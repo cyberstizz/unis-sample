@@ -1,0 +1,26 @@
+$app-bg: #000; // black background
+$logo-color: #bfbfbf; // silver/gray tone
+$logo-font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+.app {
+  background-color: $app-bg;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo {
+  font-family: $logo-font;
+  font-size: 6rem;
+  font-weight: 300;
+  color: $logo-color;
+  letter-spacing: 0.5rem;
+  text-transform: uppercase;
+
+  // subtle shine effect
+  background: linear-gradient(180deg, #d9d9d9, #7a7a7a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
