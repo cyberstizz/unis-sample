@@ -1,7 +1,7 @@
 // src/components/Onboarding.js
 import React, { useState } from 'react';
 import './Onboarding.scss';
-import unisLogo from './assets/unisLogo.jpg';
+import unisLogo from './assets/unisLogo.svg';
 
 const Onboarding = () => {
   const [step, setStep] = useState(1);

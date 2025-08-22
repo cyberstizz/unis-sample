@@ -1,6 +1,6 @@
 // src/components/Feed.js
 import React, { useState } from 'react';
-import unisLogo from './assets/unisLogo.jpg'; // Adjust path as needed
+import unisLogo from './assets/unisLogo.svg'; // Adjust path as needed
 import './Feed.scss';
 
 const Feed = () => {
