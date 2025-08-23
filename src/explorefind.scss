@@ -1,0 +1,184 @@
+// ExploreFind.scss
+
+// Variables
+$bg-black: #000000;
+$text-silver: #C0C0C0;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+$border-silver: #C0C0C0;
+$button-hover: #D3D3D3;
+$subtle-black: #1a1a1a;
+
+// Global
+* {
+  box-sizing: border-box;
+}
+
+.explore-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center; // Center content horizontally
+  height: 100vh;
+  width: 100vw;
+  background: $bg-black;
+  color: $text-gray;
+  padding: 20px 0; // Add vertical padding
+  overflow-y: auto; // Allow scrolling for the entire container
+}
+
+// ... (Header styles - keep as is, it's good)
+
+.search-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%; // Ensure it fills the container
+  max-width: 800px; // Set a max-width for centering
+  margin-bottom: 30px;
+
+  .search-bar {
+    width: 90%;
+    padding: 12px 20px;
+    border: none; // Remove border for a cleaner look
+    border-radius: 50px;
+    background: $subtle-black;
+    color: $accent-white;
+    font-size: 16px;
+    margin-bottom: 15px;
+    
+    &::placeholder {
+      color: $text-gray;
+    }
+  }
+
+  .filters {
+    display: flex;
+    justify-content: center;
+    gap: 15px; // Increase gap for spacing
+    margin-bottom: 20px;
+    width: 90%; // Ensure filters also stay within the form's width
+    
+    .filter-select {
+      padding: 10px 15px;
+      background: $subtle-black;
+      border: 1px solid rgba($border-silver, 0.3);
+      border-radius: 50px;
+      color: $accent-white;
+      cursor: pointer;
+      appearance: none; // Removes default browser styling
+      
+      &:focus {
+        outline: none;
+        border-color: $accent-white; // Highlight on focus
+      }
+    }
+  }
+
+  .search-button {
+    padding: 12px 30px;
+    background: $text-silver;
+    color: $bg-black;
+    font-weight: bold;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+    
+    &:hover {
+      background: $button-hover;
+      transform: translateY(-2px);
+    }
+  }
+}
+
+.results {
+  width: 100%;
+  max-width: 1200px; // Let the results grid be wider
+  padding: 0 20px;
+  margin-top: 20px; // Add some space from the form
+
+  h2 {
+    color: $text-silver;
+    font-size: 28px;
+    margin-bottom: 20px;
+    text-align: center; // Center the results heading
+  }
+
+  .results-grid {
+    display: grid;
+    // Auto-fit allows it to fill the available space better
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 30px; // Increase the gap
+    justify-content: center; // Center the grid items within the container
+    
+    .result-item {
+      background: $subtle-black;
+      border-radius: 12px;
+      overflow: hidden; // Hides content that overflows the rounded corners
+      transition: transform 0.2s, box-shadow 0.2s;
+      
+      &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .thumbnail {
+        width: 100%;
+        height: 180px; // Larger thumbnail
+        object-fit: cover;
+      }
+
+      .info {
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        
+        h3 {
+          color: $accent-white;
+          font-size: 20px;
+          margin-bottom: 8px;
+        }
+
+        p {
+          font-size: 14px;
+          margin: 4px 0;
+        }
+      }
+
+      .vote-button {
+        padding: 10px 20px;
+        background: transparent;
+        border: 1px solid $border-silver;
+        color: $text-silver;
+        border-radius: 50px; // Pill shape
+        cursor: pointer;
+        margin-top: 10px;
+        transition: background 0.2s, color 0.2s;
+        
+        &:hover {
+          background: $accent-white;
+          color: $bg-black;
+        }
+      }
+    }
+  }
+}
+
+// Mobile adjustments
+@media (max-width: 600px) {
+  .search-form {
+    max-width: 100%;
+    padding: 0 10px;
+  }
+  
+  .search-form .filters {
+    flex-direction: column;
+    width: 90%;
+    gap: 10px;
+  }
+  
+  .results-grid {
+    grid-template-columns: 1fr;
+  }
+}
