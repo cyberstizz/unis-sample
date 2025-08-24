@@ -7,57 +7,74 @@ $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
 $button-hover: #D3D3D3;
+$subtle-black: #1a1a1a;
 
 .vote-awards-container {
   display: flex;
   flex-direction: column;
+  align-items: center; // Center content horizontally
   height: 100vh;
+  width: 100vw;
   background: $bg-black;
   color: $text-gray;
-  padding: 20px;
+  padding: 20px 0; // Add vertical padding
+  overflow-y: auto; // Allow scrolling
 }
 
 .header {
-  text-align: center;
-  margin-bottom: 20px;
+  // Use Flexbox to center header content
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
 
   .logo {
-    height: 100px;
+    height: 80px;
+    margin-bottom: 10px;
   }
 
   h1 {
     color: $text-silver;
-    font-size: 28px;
+    font-size: 32px;
+    font-weight: bold;
   }
 }
 
 .filters {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
   justify-content: center;
+  gap: 15px; // Increased gap for better spacing
+  margin-bottom: 40px; // More space between filters and the nominee list
   flex-wrap: wrap;
+  width: 100%;
+  max-width: 900px; // Contain filters on wider screens
 
-  .filter-select,
-  .historic-filter {
-    padding: 10px;
-    background: $bg-black;
-    border: 1px solid $border-silver;
-    border-radius: 8px;
+  .filter-select {
+    padding: 12px 20px;
+    background: $subtle-black;
+    border: 1px solid rgba($border-silver, 0.3); // Softer border
+    border-radius: 50px; // Pill shape
     color: $accent-white;
     font-size: 16px;
+    cursor: pointer;
+    appearance: none; // Remove default browser styling
+    
+    &:hover {
+      background: rgba($accent-white, 0.05);
+    }
   }
 }
 
 .nominees {
-  flex: 1;
-  overflow-y: auto;
+  width: 100%;
+  max-width: 900px; // Contain the nominee list
+  padding: 0 20px;
 
   h2 {
     color: $text-silver;
-    font-size: 24px;
+    font-size: 28px;
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
   }
 
   .nominee-list {
@@ -68,38 +85,52 @@ $button-hover: #D3D3D3;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #1A1A1A;
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
+      background: $subtle-black;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      
+      &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+      }
 
       .nominee-info {
+        flex: 1;
+        
         h3 {
-          color: $text-silver;
-          font-size: 18px;
-          margin-bottom: 5px;
+          color: $accent-white;
+          font-size: 20px;
+          margin: 0 0 5px 0;
         }
 
         p {
           font-size: 14px;
           margin: 0;
+          color: $text-gray;
         }
 
         .projection {
           font-style: italic;
           color: $text-gray;
+          margin-top: 5px;
         }
       }
 
       .vote-button {
-        padding: 8px 16px;
+        padding: 10px 20px;
         background: transparent;
         border: 1px solid $border-silver;
         color: $text-silver;
-        border-radius: 8px;
+        border-radius: 50px; // Pill shape
         cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+        
         &:hover {
-          background: rgba($button-hover, 0.2);
+          background: $accent-white;
+          color: $bg-black;
+          font-weight: bold;
         }
       }
     }
@@ -108,16 +139,26 @@ $button-hover: #D3D3D3;
 
 // Mobile
 @media (max-width: 600px) {
+  .header h1 {
+    font-size: 24px;
+  }
+  
   .filters {
     flex-direction: column;
+    width: 90%;
+    gap: 10px;
   }
-
+  
   .nominee-item {
     flex-direction: column;
-    text-align: center;
+    align-items: flex-start;
+    
+    .nominee-info {
+      margin-bottom: 15px;
+    }
 
     .vote-button {
-      margin-top: 10px;
+      width: 100%;
     }
   }
 }
