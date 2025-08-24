@@ -1,0 +1,123 @@
+// VoteAwards.scss
+
+// Variables (consistent with previous pages)
+$bg-black: #000000;
+$text-silver: #C0C0C0;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+$border-silver: #C0C0C0;
+$button-hover: #D3D3D3;
+
+.vote-awards-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: $bg-black;
+  color: $text-gray;
+  padding: 20px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+
+  .logo {
+    height: 100px;
+  }
+
+  h1 {
+    color: $text-silver;
+    font-size: 28px;
+  }
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+
+  .filter-select,
+  .historic-filter {
+    padding: 10px;
+    background: $bg-black;
+    border: 1px solid $border-silver;
+    border-radius: 8px;
+    color: $accent-white;
+    font-size: 16px;
+  }
+}
+
+.nominees {
+  flex: 1;
+  overflow-y: auto;
+
+  h2 {
+    color: $text-silver;
+    font-size: 24px;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .nominee-list {
+    list-style: none;
+    padding: 0;
+
+    .nominee-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1A1A1A;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+
+      .nominee-info {
+        h3 {
+          color: $text-silver;
+          font-size: 18px;
+          margin-bottom: 5px;
+        }
+
+        p {
+          font-size: 14px;
+          margin: 0;
+        }
+
+        .projection {
+          font-style: italic;
+          color: $text-gray;
+        }
+      }
+
+      .vote-button {
+        padding: 8px 16px;
+        background: transparent;
+        border: 1px solid $border-silver;
+        color: $text-silver;
+        border-radius: 8px;
+        cursor: pointer;
+        &:hover {
+          background: rgba($button-hover, 0.2);
+        }
+      }
+    }
+  }
+}
+
+// Mobile
+@media (max-width: 600px) {
+  .filters {
+    flex-direction: column;
+  }
+
+  .nominee-item {
+    flex-direction: column;
+    text-align: center;
+
+    .vote-button {
+      margin-top: 10px;
+    }
+  }
+}
