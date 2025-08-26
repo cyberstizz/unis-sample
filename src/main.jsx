@@ -6,9 +6,10 @@ import Feed from './feed.jsx'
 import Onboarding from './onboarding.jsx'
 import ExploreFind from './explorefind.jsx'
 import VoteAwards from './voteawards.jsx'
+import ArtistPage from './artistpage.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <VoteAwards />
+    <ArtistPage />
   </StrictMode>,
 )
