@@ -7,9 +7,10 @@ import Onboarding from './onboarding.jsx'
 import ExploreFind from './explorefind.jsx'
 import VoteAwards from './voteawards.jsx'
 import ArtistPage from './artistpage.jsx'
+import SongPage from './songPage.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ArtistPage />
+    <SongPage />
   </StrictMode>,
 )

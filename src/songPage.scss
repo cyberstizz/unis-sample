@@ -1,0 +1,92 @@
+// SongPage.scss
+
+// Variables (consistent)
+$bg-black: #000000;
+$text-silver: #C0C0C0;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+$border-silver: #C0C0C0;
+$button-hover: #D3D3D3;
+
+.song-page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: $bg-black;
+  color: $text-gray;
+  padding: 20px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+
+  .logo {
+    height: 100px;
+  }
+
+  h1 {
+    color: $text-silver;
+    font-size: 28px;
+  }
+}
+
+.details {
+  text-align: center;
+  margin-bottom: 30px;
+
+  p {
+    font-size: 18px;
+    color: $text-silver;
+  }
+
+  .vote-button {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid $border-silver;
+    color: $text-silver;
+    border-radius: 8px;
+    cursor: pointer;
+    &:hover {
+      background: rgba($button-hover, 0.2);
+    }
+  }
+}
+
+.player {
+  text-align: center;
+
+  h2 {
+    color: $text-silver;
+    font-size: 24px;
+  }
+
+  .mini-player {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    background: #1A1A1A;
+    padding: 10px;
+    border-radius: 8px;
+
+    button {
+      background: transparent;
+      border: none;
+      color: $text-silver;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    div {
+      width: 200px;
+      height: 5px;
+      background: $text-gray;
+    }
+  }
+}
+
+// Mobile
+@media (max-width: 600px) {
+  padding: 10px;
+}
