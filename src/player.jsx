@@ -1,49 +1,69 @@
-import React, { useRef, useState, useEffect } from "react";
+// src/components/Player.js
+import React, { useContext, useEffect } from 'react';
+import { PlayerContext } from '../context/PlayerContext';
+import './Player.scss';
 
 const Player = () => {
-  const audioRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const { isExpanded, toggleExpand, currentMedia, next, prev, audioRef } = useContext(PlayerContext);
 
-  // Toggle play/pause
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      audio.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  // Update progress bar
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    if (currentMedia && audioRef.current) {
+      audioRef.current.src = currentMedia.url;
+      audioRef.current.play();
+    }
+  }, [currentMedia]);
 
-    const updateProgress = () => {
-      setProgress((audio.currentTime / audio.duration) * 100 || 0);
-    };
+  if (!currentMedia) return null; // Hide if no media
 
-    audio.addEventListener("timeupdate", updateProgress);
-    return () => audio.removeEventListener("timeupdate", updateProgress);
-  }, []);
+  const isVideo = currentMedia.type === 'video';
 
   return (
-    <div className="player">
-      <audio ref={audioRef} src="/song.mp3"></audio>
-
-      <div className="controls">
-        <button onClick={togglePlay}>{isPlaying ? "⏸" : "▶️"}</button>
-        <div className="progress-bar">
-          <div
-            className="progress"
-            style={{ width: `${progress}%`, height: "4px", background: "green" }}
-          />
+    <div className={`player ${isExpanded ? 'expanded' : ''}`} onClick={!isExpanded ? toggleExpand : null}>
+      {isExpanded ? (
+        <div className="expanded-view" style={{ backgroundImage: `url(${currentMedia.artwork})` }}>
+          <button className="minimize-button" onClick={toggleExpand}>Minimize</button>
+          {isVideo ? (
+            <video ref={audioRef} controls className="media-element">
+              <source src={currentMedia.url} type="video/mp4" />
+            </video>
+          ) : (
+            <audio ref={audioRef} controls className="media-element">
+              <source src={currentMedia.url} type="audio/mpeg" />
+            </audio>
+          )}
+          <div className="info">
+            <h2>{currentMedia.title}</h2>
+            <p>{currentMedia.artist}</p>
+          </div>
+          <div className="controls">
+            <button onClick={prev}>◀</button>
+            <button onClick={() => audioRef.current.paused ? audioRef.current.play() : audioRef.current.pause()}>⏯</button>
+            <button onClick={next}>▶</button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mini-player">
+          <img src={currentMedia.artwork} alt="Artwork" className="mini-artwork" />
+          <div className="mini-info">
+            <p>{currentMedia.title} - {currentMedia.artist}</p>
+          </div>
+          <div className="mini-controls">
+            <button onClick={prev}>◀</button>
+            <button onClick={() => audioRef.current.paused ? audioRef.current.play() : audioRef.current.pause()}>⏯</button>
+            <button onClick={next}>▶</button>
+          </div>
+          {/* For video in mini: Audio plays, video hidden */}
+          {isVideo ? (
+            <video ref={audioRef} style={{ display: 'none' }}>
+              <source src={currentMedia.url} type="video/mp4" />
+            </video>
+          ) : (
+            <audio ref={audioRef} style={{ display: 'none' }}>
+              <source src={currentMedia.url} type="audio/mpeg" />
+            </audio>
+          )}
+        </div>
+      )}
     </div>
   );
 };

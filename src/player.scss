@@ -1,0 +1,128 @@
+// Player.scss
+
+// Variables
+$bg-black: #000000;
+$text-silver: #C0C0C0;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+$border-silver: #C0C0C0;
+$button-hover: #D3D3D3;
+
+.player {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #1A1A1A;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 100;
+
+  &.expanded {
+    height: 100vh;
+    width: 100vw;
+    top: 0;
+    left: 0;
+    background-color: $bg-black; // Fallback
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.8); // Fade effect
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    .expanded-view {
+      text-align: center;
+      color: $accent-white;
+
+      .minimize-button {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: transparent;
+        border: none;
+        color: $text-silver;
+        font-size: 18px;
+        cursor: pointer;
+      }
+
+      .media-element {
+        width: 80%;
+        max-width: 600px;
+        margin-bottom: 20px;
+      }
+
+      .info {
+        margin-bottom: 20px;
+
+        h2 {
+          font-size: 24px;
+        }
+
+        p {
+          font-size: 18px;
+        }
+      }
+
+      .controls {
+        display: flex;
+        gap: 20px;
+
+        button {
+          background: transparent;
+          border: none;
+          color: $accent-white;
+          font-size: 30px;
+          cursor: pointer;
+        }
+      }
+    }
+  }
+
+  .mini-player {
+    display: flex;
+    align-items: center;
+    width: 100%;
+
+    .mini-artwork {
+      width: 50px;
+      height: 50px;
+      border-radius: 4px;
+      margin-right: 10px;
+    }
+
+    .mini-info {
+      flex: 1;
+
+      p {
+        margin: 0;
+        font-size: 14px;
+        color: $text-silver;
+      }
+    }
+
+    .mini-controls {
+      display: flex;
+      gap: 10px;
+
+      button {
+        background: transparent;
+        border: none;
+        color: $text-silver;
+        font-size: 20px;
+        cursor: pointer;
+      }
+    }
+  }
+}
+
+// Mobile adjustments
+@media (max-width: 600px) {
+  .expanded .media-element {
+    width: 100%;
+  }
+}
