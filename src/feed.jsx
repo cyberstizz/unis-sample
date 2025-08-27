@@ -102,7 +102,6 @@ const Feed = () => {
       </main>
 
       {/* Bottom Player */}
-      <Player />
     </div>
   );
 };
