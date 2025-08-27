@@ -2,21 +2,29 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { PlayerProvider } from './context/playercontext'
-import Player from './components/Player'; // Import the new Player
-import Feed from './components/Feed'; // Your pages
-import ExploreFind from './components/ExploreFind'; // Etc.
-// Add other imports...
+import Player from './player'; 
+import Feed from './feed'; 
+import ExploreFind from './explorefind'; 
+import ArtistPage from './artistpage';
+import SongPage from './songPage';
+import Onboarding from './onboarding';
+import VoteAwards from './Voteawards';
+
+
 
 const App = () => {
   return (
     <PlayerProvider>
       <Router>
         <Routes>
-          <Route path="/home" element={<Feed />} />
+          <Route path="/" element={<Feed />} />
           <Route path="/explore" element={<ExploreFind />} />
-          {/* Add other routes */}
+          <Route path="/artist" element={<ArtistPage />} />
+          <Route path="/song" element={<SongPage />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/voteawards" element={<VoteAwards />} />
         </Routes>
-        <Player /> {/* Render globally here—bottom of screen via CSS */}
+        <Player />
       </Router>
     </PlayerProvider>
   );

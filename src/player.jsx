@@ -1,6 +1,6 @@
 // src/components/Player.js
 import React, { useContext, useEffect } from 'react';
-import { PlayerContext } from '../context/PlayerContext';
+import { PlayerContext } from './context/playercontext';
 import './Player.scss';
 
 const Player = () => {

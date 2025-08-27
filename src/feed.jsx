@@ -3,13 +3,22 @@ import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg'; // Adjust path as needed
 import Player from './player';
 import { useContext } from 'react';
-import { PlayerContext } from '../context/PlayerContext'; // Import
-import './Feed.scss';
+import { PlayerContext } from './context/playercontext'; // Import
+import { useNavigate } from 'react-router-dom';
+import './feed.scss';
 
 const Feed = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate('/voteawards'); // Navigate to the '/about' path
+  };
+
+
 
   return (
     <div className="feed-container">
@@ -18,10 +27,10 @@ const Feed = () => {
         <img src={unisLogo} alt="UNIS Logo" className="logo" />
         <input type="text" placeholder="Search artists, songs..." className="search-bar" />
         <div className="options-bar">
-          <div className="option-box">Vote</div>
-          <div className="option-box">Awards</div>
-          <div className="option-box">Popular</div>
-          <div className="option-box">Earnings</div>
+          <div onClick={handleClick} className="option-box">Vote</div>
+          <div onClick={handleClick} className="option-box">Awards</div>
+          <div onClick={handleClick} className="option-box">Popular</div>
+          <div onClick={handleClick} className="option-box">Earnings</div>
         </div>
       </header>
 
