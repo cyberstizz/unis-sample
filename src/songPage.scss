@@ -7,86 +7,117 @@ $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
 $button-hover: #D3D3D3;
+$subtle-black: #1a1a1a;
 
 .song-page-container {
   display: flex;
   flex-direction: column;
+  align-items: center; // Center content horizontally
   height: 100vh;
+  width: 100vw;
   background: $bg-black;
   color: $text-gray;
-  padding: 20px;
+  padding: 20px 0; // Use horizontal padding on a centered container
+  overflow-y: auto;
 }
 
 .header {
-  text-align: center;
-  margin-bottom: 20px;
+  // Center the header content using flexbox
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
 
   .logo {
-    height: 100px;
+    height: 80px;
+    margin-bottom: 10px;
   }
 
   h1 {
     color: $text-silver;
-    font-size: 28px;
+    font-size: 32px;
+    font-weight: bold;
+    text-align: center;
   }
 }
 
-.details {
+.details,
+.player {
+  width: 100%;
+  max-width: 600px;
+  background: $subtle-black;
+  padding: 30px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   text-align: center;
-  margin-bottom: 30px;
+}
 
+.details {
   p {
     font-size: 18px;
     color: $text-silver;
+    margin-bottom: 15px;
   }
 
   .vote-button {
-    padding: 10px 20px;
+    padding: 12px 30px;
     background: transparent;
     border: 1px solid $border-silver;
     color: $text-silver;
-    border-radius: 8px;
+    border-radius: 50px;
     cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    
     &:hover {
-      background: rgba($button-hover, 0.2);
+      background: $accent-white;
+      color: $bg-black;
     }
   }
 }
 
 .player {
-  text-align: center;
-
   h2 {
     color: $text-silver;
     font-size: 24px;
+    margin-bottom: 20px;
   }
 
   .mini-player {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
-    background: #1A1A1A;
-    padding: 10px;
-    border-radius: 8px;
-
+    gap: 15px; // Increased gap
+    background: rgba($subtle-black, 0.8);
+    padding: 20px;
+    border-radius: 12px;
+    
     button {
       background: transparent;
       border: none;
       color: $text-silver;
-      font-size: 20px;
+      font-size: 30px; // Larger icon
       cursor: pointer;
+      transition: transform 0.2s;
+      
+      &:hover {
+        transform: scale(1.1);
+      }
     }
 
     div {
-      width: 200px;
-      height: 5px;
+      width: 250px; // Wider seek bar
+      height: 6px;
       background: $text-gray;
+      border-radius: 3px;
     }
   }
 }
 
 // Mobile
 @media (max-width: 600px) {
-  padding: 10px;
+  // FIX: Syntax error corrected here
+  .song-page-container {
+    padding: 10px;
+  }
 }

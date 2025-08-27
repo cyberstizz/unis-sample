@@ -11,6 +11,6 @@ import SongPage from './songPage.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <SongPage />
+    <Feed />
   </StrictMode>,
 )

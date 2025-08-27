@@ -1,6 +1,6 @@
 // src/components/SongPage.js
 import React from 'react';
-import unisLogo from './assets/unisLogo.jpg'; // Adjust path
+import unisLogo from './assets/unisLogo.svg'; // Adjust path
 import './SongPage.scss';
 
 const SongPage = () => {

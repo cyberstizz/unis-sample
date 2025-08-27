@@ -1,14 +1,13 @@
 // src/components/Feed.js
 import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg'; // Adjust path as needed
+import Player from './player';
 import './Feed.scss';
 
 const Feed = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-  const togglePlayer = () => setIsPlayerExpanded(!isPlayerExpanded);
 
   return (
     <div className="feed-container">
@@ -103,28 +102,7 @@ const Feed = () => {
       </main>
 
       {/* Bottom Player */}
-      <div className={`bottom-player ${isPlayerExpanded ? 'expanded' : ''}`} onClick={togglePlayer}>
-        {isPlayerExpanded ? (
-          <div className="expanded-player">
-            <img src="placeholder-artist.jpg" alt="Artist" className="artist-bg" /> {/* Replace with dynamic */}
-            <div className="controls">
-              <button>◀</button> {/* Prev */}
-              <button>⏯</button> {/* Play/Pause */}
-              <button>▶</button> {/* Next */}
-              <div className="seek-bar">Seek Bar</div>
-              <button onClick={(e) => { e.stopPropagation(); togglePlayer(); }}>Close</button>
-            </div>
-          </div>
-        ) : (
-          <div className="mini-player">
-            <div className="mini-controls">
-              <button>⏯</button>
-              <span>Song Title - Artist</span>
-              <button>▶</button>
-            </div>
-          </div>
-        )}
-      </div>
+      <Player />
     </div>
   );
 };
