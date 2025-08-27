@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg'; // Adjust path as needed
 import Player from './player';
+import { useContext } from 'react';
+import { PlayerContext } from '../context/PlayerContext'; // Import
 import './Feed.scss';
 
 const Feed = () => {
