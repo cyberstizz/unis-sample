@@ -1,10 +1,25 @@
-import React from "react";
-import "./App.scss";
+// src/App.js (or main entry)
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { PlayerProvider } from './context/playercontext'
+import Player from './components/Player'; // Import the new Player
+import Feed from './components/Feed'; // Your pages
+import ExploreFind from './components/ExploreFind'; // Etc.
+// Add other imports...
 
-export default function App() {
+const App = () => {
   return (
-    <div className="app">
-      <div className="logo">UNIS</div>
-    </div>
+    <PlayerProvider>
+      <Router>
+        <Routes>
+          <Route path="/home" element={<Feed />} />
+          <Route path="/explore" element={<ExploreFind />} />
+          {/* Add other routes */}
+        </Routes>
+        <Player /> {/* Render globally here—bottom of screen via CSS */}
+      </Router>
+    </PlayerProvider>
   );
-}
+};
+
+export default App;
