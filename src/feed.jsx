@@ -1,17 +1,17 @@
 // src/components/Feed.js
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react'; // Add useContext here if not
 import unisLogo from './assets/unisLogo.svg'; // Adjust path as needed
-import Player from './player';
-import { useContext } from 'react';
-import { PlayerContext } from './context/playercontext'; // Import
+import { PlayerContext } from './context/playercontext'; // Ensure case matches file (e.g., PlayerContext.js)
 import { useNavigate } from 'react-router-dom';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import song2 from './assets/sdboomin_waitedallnight.mp3';
+import video1 from './assets/badVideo.mp4'
 import art1 from './assets/unisLogo1.jpg'; 
-import art2 from './assets/theQuiet.jpg';
+import art2 from './assets/theQuiet.jpg'; // Assuming JPG for artwork
 import './feed.scss';
 
 const Feed = () => {
+  const { playMedia } = useContext(PlayerContext); // Move here: Top-level hook call
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -21,8 +21,6 @@ const Feed = () => {
   const handleClick = () => {
     navigate('/voteawards'); // Navigate to the '/about' path
   };
-
-
 
   return (
     <div className="feed-container">
@@ -62,43 +60,51 @@ const Feed = () => {
       <main className="feed">
         {/* Trending Carousel */}
         <section className="feed-section carousel">
-  <h2>Trending</h2>
-  <div className="carousel-items">
-    {/* Updated items with onClick */}
-    <div 
-      className="item" 
-      onClick={() => {
-        const { playMedia } = useContext(PlayerContext);
-        playMedia(
-          { type: 'song', url: song1, title: 'Song 1', artist: 'Artist A', artwork: art1 },
-          [ // Sample playlist
-            { type: 'song', url: song1, title: 'Song 1', artist: 'Artist A', artwork: art1 },
-            { type: 'song', url: song2, title: 'Song 2', artist: 'Artist B', artwork: art2 },
-          ]
-        );
-      }}
-    >
-      Song 1
-    </div>
-    <div 
-      className="item" 
-      onClick={() => {
-        const { playMedia } = useContext(PlayerContext);
-        playMedia(
-          { type: 'song', url: song2, title: 'Song 2', artist: 'Artist B', artwork: art2 },
-          [ // Another playlist
-            { type: 'song', url: song2, title: 'Song 2', artist: 'Artist B', artwork: art2 },
-            { type: 'song', url: song1, title: 'Song 1', artist: 'Artist A', artwork: art1 },
-          ]
-        );
-      }}
-    >
-      Song 2
-    </div>
-    <div className="item">Song 3</div> {/* Add similar for others */}
-    <div className="item">Song 4</div>
-  </div>
-</section>
+          <h2>Trending</h2>
+          <div className="carousel-items">
+            {/* Updated items with onClick */}
+            <div 
+              className="item" 
+              onClick={() => {
+                playMedia( // Use the variable here
+                  { type: 'song', url: song1, title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artwork: art1 },
+                  [ // Sample playlist
+                    { type: 'song', url: song1, title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artwork: art1 },
+                    { type: 'song', url: song2, title: 'SD Boomin - Waited All Night', artist: 'SD Boomin', artwork: art2 },
+                  ]
+                );
+              }}
+            >
+              Song 1: Tony Fadd - Paranoid
+            </div>
+            <div 
+              className="item" 
+              onClick={() => {
+                playMedia(
+                  { type: 'song', url: song2, title: 'SD Boomin - Waited All Night', artist: 'SD Boomin', artwork: art2 },
+                  [ // Another playlist
+                    { type: 'song', url: song2, title: 'SD Boomin - Waited All Night', artist: 'SD Boomin', artwork: art2 },
+                    { type: 'song', url: song1, title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artwork: art1 },
+                  ]
+                );
+              }}
+            >
+              Song 2: SD Boomin - Waited All Night
+            </div>
+            <div className="item" 
+              onClick={() => {
+                playMedia(
+                  { type: 'video', url: video1, title: 'badVideo', artist: 'some guy', artwork: art2 },
+                  [ // Another playlist
+                    { type: 'song', url: song2, title: 'SD Boomin - Waited All Night', artist: 'SD Boomin', artwork: art2 },
+                    { type: 'song', url: song1, title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artwork: art1 },
+                  ]
+                );
+              }}
+            >bad Video</div> {/* Add similar for others */}
+            <div className="item">Song 4</div>
+          </div>
+        </section>
 
         {/* New Carousel */}
         <section className="feed-section carousel">
@@ -144,7 +150,7 @@ const Feed = () => {
         </section>
       </main>
 
-      {/* Bottom Player */}
+      {/* Bottom Player - REMOVE this; it's now in App.js */}
     </div>
   );
 };

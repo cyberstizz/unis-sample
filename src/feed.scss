@@ -49,17 +49,12 @@ $hover-silver: #D3D3D3;
 }
 
 .header {
-    // Use Flexbox to align items cleanly
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 0 10px; // Add more vertical padding for breathing room
-  width: 100%; // Ensure it spans the full width
-  
-  // A subtle gradient looks more modern than a solid color
+  padding: 0px 0 10px; 
+  width: 100%; 
   background: linear-gradient(to bottom, #1A1A1A, $bg-black);
-
-
   .logo {
     height: 80px; // Slightly smaller and centered
     margin-bottom: 20px;
