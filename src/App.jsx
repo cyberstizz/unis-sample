@@ -9,7 +9,7 @@ import ArtistPage from './artistpage';
 import SongPage from './songPage';
 import Onboarding from './onboarding';
 import VoteAwards from './Voteawards';
-
+import Profile from './profile';
 
 
 const App = () => {
@@ -23,6 +23,7 @@ const App = () => {
           <Route path="/song" element={<SongPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/voteawards" element={<VoteAwards />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
         <Player />
       </Router>

@@ -22,6 +22,10 @@ const Feed = () => {
     navigate('/voteawards'); // Navigate to the '/about' path
   };
 
+  const handleProfile = () => {
+    navigate('/profile'); 
+  };
+
   return (
     <div className="feed-container">
       {/* Header */}
@@ -49,7 +53,7 @@ const Feed = () => {
               <li>Vote</li>
               <li>Find</li>
               <li>Leaderboards</li>
-              <li>Settings</li>
+              <li onClick={handleProfile}>Settings</li>
               <li>Earnings</li>
             </ul>
           </div>
