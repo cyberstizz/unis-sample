@@ -1,6 +1,6 @@
 // src/components/Profile.js
 import React, { useState } from 'react';
-import unisLogo from './assets/unisLogo.jpg'; // Adjust path
+import unisLogo from './assets/unisLogo.svg'; // Adjust path
 import './Profile.scss';
 
 const Profile = ({ isArtist = false }) => { // Prop for role; true for artist, false for listener

@@ -1,6 +1,6 @@
 // src/components/Feed.js
 import React, { useState, useContext } from 'react'; // Add useContext here if not
-import unisLogo from './assets/unisLogo.svg'; // Adjust path as needed
+import unisLogo from './assets/unisLogo.png'; // Adjust path as needed
 import { PlayerContext } from './context/playercontext'; // Ensure case matches file (e.g., PlayerContext.js)
 import { useNavigate } from 'react-router-dom';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
@@ -30,15 +30,17 @@ const Feed = () => {
     <div className="feed-container">
       {/* Header */}
       <header className="header">
-        <img src={unisLogo} alt="UNIS Logo" className="logo" />
-        <input type="text" placeholder="Search artists, songs..." className="search-bar" />
-        <div className="options-bar">
-          <div onClick={handleClick} className="option-box">Vote</div>
-          <div onClick={handleClick} className="option-box">Awards</div>
-          <div onClick={handleClick} className="option-box">Popular</div>
-          <div onClick={handleClick} className="option-box">Earnings</div>
-        </div>
-      </header>
+  <div className="header-top">
+    <img src={unisLogo} alt="UNIS Logo" className="logo" />
+    <input type="text" placeholder="Search artists, songs..." className="search-bar" />
+  </div>
+  <div className="options-bar">
+    <div onClick={handleClick} className="option-box">Vote</div>
+    <div onClick={handleClick} className="option-box">Awards</div>
+    <div onClick={handleClick} className="option-box">Popular</div>
+    <div onClick={handleClick} className="option-box">Earnings</div>
+  </div>
+</header>
 
       {/* Side Menu Trigger (Sticky) */}
       <div className="side-menu-trigger" onClick={toggleMenu}>
