@@ -10,6 +10,7 @@ import SongPage from './songPage';
 import Onboarding from './onboarding';
 import VoteAwards from './Voteawards';
 import Profile from './profile';
+import MilestonesPage from './milestonesPage';
 
 
 const App = () => {
@@ -24,6 +25,7 @@ const App = () => {
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/voteawards" element={<VoteAwards />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/milestones" element={<MilestonesPage />} />
         </Routes>
         <Player />
       </Router>

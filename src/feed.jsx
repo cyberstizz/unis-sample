@@ -22,6 +22,11 @@ const Feed = () => {
     navigate('/voteawards'); // Navigate to the '/about' path
   };
 
+
+  const handleMilestones = () => {
+    navigate('/milestones'); // Navigate to the '/about' path
+  };
+
   const handleArtist = () => {
     navigate('/artist'); // Navigate to the '/about' path
   };
@@ -44,7 +49,7 @@ const Feed = () => {
   </div>
   <div className="options-bar">
     <div onClick={handleClick} className="option-box">Vote</div>
-    <div onClick={handleClick} className="option-box">Awards</div>
+    <div onClick={handleMilestones} className="option-box">Awards</div>
     <div onClick={handleArtist} className="option-box">Popular</div>
     <div onClick={handleClick} className="option-box">Earnings</div>
   </div>
