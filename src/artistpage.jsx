@@ -1,115 +1,114 @@
-// src/components/ArtistPage.js
 import React, { useState } from 'react';
-import unisLogo from './assets/unisLogo.svg'; // Adjust path
+import unisLogo from './assets/unisLogo.svg';
 import './ArtistPage.scss';
 
-const ArtistPage = ({ isOwnProfile = false }) => { // Prop to check if viewing own profile (artist role)
-  const [showPopup, setShowPopup] = useState(isOwnProfile); // Show thanks popup for artists on load
+const ArtistPage = ({ isOwnProfile = false }) => {
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [bio, setBio] = useState('Artist bio here...');
 
-  // Placeholder data
   const artist = {
     name: 'Artist Name',
-    bio: 'Bio description here...',
     genre: 'Rap/Hip-Hop',
+    rank: '#5 in Uptown Harlem (Rap)',
+    followers: 1200,
+    supporters: 450,
+    bio: bio,
+    songs: ['Song 1', 'Song 2', 'Song 3', 'Song 4', 'Song 5'],
+    videos: ['Video 1', 'Video 2'],
+    events: ['Show at Venue X on Sep 10', 'Event Y on Sep 15'],
     voteCount: 150,
-    projection: 'You were only 83 votes from 20th last week',
-    songs: ['Song 1', 'Song 2', 'Song 3'],
-    plays: { daily: 100, weekly: 500, monthly: 2000, yearly: 10000 },
-    supporters: 250,
-    trends: 'Up 20% this week',
-    votingHistory: ['Voted for Artist X last week'],
-    events: ['Event 1 on Date'],
-    messaging: 'Open', // Options: Open, Permission, Paid
   };
 
-  const handleVote = () => {
-    // TODO: API vote
-    console.log('Voted!');
-  };
-
-  const handleUpload = () => {
-    // TODO: Upload logic
-    console.log('Uploading song...');
-  };
+  const handleFollow = () => setIsFollowing(!isFollowing);
+  const handleBioChange = (e) => setBio(e.target.value);
 
   return (
     <div className="artist-page-container">
       <header className="header">
         <img src={unisLogo} alt="UNIS Logo" className="logo" />
-        <h1>{artist.name}</h1>
+        <div className="artist-info">
+          <h1>{artist.name}</h1>
+          <p className="artist-genre">{artist.genre}</p>
+          <div className="follow-actions">
+            <button onClick={handleFollow} className="follow-button">
+              {isFollowing ? 'Unfollow' : 'Follow'}
+            </button>
+            {!isOwnProfile && (
+              <button className="vote-button">Vote</button>
+            )}
+          </div>
+        </div>
       </header>
 
-      {showPopup && isOwnProfile && (
-        <div className="popup">
-          <p>Thank you for making Unis possible with your creative work!</p>
-          <p>{artist.projection}</p>
-          <button onClick={() => setShowPopup(false)}>Close</button>
-        </div>
-      )}
-
-      <section className="bio">
-        <h2>Bio</h2>
-        <p>{artist.bio}</p>
-        <p>Genre: {artist.genre}</p>
-        <p>Votes: {artist.voteCount}</p>
-        <button onClick={handleVote} className="vote-button">Vote</button>
-      </section>
-
-      <section className="songs">
-        <h2>Songs</h2>
-        <ul>
-          {artist.songs.map((song, index) => (
-            <li key={index}>{song} <button>Play</button></li> // Link to SongPage
-          ))}
-        </ul>
-        {isOwnProfile && (
-          <div className="upload-section">
-            <h3>Upload/Edit Songs</h3>
-            <input type="file" />
-            <button onClick={handleUpload}>Upload</button>
+      <div className="content-wrapper">
+        <section className="stats-grid">
+          <div className="stat-item">
+            <p className="stat-value">{artist.rank}</p>
+            <p className="stat-label">Rank</p>
           </div>
-        )}
-      </section>
+          <div className="stat-item">
+            <p className="stat-value">{artist.followers}</p>
+            <p className="stat-label">Followers</p>
+          </div>
+          <div className="stat-item">
+            <p className="stat-value">{artist.supporters}</p>
+            <p className="stat-label">Supporters</p>
+          </div>
+          <div className="stat-item">
+            <p className="stat-value">{artist.voteCount}</p>
+            <p className="stat-label">Votes</p>
+          </div>
+        </section>
 
-      {isOwnProfile && (
-        <>
-          <section className="analytics">
-            <h2>Analytics</h2>
-            <p>Plays: Daily {artist.plays.daily} | Weekly {artist.plays.weekly} | Monthly {artist.plays.monthly} | Yearly {artist.plays.yearly}</p>
-            <p>Supporters: {artist.supporters}</p>
-            <p>Trends: {artist.trends}</p>
-          </section>
+        <section className="bio-section card">
+          <h2>Bio</h2>
+          {isOwnProfile ? (
+            <textarea value={bio} onChange={handleBioChange} className="bio-edit" />
+          ) : (
+            <p>{artist.bio}</p>
+          )}
+          {isOwnProfile && <button className="save-button">Save Bio</button>}
+        </section>
 
-          <section className="history">
-            <h2>Voting History</h2>
-            <ul>
-              {artist.votingHistory.map((vote, index) => <li key={index}>{vote}</li>)}
-            </ul>
-          </section>
+        <section className="songs-section card">
+          <h2>Songs (Up to 5)</h2>
+          <ul>
+            {artist.songs.slice(0, 5).map((song, index) => (
+              <li key={index}>
+                <span>{song}</span>
+                {isOwnProfile && <button className="edit-button">Edit/Remove</button>}
+              </li>
+            ))}
+          </ul>
+          {isOwnProfile && artist.songs.length < 5 && <button className="upload-button">Upload Song</button>}
+        </section>
 
-          <section className="events">
-            <h2>Events</h2>
-            <ul>
-              {artist.events.map((event, index) => <li key={index}>{event}</li>)}
-            </ul>
-            <button>Add Event</button>
-          </section>
+        <section className="videos-section card">
+          <h2>Videos</h2>
+          <ul>
+            {artist.videos.map((video, index) => (
+              <li key={index}>
+                <span>{video}</span>
+                {isOwnProfile && <button className="edit-button">Edit/Remove</button>}
+              </li>
+            ))}
+          </ul>
+          {isOwnProfile && <button className="upload-button">Upload Video</button>}
+        </section>
 
-          <section className="messaging">
-            <h2>Messaging Settings</h2>
-            <select defaultValue={artist.messaging}>
-              <option>Open</option>
-              <option>Permission</option>
-              <option>Paid</option>
-            </select>
-          </section>
-
-          <section className="revenue">
-            <h2>Revenue Reports</h2>
-            <p>Forecast: $XXX</p>
-          </section>
-        </>
-      )}
+        <section className="events-section card">
+          <h2>Events/Shows</h2>
+          <ul>
+            {artist.events.map((event, index) => (
+              <li key={index}>
+                <span>{event}</span>
+                {isOwnProfile && <button className="edit-button">Edit/Remove</button>}
+              </li>
+            ))}
+          </ul>
+          {isOwnProfile && <button className="add-button">Add Event</button>}
+        </section>
+      </div>
     </div>
   );
 };

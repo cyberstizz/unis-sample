@@ -26,6 +26,10 @@ const Feed = () => {
     navigate('/artist'); // Navigate to the '/about' path
   };
 
+  const handleSong = () => {
+    navigate('/song'); // Navigate to the '/about' path
+  };
+
   const handleProfile = () => {
     navigate('/profile'); 
   };
@@ -120,7 +124,7 @@ const Feed = () => {
         <section className="feed-section carousel">
           <h2>New</h2>
           <div className="carousel-items">
-            <div className="item">New Song A</div>
+            <div className="item" onClick={handleSong}>New Song A</div>
             <div className="item">New Song B</div>
             <div className="item">New Song C</div>
             <div className="item">New Song D</div>
