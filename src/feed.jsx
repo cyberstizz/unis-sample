@@ -1,6 +1,6 @@
 // src/components/Feed.js
-import React, { useState, useContext } from 'react'; // Add useContext here if not
-import unisLogo from './assets/unisLogo.png'; // Adjust path as needed
+import React, { useState, useContext, useEffect } from 'react'; // Add useContext here if not
+import unisLogo from './assets/unisNoBackground.png'; // Adjust path as needed
 import { PlayerContext } from './context/playercontext'; // Ensure case matches file (e.g., PlayerContext.js)
 import { useNavigate } from 'react-router-dom';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
@@ -13,6 +13,12 @@ import './feed.scss';
 const Feed = () => {
   const { playMedia } = useContext(PlayerContext); // Move here: Top-level hook call
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [animate, setAnimate] = useState(false);
+
+  useEffect(() => {
+    // Trigger animation once on mount
+    setAnimate(true);
+  }, []);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -66,7 +72,6 @@ const Feed = () => {
           <div className="side-menu" onClick={(e) => e.stopPropagation()}>
             <ul>
               <li>Vote</li>
-              <li>Find</li>
               <li>Leaderboards</li>
               <li onClick={handleProfile}>Settings</li>
               <li>Earnings</li>
@@ -78,7 +83,7 @@ const Feed = () => {
       {/* Feed Content */}
       <main className="feed">
         {/* Trending Carousel */}
-        <section className="feed-section carousel">
+        <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
           <h2>Trending</h2>
           <div className="carousel-items">
             {/* Updated items with onClick */}
@@ -126,7 +131,7 @@ const Feed = () => {
         </section>
 
         {/* New Carousel */}
-        <section className="feed-section carousel">
+        <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
           <h2>New</h2>
           <div className="carousel-items">
             <div className="item" onClick={handleSong}>New Song A</div>
@@ -137,7 +142,7 @@ const Feed = () => {
         </section>
 
         {/* My Home List */}
-        <section className="feed-section list">
+        <section className={`feed-section list ${animate ? "animate" : ""}`}>
           <h2>My Home</h2>
           <ol>
             <li>Award 1</li>
@@ -149,7 +154,7 @@ const Feed = () => {
         </section>
 
         {/* Popular List */}
-        <section className="feed-section list">
+        <section className={`feed-section list ${animate ? "animate" : ""}`}>
           <h2>Popular</h2>
           <ol>
             <li>Artist 1</li>
@@ -161,7 +166,7 @@ const Feed = () => {
         </section>
 
         {/* Posts Section */}
-        <section className="feed-section posts">
+        <section className={`feed-section posts ${animate ? "animate" : ""}`}>
           <h2>Posts</h2>
           <div className="post">Follower Post 1</div>
           <div className="post">Follower Post 2</div>

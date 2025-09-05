@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './milestonesPage.scss';
 
 const MilestonesPage = () => {
   const [location, setLocation] = useState('downtown_harlem');
