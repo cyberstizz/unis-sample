@@ -87,19 +87,19 @@ $hover-silver: #D3D3D3;
   width: 100%;
   background: linear-gradient(to bottom, #1A1A1A, $bg-black);
   padding: 8px 20px;
-  height: 90px; // smaller than before
+  height: 98px; 
 
   .header-top {
     display: flex;
     align-items: center;
-    justify-content: center; // keeps the search bar in the middle
+    justify-content: center; 
     position: relative;
     margin-bottom: 6px;
 
     .logo {
       position: absolute;
       right: 50vw; 
-      top: -20px;
+      top: -17px;
       height: 120px; 
       cursor: pointer;
     }
@@ -108,6 +108,8 @@ $hover-silver: #D3D3D3;
       width: 27vw;
       min-width: 260px;
       padding: 8px 16px;
+      margin-top: 4px;
+      margin-right: 20px;
       border: none;
       border-radius: 50px;
       background: #1a1a1a;
@@ -124,6 +126,9 @@ $hover-silver: #D3D3D3;
     display: flex;
     justify-content: center;
     gap: 15px;
+    margin-top: 7px;
+    margin-right: 20px;
+
 
     .option-box {
       padding: 5px 14px;
@@ -379,18 +384,50 @@ $hover-silver: #D3D3D3;
   display: none;
 }
 
-// Mobile adjustments
-@media (max-width: 600px) {
-  .header .search-bar {
-    width: 100%;
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  header {
+    height: 50px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
-  .options-bar {
-    flex-wrap: wrap;
+  header .logo {
+    width: 60px;
+    height: 10px;
+    left: -50px;
+    top: -10px;
+    padding: 1px;
+    margin: 0;
+    flex-shrink: 0; 
   }
 
-  .feed {
-    padding: 10px;
-    margin-left: 0;
+  header .search-bar {
+    flex: 1;        /* let search bar take remaining space */
+    max-width: 70%; /* keep it from going full width */
+    margin: 0 10px;
+  }
+
+  header nav {
+    font-size: 12px;
   }
 }
+
+
+// // Mobile adjustments
+// @media (max-width: 600px) {
+//   .header .search-bar {
+//     width: 100%;
+//   }
+
+//   .options-bar {
+//     flex-wrap: wrap;
+//   }
+
+//   .feed {
+//     padding: 10px;
+//     margin-left: 0;
+//   }
+// }

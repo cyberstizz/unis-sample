@@ -1,6 +1,6 @@
 // src/components/Feed.js
 import React, { useState, useContext, useEffect } from 'react'; // Add useContext here if not
-import unisLogo from './assets/unisNoBackground.png'; // Adjust path as needed
+import unisLogo from './assets/unisNoBackground.svg'; // Adjust path as needed
 import { PlayerContext } from './context/playercontext'; // Ensure case matches file (e.g., PlayerContext.js)
 import { useNavigate } from 'react-router-dom';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
