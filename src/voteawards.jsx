@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg'; // Adjust path
 import './VoteAwards.scss';
+import Header from './header';
 
 const VoteAwards = () => {
   const [searchQuery, setSearchQuery] = useState(''); // New: Search bar state
@@ -39,6 +40,8 @@ const VoteAwards = () => {
   };
 
   return (
+    <React.Fragment>
+      <Header />
     <div className="vote-awards-container">
       <header className="header">
         <img src={unisLogo} alt="UNIS Logo" className="logo" />
@@ -119,6 +122,7 @@ const VoteAwards = () => {
         </ol>
       </section>
     </div>
+    </React.Fragment>
   );
 };
 
