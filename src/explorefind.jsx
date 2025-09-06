@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg'; // Adjust path
 import './exploreFind.scss';
+import Header from './header';
 
 const ExploreFind = () => {
   const [query, setQuery] = useState('');
@@ -23,6 +24,8 @@ const ExploreFind = () => {
   };
 
   return (
+    <React.Fragment>
+      <Header />
     <div className="explore-container">
       <header className="header">
         <img src={unisLogo} alt="UNIS Logo" className="logo" />
@@ -77,6 +80,7 @@ const ExploreFind = () => {
         </div>
       </section>
     </div>
+    </React.Fragment>
   );
 };
 

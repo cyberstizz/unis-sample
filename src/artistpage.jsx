@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg';
 import './ArtistPage.scss';
+import Header from './header';
 
 const ArtistPage = ({ isOwnProfile = false }) => {
   const [isFollowing, setIsFollowing] = useState(false);
@@ -23,6 +24,8 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const handleBioChange = (e) => setBio(e.target.value);
 
   return (
+    <React.Fragment>
+    <Header />
     <div className="artist-page-container">
       <header className="header">
         <img src={unisLogo} alt="UNIS Logo" className="logo" />
@@ -110,6 +113,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         </section>
       </div>
     </div>
+    </React.Fragment>
   );
 };
 

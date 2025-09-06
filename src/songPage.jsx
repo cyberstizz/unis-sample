@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg';
 import songArtwork from './assets/theQuiet.jpg'; 
 import './SongPage.scss';
+import Header from './header';
 
 const SongPage = () => {
   const [comment, setComment] = useState('');
@@ -36,6 +37,8 @@ const SongPage = () => {
   };
 
   return (
+    <React.Fragment>
+      <Header />
     <div className="song-page-container">
       <header className="header">
         <img src={unisLogo} alt="UNIS Logo" className="logo" />
@@ -89,6 +92,7 @@ const SongPage = () => {
         </section>
       </div>
     </div>
+     </React.Fragment>
   );
 };
 

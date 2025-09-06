@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Header from './header';
 
 const LeaderboardsPage = () => {
   const [location, setLocation] = useState('downtown_harlem');
@@ -37,7 +38,10 @@ const LeaderboardsPage = () => {
   };
 
   return (
+    <React.fragment>
+    <Header />
     <>
+
       <style>
         {`
           .leaderboards-page-container {
@@ -281,6 +285,7 @@ const LeaderboardsPage = () => {
         </main>
       </div>
     </>
+    </React.fragment>
   );
 };
 

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg'; // Adjust path
 import './Profile.scss';
+import Header from './header';
 
 const Profile = ({ isArtist = false }) => { // Prop for role; true for artist, false for listener
   const [showPopup, setShowPopup] = useState(isArtist); // Popup for artists on load
@@ -20,6 +21,8 @@ const Profile = ({ isArtist = false }) => { // Prop for role; true for artist, f
   const handleBioChange = (e) => setBio(e.target.value);
 
   return (
+    <React.Fragment>
+      <Header />
     <div className="profile-container">
       <header className="header">
         <img src={unisLogo} alt="UNIS Logo" className="logo" />
@@ -91,6 +94,7 @@ const Profile = ({ isArtist = false }) => { // Prop for role; true for artist, f
         <p>No messages yet. (MVP stub)</p>
       </section>
     </div>
+    </React.Fragment>
   );
 };
 

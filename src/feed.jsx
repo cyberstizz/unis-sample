@@ -7,6 +7,7 @@ import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import song2 from './assets/sdboomin_waitedallnight.mp3';
 import video1 from './assets/badVideo.mp4'
 import art1 from './assets/unisLogo1.jpg'; 
+import Header from './header';
 import art2 from './assets/theQuiet.jpg'; // Assuming JPG for artwork
 import './feed.scss';
 
@@ -48,19 +49,7 @@ const Feed = () => {
   return (
     <div className="feed-container">
       {/* Header */}
-      <header className="header">
-  <div className="header-top">
-    <img src={unisLogo} alt="UNIS Logo" className="logo" />
-    <input type="text" placeholder="Search artists, songs..." className="search-bar" />
-  </div>
-  <div className="options-bar">
-    <div onClick={handleClick} className="option-box">Vote</div>
-    <div onClick={handleMilestones} className="option-box">Awards</div>
-    <div onClick={handleArtist} className="option-box">Popular</div>
-    <div onClick={handleClick} className="option-box">Earnings</div>
-  </div>
-</header>
-
+     <Header />
       {/* Side Menu Trigger (Sticky) */}
       <div className="side-menu-trigger" onClick={toggleMenu}>
         <span className="arrow-icon">&#9654;</span> {/* Right arrow; rotates on open */}
