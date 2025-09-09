@@ -28,7 +28,6 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     <Header />
     <div className="artist-page-container">
       <header className="header">
-        <img src={unisLogo} alt="UNIS Logo" className="logo" />
         <div className="artist-info">
           <h1>{artist.name}</h1>
           <p className="artist-genre">{artist.genre}</p>

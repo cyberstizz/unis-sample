@@ -1,0 +1,74 @@
+// Header.scss
+
+// Variables (copy from your theme)
+$bg-black: #000000;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+
+// Header styles (copied/adapted from feed.scss)
+.header {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: linear-gradient(to bottom, #1A1A1A, $bg-black);
+  padding: 8px 20px;
+  height: 98px;
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 6px;
+
+    .logo {
+      position: absolute;
+      right: 50vw;
+      top: -17px;
+      height: 120px;
+      cursor: pointer;
+    }
+
+    .search-bar {
+      width: 27vw;
+      min-width: 260px;
+      padding: 8px 16px;
+      margin-top: 4px;
+      margin-right: 20px;
+      border: none;
+      border-radius: 50px;
+      background: #1a1a1a;
+      color: $accent-white;
+      font-size: 14px;
+
+      &::placeholder {
+        color: $text-gray;
+      }
+    }
+  }
+
+  .options-bar {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 7px;
+    margin-right: 20px;
+
+    .option-box {
+      padding: 5px 14px;
+      background: #D3D3D3; // light silver background
+      color: #000; // black text for contrast
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      font-size: 13px;
+      font-weight: bold;
+      border: 2px;
+
+      &:hover {
+        background: #C0C0C0;
+        transform: translateY(-2px);
+      }
+    }
+  }
+}

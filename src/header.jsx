@@ -1,5 +1,5 @@
 import React from "react";
-import "./feed.scss"; 
+import "./header.scss"; 
 import unisLogo from './assets/unisNoBackground.svg'; // Adjust path as needed
 import { useNavigate } from 'react-router-dom';
 

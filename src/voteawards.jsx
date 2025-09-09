@@ -44,7 +44,6 @@ const VoteAwards = () => {
       <Header />
     <div className="vote-awards-container">
       <header className="header">
-        <img src={unisLogo} alt="UNIS Logo" className="logo" />
         <h1>Vote & Awards</h1>
       </header>
 
@@ -105,6 +104,7 @@ const VoteAwards = () => {
                 <p>Votes: {nominee.votes}</p>
                 <p className="projection">{nominee.projection}</p>
               </div>
+              <button onClick={() => handleVote(nominee.id)} className="listen-button">Listen</button>
               <button onClick={() => handleVote(nominee.id)} className="vote-button">Vote</button>
             </li>
           ))}

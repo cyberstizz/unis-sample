@@ -30,10 +30,7 @@ $subtle-black: #1a1a1a;
     left: 0;
     width: 100%;
     height: 100%;
-    
-    // Combine the two background-image properties into one
     background-image: linear-gradient(to bottom, transparent, $bg-black 90%), url('./assets/randomrapper.jpeg');
-    
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -144,6 +141,24 @@ $subtle-black: #1a1a1a;
         padding: 10px 20px;
         background: transparent;
         border: 1px solid $border-silver;
+        color: $text-silver;
+        border-radius: 50px; // Pill shape
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+        
+        &:hover {
+          background: $accent-white;
+          color: $bg-black;
+          font-weight: bold;
+        }
+      }
+
+
+      .listen-button {
+        padding: 10px 20px;
+        background: transparent;
+        border: 1px solid $border-silver;
+        margin-right: 1px;
         color: $text-silver;
         border-radius: 50px; // Pill shape
         cursor: pointer;

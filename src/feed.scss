@@ -54,7 +54,7 @@ $hover-silver: #D3D3D3;
   background: $bg-black;
   color: $text-gray;
   font-family: 'Arial', sans-serif;
-  overflow: hidden; // Prevent scroll issues
+  overflow: hidden; 
   position: relative;
   align-items: center; 
   z-index: 1;
@@ -67,10 +67,7 @@ $hover-silver: #D3D3D3;
     left: 0;
     width: 100%;
     height: 100%;
-    
-    // Combine the two background-image properties into one
     background-image: linear-gradient(to bottom, transparent, $bg-black 90%), url('./assets/randomrapper.jpeg');
-    
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
