@@ -1,15 +1,15 @@
 // src/components/Feed.js
 import React, { useState, useContext, useEffect } from 'react'; // Add useContext here if not
-import unisLogo from './assets/unisNoBackground.svg'; // Adjust path as needed
-import { PlayerContext } from './context/playercontext'; // Ensure case matches file (e.g., PlayerContext.js)
+import { PlayerContext } from './context/playercontext'; 
 import { useNavigate } from 'react-router-dom';
+import Layout from './layout';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import song2 from './assets/sdboomin_waitedallnight.mp3';
 import video1 from './assets/badVideo.mp4'
 import art1 from './assets/unisLogo1.jpg'; 
-import Header from './header';
 import art2 from './assets/theQuiet.jpg'; // Assuming JPG for artwork
 import './feed.scss';
+import randomRapper from './assets/randomrapper.jpeg';
 
 const Feed = () => {
   const { playMedia } = useContext(PlayerContext); // Move here: Top-level hook call
@@ -47,9 +47,8 @@ const Feed = () => {
   };
 
   return (
-    <div className="feed-container">
-      {/* Header */}
-     <Header />
+    <Layout backgroundImage={randomRapper}> {/* random image for MVP */}
+      <div className="feed-content-wrapper">
       {/* Side Menu Trigger (Sticky) */}
       <div className="side-menu-trigger" onClick={toggleMenu}>
         <span className="arrow-icon">&#9654;</span> {/* Right arrow; rotates on open */}
@@ -162,9 +161,8 @@ const Feed = () => {
           <div className="post">Follower Post 3</div>
         </section>
       </main>
-
-      {/* Bottom Player - REMOVE this; it's now in App.js */}
-    </div>
+     </div>
+    </Layout>
   );
 };
 

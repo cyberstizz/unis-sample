@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg';
+import Layout from './layout';
 import './ArtistPage.scss';
-import Header from './header';
+import theQuiet from './assets/theQuiet.jpg';
 
 const ArtistPage = ({ isOwnProfile = false }) => {
   const [isFollowing, setIsFollowing] = useState(false);
@@ -24,10 +25,9 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const handleBioChange = (e) => setBio(e.target.value);
 
   return (
-    <React.Fragment>
-    <Header />
+    <Layout backgroundImage={theQuiet}> {/* random image for MVP */}
     <div className="artist-page-container">
-      <header className="header">
+      <header className="artist-header">
         <div className="artist-info">
           <h1>{artist.name}</h1>
           <p className="artist-genre">{artist.genre}</p>
@@ -112,7 +112,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         </section>
       </div>
     </div>
-    </React.Fragment>
+    </Layout>
   );
 };
 

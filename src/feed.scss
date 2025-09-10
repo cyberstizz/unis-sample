@@ -8,6 +8,14 @@ $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
 $hover-silver: #D3D3D3;
 
+
+//cool handwritten font from google fonts
+@import url('https://fonts.googleapis.com/css2?family=Delicious+Handrawn&display=swap');
+
+
+//and another font
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Delicious+Handrawn&display=swap');
+
 // Global
 * {
   box-sizing: border-box;
@@ -45,6 +53,16 @@ $hover-silver: #D3D3D3;
   animation-delay: 0.5s;
 }
 
+
+.feed-content-wrapper {
+  width: 100%;
+  max-width: 1200px; /* Adjust to match your design */
+  margin: 0 auto; /* Center horizontally */
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
 .feed-container {
   display: flex;
@@ -214,13 +232,36 @@ $hover-silver: #D3D3D3;
   margin-right: 0;
 
   .feed-section {
-    margin-bottom: 40px; 
+    width: 100%;
+    max-width: 1200px; /* Match feed-content-wrapper */
+    margin: 0 auto; /* Center with parent */
+    padding: 20px; 
 
     h2 {
-      color: $text-silver;
-      font-size: 28px; // Larger, bolder headings
-      font-weight: bold;
-      margin-bottom: 20px;
+      color: #918f8f; /* Silverish metallic base */
+      font-size: 45px;
+      font-family: "Delicious Handrawn", cursive;
+      font-weight: 400;
+      letter-spacing: 1.5px;
+      font-style: normal;
+      text-transform: uppercase; /* Modern touch, optional */
+      position: relative;
+      padding-bottom: 5px;
+      margin-bottom: 15px;
+      border-bottom: solid 1px #163387;
+
+    /* Metallic effect with text-shadow */
+    text-shadow: 
+      1px 1px 2px rgba(#FFFFFF, 0.3), /* Slight white highlight */
+      -1px -1px 2px rgba(#000000, 0.3); /* Subtle dark edge */
+
+    /* Blue outline effect */
+    -webkit-text-stroke: 1px #163387; /* For WebKit browsers */
+    text-outline: 1px #163387; /* Non-standard, fallback */
+    /* Fallback with box-shadow for broader support */
+    // box-shadow: 
+    //   // 0 0 0 1px #163387,
+    //   inset 0 0 0 1px #163387;
     }
 
     &.carousel {

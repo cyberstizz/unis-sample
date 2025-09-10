@@ -55,45 +55,28 @@ $subtle-black: #1a1a1a;
 
 
 .artist-page-container {
+  background: transparent;
   display: flex;
   flex-direction: column;
   align-items: center; 
   height: 100vh;
   width: 100vw;
-  background: $bg-black;
+  background: none; 
   color: $text-gray;
   overflow: hidden;
   z-index: 1;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: linear-gradient(to bottom, transparent, $bg-black 90%), url('./assets/theQuiet.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    opacity: 0.15; 
-    z-index: -1;
-    
-    filter: blur(5px);
-}
 }
 
-.header {
+.artist-header {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-
-  // .logo {
-  //   height: 80px;
-  //   margin-bottom: 10px;
-  // }
+  padding: 20px;
+  background: transparent; /* Ensure no background blocks Layout's ::before */
+  z-index: 0;
   
+
   .artist-info {
     text-align: center;
   }
@@ -146,7 +129,7 @@ $subtle-black: #1a1a1a;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  margin: 55px;
+  margin: 35px auto;
 }
 
 .stats-grid {
