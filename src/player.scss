@@ -26,9 +26,9 @@ $button-hover: #D3D3D3;
     width: 100vw;
     top: 0;
     left: 0;
-    background-color: $bg-black; // Fallback
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat;
     filter: brightness(0.8); // Fade effect
     display: flex;
     flex-direction: column;
@@ -38,6 +38,9 @@ $button-hover: #D3D3D3;
     .expanded-view {
       text-align: center;
       color: $accent-white;
+      background: transparent; // Let parent background show through
+      width: 80%; // Constrain content width
+      max-width: 800px; // Limit max width
 
       .minimize-button {
         position: absolute;
@@ -51,7 +54,7 @@ $button-hover: #D3D3D3;
       }
 
       .media-element {
-        width: 80%;
+        width: 100%;
         max-width: 600px;
         margin-bottom: 20px;
       }
@@ -70,7 +73,9 @@ $button-hover: #D3D3D3;
 
       .controls {
         display: flex;
+        justify-content: center; // Center the buttons
         gap: 20px;
+        width: 100%; // Ensure full width for centering
 
         button {
           background: transparent;
@@ -86,17 +91,20 @@ $button-hover: #D3D3D3;
   .mini-player {
     display: flex;
     align-items: center;
+    justify-content: center; // Center everything horizontally
     width: 100%;
+    gap: 20px;
 
     .mini-artwork {
       width: 50px;
       height: 50px;
       border-radius: 4px;
-      margin-right: 10px;
+      flex-shrink: 0;
     }
 
     .mini-info {
       flex: 1;
+      text-align: center;
 
       p {
         margin: 0;
@@ -108,6 +116,8 @@ $button-hover: #D3D3D3;
     .mini-controls {
       display: flex;
       gap: 10px;
+      flex-shrink: 0;
+      border: solid 2px green;
 
       button {
         background: transparent;
@@ -124,5 +134,10 @@ $button-hover: #D3D3D3;
 @media (max-width: 600px) {
   .expanded .media-element {
     width: 100%;
+  }
+
+  .mini-player {
+    gap: 10px;
+    padding: 0 10px;
   }
 }
