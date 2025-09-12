@@ -5,8 +5,10 @@ import './Player.scss';
 
 const Player = () => {
   const { isExpanded, toggleExpand, currentMedia, next, prev, audioRef } = useContext(PlayerContext);
-  const [isPlaying, setIsPlaying] = useState(false); // Track playback state
-  const mediaRef = useRef(null); // Ref for media element (audio/video)
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0); // For seekbar
+  const [duration, setDuration] = useState(0); // For seekbar
+  const mediaRef = useRef(null);
 
   useEffect(() => {
     if (currentMedia && mediaRef.current) {
@@ -14,7 +16,7 @@ const Player = () => {
       mediaRef.current
         .play()
         .then(() => setIsPlaying(true))
-        .catch(() => {}); // Handle autoplay blocks
+        .catch(() => {});
     }
   }, [currentMedia]);
 
@@ -23,21 +25,33 @@ const Player = () => {
     if (media) {
       const handlePlay = () => setIsPlaying(true);
       const handlePause = () => setIsPlaying(false);
+      const handleTimeUpdate = () => {
+        setCurrentTime(media.currentTime);
+        setDuration(media.duration || 0);
+      };
+      const handleLoadedMetadata = () => setDuration(media.duration || 0);
+
       media.addEventListener('play', handlePlay);
       media.addEventListener('pause', handlePause);
+      media.addEventListener('timeupdate', handleTimeUpdate);
+      media.addEventListener('loadedmetadata', handleLoadedMetadata);
+
       return () => {
         media.removeEventListener('play', handlePlay);
         media.removeEventListener('pause', handlePause);
+        media.removeEventListener('timeupdate', handleTimeUpdate);
+        media.removeEventListener('loadedmetadata', handleLoadedMetadata);
       };
     }
   }, [mediaRef]);
 
-  if (!currentMedia) return null; // Hide if no media
+  if (!currentMedia) return null;
 
   const isVideo = currentMedia.type === 'video';
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const handlePlayPause = (e) => {
-    e.stopPropagation(); // Prevent expanding
+    e.stopPropagation();
     if (mediaRef.current.paused) {
       mediaRef.current.play().then(() => setIsPlaying(true));
     } else {
@@ -54,6 +68,18 @@ const Player = () => {
   const handleNext = (e) => {
     e.stopPropagation();
     next();
+  };
+
+  const handleLike = (e) => {
+    e.stopPropagation();
+    // TODO: Implement like functionality
+    console.log('Like pressed');
+  };
+
+  const handleDownload = (e) => {
+    e.stopPropagation();
+    // TODO: Implement download functionality
+    console.log('Download pressed');
   };
 
   return (
@@ -85,26 +111,44 @@ const Player = () => {
           </div>
         </div>
       ) : (
-        <div className="mini-player">
-          <img src={currentMedia.artwork || '/assets/placeholder.jpg'} alt="Artwork" className="mini-artwork" />
-          <div className="mini-info">
-            <p>{currentMedia.title} - {currentMedia.artist}</p>
+        <>
+          {/* Seekbar at the top */}
+          <div className="seekbar">
+            <div className="seekbar-track">
+              <div className="seekbar-progress" style={{ width: `${progress}%` }}></div>
+              <div className="seekbar-thumb" style={{ left: `calc(${progress}% - 6px)` }}></div>
+            </div>
           </div>
-          <div className="mini-controls">
-            <button onClick={handlePrev}>◀</button>
-            <button onClick={handlePlayPause}>{mediaRef.current?.paused ? '▶' : '⏸'}</button>
-            <button onClick={handleNext}>▶</button>
+          <div className="mini-player">
+            {/* Left: Song Info (artwork + info) */}
+            <div className="song-info">
+              <img src={currentMedia.artwork || '/assets/placeholder.jpg'} alt="Artwork" className="mini-artwork" />
+              <div className="mini-info">
+                <p>{currentMedia.title} - {currentMedia.artist}</p>
+              </div>
+            </div>
+            {/* Middle: Controls */}
+            <div className="mini-controls">
+              <button onClick={handlePrev}>◀</button>
+              <button onClick={handlePlayPause}>{mediaRef.current?.paused ? '▶' : '⏸'}</button>
+              <button onClick={handleNext}>▶</button>
+            </div>
+            {/* Right: Like/Download */}
+            <div className="like-download">
+              <button onClick={handleLike}>❤️</button>
+              <button onClick={handleDownload}>⬇</button>
+            </div>
+            {isVideo ? (
+              <video ref={mediaRef} style={{ display: 'none' }}>
+                <source src={currentMedia.url} type="video/mp4" />
+              </video>
+            ) : (
+              <audio ref={mediaRef} style={{ display: 'none' }}>
+                <source src={currentMedia.url} type="audio/mpeg" />
+              </audio>
+            )}
           </div>
-          {isVideo ? (
-            <video ref={mediaRef} style={{ display: 'none' }}>
-              <source src={currentMedia.url} type="video/mp4" />
-            </video>
-          ) : (
-            <audio ref={mediaRef} style={{ display: 'none' }}>
-              <source src={currentMedia.url} type="audio/mpeg" />
-            </audio>
-          )}
-        </div>
+        </>
       )}
     </div>
   );
