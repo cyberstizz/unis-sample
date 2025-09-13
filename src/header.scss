@@ -4,6 +4,8 @@
 $bg-black: #000000;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
+$unis-blue: #163387;
+$unis-silver: #918f8f;
 
 // Header styles (copied/adapted from feed.scss)
 .header {
@@ -57,7 +59,7 @@ $accent-white: #FFFFFF;
     .option-box {
       padding: 5px 14px;
       background: #918f8f; // light silver background
-      color: #163387; // black text for contrast
+      color: $unis-blue; 
       border-radius: 50px;
       cursor: pointer;
       transition: all 0.2s ease-in-out;

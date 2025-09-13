@@ -8,6 +8,7 @@ $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
 $button-hover: #D3D3D3;
 $unis-blue: #163387;
+$unis-silver: #918f8f; 
 
 .player {
   position: fixed;
@@ -82,9 +83,33 @@ $unis-blue: #163387;
         button {
           background: transparent;
           border: none;
-          color: $accent-white;
+          color: $unis-silver; // Silverish metallic base
           font-size: 30px;
+          font-family: inherit;
+          font-weight: 400;
+          letter-spacing: 1px;
           cursor: pointer;
+
+          /* Metallic effect with text-shadow */
+          text-shadow: 
+            1px 1px 2px rgba(#FFFFFF, 0.3), /* Slight white highlight */
+            -1px -1px 2px rgba(#000000, 0.3); /* Subtle dark edge */
+
+          /* Blue outline effect */
+          -webkit-text-stroke: 1px $unis-blue; /* For WebKit browsers */
+
+          /* Fallback box-shadow for broader support */
+          box-shadow: 
+            0 0 0 1px $unis-blue; /* Thin blue stroke around text/icon */
+
+          transition: color 0.2s ease, text-shadow 0.2s ease;
+
+          &:hover {
+            color: lighten($unis-silver, 10%); // Lighter silver on hover
+            text-shadow: 
+              1px 1px 3px rgba(#FFFFFF, 0.4),
+              -1px -1px 3px rgba(#000000, 0.4);
+          }
         }
       }
     }
@@ -158,23 +183,46 @@ $unis-blue: #163387;
       }
     }
 
-    // Middle: Controls (centered via space-between)
+    // Middle: Controls (centered via space-between) - Metallic theme
     .mini-controls {
       display: flex;
       gap: 15px; 
       flex-shrink: 0;
-      width: 20vw;
 
       button {
         background: transparent;
         border: none;
-        color: $text-silver;
-        font-size: 18px; 
+        color: $unis-silver; // Silverish metallic base
+        font-size: 25px;
+        font-family: inherit; 
+        font-weight: 400;
+        letter-spacing: 0.5px;
         cursor: pointer;
+
+        /* Metallic effect with text-shadow */
+        text-shadow: 
+          1px 1px 2px rgba(#FFFFFF, 0.3), /* Slight white highlight */
+          -1px -1px 2px rgba(#000000, 0.3); /* Subtle dark edge */
+
+        /* Blue outline effect */
+        -webkit-text-stroke: 0.5px $unis-blue; /* Thinner for icons; WebKit browsers */
+
+        /* Fallback box-shadow for broader support */
+        // box-shadow: 
+        //   0 0 0 0.5px $unis-blue; /* Thin blue stroke around text/icon */
+
+        // transition: color 0.2s ease, text-shadow 0.2s ease;
+
+        &:hover {
+          color: lighten($unis-silver, 10%); // Lighter silver on hover
+          text-shadow: 
+            1px 1px 3px rgba(#FFFFFF, 0.4),
+            -1px -1px 3px rgba(#000000, 0.4);
+        }
       }
     }
 
-    // Right: Like/Download
+    // Right: Like/Download - Metallic theme
     .like-download {
       display: flex;
       gap: 10px;
@@ -183,13 +231,32 @@ $unis-blue: #163387;
       button {
         background: transparent;
         border: none;
-        color: $text-silver;
-        font-size: 16px;
+        color: $unis-silver; // Silverish metallic base
+        font-size: 18px;
+        font-family: inherit;
+        font-weight: 400;
+        letter-spacing: 0.5px;
         cursor: pointer;
-        transition: color 0.2s;
+
+        /* Metallic effect with text-shadow */
+        text-shadow: 
+          1px 1px 2px rgba(#FFFFFF, 0.3),
+          -1px -1px 2px rgba(#000000, 0.3);
+
+        /* Blue outline effect */
+        -webkit-text-stroke: 0.5px $unis-blue;
+
+        /* Fallback box-shadow for outline */
+        // box-shadow: 
+        //   0 0 0 0.5px $unis-blue;
+
+        // transition: color 0.2s ease, text-shadow 0.2s ease;
 
         &:hover {
-          color: $button-hover;
+          color: lighten($unis-silver, 10%); // Lighter silver on hover
+          text-shadow: 
+            1px 1px 3px rgba(#FFFFFF, 0.4),
+            -1px -1px 3px rgba(#000000, 0.4);
         }
       }
     }

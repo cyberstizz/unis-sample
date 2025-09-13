@@ -7,7 +7,8 @@ $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
 $hover-silver: #D3D3D3;
-
+$unis-blue: #163387;
+$unis-silver: #918f8f; 
 
 //cool handwritten font from google fonts
 @import url('https://fonts.googleapis.com/css2?family=Delicious+Handrawn&display=swap');
@@ -147,8 +148,8 @@ $hover-silver: #D3D3D3;
 
     .option-box {
       padding: 5px 14px;
-      background: #D3D3D3; // light silver background
-      color: #000; // black text for contrast
+      background: $unis-blue; 
+      color: $unis-silver; 
       border-radius: 50px;
       cursor: pointer;
       transition: all 0.2s ease-in-out;

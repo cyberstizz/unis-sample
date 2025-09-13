@@ -1,5 +1,6 @@
 // ArtistPage.scss
 
+
 // Variables (consistent with Unis theme)
 $bg-black: #000000;
 $text-silver: #C0C0C0;
@@ -64,7 +65,6 @@ $subtle-black: #1a1a1a;
   background: none; 
   color: $text-gray;
   overflow: hidden;
-  z-index: 1;
 }
 
 .artist-header {
@@ -72,26 +72,50 @@ $subtle-black: #1a1a1a;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  padding: 20px;
+  padding-bottom: 5px;
   background: transparent; /* Ensure no background blocks Layout's ::before */
   z-index: 0;
-  
+
 
   .artist-info {
     text-align: center;
   }
 
-  h1 {
+  .artist-top{
+    display: flex;
+    flex-direction: column;
+   
+  }
+
+  .artist-name{
     color: $text-silver;
-    font-size: 32px;
+    font-size:35px;
     font-weight: bold;
     margin: 0;
+  }
+
+  .artist-jurisdiction{
+      color: #918f8f; /* Silverish metallic base */
+      font-size: 20px;
+      font-family: "Delicious Handrawn", cursive;
+      font-weight: 400;
+      letter-spacing: 1.5px;
+      font-style: normal;
+      text-transform: uppercase; 
+      border-top: dotted 1px silver;
+      position: relative;
+      // padding-bottom: 5px;
+      // text-shadow: 
+      // 1px 1px 2px rgba(#FFFFFF, 0.3), /* Slight white highlight */
+      // -1px -1px 2px rgba(#000000, 0.3); /* Subtle dark edge */
+    -webkit-text-stroke: 1px #163387; /* For WebKit browsers */
+      line-height: 1.4;
+      margin-top: -5px; 
   }
   
   .artist-genre {
     font-size: 16px;
     color: $text-gray;
-    margin: 5px 0 20px;
   }
 }
 

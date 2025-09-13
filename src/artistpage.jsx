@@ -12,6 +12,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     name: 'Artist Name',
     genre: 'Rap/Hip-Hop',
     rank: '#5 in Uptown Harlem (Rap)',
+    jurisdiction: 'Uptown Harlem',
     followers: 1200,
     supporters: 450,
     bio: bio,
@@ -29,7 +30,10 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     <div className="artist-page-container">
       <header className="artist-header">
         <div className="artist-info">
-          <h1>{artist.name}</h1>
+          <div className='artist-top'>
+          <p className='artist-name'>{artist.name}</p>
+          <p className="artist-jurisdiction">{artist.jurisdiction}</p>
+          </div>
           <p className="artist-genre">{artist.genre}</p>
           <div className="follow-actions">
             <button onClick={handleFollow} className="follow-button">
