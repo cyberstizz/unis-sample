@@ -9,6 +9,7 @@ const Player = () => {
   const [currentTime, setCurrentTime] = useState(0); // For seekbar
   const [duration, setDuration] = useState(0); // For seekbar
   const mediaRef = useRef(null);
+  const [isLiked, setIsLiked] = useState(false); // New state for like toggle
 
   useEffect(() => {
     if (currentMedia && mediaRef.current) {
@@ -72,8 +73,9 @@ const Player = () => {
 
   const handleLike = (e) => {
     e.stopPropagation();
-    // TODO: Implement like functionality
-    console.log('Like pressed');
+    setIsLiked(!isLiked); // Toggle state
+    // TODO: Implement like functionality (e.g., API call)
+    console.log('Like toggled:', !isLiked);
   };
 
   const handleDownload = (e) => {
@@ -135,8 +137,10 @@ const Player = () => {
             </div>
             {/* Right: Like/Download */}
             <div className="like-download">
-              <button onClick={handleLike}>❤️</button>
-              <button onClick={handleDownload}>⬇</button>
+              <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
+                <span className="heart-icon"></span> {/* Empty span for CSS heart */}
+              </button>
+              <button onClick={handleDownload}>⬇</button> {/* Download unchanged */}
             </div>
             {isVideo ? (
               <video ref={mediaRef} style={{ display: 'none' }}>
