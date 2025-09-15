@@ -45,32 +45,12 @@ const Feed = () => {
   const handleProfile = () => {
     navigate('/profile'); 
   };
-
-  return (
+return (
     <Layout backgroundImage={randomRapper}> {/* random image for MVP */}
       <div className="feed-content-wrapper">
-      {/* Side Menu Trigger (Sticky) */}
-      <div className="side-menu-trigger" onClick={toggleMenu}>
-        <span className="arrow-icon">&#9654;</span> {/* Right arrow; rotates on open */}
-      </div>
-
-      {/* Side Menu Overlay */}
-      {isMenuOpen && (
-        <div className="side-menu-overlay" onClick={toggleMenu}>
-          <div className="side-menu" onClick={(e) => e.stopPropagation()}>
-            <ul>
-              <li>Vote</li>
-              <li>Leaderboards</li>
-              <li onClick={handleProfile}>Settings</li>
-              <li>Earnings</li>
-            </ul>
-          </div>
-        </div>
-      )}
-
-      {/* Feed Content */}
-      <main className="feed">
-        {/* Trending Carousel */}
+        {/* Feed Content */}
+        <main className="feed">
+          {/* Trending Carousel */}
         <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
           <h2>Trending</h2>
           <div className="carousel-items">

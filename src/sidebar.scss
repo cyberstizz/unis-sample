@@ -1,0 +1,121 @@
+// Sidebar.scss
+
+// Variables 
+$text-silver: #C0C0C0;
+$accent-white: #FFFFFF;
+$border-silver: #C0C0C0;
+$bg-dark: #1A1A1A;
+$unis-blue: #163387;
+$unis-silver: #918f8f; 
+
+.sidebar-trigger {
+  display: none; // Hidden on desktop
+  position: fixed;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 45px;
+  height: 60px;
+  background: rgba($text-silver, 0.1);
+  border-radius: 0 10px 10px 0;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  z-index: -10;
+  transition: transform 0.3s;
+
+  .arrow-icon {
+    color: $accent-white;
+    font-size: 24px;
+  }
+
+  // Rotate arrow on open (mobile)
+  + .sidebar.open ~ .sidebar-trigger .arrow-icon {
+    transform: rotate(180deg);
+  }
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 250px;
+  height: 100vh;
+  background: rgba($bg-dark, 0.0);
+//   background-color: #ffffff00;
+  background-color: transparent;
+  padding: 20px;
+  transition: transform 0.3s ease-in-out;
+  transform: translateX(-100%); // Hidden by default on mobile
+  z-index: -10;
+  border-right: $unis-blue;
+
+  &.open {
+    transform: translateX(0); // Slide in on mobile
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin-top: 60px; // Space below header if needed
+
+    li {
+      padding: 15px 10px;
+      cursor: pointer;
+      border-bottom: 1px solid $border-silver;
+      color: $text-silver;
+      transition: color 0.3s;
+
+      &:hover {
+        color: $accent-white;
+        background: rgba($text-silver, 0.1);
+      }
+    }
+  }
+}
+
+.sidebar-overlay {
+  display: none; // Hidden on desktop
+
+  .sidebar.open ~ & {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -4;
+  }
+}
+
+// Desktop: Always visible, no overlay/trigger
+@media (min-width: 1025px) {
+  .sidebar-trigger {
+    display: none !important;
+  }
+
+  .sidebar {
+    transform: translateX(0) !important; // Always shown
+    background: rgba($bg-dark, 0.8); // Transparent overlay
+    z-index: 3; // Below content
+  }
+
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+// Mobile: Slide-out with trigger
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+}

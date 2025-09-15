@@ -1,76 +1,117 @@
-// Header.scss
+// Sidebar.scss
 
-// Variables (copy from your theme)
-$bg-black: #000000;
-$text-gray: #A9A9A9;
+// Variables (consistent)
+$text-silver: #C0C0C0;
 $accent-white: #FFFFFF;
+$border-silver: #C0C0C0;
+$bg-dark: #1A1A1A; // Not used now
 $unis-blue: #163387;
-$unis-silver: #918f8f;
 
-// Header styles (copied/adapted from feed.scss)
-.header {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  background: linear-gradient(to bottom, #1A1A1A, $bg-black);
-  padding: 8px 20px;
-  height: 98px;
+.sidebar-trigger {
+  display: none; // Hidden on desktop
+  position: fixed;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 45px;
+  height: 60px;
+  background: rgba($text-silver, 0.1);
+  border-radius: 0 10px 10px 0;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  z-index: 10; // Same as sidebar
+  transition: transform 0.3s;
 
-  .header-top {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    margin-bottom: 6px;
+  .arrow-icon {
+    color: $accent-white;
+    font-size: 24px;
+  }
 
-    .logo {
-      position: absolute;
-      right: 50vw;
-      top: -17px;
-      height: 120px;
+  // Rotate on open (mobile)
+  + .sidebar.open ~ .sidebar-trigger .arrow-icon {
+    transform: rotate(180deg);
+  }
+}
+
+.sidebar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 250px;
+  height: 85vh;
+  background: transparent; // Fully transparent—no bg
+  padding: 20px;
+  z-index: 10; 
+  transition: transform 0.3s ease-in-out;
+  transform: translateX(-100%); // Hidden on mobile
+  border-right: solid 0.5px $unis-blue;
+
+  &.open {
+    transform: translateX(0); // Slide in
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin-top: 60px; // Space below header
+
+    li {
+      padding: 15px 10px;
       cursor: pointer;
-    }
+      border-bottom: 1px solid rgba($border-silver, 0.5); // Faint line for visibility
+      color: $text-silver;
+      transition: color 0.3s, background 0.3s;
 
-    .search-bar {
-      width: 27vw;
-      min-width: 260px;
-      padding: 8px 16px;
-      margin-top: 4px;
-      margin-right: 20px;
-      border: none;
-      border-radius: 50px;
-      background: #1a1a1a;
-      color: $accent-white;
-      font-size: 14px;
-
-      &::placeholder {
-        color: $text-gray;
+      &:hover {
+        color: $accent-white;
+        background: rgba($text-silver, 0.1); // Subtle hover bg, still transparent
       }
     }
   }
+}
 
-  .options-bar {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 7px;
-    margin-right: 20px;
+.sidebar-overlay {
+  display: none; // Hidden on desktop
 
-    .option-box {
-      padding: 5px 14px;
-      background: #918f8f; // light silver background
-      color: $unis-blue; 
-      border-radius: 50px;
-      cursor: pointer;
-      transition: all 0.2s ease-in-out;
-      font-size: 13px;
-      font-weight: bold;
-      border: 2px;
+  .sidebar.open ~ & {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: 86vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9; // Below sidebar
+  }
+}
 
-      &:hover {
-        background: #C0C0C0;
-        transform: translateY(-2px);
-      }
-    }
+// Desktop: Always visible, transparent
+@media (min-width: 1025px) {
+  .sidebar-trigger {
+    display: none !important;
+  }
+
+  .sidebar {
+    transform: translateX(0) !important; // Always shown
+    background: transparent; // No bg, image shows through
+  }
+
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+// Mobile: Slide-out
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    display: block;
   }
 }
