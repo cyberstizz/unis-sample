@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg'; // Adjust path
 import './VoteAwards.scss';
 import Header from './header';
+import Layout from './layout';
+import backimage from './assets/randomrapper.jpeg';
 
 const VoteAwards = () => {
   const [searchQuery, setSearchQuery] = useState(''); // New: Search bar state
@@ -40,13 +42,8 @@ const VoteAwards = () => {
   };
 
   return (
-    <React.Fragment>
-      <Header />
-    <div className="vote-awards-container">
-      <header className="header">
-        <h1>Vote & Awards</h1>
-      </header>
-
+       <Layout backgroundImage={backimage}> {/* random image for MVP */}
+      <div className='voteAwardsContainer'>
       {/* New: Search Bar */}
       <form className="search-form" onSubmit={handleSearch}>
         <input
@@ -79,19 +76,7 @@ const VoteAwards = () => {
             <option key={jur.value} value={jur.value}>{jur.label}</option>
           ))}
         </select>
-        {/* New: Historic Toggle */}
-        <label className="historic-toggle">
-          Historic Mode:
-          <input type="checkbox" checked={isHistoricMode} onChange={(e) => setIsHistoricMode(e.target.checked)} />
-        </label>
-        {isHistoricMode && (
-          <input
-            type="date"
-            value={historicDate}
-            onChange={(e) => setHistoricDate(e.target.value)}
-            className="historic-date"
-          />
-        )}
+      
       </div>
 
       <section className="nominees">
@@ -112,17 +97,9 @@ const VoteAwards = () => {
         </ul>
       </section>
 
-      {/* New: Mini-Leaderboard for Current Standings */}
-      <section className="leaderboard-snippet">
-        <h2>Current Leaderboard (Top 5)</h2>
-        <ol>
-          {nominees.slice(0, 5).map((nominee, index) => (
-            <li key={index}>{nominee.name} - {nominee.votes} votes</li>
-          ))}
-        </ol>
-      </section>
+    
     </div>
-    </React.Fragment>
+    </Layout>
   );
 };
 

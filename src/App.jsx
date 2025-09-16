@@ -9,7 +9,7 @@ import ExploreFind from './explorefind';
 import ArtistPage from './artistpage';
 import SongPage from './songPage';
 import Onboarding from './onboarding';
-import VoteAwards from './Voteawards';
+import VoteAwards from './voteawards';
 import Profile from './profile';
 import MilestonesPage from './milestonesPage';
 
@@ -30,7 +30,7 @@ const App = () => {
             <Route path="/song" element={<SongPage />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/voteawards" element={<VoteAwards />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Profile />} />
             <Route path="/milestones" element={<MilestonesPage />} />
           </Routes>
         </div>

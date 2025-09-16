@@ -6,7 +6,7 @@ import App from './App.jsx'
 import Feed from './feed.jsx'
 import Onboarding from './onboarding.jsx'
 import ExploreFind from './explorefind.jsx'
-import VoteAwards from './Voteawards.jsx'
+import VoteAwards from './voteawards.jsx'
 import ArtistPage from './artistpage.jsx'
 import SongPage from './songPage.jsx'
 

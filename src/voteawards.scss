@@ -9,54 +9,10 @@ $border-silver: #C0C0C0;
 $button-hover: #D3D3D3;
 $subtle-black: #1a1a1a;
 
-.vote-awards-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center; // Center content horizontally
-  height: 100vh;
-  width: 100vw;
-  background: $bg-black;
-  color: $text-gray;
-  padding: 20px 0; // Add vertical padding
-  overflow-y: auto; // Allow scrolling
-  // Your existing styles...
-  position: relative; // Important for positioning the pseudo-element
-  z-index: 1; // Ensures content is above the pseudo-element
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: linear-gradient(to bottom, transparent, $bg-black 90%), url('./assets/randomrapper.jpeg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    opacity: 0.15; 
-    z-index: -1;
-    
-    filter: blur(5px);
-}
-}
-
-.header {
-  display: flex;
-  flex-direction: column;
+.voteAwardsContainer{
   align-items: center;
-  margin-bottom: 30px;
-
-  .logo {
-    height: 80px;
-    margin-bottom: 10px;
-  }
-
-  h1 {
-    color: $text-silver;
-    font-size: 32px;
-    font-weight: bold;
-  }
+  display: flex;
+  flex-direction: column;
 }
 
 .filters {

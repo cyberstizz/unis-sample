@@ -10,6 +10,10 @@ const Header = () => {
   };
 
 
+  const handleHome = () => {
+    navigate('/')
+  }
+
   const handleMilestones = () => {
     navigate('/milestones'); // Navigate to the '/about' path
   };
@@ -33,7 +37,7 @@ const Header = () => {
   return (
    <header className="header">
      <div className="header-top">
-       <img src={unisLogo} alt="UNIS Logo" className="logo" />
+       <img onClick={handleHome} src={unisLogo} alt="UNIS Logo" className="logo" />
        <input type="text" placeholder="Search artists, songs..." className="search-bar" />
      </div>
      <div className="options-bar">
