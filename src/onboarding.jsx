@@ -1,6 +1,6 @@
 // src/components/Onboarding.js
 import React, { useState } from 'react';
-import './Onboarding.scss';
+import './onboarding.scss';
 import unisLogo from './assets/unisLogo.svg';
 
 const Onboarding = () => {
