@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg';
 import Layout from './layout';
-import './ArtistPage.scss';
+import './artistPage.scss';
 import theQuiet from './assets/theQuiet.jpg';
 
 const ArtistPage = ({ isOwnProfile = false }) => {
