@@ -1,7 +1,7 @@
 // src/components/VoteAwards.js
 import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg'; // Adjust path
-import './voteAwards.scss';
+import './voteawards.scss';
 import Header from './header';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
