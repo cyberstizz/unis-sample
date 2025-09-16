@@ -1,7 +1,7 @@
 // src/components/Player.js
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { PlayerContext } from './context/playercontext';
-import './Player.scss';
+import './player.scss';
 
 const Player = () => {
   const { isExpanded, toggleExpand, currentMedia, next, prev, audioRef } = useContext(PlayerContext);

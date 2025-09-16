@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './Sidebar.scss';
+import './sidebar.scss';
 
 const Sidebar = ({ onProfileClick }) => { // Prop for Settings click handler
   const [isOpen, setIsOpen] = useState(false); // For mobile slide-out

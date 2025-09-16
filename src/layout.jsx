@@ -1,6 +1,6 @@
 import React from 'react';
 import Header from './header'; 
-import './Layout.scss'; 
+import './layout.scss'; 
 
 const Layout = ({ children, backgroundImage }) => {
   return (

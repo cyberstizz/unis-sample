@@ -1,7 +1,7 @@
 // src/components/SongPage.js
 import React, { useState } from 'react';
 import songArtwork from './assets/theQuiet.jpg'; 
-import './SongPage.scss';
+import './songPage.scss';
 import Layout from './layout';
 
 const SongPage = () => {
