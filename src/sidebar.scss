@@ -1,12 +1,14 @@
-// Sidebar.scss
+// fonts
+@import url('https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double:wght@100..900&family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Delicious+Handrawn&display=swap');
 
-// Variables 
+// Variables (consistent)
 $text-silver: #C0C0C0;
 $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
-$bg-dark: #1A1A1A;
+$bg-dark: #1A1A1A; // Not used now
 $unis-blue: #163387;
 $unis-silver: #918f8f; 
+
 
 .sidebar-trigger {
   display: none; // Hidden on desktop
@@ -21,7 +23,7 @@ $unis-silver: #918f8f;
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  z-index: -10;
+  z-index: 10; // Same as sidebar
   transition: transform 0.3s;
 
   .arrow-icon {
@@ -29,7 +31,7 @@ $unis-silver: #918f8f;
     font-size: 24px;
   }
 
-  // Rotate arrow on open (mobile)
+  // Rotate on open (mobile)
   + .sidebar.open ~ .sidebar-trigger .arrow-icon {
     transform: rotate(180deg);
   }
@@ -37,38 +39,50 @@ $unis-silver: #918f8f;
 
 .sidebar {
   position: fixed;
-  top: 0;
+  font-size: 28px;
+  font-family: "Bitcount Grid Double", system-ui;
+  font-optical-sizing: auto;
+  font-weight: normal;
+  font-style: normal;
+  font-variation-settings:
+    "slnt" 0,
+    "CRSV" 0.5,
+    "ELSH" 0,
+    "ELXP" 0;
+  top: 98px; height: calc(100vh - 98px);
   left: 0;
   width: 250px;
   height: 100vh;
-  background: rgba($bg-dark, 0.0);
-//   background-color: #ffffff00;
-  background-color: transparent;
+  background: transparent; // Fully transparent—no bg
   padding: 20px;
+  padding-top: 2px;
+  padding-right: 5px;
+  z-index: 10;
   transition: transform 0.3s ease-in-out;
-  transform: translateX(-100%); // Hidden by default on mobile
-  z-index: -10;
-  border-right: $unis-blue;
+  transform: translateX(-100%); // Hidden on mobile
+  border-right: 0.5px solid $unis-blue;
 
   &.open {
-    transform: translateX(0); // Slide in on mobile
+    transform: translateX(0); // Slide in
   }
 
   ul {
     list-style: none;
     padding: 0;
-    margin-top: 60px; // Space below header if needed
+    margin-top: 60px; // Space below header
 
     li {
       padding: 15px 10px;
+      padding-top: 1px;
+      padding-right: 1px;
       cursor: pointer;
-      border-bottom: 1px solid $border-silver;
+      border-bottom: 1px solid rgba($unis-blue, 0.5); // Faint line for visibility
       color: $text-silver;
-      transition: color 0.3s;
+      transition: color 0.3s, background 0.3s;
 
       &:hover {
-        color: $accent-white;
-        background: rgba($text-silver, 0.1);
+        color: $unis-blue;
+        background: rgba($unis-silver, 0.1); // Subtle hover bg, still transparent
       }
     }
   }
@@ -84,11 +98,11 @@ $unis-silver: #918f8f;
     width: 100vw;
     height: 100vh;
     background: rgba(0, 0, 0, 0.5);
-    z-index: -4;
+    z-index: 9; // Below sidebar
   }
 }
 
-// Desktop: Always visible, no overlay/trigger
+// Desktop: Always visible, transparent
 @media (min-width: 1025px) {
   .sidebar-trigger {
     display: none !important;
@@ -96,8 +110,7 @@ $unis-silver: #918f8f;
 
   .sidebar {
     transform: translateX(0) !important; // Always shown
-    background: rgba($bg-dark, 0.8); // Transparent overlay
-    z-index: 3; // Below content
+    background: transparent; // No bg, image shows through
   }
 
   .sidebar-overlay {
@@ -105,7 +118,7 @@ $unis-silver: #918f8f;
   }
 }
 
-// Mobile: Slide-out with trigger
+// Mobile: Slide-out
 @media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);

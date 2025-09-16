@@ -5,29 +5,21 @@ $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
 $subtle-black: #1a1a1a;
 $button-hover: #D3D3D3;
+$unis-blue: #163387;
+$unis-silver: #918f8f; 
 
 .song-page-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
-  background: $bg-black;
+  background: transparent;
   color: $text-gray;
-  padding: 20px 0;
   overflow-y: auto;
   width: 100vw;
 }
 
-.header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 30px;
-  
-  .logo {
-    height: 80px;
-  }
-}
+
 
 .main-content-card {
   width: 100%;
@@ -36,6 +28,7 @@ $button-hover: #D3D3D3;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   padding: 30px;
+  padding-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 30px;
@@ -162,10 +155,10 @@ $button-hover: #D3D3D3;
       resize: vertical;
     }
     .submit-comment-button {
-      align-self: flex-start;
+      align-self: center;
       padding: 10px 20px;
-      background: $text-silver;
-      color: $bg-black;
+      background: $unis-blue;
+      color: $unis-silver;
       border: none;
       border-radius: 50px;
       cursor: pointer;

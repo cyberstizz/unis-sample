@@ -137,8 +137,8 @@ const Player = () => {
             </div>
             {/* Right: Like/Download */}
             <div className="like-download">
-              <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
-                <span className="heart-icon"></span> {/* Empty span for CSS heart */}
+              <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>❤️
+                <span className="heart-icon"></span> 
               </button>
               <button onClick={handleDownload}>⬇</button> {/* Download unchanged */}
             </div>

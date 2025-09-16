@@ -59,7 +59,8 @@ $unis-silver: #918f8f;
   width: 100%;
   max-width: 1200px; /* Adjust to match your design */
   margin: 0 auto; /* Center horizontally */
-  padding: 20px;
+  margin-top: 1px;
+  padding-top: 1px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -73,6 +74,7 @@ $unis-silver: #918f8f;
   background: $bg-black;
   color: $text-gray;
   font-family: 'Arial', sans-serif;
+  top: 0;
   overflow: hidden; 
   position: relative;
   align-items: center; 
@@ -104,6 +106,8 @@ $unis-silver: #918f8f;
   background: linear-gradient(to bottom, #1A1A1A, $bg-black);
   padding: 8px 20px;
   height: 98px; 
+  z-index: 100;
+  position: relative;
 
   .header-top {
     display: flex;
@@ -240,9 +244,9 @@ $unis-silver: #918f8f;
     padding: 20px; 
 
     h2 {
-      color: #918f8f; /* Silverish metallic base */
+      color: $unis-blue;
       font-size: 45px;
-      font-family: "Delicious Handrawn", cursive;
+      font-family: "Bitcount Grid Double", system-ui;
       font-weight: 400;
       letter-spacing: 1.5px;
       font-style: normal;
@@ -250,16 +254,16 @@ $unis-silver: #918f8f;
       position: relative;
       padding-bottom: 5px;
       margin-bottom: 15px;
-      border-bottom: solid 1px #163387;
+      border-bottom: solid 1px white;
 
     /* Metallic effect with text-shadow */
-    text-shadow: 
-      1px 1px 2px rgba(#FFFFFF, 0.3), /* Slight white highlight */
-      -1px -1px 2px rgba(#000000, 0.3); /* Subtle dark edge */
+    // text-shadow: 
+    //   1px 1px 2px rgba(#FFFFFF, 0.3), /* Slight white highlight */
+    //   -1px -1px 2px rgba(#000000, 0.3); /* Subtle dark edge */
 
-    /* Blue outline effect */
-    -webkit-text-stroke: 1px #163387; /* For WebKit browsers */
-    text-outline: 1px #163387; /* Non-standard, fallback */
+    // /* Blue outline effect */
+    // -webkit-text-stroke: 1px #163387; /* For WebKit browsers */
+    // text-outline: 1px #163387; /* Non-standard, fallback */
     /* Fallback with box-shadow for broader support */
     // box-shadow: 
     //   // 0 0 0 1px #163387,
@@ -281,7 +285,7 @@ $unis-silver: #918f8f;
           align-items: center;
           justify-content: center;
           border-radius: 12px; // Rounded corners
-          color: $accent-white;
+          color: $unis-silver;
           font-weight: 600;
           transition: transform 0.3s ease;
           flex-shrink: 0; // Prevent items from shrinking
@@ -323,103 +327,106 @@ $unis-silver: #918f8f;
   }
 }
 
-.bottom-player {
-  // Use Flexbox for cleaner alignment
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 15px 20px;
-  background: #1a1a1a; // A darker, solid color for prominence
-  border-top: 1px solid rgba($border-silver, 0.1); // A subtle top border
-  transition: all 0.3s ease-in-out;
-  cursor: pointer;
-  z-index: 25; // Ensure it's above other content
+// .bottom-player {
+//   // Use Flexbox for cleaner alignment
+//   display: flex;
+//   align-items: center;
+//   justify-content: space-between;
+//   width: 100%;
+//   padding: 15px 20px;
+//   background: #1a1a1a; // A darker, solid color for prominence
+//   border-top: 1px solid rgba($border-silver, 0.1); // A subtle top border
+//   transition: all 0.3s ease-in-out;
+//   cursor: pointer;
+//   z-index: 25; // Ensure it's above other content
 
-  .mini-player {
-    display: flex;
-    align-items: center;
-    width: 100%;
+//   .mini-player {
+//     display: flex;
+//     align-items: center;
+//     width: 100%;
     
-    .mini-controls {
-      display: flex;
-      align-items: center;
-      gap: 15px;
+//     .mini-controls {
+//       display: flex;
+//       align-items: center;
+//       gap: 15px;
 
-      button {
-        font-size: 24px;
-        color: $accent-white;
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        transition: transform 0.2s;
-        &:hover {
-          transform: scale(1.1);
-        }
-      }
+//       button {
+//         font-size: 24px;
+//         color: $accent-white;
+//         background: transparent;
+//         border: none;
+//         cursor: pointer;
+//         transition: transform 0.2s;
+//         &:hover {
+//           transform: scale(1.1);
+//         }
+//       }
 
-      span {
-        flex: 1;
-        text-align: left;
-        color: $text-silver;
-      }
-    }
-  }
+//       span {
+//         flex: 1;
+//         text-align: left;
+//         color: $text-silver;
+//       }
+//     }
+//   }
 
-  &.expanded {
-    height: 100vh;
-    width: 100vw;
-    z-index: 30;
+//   &.expanded {
+//     height: 100vh;
+//     width: 100vw;
+//     z-index: 30;
     
-    // Position elements within the expanded player using Flexbox
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+//     // Position elements within the expanded player using Flexbox
+//     display: flex;
+//     flex-direction: column;
+//     justify-content: center;
+//     align-items: center;
 
-    .expanded-player {
-      width: 100%;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      position: relative;
+//     .expanded-player {
+//       width: 100%;
+//       height: 100vh;
+//       display: flex;
+//       flex-direction: column;
+//       justify-content: center;
+//       align-items: center;
+//       position: relative;
 
-      .artist-bg {
-        // You'll need to set a full-screen, blurry background here for a modern effect
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        filter: blur(20px); // Blur the background image
-        opacity: 0.8;
-      }
+//       .artist-bg {
+//         // You'll need to set a full-screen, blurry background here for a modern effect
+//         position: absolute;
+//         top: 0;
+//         left: 0;
+//         width: 100%;
+//         height: 100%;
+//         object-fit: cover;
+//         filter: blur(20px); // Blur the background image
+//         opacity: 0.8;
+//       }
 
-      .controls {
-        z-index: 31; // Ensure controls are on top of the background
-        position: relative;
-        display: flex;
-        align-items: center;
-        gap: 30px;
+//       .controls {
+//         z-index: 31; // Ensure controls are on top of the background
+//         position: relative;
+//         display: flex;
+//         align-items: center;
+//         gap: 30px;
         
-        button {
-          font-size: 40px;
-        }
+//         button {
+//           font-size: 40px;
+//         }
 
-        .seek-bar {
-          width: 300px;
-          height: 6px;
-          background: rgba($text-gray, 0.5);
-          border-radius: 5px;
-          margin: 0 20px;
-        }
-      }
-    }
-  }
-}
+//         .seek-bar {
+//           width: 300px;
+//           height: 6px;
+//           background: rgba($text-gray, 0.5);
+//           border-radius: 5px;
+//           margin: 0 20px;
+//         }
+//       }
+//     }
+//   }
+// }
+
+
+
 .feed::-webkit-scrollbar {
   display: none;
 }

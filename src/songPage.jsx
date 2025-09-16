@@ -1,9 +1,8 @@
 // src/components/SongPage.js
 import React, { useState } from 'react';
-import unisLogo from './assets/unisLogo.svg';
 import songArtwork from './assets/theQuiet.jpg'; 
 import './SongPage.scss';
-import Header from './header';
+import Layout from './layout';
 
 const SongPage = () => {
   const [comment, setComment] = useState('');
@@ -37,13 +36,8 @@ const SongPage = () => {
   };
 
   return (
-    <React.Fragment>
-      <Header />
+        <Layout backgroundImage={songArtwork}>
     <div className="song-page-container">
-      <header className="header">
-        <img src={unisLogo} alt="UNIS Logo" className="logo" />
-      </header>
-      
       <div className="main-content-card">
         <section className="song-player-section">
           <img src={song.artwork} alt={`${song.title} artwork`} className="song-artwork" />
@@ -55,7 +49,7 @@ const SongPage = () => {
           </div>
           <div className="song-details">
             <h1>{song.title}</h1>
-            <p className="artist-name">By: {song.artist}</p>
+            <p className="artist-name">{song.artist}</p>
             <p className="vote-count">Votes: {song.voteCount}</p>
             <button onClick={handleVote} className="vote-button">Vote</button>
           </div>
@@ -92,7 +86,7 @@ const SongPage = () => {
         </section>
       </div>
     </div>
-     </React.Fragment>
+     </Layout>
   );
 };
 
