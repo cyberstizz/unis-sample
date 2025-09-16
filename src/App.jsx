@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { PlayerProvider } from './context/playercontext';
 import Player from './player'; 
-import Sidebar from './sidebar'; // New import
+import Sidebar from './sidebar'; 
 import Feed from './feed'; 
 import ExploreFind from './explorefind'; 
 import ArtistPage from './artistpage';
