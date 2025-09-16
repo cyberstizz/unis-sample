@@ -1,7 +1,7 @@
 // src/components/ExploreFind.js
 import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg'; // Adjust path
-import './exploreFind.scss';
+import './explorefind.scss';
 import Header from './header';
 
 const ExploreFind = () => {
