@@ -7,7 +7,7 @@ Unis is a community. once you join, you select an artist to support as a part of
 
 <p align="center">
   <br>
-  <img src="./assets/unisScreenshot.png" alt="wb" width="400">
+  <img src="./src/assets/unisScreenshot.png" alt="wb" width="400">
   <br>
 </p>
 <p align="center" >
