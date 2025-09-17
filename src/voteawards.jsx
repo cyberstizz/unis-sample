@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { PlayerContext } from './context/playercontext'; 
 import unisLogo from './assets/unisLogo.svg';
 import './voteAwards.scss';
 import Header from './header';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
+import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
+import art1 from './assets/unisLogo1.jpg'; 
+import VotingWizard from './votingWizard'; 
 
-// Dummy data to mimic backend response
+
 const dummyData = [
   {
     id: 1, name: 'LyricLoom', type: 'artist', genre: 'rap-hiphop', jurisdiction: 'uptown-harlem', votes: 124, projection: '12th place',
@@ -37,6 +40,8 @@ const VoteAwards = () => {
   const [selectedInterval, setSelectedInterval] = useState('daily');
   const [selectedJurisdiction, setSelectedJurisdiction] = useState('harlem-wide');
   const { playMedia } = useContext(PlayerContext);
+  const [showVotingWizard, setShowVotingWizard] = useState(false);
+  const [selectedNominee, setSelectedNominee] = useState(null);
 
   const intervals = ['daily', 'weekly', 'monthly', 'quarterly', 'midterm', 'annual'];
   const genres = ['rap-hiphop', 'rock', 'pop'];
@@ -57,15 +62,33 @@ const VoteAwards = () => {
       (selectedJurisdiction === 'harlem-wide' || nominee.jurisdiction === selectedJurisdiction)
     );
 
-    // Apply the search filter if a query exists
     const passesSearch = searchQuery.length === 0 || nominee.name.toLowerCase().includes(searchQuery.toLowerCase());
-
     return passesFilters && passesSearch;
   });
 
   const handleVote = (id) => {
     console.log(`Voted for ${id} in ${selectedInterval}, ${selectedJurisdiction}`);
     alert('Vote cast!');
+  };
+
+  // Handle vote button click to open the wizard
+  const handleVoteClick = (nominee) => {
+    setSelectedNominee(nominee);
+    setShowVotingWizard(true);
+  };
+
+  // Callback function for successful vote
+  const handleVoteSuccess = () => {
+    alert(`Vote for ${selectedNominee.name} confirmed!`);
+    setShowVotingWizard(false);
+    setSelectedNominee(null);
+  };
+
+  const currentFilters = {
+    selectedGenre,
+    selectedType,
+    selectedInterval,
+    selectedJurisdiction,
   };
 
   return (
@@ -113,12 +136,12 @@ const VoteAwards = () => {
                 <li key={nominee.id} className="nominee-item">
                   <div className="nominee-image" style={{ backgroundImage: `url(${nominee.imageUrl})` }}></div>
                   <div className="nominee-info">
-                    <h3>{nominee.name}</h3>
+                    <h3 id='nominee-name'>{nominee.name}</h3>
                     <p>Votes: {nominee.votes}</p>
                     <p className="projection">{nominee.projection}</p>
                   </div>
-                  <button onClick={() => {}} className="listen-button">Listen</button>
-                  <button onClick={() => handleVote(nominee.id)} className="vote-button">Vote</button>
+                  <button onClick={() => {playMedia({ type: 'song', url: song1, title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artwork: art1 })}} className="listen-button">Listen</button>
+                  <button onClick={() => handleVoteClick(nominee)} className="vote-button">Vote</button>
                 </li>
               ))
             ) : (
@@ -127,6 +150,13 @@ const VoteAwards = () => {
           </ul>
         </section>
       </div>
+
+      <VotingWizard
+        show={showVotingWizard}
+        onClose={() => setShowVotingWizard(false)}
+        onVoteSuccess={handleVoteSuccess}
+        nomineeName={selectedNominee ? selectedNominee.name : ''}
+      />
     </Layout>
   );
 };

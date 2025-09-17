@@ -8,6 +8,8 @@ $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
 $button-hover: #D3D3D3;
 $subtle-black: #1a1a1a;
+$unis-blue: #163387;
+$unis-silver: #918f8f; 
 
 .voteAwardsContainer{
   align-items: center;
@@ -86,6 +88,12 @@ $subtle-black: #1a1a1a;
       &:hover {
         transform: translateY(-5px);
         box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      #nominee-name {
+        font-family: "Bitcount Grid Double", system-ui;
+        color: $unis-blue;
+        font-size: 27px;
       }
       
       .nominee-image {
