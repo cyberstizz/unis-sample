@@ -52,13 +52,30 @@ $subtle-black: #1a1a1a;
     margin-bottom: 20px;
   }
 
+  .search-form {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .search-bar {
+    width: 100%;
+    max-width: 500px;
+    padding: 12px 20px;
+    border-radius: 50px;
+    border: 1px solid rgba($border-silver, 0.3);
+    background: $subtle-black;
+    color: $accent-white;
+    font-size: 16px;
+  }
+
   .nominee-list {
     list-style: none;
     padding: 0;
 
     .nominee-item {
       display: flex;
-      justify-content: space-between;
       align-items: center;
       background: $subtle-black;
       border-radius: 12px;
@@ -69,6 +86,16 @@ $subtle-black: #1a1a1a;
       &:hover {
         transform: translateY(-5px);
         box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+      }
+      
+      .nominee-image {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        margin-right: 20px;
+        background-size: cover;
+        background-position: center;
+        border: 2px solid $border-silver;
       }
 
       .nominee-info {
@@ -109,12 +136,11 @@ $subtle-black: #1a1a1a;
         }
       }
 
-
       .listen-button {
+        
         padding: 10px 20px;
         background: transparent;
         border: 1px solid $border-silver;
-        margin-right: 1px;
         color: $text-silver;
         border-radius: 50px; // Pill shape
         cursor: pointer;
@@ -126,6 +152,13 @@ $subtle-black: #1a1a1a;
           font-weight: bold;
         }
       }
+    }
+    
+    .no-nominees {
+      color: $text-gray;
+      text-align: center;
+      font-size: 16px;
+      margin-top: 50px;
     }
   }
 }
