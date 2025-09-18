@@ -130,7 +130,7 @@ const VoteAwards = () => {
                 <li key={nominee.id} className="nominee-item">
                   <div className="nominee-image" style={{ backgroundImage: `url(${nominee.imageUrl})` }}></div>
                   <div className="nominee-info">
-                    <h3>{nominee.name}</h3>
+                    <h3 id="nominee-name">{nominee.name}</h3>
                     <p>Votes: {nominee.votes}</p>
                     <p className="projection">{nominee.projection}</p>
                   </div>

@@ -66,12 +66,12 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, filters }) => {
 
               <label>Interval</label>
               <select value={currentFilters.selectedInterval} onChange={(e) => setCurrentFilters({...currentFilters, selectedInterval: e.target.value})} className="input-field">
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
+                <option value="daily">Day</option>
+                <option value="weekly">Week</option>
+                <option value="monthly">Month</option>
+                <option value="quarterly">Quarter</option>
                 <option value="midterm">Midterm</option>
-                <option value="annual">Annual</option>
+                <option value="annual">Year</option>
               </select>
 
               <label>Jurisdiction</label>

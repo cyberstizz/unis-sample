@@ -139,6 +139,7 @@ $blue-accent: #163387;
     justify-content: space-between;
     width: 100%;
     margin-top: 20px;
+    align-items: center;
   }
 
   .back-button, .next-button, .submit-vote-button {
@@ -157,9 +158,11 @@ $blue-accent: #163387;
     color: $text-silver;
   }
 
+ 
   .next-button {
     background: $blue-accent;
     color: $accent-white;
+    margin-left: 180px;
   }
 
   .submit-vote-button {
