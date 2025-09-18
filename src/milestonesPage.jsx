@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './milestonesPage.scss';
-import Header from './header';
+import Layout from './layout';
+import backimage from './assets/randomrapper.jpeg';
 
 const MilestonesPage = () => {
   const [location, setLocation] = useState('downtown_harlem');
@@ -40,7 +41,6 @@ const MilestonesPage = () => {
 
   return (
     <React.Fragment>
-      <Header />
     <>
       <style>
         {`
@@ -227,6 +227,7 @@ const MilestonesPage = () => {
         `}
       </style>
 
+      <Layout backgroundImage={backimage}>
       <div className="milestones-page-container">
         <header className="header">
           <h1>Milestones</h1>
@@ -283,6 +284,7 @@ const MilestonesPage = () => {
           </section>
         </main>
       </div>
+      </Layout>
     </>
    </React.Fragment>
   );

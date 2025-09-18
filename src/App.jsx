@@ -12,6 +12,8 @@ import Onboarding from './onboarding';
 import VoteAwards from './voteawards';
 import Profile from './profile';
 import MilestonesPage from './milestonesPage';
+import Leaderboards from './leaderboardsPage';
+
 
 const App = () => {
   const handleProfileClick = () => {
@@ -30,8 +32,9 @@ const App = () => {
             <Route path="/song" element={<SongPage />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/voteawards" element={<VoteAwards />} />
-            <Route path="/settings" element={<Profile />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/milestones" element={<MilestonesPage />} />
+            <Route path="/leaderboards" element={<Leaderboards />} />
           </Routes>
         </div>
         <Player />

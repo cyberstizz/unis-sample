@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Header from './header';
+import './leaderboardsPage.scss';
 
 const LeaderboardsPage = () => {
   const [location, setLocation] = useState('downtown_harlem');
