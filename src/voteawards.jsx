@@ -1,3 +1,4 @@
+// src/components/VoteAwards.js
 import React, { useState, useContext } from 'react';
 import { PlayerContext } from './context/playercontext'; 
 import unisLogo from './assets/unisLogo.svg';
@@ -8,7 +9,6 @@ import backimage from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import art1 from './assets/unisLogo1.jpg'; 
 import VotingWizard from './votingWizard'; 
-
 
 const dummyData = [
   {
@@ -66,24 +66,18 @@ const VoteAwards = () => {
     return passesFilters && passesSearch;
   });
 
-  const handleVote = (id) => {
-    console.log(`Voted for ${id} in ${selectedInterval}, ${selectedJurisdiction}`);
-    alert('Vote cast!');
-  };
-
-  // Handle vote button click to open the wizard
   const handleVoteClick = (nominee) => {
     setSelectedNominee(nominee);
     setShowVotingWizard(true);
   };
 
-  // Callback function for successful vote
-  const handleVoteSuccess = () => {
-    alert(`Vote for ${selectedNominee.name} confirmed!`);
+  const handleVoteSuccess = (id) => {
+    alert(`Vote confirmed for nominee with ID: ${id}!`);
     setShowVotingWizard(false);
     setSelectedNominee(null);
   };
 
+  // Create a single object with all filter states to pass as a prop
   const currentFilters = {
     selectedGenre,
     selectedType,
@@ -136,7 +130,7 @@ const VoteAwards = () => {
                 <li key={nominee.id} className="nominee-item">
                   <div className="nominee-image" style={{ backgroundImage: `url(${nominee.imageUrl})` }}></div>
                   <div className="nominee-info">
-                    <h3 id='nominee-name'>{nominee.name}</h3>
+                    <h3>{nominee.name}</h3>
                     <p>Votes: {nominee.votes}</p>
                     <p className="projection">{nominee.projection}</p>
                   </div>
@@ -155,7 +149,8 @@ const VoteAwards = () => {
         show={showVotingWizard}
         onClose={() => setShowVotingWizard(false)}
         onVoteSuccess={handleVoteSuccess}
-        nomineeName={selectedNominee ? selectedNominee.name : ''}
+        nominee={selectedNominee}
+        filters={currentFilters}
       />
     </Layout>
   );

@@ -2,23 +2,15 @@
 import React, { useState } from 'react';
 import './votingWizard.scss';
 
-const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, filters, allNominees }) => {
+const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, filters }) => {
   const [step, setStep] = useState(1);
   const [currentFilters, setCurrentFilters] = useState(filters);
   const [artistNameForward, setArtistNameForward] = useState('');
   const [artistNameBackward, setArtistNameBackward] = useState('');
   const [error, setError] = useState('');
 
-  // Conditional nominee lookup to prevent the error
-  const selectedNominee = allNominees && nominee
-    ? allNominees.find(n => 
-        n.genre === currentFilters.selectedGenre &&
-        n.type === currentFilters.selectedType &&
-        (currentFilters.selectedJurisdiction === 'harlem-wide' || n.jurisdiction === currentFilters.selectedJurisdiction) &&
-        n.name === nominee.name
-      )
-    : null;
-
+  // Use the 'nominee' prop directly as the source of truth
+  const selectedNominee = nominee;
   const reversedNomineeName = selectedNominee ? selectedNominee.name.split('').reverse().join('') : '';
 
   const handleNext = () => {
@@ -46,9 +38,9 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, filters, allNomin
   };
 
   const renderStep = () => {
-    // We should render a loading state or nothing if the nominee is not yet found
+    // A simple guard clause to prevent rendering until the nominee prop is defined
     if (!selectedNominee) {
-      return <p>Loading nominee data...</p>;
+      return null;
     }
 
     switch (step) {
