@@ -1,21 +1,30 @@
-// Variables (consistent with Unis theme)
+// MilestonesPage.scss
+
+// Unis theme variables
 $bg-black: #000000;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
-$subtle-black: #1a1a1a;
+$border-silver: #C0C0C0;
 $button-hover: #D3D3D3;
+$unis-blue: #163387;
+$unis-silver: #918f8f;
 
 .milestones-page-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
-  min-width: 100vw;
   background: $bg-black;
   color: $text-gray;
-  padding: 20px 0;
+  padding: 5px 0;
   overflow-y: auto;
+  font-family: sans-serif;
+  background: transparent;
+}
+
+#milestonesHeader{
+  background: transparent;
 }
 
 .header {
@@ -23,16 +32,14 @@ $button-hover: #D3D3D3;
   flex-direction: column;
   align-items: center;
   margin-bottom: 30px;
-  
-  .logo {
-    height: 80px;
-  }
-  
+  font-family: "Bitcount Grid Double", system-ui;
+
+
   h1 {
     color: $text-silver;
-    font-size: 32px;
+    font-size: 36px;
     font-weight: bold;
-    margin: 10px 0 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); // Better visibility
   }
 }
 
@@ -46,10 +53,11 @@ $button-hover: #D3D3D3;
 }
 
 .filter-card {
-  background: $subtle-black;
+  background: rgba($unis-blue, 0.8); // Slight transparency for Unis feel
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  border: 1px solid $border-silver;
 }
 
 .filter-controls {
@@ -61,7 +69,7 @@ $button-hover: #D3D3D3;
 
 .filter-select {
   background: $bg-black;
-  border: 1px solid rgba($text-silver, 0.3);
+  border: 1px solid $border-silver;
   color: $accent-white;
   padding: 10px 15px;
   border-radius: 50px;
@@ -73,6 +81,10 @@ $button-hover: #D3D3D3;
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="%23C0C0C0" d="M6 9l-4-4h8z"/></svg>');
   background-repeat: no-repeat;
   background-position: right 10px center;
+
+  &:hover {
+    border-color: $text-silver;
+  }
 }
 
 .view-button {
@@ -84,11 +96,12 @@ $button-hover: #D3D3D3;
   cursor: pointer;
   font-weight: bold;
   transition: background 0.2s, color 0.2s;
-  
+
   &:hover:not(:disabled) {
     background: $accent-white;
     color: $bg-black;
   }
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -114,54 +127,56 @@ $button-hover: #D3D3D3;
 }
 
 .result-item {
-  background: $subtle-black;
+  background: rgba(#1a1a1a, 0.8); // Unis dark with transparency
   border-radius: 12px;
   padding: 20px;
   display: flex;
   align-items: center;
   gap: 15px;
   transition: transform 0.2s, box-shadow 0.2s;
-  
+  border: 1px solid $border-silver;
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
   }
-  
-  .rank {
-    font-size: 28px;
-    font-weight: bold;
-    color: $accent-white;
-  }
-  
-  .item-artwork {
-    width: 60px;
-    height: 60px;
-    border-radius: 8px;
-  }
-  
-  .item-info {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    
-    .item-title {
-      font-size: 18px;
-      font-weight: bold;
-      color: $text-silver;
-    }
-    
-    .item-artist {
-      font-size: 14px;
-      color: $text-gray;
-    }
-  }
-  
-  .item-votes {
-    font-size: 14px;
-    color: $text-silver;
-    font-weight: bold;
-    white-space: nowrap;
-  }
+}
+
+.rank {
+  font-size: 28px;
+  font-weight: bold;
+  color: $text-silver;
+}
+
+.item-artwork {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  border: 1px solid $border-silver;
+}
+
+.item-info {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.item-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: $text-silver;
+}
+
+.item-artist {
+  font-size: 14px;
+  color: $text-gray;
+}
+
+.item-votes {
+  font-size: 14px;
+  color: $text-silver;
+  font-weight: bold;
+  white-space: nowrap;
 }
 
 // Mobile
@@ -170,18 +185,21 @@ $button-hover: #D3D3D3;
     flex-direction: column;
     align-items: center;
   }
+
   .filter-select, .view-button {
     width: 100%;
     text-align: center;
   }
+
   .result-item {
     flex-direction: column;
     text-align: center;
-    
-    .item-info {
-      text-align: center;
-    }
   }
+
+  .item-info {
+    text-align: center;
+  }
+
   .item-artwork {
     width: 80px;
     height: 80px;

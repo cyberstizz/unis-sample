@@ -5,6 +5,8 @@ $accent-white: #FFFFFF;
 $subtle-black: #1a1a1a;
 $red-error: #ff4d4d;
 $blue-accent: #163387;
+$unis-blue: #163387;
+$unis-silver: #918f8f; 
 
 .voting-wizard-overlay {
   position: fixed;
@@ -42,6 +44,10 @@ $blue-accent: #163387;
     font-size: 14px;
     margin-bottom: 20px;
     color: $text-silver;
+  }
+
+  .nominee-name{
+    color: $unis-blue;
   }
 
   .close-button {

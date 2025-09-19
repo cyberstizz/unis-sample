@@ -20,6 +20,10 @@ const Sidebar = ({ onProfileClick }) => {
     navigate('/milestones'); 
   };
 
+   const handleMap = () => {
+    navigate('/find'); 
+  };
+
 
   const handleLeaderboards = () => {
     navigate('/leaderboards'); 
@@ -48,7 +52,7 @@ const Sidebar = ({ onProfileClick }) => {
       <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
         <ul>
           <li onClick={handleClick}>Vote</li> {/* Add navigation if needed */}
-          <li onClick={handleMilestones}>Find</li>
+          <li onClick={handleMap}>Find</li>
           <li onClick={handleLeaderboards}>Leaderboards</li>
           <li onClick={handleProfile}>Settings</li>
           <li>Earnings</li>

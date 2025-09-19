@@ -48,7 +48,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, filters }) => {
         return (
           <div className="step-content">
             <h2>Confirm Your Vote For:</h2>
-            <h3 className='nominee-name'>{selectedNominee.name}</h3>
+            <h2 className='nominee-name'>{selectedNominee.name}</h2>
             <p className="wizard-intro">Please review your selections below. You can make changes before you confirm.</p>
             
             <div className="filter-selection-grid">

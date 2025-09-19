@@ -30,16 +30,21 @@ const Feed = () => {
   };
 
 
+  const handleLeaderboards = () => {
+    navigate('/leaderboards'); 
+  };
+
+
   const handleMilestones = () => {
-    navigate('/milestones'); // Navigate to the '/about' path
+    navigate('/milestones'); 
   };
 
   const handleArtist = () => {
-    navigate('/artist'); // Navigate to the '/about' path
+    navigate('/artist'); 
   };
 
   const handleSong = () => {
-    navigate('/song'); // Navigate to the '/about' path
+    navigate('/song'); 
   };
 
   const handleProfile = () => {

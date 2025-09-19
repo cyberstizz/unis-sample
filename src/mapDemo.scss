@@ -1,0 +1,113 @@
+// FindPage.scss
+
+// Variables (Unis theme)
+$bg-black: #000000;
+$text-silver: #C0C0C0;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+$border-silver: #C0C0C0;
+$unis-blue: #163387;
+
+.find-page-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background: transparent;
+  color: $text-gray;
+  padding: 20px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+#findHeader{
+  background: transparent;
+}
+
+  h1 {
+    color: $text-silver;
+    font-size: 32px;
+  }
+
+
+.filters {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+
+  .filter-select {
+    padding: 10px;
+    background: $bg-black;
+    border: 1px solid $border-silver;
+    color: $accent-white;
+    border-radius: 8px;
+  }
+}
+
+.map-container {
+  width: 85%;
+  max-width: 820px;
+  height: 490px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 30px;
+  background: transparent;
+}
+
+.results-section {
+  display: flex;
+  width: 100%;
+  max-width: 900px;
+  gap: 20px;
+
+  .column {
+    flex: 1;
+    background: #1a1a1a;
+    padding: 20px;
+    border-radius: 12px;
+
+    h2 {
+      color: $text-silver;
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+
+      li {
+        padding: 10px 0;
+        border-bottom: 1px solid $border-silver;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .artwork {
+          width: 40px;
+          height: 40px;
+          border-radius: 4px;
+        }
+      }
+    }
+  }
+}
+
+// Mobile
+@media (max-width: 600px) {
+  .filters {
+    flex-direction: column;
+  }
+
+  .map-container {
+    width: 100%;
+    height: 300px;
+  }
+
+  .results-section {
+    flex-direction: column;
+  }
+}

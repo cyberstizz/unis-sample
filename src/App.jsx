@@ -13,6 +13,7 @@ import VoteAwards from './voteawards';
 import Profile from './profile';
 import MilestonesPage from './milestonesPage';
 import Leaderboards from './leaderboardsPage';
+import MapDemo from './mapDemo';
 
 
 const App = () => {
@@ -35,6 +36,7 @@ const App = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/milestones" element={<MilestonesPage />} />
             <Route path="/leaderboards" element={<Leaderboards />} />
+            <Route path="/find" element={<MapDemo />} />
           </Routes>
         </div>
         <Player />
