@@ -84,7 +84,7 @@ const MapDemo = () => {
                         outline: 'none',
                       },
                       hover: {
-                        fill: geo.properties.name === "New York" ? '#0D2359' : '#ddd',
+                        fill: '#0D2359',
                         outline: 'none',
                       },
                       pressed: { fill: '#0A1C4A', outline: 'none' },
