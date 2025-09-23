@@ -1,10 +1,13 @@
 // src/components/SongPage.js
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react'; // Add useContext
 import songArtwork from './assets/theQuiet.jpg';
 import './songPage.scss';
 import Layout from './layout';
+import { PlayerContext } from './context/playercontext'; // Import context
+import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3'; // Placeholder song (adjust path)
 
 const SongPage = () => {
+  const { playMedia } = useContext(PlayerContext); // Get playMedia from context
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState([]);
 
@@ -35,6 +38,15 @@ const SongPage = () => {
     console.log('Voted for song!');
   };
 
+  const handlePlay = () => {
+    playMedia(
+      { type: 'song', url: sampleSong, title: song.title, artist: song.artist, artwork: song.artwork },
+      [ // Sample playlist (optional)
+        { type: 'song', url: sampleSong, title: song.title, artist: song.artist, artwork: song.artwork },
+      ]
+    );
+  };
+
   const handleCommentSubmit = (e) => {
     e.preventDefault();
     if (comment.trim()) {
@@ -58,19 +70,21 @@ const SongPage = () => {
             className="song-artwork"
           />
 
-          {/* Play Button (global player controls playback) */}
-          <button className="play-button">▶️ Play</button>
+          {/* Play and Vote Buttons (side by side) */}
+          <div className="follow-actions">
+            <button onClick={handlePlay} className="play-button">Play</button>
+            <button onClick={handleVote} className="vote-button">Vote</button>
+          </div>
 
           {/* Artist & Jurisdiction */}
-          <p className="artist-name">Artist: {song.artist}</p>
-          <p className="jurisdiction">Jurisdiction: {song.jurisdiction}</p>
+          <p className="artist-name">{song.artist}</p>
+          <p className="jurisdiction">{song.jurisdiction}</p>
 
           {/* Play Counts & Votes */}
           <div className="stats">
             <p>Total Plays: {song.playCount}</p>
-            <p>Today’s Plays: {song.todayPlayCount}</p>
+            <p>Plays Today: {song.todayPlayCount}</p>
             <p>Votes: {song.voteCount}</p>
-            <button onClick={handleVote} className="vote-button">Vote</button>
           </div>
 
           {/* About Section */}

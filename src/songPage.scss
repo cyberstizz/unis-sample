@@ -1,209 +1,253 @@
-// SongPage.scss
+// songPage.scss
+
+// Variables (Unis theme)
 $bg-black: #000000;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
-$subtle-black: #1a1a1a;
+$border-silver: #C0C0C0;
 $button-hover: #D3D3D3;
-$unis-blue: #163387;
-$unis-silver: #918f8f; 
 
 .song-page-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
-  background: transparent;
+  background: $bg-black;
   color: $text-gray;
-  overflow-y: auto;
-  width: 100vw;
+  padding: 20px;
 }
-
-
 
 .main-content-card {
   width: 100%;
-  max-width: 700px;
-  background: $subtle-black;
+  max-width: 800px;
+  background: rgba(#1a1a1a, 0.8);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  padding: 30px;
-  padding-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  text-align: center; // Center all text/content
 }
 
-.song-player-section {
+.track-title {
+  color: $text-silver;
+  font-size: 48px; // Larger title
+  margin-bottom: 20px;
+}
+
+.song-artwork {
+  width: 100%;
+  max-width: 400px; // Contain size
+  height: auto;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.follow-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.play-button,
+.vote-button {
+  padding: 12px 30px;
+  background: transparent;
+  border: 1px solid $border-silver;
+  color: $text-silver;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  font-weight: bold;
+
+  &:hover {
+    background: $accent-white;
+    color: $bg-black;
+  }
+}
+
+.artist-name,
+.jurisdiction {
+  font-size: 32px; // Twice original (assuming ~16px base)
+  color: $text-silver;
+  margin: 10px 0;
+}
+
+.stats {
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
-  
-  .song-artwork {
-    width: 250px;
-    height: 250px;
-    object-fit: cover;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  }
-  
-  .player-controls {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    width: 100%;
-    max-width: 400px;
-    margin-bottom: 20px;
-    
-    .play-button {
-      background: $accent-white;
-      color: $bg-black;
-      border: none;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      font-size: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: transform 0.2s;
-      
-      &:hover {
-        transform: scale(1.1);
-      }
-    }
-    
-    .seek-bar-container {
-      flex: 1;
-      height: 6px;
-      background: rgba($text-gray, 0.3);
-      border-radius: 3px;
-    }
-    .seek-bar {
-      width: 0%; // Dynamic width based on playback
-      height: 100%;
-      background: $accent-white;
-      border-radius: 3px;
-    }
-  }
+  font-size: 32px; // Larger stats
+  color: $text-gray;
+  margin-bottom: 30px;
 
-  .song-details {
-    h1 {
-      font-size: 32px;
-      font-weight: bold;
-      margin: 0 0 5px 0;
-      color: $text-silver;
-    }
-    .artist-name {
-      font-size: 18px;
-      color: $text-gray;
-      margin: 0 0 10px 0;
-    }
-    .vote-count {
-      font-size: 16px;
-      color: $text-silver;
-      margin: 0 0 20px 0;
-    }
-    .vote-button {
-      padding: 12px 30px;
-      background: transparent;
-      border: 1px solid $text-silver;
-      color: $text-silver;
-      border-radius: 50px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.2s, color 0.2s;
-      
-      &:hover {
-        background: $accent-white;
-        color: $bg-black;
-      }
-    }
+  p {
+    margin: 5px 0;
   }
 }
 
 .description-section,
-.credits-section,
-.comments-section {
+.credits-section {
+  margin-bottom: 30px;
+
   h2 {
     color: $text-silver;
-    font-size: 24px;
-    border-bottom: 2px solid rgba($text-silver, 0.2);
-    padding-bottom: 10px;
-    margin-bottom: 15px;
+    font-size: 36px; // Larger headers
+  }
+
+  p {
+    font-size: 24px; // Larger text
+  }
+}
+
+.photos-section {
+  margin-bottom: 30px;
+
+  h2 {
+    color: $text-silver;
+    font-size: 36px;
+  }
+
+  .photo-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+
+    figure {
+      text-align: center;
+
+      img {
+        width: 100%;
+        max-width: 300px; // Smaller, contained photos
+        height: auto;
+        border-radius: 8px;
+      }
+
+      figcaption {
+        margin-top: 10px;
+        font-size: 18px;
+        color: $text-gray;
+      }
+    }
+  }
+}
+
+.videos-section {
+  margin-bottom: 30px;
+
+  h2 {
+    color: $text-silver;
+    font-size: 36px;
+  }
+
+  .video-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+
+    .video-wrapper {
+      width: 100%;
+      max-width: 600px;
+
+      iframe {
+        width: 100%;
+        height: 315px;
+        border-radius: 8px;
+      }
+
+      p {
+        text-align: center;
+        margin-top: 10px;
+        font-size: 18px;
+      }
+    }
   }
 }
 
 .comments-section {
+  h2 {
+    color: $text-silver;
+    font-size: 36px;
+  }
+
   .comment-form {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    align-items: center;
     margin-bottom: 20px;
-    
+
     textarea {
       width: 100%;
-      height: 80px;
+      max-width: 600px;
+      height: 100px;
       background: $bg-black;
-      border: 1px solid rgba($text-gray, 0.5);
-      border-radius: 8px;
+      border: 1px solid $border-silver;
       color: $accent-white;
       padding: 10px;
-      resize: vertical;
+      border-radius: 8px;
+      margin-bottom: 10px;
     }
+
     .submit-comment-button {
-      align-self: center;
       padding: 10px 20px;
-      background: $unis-blue;
-      color: $unis-silver;
-      border: none;
+      background: transparent;
+      border: 1px solid $border-silver;
+      color: $text-silver;
       border-radius: 50px;
       cursor: pointer;
-      font-weight: bold;
-      transition: background 0.2s;
-      
       &:hover {
         background: $button-hover;
       }
     }
   }
-  
+
   .comments-list {
     list-style: none;
     padding: 0;
+
+    .comment-item {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
   }
-  
-  .comment-item {
-    background: rgba($text-silver, 0.05);
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    font-size: 14px;
-  }
-  
+
   .no-comments {
     text-align: center;
     font-style: italic;
-    color: $text-gray;
   }
 }
 
-// Mobile
+// Mobile adjustments
 @media (max-width: 600px) {
   .main-content-card {
-    padding: 20px;
+    padding: 10px;
   }
-  .song-player-section .song-artwork {
-    width: 200px;
-    height: 200px;
+
+  .track-title {
+    font-size: 36px;
   }
-  .player-controls {
+
+  .artist-name, .jurisdiction, .stats p {
+    font-size: 24px;
+  }
+
+  .description-section h2, .credits-section h2, .photos-section h2, .videos-section h2, .comments-section h2 {
+    font-size: 28px;
+  }
+
+  .description-section p, .credits-section p {
+    font-size: 18px;
+  }
+
+  .photo-gallery figure img {
     max-width: 100%;
   }
-  .song-details h1 {
-    font-size: 28px;
+
+  .video-gallery .video-wrapper iframe {
+    height: 200px;
   }
 }
