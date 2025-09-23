@@ -13,7 +13,7 @@ $button-hover: #D3D3D3;
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
-  background: $bg-black;
+  background: transparent;
   color: $text-gray;
   padding: 20px;
 }
@@ -21,7 +21,7 @@ $button-hover: #D3D3D3;
 .main-content-card {
   width: 100%;
   max-width: 800px;
-  background: rgba(#1a1a1a, 0.8);
+  background: rgba(#1a1a1a, 0.6);
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);

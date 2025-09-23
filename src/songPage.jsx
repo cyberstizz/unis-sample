@@ -5,11 +5,14 @@ import './songPage.scss';
 import Layout from './layout';
 import { PlayerContext } from './context/playercontext'; // Import context
 import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3'; // Placeholder song (adjust path)
+import VotingWizard from './VotingWizard'; // Import VotingWizard
 
 const SongPage = () => {
   const { playMedia } = useContext(PlayerContext); // Get playMedia from context
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState([]);
+  const [showVotingWizard, setShowVotingWizard] = useState(false); // State for wizard
+  const [selectedNominee, setSelectedNominee] = useState(null); // State for nominee
 
   const song = {
     title: 'Song Title',
@@ -34,8 +37,20 @@ const SongPage = () => {
     ],
   };
 
+  const handleVoteSuccess = (id) => {
+    // Handle successful vote (e.g., update UI, API call)
+    console.log(`Vote confirmed for ID: ${id}`);
+    setShowVotingWizard(false);
+  };
+
   const handleVote = () => {
-    console.log('Voted for song!');
+    // Set the song as nominee and open wizard
+    setSelectedNominee({
+      id: 'song-id-placeholder', // Replace with real ID
+      name: song.title, // Use title as "name" for wizard
+      // Add other needed fields if wizard expects
+    });
+    setShowVotingWizard(true);
   };
 
   const handlePlay = () => {
@@ -72,18 +87,18 @@ const SongPage = () => {
 
           {/* Play and Vote Buttons (side by side) */}
           <div className="follow-actions">
-            <button onClick={handlePlay} className="play-button">Play</button>
+            <button onClick={handlePlay} className="play-button">▶️ Play</button>
             <button onClick={handleVote} className="vote-button">Vote</button>
           </div>
 
           {/* Artist & Jurisdiction */}
-          <p className="artist-name">{song.artist}</p>
-          <p className="jurisdiction">{song.jurisdiction}</p>
+          <p className="artist-name">Artist: {song.artist}</p>
+          <p className="jurisdiction">Jurisdiction: {song.jurisdiction}</p>
 
           {/* Play Counts & Votes */}
           <div className="stats">
             <p>Total Plays: {song.playCount}</p>
-            <p>Plays Today: {song.todayPlayCount}</p>
+            <p>Today’s Plays: {song.todayPlayCount}</p>
             <p>Votes: {song.voteCount}</p>
           </div>
 
@@ -156,6 +171,20 @@ const SongPage = () => {
 
         </div>
       </div>
+
+      {/* Voting Wizard */}
+      <VotingWizard
+        show={showVotingWizard}
+        onClose={() => setShowVotingWizard(false)}
+        onVoteSuccess={handleVoteSuccess}
+        nominee={selectedNominee}
+        filters={{ /* Pass current filters; hardcode or from state/context */
+          selectedGenre: 'rap-hiphop', // Example; adjust as needed
+          selectedType: 'song',
+          selectedInterval: 'daily',
+          selectedJurisdiction: song.jurisdiction.toLowerCase().replace(' ', '-'),
+        }}
+      />
     </Layout>
   );
 };
