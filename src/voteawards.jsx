@@ -2,7 +2,7 @@
 import React, { useState, useContext } from 'react';
 import { PlayerContext } from './context/playercontext'; 
 import unisLogo from './assets/unisLogo.svg';
-import './voteAwards.scss';
+import './voteawards.scss';
 import Header from './header';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
