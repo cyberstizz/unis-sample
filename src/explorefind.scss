@@ -26,7 +26,6 @@ $subtle-black: #1a1a1a;
   overflow-y: auto; // Allow scrolling for the entire container
 }
 
-// ... (Header styles - keep as is, it's good)
 
 .search-form {
   display: flex;
@@ -57,7 +56,7 @@ $subtle-black: #1a1a1a;
     gap: 15px; // Increase gap for spacing
     margin-bottom: 20px;
     width: 90%; // Ensure filters also stay within the form's width
-    
+
     .filter-select {
       padding: 10px 15px;
       background: $subtle-black;
@@ -76,10 +75,12 @@ $subtle-black: #1a1a1a;
 
   .search-button {
     padding: 12px 30px;
+    height: 50%;
+    width: 50%;
     background: $text-silver;
     color: $bg-black;
     font-weight: bold;
-    border: none;
+    border: solid 2px green;
     border-radius: 50px;
     cursor: pointer;
     transition: transform 0.2s, background 0.2s;

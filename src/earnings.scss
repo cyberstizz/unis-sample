@@ -1,0 +1,85 @@
+// Earnings.scss
+
+// Unis theme variables
+$bg-black: #000000;
+$text-silver: #C0C0C0;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+$border-silver: #C0C0C0;
+$unis-blue: #163387;
+
+.earnings-page-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background: $bg-black;
+  color: $text-gray;
+  padding: 20px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+
+  h1 {
+    color: $unis-blue;
+    font-size: 36px;
+    font-weight: bold;
+  }
+}
+
+.content-wrapper {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.graph-section {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.info-box {
+  background: $unis-blue; // Unis blue for info box
+  border-radius: 12px;
+  padding: 20px;
+  color: $accent-white;
+  text-align: center;
+
+  h2 {
+    font-size: 24px;
+    margin-bottom: 15px;
+  }
+
+  .details {
+    p {
+      font-size: 18px;
+      margin: 5px 0;
+    }
+  }
+
+  .no-selection {
+    font-style: italic;
+    color: $text-gray;
+  }
+}
+
+// Mobile
+@media (max-width: 600px) {
+  .header h1 {
+    font-size: 28px;
+  }
+
+  .graph-section {
+    padding: 10px;
+  }
+
+  .info-box {
+    padding: 15px;
+  }
+}

@@ -10,11 +10,15 @@ $button-hover: #D3D3D3;
 $unis-blue: #163387;
 $unis-silver: #918f8f; 
 
+*{
+  border: solid 2px green;
+}
+
 .player {
   position: fixed;
   bottom: 0;
   left: 0;
-  width: 100%;
+  width: 100vw;
   background: #1A1A1A;
   padding: 10px 10px 0 10px; // Top padding reduced for seekbar
   display: flex;
@@ -41,8 +45,8 @@ $unis-silver: #918f8f;
     .expanded-view {
       text-align: center;
       color: black;
-      width: 80%;
-      max-width: 800px;
+      width: 80vw;
+      max-width: 80vw;
 
       .minimize-button {
         position: absolute;

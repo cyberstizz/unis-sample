@@ -21,10 +21,9 @@ const Profile = ({ isArtist = false }) => { // Prop for role; true for artist, f
   const handleBioChange = (e) => setBio(e.target.value);
 
   return (
-    <React.Fragment>
-      <Header />
     <div className="profile-container">
-      <header className="header">
+      <div className='profile-content'>
+      <header className="profile-header">
         <img src={unisLogo} alt="UNIS Logo" className="logo" />
         <h1>{profileData.name}'s Profile</h1>
       </header>
@@ -75,7 +74,7 @@ const Profile = ({ isArtist = false }) => { // Prop for role; true for artist, f
         </>
       ) : (
         <section className="supported-artists">
-          <h2>Supported Artists</h2>
+          <h2>Supported Artist</h2>
           <ul>
             {profileData.supportedArtists.map((artist, index) => <li key={index}>{artist}</li>)}
           </ul>
@@ -93,8 +92,8 @@ const Profile = ({ isArtist = false }) => { // Prop for role; true for artist, f
         <h2>Messages</h2>
         <p>No messages yet. (MVP stub)</p>
       </section>
+      </div>
     </div>
-    </React.Fragment>
   );
 };
 

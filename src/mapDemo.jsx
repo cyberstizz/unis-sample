@@ -57,8 +57,10 @@ const MapDemo = () => {
             <option value="artist">Artist</option>
             <option value="song">Song</option>
           </select>
+          
         </div>
-
+        <button>Random</button>
+        <p className="map-caption">Click a state to see top artists & songs</p>
         {/* Map Box */}
         <div className="map-box">
           <ComposableMap
@@ -94,7 +96,6 @@ const MapDemo = () => {
               }
             </Geographies>
           </ComposableMap>
-          <p className="map-caption">Click a state to see top artists & songs</p>
         </div>
 
         <div className="results-section">

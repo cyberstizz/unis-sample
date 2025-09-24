@@ -1,4 +1,3 @@
-// src/components/Player.js
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { PlayerContext } from './context/playercontext';
 import './player.scss';
@@ -6,10 +5,10 @@ import './player.scss';
 const Player = () => {
   const { isExpanded, toggleExpand, currentMedia, next, prev, audioRef } = useContext(PlayerContext);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0); // For seekbar
-  const [duration, setDuration] = useState(0); // For seekbar
+  const [currentTime, setCurrentTime] = useState(0); 
+  const [duration, setDuration] = useState(0); 
   const mediaRef = useRef(null);
-  const [isLiked, setIsLiked] = useState(false); // New state for like toggle
+  const [isLiked, setIsLiked] = useState(false); 
 
   useEffect(() => {
     if (currentMedia && mediaRef.current) {
@@ -73,14 +72,12 @@ const Player = () => {
 
   const handleLike = (e) => {
     e.stopPropagation();
-    setIsLiked(!isLiked); // Toggle state
-    // TODO: Implement like functionality (e.g., API call)
+    setIsLiked(!isLiked); 
     console.log('Like toggled:', !isLiked);
   };
 
   const handleDownload = (e) => {
     e.stopPropagation();
-    // TODO: Implement download functionality
     console.log('Download pressed');
   };
 

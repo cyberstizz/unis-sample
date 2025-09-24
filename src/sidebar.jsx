@@ -15,6 +15,11 @@ const Sidebar = ({ onProfileClick }) => {
     navigate('/voteawards'); 
   };
 
+   const handleEarnings = () => {
+    navigate('/earnings'); 
+  };
+
+
 
   const handleMilestones = () => {
     navigate('/milestones'); 
@@ -55,7 +60,7 @@ const Sidebar = ({ onProfileClick }) => {
           <li onClick={handleMap}>Find</li>
           <li onClick={handleLeaderboards}>Leaderboards</li>
           <li onClick={handleProfile}>Settings</li>
-          <li>Earnings</li>
+          <li onClick={handleEarnings}>Earnings</li>
         </ul>
       </nav>
 

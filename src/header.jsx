@@ -6,7 +6,12 @@ import { useNavigate } from 'react-router-dom';
 const Header = () => {
 
   const handleClick = () => {
-    navigate('/voteawards'); // Navigate to the '/about' path
+    navigate('/voteawards'); 
+  };
+
+
+  const handleEarnings = () => {
+    navigate('/earnings'); 
   };
 
 
@@ -44,7 +49,7 @@ const Header = () => {
        <div onClick={handleClick} className="option-box">Vote</div>
        <div onClick={handleMilestones} className="option-box">Awards</div>
        <div onClick={handleArtist} className="option-box">Popular</div>
-       <div onClick={handleClick} className="option-box">Earnings</div>
+       <div onClick={handleEarnings} className="option-box">Earnings</div>
      </div>
    </header>
   );

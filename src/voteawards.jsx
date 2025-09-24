@@ -49,7 +49,7 @@ const VoteAwards = () => {
   const jurisdictions = [
     { value: 'uptown-harlem', label: 'Uptown Harlem' },
     { value: 'downtown-harlem', label: 'Downtown Harlem' },
-    { value: 'harlem-wide', label: 'Harlem-wide' },
+    { value: 'Harlem', label: 'Harlem' },
   ];
 
   // Corrected filtering logic

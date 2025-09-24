@@ -14,6 +14,7 @@ import Profile from './profile';
 import MilestonesPage from './milestonesPage';
 import Leaderboards from './leaderboardsPage';
 import MapDemo from './mapDemo';
+import Earnings from './earnings';
 
 
 const App = () => {
@@ -37,6 +38,7 @@ const App = () => {
             <Route path="/milestones" element={<MilestonesPage />} />
             <Route path="/leaderboards" element={<Leaderboards />} />
             <Route path="/find" element={<MapDemo />} />
+            <Route path="/earnings" element={<Earnings />} />
           </Routes>
         </div>
         <Player />

@@ -1,111 +1,182 @@
-// Profile.scss
+// Profile.scss (updated)
 
-// Variables (consistent with Unis theme)
+/* Theme variables */
 $bg-black: #000000;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
 $button-hover: #D3D3D3;
+$subtle-black: #1a1a1a;
+$max-width: 760px;
+
+* { box-sizing: border-box; }
 
 .profile-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 100vw;
+  width: 100vw !important;
+  min-height: 100vh;
   background: $bg-black;
   color: $text-gray;
-  padding: 20px;
+  padding: 32px 20px;
+  display: flex;
+  justify-content: center;   /* center the inner column horizontally */
+  align-items: flex-start;   /* start at top */
   overflow-y: auto;
+  position: relative;
+  z-index: 1;
 }
 
-.header {
+/* Constrained & centered inner column */
+.profile-content {
+  width: 100%;
+  max-width: $max-width;
+  margin: 0 auto !important;   /* strong centering in case parent styles interfere */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 40px;
+}
+
+/* Header */
+.profile-header {
+  width: 100%;
   text-align: center;
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
 
   .logo {
-    height: 100px;
+    height: 92px;
+    width: auto;
+    display: block;
+    object-fit: contain;
   }
 
   h1 {
     color: $text-silver;
     font-size: 28px;
+    margin: 0;
+    font-weight: 700;
   }
 }
 
+/* Popup */
 .popup {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: #1A1A1A;
+  background: $subtle-black;
   padding: 20px;
-  border-radius: 8px;
-  text-align: center;
-  z-index: 10;
+  border-radius: 10px;
+  z-index: 1200;
+  width: min(92%, 480px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
 
-  p {
-    color: $text-silver;
-  }
+  p { color: $text-silver; margin: 8px 0; }
 
   button {
     background: $text-silver;
     color: $bg-black;
     border: none;
-    padding: 10px;
-    border-radius: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
     cursor: pointer;
+    font-weight: 700;
   }
 }
 
-.bio-section, .vote-history, .stats, .messaging-settings, .revenue, .supported-artists, .settings, .messages {
-  margin-bottom: 30px;
+/* Sections: center content and constrain width */
+.section {
+  width: 100%;
+}
+.bio-section,
+.vote-history,
+.stats,
+.messaging-settings,
+.revenue,
+.supported-artists,
+.settings,
+.messages {
+  @extend .section;
+  background: rgba(255,255,255,0.01);
+  padding: 16px;
+  border-radius: 10px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
 
   h2 {
     color: $text-silver;
-    font-size: 24px;
+    margin: 0;
+    font-size: 20px;
+    width: 100%;
+    text-align: left;
   }
 
   .bio-edit {
     width: 100%;
-    height: 100px;
+    min-height: 100px;
     background: $bg-black;
-    border: 1px solid $border-silver;
+    border: 1px solid rgba($border-silver, 0.2);
     color: $accent-white;
-    padding: 10px;
+    padding: 12px;
     border-radius: 8px;
+    resize: vertical;
   }
 
-  ul {
-    list-style: none;
-    padding: 0;
-
+  ul { list-style: none; padding: 0; margin: 0;
     li {
-      padding: 5px 0;
-      border-bottom: 1px solid $border-silver;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba($border-silver, 0.06);
+      color: $text-gray;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
     }
   }
 
-  p {
-    font-size: 16px;
-  }
+  p { color: $text-gray; margin: 0; }
 
   select, button {
-    padding: 10px;
+    padding: 10px 14px;
     background: $bg-black;
-    border: 1px solid $border-silver;
+    border: 1px solid rgba($border-silver, 0.2);
     color: $text-silver;
     border-radius: 8px;
     cursor: pointer;
-    margin-top: 10px;
-
-    &:hover {
-      background: rgba($button-hover, 0.2);
-    }
+    margin-top: 8px;
+    font-weight: 600;
   }
 }
 
-// // Mobile adjustments
-// @media (max-width: 600px) {
-//   padding: 10px;
-// }
+/* Settings buttons layout */
+.settings {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+
+  button { min-width: 140px; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 800px) {
+  .profile-container { padding: 20px 12px; }
+  .header .logo { height: 76px; }
+  .bio-section, .vote-history, .stats, .messaging-settings, .revenue, .supported-artists, .settings, .messages {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-content { max-width: 100%; padding: 0 8px; }
+  .header .logo { height: 60px; }
+  .section h2 { font-size: 18px; }
+  .settings button { min-width: 100%; }
+}

@@ -51,7 +51,7 @@ const ExploreFind = () => {
             <option value="">All Harlem</option>
             <option value="uptown">Uptown Harlem</option>
             <option value="downtown">Downtown Harlem</option>
-            <option value="harlem-wide">Harlem-wide</option>
+            <option value="harlem-wide">Harlem</option>
           </select>
           <select value={type} onChange={(e) => setType(e.target.value)} className="filter-select">
             <option value="artist">Artists</option>

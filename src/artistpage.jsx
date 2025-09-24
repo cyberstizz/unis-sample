@@ -1,12 +1,16 @@
+// src/components/ArtistPage.js
 import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg';
 import Layout from './layout';
 import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
+import VotingWizard from './VotingWizard'; // Import VotingWizard
 
 const ArtistPage = ({ isOwnProfile = false }) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [bio, setBio] = useState('Artist bio here...');
+  const [showVotingWizard, setShowVotingWizard] = useState(false); // State for wizard
+  const [selectedNominee, setSelectedNominee] = useState(null); // State for nominee
 
   const artist = {
     name: 'Artist Name',
@@ -31,6 +35,22 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const handleFollow = () => setIsFollowing(!isFollowing);
   const handleBioChange = (e) => setBio(e.target.value);
 
+  const handleVoteSuccess = (id) => {
+    // Handle successful vote (e.g., update UI, API call)
+    console.log(`Vote confirmed for ID: ${id}`);
+    setShowVotingWizard(false);
+  };
+
+  const handleVote = () => {
+    // Set the artist as nominee and open wizard
+    setSelectedNominee({
+      id: 'artist-id-placeholder', // Replace with real ID
+      name: artist.name, // Use artist name for wizard
+      // Add other needed fields if wizard expects
+    });
+    setShowVotingWizard(true);
+  };
+
   return (
     <Layout backgroundImage={theQuiet}> {/* random image for MVP */}
       <div className="artist-page-container">
@@ -46,7 +66,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
               <button onClick={handleFollow} className="follow-button">
                 {isFollowing ? 'Unfollow' : 'Follow'}
               </button>
-              {!isOwnProfile && <button className="vote-button">Vote</button>}
+              {!isOwnProfile && <button onClick={handleVote} className="vote-button">Vote</button>}
             </div>
           </div>
         </header>
@@ -146,6 +166,20 @@ const ArtistPage = ({ isOwnProfile = false }) => {
           </section>
         </div>
       </div>
+
+      {/* Voting Wizard */}
+      <VotingWizard
+        show={showVotingWizard}
+        onClose={() => setShowVotingWizard(false)}
+        onVoteSuccess={handleVoteSuccess}
+        nominee={selectedNominee}
+        filters={{ /* Pass current filters; hardcode or from state/context */
+          selectedGenre: artist.genre.toLowerCase().replace('/', '-'), // e.g., 'rap-hiphop'
+          selectedType: 'artist',
+          selectedInterval: 'daily', // Default or from state
+          selectedJurisdiction: artist.jurisdiction.toLowerCase().replace(' ', '-'), // e.g., 'uptown-harlem'
+        }}
+      />
     </Layout>
   );
 };

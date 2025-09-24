@@ -1,18 +1,17 @@
-// src/components/SongPage.js
-import React, { useState, useContext } from 'react'; // Add useContext
+import React, { useState, useContext } from 'react';
 import songArtwork from './assets/theQuiet.jpg';
 import './songPage.scss';
 import Layout from './layout';
-import { PlayerContext } from './context/playercontext'; // Import context
-import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3'; // Placeholder song (adjust path)
-import VotingWizard from './VotingWizard'; // Import VotingWizard
+import { PlayerContext } from './context/playercontext'; 
+import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3'; 
+import VotingWizard from './votingWizard'; 
 
 const SongPage = () => {
-  const { playMedia } = useContext(PlayerContext); // Get playMedia from context
+  const { playMedia } = useContext(PlayerContext); 
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState([]);
-  const [showVotingWizard, setShowVotingWizard] = useState(false); // State for wizard
-  const [selectedNominee, setSelectedNominee] = useState(null); // State for nominee
+  const [showVotingWizard, setShowVotingWizard] = useState(false); 
+  const [selectedNominee, setSelectedNominee] = useState(null); 
 
   const song = {
     title: 'Song Title',
@@ -87,7 +86,7 @@ const SongPage = () => {
 
           {/* Play and Vote Buttons (side by side) */}
           <div className="follow-actions">
-            <button onClick={handlePlay} className="play-button">▶️ Play</button>
+            <button onClick={handlePlay} className="play-button">Play</button>
             <button onClick={handleVote} className="vote-button">Vote</button>
           </div>
 
