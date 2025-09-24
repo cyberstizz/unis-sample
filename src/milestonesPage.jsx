@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './MilestonesPage.scss';
+import './milestonesPage.scss';
 import Layout from './layout'; // Assume your Layout component
 import backimage from './assets/randomrapper.jpeg';
 

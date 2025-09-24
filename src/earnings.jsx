@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 import Layout from './layout'; 
 import backimage from './assets/randomrapper.jpeg'; 
-import './Earnings.scss';
+import './earnings.scss';
 
 const Earnings = () => {
   

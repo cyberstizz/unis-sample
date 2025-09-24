@@ -4,7 +4,7 @@ import unisLogo from './assets/unisLogo.svg';
 import Layout from './layout';
 import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
-import VotingWizard from './VotingWizard'; // Import VotingWizard
+import VotingWizard from './votingWizard'; // Import VotingWizard
 
 const ArtistPage = ({ isOwnProfile = false }) => {
   const [isFollowing, setIsFollowing] = useState(false);
