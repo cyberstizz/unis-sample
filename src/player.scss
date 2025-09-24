@@ -10,9 +10,6 @@ $button-hover: #D3D3D3;
 $unis-blue: #163387;
 $unis-silver: #918f8f; 
 
-*{
-  border: solid 2px green;
-}
 
 .player {
   position: fixed;
@@ -112,7 +109,7 @@ $unis-silver: #918f8f;
           transition: color 0.2s ease, text-shadow 0.2s ease;
 
           &:hover {
-            color: lighten($unis-silver, 10%); // Lighter silver on hover
+            color: silver;
             text-shadow: 
               1px 1px 3px rgba(#FFFFFF, 0.4),
               -1px -1px 3px rgba(#000000, 0.4);
@@ -225,7 +222,7 @@ $unis-silver: #918f8f;
         // transition: color 0.2s ease, text-shadow 0.2s ease;
 
         &:hover {
-          color: lighten($unis-silver, 10%); // Lighter silver on hover
+          color: silver;
           text-shadow: 
             1px 1px 3px rgba(#FFFFFF, 0.4),
             -1px -1px 3px rgba(#000000, 0.4);
