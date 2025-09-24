@@ -178,7 +178,7 @@ $unis-silver: #918f8f;
   }
 
   .back-button:hover { background: rgba($accent-white, 0.1); }
-  .next-button:hover, .submit-vote-button:hover { background: darken($blue-accent, 10%); }
+  .next-button:hover, .submit-vote-button:hover { background: $blue-accent; }
 }
 
 @keyframes fadeIn {
