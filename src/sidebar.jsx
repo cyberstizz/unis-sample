@@ -34,6 +34,11 @@ const Sidebar = ({ onProfileClick }) => {
     navigate('/leaderboards'); 
   };
 
+
+  const handleFindPage = () => {
+    navigate('/findpage'); 
+  };
+
   const handleArtist = () => {
     navigate('/artist'); 
   };
@@ -57,7 +62,7 @@ const Sidebar = ({ onProfileClick }) => {
       <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
         <ul>
           <li onClick={handleClick}>Vote</li> {/* Add navigation if needed */}
-          <li onClick={handleMap}>Find</li>
+          <li onClick={handleFindPage}>Find</li>
           <li onClick={handleLeaderboards}>Leaderboards</li>
           <li onClick={handleProfile}>Settings</li>
           <li onClick={handleEarnings}>Earnings</li>
