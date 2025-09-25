@@ -7,11 +7,11 @@ import {
   ZoomableGroup,
 } from 'react-simple-maps';
 import { useNavigate } from 'react-router-dom';
-import Layout from './layout'; // Assume your Layout component
+import Layout from './layout'; 
 import backimage from './assets/randomrapper.jpeg';
 import { PlayerContext } from './context/playercontext'; // For play button
 import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3'; // Placeholder MP3
-import './FindPage.scss'; // Updated SCSS
+import './FindPage.scss'; 
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json"; // US states
 
@@ -134,9 +134,19 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
   const handlePlay = (media) => {
     playMedia(
       { type: 'song', url: sampleSong, title: media.title || media.name, artist: media.artist, artwork: media.artwork },
-      [] // Empty playlist for single play
+      [] 
     );
   };
+
+  //this is my prototype mvp dummy function that must be changed later
+   const handleSong = () => {
+    navigate('/song')
+   }
+
+   //as well as for the artist button
+   const handleArtist = () => {
+    navigate('/artist')
+   }
 
   const handleView = (id, type) => {
     navigate(type === 'artist' ? `/artist/${id}` : `/song/${id}`);
@@ -145,7 +155,7 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
   return (
     <Layout backgroundImage={backimage}>
       <div className="find-page-container">
-        <header className="header">
+        <header className="findpageheader">
           <h1>Search for Artists or Songs</h1>
         </header>
 
@@ -155,10 +165,10 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
             <option value="rock">Rock</option>
             <option value="pop">Pop</option>
           </select>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="filter-select">
+          {/* <select value={category} onChange={(e) => setCategory(e.target.value)} className="filter-select">
             <option value="artist">Artist</option>
             <option value="song">Song</option>
-          </select>
+          </select> */}
           <button onClick={handleRandom} disabled={isAnimating} className="random-button">
             Random
           </button>
@@ -239,7 +249,7 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
                     <span>{item.votes} Votes</span>
                   </div>
                   <button onClick={() => handlePlay(item)} className="play-button">Play</button>
-                  <button onClick={() => handleView(item.id, 'song')} className="view-button">View</button>
+                  <button onClick={() => handleSong()} className="view-button">View</button>
                 </li>
               ))}
             </ul>
@@ -258,7 +268,7 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
                     <span>{item.votes} Votes</span>
                   </div>
                   <button onClick={() => handlePlay(item)} className="play-button">Play</button>
-                  <button onClick={() => handleView(item.id, 'artist')} className="view-button">View</button>
+                  <button onClick={() => handleArtist()} className="view-button">View</button>
                 </li>
               ))}
             </ul>
