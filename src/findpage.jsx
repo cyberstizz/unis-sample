@@ -11,6 +11,19 @@ import backimage from './assets/randomrapper.jpeg';
 import { PlayerContext } from './context/playercontext'; // For play button
 import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3'; // Placeholder MP3
 import './findpage.scss'; 
+import rapperOne from './assets/rapperphotoOne.jpg';
+import rapperTwo from './assets/rapperphototwo.jpg';
+import rapperThree from './assets/rapperphotothree.jpg';
+import rapperFree from './assets/rapperphotofour.jpg';
+import songArtOne from './assets/songartworkOne.jpeg';
+import songArtTwo from './assets/songartworktwo.jpeg';
+import songArtThree from './assets/songartworkthree.jpeg';
+import songArtFour from './assets/songartworkfour.jpeg';
+
+
+
+
+
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json"; // US states
 
@@ -68,29 +81,29 @@ const FindPage = () => {
   const dummyData = {
     'rap-hiphop-artist': {
       artists: [
-        { id: 1, name: 'Artist 1', votes: 150, artwork: 'https://placehold.co/60x60?text=Artist1' },
-        { id: 2, name: 'Artist 2', votes: 120, artwork: 'https://placehold.co/60x60?text=Artist2' },
-        { id: 3, name: 'Artist 3', votes: 100, artwork: 'https://placehold.co/60x60?text=Artist3' },
+        { id: 1, name: 'Artist 1', votes: 150, artwork: rapperOne },
+        { id: 2, name: 'Artist 2', votes: 120, artwork: rapperTwo },
+        { id: 3, name: 'Artist 3', votes: 100, artwork: rapperThree },
       ],
       songs: [
-        { id: 4, title: 'Song A', artist: 'Artist X', votes: 140, artwork: 'https://placehold.co/60x60?text=SongA' },
-        { id: 5, title: 'Song B', artist: 'Artist Y', votes: 110, artwork: 'https://placehold.co/60x60?text=SongB' },
-        { id: 6, title: 'Song C', artist: 'Artist Z', votes: 90, artwork: 'https://placehold.co/60x60?text=SongC' },
+        { id: 4, title: 'Song A', artist: 'Artist X', votes: 140, artwork: songArtOne },
+        { id: 5, title: 'Song B', artist: 'Artist Y', votes: 110, artwork: songArtTwo },
+        { id: 6, title: 'Song C', artist: 'Artist Z', votes: 90, artwork: songArtThree },
       ],
     },
     'rap-hiphop-song': {
       artists: [
-        { id: 7, name: 'Artist 4', votes: 130, artwork: 'https://placehold.co/60x60?text=Artist4' },
-        { id: 8, name: 'Artist 5', votes: 100, artwork: 'https://placehold.co/60x60?text=Artist5' },
-        { id: 9, name: 'Artist 6', votes: 80, artwork: 'https://placehold.co/60x60?text=Artist6' },
+        { id: 7, name: 'Artist 4', votes: 130, artwork: rapperFree },
+        { id: 8, name: 'Artist 5', votes: 100, artwork: rapperTwo },
+        { id: 9, name: 'Artist 6', votes: 80, artwork: rapperOne },
       ],
       songs: [
-        { id: 10, title: 'Song D', artist: 'Artist P', votes: 120, artwork: 'https://placehold.co/60x60?text=SongD' },
-        { id: 11, title: 'Song E', artist: 'Artist Q', votes: 90, artwork: 'https://placehold.co/60x60?text=SongE' },
-        { id: 12, title: 'Song F', artist: 'Artist R', votes: 70, artwork: 'https://placehold.co/60x60?text=SongF' },
+        { id: 10, title: 'Song D', artist: 'Artist P', votes: 120, artwork: songArtFour },
+        { id: 11, title: 'Song E', artist: 'Artist Q', votes: 90, artwork: songArtThree },
+        { id: 12, title: 'Song F', artist: 'Artist R', votes: 70, artwork: songArtTwo },
       ],
     },
-    // Extend for rock/pop as needed; use placehold.co for 20 unique dummies (e.g., ?text=Artist7 to Artist20)
+    
   };
 
   // State centers for random toggle (sample US states)
