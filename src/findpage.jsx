@@ -10,7 +10,7 @@ import Layout from './layout'; // Assume your Layout component
 import backimage from './assets/randomrapper.jpeg';
 import { PlayerContext } from './context/playercontext'; // For play button
 import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3'; // Placeholder MP3
-import './FindPage.scss'; // Updated SCSS
+import './findpage.scss'; 
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json"; // US states
 
