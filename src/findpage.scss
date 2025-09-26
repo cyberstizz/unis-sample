@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Delicious+Handrawn&display=swap');
+
+
 $bg-black: #000000;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
@@ -29,9 +32,10 @@ $unis-blue: #163387;
 
 .territory-name {
   text-align: center;
-  color: silver;
-  font-size: 24px;
+  color: $unis-blue;
+  font-size: 40px;
   margin-bottom: 10px;
+  font-family: "Bitcount Grid Double", system-ui;
 }
 
 .back-button {
