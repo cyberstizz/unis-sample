@@ -15,7 +15,7 @@ import rapperOne from './assets/rapperphotoOne.jpg';
 import rapperTwo from './assets/rapperphototwo.jpg';
 import rapperThree from './assets/rapperphotothree.jpg';
 import rapperFree from './assets/rapperphotofour.jpg';
-import songArtOne from './assets/songartworkOne.jpeg';
+import songArtOne from './assets/songartworkONe.jpeg';
 import songArtTwo from './assets/songartworktwo.jpeg';
 import songArtThree from './assets/songartworkthree.jpeg';
 import songArtFour from './assets/songartworkfour.jpeg';
