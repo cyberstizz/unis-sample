@@ -1,51 +1,50 @@
-// src/components/FindPage.js (rename from MapDemo.js)
 import React, { useState, useEffect, useContext } from 'react';
 import {
   ComposableMap,
   Geographies,
   Geography,
   ZoomableGroup,
-} from 'react-simple-maps';
+} from "react-simple-maps";
 import { useNavigate } from 'react-router-dom';
-import Layout from './layout'; 
+import Layout from './layout'; // Assume your Layout component
 import backimage from './assets/randomrapper.jpeg';
 import { PlayerContext } from './context/playercontext'; // For play button
 import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3'; // Placeholder MP3
-import './FindPage.scss'; 
+import './FindPage.scss'; // Updated SCSS
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json"; // US states
 
-// Hardcoded simple Harlem polygons (approximations; replace with accurate GeoJSON)
+// Refined Harlem GeoJSON (from search: approximate boundaries for Uptown, Downtown, Harlem-wide)
 const harlemGeo = {
   type: 'FeatureCollection',
   features: [
-    { // Uptown Harlem (approx)
+    { // Uptown Harlem (approx: 125th to 155th St)
       type: 'Feature',
       properties: { name: 'Uptown Harlem' },
       geometry: {
         type: 'Polygon',
         coordinates: [[
-          [-73.96, 40.81], [-73.94, 40.83], [-73.93, 40.82], [-73.95, 40.80], [-73.96, 40.81]
+          [-73.954, 40.812], [-73.935, 40.832], [-73.930, 40.825], [-73.948, 40.805], [-73.954, 40.812]
         ]]
       }
     },
-    { // Downtown Harlem (approx)
+    { // Downtown Harlem (approx: 110th to 125th St)
       type: 'Feature',
       properties: { name: 'Downtown Harlem' },
       geometry: {
         type: 'Polygon',
         coordinates: [[
-          [-73.95, 40.78], [-73.93, 40.80], [-73.92, 40.79], [-73.94, 40.77], [-73.95, 40.78]
+          [-73.958, 40.799], [-73.940, 40.819], [-73.935, 40.812], [-73.953, 40.792], [-73.958, 40.799]
         ]]
       }
     },
-    { // Harlem-wide (combined approx)
+    { // Harlem-wide (combined)
       type: 'Feature',
       properties: { name: 'Harlem-wide' },
       geometry: {
         type: 'Polygon',
         coordinates: [[
-          [-73.96, 40.78], [-73.92, 40.83], [-73.93, 40.82], [-73.95, 40.77], [-73.96, 40.78]
+          [-73.958, 40.792], [-73.930, 40.832], [-73.925, 40.825], [-73.953, 40.785], [-73.958, 40.792]
         ]]
       }
     },
@@ -58,30 +57,40 @@ const FindPage = () => {
   const [zoom, setZoom] = useState(1);
   const [center, setCenter] = useState([-97, 40]); // US center
   const [selectedState, setSelectedState] = useState(null); // For name display
+  const [hoveredState, setHoveredState] = useState(null); // For hover name
   const [selectedHarlem, setSelectedHarlem] = useState(null); // For Harlem sub-area
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false); // For back button
   const [genre, setGenre] = useState('rap-hiphop');
   const [category, setCategory] = useState('artist');
-  const [isAnimating, setIsAnimating] = useState(false);
-const [isNYHighlighted, setIsNYHighlighted] = useState(false);
-
 
   // Dummy data for top 3 (key: 'genre-category')
   const dummyData = {
     'rap-hiphop-artist': {
       artists: [
-        { name: 'Artist 1', votes: 150, artwork: 'https://placehold.co/60x60?text=Artist1' },
-        { name: 'Artist 2', votes: 120, artwork: 'https://placehold.co/60x60?text=Artist2' },
-        { name: 'Artist 3', votes: 100, artwork: 'https://placehold.co/60x60?text=Artist3' },
+        { id: 1, name: 'Artist 1', votes: 150, artwork: 'https://placehold.co/60x60?text=Artist1' },
+        { id: 2, name: 'Artist 2', votes: 120, artwork: 'https://placehold.co/60x60?text=Artist2' },
+        { id: 3, name: 'Artist 3', votes: 100, artwork: 'https://placehold.co/60x60?text=Artist3' },
       ],
       songs: [
-        { title: 'Song A', artist: 'Artist X', votes: 140, artwork: 'https://placehold.co/60x60?text=SongA' },
-        { title: 'Song B', artist: 'Artist Y', votes: 110, artwork: 'https://placehold.co/60x60?text=SongB' },
-        { title: 'Song C', artist: 'Artist Z', votes: 90, artwork: 'https://placehold.co/60x60?text=SongC' },
+        { id: 4, title: 'Song A', artist: 'Artist X', votes: 140, artwork: 'https://placehold.co/60x60?text=SongA' },
+        { id: 5, title: 'Song B', artist: 'Artist Y', votes: 110, artwork: 'https://placehold.co/60x60?text=SongB' },
+        { id: 6, title: 'Song C', artist: 'Artist Z', votes: 90, artwork: 'https://placehold.co/60x60?text=SongC' },
       ],
     },
-    // Add 20 dummy images via placehold.co (text labels for uniqueness; repeat pattern for more)
-    // Examples: Artist4 to Artist20 similar
-    // For brevity, extend in code as needed
+    'rap-hiphop-song': {
+      artists: [
+        { id: 7, name: 'Artist 4', votes: 130, artwork: 'https://placehold.co/60x60?text=Artist4' },
+        { id: 8, name: 'Artist 5', votes: 100, artwork: 'https://placehold.co/60x60?text=Artist5' },
+        { id: 9, name: 'Artist 6', votes: 80, artwork: 'https://placehold.co/60x60?text=Artist6' },
+      ],
+      songs: [
+        { id: 10, title: 'Song D', artist: 'Artist P', votes: 120, artwork: 'https://placehold.co/60x60?text=SongD' },
+        { id: 11, title: 'Song E', artist: 'Artist Q', votes: 90, artwork: 'https://placehold.co/60x60?text=SongE' },
+        { id: 12, title: 'Song F', artist: 'Artist R', votes: 70, artwork: 'https://placehold.co/60x60?text=SongF' },
+      ],
+    },
+    // Extend for rock/pop as needed; use placehold.co for 20 unique dummies (e.g., ?text=Artist7 to Artist20)
   };
 
   // State centers for random toggle (sample US states)
@@ -91,7 +100,12 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
     { name: 'Texas', center: [-99, 31] },
     { name: 'Florida', center: [-82, 27] },
     { name: 'Illinois', center: [-89, 40] },
-    // Add more for variety
+    // Add 5-10 more for better animation
+    { name: 'Washington', center: [-120, 47] },
+    { name: 'Arizona', center: [-111, 34] },
+    { name: 'Colorado', center: [-105, 39] },
+    { name: 'Ohio', center: [-82, 40] },
+    { name: 'Georgia', center: [-83, 33] },
   ];
 
   const handleStateClick = (geo) => {
@@ -100,12 +114,31 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
       setCenter([-74, 40.7]); // NYC center
       setZoom(10); // Zoom to NYC
       setSelectedHarlem('harlem-wide'); // Default Harlem sub
+      setIsZoomed(true); // Show back button
+    } else {
+      alert('Coming to Unis soon'); // Message for non-NY
     }
+  };
+
+  const handleStateHover = (geo) => {
+    setHoveredState(geo.properties.name);
+  };
+
+  const handleStateLeave = () => {
+    setHoveredState(null);
   };
 
   const handleHarlemClick = (geo) => {
     setSelectedHarlem(geo.properties.name);
-    // Further zoom if needed
+    // Optional further zoom
+  };
+
+  const handleBack = () => {
+    setCenter([-97, 40]); // US center
+    setZoom(1);
+    setSelectedState(null);
+    setSelectedHarlem(null);
+    setIsZoomed(false);
   };
 
   const handleRandom = () => {
@@ -115,13 +148,21 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
       const randomIndex = Math.floor(Math.random() * stateCenters.length);
       setCenter(stateCenters[randomIndex].center);
       setZoom(5);
-      setSelectedState(stateCenters[randomIndex].name);
+      setHoveredState(stateCenters[randomIndex].name); // Display during animation
       count++;
-      if (count >= 10) { // Cycle 10 times (~5s at 500ms interval)
+      if (count >= 10) { // 10 cycles = ~5s at 500ms
         clearInterval(interval);
         setIsAnimating(false);
+        // Final state (random or NY for demo)
+        const finalIndex = Math.floor(Math.random() * stateCenters.length);
+        setSelectedState(stateCenters[finalIndex].name);
+        if (stateCenters[finalIndex].name === 'New York') {
+          handleStateClick({ properties: { name: 'New York' } });
+        } else {
+          alert('Coming to Unis soon');
+        }
       }
-    }, 500); // 0.5s per cycle
+    }, 500);
   };
 
   const getResults = () => {
@@ -134,28 +175,23 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
   const handlePlay = (media) => {
     playMedia(
       { type: 'song', url: sampleSong, title: media.title || media.name, artist: media.artist, artwork: media.artwork },
-      [] 
+      [] // Empty for single
     );
   };
 
-  //this is my prototype mvp dummy function that must be changed later
-   const handleSong = () => {
-    navigate('/song')
-   }
+  const handleArtistView = (id, type) => {
+    navigate(`/artist`)
+  };
 
-   //as well as for the artist button
-   const handleArtist = () => {
-    navigate('/artist')
-   }
 
-  const handleView = (id, type) => {
-    navigate(type === 'artist' ? `/artist/${id}` : `/song/${id}`);
+  const handleSongView = (id, type) => {
+    navigate(`/song`)
   };
 
   return (
     <Layout backgroundImage={backimage}>
       <div className="find-page-container">
-        <header className="findpageheader">
+        <header className="find-page-header">
           <h1>Search for Artists or Songs</h1>
         </header>
 
@@ -165,20 +201,24 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
             <option value="rock">Rock</option>
             <option value="pop">Pop</option>
           </select>
-          {/* <select value={category} onChange={(e) => setCategory(e.target.value)} className="filter-select">
-            <option value="artist">Artist</option>
-            <option value="song">Song</option>
-          </select> */}
+        
           <button onClick={handleRandom} disabled={isAnimating} className="random-button">
             Random
           </button>
         </div>
 
-        {selectedState && <p className="territory-name">{selectedState}{selectedHarlem ? ` - ${selectedHarlem}` : ''}</p>}
+        {/* State name display */}
+        <p className="territory-name">
+          {hoveredState || selectedState || 'Hover a state'}
+          {selectedHarlem ? ` - ${selectedHarlem}` : ''}
+        </p>
+
+        {/* Back button */}
+        {isZoomed && <button onClick={handleBack} className="back-button">← Back</button>}
 
         <div className="map-container">
           <ComposableMap projection="geoAlbersUsa">
-            <ZoomableGroup center={center} zoom={zoom}>
+            <ZoomableGroup center={center} zoom={zoom} disablePanning={!isZoomed} disableZooming={!isZoomed}> {/* Disable pan/zoom in US mode */}
               <Geographies geography={geoUrl}>
                 {({ geographies }) =>
                   geographies.map((geo) => (
@@ -186,18 +226,20 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
                       key={geo.rsmKey}
                       geography={geo}
                       onClick={() => handleStateClick(geo)}
+                      onMouseEnter={() => handleStateHover(geo)}
+                      onMouseLeave={handleStateLeave}
                       style={{
                         default: {
-                          fill: geo.properties.name === "New York" && isNYHighlighted ? '#163387' : '#EAEAEC', // Unis blue
+                          fill: geo.properties.name === selectedState ? '#163387' : '#EAEAEC', // Unis blue on select
                           outline: "none",
                           stroke: "#999",
                         },
                         hover: {
-                          fill: geo.properties.name === "New York" ? '#0D2359' : '#ddd',
+                          fill: '#163387', // Unis blue on hover
                           outline: "none",
                         },
                         pressed: {
-                          fill: '#0A1C4A',
+                          fill: '#0A1C4A', // Darker pressed
                           outline: "none",
                         },
                       }}
@@ -205,7 +247,7 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
                   ))
                 }
               </Geographies>
-              {/* Harlem layer (shown on zoom) */}
+              {/* Harlem layer on zoom */}
               {zoom > 5 && (
                 <Geographies geography={harlemGeo}>
                   {({ geographies }) =>
@@ -214,6 +256,8 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
                         key={geo.properties.name}
                         geography={geo}
                         onClick={() => handleHarlemClick(geo)}
+                        onMouseEnter={() => setHoveredState(geo.properties.name)} // Hover name for Harlem too
+                        onMouseLeave={handleStateLeave}
                         style={{
                           default: {
                             fill: geo.properties.name === selectedHarlem ? '#163387' : 'transparent',
@@ -221,7 +265,7 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
                             strokeWidth: 1,
                           },
                           hover: {
-                            fill: '#0D2359',
+                            fill: '#163387',
                           },
                         }}
                       />
@@ -249,7 +293,7 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
                     <span>{item.votes} Votes</span>
                   </div>
                   <button onClick={() => handlePlay(item)} className="play-button">Play</button>
-                  <button onClick={() => handleSong()} className="view-button">View</button>
+                  <button onClick={() => handleSongView()} className="view-button">View</button>
                 </li>
               ))}
             </ul>
@@ -268,7 +312,7 @@ const [isNYHighlighted, setIsNYHighlighted] = useState(false);
                     <span>{item.votes} Votes</span>
                   </div>
                   <button onClick={() => handlePlay(item)} className="play-button">Play</button>
-                  <button onClick={() => handleArtist()} className="view-button">View</button>
+                  <button onClick={() => handleArtistView()} className="view-button">View</button>
                 </li>
               ))}
             </ul>
