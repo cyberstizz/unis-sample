@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import './leaderboardsPage.scss';
-import Layout from './layout'; // Assume shared
+import Layout from './layout'; 
 import backimage from './assets/randomrapper.jpeg';
+import rapperOne from './assets/rapperphotoOne.jpg';
+import rapperTwo from './assets/rapperphototwo.jpg';
+import rapperThree from './assets/rapperphotothree.jpg';
+import rapperFree from './assets/rapperphotofour.jpg';
+
 
 const LeaderboardsPage = () => {
   const [location, setLocation] = useState('downtown_harlem');
@@ -14,11 +19,11 @@ const LeaderboardsPage = () => {
   // Mock current data (key: 'location-genre-category-interval')
   const mockLeaderboardData = {
     'downtown_harlem-rap-song_of_the_month-daily': [
-      { rank: 1, title: 'Current Hit', artist: 'Artist K', votes: 800, artwork: 'https://placehold.co/100x100/1a1a1a/ffffff?text=K' },
-      { rank: 2, title: 'Rising Star', artist: 'Artist L', votes: 750, artwork: 'https://placehold.co/100x100/1a1a1a/ffffff?text=L' },
-      { rank: 3, title: 'Beat Drop', artist: 'Artist M', votes: 700, artwork: 'https://placehold.co/100x100/1a1a1a/ffffff?text=M' },
-      { rank: 4, title: 'Flow Master', artist: 'Artist N', votes: 650, artwork: 'https://placehold.co/100x100/1a1a1a/ffffff?text=N' },
-      { rank: 5, title: 'Rhyme Time', artist: 'Artist O', votes: 600, artwork: 'https://placehold.co/100x100/1a1a1a/ffffff?text=O' },
+      { rank: 1, title: 'Current Hit', artist: 'Artist K', votes: 800, artwork: rapperOne },
+      { rank: 2, title: 'Rising Star', artist: 'Artist L', votes: 750, artwork: rapperTwo },
+      { rank: 3, title: 'Beat Drop', artist: 'Artist M', votes: 700, artwork: rapperThree },
+      { rank: 4, title: 'Flow Master', artist: 'Artist N', votes: 650, artwork: rapperFree },
+      { rank: 5, title: 'Rhyme Time', artist: 'Artist O', votes: 600, artwork: rapperTwo },
     ],
     
   };
