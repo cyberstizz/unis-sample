@@ -36,7 +36,7 @@ const Earnings = () => {
   return (
     <Layout backgroundImage={backimage}>
       <div className="earnings-page-container">
-        <header className="header">
+        <header className="earningsheader">
           <h1>Your Earnings</h1>
         </header>
 

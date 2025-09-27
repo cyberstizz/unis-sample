@@ -9,27 +9,35 @@ import backimage from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import art1 from './assets/unisLogo1.jpg'; 
 import VotingWizard from './votingWizard'; 
+import rapperOne from './assets/rapperphotoOne.jpg';
+import rapperTwo from './assets/rapperphototwo.jpg';
+import rapperThree from './assets/rapperphotothree.jpg';
+import rapperFree from './assets/rapperphotofour.jpg';
+import songArtOne from './assets/songartworkONe.jpeg';
+import songArtTwo from './assets/songartworktwo.jpeg';
+import songArtThree from './assets/songartworkthree.jpeg';
+import songArtFour from './assets/songartworkfour.jpeg';
 
 const dummyData = [
   {
     id: 1, name: 'LyricLoom', type: 'artist', genre: 'rap-hiphop', jurisdiction: 'uptown-harlem', votes: 124, projection: '12th place',
-    imageUrl: 'https://images.unsplash.com/photo-1547447171-872654ae7002?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+    imageUrl: rapperThree
   },
   {
     id: 2, name: 'The Golden Age', type: 'song', genre: 'rap-hiphop', jurisdiction: 'harlem-wide', votes: 180, projection: 'Top 5',
-    imageUrl: 'https://images.unsplash.com/photo-1594953372205-1a8537a72d76?q=80&w=1964&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+    imageUrl: rapperOne
   },
   {
     id: 3, name: 'Soulful Serenade', type: 'artist', genre: 'pop', jurisdiction: 'harlem-wide', votes: 98, projection: 'Rising Fast',
-    imageUrl: 'https://images.unsplash.com/photo-1555513220-410c5c378563?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+    imageUrl: rapperTwo
   },
   {
     id: 4, name: 'Rock Riot', type: 'song', genre: 'rock', jurisdiction: 'downtown-harlem', votes: 210, projection: 'No. 1 Contender',
-    imageUrl: 'https://images.unsplash.com/photo-1568297621183-f274a101b444?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+    imageUrl: rapperOne
   },
   {
     id: 5, name: 'Urban Echo', type: 'artist', genre: 'pop', jurisdiction: 'uptown-harlem', votes: 56, projection: 'Steady climb',
-    imageUrl: 'https://images.unsplash.com/photo-1544465529-da4c4187f311?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+    imageUrl: rapperFree
   },
 ];
 

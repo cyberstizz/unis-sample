@@ -61,11 +61,11 @@ const Sidebar = ({ onProfileClick }) => {
       {/* Sidebar Content */}
       <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
         <ul>
-          <li onClick={handleClick}>Vote</li> {/* Add navigation if needed */}
-          <li onClick={handleFindPage}>Find</li>
-          <li onClick={handleLeaderboards}>Leaderboards</li>
-          <li onClick={handleProfile}>Settings</li>
-          <li onClick={handleEarnings}>Earnings</li>
+          <li onClick={handleClick}><span className="sidebar-icon">🗳️</span>Vote</li> {/* Placeholder icon */}
+          <li onClick={handleFindPage}><span className="sidebar-icon">🔍</span>Find</li>
+          <li onClick={handleLeaderboards}><span className="sidebar-icon">🏆</span>Leaderboards</li>
+          <li onClick={handleProfile}><span className="sidebar-icon">⚙️</span>Settings</li>
+          <li onClick={handleEarnings}><span className="sidebar-icon">💰</span>Earnings</li>
         </ul>
       </nav>
 

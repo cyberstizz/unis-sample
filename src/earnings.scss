@@ -16,12 +16,13 @@ $unis-blue: #163387;
   background: $bg-black;
   color: $text-gray;
   padding: 20px;
+  background: transparent;
 }
 
-.header {
+.earningsheader {
   text-align: center;
   margin-bottom: 30px;
-
+  font-family: "Bitcount Grid Double", system-ui;
   h1 {
     color: $unis-blue;
     font-size: 36px;
