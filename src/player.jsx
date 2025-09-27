@@ -1,3 +1,4 @@
+// src/components/Player.js
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { PlayerContext } from './context/playercontext';
 import './player.scss';

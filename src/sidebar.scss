@@ -10,6 +10,15 @@ $unis-blue: #163387;
 $unis-silver: #918f8f; 
 
 
+.sidebar-icon-leaderboards{
+  font-size: 25px;
+}
+
+.sidebar-icon{
+  margin-right: 1px;
+  padding-right: 1%;
+}
+
 .sidebar-trigger {
   display: none; // Hidden on desktop
   position: fixed;
