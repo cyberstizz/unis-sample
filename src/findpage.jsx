@@ -223,7 +223,7 @@ const FindPage = () => {
 
         {/* State name display */}
         <p className="territory-name">
-          {hoveredState || selectedState || 'Hover a state'}
+          {hoveredState || selectedState || 'Select a state'}
           {selectedHarlem ? ` - ${selectedHarlem}` : ''}
         </p>
 

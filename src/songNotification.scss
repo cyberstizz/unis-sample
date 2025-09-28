@@ -1,0 +1,49 @@
+// SongNotification.scss
+
+.song-notification {
+  position: fixed;
+  bottom: 80px; // Above player
+  left: 20px;
+  z-index: 101; // Above player (100)
+  animation: slideIn 0.5s ease-out forwards, slideOut 0.5s 2.5s ease-in forwards; // Slide in/out
+
+  .card {
+    display: flex;
+    align-items: center;
+    background: rgba(#1a1a1a, 0.8);
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    gap: 10px;
+
+    .notification-artwork {
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+    }
+
+    .notification-info {
+      color: $text-silver;
+
+      h3 {
+        font-size: 18px;
+        margin: 0;
+      }
+
+      p {
+        font-size: 14px;
+        margin: 2px 0;
+      }
+    }
+  }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-100%); opacity: 0; }
+}

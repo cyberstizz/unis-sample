@@ -119,10 +119,10 @@ $unis-silver: #918f8f;
     }
   }
 
-  // Seekbar (top of player)
+  
   .seekbar {
     width: 100%;
-    height: 4px; // Thin top border-like
+    height: 4px; 
     background: $unis-blue;
     position: relative;
     margin-bottom: 5px;
@@ -155,6 +155,25 @@ $unis-silver: #918f8f;
       transition: left 0.1s ease;
     }
   }
+
+
+  .expanded-seekbar {
+  width: 80%;
+  margin-top: 20px;
+  height: 4px;
+  background: $text-gray;
+  appearance: none;
+  border-radius: 2px;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: $accent-white;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+}
 
   .mini-player {
     display: flex;

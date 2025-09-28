@@ -1,4 +1,3 @@
-// src/components/Player.js
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { PlayerContext } from './context/playercontext';
 import './player.scss';
@@ -13,11 +12,14 @@ const Player = () => {
 
   useEffect(() => {
     if (currentMedia && mediaRef.current) {
+      const wasPlaying = !mediaRef.current.paused;
+      const prevTime = mediaRef.current.currentTime;
       mediaRef.current.src = currentMedia.url;
-      mediaRef.current
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch(() => {});
+      mediaRef.current.load(); // Reload to apply new src without reset if same
+      mediaRef.current.currentTime = prevTime; // Restore time
+      if (wasPlaying) {
+        mediaRef.current.play().catch(() => {});
+      }
     }
   }, [currentMedia]);
 
@@ -82,6 +84,12 @@ const Player = () => {
     console.log('Download pressed');
   };
 
+  const handleSeek = (e) => {
+    const newTime = (e.target.value / 100) * duration;
+    mediaRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
   return (
     <div
       className={`player ${isExpanded ? 'expanded' : ''}`}
@@ -109,6 +117,15 @@ const Player = () => {
             <button onClick={handlePlayPause}>{mediaRef.current?.paused ? '▶' : '⏸'}</button>
             <button onClick={handleNext}>▶</button>
           </div>
+          {/* Seek bar in expanded */}
+          <input
+            type="range"
+            value={progress}
+            onChange={handleSeek}
+            className="expanded-seekbar"
+            min="0"
+            max="100"
+          />
         </div>
       ) : (
         <>
@@ -120,7 +137,7 @@ const Player = () => {
             </div>
           </div>
           <div className="mini-player">
-            {/* Left: Song Info (artwork + info) */}
+            {/* Left: Song Info */}
             <div className="song-info">
               <img src={currentMedia.artwork || '/assets/placeholder.jpg'} alt="Artwork" className="mini-artwork" />
               <div className="mini-info">
@@ -138,7 +155,7 @@ const Player = () => {
               <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>❤️
                 <span className="heart-icon"></span> 
               </button>
-              <button onClick={handleDownload}>⬇</button> {/* Download unchanged */}
+              <button onClick={handleDownload}>⬇</button>
             </div>
             {isVideo ? (
               <video ref={mediaRef} style={{ display: 'none' }}>

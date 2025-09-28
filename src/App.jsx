@@ -16,6 +16,7 @@ import Leaderboards from './leaderboardsPage';
 import MapDemo from './mapDemo';
 import Earnings from './earnings';
 import FindPage from './findpage';
+import SongNotification from './songNotification';
 
 
 const App = () => {
@@ -42,6 +43,7 @@ const App = () => {
             <Route path="/earnings" element={<Earnings />} />
             <Route path="/findpage" element={<FindPage />} />
           </Routes>
+          <SongNotification />
         </div>
         <Player />
       </Router>
