@@ -1,0 +1,37 @@
+
+.playlists-container {
+  padding: 20px;
+  color: $text-silver;
+
+  h2 {
+    color: $unis-blue;
+  }
+
+  input {
+    padding: 10px;
+    border: 1px solid $border-silver;
+    border-radius: 8px;
+    margin-right: 10px;
+  }
+
+  button {
+    padding: 10px 20px;
+    background: $unis-blue;
+    color: $accent-white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+
+    li {
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+  }
+}

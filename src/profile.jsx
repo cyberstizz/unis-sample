@@ -3,6 +3,9 @@ import React, { useState } from 'react';
 import unisLogo from './assets/unisLogo.svg'; // Adjust path
 import './profile.scss';
 import Header from './header';
+import Layout from './layout';
+import backimage from './assets/randomrapper.jpeg';
+
 
 const Profile = ({ isArtist = false }) => { // Prop for role; true for artist, false for listener
   const [showPopup, setShowPopup] = useState(isArtist); // Popup for artists on load
@@ -21,6 +24,7 @@ const Profile = ({ isArtist = false }) => { // Prop for role; true for artist, f
   const handleBioChange = (e) => setBio(e.target.value);
 
   return (
+   <Layout backgroundImage={backimage}>
     <div className="profile-container">
       <div className='profile-content'>
       <header className="profile-header">
@@ -94,6 +98,7 @@ const Profile = ({ isArtist = false }) => { // Prop for role; true for artist, f
       </section>
       </div>
     </div>
+  </Layout>
   );
 };
 
