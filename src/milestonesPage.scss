@@ -179,6 +179,52 @@ $unis-silver: #918f8f;
   white-space: nowrap;
 }
 
+
+
+.winner-highlight {
+  margin: 40px auto 30px;
+  max-width: 900px;
+  text-align: center;
+  padding: 20px;
+  background: #0a0a0a;
+  border: 1px solid #444;
+  border-radius: 12px;
+
+  .winner-title {
+    font-size: 2rem;
+    color: #ffffff;
+    font-weight: bold;
+  }
+
+  .winner-artist {
+    font-size: 1.5rem;
+    color: #c0c0c0;
+    margin-top: 6px;
+  }
+
+  .winner-jurisdiction {
+    font-size: 1rem;
+    color: #a9a9a9;
+    margin: 8px 0;
+  }
+
+  .winner-artwork {
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    border-radius: 8px;
+    margin: 16px 0;
+  }
+
+  .winner-caption {
+    font-size: 1.1rem;
+    font-style: italic;
+    color: #c0c0c0;
+    margin-top: 6px;
+  }
+}
+
+
 // Mobile
 @media (max-width: 600px) {
   .filter-controls {
