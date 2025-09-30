@@ -126,13 +126,16 @@ $green-500: #22c55e;
   margin-bottom: 2rem;
 
   h1 {
-    font-size: 2.25rem;
+    font-size: 2.4rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
+    padding-left: 30%;
+    font-family: "Bitcount Grid Double", system-ui;
   }
 
   p {
     color: $text-gray-400;
+    padding-left: 17%;
   }
 }
 

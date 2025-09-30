@@ -25,7 +25,7 @@ const ArtistDashboard = () => {
   // Mock artist data - replace with actual data
   const artistData = {
     name: "Tony Fadd",
-    profileImage: "https://via.placeholder.com/200",
+    profileImage: backimage,
     bio: "Creating unique sounds that blend electronic and acoustic elements. Inspired by life, love, and the pursuit of perfect harmony.",
     mainSong: {
       title: "Paranoid",
@@ -87,7 +87,7 @@ const ArtistDashboard = () => {
       <div className="dashboard-content">
         {/* Header Section */}
         <div className="dashboard-header">
-          <h1>Artist Dashboard</h1>
+          <h1 style={{alignSelf: "center"}}>Dashboard</h1>
           <p>Manage your content and track your performance</p>
         </div>
 
@@ -96,7 +96,7 @@ const ArtistDashboard = () => {
           <div className="stat-card">
             <div className="stat-content">
               <div className="stat-info">
-                <p className="stat-label">Total Views</p>
+                <p className="stat-label">Total Votes</p>
                 <p className="stat-value">{artistData.totalViews.toLocaleString()}</p>
               </div>
               <div className="stat-icon stat-icon-blue">
@@ -120,7 +120,7 @@ const ArtistDashboard = () => {
           <div className="stat-card">
             <div className="stat-content">
               <div className="stat-info">
-                <p className="stat-label">Fans</p>
+                <p className="stat-label">Total Plays</p>
                 <p className="stat-value">{artistData.followers.toLocaleString()}</p>
               </div>
               <div className="stat-icon stat-icon-green">
@@ -158,13 +158,6 @@ const ArtistDashboard = () => {
         </div>
 
         {/* makeshift bio section to be edited*/}
-
-
-      <section className="bio-section">
-        <h2>Bio</h2>
-        <textarea value={"your bio here"} onChange={null} className="bio-edit" />
-        <button>Save Bio</button>
-      </section>
 
       <section className="vote-history">
         <h2>Vote History</h2>
