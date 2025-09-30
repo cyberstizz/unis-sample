@@ -1,7 +1,7 @@
 // ArtistDashboard.jsx
 import React, { useState } from 'react';
 import { Upload, Play, Image, Video, TrendingUp, Eye, Heart, Users, X } from 'lucide-react';
-import './ArtistDashboard.scss';
+import './artistDashboard.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 
