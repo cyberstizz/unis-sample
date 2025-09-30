@@ -1,0 +1,517 @@
+// ArtistDashboard.scss
+
+// Variables
+$primary-blue: #3b82f6;
+$primary-blue-hover: #2563eb;
+$bg-black: #000000;
+$bg-gray-900: #111827;
+$bg-gray-800: #1f2937;
+$border-gray: #374151;
+$text-white: #ffffff;
+$text-gray-400: #9ca3af;
+$text-gray-300: #d1d5db;
+$red-500: #ef4444;
+$green-500: #22c55e;
+
+// Mixins
+@mixin card {
+  background-color: $bg-gray-900;
+  border: 1px solid $border-gray;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+
+@mixin button-base {
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// Main Container
+.artist-dashboard {
+  min-height: 100vh;
+  background-color: $bg-black;
+  color: $text-white;
+  margin-left: 30%;
+  width: 48%;
+}
+
+// Welcome Popup
+.welcome-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.welcome-popup {
+  background-color: $bg-gray-900;
+  border: 1px solid $primary-blue;
+  border-radius: 0.5rem;
+  padding: 2rem;
+  max-width: 28rem;
+  margin: 0 1rem;
+  text-align: center;
+  position: relative;
+
+  .close-button {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: $text-gray-400;
+    cursor: pointer;
+    transition: color 0.2s;
+
+    &:hover {
+      color: $text-white;
+    }
+  }
+
+  .popup-content {
+    margin-bottom: 1.5rem;
+
+    .icon-circle {
+      width: 5rem;
+      height: 5rem;
+      background-color: $primary-blue;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    p {
+      color: $text-gray-300;
+      font-size: 1.125rem;
+    }
+  }
+
+  .welcome-button {
+    @include button-base;
+    background-color: $primary-blue;
+    color: $text-white;
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+
+    &:hover {
+      background-color: $primary-blue-hover;
+    }
+  }
+}
+
+// Dashboard Content
+.dashboard-content {
+  padding: 2rem;
+}
+
+// Header
+.dashboard-header {
+  margin-bottom: 2rem;
+
+  h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: $text-gray-400;
+  }
+}
+
+// Stats Grid
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  @include card;
+
+  .stat-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .stat-info {
+    .stat-label {
+      color: $text-gray-400;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+      font-size: 1.875rem;
+      font-weight: 700;
+    }
+  }
+
+  .stat-icon {
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+
+    &.stat-icon-blue {
+      background-color: rgba($primary-blue, 0.2);
+      color: $primary-blue;
+    }
+
+    &.stat-icon-red {
+      background-color: rgba($red-500, 0.2);
+      color: $red-500;
+    }
+
+    &.stat-icon-green {
+      background-color: rgba($green-500, 0.2);
+      color: $green-500;
+    }
+  }
+}
+
+// Card Base
+.card {
+  @include card;
+  margin-bottom: 2rem;
+}
+
+// Profile Section
+.profile-section {
+  .profile-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+
+  .profile-image {
+    width: 8rem;
+    height: 8rem;
+    border-radius: 0.5rem;
+    object-fit: cover;
+  }
+
+  .profile-info {
+    flex: 1;
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+
+      h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+    }
+
+    .bio {
+      color: $text-gray-400;
+      margin-bottom: 1rem;
+    }
+
+    .profile-actions {
+      display: flex;
+      gap: 1rem;
+    }
+  }
+}
+
+// Main Song Section
+.main-song-section {
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+  }
+
+  .main-song-card {
+    background-color: $bg-gray-800;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .song-icon {
+      width: 4rem;
+      height: 4rem;
+      background-color: $primary-blue;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .song-info {
+      flex: 1;
+
+      h4 {
+        font-weight: 600;
+        font-size: 1.125rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .song-stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.875rem;
+        color: $text-gray-400;
+
+        span {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+        }
+      }
+    }
+  }
+}
+
+// Content Grid
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.content-section {
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: $primary-blue;
+    }
+  }
+
+  .content-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .content-item {
+    background-color: $bg-gray-800;
+    border-radius: 0.5rem;
+    padding: 1rem;
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.5rem;
+
+      h4 {
+        font-weight: 600;
+      }
+    }
+
+    .item-stats {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.875rem;
+      color: $text-gray-400;
+
+      span {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
+    }
+  }
+}
+
+// Images Section
+.images-section {
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: $primary-blue;
+    }
+  }
+
+  .images-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .image-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.5rem;
+
+    &:hover .image-overlay {
+      opacity: 1;
+    }
+
+    img {
+      width: 100%;
+      height: 12rem;
+      object-fit: cover;
+      border-radius: 0.5rem;
+    }
+
+    .image-overlay {
+      position: absolute;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      opacity: 0;
+      transition: opacity 0.2s;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .overlay-content {
+        text-align: center;
+
+        p {
+          font-size: 0.875rem;
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          justify-content: center;
+          margin-bottom: 0.5rem;
+        }
+      }
+    }
+  }
+}
+
+// Buttons
+.btn {
+  @include button-base;
+  padding: 0.5rem 1rem;
+
+  &.btn-primary {
+    background-color: $primary-blue;
+    color: $text-white;
+
+    &:hover {
+      background-color: $primary-blue-hover;
+    }
+  }
+
+  &.btn-secondary {
+    background-color: $bg-gray-800;
+    color: $text-white;
+
+    // &:hover {
+    //   background-color: lighten($bg-gray-800, 5%);
+    // }
+  }
+
+  &.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: $primary-blue;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color 0.2s;
+
+//   &:hover {
+//     color: lighten($primary-blue, 10%);
+//   }
+}
+
+.edit-button {
+  background: none;
+  border: none;
+  color: $text-gray-400;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color 0.2s;
+
+  &:hover {
+    color: $text-white;
+  }
+}
+
+// Responsive Design
+@media (max-width: 1024px) {
+  .artist-dashboard {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .images-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .images-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-content {
+    flex-direction: column;
+  }
+
+  .profile-actions {
+    flex-direction: column;
+    width: 100%;
+
+    button {
+      width: 100%;
+    }
+  }
+}

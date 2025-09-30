@@ -17,6 +17,7 @@ import MapDemo from './mapDemo';
 import Earnings from './earnings';
 import FindPage from './findpage';
 import SongNotification from './songNotification';
+import ArtistDashboard from './artistDashboard';
 
 
 const App = () => {
@@ -36,12 +37,13 @@ const App = () => {
             <Route path="/song" element={<SongPage />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/voteawards" element={<VoteAwards />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile" element={<ArtistDashboard />} />
             <Route path="/milestones" element={<MilestonesPage />} />
             <Route path="/leaderboards" element={<Leaderboards />} />
             <Route path="/find" element={<MapDemo />} />
             <Route path="/earnings" element={<Earnings />} />
             <Route path="/findpage" element={<FindPage />} />
+            <Route path="/artistDashboard" element={<ArtistDashboard />} />
           </Routes>
           <SongNotification />
         </div>
