@@ -117,7 +117,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
             {/* Top 30 Artists */}
             <div className="content-section card">
               <div className="section-header">
-                <h3 className='specialThirty'><Music size={20} /> Top 30 Artists</h3>
+                <h3 className='specialThirty'><Music size={20} /> Top 30 Artists in Harlem</h3>
                 <button className="link-button">View More</button>
               </div>
               <div className="content-list scrollable"> {/* Add scroll if needed */}
@@ -144,7 +144,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
             {/* Top 30 Songs */}
             <div className="content-section card">
               <div className="section-header">
-                <h3 className='specialThirty'><Play size={20} /> Top 30 Songs</h3>
+                <h3 className='specialThirty'><Play size={20} /> Top 30 Songs in Harlem</h3>
                 <button className="link-button">View More</button>
               </div>
               <div className="content-list scrollable">
