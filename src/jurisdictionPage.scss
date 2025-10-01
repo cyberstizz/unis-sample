@@ -1,0 +1,122 @@
+// jurisdiction.scss
+@import './artistDashboard'; // Reuse all variables/mixins
+
+// Main Container (similar to artist-dashboard)
+.jurisdiction-dashboard {
+  min-height: 100vh;
+  background-color: $bg-black;
+  color: $text-white;
+  margin-left: 30%;
+  width: 48%;
+}
+
+// Hero Section for Area Symbol
+.jurisdiction-hero {
+  position: relative;
+  overflow: hidden;
+
+  .hero-image {
+    width: 100%;
+    height: 15rem;
+    object-fit: cover;
+    border-radius: 0.5rem;
+  }
+
+  .hero-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: $text-white;
+
+    h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: $text-gray-400;
+    }
+  }
+}
+
+// Highlights Grid (like stats-grid but 2-col)
+.highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.highlight-card {
+  .highlight-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .profile-image, .song-icon {
+      // Reuse styles
+    }
+
+    .highlight-info {
+      flex: 1;
+
+      h4 {
+        font-size: 1.125rem;
+        margin-bottom: 0.25rem;
+      }
+
+      p {
+        color: $text-gray-400;
+        margin-bottom: 0.75rem;
+      }
+    }
+  }
+}
+
+// Top List Items
+.top-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+
+  .rank-badge {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    background-color: $primary-blue;
+    color: $text-white;
+    font-weight: bold;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px; // Pill shape for rank
+    font-size: 0.875rem;
+  }
+
+  .top-thumbnail {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%; // Circle for bubble feel (or 20px for softer corners)
+    object-fit: cover;
+  }
+}
+
+.content-list.scrollable {
+  max-height: 30rem; // For top 30 scrolling
+  overflow-y: auto;
+  padding-right: 0.5rem;
+
+  &::-webkit-scrollbar {
+    width: 0.5rem;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $border-gray;
+    border-radius: 0.25rem;
+  }
+}
