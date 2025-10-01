@@ -1,14 +1,15 @@
 import React from 'react';
 import { Star, Music, Trophy, Play, Heart, Eye, MapPin } from 'lucide-react';
-import './jurisdiction.scss'; // Or import './artistDashboard.scss' if extending
+import './jurisdictionPage.scss'; 
 import Layout from './layout';
-import areaSymbol from './assets/harlem-symbol.jpeg'; // Placeholder for area photo (e.g., Apollo Theater)
-import prominentArtistBg from './assets/prominent-artist.jpeg'; // Dynamic background (artist of the month)
+import areaSymbol from './assets/apollopic.jpg';
+import prominentArtistBg from './assets/songartworkfour.jpeg';
+import albumArt from './assets/songartworktwo.jpeg';
 
 const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
-  // Mock data - replace with props or API fetch
+  
   const data = {
-    symbolImage: areaSymbol, // Iconic photo of the jurisdiction
+    symbolImage: areaSymbol, 
     artistOfMonth: {
       name: 'Tony Fadd',
       image: prominentArtistBg,
@@ -21,6 +22,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
       artist: 'Tony Fadd',
       plays: 15420,
       likes: 892,
+      image: albumArt,
     },
     topArtists: Array.from({ length: 30 }, (_, i) => ({
       id: i + 1,
@@ -47,7 +49,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
         <div className="dashboard-content">
           {/* Header */}
           <div className="dashboard-header">
-            <h1>{jurisdiction} Hub</h1>
+            <h1 style={{padding: "auto"}}>{jurisdiction} Hub</h1>
             <p>Discover local talent, top tracks, and rising stars in {jurisdiction}</p>
           </div>
 
@@ -61,7 +63,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
             <div className="hero-overlay">
               <MapPin size={32} />
               <h2>Explore {jurisdiction}</h2>
-              <p>Local vibes, global potential</p>
+              <p>Across a hundred and tength street!</p>
             </div>
           </div>
 
@@ -69,13 +71,13 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           <div className="highlights-grid"> {/* Like .stats-grid but 2-col */}
             <div className="highlight-card card">
               <div className="section-header">
-                <h3><Trophy size={20} /> Artist of the Month</h3>
+                <h3><Trophy size={20} /> #1 Artist in Harlem</h3>
               </div>
               <div className="highlight-content">
                 <img 
                   src={data.artistOfMonth.image} 
                   alt={data.artistOfMonth.name}
-                  className="profile-image" {/* Reuse from artist dash */}
+                  className="profile-image" 
                 />
                 <div className="highlight-info">
                   <h4>{data.artistOfMonth.name}</h4>
@@ -89,9 +91,9 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
               </div>
             </div>
 
-            <div className="highlight-card card">
-              <div className="section-header">
-                <h3><Star size={20} /> Song of the Week</h3>
+            <div className="highlight-card card" style={{ backgroundImage: `url(${data.songOfWeek.image})`, backgroundSize: 'cover', backgroundPosition: 'center', }}>
+              <div className="section-header" >
+                <h3><Star size={20} /> #1 Song in Harlem</h3>
               </div>
               <div className="highlight-content">
                 <div className="song-icon"> {/* Reuse from main-song-card */}
@@ -115,7 +117,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
             {/* Top 30 Artists */}
             <div className="content-section card">
               <div className="section-header">
-                <h3><Music size={20} /> Top 30 Artists</h3>
+                <h3 className='specialThirty'><Music size={20} /> Top 30 Artists</h3>
                 <button className="link-button">View More</button>
               </div>
               <div className="content-list scrollable"> {/* Add scroll if needed */}
@@ -142,7 +144,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
             {/* Top 30 Songs */}
             <div className="content-section card">
               <div className="section-header">
-                <h3><Play size={20} /> Top 30 Songs</h3>
+                <h3 className='specialThirty'><Play size={20} /> Top 30 Songs</h3>
                 <button className="link-button">View More</button>
               </div>
               <div className="content-list scrollable">
