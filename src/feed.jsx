@@ -16,6 +16,9 @@ import songArtThree from './assets/songartworkthree.jpeg';
 import songArtFour from './assets/songartworkfour.jpeg';
 import songArtFive from './assets/songartfive.jpg';
 import songArtSix from './assets/songarteight.png';
+import songArtNine from './assets/albumartnine.jpg';
+import songArtTen from './assets/albumartten.jpeg';
+import songArtEleven from './assets/rapperphotoOne.jpg';
 
 
 const Feed = () => {
@@ -117,7 +120,7 @@ const Feed = () => {
 
               <div className="item-wrapper">
                 <div className="item"
-                     style={{ backgroundImage: `url(${art2})`, backgroundSize: "contain", backgroundRepeat: "no-repeat" }}
+                     style={{ backgroundImage: `url(${songArtNine})`, backgroundSize: "contain", backgroundRepeat: "no-repeat" }}
                />
                 <div className="item-title">Song 4</div>
               </div>
@@ -134,21 +137,25 @@ const Feed = () => {
                      style={{ backgroundImage: `url(${songArtFive})` }}
                 onClick={handleSong} />
                 <div className="item-title"
-                >New Song A</div>
+                >The Outside</div>
               </div>
               <div className="item-wrapper">
                 <div className="item" 
                      style={{ backgroundImage: `url(${songArtSix})` }}
                 />
-                <div className="item-title">New Song B</div>
+                <div className="item-title">Original Man</div>
               </div>
               <div className="item-wrapper">
-                <div className="item" />
-                <div className="item-title">New Song C</div>
+                <div className="item" 
+                     style={{ backgroundImage: `url(${songArtTen})` }}
+                />
+                <div className="item-title">flavorfall</div>
               </div>
               <div className="item-wrapper">
-                <div className="item" />
-                <div className="item-title">New Song D</div>
+                <div className="item" 
+                     style={{ backgroundImage: `url(${songArtEleven})`, backgroundSize: "contain", backgroundRepeat: "no-repeat" }}
+                />
+                <div className="item-title">Golden Son</div>
               </div>
             </div>
           </section>
