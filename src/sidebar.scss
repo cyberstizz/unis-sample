@@ -10,13 +10,20 @@ $unis-blue: #163387;
 $unis-silver: #918f8f; 
 
 
-.sidebar-icon-leaderboards{
-  font-size: 25px;
+// .sidebar-icon-leaderboards{
+//   font-size: 25px;
+// }
+
+.sidebar-icon {
+  display: inline-block;
+  width: 32px; // Fixed width ensures alignment
+  text-align: center;
+  flex-shrink: 0;
+  margin-right: 14px;
 }
 
-.sidebar-icon{
-  margin-right: 1px;
-  padding-right: 1%;
+.sidebar-text {
+  font-size: 23px; // Your default size
 }
 
 .sidebar-trigger {
@@ -81,17 +88,19 @@ $unis-silver: #918f8f;
     margin-top: 60px; // Space below header
 
     li {
+      display: flex; // Enable flexbox
+      align-items: center; // Vertical alignment
       padding: 15px 10px;
       padding-top: 1px;
       padding-right: 1px;
       cursor: pointer;
-      border-bottom: 1px solid rgba($unis-blue, 0.5); // Faint line for visibility
+      border-bottom: 1px solid rgba($unis-blue, 0.5);
       color: $text-silver;
       transition: color 0.3s, background 0.3s;
 
       &:hover {
         color: $unis-blue;
-        background: rgba($unis-silver, 0.1); // Subtle hover bg, still transparent
+        background: rgba($unis-silver, 0.1);
       }
     }
   }

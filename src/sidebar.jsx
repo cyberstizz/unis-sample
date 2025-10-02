@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import './sidebar.scss';
 import { useNavigate } from 'react-router-dom';
-
+import { Vote, Search, Trophy, Settings, DollarSign } from 'lucide-react';
 
 const Sidebar = ({ onProfileClick }) => { 
   const [isOpen, setIsOpen] = useState(false); 
 
   const toggleOpen = () => setIsOpen(!isOpen);
-
 
   const navigate = useNavigate();
 
@@ -15,25 +14,21 @@ const Sidebar = ({ onProfileClick }) => {
     navigate('/voteawards'); 
   };
 
-   const handleEarnings = () => {
+  const handleEarnings = () => {
     navigate('/earnings'); 
   };
-
-
 
   const handleMilestones = () => {
     navigate('/milestones'); 
   };
 
-   const handleMap = () => {
+  const handleMap = () => {
     navigate('/find'); 
   };
-
 
   const handleLeaderboards = () => {
     navigate('/leaderboards'); 
   };
-
 
   const handleFindPage = () => {
     navigate('/findpage'); 
@@ -61,11 +56,26 @@ const Sidebar = ({ onProfileClick }) => {
       {/* Sidebar Content */}
       <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
         <ul>
-          <li onClick={handleClick}><span className="sidebar-icon">🗳️</span> Vote</li> {/* Placeholder icon */}
-          <li onClick={handleFindPage}><span className="sidebar-icon">🔍</span> Find</li>
-          <li onClick={handleLeaderboards} className='sidebar-icon-leaderboards'><span className="sidebar-icon">🏆</span> <span style={{fontSize: '20px'}}> Leaderboards</span></li>
-          <li onClick={handleProfile}><span className="sidebar-icon">⚙️</span> Settings</li>
-          <li onClick={handleEarnings}><span className="sidebar-icon">💰</span> Earnings</li>
+          <li onClick={handleClick}>
+            <span className="sidebar-icon"><Vote size={24} /></span>
+            <span className="sidebar-text">Vote</span>
+          </li>
+          <li onClick={handleFindPage}>
+            <span className="sidebar-icon"><Search size={24} /></span>
+            <span className="sidebar-text">Find</span>
+          </li>
+          <li onClick={handleLeaderboards}>
+            <span className="sidebar-icon"><Trophy size={24} /></span>
+            <span className="sidebar-text">Leaderboards</span>
+          </li>
+          <li onClick={handleProfile}>
+            <span className="sidebar-icon"><Settings size={24} /></span>
+            <span className="sidebar-text">Settings</span>
+          </li>
+          <li onClick={handleEarnings}>
+            <span className="sidebar-icon"><DollarSign size={24} /></span>
+            <span className="sidebar-text">Earnings</span>
+          </li>
         </ul>
       </nav>
 
