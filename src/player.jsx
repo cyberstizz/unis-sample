@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { PlayerContext } from './context/playercontext';
+import { Heart, Maximize2 } from 'lucide-react';
 import './player.scss';
 
 const Player = () => {
@@ -221,7 +222,7 @@ const Player = () => {
 
           <div className="expanded-actions">
             <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
-              ❤️
+              <Heart />
             </button>
             <button onClick={handleDownload}>⬇</button>
           </div>
@@ -271,9 +272,11 @@ const Player = () => {
             
             {/* Right: Expand/Like/Download */}
             <div className="like-download">
-              <button className="expand-button" onClick={handleExpand}>&uarr;</button>
+              <button className="expand-button" onClick={handleExpand}>
+                <Maximize2 />
+              </button>
               <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
-                ❤️
+                <Heart />
               </button>
               <button onClick={handleDownload}>⬇</button>
             </div>

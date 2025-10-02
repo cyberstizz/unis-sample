@@ -1,33 +1,27 @@
 // fonts
 @import url('https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double:wght@100..900&family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Delicious+Handrawn&display=swap');
 
-// Variables (consistent)
 $text-silver: #C0C0C0;
 $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
-$bg-dark: #1A1A1A; // Not used now
+$bg-dark: #1A1A1A;
 $unis-blue: #163387;
 $unis-silver: #918f8f; 
 
-
-// .sidebar-icon-leaderboards{
-//   font-size: 25px;
-// }
-
 .sidebar-icon {
   display: inline-block;
-  width: 32px; // Fixed width ensures alignment
-  text-align: center;
+  width: 25px; 
   flex-shrink: 0;
-  margin-right: 14px;
+  margin-right: 7px;
+  margin-top: 2.5px;
 }
 
 .sidebar-text {
-  font-size: 23px; // Your default size
+  font-size: 23px; 
 }
 
 .sidebar-trigger {
-  display: none; // Hidden on desktop
+  display: none; 
   position: fixed;
   top: 50%;
   left: 0;
