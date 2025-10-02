@@ -1,4 +1,3 @@
-// src/components/Feed.js
 import React, { useState, useContext, useEffect } from 'react';
 import { PlayerContext } from './context/playercontext'; 
 import { useNavigate } from 'react-router-dom';

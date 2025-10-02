@@ -49,7 +49,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
         <div className="dashboard-content">
           {/* Header */}
           <div className="dashboard-header">
-            <h1 style={{padding: "auto"}}>{jurisdiction} Hub</h1>
+            <h1 style={{padding: "auto"}}>{jurisdiction}</h1>
             <p>Discover local talent, top tracks, and rising stars in {jurisdiction}</p>
           </div>
 

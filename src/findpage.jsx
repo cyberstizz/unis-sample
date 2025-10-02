@@ -232,7 +232,7 @@ const FindPage = () => {
 
         <div className="map-container">
           <ComposableMap projection="geoAlbersUsa">
-            <ZoomableGroup center={center} zoom={zoom} disablePanning={!isZoomed} disableZooming={!isZoomed}> {/* Disable pan/zoom in US mode */}
+            <ZoomableGroup center={center} zoom={zoom} disablePanning={true} disableZooming={true}> {/* Disable pan/zoom in US mode */}
               <Geographies geography={geoUrl}>
                 {({ geographies }) =>
                   geographies.map((geo) => (
