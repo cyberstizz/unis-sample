@@ -24,12 +24,24 @@ const Player = () => {
       
       // Set new source
       media.src = currentMedia.url;
+      
+      // Listen for when media is ready to play, then auto-start
+      const handleCanPlay = () => {
+        media.play().catch((error) => {
+          console.error('Auto-play failed:', error);
+          // Optionally, you could setIsPlaying(false) here if you want to reflect failures
+        });
+        setIsPlaying(true);
+        media.removeEventListener('canplay', handleCanPlay);
+      };
+      
+      media.addEventListener('canplay', handleCanPlay);
       media.load();
       
-      // Auto-play if there was a previous song playing
-      if (isPlaying) {
-        media.play().catch(console.error);
-      }
+      // Cleanup listener if component unmounts before canplay fires
+      return () => {
+        media.removeEventListener('canplay', handleCanPlay);
+      };
     }
   }, [currentMedia]);
 
@@ -102,6 +114,11 @@ const Player = () => {
     console.log('Download pressed');
   };
 
+  const handleExpand = (e) => {
+    e.stopPropagation();
+    toggleExpand();
+  };
+
   // Handle seeking from range input (expanded mode)
   const handleSeek = (e) => {
     const newTime = (e.target.value / 100) * duration;
@@ -133,7 +150,6 @@ const Player = () => {
   return (
     <div
       className={`player ${isExpanded ? 'expanded' : ''}`}
-      onClick={!isExpanded ? toggleExpand : null}
       style={isExpanded ? { backgroundImage: `url(${currentMedia.artwork || '/assets/placeholder.jpg'})` } : {}}
     >
       {/* Single audio/video element that persists across mode changes */}
@@ -246,15 +262,16 @@ const Player = () => {
             
             {/* Middle: Controls */}
             <div className="mini-controls">
-              <button onClick={handlePrev}>⏮</button>
+              <button onClick={handlePrev}>◀</button>
               <button onClick={handlePlayPause} className="play-pause-btn">
                 {isPlaying ? '⏸' : '▶'}
               </button>
-              <button onClick={handleNext}>⏭</button>
+              <button onClick={handleNext}>▶</button>
             </div>
             
-            {/* Right: Like/Download */}
+            {/* Right: Expand/Like/Download */}
             <div className="like-download">
+              <button className="expand-button" onClick={handleExpand}>&uarr;</button>
               <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
                 ❤️
               </button>

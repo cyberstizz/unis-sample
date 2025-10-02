@@ -5,6 +5,8 @@ import Layout from './layout';
 import { PlayerContext } from './context/playercontext'; 
 import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3'; 
 import VotingWizard from './votingWizard'; 
+import songArtOne from './assets/songartworkONe.jpeg';
+
 
 const SongPage = () => {
   const { playMedia } = useContext(PlayerContext); 
@@ -14,13 +16,13 @@ const SongPage = () => {
   const [selectedNominee, setSelectedNominee] = useState(null); 
 
   const song = {
-    title: 'Song Title',
+    title: 'Paranoid',
     artist: 'Artist Name',
     jurisdiction: 'Harlem-Wide',
     playCount: 5120,
     todayPlayCount: 64,
     voteCount: 120,
-    artwork: songArtwork,
+    artwork: songArtOne,
     description: 'This is a brief description of the song. It tells the story behind the music and the artist\'s inspiration.',
     credits: {
       producer: 'Producer Name',
