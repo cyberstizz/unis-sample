@@ -19,6 +19,9 @@ import FindPage from './findpage';
 import SongNotification from './songNotification';
 import ArtistDashboard from './artistDashboard';
 import JurisdictionPage from './jurisdictionPage';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import PrivateRoute from './components/PrivateRoute';
 
 
 const App = () => {
@@ -32,20 +35,24 @@ const App = () => {
         <div className="app-wrapper"> {/* New wrapper for sidebar positioning */}
           <Sidebar onProfileClick={handleProfileClick} /> {/* Global sidebar */}
           <Routes>
-            <Route path="/" element={<Feed />} />
-            <Route path="/explore" element={<ExploreFind />} />
-            <Route path="/artist" element={<ArtistPage />} />
-            <Route path="/song" element={<SongPage />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/voteawards" element={<VoteAwards />} />
-            <Route path="/profile" element={<JurisdictionPage />} />
-            <Route path="/milestones" element={<MilestonesPage />} />
-            <Route path="/leaderboards" element={<Leaderboards />} />
-            <Route path="/find" element={<MapDemo />} />
-            <Route path="/earnings" element={<Earnings />} />
-            <Route path="/findpage" element={<FindPage />} />
-            <Route path="/artistDashboard" element={<ArtistDashboard />} />
-            <Route path="/jurisdictionPage" element={<JurisdictionPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route element={<PrivateRoute />}>
+              <Route path="/" element={<Feed />} />
+              <Route path="/explore" element={<ExploreFind />} />
+              <Route path="/artist" element={<ArtistPage />} />
+              <Route path="/song" element={<SongPage />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/voteawards" element={<VoteAwards />} />
+              <Route path="/profile" element={<ArtistDashboard />} />
+              <Route path="/milestones" element={<MilestonesPage />} />
+              <Route path="/leaderboards" element={<Leaderboards />} />
+              <Route path="/find" element={<MapDemo />} />
+              <Route path="/earnings" element={<Earnings />} />
+              <Route path="/findpage" element={<FindPage />} />
+              <Route path="/artistDashboard" element={<ArtistDashboard />} />
+              <Route path="/jurisdictionPage" element={<JurisdictionPage />} />
+            </Route>
           </Routes>
           <SongNotification />
         </div>
