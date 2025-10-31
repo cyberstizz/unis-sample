@@ -13,6 +13,15 @@ const Login = () => {
     try {
       const response = await login(email, password);
       localStorage.setItem('token', response.data.token);
+
+
+      const successMsg = document.createElement('div');
+      successMsg.textContent = 'Login successful! Welcome back.';
+      successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 10px 20px; border-radius: 4px; z-index: 1001;';
+      document.body.appendChild(successMsg);
+      setTimeout(() => document.body.removeChild(successMsg), 3000);
+      navigate('/');
+
       navigate('/');
     } catch (error) {
       console.error('Login failed', error);
