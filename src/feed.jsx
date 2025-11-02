@@ -1,14 +1,12 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { PlayerContext } from './context/playercontext'; 
 import { useNavigate } from 'react-router-dom';
+import axiosInstance, { apiCall } from './components/axiosInstance';
 import Layout from './layout';
+import randomRapper from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import song2 from './assets/sdboomin_waitedallnight.mp3';
-import video1 from './assets/badVideo.mp4'
-import art1 from './assets/unisLogo1.jpg'; 
-import art2 from './assets/theQuiet.jpg';
-import './feed.scss';
-import randomRapper from './assets/randomrapper.jpeg';
+import video1 from './assets/badVideo.mp4';
 import songArtOne from './assets/songartworkONe.jpeg';
 import songArtTwo from './assets/songartworktwo.jpeg';
 import songArtThree from './assets/songartworkthree.jpeg';
@@ -18,271 +16,172 @@ import songArtSix from './assets/songarteight.png';
 import songArtNine from './assets/albumartnine.jpg';
 import songArtTen from './assets/albumartten.jpeg';
 import songArtEleven from './assets/rapperphotoOne.jpg';
-
+import './feed.scss';
 
 const Feed = () => {
   const { playMedia } = useContext(PlayerContext);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [animate, setAnimate] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [jurisdictionId, setJurisdictionId] = useState('00000000-0000-0000-0000-000000000002');  // Default; update from profile
+  const [supportedArtistId, setSupportedArtistId] = useState(null);  // For posts
+  const [trendingMedia, setTrendingMedia] = useState([]);  // {id, title, artist, artworkUrl, mediaUrl, type: 'song'|'video'}
+  const [newMedia, setNewMedia] = useState([]);
+  const [awards, setAwards] = useState([]);  // {id, name, winner}
+  const [popularArtists, setPopularArtists] = useState([]);  // {id, username, photoUrl}
+  const [followedPosts, setFollowedPosts] = useState([]);  // {id, content/media, artist}
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setAnimate(true);
+    fetchFeedData();
   }, []);
 
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const fetchFeedData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      // 1. Fetch user profile for jurisdiction + supported artist
+      const profileRes = await apiCall({ method: 'get', url: '/v1/users/profile' });
+      const { userId: uid, jurisdiction, supportedArtistId: suppId } = profileRes.data;
+      setUserId(uid);
+      setJurisdictionId(jurisdiction.jurisdictionId);
+      setSupportedArtistId(suppId);
+
+      // 2. Parallel fetches with params
+      const [trendingRes, newRes, awardsRes, popularRes, postsRes] = await Promise.all([
+        apiCall({ method: 'get', url: `/v1/media/trending?jurisdictionId=${jurisdiction.jurisdictionId}` }),
+        apiCall({ method: 'get', url: `/v1/media/new?jurisdictionId=${jurisdiction.jurisdictionId}` }),
+        apiCall({ method: 'get', url: `/v1/awards/leaderboards?jurisdictionId=${jurisdiction.jurisdictionId}` }),
+        apiCall({ method: 'get', url: `/v1/users/artist/top?jurisdictionId=${jurisdiction.jurisdictionId}` }),
+        suppId ? apiCall({ method: 'get', url: `/v1/media/supported?userId=${uid}` })  // Followed artist's posts/media
+              : Promise.resolve({ data: [] })  // No follows → empty
+      ]);
+
+      setTrendingMedia(trendingRes.data || []);
+      setNewMedia(newRes.data || []);
+      setAwards(awardsRes.data || []);
+      setPopularArtists(popularRes.data || []);
+      setFollowedPosts(postsRes.data || []);
+    } catch (err) {
+      console.error('Feed load error:', err);
+      setError('Feed unavailable—showing demo content.');
+      // apiCall fallback auto-uses mocks
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const navigate = useNavigate();
 
-  const handleClick = () => {
-    navigate('/voteawards');
-  };
+  // Nav handlers (uniform by ID)
+  const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
+  const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
 
-  const handleLeaderboards = () => {
-    navigate('/leaderboards'); 
-  };
-
-  const handleMilestones = () => {
-    navigate('/milestones'); 
-  };
-
-  const handleArtist = () => {
-    navigate('/artist'); 
-  };
-
-  const handleSong = () => {
-    navigate('/song'); 
-  };
-
-  const handleProfile = () => {
-    navigate('/profile'); 
-  };
-
-  const handlePlaySongOne = (e) => {
+  // Play handler (immediate, uses data—no refetch)
+  const handlePlayMedia = (e, media) => {
     e.stopPropagation();
-    playMedia(
-      { type: 'song', url: song1, title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artwork: songArtOne },
-      [
-        { type: 'song', url: song1, title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artwork: songArtTwo },
-        { type: 'song', url: song2, title: 'SD Boomin - Waited All Night', artist: 'SD Boomin', artwork: songArtFour },
-      ]
-    );
+    const playlist = [media, ...newMedia.slice(0, 2).filter(m => m.id !== media.id)];  // Dynamic, dedup
+    playMedia(media, playlist);  // {type, url: mediaUrl, title, artist, artwork: artworkUrl}
   };
 
-  const handlePlaySongTwo = (e) => {
-    e.stopPropagation();
-    playMedia(
-      { type: 'song', url: song2, title: 'SD Boomin - Waited All Night', artist: 'SD Boomin', artwork: songArtTwo },
-      [
-        { type: 'song', url: song2, title: 'SD Boomin - Waited All Night', artist: 'SD Boomin', artwork: songArtThree },
-        { type: 'song', url: song1, title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artwork: songArtFour },
-      ]
-    );
-  };
+  // Dummies (env fallback or error)
+  const getDummyTrending = () => [
+    { id: 'dummy1', title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artworkUrl: songArtOne, mediaUrl: song1, type: 'song' },
+    { id: 'dummy2', title: 'SD Boomin - Waited All Night', artist: 'SD Boomin', artworkUrl: songArtTwo, mediaUrl: song2, type: 'song' },
+    { id: 'dummy3', title: 'Bad Video', artist: 'some guy', artworkUrl: songArtThree, mediaUrl: video1, type: 'video' },
+    { id: 'dummy4', title: 'Song 4', artist: 'Artist 4', artworkUrl: songArtNine, mediaUrl: song1, type: 'song' }
+  ];
+  const getDummyNew = () => [
+    { id: 'dummy5', title: 'The Outside', artist: 'Artist Five', artworkUrl: songArtFive, mediaUrl: song2, type: 'song' },
+    { id: 'dummy6', title: 'Original Man', artist: 'Artist Six', artworkUrl: songArtSix, mediaUrl: song1, type: 'song' },
+    { id: 'dummy10', title: 'flavorfall', artist: 'Artist Ten', artworkUrl: songArtTen, mediaUrl: song2, type: 'song' },
+    { id: 'dummy11', title: 'Golden Son', artist: 'Artist Eleven', artworkUrl: songArtEleven, mediaUrl: song1, type: 'song' }
+  ];
+  const getDummyAwards = () => [{ id: 'a1', name: 'Award 1' }, { id: 'a2', name: 'Award 2' }, { id: 'a3', name: 'Award 3' }, { id: 'a4', name: 'Award 4' }, { id: 'a5', name: 'Award 5' }];
+  const getDummyArtists = () => [{ id: 'art1', username: 'Artist 1' }, { id: 'art2', username: 'Artist 2' }, { id: 'art3', username: 'Artist 3' }, { id: 'art4', username: 'Artist 4' }, { id: 'art5', username: 'Artist 5' }];
+  const getDummyPosts = () => [{ id: 'p1', content: 'Follower Post 1' }, { id: 'p2', content: 'Follower Post 2' }, { id: 'p3', content: 'Follower Post 3' }];
 
-  const handlePlayVideoOne = (e) => {
-    e.stopPropagation();
-    playMedia(
-      { type: 'video', url: video1, title: 'badVideo', artist: 'some guy', artwork: art2 },
-      [
-        { type: 'song', url: song2, title: 'SD Boomin - Waited All Night', artist: 'SD Boomin', artwork: art2 },
-        { type: 'song', url: song1, title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artwork: art1 },
-      ]
-    );
-  };
+  // Data with fallbacks
+  const trending = trendingMedia.length ? trendingMedia : getDummyTrending();
+  const newMediaList = newMedia.length ? newMedia : getDummyNew();
+  const awardsList = awards.length ? awards : getDummyAwards();
+  const artistsList = popularArtists.length ? popularArtists : getDummyArtists();
+  const postsList = followedPosts.length ? followedPosts : getDummyPosts();
 
-  const handlePlaySongNine = (e) => {
-    e.stopPropagation();
-    // Placeholder media for Song 4—replace with real data
-    playMedia(
-      { type: 'song', url: song1, title: 'Song 4', artist: 'Artist 4', artwork: songArtNine },
-      [
-        { type: 'song', url: song1, title: 'Song 4', artist: 'Artist 4', artwork: songArtNine },
-        { type: 'song', url: song2, title: 'Next Song', artist: 'Next Artist', artwork: songArtTen },
-      ]
-    );
-  };
-
-  const handlePlaySongFive = (e) => {
-    e.stopPropagation();
-    // Placeholder media for The Outside—replace with real data
-    playMedia(
-      { type: 'song', url: song2, title: 'The Outside', artist: 'Artist Five', artwork: songArtFive },
-      [
-        { type: 'song', url: song2, title: 'The Outside', artist: 'Artist Five', artwork: songArtFive },
-        { type: 'song', url: song1, title: 'Previous Song', artist: 'Prev Artist', artwork: songArtSix },
-      ]
-    );
-  };
-
-  const handlePlaySongSix = (e) => {
-    e.stopPropagation();
-    // Placeholder media for Original Man—replace with real data
-    playMedia(
-      { type: 'song', url: song1, title: 'Original Man', artist: 'Artist Six', artwork: songArtSix },
-      [
-        { type: 'song', url: song1, title: 'Original Man', artist: 'Artist Six', artwork: songArtSix },
-        { type: 'song', url: song2, title: 'Next Song', artist: 'Next Artist', artwork: songArtTen },
-      ]
-    );
-  };
-
-  const handlePlaySongTen = (e) => {
-    e.stopPropagation();
-    // Placeholder media for flavorfall—replace with real data
-    playMedia(
-      { type: 'song', url: song2, title: 'flavorfall', artist: 'Artist Ten', artwork: songArtTen },
-      [
-        { type: 'song', url: song2, title: 'flavorfall', artist: 'Artist Ten', artwork: songArtTen },
-        { type: 'song', url: song1, title: 'Previous Song', artist: 'Prev Artist', artwork: songArtEleven },
-      ]
-    );
-  };
-
-  const handlePlaySongEleven = (e) => {
-    e.stopPropagation();
-    // Placeholder media for Golden Son—replace with real data
-    playMedia(
-      { type: 'song', url: song1, title: 'Golden Son', artist: 'Artist Eleven', artwork: songArtEleven },
-      [
-        { type: 'song', url: song1, title: 'Golden Son', artist: 'Artist Eleven', artwork: songArtEleven },
-        { type: 'song', url: song2, title: 'Next Song', artist: 'Next Artist', artwork: songArtNine },
-      ]
-    );
-  };
+  if (loading) return <div className="loading-feed" style={{ textAlign: 'center', padding: '50px' }}>Loading your feed...</div>;
 
   return (
     <Layout backgroundImage={randomRapper}>
       <div className="feed-content-wrapper">
+        {error && <div className="feed-error" style={{ color: 'orange', padding: '10px', textAlign: 'center' }}>{error}</div>}
         <main className="feed">
           {/* Trending Carousel */}
           <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
-            <h2>Trending</h2>
+            <h2>Trending in {jurisdictionId === '00000000-0000-0000-0000-000000000002' ? 'Uptown Harlem' : 'Your Area'}</h2>
             <div className="carousel-items">
-
-              <div className="item-wrapper">
-                <div 
-                  className="item" 
-                  style={{ backgroundImage: `url(${songArtOne})` }}
-                  onClick={handleSong}
-                >
-                  <button className="play-icon" onClick={handlePlaySongOne}>▶</button>
+              {trending.map((item) => (
+                <div key={item.id} className="item-wrapper">
+                  <div 
+                    className="item" 
+                    style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})` }}
+                    onClick={() => handleSongNav(item.id, item.type)}
+                  >
+                    <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+                  </div>
+                  <div className="item-title">{item.title} by {item.artist}</div>
                 </div>
-                <div className="item-title">Tony Fadd - Paranoid</div>
-              </div>
-
-              <div className="item-wrapper">
-                <div 
-                  className="item" 
-                  style={{ backgroundImage: `url(${songArtTwo})` }}
-                  onClick={handleSong}
-                >
-                  <button className="play-icon" onClick={handlePlaySongTwo}>▶</button>
-                </div>
-                <div className="item-title">SD Boomin - Waited All Night</div>
-              </div>
-
-              <div className="item-wrapper">
-                <div 
-                  className="item" 
-                  style={{ backgroundImage: `url(${songArtThree})` }}
-                  onClick={handleSong}
-                >
-                  <button className="play-icon" onClick={handlePlayVideoOne}>▶</button>
-                </div>
-                <div className="item-title">Bad Video</div>
-              </div>
-
-              <div className="item-wrapper">
-                <div 
-                  className="item"
-                  style={{ backgroundImage: `url(${songArtNine})`, backgroundSize: "contain", backgroundRepeat: "no-repeat" }}
-                  onClick={handleSong}
-                >
-                  <button className="play-icon" onClick={handlePlaySongNine}>▶</button>
-                </div>
-                <div className="item-title">Song 4</div>
-              </div>
-
+              ))}
             </div>
           </section>
 
           {/* New Carousel */}
           <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
-            <h2>New</h2>
+            <h2>New Releases</h2>
             <div className="carousel-items">
-              <div className="item-wrapper">
-                <div 
-                  className="item" 
-                  style={{ backgroundImage: `url(${songArtFive})` }}
-                  onClick={handleSong}
-                >
-                  <button className="play-icon" onClick={handlePlaySongFive}>▶</button>
+              {newMediaList.map((item) => (
+                <div key={item.id} className="item-wrapper">
+                  <div 
+                    className="item" 
+                    style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})` }}
+                    onClick={() => handleSongNav(item.id, item.type)}
+                  >
+                    <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+                  </div>
+                  <div className="item-title">{item.title} by {item.artist}</div>
                 </div>
-                <div className="item-title">The Outside</div>
-              </div>
-              <div className="item-wrapper">
-                <div 
-                  className="item" 
-                  style={{ backgroundImage: `url(${songArtSix})` }}
-                  onClick={handleSong}
-                >
-                  <button className="play-icon" onClick={handlePlaySongSix}>▶</button>
-                </div>
-                <div className="item-title">Original Man</div>
-              </div>
-              <div className="item-wrapper">
-                <div 
-                  className="item" 
-                  style={{ backgroundImage: `url(${songArtTen})` }}
-                  onClick={handleSong}
-                >
-                  <button className="play-icon" onClick={handlePlaySongTen}>▶</button>
-                </div>
-                <div className="item-title">flavorfall</div>
-              </div>
-              <div className="item-wrapper">
-                <div 
-                  className="item" 
-                  style={{ backgroundImage: `url(${songArtEleven})`, backgroundSize: "contain", backgroundRepeat: "no-repeat" }}
-                  onClick={handleSong}
-                >
-                  <button className="play-icon" onClick={handlePlaySongEleven}>▶</button>
-                </div>
-                <div className="item-title">Golden Son</div>
-              </div>
+              ))}
             </div>
           </section>
 
-          {/* My Home List */}
+          {/* My Home (Awards) */}
           <section className={`feed-section list ${animate ? "animate" : ""}`}>
             <h2>My Home</h2>
             <ol>
-              <li>Award 1</li>
-              <li>Award 2</li>
-              <li>Award 3</li>
-              <li>Award 4</li>
-              <li>Award 5</li>
+              {awardsList.map((award) => <li key={award.id}>{award.name}</li>)}
             </ol>
           </section>
 
-          {/* Popular List */}
+          {/* Popular (Artists) */}
           <section className={`feed-section list ${animate ? "animate" : ""}`}>
-            <h2>Popular</h2>
+            <h2>Popular Artists</h2>
             <ol>
-              <li>Artist 1</li>
-              <li>Artist 2</li>
-              <li>Artist 3</li>
-              <li>Artist 4</li>
-              <li>Artist 5</li>
+              {artistsList.map((artist) => (
+                <li key={artist.id} onClick={() => handleArtistNav(artist.id)} style={{ cursor: 'pointer' }}>
+                  {artist.username || artist.name}
+                </li>
+              ))}
             </ol>
           </section>
 
-          {/* Posts Section */}
+          {/* Posts (Followed) */}
           <section className={`feed-section posts ${animate ? "animate" : ""}`}>
-            <h2>Posts</h2>
-            <div className="post">Follower Post 1</div>
-            <div className="post">Follower Post 2</div>
-            <div className="post">Follower Post 3</div>
+            <h2>From Artists You Follow</h2>
+            {postsList.map((post) => (
+              <div key={post.id} className="post" onClick={() => handleSongNav(post.id, post.type || 'song')}>
+                {post.content || `${post.title} by ${post.artist}`}
+              </div>
+            ))}
           </section>
         </main>
       </div>
