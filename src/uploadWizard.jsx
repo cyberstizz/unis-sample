@@ -1,21 +1,21 @@
-// src/components/UploadWizard.jsx
 import React, { useState } from 'react';
 import axiosInstance from './components/axiosInstance'; 
-import './uploadWizard.scss';
+import './UploadWizard.scss';
 
 const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
   const [step, setStep] = useState(1);
-  const [mediaType, setMediaType] = useState('song');  // song/video
+  const [mediaType, setMediaType] = useState('song');  
   const [genreId, setGenreId] = useState('00000000-0000-0000-0000-000000000101');  // Default hip-hop
   const [jurisdictionId, setJurisdictionId] = useState(userProfile.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002');  // Default Uptown
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState(null);
+  const [artwork, setArtwork] = useState(null);  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState(null);  // For confirmation
+  const [preview, setPreview] = useState(null);  // For media preview
 
-  const artistId = userProfile.userId;  // From profile/token
+  const artistId = userProfile.userId;  // From profile
 
   const handleNext = () => {
     setError('');
@@ -43,8 +43,25 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
 
     setFile(selectedFile);
     setError('');
-    // Preview URL for confirmation (audio/video tag src)
-    setPreview(URL.createObjectURL(selectedFile));
+    setPreview(URL.createObjectURL(selectedFile));  
+  };
+
+  // New: Artwork change handler
+  const handleArtworkChange = (e) => {
+    const selectedArtwork = e.target.files[0];
+    if (!selectedArtwork) return;
+
+    if (!['image/jpeg', 'image/png'].includes(selectedArtwork.type)) {
+      setError('Artwork must be JPEG or PNG');
+      return;
+    }
+    if (selectedArtwork.size > 1024 * 1024) {  // 1MB
+      setError('Artwork too large (max 1MB)');
+      return;
+    }
+
+    setArtwork(selectedArtwork);
+    setError('');
   };
 
   const handleUpload = async (e) => {
@@ -59,17 +76,17 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
     }
 
     try {
-      // FormData for multipart
       const formData = new FormData();
       const metadata = {
         title,
         description,
         genreId,
-        artistId,  // Current user (artist)
+        artistId,  
         jurisdictionId
       };
-      formData.append(mediaType, JSON.stringify(metadata));  // "song" or "video" JSON
+      formData.append(mediaType, JSON.stringify(metadata));  
       formData.append('file', file);
+      if (artwork) formData.append('artwork', artwork);  
 
       const response = await axiosInstance.post(`/${mediaType}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -143,7 +160,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="file">Upload {mediaType} File</label>
+                <label htmlFor="file">{mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} File</label>
                 <input
                   type="file"
                   id="file"
@@ -152,6 +169,17 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
                   required
                 />
                 {file && <p className="file-preview">Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</p>}
+              </div>
+              {/* New: Artwork input */}
+              <div className="form-group">
+                <label htmlFor="artwork">Cover Artwork (Optional, JPEG/PNG &lt;1MB)</label>
+                <input
+                  type="file"
+                  id="artwork"
+                  accept="image/jpeg,image/png"
+                  onChange={handleArtworkChange}
+                />
+                {artwork && <p className="file-preview">Selected: {artwork.name} ({(artwork.size / 1024 / 1024).toFixed(1)} MB)</p>}
               </div>
               <button type="submit" disabled={loading} className="submit-upload-button">
                 {loading ? 'Uploading...' : 'Upload'}
@@ -170,6 +198,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
               <strong>Genre:</strong> Hip-Hop/Rap (ID: {genreId})<br />
               <strong>Jurisdiction:</strong> Uptown Harlem (ID: {jurisdictionId})<br />
               <strong>File:</strong> {file?.name} ({mediaType})<br />
+              <strong>Artwork:</strong> {artwork ? artwork.name : 'None'}<br />
               {preview && (
                 <div className="preview-media">
                   {mediaType === 'song' ? (
@@ -179,6 +208,11 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
                   )}
                 </div>
               )}
+                {artwork && (
+                  <div className="preview-artwork">
+                    <img src={URL.createObjectURL(artwork)} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover' }} />
+                  </div>
+                )}
             </div>
             <p className="warning-message">This upload cannot be undone. Ensure file is yours.</p>
           </div>

@@ -1,16 +1,14 @@
 // ArtistDashboard.jsx
 import React, { useState } from 'react';
 import { Upload, Play, Image, Video, TrendingUp, Eye, Heart, Users, X } from 'lucide-react';
+import UploadWizard from './UploadWizard';  // Add: Import your wizard (adjust path if needed)
 import './artistDashboard.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 
 const ArtistDashboard = () => {
   const [showWelcomePopup, setShowWelcomePopup] = useState(true);
-  
-
-
-
+  const [showUploadWizard, setShowUploadWizard] = useState(false);  // Add: Wizard state
 
   // Placeholder data
   const profileData = {
@@ -49,6 +47,12 @@ const ArtistDashboard = () => {
       { id: 1, title: "Behind the Scenes", views: 8920 },
       { id: 2, title: "Live Performance", views: 12450 }
     ]
+  };
+
+  // Add: Placeholder for upload success (no-op for now)
+  const handleUploadSuccess = (newMedia) => {
+    console.log('Uploaded:', newMedia);  // Test log—add refresh later
+    setShowUploadWizard(false);
   };
 
   return (
@@ -145,7 +149,7 @@ const ArtistDashboard = () => {
               </div>
               <p className="bio">{artistData.bio}</p>
               <div className="profile-actions">
-                <button className="btn btn-secondary">
+                <button className="btn btn-secondary" onClick={() => setShowUploadWizard(true)}>  {/* Add: Wire upload */}
                   <Upload size={16} />
                   Update Photo
                 </button>
@@ -201,7 +205,7 @@ const ArtistDashboard = () => {
                 <Play size={20} />
                 Your Songs
               </h3>
-              <button className="btn btn-primary btn-small">
+              <button className="btn btn-primary btn-small" onClick={() => setShowUploadWizard(true)}>  {/* Add: Wire upload */}
                 <Upload size={16} />
                 Upload
               </button>
@@ -235,7 +239,7 @@ const ArtistDashboard = () => {
                 <Video size={20} />
                 Your Videos
               </h3>
-              <button className="btn btn-primary btn-small">
+              <button className="btn btn-primary btn-small" onClick={() => setShowUploadWizard(true)}>  {/* Add: Wire upload */}
                 <Upload size={16} />
                 Upload
               </button>
@@ -266,7 +270,7 @@ const ArtistDashboard = () => {
               <Image size={20} />
               Your Images
             </h3>
-            <button className="btn btn-primary btn-small">
+            <button className="btn btn-primary btn-small" onClick={() => setShowUploadWizard(true)}>  {/* Add: Wire upload */}
               <Upload size={16} />
               Upload
             </button>
@@ -292,6 +296,16 @@ const ArtistDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Add: Wizard at bottom (pops on button click) */}
+      {showUploadWizard && (
+        <UploadWizard
+          show={showUploadWizard}
+          onClose={() => setShowUploadWizard(false)}
+          onUploadSuccess={handleUploadSuccess}
+          userProfile={{}}  // Empty for now—fill from profile later
+        />
+      )}
     </div>
     </Layout>
   );
