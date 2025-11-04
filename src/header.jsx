@@ -29,17 +29,7 @@ const Header = () => {
         {/* Center: Search bar */}
         <input type="text" placeholder="Search artists, songs..." className="search-bar" />
 
-        {/* Right: User name + Logout */}
-        <div className="user-section">
-          {user ? (  // New: Conditional user display
-            <>
-              <span className="user-name">Welcome, {user.username}</span>  {/* New: Artist name */}
-              <div onClick={handleLogout} className="logout-button">Logout</div>
-            </>
-          ) : (
-            <div className="logout-button" onClick={handleLogout}>Logout</div>  // Fallback
-          )}
-        </div>
+        
       </div>
 
       {/* Static options bar underneath */}
@@ -49,6 +39,17 @@ const Header = () => {
         <div onClick={handleArtist} className="option-box">Popular</div>
         <div onClick={handleEarnings} className="option-box">Earnings</div>
       </div>
+      {/* Right: User name + Logout */}
+        <div className="user-section">
+          {user ? (  // New: Conditional user display
+            <>
+              <span className="user-name">{user.username}</span>  
+              <div onClick={handleLogout} className="logout-button">Logout</div>
+            </>
+          ) : (
+            <div className="logout-button" onClick={handleLogout}>Logout</div>  // Fallback
+          )}
+        </div>
     </header>
   );
 };
