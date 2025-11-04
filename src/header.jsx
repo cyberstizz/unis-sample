@@ -2,12 +2,13 @@ import React from "react";
 import "./header.scss"; 
 import unisLogo from './assets/unisNoBackground.svg';
 import { useNavigate } from 'react-router-dom';
-import { logoutUser } from './components/axiosInstance'; 
+import { useAuth } from './context/AuthContext';  
 
 const Header = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();  
 
-  // Navigation handlers
+  
   const handleClick = () => navigate('/voteawards');
   const handleEarnings = () => navigate('/earnings');
   const handleHome = () => navigate('/');
@@ -16,7 +17,7 @@ const Header = () => {
   const handleSong = () => navigate('/song');
   const handleProfile = () => navigate('/profile');
   const handleLogout = async () => {
-    await logoutUser();
+    logout(); 
   };
 
   return (
@@ -28,8 +29,17 @@ const Header = () => {
         {/* Center: Search bar */}
         <input type="text" placeholder="Search artists, songs..." className="search-bar" />
 
-        {/* Right: Logout */}
-        <div onClick={handleLogout} className="logout-button">Logout</div>
+        {/* Right: User name + Logout */}
+        <div className="user-section">
+          {user ? (  // New: Conditional user display
+            <>
+              <span className="user-name">Welcome, {user.username}</span>  {/* New: Artist name */}
+              <div onClick={handleLogout} className="logout-button">Logout</div>
+            </>
+          ) : (
+            <div className="logout-button" onClick={handleLogout}>Logout</div>  // Fallback
+          )}
+        </div>
       </div>
 
       {/* Static options bar underneath */}

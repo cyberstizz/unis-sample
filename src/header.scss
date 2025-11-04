@@ -1,15 +1,9 @@
-// Header.scss
-
-// 🎨 Theme Variables
 $bg-black: #000000;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
 $unis-blue: #163387;
 $unis-silver: #918f8f;
 
-// ============================
-// HEADER STRUCTURE
-// ============================
 .header {
   display: flex;
   flex-direction: column;
@@ -110,9 +104,22 @@ $unis-silver: #918f8f;
   }
 }
 
-// ============================
-// RESPONSIVE: Hide logo on small screens
-// ============================
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: absolute;
+  bottom: -10px;  // Bottom of header-top
+  right: 20px;  // Right edge
+
+  .user-name {
+    color: $accent-white;
+    font-weight: bold;
+    font-size: 14px;
+    white-space: nowrap;  // No wrap
+  }
+}
+
 @media (max-width: 600px) {
   .header {
     .logo {

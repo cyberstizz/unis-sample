@@ -1,4 +1,3 @@
-// src/App.jsx (or main entry)
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { PlayerProvider } from './context/playercontext';
@@ -22,6 +21,7 @@ import JurisdictionPage from './jurisdictionPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import PrivateRoute from './components/PrivateRoute';
+import { AuthProvider } from './context/AuthContext';  
 
 
 const App = () => {
@@ -30,6 +30,7 @@ const App = () => {
   };
 
   return (
+  <AuthProvider>
     <PlayerProvider>
       <Router>
         <div className="app-wrapper"> {/* New wrapper for sidebar positioning */}
@@ -59,6 +60,7 @@ const App = () => {
         <Player />
       </Router>
     </PlayerProvider>
+  </AuthProvider>
   );
 };
 
