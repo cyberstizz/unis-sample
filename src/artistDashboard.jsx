@@ -1,16 +1,51 @@
-// ArtistDashboard.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, Play, Image, Video, TrendingUp, Eye, Heart, Users, X } from 'lucide-react';
-import UploadWizard from './UploadWizard';  // Add: Import your wizard (adjust path if needed)
+import UploadWizard from './UploadWizard';  
 import './artistDashboard.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
+import { useAuth } from './context/AuthContext';
+import { apiCall } from './components/axiosInstance'; 
 
 const ArtistDashboard = () => {
+  const [userProfile, setUserProfile] = useState(null);
+  const { user, loading } = useAuth();
   const [showWelcomePopup, setShowWelcomePopup] = useState(true);
-  const [showUploadWizard, setShowUploadWizard] = useState(false);  // Add: Wizard state
+  const [showUploadWizard, setShowUploadWizard] = useState(false);  
+  const [songs, setSongs] = useState([]);  
+  const [videos, setVideos] = useState([]);  
 
-  // Placeholder data
+  useEffect(() => {
+    if (!loading && user) {
+      setUserProfile(user);  
+      // NEW: Fetch artist's songs/videos on load (use user.userId as artistId)
+      if (user.userId) {
+        apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get' })
+          .then(res => setSongs(res.data || []))
+          .catch(err => console.error('Failed to fetch songs:', err));
+
+        // Optional: Fetch videos too
+        apiCall({ url: `/v1/media/videos/artist/${user.userId}`, method: 'get' })
+          .then(res => setVideos(res.data || []))
+          .catch(err => console.error('Failed to fetch videos:', err));
+      }
+    } else if (!loading && !user) {
+      // Optional: Redirect to login
+      window.location.href = '/login';
+    }
+  }, [user, loading]);
+
+  console.log('Dashboard userProfile:', userProfile); 
+
+  if (loading) {
+    return <div>Loading profile...</div>;  // Guard render
+  }
+
+  if (!user) {
+    return <div>Please log in to view dashboard.</div>;
+  }
+
+  // Placeholder data (keep for other sections)
   const profileData = {
     name: 'User Name',
     voteHistory: ['Voted for Artist X on Daily Rap', 'Voted for Song Y on Weekly Pop'],
@@ -20,7 +55,7 @@ const ArtistDashboard = () => {
     revenue: '$XXX forecast',
   };
 
-  // Mock artist data - replace with actual data
+  // Mock artist data - replace with actual data (keep for profile/main song)
   const artistData = {
     name: "Tony Fadd",
     profileImage: backimage,
@@ -33,26 +68,22 @@ const ArtistDashboard = () => {
     totalViews: 45230,
     supporters: 3421,
     followers: 1823,
-    songs: [
-      { id: 1, title: "Paranoid", views: 15420, likes: 892 },
-      { id: 2, title: "Midnight Dreams", views: 12340, likes: 745 },
-      { id: 3, title: "Electric Soul", views: 9870, likes: 634 }
-    ],
     images: [
       { id: 1, url: backimage, views: 2340 },
       { id: 2, url: backimage, views: 1890 },
       { id: 3, url: backimage, views: 1567 }
-    ],
-    videos: [
-      { id: 1, title: "Behind the Scenes", views: 8920 },
-      { id: 2, title: "Live Performance", views: 12450 }
     ]
   };
 
   // Add: Placeholder for upload success (no-op for now)
   const handleUploadSuccess = (newMedia) => {
-    console.log('Uploaded:', newMedia);  // Test log—add refresh later
+    console.log('Uploaded:', newMedia);  // Test log—add refresh later (refetch songs?)
     setShowUploadWizard(false);
+    // Optional: Refetch songs to include new one
+    if (newMedia && user.userId) {
+      apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get' })
+        .then(res => setSongs(res.data || []));
+    }
   };
 
   return (
@@ -211,24 +242,29 @@ const ArtistDashboard = () => {
               </button>
             </div>
             <div className="content-list">
-              {artistData.songs.map((song) => (
-                <div key={song.id} className="content-item">
-                  <div className="item-header">
-                    <h4>{song.title}</h4>
-                    <button className="edit-button">Edit</button>
+              {/* FIXED: Map over real songs (title + score as proxy for "views/likes") */}
+              {songs.length > 0 ? (
+                songs.map((song) => (
+                  <div key={song.songId} className="content-item">
+                    <div className="item-header">
+                      <h4>{song.title}</h4>
+                      <button className="edit-button">Edit</button>
+                    </div>
+                    <div className="item-stats">
+                      <span>
+                        <Eye size={12} />
+                        Score: {song.score || 0}
+                      </span>
+                      <span>
+                        <Heart size={12} />
+                        Duration: {(song.duration / 1000 / 60).toFixed(1)} min
+                      </span>
+                    </div>
                   </div>
-                  <div className="item-stats">
-                    <span>
-                      <Eye size={12} />
-                      {song.views.toLocaleString()}
-                    </span>
-                    <span>
-                      <Heart size={12} />
-                      {song.likes.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p>No songs yet—upload your first!</p>
+              )}
             </div>
           </div>
 
@@ -245,20 +281,29 @@ const ArtistDashboard = () => {
               </button>
             </div>
             <div className="content-list">
-              {artistData.videos.map((video) => (
-                <div key={video.id} className="content-item">
-                  <div className="item-header">
-                    <h4>{video.title}</h4>
-                    <button className="edit-button">Edit</button>
+              {/* NEW: Map over real videos (symmetric to songs) */}
+              {videos.length > 0 ? (
+                videos.map((video) => (
+                  <div key={video.videoId} className="content-item">
+                    <div className="item-header">
+                      <h4>{video.title}</h4>
+                      <button className="edit-button">Edit</button>
+                    </div>
+                    <div className="item-stats">
+                      <span>
+                        <Eye size={12} />
+                        Score: {video.score || 0}
+                      </span>
+                      <span>
+                        <Heart size={12} />
+                        Duration: {(video.duration / 1000 / 60).toFixed(1)} min
+                      </span>
+                    </div>
                   </div>
-                  <div className="item-stats">
-                    <span>
-                      <Eye size={12} />
-                      {video.views.toLocaleString()} views
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p>No videos yet—upload your first!</p>
+              )}
             </div>
           </div>
         </div>
@@ -298,12 +343,12 @@ const ArtistDashboard = () => {
       </div>
 
       {/* Add: Wizard at bottom (pops on button click) */}
-      {showUploadWizard && (
+      {showUploadWizard && userProfile && (  // NEW: Guard on userProfile
         <UploadWizard
           show={showUploadWizard}
           onClose={() => setShowUploadWizard(false)}
           onUploadSuccess={handleUploadSuccess}
-          userProfile={{}}  // Empty for now—fill from profile later
+          userProfile={userProfile}  // FIXED: Pass real profile (was {{}})
         />
       )}
     </div>

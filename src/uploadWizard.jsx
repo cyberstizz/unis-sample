@@ -1,6 +1,6 @@
 // src/components/UploadWizard.jsx
-import React, { useState } from 'react';
-import axiosInstance from './components/axiosInstance';  // Your instance
+import React, { useState, useEffect } from 'react';
+import { apiCall } from './components/axiosInstance';  // Use wrapper now (imported as named)
 import './UploadWizard.scss';
 
 const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
@@ -18,13 +18,21 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
 
   const artistId = userProfile.userId;  // From profile
 
+  // Cleanup previews on unmount/close (memory fix)
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+      if (artwork) URL.revokeObjectURL(URL.createObjectURL(artwork));  // If previewed
+    };
+  }, [preview, artwork]);
+
   const handleNext = () => {
     setError('');
-    if (step < 3) setStep(step + 1);  // Fix: +1 for proper step flow
+    if (step < 3) setStep(step + 1);
   };
 
   const handleBack = () => {
-    if (step > 1) setStep(step - 1);  // Fix: Proper back logic
+    if (step > 1) setStep(step - 1);
   };
 
   const handleFileChange = (e) => {
@@ -41,6 +49,8 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
       return;
     }
 
+    // Revoke old preview
+    if (preview) URL.revokeObjectURL(preview);
     setFile(selectedFile);
     setError('');
     setPreview(URL.createObjectURL(selectedFile));
@@ -87,14 +97,27 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
       formData.append('file', file);
       if (artwork) formData.append('artwork', artwork);
 
-      const response = await axiosInstance.post(`/v1/media/${mediaType}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      // Debug: Log FormData (remove after)
+      console.log('Uploading to:', `/v1/media/${mediaType}`);
+      console.log('FormData keys:', Array.from(formData.keys()));
+
+      // Fix: Use apiCall wrapper for mock fallback + error handling
+      const response = await apiCall({
+        url: `/v1/media/${mediaType}`,
+        method: 'post',
+        data: formData,
+        headers: { 'Content-Type': 'multipart/form-data' }  // Optional: Axios auto-handles, but explicit for clarity
       });
 
-      onUploadSuccess(response.data);
+      // Mock mode returns { data: [] }—treat as success for demo, or check response
+      console.log('Upload response:', response.data);
+      onUploadSuccess(response.data || { message: 'Upload successful (mock mode)' });
       onClose();
+      setStep(1);  // Reset wizard
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Upload failed—try again');
+      console.error('Upload error:', err);
+      // apiCall already handles 401 redirect; enhance error msg if needed
+      setError(err.response?.data?.message || err.message || 'Upload failed—check console/backend');
     } finally {
       setLoading(false);
     }
@@ -107,6 +130,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
           <div className="step-content">
             <h2>Upload New {mediaType.toUpperCase()}</h2>
             <p className="wizard-intro">Select media type (your genre and jurisdiction auto-filled).</p>
+            {error && <p className="error-message">{error}</p>}  {/* Global error */}
             <div className="filter-selection-grid">
               <label>Media Type</label>
               <select value={mediaType} onChange={(e) => setMediaType(e.target.value)} className="input-field">
@@ -122,7 +146,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
             <h2>Upload File & Details</h2>
             <p className="wizard-intro">Add title, description, and your {mediaType} file.</p>
             {error && <p className="error-message">{error}</p>}
-            <form onSubmit={(e) => e.preventDefault()}>  {/* No submit */}
+            <form onSubmit={(e) => e.preventDefault()}>
               <div className="form-group">
                 <label htmlFor="title">Title</label>
                 <input
