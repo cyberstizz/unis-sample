@@ -106,8 +106,14 @@ const normalizeMedia = (items) => items.map(item => {
   const navigate = useNavigate();
 
   // Nav handlers (uniform by ID)
-  const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
-  const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
+  // const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
+  // const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
+
+  const handleSongNav = (mediaId, type = 'song') => navigate(`/song`);
+  const handleArtistNav = (mediaId, type = 'song') => navigate(`/artist`);
+
+
+
 
   // Play handler (immediate, uses data—no refetch)
   const handlePlayMedia = async (e, media) => {
@@ -175,42 +181,60 @@ const normalizeMedia = (items) => items.map(item => {
         {error && <div className="feed-error" style={{ color: 'orange', padding: '10px', textAlign: 'center' }}>{error}</div>}
         <main className="feed">
           {/* Trending Carousel */}
-          <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
-            <h2>Trending in {jurisdictionId === '00000000-0000-0000-0000-000000000002' ? 'Uptown Harlem' : 'Your Area'}</h2>
-            <div className="carousel-items">
-              {trending.map((item) => (
-                <div key={item.id} className="item-wrapper">
-                  <div 
-                    className="item" 
-                    style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})` }}
-                    onClick={() => handleSongNav(item.id, item.type)}
-                  >
-                    <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
-                  </div>
-                  <div className="item-title">{item.title} by {item.artistData.username}</div>
+        <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
+          <h2>Trending in {jurisdictionId === '00000000-0000-0000-0000-000000000002' ? 'Uptown Harlem' : 'Your Area'}</h2>
+          <div className="carousel-items">
+            {trending.map((item) => (
+              <div key={item.id} className="item-wrapper">
+                <div 
+                  className="item" 
+                  style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})` }}
+                  onClick={() => handleSongNav(item.id, item.type)}
+                >
+                  <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
                 </div>
-              ))}
-            </div>
-          </section>
+                <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
+                  {item.title}
+                </div>
+                <span 
+                  className="item-artist" 
+                  onClick={() => handleArtistNav(item.artistData.userId)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {item.artistData.username}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
 
-          {/* New Carousel */}
-          <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
-            <h2>New Releases</h2>
-            <div className="carousel-items">
-              {newMediaList.map((item) => (
-                <div key={item.id} className="item-wrapper">
-                  <div 
-                    className="item" 
-                    style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})` }}
-                    onClick={() => handleSongNav(item.id, item.type)}
-                  >
-                    <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
-                  </div>
-                  <div className="item-title">{item.title} by {item.artist.username}</div>
+        {/* New Carousel */}
+        <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
+          <h2>New Releases</h2>
+          <div className="carousel-items">
+            {newMediaList.map((item) => (
+              <div key={item.id} className="item-wrapper">
+                <div 
+                  className="item" 
+                  style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})` }}
+                  onClick={() => handleSongNav(item.id, item.type)}
+                >
+                  <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
                 </div>
-              ))}
-            </div>
-          </section>
+                <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
+                  {item.title}
+                </div>
+                <span 
+                  className="item-artist" 
+                  onClick={() => handleArtistNav(item.artistData.userId)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {item.artistData.username}
+                </span>
+              </div>
+            ))}
+          </div>
+</section>
 
           {/* REMOVED: My Home section */}
 
