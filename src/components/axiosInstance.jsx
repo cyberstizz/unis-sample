@@ -102,24 +102,91 @@ export const logoutUser = async () => {
   }
 };
 
-// Dummy arrays (match your assets—expand as needed)
 const getDummyTrending = () => [
-  { id: '1', title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artworkUrl: songArtOne, mediaUrl: song1, type: 'song' },
-  { id: '2', title: 'SD Boomin - Waited All Night', artist: 'SD Boomin', artworkUrl: songArtTwo, mediaUrl: song2, type: 'song' },
-  { id: '3', title: 'Bad Video', artist: 'some guy', artworkUrl: songArtThree, mediaUrl: video1, type: 'video' },
-  { id: '4', title: 'Song 4', artist: 'Artist 4', artworkUrl: songArtNine, mediaUrl: song1, type: 'song' }
+  { 
+    songId: '1', 
+    title: 'Tony Fadd - Paranoid', 
+    artist: { userId: 'user1', username: 'Tony Fadd' }, 
+    artworkUrl: songArtOne, 
+    fileUrl: song1, 
+    score: 100 
+  },
+  { 
+    songId: '2', 
+    title: 'SD Boomin - Waited All Night', 
+    artist: { userId: 'user2', username: 'SD Boomin' }, 
+    artworkUrl: songArtTwo, 
+    fileUrl: song2, 
+    score: 80 
+  },
+  { 
+    videoId: '3', 
+    title: 'Bad Video', 
+    artist: { userId: 'user3', username: 'some guy' }, 
+    artworkUrl: songArtThree, 
+    fileUrl: video1, 
+    score: 60 
+  },
+  { 
+    songId: '4', 
+    title: 'Song 4', 
+    artist: { userId: 'user4', username: 'Artist 4' }, 
+    artworkUrl: songArtFour, 
+    fileUrl: song1, 
+    score: 50 
+  }
 ];
 
 const getDummyNew = () => [
-  { id: '5', title: 'The Outside', artist: 'Artist Five', artworkUrl: songArtFive, mediaUrl: song2, type: 'song' },
-  { id: '6', title: 'Original Man', artist: 'Artist Six', artworkUrl: songArtSix, mediaUrl: song1, type: 'song' },
-  { id: '10', title: 'flavorfall', artist: 'Artist Ten', artworkUrl: songArtTen, mediaUrl: song2, type: 'song' },
-  { id: '11', title: 'Golden Son', artist: 'Artist Eleven', artworkUrl: songArtEleven, mediaUrl: song1, type: 'song' }
+  { 
+    songId: '5', 
+    title: 'The Outside', 
+    artist: { userId: 'user5', username: 'Artist Five' }, 
+    artworkUrl: songArtFive, 
+    fileUrl: song2, 
+    score: 30 
+  },
+  { 
+    songId: '6', 
+    title: 'Original Man', 
+    artist: { userId: 'user6', username: 'Artist Six' }, 
+    artworkUrl: songArtSix, 
+    fileUrl: song1, 
+    score: 25 
+  },
+  { 
+    songId: '10', 
+    title: 'flavorfall', 
+    artist: { userId: 'user10', username: 'Artist Ten' }, 
+    artworkUrl: songArtTen, 
+    fileUrl: song2, 
+    score: 20 
+  },
+  { 
+    songId: '11', 
+    title: 'Golden Son', 
+    artist: { userId: 'user11', username: 'Artist Eleven' }, 
+    artworkUrl: songArtEleven, 
+    fileUrl: song1, 
+    score: 15 
+  }
 ];
 
-const getDummyAwards = () => ['Award 1', 'Award 2', 'Award 3', 'Award 4', 'Award 5'];
+const getDummyAwards = () => [
+  { id: 'award1', name: 'Best Rap Song', winner: { id: 'winner1', username: 'Tony Fadd' } },
+  { id: 'award2', name: 'Top Video', winner: { id: 'winner2', username: 'SD Boomin' } },
+  { id: 'award3', name: 'Rising Artist', winner: { id: 'winner3', username: 'Artist Three' } },
+  { id: 'award4', name: 'Fan Favorite', winner: { id: 'winner4', username: 'Artist Four' } },
+  { id: 'award5', name: 'Breakthrough Track', winner: { id: 'winner5', username: 'Artist Five' } }
+];
 
-const getDummyArtists = () => ['Artist 1', 'Artist 2', 'Artist 3', 'Artist 4', 'Artist 5'];
+const getDummyArtists = () => [
+  { userId: 'artist1', username: 'Tony Fadd', photoUrl: songArtOne, score: 100 },
+  { userId: 'artist2', username: 'SD Boomin', photoUrl: songArtTwo, score: 80 },
+  { userId: 'artist3', username: 'Artist Three', photoUrl: songArtThree, score: 60 },
+  { userId: 'artist4', username: 'Artist Four', photoUrl: songArtFour, score: 50 },
+  { userId: 'artist5', username: 'Artist Five', photoUrl: songArtFive, score: 40 }
+];
 
 const getDummyPosts = () => ['Follower Post 1', 'Follower Post 2', 'Follower Post 3'];
 
