@@ -71,11 +71,15 @@ const normalizeMedia = (items) => items.map(item => {
   const normalized = {
     id: item.songId || item.videoId,
     title: item.title,
-    artist: { userId: item.artist.userId, username: item.artist.username },
+    artist: item.artist.username,  
+    artistData: item.artist,  // For Feed display (object)
     artworkUrl: item.artworkUrl ? `${API_BASE_URL}${item.artworkUrl}` : null,
     mediaUrl: item.fileUrl ? `${API_BASE_URL}${item.fileUrl}` : null,
+    url: item.fileUrl ? `${API_BASE_URL}${item.fileUrl}` : null,  // ADDED
+    artwork: item.artworkUrl ? `${API_BASE_URL}${item.artworkUrl}` : null,  // ADDED
     type: item.songId ? 'song' : 'video',
-    score: item.score || 0
+    score: item.score || 0,
+    artistId: item.artist.userId  // ADDED
   };
   console.log('Normalized item:', normalized);
   return normalized;
@@ -106,11 +110,26 @@ const normalizeMedia = (items) => items.map(item => {
   const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
 
   // Play handler (immediate, uses data—no refetch)
-  const handlePlayMedia = (e, media) => {
-    e.stopPropagation();
-    const playlist = [media, ...newMedia.slice(0, 2).filter(m => m.id !== media.id)];  // Dynamic, dedup
-    playMedia(media, playlist);  // {type, url: mediaUrl, title, artist, artwork: artworkUrl}
-  };
+  const handlePlayMedia = async (e, media) => {
+  e.stopPropagation();
+  
+  // Track the play in backend
+  try {
+    const endpoint = media.type === 'song' 
+      ? `/v1/media/song/${media.id}/play?userId=${userId}`
+      : `/v1/media/video/${media.id}/play?userId=${userId}`;
+    
+    await apiCall({ method: 'post', url: endpoint });
+    console.log('Play tracked successfully');
+  } catch (err) {
+    console.error('Failed to track play:', err);
+    // Don't block playback if tracking fails
+  }
+  
+  // Play the media
+  const playlist = [media, ...newMedia.slice(0, 2).filter(m => m.id !== media.id)];
+  playMedia(media, playlist);
+};
 
   // Dummies (env fallback or error—limit to 5)
   const getDummyTrending = () => [
@@ -168,7 +187,7 @@ const normalizeMedia = (items) => items.map(item => {
                   >
                     <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
                   </div>
-                  <div className="item-title">{item.title} by {item.artist.username}</div>
+                  <div className="item-title">{item.title} by {item.artistData.username}</div>
                 </div>
               ))}
             </div>
