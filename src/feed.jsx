@@ -109,8 +109,8 @@ const normalizeMedia = (items) => items.map(item => {
   // const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
   // const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
 
-  const handleSongNav = (mediaId, type = 'song') => navigate(`/song`);
-  const handleArtistNav = (mediaId, type = 'song') => navigate(`/artist`);
+  const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
+  const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
 
 
 

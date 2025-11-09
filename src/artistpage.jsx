@@ -1,183 +1,295 @@
-// src/components/ArtistPage.js
-import React, { useState } from 'react';
-import unisLogo from './assets/unisLogo.svg';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { apiCall } from './components/axiosInstance';
 import Layout from './layout';
 import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
-import VotingWizard from './votingWizard'; // Import VotingWizard
+import VotingWizard from './votingWizard';
 
 const ArtistPage = ({ isOwnProfile = false }) => {
+  const { artistId } = useParams();
+  const navigate = useNavigate();
+  const [artist, setArtist] = useState(null);
+  const [songs, setSongs] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [isFollowing, setIsFollowing] = useState(false);
-  const [bio, setBio] = useState('Artist bio here...');
-  const [showVotingWizard, setShowVotingWizard] = useState(false); // State for wizard
-  const [selectedNominee, setSelectedNominee] = useState(null); // State for nominee
+  const [bio, setBio] = useState('');
+  const [showVotingWizard, setShowVotingWizard] = useState(false);
+  const [selectedNominee, setSelectedNominee] = useState(null);
 
-  const artist = {
-    name: 'Artist Name',
-    genre: 'Rap/Hip-Hop',
-    rank: '#5 in Uptown Harlem (Rap)',
-    jurisdiction: 'Uptown Harlem',
-    followers: 1200,
-    supporters: 450,
-    bio: bio,
-    songs: ['Song 1', 'Song 2', 'Song 3', 'Song 4', 'Song 5'],
-    videos: ['Video 1', 'Video 2'],
-    photos: ['Photo 1', 'Photo 2'], // Placeholder for new Photos section
-    bestSong: 'Song 1 - Fans\' Pick', // Placeholder for Fans Pick
-    socialLinks: [
-      { icon: '📸', label: 'Instagram', url: 'https://instagram.com/artist' },
-      { icon: '🐦', label: 'Twitter', url: 'https://twitter.com/artist' },
-      { icon: '🎵', label: 'Spotify', url: 'https://spotify.com/artist' },
-    ], // Placeholder for Social Media Links
-    voteCount: 150,
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+  useEffect(() => {
+    fetchArtistData();
+  }, [artistId]);
+
+  const fetchArtistData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      // Fetch artist profile
+      const artistRes = await apiCall({ 
+        method: 'get', 
+        url: `/v1/users/artist/${artistId}` 
+      });
+      
+      const artistData = artistRes.data;
+      setArtist(artistData);
+      setBio(artistData.bio || 'No bio available');
+
+      // Fetch artist's songs
+      const songsRes = await apiCall({ 
+        method: 'get', 
+        url: `/v1/media/songs/artist/${artistId}` 
+      });
+      setSongs(songsRes.data || []);
+
+      // Fetch artist's videos
+      const videosRes = await apiCall({ 
+        method: 'get', 
+        url: `/v1/media/videos/artist/${artistId}` 
+      });
+      setVideos(videosRes.data || []);
+
+    } catch (err) {
+      console.error('Failed to load artist:', err);
+      setError('Failed to load artist details');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleFollow = () => setIsFollowing(!isFollowing);
+  const handleFollow = () => {
+    setIsFollowing(!isFollowing);
+    // TODO: Call backend API to follow/unfollow
+  };
+
   const handleBioChange = (e) => setBio(e.target.value);
 
+  const handleSaveBio = async () => {
+    try {
+      await apiCall({
+        method: 'put',
+        url: `/v1/users/profile/${artistId}/bio`,
+        data: { bio }
+      });
+      alert('Bio updated successfully');
+    } catch (err) {
+      console.error('Failed to update bio:', err);
+      alert('Failed to update bio');
+    }
+  };
+
   const handleVoteSuccess = (id) => {
-    // Handle successful vote (e.g., update UI, API call)
     console.log(`Vote confirmed for ID: ${id}`);
     setShowVotingWizard(false);
   };
 
   const handleVote = () => {
-    // Set the artist as nominee and open wizard
     setSelectedNominee({
-      id: 'artist-id-placeholder', // Replace with real ID
-      name: artist.name, // Use artist name for wizard
-      // Add other needed fields if wizard expects
+      id: artistId,
+      name: artist.username,
     });
     setShowVotingWizard(true);
   };
 
+  const handleSongClick = (songId) => {
+    navigate(`/song/${songId}`);
+  };
+
+  if (loading) {
+    return (
+      <Layout backgroundImage={theQuiet}>
+        <div style={{ textAlign: 'center', padding: '50px', color: 'white' }}>
+          Loading artist...
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error || !artist) {
+    return (
+      <Layout backgroundImage={theQuiet}>
+        <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>
+          {error || 'Artist not found'}
+        </div>
+      </Layout>
+    );
+  }
+
+  const artistPhoto = artist.photoUrl 
+    ? `${API_BASE_URL}${artist.photoUrl}` 
+    : theQuiet;
+
+  // Calculate stats (you'll need to add these fields to backend or calculate)
+  const rank = `#${artist.rank || '?'}`;
+  const followers = artist.followerCount || 0;
+  const supporters = artist.supporterCount || 0;
+  const voteCount = artist.voteCount || 0;
+
+  // Get top song by score
+  const topSong = songs.length > 0 
+    ? songs.reduce((prev, current) => 
+        (current.score > prev.score) ? current : prev
+      )
+    : null;
+
   return (
-    <Layout backgroundImage={theQuiet}> {/* random image for MVP */}
+    <Layout backgroundImage={artistPhoto}>
       <div className="artist-page-container">
-        {/* Header - Kept intact */}
         <header className="artist-header">
           <div className="artist-info">
             <div className="artist-top">
-              <p className="artist-name">{artist.name}</p>
-              <p className="artist-jurisdiction">{artist.jurisdiction}</p>
+              <p className="artist-name">{artist.username}</p>
+              <p className="artist-jurisdiction">
+                {artist.jurisdiction?.name || 'Unknown'}
+              </p>
             </div>
-            <p className="artist-genre">{artist.genre}</p>
+            <p className="artist-genre">
+              {artist.genre?.name || 'Unknown Genre'}
+            </p>
             <div className="follow-actions">
               <button onClick={handleFollow} className="follow-button">
                 {isFollowing ? 'Unfollow' : 'Follow'}
               </button>
-              {!isOwnProfile && <button onClick={handleVote} className="vote-button">Vote</button>}
+              {!isOwnProfile && (
+                <button onClick={handleVote} className="vote-button">
+                  Vote
+                </button>
+              )}
             </div>
           </div>
         </header>
 
         <div className="content-wrapper">
-          {/* Artist Info (Stats Grid) */}
+          {/* Stats Grid */}
           <section className="stats-grid">
             <div className="stat-item">
-              <p className="stat-value">{artist.rank}</p>
+              <p className="stat-value">{rank}</p>
               <p className="stat-label">Rank</p>
             </div>
             <div className="stat-item">
-              <p className="stat-value">{artist.followers}</p>
+              <p className="stat-value">{followers}</p>
               <p className="stat-label">Followers</p>
             </div>
             <div className="stat-item">
-              <p className="stat-value">{artist.supporters}</p>
+              <p className="stat-value">{supporters}</p>
               <p className="stat-label">Supporters</p>
             </div>
             <div className="stat-item">
-              <p className="stat-value">{artist.voteCount}</p>
+              <p className="stat-value">{voteCount}</p>
               <p className="stat-label">Votes</p>
             </div>
           </section>
 
           {/* Fans Pick Section */}
-          <section className="fans-pick-section card">
-            <h2>Fans Pick</h2>
-            <ul>
-              <li>{artist.bestSong}</li>
-            </ul>
-          </section>
+          {topSong && (
+            <section className="fans-pick-section card">
+              <h2>Fans Pick</h2>
+              <ul>
+                <li 
+                  onClick={() => handleSongClick(topSong.songId)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {topSong.title} (Score: {topSong.score})
+                </li>
+              </ul>
+            </section>
+          )}
 
           {/* Music (Songs) Section */}
           <section className="music-section card">
             <h2>Music</h2>
             <ul>
-              {artist.songs.slice(0, 5).map((song, index) => (
-                <li key={index}>
-                  <span>{song}</span>
-                  {isOwnProfile && <button className="edit-button">Edit/Remove</button>}
+              {songs.slice(0, 5).map((song) => (
+                <li 
+                  key={song.songId}
+                  onClick={() => handleSongClick(song.songId)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span>{song.title}</span>
+                  {isOwnProfile && (
+                    <button className="edit-button">Edit/Remove</button>
+                  )}
                 </li>
               ))}
+              {songs.length === 0 && <p>No songs yet</p>}
             </ul>
-            {isOwnProfile && artist.songs.length < 5 && <button className="upload-button">Upload Song</button>}
+            {isOwnProfile && songs.length < 5 && (
+              <button className="upload-button">Upload Song</button>
+            )}
           </section>
 
           {/* Bio Section */}
           <section className="bio-section card">
             <h2>Bio</h2>
             {isOwnProfile ? (
-              <textarea value={bio} onChange={handleBioChange} className="bio-edit" />
+              <>
+                <textarea 
+                  value={bio} 
+                  onChange={handleBioChange} 
+                  className="bio-edit" 
+                />
+                <button onClick={handleSaveBio} className="save-button">
+                  Save Bio
+                </button>
+              </>
             ) : (
-              <p>{artist.bio}</p>
+              <p>{bio}</p>
             )}
-            {isOwnProfile && <button className="save-button">Save Bio</button>}
           </section>
 
           {/* Videos Section */}
           <section className="videos-section card">
             <h2>Videos</h2>
             <ul>
-              {artist.videos.map((video, index) => (
-                <li key={index}>
-                  <span>{video}</span>
-                  {isOwnProfile && <button className="edit-button">Edit/Remove</button>}
+              {videos.map((video) => (
+                <li key={video.videoId}>
+                  <span>{video.title}</span>
+                  {isOwnProfile && (
+                    <button className="edit-button">Edit/Remove</button>
+                  )}
                 </li>
               ))}
+              {videos.length === 0 && <p>No videos yet</p>}
             </ul>
-            {isOwnProfile && <button className="upload-button">Upload Video</button>}
+            {isOwnProfile && (
+              <button className="upload-button">Upload Video</button>
+            )}
           </section>
 
-          {/* Photos Section (New) */}
-          <section className="photos-section card">
-            <h2>Photos</h2>
-            <ul>
-              {artist.photos.map((photo, index) => (
-                <li key={index}>
-                  <span>{photo}</span>
-                  {isOwnProfile && <button className="edit-button">Edit/Remove</button>}
-                </li>
-              ))}
-            </ul>
-            {isOwnProfile && <button className="upload-button">Upload Photo</button>}
-          </section>
-
-          {/* Social Media Links (New) */}
+          {/* Social Media Links */}
           <section className="social-section card">
             <h2>Social Media</h2>
             <div className="social-links">
-              {artist.socialLinks.map((link, index) => (
-                <a key={index} href={link.url} target="_blank" rel="noopener noreferrer" className="social-link">
+              {artist.socialLinks?.map((link, index) => (
+                <a 
+                  key={index} 
+                  href={link.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="social-link"
+                >
                   <span>{link.icon}</span> {link.label}
                 </a>
-              ))}
+              )) || <p>No social links added</p>}
             </div>
           </section>
         </div>
       </div>
 
-      {/* Voting Wizard */}
       <VotingWizard
         show={showVotingWizard}
         onClose={() => setShowVotingWizard(false)}
         onVoteSuccess={handleVoteSuccess}
         nominee={selectedNominee}
-        filters={{ /* Pass current filters; hardcode or from state/context */
-          selectedGenre: artist.genre.toLowerCase().replace('/', '-'), // e.g., 'rap-hiphop'
+        filters={{
+          selectedGenre: artist.genre?.name?.toLowerCase().replace('/', '-') || 'unknown',
           selectedType: 'artist',
-          selectedInterval: 'daily', // Default or from state
-          selectedJurisdiction: artist.jurisdiction.toLowerCase().replace(' ', '-'), // e.g., 'uptown-harlem'
+          selectedInterval: 'daily',
+          selectedJurisdiction: artist.jurisdiction?.name?.toLowerCase().replace(' ', '-') || 'unknown',
         }}
       />
     </Layout>

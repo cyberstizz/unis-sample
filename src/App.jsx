@@ -40,8 +40,8 @@ const AppLayout = () => {
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<Feed />} />
           <Route path="/explore" element={<ExploreFind />} />
-          <Route path="/artist" element={<ArtistPage />} />
-          <Route path="/song" element={<SongPage />} />
+          <Route path="/artist/:artistId" element={<ArtistPage />} />
+          <Route path="/song/:songId" element={<SongPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/voteawards" element={<VoteAwards />} />
           <Route path="/profile" element={<ArtistDashboard />} />
