@@ -1,77 +1,122 @@
-// src/components/VoteAwards.js
-import React, { useState, useContext } from 'react';
-import { PlayerContext } from './context/playercontext'; 
-import unisLogo from './assets/unisLogo.svg';
+import React, { useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PlayerContext } from './context/playercontext';
+import { apiCall } from './components/axiosInstance';
 import './voteawards.scss';
-import Header from './header';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
-import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
-import art1 from './assets/unisLogo1.jpg'; 
-import VotingWizard from './votingWizard'; 
-import rapperOne from './assets/rapperphotoOne.jpg';
-import rapperTwo from './assets/rapperphototwo.jpg';
-import rapperThree from './assets/rapperphotothree.jpg';
-import rapperFree from './assets/rapperphotofour.jpg';
-import songArtOne from './assets/songartworkONe.jpeg';
-import songArtTwo from './assets/songartworktwo.jpeg';
-import songArtThree from './assets/songartworkthree.jpeg';
-import songArtFour from './assets/songartworkfour.jpeg';
-
-const dummyData = [
-  {
-    id: 1, name: 'LyricLoom', type: 'artist', genre: 'rap-hiphop', jurisdiction: 'uptown-harlem', votes: 124, projection: '12th place',
-    imageUrl: rapperThree
-  },
-  {
-    id: 2, name: 'The Golden Age', type: 'song', genre: 'rap-hiphop', jurisdiction: 'harlem-wide', votes: 180, projection: 'Top 5',
-    imageUrl: rapperOne
-  },
-  {
-    id: 3, name: 'Soulful Serenade', type: 'artist', genre: 'pop', jurisdiction: 'harlem-wide', votes: 98, projection: 'Rising Fast',
-    imageUrl: rapperTwo
-  },
-  {
-    id: 4, name: 'Rock Riot', type: 'song', genre: 'rock', jurisdiction: 'downtown-harlem', votes: 210, projection: 'No. 1 Contender',
-    imageUrl: rapperOne
-  },
-  {
-    id: 5, name: 'Urban Echo', type: 'artist', genre: 'pop', jurisdiction: 'uptown-harlem', votes: 56, projection: 'Steady climb',
-    imageUrl: rapperFree
-  },
-];
+import VotingWizard from './votingWizard';
+import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 
 const VoteAwards = () => {
+  const navigate = useNavigate();
+  const { playMedia } = useContext(PlayerContext);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('rap-hiphop');
   const [selectedType, setSelectedType] = useState('artist');
   const [selectedInterval, setSelectedInterval] = useState('daily');
   const [selectedJurisdiction, setSelectedJurisdiction] = useState('harlem-wide');
-  const { playMedia } = useContext(PlayerContext);
+  const [nominees, setNominees] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [showVotingWizard, setShowVotingWizard] = useState(false);
   const [selectedNominee, setSelectedNominee] = useState(null);
+  const [userId, setUserId] = useState(null);
 
-  const intervals = ['daily', 'weekly', 'monthly', 'quarterly', 'midterm', 'annual'];
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+  const intervals = ['daily', 'weekly', 'monthly', 'quarterly', 'annual'];
   const genres = ['rap-hiphop', 'rock', 'pop'];
   const types = ['artist', 'song'];
   const jurisdictions = [
     { value: 'uptown-harlem', label: 'Uptown Harlem' },
     { value: 'downtown-harlem', label: 'Downtown Harlem' },
-    { value: 'Harlem', label: 'Harlem' },
+    { value: 'harlem-wide', label: 'Harlem-Wide' },
   ];
 
-  // Corrected filtering logic
-  const filteredNominees = dummyData.filter(nominee => {
-    // Check if the nominee matches all selected filters
-    const passesFilters = (
-      nominee.genre === selectedGenre &&
-      nominee.type === selectedType &&
-      // Corrected jurisdiction logic
-      (selectedJurisdiction === 'harlem-wide' || nominee.jurisdiction === selectedJurisdiction)
-    );
+  // Get userId on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserId(payload.userId);
+      } catch (e) {
+        console.error('Failed to decode token:', e);
+      }
+    }
+  }, []);
 
-    const passesSearch = searchQuery.length === 0 || nominee.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return passesFilters && passesSearch;
+  // Fetch nominees whenever filters change
+  useEffect(() => {
+    if (userId) {
+      fetchNominees();
+    }
+  }, [selectedGenre, selectedType, selectedInterval, selectedJurisdiction, userId]);
+
+  const fetchNominees = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const genreId = GENRE_IDS[selectedGenre];
+      const jurisdictionId = JURISDICTION_IDS[selectedJurisdiction];
+      const intervalId = INTERVAL_IDS[selectedInterval];
+
+      const response = await apiCall({
+        method: 'get',
+        url: `/v1/vote/nominees?targetType=${selectedType}&genreId=${genreId}&jurisdictionId=${jurisdictionId}&intervalId=${intervalId}&limit=20`
+      });
+
+      
+
+      const nomineesData = response.data || [];
+      
+      // Normalize nominees (artists or songs)
+      const normalized = nomineesData.map((nominee) => {
+        if (selectedType === 'artist') {
+          return {
+            id: nominee.userId,
+            name: nominee.username,
+            type: 'artist',
+            imageUrl: nominee.photoUrl ? `${API_BASE_URL}${nominee.photoUrl}` : backimage,
+            votes: nominee.voteCount || 0,
+            jurisdiction: nominee.jurisdiction?.name || 'Unknown',
+            genre: nominee.genre?.name || 'Unknown',
+          };
+        } else {
+          return {
+            id: nominee.songId,
+            name: nominee.title,
+            type: 'song',
+            artist: nominee.artist?.username || 'Unknown Artist',
+            artistId: nominee.artist?.userId,
+            imageUrl: nominee.artworkUrl ? `${API_BASE_URL}${nominee.artworkUrl}` : backimage,
+            mediaUrl: nominee.fileUrl ? `${API_BASE_URL}${nominee.fileUrl}` : null,
+            votes: nominee.voteCount || 0,
+            jurisdiction: nominee.jurisdiction?.name || 'Unknown',
+            genre: nominee.genre?.name || 'Unknown',
+          };
+        }
+      });
+
+      setNominees(normalized);
+      console.log('Raw backend response:', response.data);  // []? Check logs above
+      console.log('Normalized nominees:', normalized);  // Empty → backend issue
+
+    } catch (err) {
+      console.error('Failed to fetch nominees:', err);
+      setError('Failed to load nominees. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+
+  };
+
+
+  // Client-side search filtering
+  const filteredNominees = nominees.filter((nominee) => {
+    if (searchQuery.length === 0) return true;
+    return nominee.name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const handleVoteClick = (nominee) => {
@@ -79,77 +124,167 @@ const VoteAwards = () => {
     setShowVotingWizard(true);
   };
 
-  const handleVoteSuccess = (id) => {
-    alert(`Vote confirmed for nominee with ID: ${id}!`);
+  const handleVoteSuccess = async (nomineeId) => {
+    console.log(`Vote confirmed for nominee: ${nomineeId}`);
     setShowVotingWizard(false);
     setSelectedNominee(null);
+    // Refresh nominees to show updated vote counts
+    await fetchNominees();
   };
 
-  // Create a single object with all filter states to pass as a prop
-  const currentFilters = {
-    selectedGenre,
-    selectedType,
-    selectedInterval,
-    selectedJurisdiction,
+  const handlePlaySong = (nominee) => {
+    if (nominee.type === 'song' && nominee.mediaUrl) {
+      playMedia(
+        {
+          type: 'song',
+          url: nominee.mediaUrl,
+          title: nominee.name,
+          artist: nominee.artist,
+          artwork: nominee.imageUrl,
+        },
+        [{
+          type: 'song',
+          url: nominee.mediaUrl,
+          title: nominee.name,
+          artist: nominee.artist,
+          artwork: nominee.imageUrl,
+        }]
+      );
+    }
   };
+
+  const handleNomineeClick = (nominee) => {
+    if (nominee.type === 'artist') {
+      navigate(`/artist/${nominee.id}`);
+    } else {
+      navigate(`/song/${nominee.id}`);
+    }
+  };
+
+  // Format jurisdiction name for display
+  const jurisdictionLabel = jurisdictions.find(j => j.value === selectedJurisdiction)?.label || 'Unknown';
 
   return (
     <Layout backgroundImage={backimage}>
       <div className='voteAwardsContainer'>
         <div className="filters">
-          <select value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)} className="filter-select">
+          <select 
+            value={selectedGenre} 
+            onChange={(e) => setSelectedGenre(e.target.value)} 
+            className="filter-select"
+          >
             {genres.map((g) => (
-              <option key={g} value={g}>{g.charAt(0).toUpperCase() + g.slice(1)}</option>
+              <option key={g} value={g}>
+                {g.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('/')}
+              </option>
             ))}
           </select>
-          <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="filter-select">
+
+          <select 
+            value={selectedType} 
+            onChange={(e) => setSelectedType(e.target.value)} 
+            className="filter-select"
+          >
             {types.map((t) => (
-              <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+              <option key={t} value={t}>
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </option>
             ))}
           </select>
-          <select value={selectedInterval} onChange={(e) => setSelectedInterval(e.target.value)} className="filter-select">
+
+          <select 
+            value={selectedInterval} 
+            onChange={(e) => setSelectedInterval(e.target.value)} 
+            className="filter-select"
+          >
             {intervals.map((int) => (
-              <option key={int} value={int}>{int.charAt(0).toUpperCase() + int.slice(1)}</option>
+              <option key={int} value={int}>
+                {int.charAt(0).toUpperCase() + int.slice(1)}
+              </option>
             ))}
           </select>
-          <select value={selectedJurisdiction} onChange={(e) => setSelectedJurisdiction(e.target.value)} className="filter-select">
+
+          <select 
+            value={selectedJurisdiction} 
+            onChange={(e) => setSelectedJurisdiction(e.target.value)} 
+            className="filter-select"
+          >
             {jurisdictions.map((jur) => (
-              <option key={jur.value} value={jur.value}>{jur.label}</option>
+              <option key={jur.value} value={jur.value}>
+                {jur.label}
+              </option>
             ))}
           </select>
         </div>
 
         <section className="nominees">
-          <h2>{selectedInterval.charAt(0).toUpperCase() + selectedInterval.slice(1)} {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} of {selectedGenre.toUpperCase()} in {jurisdictions.find(j => j.value === selectedJurisdiction)?.label}</h2>
+          <h2>
+            {selectedInterval.charAt(0).toUpperCase() + selectedInterval.slice(1)}{' '}
+            {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} of{' '}
+            {selectedGenre.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('/')}{' '}
+            in {jurisdictionLabel}
+          </h2>
 
           <form className="search-form" onSubmit={(e) => e.preventDefault()}>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`Search for a ${selectedType} to vote for...`}
+              placeholder={`Search for a ${selectedType}...`}
               className="search-bar"
             />
           </form>
 
-          <ul className="nominee-list">
-            {filteredNominees.length > 0 ? (
-              filteredNominees.map((nominee) => (
-                <li key={nominee.id} className="nominee-item">
-                  <div className="nominee-image" style={{ backgroundImage: `url(${nominee.imageUrl})` }}></div>
-                  <div className="nominee-info">
-                    <h3 id="nominee-name">{nominee.name}</h3>
-                    <p>Votes: {nominee.votes}</p>
-                    <p className="projection">{nominee.projection}</p>
-                  </div>
-                  <button onClick={() => {playMedia({ type: 'song', url: song1, title: 'Tony Fadd - Paranoid', artist: 'Tony Fadd', artwork: art1 })}} className="listen-button">Listen</button>
-                  <button onClick={() => handleVoteClick(nominee)} className="vote-button">Vote</button>
-                </li>
-              ))
-            ) : (
-              <p className="no-nominees">No nominees found. Try a different search or filter combination.</p>
-            )}
-          </ul>
+          {loading && (
+            <div style={{ textAlign: 'center', padding: '50px', color: 'white' }}>
+              Loading nominees...
+            </div>
+          )}
+
+          {error && (
+            <div style={{ textAlign: 'center', padding: '20px', color: 'red' }}>
+              {error}
+            </div>
+          )}
+
+          {!loading && !error && (
+            <ul className="nominee-list">
+              {filteredNominees.length > 0 ? (
+                filteredNominees.map((nominee) => (
+                  <li key={nominee.id} className="nominee-item">
+                    <div 
+                      className="nominee-image" 
+                      style={{ backgroundImage: `url(${nominee.imageUrl})` }}
+                      onClick={() => handleNomineeClick(nominee)}
+                    />
+                    <div className="nominee-info" onClick={() => handleNomineeClick(nominee)}>
+                      <h3 id="nominee-name">{nominee.name}</h3>
+                      {nominee.type === 'song' && <p className="artist-name">by {nominee.artist}</p>}
+                      <p>Votes: {nominee.votes}</p>
+                    </div>
+                    {nominee.type === 'song' && nominee.mediaUrl && (
+                      <button 
+                        onClick={() => handlePlaySong(nominee)} 
+                        className="listen-button"
+                      >
+                        Listen
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => handleVoteClick(nominee)} 
+                      className="vote-button"
+                    >
+                      Vote
+                    </button>
+                  </li>
+                ))
+              ) : (
+                <p className="no-nominees">
+                  {searchQuery ? 'No nominees match your search.' : 'No nominees found for this category yet.'}
+                </p>
+              )}
+            </ul>
+          )}
         </section>
       </div>
 
@@ -158,7 +293,13 @@ const VoteAwards = () => {
         onClose={() => setShowVotingWizard(false)}
         onVoteSuccess={handleVoteSuccess}
         nominee={selectedNominee}
-        filters={currentFilters}
+        userId={userId}
+        filters={{
+          selectedGenre,
+          selectedType,
+          selectedInterval,
+          selectedJurisdiction,
+        }}
       />
     </Layout>
   );

@@ -1,4 +1,3 @@
-// Feed.jsx
 import React, { useState, useContext, useEffect } from 'react';
 import { PlayerContext } from './context/playercontext'; 
 import { useNavigate } from 'react-router-dom';
@@ -188,7 +187,7 @@ const normalizeMedia = (items) => items.map(item => {
               <div key={item.id} className="item-wrapper">
                 <div 
                   className="item" 
-                  style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})` }}
+                  style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})`, backgroundSize: 'cover' }}
                   onClick={() => handleSongNav(item.id, item.type)}
                 >
                   <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
@@ -216,7 +215,7 @@ const normalizeMedia = (items) => items.map(item => {
               <div key={item.id} className="item-wrapper">
                 <div 
                   className="item" 
-                  style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})` }}
+                  style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})`, backgroundSize: 'cover' }}
                   onClick={() => handleSongNav(item.id, item.type)}
                 >
                   <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
