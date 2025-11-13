@@ -1,10 +1,18 @@
-@import './artistDashboard'; // Reuse all variables/
+
+// Variables (consistent with Unis theme)
+$bg-black: #000000;
+$text-silver: #C0C0C0;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+$border-silver: #C0C0C0;
+$button-hover: #D3D3D3;
+$subtle-black: #1a1a1a;
 
 // Main Container 
 .jurisdiction-dashboard {
   min-height: 100vh;
   background-color: $bg-black;
-  color: $text-white;
+  color: white;
   margin-left: 17%;
   background: transparent;
 }
@@ -32,7 +40,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    color: $text-white;
+    color: white;
 
     h2 {
       font-size: 1.5rem;
@@ -40,7 +48,7 @@
     }
 
     p {
-      color: $text-gray-400;
+      color: gray;
     }
   }
 }
@@ -71,7 +79,7 @@
       }
 
       p {
-        color: $text-gray-400;
+        color: gray;
         margin-bottom: 0.75rem;
       }
     }
@@ -98,8 +106,8 @@
     position: absolute;
     top: 0.5rem;
     left: 0.5rem;
-    background-color: $primary-blue;
-    color: $text-white;
+    background-color: blue;
+    color: white;
     font-weight: bold;
     padding: 0.25rem 0.5rem;
     border-radius: 9999px; // Pill shape for rank
@@ -125,7 +133,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: $border-gray;
+    background: gray;
     border-radius: 0.25rem;
   }
 }
