@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiCall } from './components/axiosInstance';
 import './milestonesPage.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
@@ -10,59 +11,77 @@ import songArtOne from './assets/songartworkONe.jpeg';
 import songArtTwo from './assets/songartworktwo.jpeg';
 import songArtThree from './assets/songartworkthree.jpeg';
 import songArtFour from './assets/songartworkfour.jpeg';
-
+import { GENRE_IDS, JURISDICTION_IDS } from './utils/idMappings';
 
 const MilestonesPage = () => {
-  const [location, setLocation] = useState('downtown_harlem');
-  const [genre, setGenre] = useState('rap');
-  const [category, setCategory] = useState('song_of_the_month');
+  const [location, setLocation] = useState('downtown-harlem');  // Fixed: Hyphen
+  const [genre, setGenre] = useState('rap-hiphop');
+  const [category, setCategory] = useState('song');
   const [selectedDate, setSelectedDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [results, setResults] = useState([]);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-  // Dummy winners list
-  const dummyResults = [
-    {
-      rank: 1,
-      title: "Orange cup",
-      artist: 'Aks da Bully',
-      jurisdiction: 'Downtown Harlem',
-      votes: 1500,
-      artwork: songArtFour,
-      caption: 'This win means everything to me. Harlem stand up!'
-    },
-    {
-      rank: 2,
-      title: 'City Lights',
-      artist: 'Artist B',
-      jurisdiction: 'Downtown Harlem',
-      votes: 1200,
-      artwork: 'https://placehold.co/200x200/1a1a1a/ffffff?text=B'
-    },
-    {
-      rank: 3,
-      title: 'Midnight Hustle',
-      artist: 'Artist C',
-      jurisdiction: 'Downtown Harlem',
-      votes: 1150,
-      artwork: 'https://placehold.co/200x200/1a1a1a/ffffff?text=C'
+  const handleView = async () => {
+  if (!selectedDate) {
+    setError('Select a date.');
+    return;
+  }
+  setIsLoading(true);
+  setError(null);
+  try {
+    const jurId = JURISDICTION_IDS[location];
+    const genreId = GENRE_IDS[genre];
+    const type = category;
+    const date = selectedDate;
+
+    if (!jurId) {
+      throw new Error('Invalid location—check mappings.');
     }
-  ];
 
-  const [results, setResults] = useState(dummyResults);
+    console.log('Params:', { jurId, genreId, type, date });  // Debug
 
-  const handleView = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setResults(dummyResults); // always dummy data for MVP
-      setIsLoading(false);
-    }, 800);
-  };
+    const response = await apiCall({
+      method: 'get',
+      url: `/v1/awards/past?type=${type}&startDate=${date}&endDate=${date}&jurisdictionId=${jurId}&genreId=${genreId}`,
+    });
+
+    const rawResults = response.data;
+    if (rawResults.length === 0) {
+      setError('No milestones for this date—try manual cron.');
+      setResults([]);
+      return;
+    }
+
+    const normalized = rawResults.map((award, i) => ({
+      rank: i + 1,
+      title: award.targetType === 'artist' ? award.user?.username : award.song?.title || 'Unknown',
+      artist: award.targetType === 'artist' ? award.user?.username : award.song?.artist?.username || 'Unknown',
+      jurisdiction: award.jurisdiction?.name || location,
+      votes: award.votesCount || 0,
+      artwork: (award.targetType === 'artist' ? award.user?.photoUrl : award.song?.artworkUrl) ? `${API_BASE_URL}${award.targetType === 'artist' ? award.user.photoUrl : award.song.artworkUrl}` : songArtFour,
+      caption: award.caption || `${award.artist} on their win: "This means everything!"`,
+    }));
+
+    setResults(normalized);
+  } catch (err) {
+    console.error('Milestones fetch error:', err);
+    setError('Failed to load—using dummies.');
+    setResults([
+      { rank: 1, title: "Orange cup", artist: 'Aks da Bully', jurisdiction: 'Downtown Harlem', votes: 1500, artwork: songArtFour, caption: 'This win means everything to me. Harlem stand up!' },
+      { rank: 2, title: 'City Lights', artist: 'Artist B', jurisdiction: 'Downtown Harlem', votes: 1200, artwork: rapperTwo, caption: 'Grateful for the support!' },
+      { rank: 3, title: 'Midnight Hustle', artist: 'Artist C', jurisdiction: 'Downtown Harlem', votes: 1150, artwork: rapperThree, caption: 'Honored to be here.' },
+    ]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const maxDate = yesterday.toISOString().split('T')[0];
 
-  // Winner highlight is always the first entry
   const winner = results[0];
 
   return (
@@ -73,38 +92,22 @@ const MilestonesPage = () => {
         </header>
 
         <main className="content-wrapper">
-          {/* Filter bar */}
           <section className="filter-card">
             <div className="filter-controls">
-              <select
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="filter-select"
-              >
-                <option value="downtown_harlem">Downtown Harlem</option>
-                <option value="uptown_harlem">Uptown Harlem</option>
-                <option value="harlem_wide">Harlem</option>
+              <select value={location} onChange={(e) => setLocation(e.target.value)} className="filter-select">
+                <option value="downtown-harlem">Downtown Harlem</option>  // Fixed: Hyphen
+                <option value="uptown-harlem">Uptown Harlem</option>
+                <option value="harlem">Harlem</option>
               </select>
-
-              <select
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                className="filter-select"
-              >
-                <option value="rap">Rap/Hip-Hop</option>
+              <select value={genre} onChange={(e) => setGenre(e.target.value)} className="filter-select">
+                <option value="rap-hiphop">Rap/Hip-Hop</option>
                 <option value="rock">Rock</option>
                 <option value="pop">Pop</option>
               </select>
-
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="filter-select"
-              >
-                <option value="artist_of_the_interval">Artist</option>
-                <option value="song_of_the_interval">Song</option>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="filter-select">
+                <option value="artist">Artist</option>
+                <option value="song">Song</option>
               </select>
-
               <input
                 type="date"
                 value={selectedDate}
@@ -112,46 +115,33 @@ const MilestonesPage = () => {
                 className="filter-select"
                 max={maxDate}
               />
-
-              <button
-                onClick={handleView}
-                className="view-button"
-                disabled={isLoading}
-              >
+              <button onClick={handleView} className="view-button" disabled={isLoading}>
                 {isLoading ? 'Loading…' : 'View'}
               </button>
             </div>
           </section>
 
-          {/* --- Winner Highlight Block --- */}
           {winner && (
             <section className="winner-highlight">
               <div className="winner-title">{winner.title}</div>
               <div className="winner-artist">{winner.artist}</div>
               <div className="winner-jurisdiction">{winner.jurisdiction}</div>
-              <img
-                src={songArtFour}
-                alt={`${winner.title} artwork`}
-                className="winner-artwork"
-              />
+              <img src={winner.artwork} alt={`${winner.title} artwork`} className="winner-artwork" />
               <div className="winner-caption">“{winner.caption}”</div>
             </section>
           )}
 
-          {/* Results list */}
           <section className="results-section">
             {isLoading ? (
               <div className="loading-message">Loading milestones…</div>
+            ) : error ? (
+              <div className="error-message">{error}</div>
             ) : (
               <ul className="results-list">
-                {results.map((item, idx) => (
+                {results.slice(1).map((item) => (
                   <li key={item.rank} className="result-item">
                     <div className="rank">#{item.rank}</div>
-                    <img
-                      src={item.artwork}
-                      alt={`${item.title} artwork`}
-                      className="item-artwork"
-                    />
+                    <img src={item.artwork} alt={`${item.title} artwork`} className="item-artwork" />
                     <div className="item-info">
                       <div className="item-title">{item.title}</div>
                       <div className="item-artist">{item.artist}</div>
