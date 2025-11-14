@@ -6,10 +6,10 @@ import {
   ZoomableGroup,
 } from "react-simple-maps";
 import { useNavigate } from 'react-router-dom';
-import Layout from './layout'; // Assume your Layout component
+import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
-import { PlayerContext } from './context/playercontext'; // For play button
-import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3'; // Placeholder MP3
+import { PlayerContext } from './context/playercontext';
+import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import './findpage.scss'; 
 import rapperOne from './assets/rapperphotoOne.jpg';
 import rapperTwo from './assets/rapperphototwo.jpg';
@@ -19,22 +19,18 @@ import songArtOne from './assets/songartworkONe.jpeg';
 import songArtTwo from './assets/songartworktwo.jpeg';
 import songArtThree from './assets/songartworkthree.jpeg';
 import songArtFour from './assets/songartworkfour.jpeg';
+import { apiCall } from './components/axiosInstance';
+import { JURISDICTION_IDS } from './utils/idMappings';
 
+const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json";
 
-//adding a comment to make the file chane commit
-
-
-
-
-const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json"; // US states
-
-// Refined Harlem GeoJSON (from search: approximate boundaries for Uptown, Downtown, Harlem-wide)
+// Updated geo with DB-matching names (capitalized)
 const harlemGeo = {
   type: 'FeatureCollection',
   features: [
-    { // Uptown Harlem (approx: 125th to 155th St)
+    {
       type: 'Feature',
-      properties: { name: 'Uptown Harlem' },
+      properties: { name: 'Uptown Harlem' },  // DB name
       geometry: {
         type: 'Polygon',
         coordinates: [[
@@ -42,9 +38,9 @@ const harlemGeo = {
         ]]
       }
     },
-    { // Downtown Harlem (approx: 110th to 125th St)
+    {
       type: 'Feature',
-      properties: { name: 'Downtown Harlem' },
+      properties: { name: 'Downtown Harlem' },  // DB name
       geometry: {
         type: 'Polygon',
         coordinates: [[
@@ -52,9 +48,9 @@ const harlemGeo = {
         ]]
       }
     },
-    { // Harlem-wide (combined)
+    {
       type: 'Feature',
-      properties: { name: 'Harlem-wide' },
+      properties: { name: 'Harlem' },  // DB name (parent)
       geometry: {
         type: 'Polygon',
         coordinates: [[
@@ -69,16 +65,20 @@ const FindPage = () => {
   const navigate = useNavigate();
   const { playMedia } = useContext(PlayerContext);
   const [zoom, setZoom] = useState(1);
-  const [center, setCenter] = useState([-97, 40]); // US center
-  const [selectedState, setSelectedState] = useState(null); // For name display
-  const [hoveredState, setHoveredState] = useState(null); // For hover name
-  const [selectedHarlem, setSelectedHarlem] = useState(null); // For Harlem sub-area
+  const [center, setCenter] = useState([-97, 40]);
+  const [selectedState, setSelectedState] = useState(null);
+  const [hoveredState, setHoveredState] = useState(null);
+  const [selectedHarlem, setSelectedHarlem] = useState(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isZoomed, setIsZoomed] = useState(false); // For back button
+  const [isZoomed, setIsZoomed] = useState(false);
   const [genre, setGenre] = useState('rap-hiphop');
   const [category, setCategory] = useState('artist');
+  const [topResults, setTopResults] = useState({ artists: [], songs: [] });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-  // Dummy data for top 3 (key: 'genre-category')
+  // Dummy fallback (unchanged)
   const dummyData = {
     'rap-hiphop-artist': {
       artists: [
@@ -104,17 +104,25 @@ const FindPage = () => {
         { id: 12, title: 'Song F', artist: 'Artist R', votes: 70, artwork: songArtTwo },
       ],
     },
-    
   };
 
-  // State centers for random toggle (sample US states)
+  // Name mapper (lowercase geo → DB capital)
+  const mapGeoToDBName = (geoName) => {
+    const map = {
+      'uptown harlem': 'Uptown Harlem',
+      'downtown harlem': 'Downtown Harlem',
+      'harlem': 'Harlem',
+    };
+    return map[geoName.toLowerCase()] || geoName;
+  };
+
+  // State centers (unchanged)
   const stateCenters = [
     { name: 'New York', center: [-75, 43] },
     { name: 'California', center: [-120, 37] },
     { name: 'Texas', center: [-99, 31] },
     { name: 'Florida', center: [-82, 27] },
     { name: 'Illinois', center: [-89, 40] },
-    // Add 5-10 more for better animation
     { name: 'Washington', center: [-120, 47] },
     { name: 'Arizona', center: [-111, 34] },
     { name: 'Colorado', center: [-105, 39] },
@@ -122,15 +130,69 @@ const FindPage = () => {
     { name: 'Georgia', center: [-83, 33] },
   ];
 
+  // Fetch tops on select (mimics JurisdictionPage)
+  const fetchTopResults = async (jurisdictionName) => {
+    if (!jurisdictionName) return;
+    setLoading(true);
+    setError(null);
+    try {
+      // Map to DB name (capital)
+      const dbName = mapGeoToDBName(jurisdictionName);
+
+      // Step 1: Get ID by name
+      const jurResponse = await apiCall({
+        method: 'get',
+        url: `/v1/jurisdictions/byName/${encodeURIComponent(dbName)}`,
+      });
+      const { jurisdictionId: jurId } = jurResponse.data;
+      if (!jurId) throw new Error('Jurisdiction not found');
+
+      // Step 2: Get tops
+      const topsResponse = await apiCall({
+        method: 'get',
+        url: `/v1/jurisdictions/${jurId}/tops`,
+      });
+      const rawData = topsResponse.data;
+
+      // Normalize & slice to 3
+      const topArtists3 = (rawData.topArtists || []).slice(0, 3).map((artist, i) => ({
+        id: artist.userId || i,
+        name: artist.username,
+        votes: artist.score || 0,
+        artwork: artist.photoUrl ? `${API_BASE_URL}${artist.photoUrl}` : rapperOne,
+      }));
+
+      const topSongs3 = (rawData.topSongs || []).slice(0, 3).map((song, i) => ({
+        id: song.songId || i,
+        title: song.title,
+        artist: song.artist?.username || 'Unknown',
+        votes: song.score || 0,
+        artwork: song.artworkUrl ? `${API_BASE_URL}${song.artworkUrl}` : songArtOne,
+      }));
+
+      setTopResults({ artists: topArtists3, songs: topSongs3 });
+    } catch (err) {
+      console.error('Fetch tops error:', err);
+      setError('Failed to load tops—using dummies.');
+      const key = `${genre}-${category}`;
+      const dummyKey = category === 'artist' ? 'artists' : 'songs';
+      const dummy = dummyData[key]?.[dummyKey] || [];
+      setTopResults({ artists: dummyData[`${genre}-artist`]?.artists || [], songs: dummyData[`${genre}-song`]?.songs || [] });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleStateClick = (geo) => {
     if (geo.properties.name === "New York") {
       setSelectedState('New York');
-      setCenter([-74, 40.7]); // NYC center
-      setZoom(10); // Zoom to NYC
-      setSelectedHarlem('harlem-wide'); // Default Harlem sub
-      setIsZoomed(true); // Show back button
+      setCenter([-74, 40.7]);
+      setZoom(10);
+      setSelectedHarlem('harlem-wide');
+      setIsZoomed(true);
+      fetchTopResults('Harlem');  // Use DB name 'Harlem'
     } else {
-      alert('Coming to Unis soon'); // Message for non-NY
+      alert('Coming to Unis soon');
     }
   };
 
@@ -144,15 +206,16 @@ const FindPage = () => {
 
   const handleHarlemClick = (geo) => {
     setSelectedHarlem(geo.properties.name);
-    // Optional further zoom
+    fetchTopResults(geo.properties.name);  // Mapper handles capital
   };
 
   const handleBack = () => {
-    setCenter([-97, 40]); // US center
+    setCenter([-97, 40]);
     setZoom(1);
     setSelectedState(null);
     setSelectedHarlem(null);
     setIsZoomed(false);
+    setTopResults({ artists: [], songs: [] });
   };
 
   const handleRandom = () => {
@@ -162,12 +225,11 @@ const FindPage = () => {
       const randomIndex = Math.floor(Math.random() * stateCenters.length);
       setCenter(stateCenters[randomIndex].center);
       setZoom(5);
-      setHoveredState(stateCenters[randomIndex].name); // Display during animation
+      setHoveredState(stateCenters[randomIndex].name);
       count++;
-      if (count >= 10) { // 10 cycles = ~5s at 500ms
+      if (count >= 10) {
         clearInterval(interval);
         setIsAnimating(false);
-        // Final state (random or NY for demo)
         const finalIndex = Math.floor(Math.random() * stateCenters.length);
         setSelectedState(stateCenters[finalIndex].name);
         if (stateCenters[finalIndex].name === 'New York') {
@@ -179,27 +241,33 @@ const FindPage = () => {
     }, 500);
   };
 
+  const { artists = [], songs = [] } = topResults;
+
   const getResults = () => {
     const key = `${genre}-${category}`;
-    return dummyData[key] || { artists: [], songs: [] };
+    const dummyKey = category === 'artist' ? 'artists' : 'songs';
+    const dummy = dummyData[key]?.[dummyKey] || [];
+    return {
+      artists: artists.length > 0 ? artists : dummyData[`${genre}-artist`]?.artists || [],
+      songs: songs.length > 0 ? songs : dummyData[`${genre}-song`]?.songs || [],
+    };
   };
 
-  const { artists, songs } = getResults();
+  const { artists: displayArtists, songs: displaySongs } = getResults();
 
   const handlePlay = (media) => {
     playMedia(
       { type: 'song', url: sampleSong, title: media.title || media.name, artist: media.artist, artwork: media.artwork },
-      [] // Empty for single
+      []
     );
   };
 
-  const handleArtistView = (id, type) => {
-    navigate(`/artist`)
+  const handleArtistView = (id) => {
+    navigate(`/artist/${id}`);
   };
 
-
-  const handleSongView = (id, type) => {
-    navigate(`/song`)
+  const handleSongView = (id) => {
+    navigate(`/song/${id}`);
   };
 
   return (
@@ -215,9 +283,12 @@ const FindPage = () => {
             <option value="rock">Rock</option>
             <option value="pop">Pop</option>
           </select>
-        
-          <button onClick={handleRandom} disabled={isAnimating} className="random-button">
-            Random
+          <select value={category} onChange={(e) => setCategory(e.target.value)} className="filter-select">
+            <option value="artist">Artists</option>
+            <option value="song">Songs</option>
+          </select>
+          <button onClick={handleRandom} disabled={isAnimating || loading} className="random-button">
+            {isAnimating ? 'Spinning...' : 'Random'}
           </button>
         </div>
 
@@ -232,7 +303,7 @@ const FindPage = () => {
 
         <div className="map-container">
           <ComposableMap projection="geoAlbersUsa">
-            <ZoomableGroup center={center} zoom={zoom} disablePanning={true} disableZooming={true}> {/* Disable pan/zoom in US mode */}
+            <ZoomableGroup center={center} zoom={zoom} disablePanning={true} disableZooming={true}>
               <Geographies geography={geoUrl}>
                 {({ geographies }) =>
                   geographies.map((geo) => (
@@ -244,16 +315,16 @@ const FindPage = () => {
                       onMouseLeave={handleStateLeave}
                       style={{
                         default: {
-                          fill: geo.properties.name === selectedState ? '#163387' : '#EAEAEC', // Unis blue on select
+                          fill: geo.properties.name === selectedState ? '#163387' : '#EAEAEC',
                           outline: "none",
                           stroke: "#999",
                         },
                         hover: {
-                          fill: '#163387', // Unis blue on hover
+                          fill: '#163387',
                           outline: "none",
                         },
                         pressed: {
-                          fill: '#0A1C4A', // Darker pressed
+                          fill: '#0A1C4A',
                           outline: "none",
                         },
                       }}
@@ -270,7 +341,7 @@ const FindPage = () => {
                         key={geo.properties.name}
                         geography={geo}
                         onClick={() => handleHarlemClick(geo)}
-                        onMouseEnter={() => setHoveredState(geo.properties.name)} // Hover name for Harlem too
+                        onMouseEnter={() => setHoveredState(geo.properties.name)}
                         onMouseLeave={handleStateLeave}
                         style={{
                           default: {
@@ -291,12 +362,15 @@ const FindPage = () => {
           </ComposableMap>
         </div>
 
+        {loading && <div className="loading">Loading tops...</div>}
+        {error && <div className="error">{error}</div>}
+
         <div className="results-section">
           <div className="column">
             <h2>Top Songs</h2>
             <ul className="results-list">
-              {songs.slice(0, 3).map((item, index) => (
-                <li key={index} className="result-item">
+              {displaySongs.slice(0, 3).map((item, index) => (
+                <li key={item.id || index} className="result-item">
                   <div className="rank">#{index + 1}</div>
                   <img src={item.artwork} alt={item.title} className="item-artwork" />
                   <div className="item-info">
@@ -307,7 +381,7 @@ const FindPage = () => {
                     <span>{item.votes} Votes</span>
                   </div>
                   <button onClick={() => handlePlay(item)} className="play-button">Play</button>
-                  <button onClick={() => handleSongView()} className="view-button">View</button>
+                  <button onClick={() => handleSongView(item.id)} className="view-button">View</button>
                 </li>
               ))}
             </ul>
@@ -315,8 +389,8 @@ const FindPage = () => {
           <div className="column">
             <h2>Top Artists</h2>
             <ul className="results-list">
-              {artists.slice(0, 3).map((item, index) => (
-                <li key={index} className="result-item">
+              {displayArtists.slice(0, 3).map((item, index) => (
+                <li key={item.id || index} className="result-item">
                   <div className="rank">#{index + 1}</div>
                   <img src={item.artwork} alt={item.name} className="item-artwork" />
                   <div className="item-info">
@@ -326,7 +400,7 @@ const FindPage = () => {
                     <span>{item.votes} Votes</span>
                   </div>
                   <button onClick={() => handlePlay(item)} className="play-button">Play</button>
-                  <button onClick={() => handleArtistView()} className="view-button">View</button>
+                  <button onClick={() => handleArtistView(item.id)} className="view-button">View</button>
                 </li>
               ))}
             </ul>
