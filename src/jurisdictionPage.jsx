@@ -177,7 +177,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {  // Keep prop as fal
               <div className="section-header">
                 <h3><Trophy size={20} /> #1 Artist in {jurName}</h3>
               </div>
-              <div className="highlight-content">
+              <div className="highlight-content" style={{backgroundSize: "contain"}}>
                 <img
                   src={renderData.artistOfMonth.image}
                   alt={renderData.artistOfMonth.name}

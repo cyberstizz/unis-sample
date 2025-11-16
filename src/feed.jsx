@@ -23,10 +23,10 @@ const Feed = () => {
   const [animate, setAnimate] = useState(false);
   const [userId, setUserId] = useState(null);
   const [jurisdictionId, setJurisdictionId] = useState('00000000-0000-0000-0000-000000000002');  // Default; update from profile
-  const [trendingMedia, setTrendingMedia] = useState([]);  // {songId/videoId, title, artist: {userId, username}, artworkUrl, fileUrl, type: 'song'|'video', score}
+  const [trendingMedia, setTrendingMedia] = useState([]);
   const [newMedia, setNewMedia] = useState([]);
-  const [awards, setAwards] = useState([]);  // {id, name, winner: {id, username}}
-  const [popularArtists, setPopularArtists] = useState([]);  // {userId, username, photoUrl?, score}
+  const [awards, setAwards] = useState([]);
+  const [popularArtists, setPopularArtists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -36,105 +36,114 @@ const Feed = () => {
   }, []);
 
   const fetchFeedData = async () => {
-  setLoading(true);
-  setError('');
-  try {
-    // 1. Get userId from token
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Not authenticated');
+    setLoading(true);
+    setError('');
+    try {
+      // 1. Get userId from token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+      
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const uid = payload.userId;
+      setUserId(uid);
+
+      // 2. Fetch user profile with userId
+      const profileRes = await apiCall({ method: 'get', url: `/v1/users/profile/${uid}` });
+      const { jurisdiction } = profileRes.data;
+      setJurisdictionId(jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002');  // Safe fallback
+
+      // 3. Parallel fetches
+      const [trendingRes, newRes, songAwardsRes, artistAwardsRes, popularRes] = await Promise.all([
+        apiCall({ method: 'get', url: `/v1/media/trending?jurisdictionId=${jurisdictionId}&limit=5` }),
+        apiCall({ method: 'get', url: `/v1/media/new?jurisdictionId=${jurisdictionId}&limit=5` }),
+        apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=song&jurisdictionId=${jurisdictionId}` }),
+        apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=artist&jurisdictionId=${jurisdictionId}` }),
+        apiCall({ method: 'get', url: `/v1/users/artist/top?jurisdictionId=${jurisdictionId}&limit=5` })
+      ]);
+
+      // Normalize the data (null-safe)
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+      const normalizeMedia = (items) => (items || []).map(item => {
+        const normalized = {
+          id: item.songId || item.videoId,
+          title: item.title,
+          artist: item.artist?.username || 'Unknown',  // Safe
+          artistData: item.artist || { userId: 'unknown', username: 'Unknown' },  // Safe object
+          artworkUrl: item.artworkUrl ? `${API_BASE_URL}${item.artworkUrl}` : null,
+          mediaUrl: item.fileUrl ? `${API_BASE_URL}${item.fileUrl}` : null,
+          url: item.fileUrl ? `${API_BASE_URL}${item.fileUrl}` : null,
+          artwork: item.artworkUrl ? `${API_BASE_URL}${item.artworkUrl}` : null,
+          type: item.songId ? 'song' : 'video',
+          score: item.score || 0,
+          artistId: item.artist?.userId || 'unknown'  // Safe
+        };
+        console.log('Normalized item:', normalized);
+        return normalized;
+      });
+
+      setTrendingMedia(normalizeMedia(trendingRes.data || []));
+      setNewMedia(normalizeMedia(newRes.data || []));
+      
+      // Combine song and artist awards, first five
+      const combinedAwards = [...(songAwardsRes.data || []), ...(artistAwardsRes.data || [])].slice(0, 5);
+      setAwards(combinedAwards);
+      
+      setPopularArtists(popularRes.data || []);
+    } catch (err) {
+      console.error('Feed load error:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      setError('Feed unavailable—showing demo content.');
+    } finally {
+      setLoading(false);
     }
-    
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const uid = payload.userId;
-    setUserId(uid);
-
-    // 2. Fetch user profile with userId
-    const profileRes = await apiCall({ method: 'get', url: `/v1/users/profile/${uid}` });
-    const { jurisdiction } = profileRes.data;
-    setJurisdictionId(jurisdiction.jurisdictionId);
-
-    // 3. Parallel fetches
-    const [trendingRes, newRes, songAwardsRes, artistAwardsRes, popularRes] = await Promise.all([
-      apiCall({ method: 'get', url: `/v1/media/trending?jurisdictionId=${jurisdiction.jurisdictionId}&limit=5` }),
-      apiCall({ method: 'get', url: `/v1/media/new?jurisdictionId=${jurisdiction.jurisdictionId}&limit=5` }),
-      apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=song&jurisdictionId=${jurisdiction.jurisdictionId}` }),
-      apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=artist&jurisdictionId=${jurisdiction.jurisdictionId}` }),
-      apiCall({ method: 'get', url: `/v1/users/artist/top?jurisdictionId=${jurisdiction.jurisdictionId}&limit=5` })
-    ]);
-
-  //normalize the data
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
-const normalizeMedia = (items) => items.map(item => {
-  const normalized = {
-    id: item.songId || item.videoId,
-    title: item.title,
-    artist: item.artist.username,  
-    artistData: item.artist,  // For Feed display (object)
-    artworkUrl: item.artworkUrl ? `${API_BASE_URL}${item.artworkUrl}` : null,
-    mediaUrl: item.fileUrl ? `${API_BASE_URL}${item.fileUrl}` : null,
-    url: item.fileUrl ? `${API_BASE_URL}${item.fileUrl}` : null,  // ADDED
-    artwork: item.artworkUrl ? `${API_BASE_URL}${item.artworkUrl}` : null,  // ADDED
-    type: item.songId ? 'song' : 'video',
-    score: item.score || 0,
-    artistId: item.artist.userId  // ADDED
   };
-  console.log('Normalized item:', normalized);
-  return normalized;
-});
-
-    setTrendingMedia(normalizeMedia(trendingRes.data || []));
-    setNewMedia(normalizeMedia(newRes.data || []));
-    
-    // Combine song and artist awards, first five
-    const combinedAwards = [...(songAwardsRes.data || []), ...(artistAwardsRes.data || [])].slice(0, 5);
-    setAwards(combinedAwards);
-    
-    setPopularArtists(popularRes.data || []);
-  } catch (err) {
-    console.error('Feed load error:', err);
-    console.error('Error response:', err.response?.data);
-    console.error('Error status:', err.response?.status);
-    setError('Feed unavailable—showing demo content.');
-  } finally {
-    setLoading(false);
-  }
-};
 
   const navigate = useNavigate();
-
-  // Nav handlers (uniform by ID)
-  // const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
-  // const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
 
   const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
   const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
 
-
-
-
   // Play handler (immediate, uses data—no refetch)
   const handlePlayMedia = async (e, media) => {
-  e.stopPropagation();
-  
-  // Track the play in backend
-  try {
-    const endpoint = media.type === 'song' 
-      ? `/v1/media/song/${media.id}/play?userId=${userId}`
-      : `/v1/media/video/${media.id}/play?userId=${userId}`;
+    e.stopPropagation();
     
-    await apiCall({ method: 'post', url: endpoint });
-    console.log('Play tracked successfully');
-  } catch (err) {
-    console.error('Failed to track play:', err);
-    // Don't block playback if tracking fails
-  }
-  
-  // Play the media
-  const playlist = [media, ...newMedia.slice(0, 2).filter(m => m.id !== media.id)];
-  playMedia(media, playlist);
-};
+    let playMediaObj = media;
+    if (media.type === 'artist') {
+      // Fetch default song
+      try {
+        const defaultRes = await apiCall({ method: 'get', url: `/v1/users/${media.artistData.userId}/default-song` });
+        playMediaObj = {
+          type: 'song',
+          url: defaultRes.data.fileUrl ? `${API_BASE_URL}${defaultRes.data.fileUrl}` : song1,
+          title: defaultRes.data.title || 'Default Track',
+          artist: media.name,
+          artwork: defaultRes.data.artworkUrl ? `${API_BASE_URL}${defaultRes.data.artworkUrl}` : media.imageUrl,
+        };
+      } catch (err) {
+        console.error('Default song fetch error:', err);
+        playMediaObj = { type: 'song', url: song1, title: 'Default Track', artist: media.name, artwork: media.imageUrl };
+      }
+    }
+
+    // Track play
+    try {
+      const endpoint = playMediaObj.type === 'song' 
+        ? `/v1/media/song/${playMediaObj.id}/play?userId=${userId}`
+        : `/v1/media/video/${playMediaObj.id}/play?userId=${userId}`;
+      await apiCall({ method: 'post', url: endpoint });
+      console.log('Play tracked successfully');
+    } catch (err) {
+      console.error('Failed to track play:', err);
+    }
+    
+    // Play
+    const playlist = [playMediaObj, ...newMedia.slice(0, 2).filter(m => m.id !== playMediaObj.id)];
+    playMedia(playMediaObj, playlist);
+  };
 
   // Dummies (env fallback or error—limit to 5)
   const getDummyTrending = () => [
@@ -180,62 +189,60 @@ const normalizeMedia = (items) => items.map(item => {
         {error && <div className="feed-error" style={{ color: 'orange', padding: '10px', textAlign: 'center' }}>{error}</div>}
         <main className="feed">
           {/* Trending Carousel */}
-        <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
-          <h2>Trending in {jurisdictionId === '00000000-0000-0000-0000-000000000002' ? 'Uptown Harlem' : 'Your Area'}</h2>
-          <div className="carousel-items">
-            {trending.map((item) => (
-              <div key={item.id} className="item-wrapper">
-                <div 
-                  className="item" 
-                  style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})`, backgroundSize: 'cover' }}
-                  onClick={() => handleSongNav(item.id, item.type)}
-                >
-                  <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+          <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
+            <h2>Trending in {jurisdictionId === '00000000-0000-0000-0000-000000000002' ? 'Uptown Harlem' : 'Your Area'}</h2>
+            <div className="carousel-items">
+              {trending.map((item) => (
+                <div key={item.id} className="item-wrapper">
+                  <div 
+                    className="item" 
+                    style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})`, backgroundSize: 'cover' }}
+                    onClick={() => handleSongNav(item.id, item.type)}
+                  >
+                    <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+                  </div>
+                  <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
+                    {item.title}
+                  </div>
+                  <span 
+                    className="item-artist" 
+                    onClick={() => handleArtistNav(item.artistData.userId)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {item.artistData.username}
+                  </span>
                 </div>
-                <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
-                  {item.title}
-                </div>
-                <span 
-                  className="item-artist" 
-                  onClick={() => handleArtistNav(item.artistData.userId)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {item.artistData.username}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
 
-        {/* New Carousel */}
-        <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
-          <h2>New Releases</h2>
-          <div className="carousel-items">
-            {newMediaList.map((item) => (
-              <div key={item.id} className="item-wrapper">
-                <div 
-                  className="item" 
-                  style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})`, backgroundSize: 'cover' }}
-                  onClick={() => handleSongNav(item.id, item.type)}
-                >
-                  <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+          {/* New Carousel */}
+          <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
+            <h2>New Releases</h2>
+            <div className="carousel-items">
+              {newMediaList.map((item) => (
+                <div key={item.id} className="item-wrapper">
+                  <div 
+                    className="item" 
+                    style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})`, backgroundSize: 'cover' }}
+                    onClick={() => handleSongNav(item.id, item.type)}
+                  >
+                    <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+                  </div>
+                  <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
+                    {item.title}
+                  </div>
+                  <span 
+                    className="item-artist" 
+                    onClick={() => handleArtistNav(item.artistData.userId)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {item.artistData.username}
+                  </span>
                 </div>
-                <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
-                  {item.title}
-                </div>
-                <span 
-                  className="item-artist" 
-                  onClick={() => handleArtistNav(item.artistData.userId)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {item.artistData.username}
-                </span>
-              </div>
-            ))}
-          </div>
-</section>
-
-          {/* REMOVED: My Home section */}
+              ))}
+            </div>
+          </section>
 
           {/* Popular (Artists) */}
           <section className={`feed-section list ${animate ? "animate" : ""}`}>
@@ -250,8 +257,6 @@ const normalizeMedia = (items) => items.map(item => {
               ))}
             </ol>
           </section>
-
-          {/* REMOVED: From Artists You Follow section */}
         </main>
       </div>
     </Layout>

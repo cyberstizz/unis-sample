@@ -30,7 +30,7 @@ const harlemGeo = {
   features: [
     {
       type: 'Feature',
-      properties: { name: 'Uptown Harlem' },  // DB name
+      properties: { name: 'Uptown Harlem' },
       geometry: {
         type: 'Polygon',
         coordinates: [[
@@ -40,7 +40,7 @@ const harlemGeo = {
     },
     {
       type: 'Feature',
-      properties: { name: 'Downtown Harlem' },  // DB name
+      properties: { name: 'Downtown Harlem' },
       geometry: {
         type: 'Polygon',
         coordinates: [[
@@ -50,7 +50,7 @@ const harlemGeo = {
     },
     {
       type: 'Feature',
-      properties: { name: 'Harlem' },  // DB name (parent)
+      properties: { name: 'Harlem' },
       geometry: {
         type: 'Polygon',
         coordinates: [[
@@ -256,10 +256,34 @@ const FindPage = () => {
   const { artists: displayArtists, songs: displaySongs } = getResults();
 
   const handlePlay = (media) => {
-    playMedia(
-      { type: 'song', url: sampleSong, title: media.title || media.name, artist: media.artist, artwork: media.artwork },
-      []
-    );
+    // If it's a song with a fileUrl, play it directly
+    if (media.fileUrl) {
+      playMedia(
+        { type: 'song', url: media.fileUrl, title: media.title || media.name, artist: media.artist || media.name, artwork: media.artwork },
+        []
+      );
+    }
+    // If it's an artist with a default song, play that
+    else if (media.defaultSong && media.defaultSong.fileUrl) {
+      const defaultSong = media.defaultSong;
+      playMedia(
+        { 
+          type: 'song', 
+          url: `${API_BASE_URL}${defaultSong.fileUrl}`, 
+          title: defaultSong.title, 
+          artist: media.name, 
+          artwork: defaultSong.artworkUrl ? `${API_BASE_URL}${defaultSong.artworkUrl}` : media.artwork 
+        },
+        []
+      );
+    }
+    // Otherwise fall back to sample song
+    else {
+      playMedia(
+        { type: 'song', url: sampleSong, title: media.title || media.name, artist: media.artist || media.name, artwork: media.artwork },
+        []
+      );
+    }
   };
 
   const handleArtistView = (id) => {
