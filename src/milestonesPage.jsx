@@ -24,59 +24,53 @@ const MilestonesPage = () => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   const handleView = async () => {
-  if (!selectedDate) {
-    setError('Select a date.');
-    return;
-  }
-  setIsLoading(true);
-  setError(null);
-  try {
-    const jurId = JURISDICTION_IDS[location];
-    const genreId = GENRE_IDS[genre];
-    const type = category;
-    const date = selectedDate;
-
-    if (!jurId) {
-      throw new Error('Invalid location—check mappings.');
-    }
-
-    console.log('Params:', { jurId, genreId, type, date });  // Debug
-
-    const response = await apiCall({
-      method: 'get',
-      url: `/v1/awards/past?type=${type}&startDate=${date}&endDate=${date}&jurisdictionId=${jurId}&genreId=${genreId}`,
-    });
-
-    const rawResults = response.data;
-    if (rawResults.length === 0) {
-      setError('No milestones for this date—try manual cron.');
-      setResults([]);
+    if (!selectedDate) {
+      setError('Select a date.');
       return;
     }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const jurId = JURISDICTION_IDS[location];
+      const genreId = GENRE_IDS[genre];
+      const type = category;
+      const date = selectedDate;
 
-    const normalized = rawResults.map((award, i) => ({
-      rank: i + 1,
-      title: award.targetType === 'artist' ? award.user?.username : award.song?.title || 'Unknown',
-      artist: award.targetType === 'artist' ? award.user?.username : award.song?.artist?.username || 'Unknown',
-      jurisdiction: award.jurisdiction?.name || location,
-      votes: award.votesCount || 0,
-      artwork: (award.targetType === 'artist' ? award.user?.photoUrl : award.song?.artworkUrl) ? `${API_BASE_URL}${award.targetType === 'artist' ? award.user.photoUrl : award.song.artworkUrl}` : songArtFour,
-      caption: award.caption || `${award.artist} on their win: "This means everything!"`,
-    }));
+      if (!jurId) {
+        throw new Error('Invalid location—check idMappings.');
+      }
 
-    setResults(normalized);
-  } catch (err) {
-    console.error('Milestones fetch error:', err);
-    setError('Failed to load—using dummies.');
-    setResults([
-      { rank: 1, title: "Orange cup", artist: 'Aks da Bully', jurisdiction: 'Downtown Harlem', votes: 1500, artwork: songArtFour, caption: 'This win means everything to me. Harlem stand up!' },
-      { rank: 2, title: 'City Lights', artist: 'Artist B', jurisdiction: 'Downtown Harlem', votes: 1200, artwork: rapperTwo, caption: 'Grateful for the support!' },
-      { rank: 3, title: 'Midnight Hustle', artist: 'Artist C', jurisdiction: 'Downtown Harlem', votes: 1150, artwork: rapperThree, caption: 'Honored to be here.' },
-    ]);
-  } finally {
-    setIsLoading(false);
-  }
-};
+      console.log('Params:', { location, jurId, genre, genreId, type, date });  // Debug
+
+      const response = await apiCall({
+        method: 'get',
+        url: `/v1/awards/past?type=${type}&startDate=${date}&endDate=${date}&jurisdictionId=${jurId}&genreId=${genreId}`,
+      });
+
+      const rawResults = response.data;  // List<Award>
+      const normalized = rawResults.map((award, i) => ({
+        rank: i + 1,
+        title: award.targetType === 'artist' ? award.user?.username : award.song?.title || 'Unknown',
+        artist: award.targetType === 'artist' ? award.user?.username : award.song?.artist?.username || 'Unknown',
+        jurisdiction: award.jurisdiction?.name || location,
+        votes: award.votesCount || 0,
+        artwork: (award.targetType === 'artist' ? award.user?.photoUrl : award.song?.artworkUrl) ? `${API_BASE_URL}${award.targetType === 'artist' ? award.user.photoUrl : award.song.artworkUrl}` : songArtFour,
+        caption: award.caption || `${award.artist} on their win: "This means everything!"`,
+      }));
+
+      setResults(normalized);
+    } catch (err) {
+      console.error('Milestones fetch error:', err);
+      setError('Failed to load—using dummies.');
+      setResults([
+        { rank: 1, title: "Orange cup", artist: 'Aks da Bully', jurisdiction: 'Downtown Harlem', votes: 1500, artwork: songArtFour, caption: 'This win means everything to me. Harlem stand up!' },
+        { rank: 2, title: 'City Lights', artist: 'Artist B', jurisdiction: 'Downtown Harlem', votes: 1200, artwork: rapperTwo, caption: 'Grateful for the support!' },
+        { rank: 3, title: 'Midnight Hustle', artist: 'Artist C', jurisdiction: 'Downtown Harlem', votes: 1150, artwork: rapperThree, caption: 'Honored to be here.' },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
