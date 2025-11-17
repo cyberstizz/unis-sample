@@ -4,7 +4,8 @@ import {
   Geographies,
   Geography,
   ZoomableGroup,
-} from "react-simple-maps";
+}
+from "react-simple-maps";
 import { useNavigate } from 'react-router-dom';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
@@ -167,6 +168,7 @@ const FindPage = () => {
         title: song.title,
         artist: song.artist?.username || 'Unknown',
         votes: song.score || 0,
+        fileUrl: song.fileUrl ? `${API_BASE_URL}${song.fileUrl}` : null,  // NEW: Full URL for play
         artwork: song.artworkUrl ? `${API_BASE_URL}${song.artworkUrl}` : songArtOne,
       }));
 
@@ -255,35 +257,51 @@ const FindPage = () => {
 
   const { artists: displayArtists, songs: displaySongs } = getResults();
 
-  const handlePlay = (media) => {
-    // If it's a song with a fileUrl, play it directly
+  const handlePlay = async (media) => {
+    // If it's a song with fileUrl, play it directly
     if (media.fileUrl) {
+      console.log('Playing song directly:', media.title, media.fileUrl);  // Debug log
       playMedia(
         { type: 'song', url: media.fileUrl, title: media.title || media.name, artist: media.artist || media.name, artwork: media.artwork },
         []
       );
+      return;  // Exit early
     }
-    // If it's an artist with a default song, play that
-    else if (media.defaultSong && media.defaultSong.fileUrl) {
-      const defaultSong = media.defaultSong;
-      playMedia(
-        { 
-          type: 'song', 
-          url: `${API_BASE_URL}${defaultSong.fileUrl}`, 
-          title: defaultSong.title, 
-          artist: media.name, 
-          artwork: defaultSong.artworkUrl ? `${API_BASE_URL}${defaultSong.artworkUrl}` : media.artwork 
-        },
-        []
-      );
+    // If it's an artist, fetch and play default song
+    else if (media.id && media.name) {  // Artist check (has id/name, no fileUrl)
+      console.log('Fetching default for artist:', media.name, media.id);  // Debug
+      try {
+        const response = await apiCall({
+          method: 'get',
+          url: `/v1/users/${media.id}/default-song`,
+        });
+        const defaultSong = response.data;  // Full Song entity
+        if (defaultSong && defaultSong.fileUrl) {
+          console.log('Playing default song:', defaultSong.title, `${API_BASE_URL}${defaultSong.fileUrl}`);
+          playMedia(
+            { 
+              type: 'default-song', 
+              url: `${API_BASE_URL}${defaultSong.fileUrl}`, 
+              title: defaultSong.title, 
+              artist: media.name, 
+              artwork: defaultSong.artworkUrl ? `${API_BASE_URL}${defaultSong.artworkUrl}` : media.artwork 
+            },
+            []
+          );
+          return;  // Exit early
+        } else {
+          console.warn('No default song found for artist');
+        }
+      } catch (err) {
+        console.error('Default song fetch failed:', err);
+      }
     }
-    // Otherwise fall back to sample song
-    else {
-      playMedia(
-        { type: 'song', url: sampleSong, title: media.title || media.name, artist: media.artist || media.name, artwork: media.artwork },
-        []
-      );
-    }
+    // Fallback to sample only if no song/default available
+    console.warn('Falling back to sample song');
+    playMedia(
+      { type: 'song', url: sampleSong, title: media.title || media.name, artist: media.artist || media.name, artwork: media.artwork },
+      []
+    );
   };
 
   const handleArtistView = (id) => {
@@ -435,4 +453,4 @@ const FindPage = () => {
   );
 };
 
-export default FindPage;
+export default FindPage;  

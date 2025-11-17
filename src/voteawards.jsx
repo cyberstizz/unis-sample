@@ -164,6 +164,53 @@ const VoteAwards = () => {
   // Format jurisdiction name for display
   const jurisdictionLabel = jurisdictions.find(j => j.value === selectedJurisdiction)?.label || 'Unknown';
 
+
+  const handlePlayArtistDefault = async (nominee) => {
+    try {
+      const response = await apiCall({
+        method: 'get',
+        url: `/v1/users/${nominee.id}/default-song`,  // Your endpoint
+      });
+      const defaultSong = response.data;  // Assumes { song: { title, fileUrl, artworkUrl } } or direct { title, fileUrl, ... }
+
+      let playData;
+      let queue = [];
+
+      if (defaultSong?.fileUrl) {
+        // Use default song
+        playData = {
+          type: 'default-song',
+          url: `${API_BASE_URL}${defaultSong.fileUrl}`,
+          title: defaultSong.title || `${nominee.name}'s Default Track`,
+          artist: nominee.name,
+          artwork: defaultSong.artworkUrl ? `${API_BASE_URL}${defaultSong.artworkUrl}` : nominee.imageUrl,
+        };
+      } else {
+        // Fallback: Fetch/play sample song (add /v1/media/sample-song endpoint if needed, or hardcode a URL for MVP)
+        const sampleResponse = await apiCall({
+          method: 'get',
+          url: '/v1/media/sample-song',  // New simple endpoint returning { title: 'Sample', fileUrl: '/uploads/sample.mp3', ... }
+        });
+        playData = {
+          type: 'sample-song',
+          url: `${API_BASE_URL}${sampleResponse.data.fileUrl}`,
+          title: sampleResponse.data.title || 'Sample Track',
+          artist: `${nominee.name} (Sample)`,
+          artwork: sampleResponse.data.artworkUrl ? `${API_BASE_URL}${sampleResponse.data.artworkUrl}` : backimage,
+        };
+      }
+
+      queue = [playData];  // Single-item queue like songs
+
+      playMedia(playData, queue);
+    } catch (err) {
+      console.error('Failed to fetch/play default song:', err);
+      // Optional: Toast/error message to user
+    }
+  };
+
+
+
   return (
     <Layout backgroundImage={backimage}>
       <div className='voteAwardsContainer'>
@@ -270,6 +317,17 @@ const VoteAwards = () => {
                         Listen
                       </button>
                     )}
+
+                    {nominee.type === 'artist' && (
+                    <button 
+                        onClick={() => handlePlayArtistDefault(nominee)} 
+                        className="listen-button"
+                      >
+                        Listen
+                      </button>
+                    )}
+
+
                     <button 
                       onClick={() => handleVoteClick(nominee)} 
                       className="vote-button"
