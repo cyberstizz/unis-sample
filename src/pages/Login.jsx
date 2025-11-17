@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import unisLogo from '../assets/unisNoBackground.svg';
 import spaceVideo from '../assets/space-bg.mp4';   
+import CreateAccountWizard from '../CreateAccountWizard';  // Ensure imported
 import './Login.scss';
 
 const Login = () => {
@@ -11,6 +12,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const [showWizard, setShowWizard] = useState(false);  // NEW: Wizard state (if not already)
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -19,7 +21,7 @@ const Login = () => {
     setLoading(true);
     const result = await login({ email, password });
     if (result.success) {
-      navigate('/');
+      navigate('/');  // Or /feed
     } else {
       setError(result.error || 'Login failed');
     }
@@ -69,7 +71,31 @@ const Login = () => {
             {loading ? 'Logging in…' : 'Login'}
           </button>
         </form>
+
+        {/* FIXED: type="button" prevents form submit; styled to match your design */}
+        <button 
+          type="button"  // NEW: Prevents submit
+          onClick={() => setShowWizard(true)} 
+          className="create-account-btn"
+          disabled={loading}  // Optional: Disable during login
+        >
+          Don't have an account? Create one
+        </button>
       </div>
+
+      {/* FIXED: Move overlay here (outside form/card) for full-screen on top of bg */}
+      {showWizard && (
+        <div className="wizard-overlay">
+          <CreateAccountWizard 
+            onClose={() => setShowWizard(false)} 
+            onSuccess={() => {
+              setShowWizard(false);
+              // Optional: Auto-login if wizard returns token, then navigate
+              navigate('/feed');
+            }} 
+          />
+        </div>
+      )}
     </div>
   );
 };
