@@ -16,13 +16,15 @@ import songArtSix from './assets/songarteight.png';
 import songArtNine from './assets/albumartnine.jpg';
 import songArtTen from './assets/albumartten.jpeg';
 import songArtEleven from './assets/rapperphotoOne.jpg';
+import { JURISDICTION_NAMES } from './utils/idMappings';
 import './feed.scss';
 
 const Feed = () => {
   const { playMedia } = useContext(PlayerContext);
   const [animate, setAnimate] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [jurisdictionId, setJurisdictionId] = useState('00000000-0000-0000-0000-000000000002');  // Default; update from profile
+  const [jurisdictionId, setJurisdictionId] = useState(null);  // Start null, no fallback yet
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [trendingMedia, setTrendingMedia] = useState([]);
   const [newMedia, setNewMedia] = useState([]);
   const [awards, setAwards] = useState([]);
@@ -30,16 +32,27 @@ const Feed = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+  const formatDuration = (ms) => {
+    if (!ms) return '';
+    const totalSec = Math.floor(ms / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = String(totalSec % 60).padStart(2, '0');
+    return `${min}:${sec}`;
+  };
+
   useEffect(() => {
     setAnimate(true);
-    fetchFeedData();
+    fetchProfile();
   }, []);
 
-  const fetchFeedData = async () => {
+  // Step 1: Fetch profile and set jurisdiction (blocks until done)
+  const fetchProfile = async () => {
     setLoading(true);
     setError('');
     try {
-      // 1. Get userId from token
+      // Get userId from token
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('Not authenticated');
@@ -49,12 +62,33 @@ const Feed = () => {
       const uid = payload.userId;
       setUserId(uid);
 
-      // 2. Fetch user profile with userId
+      // Fetch user profile
       const profileRes = await apiCall({ method: 'get', url: `/v1/users/profile/${uid}` });
       const { jurisdiction } = profileRes.data;
-      setJurisdictionId(jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002');  // Safe fallback
+      const jurId = jurisdiction?.jurisdictionId;
+      setJurisdictionId(jurId || '00000000-0000-0000-0000-000000000002');  // Safe fallback
+      setProfileLoaded(true);
+    } catch (err) {
+      console.error('Profile load error:', err);
+      setError('Profile unavailable—using default feed.');
+      setJurisdictionId('00000000-0000-0000-0000-000000000002');  // Fallback
+      setProfileLoaded(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // 3. Parallel fetches
+  // Step 2: Fetch media once profile/jurisdiction is ready
+  useEffect(() => {
+    if (!profileLoaded || !userId || !jurisdictionId) return;
+    fetchMediaData();
+  }, [userId, jurisdictionId, profileLoaded]);
+
+  const fetchMediaData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      // Parallel fetches with correct jurisdictionId
       const [trendingRes, newRes, songAwardsRes, artistAwardsRes, popularRes] = await Promise.all([
         apiCall({ method: 'get', url: `/v1/media/trending?jurisdictionId=${jurisdictionId}&limit=5` }),
         apiCall({ method: 'get', url: `/v1/media/new?jurisdictionId=${jurisdictionId}&limit=5` }),
@@ -64,8 +98,6 @@ const Feed = () => {
       ]);
 
       // Normalize the data (null-safe)
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
       const normalizeMedia = (items) => (items || []).map(item => {
         const normalized = {
           id: item.songId || item.videoId,
@@ -78,7 +110,8 @@ const Feed = () => {
           artwork: item.artworkUrl ? `${API_BASE_URL}${item.artworkUrl}` : null,
           type: item.songId ? 'song' : 'video',
           score: item.score || 0,
-          artistId: item.artist?.userId || 'unknown'  // Safe
+          artistId: item.artist?.userId || 'unknown',
+          duration: item.duration || null
         };
         console.log('Normalized item:', normalized);
         return normalized;
@@ -93,7 +126,7 @@ const Feed = () => {
       
       setPopularArtists(popularRes.data || []);
     } catch (err) {
-      console.error('Feed load error:', err);
+      console.error('Media load error:', err);
       console.error('Error response:', err.response?.data);
       console.error('Error status:', err.response?.status);
       setError('Feed unavailable—showing demo content.');
@@ -118,6 +151,7 @@ const Feed = () => {
         const defaultRes = await apiCall({ method: 'get', url: `/v1/users/${media.artistData.userId}/default-song` });
         playMediaObj = {
           type: 'song',
+          id: defaultRes.data.songId,  // Add ID for tracking
           url: defaultRes.data.fileUrl ? `${API_BASE_URL}${defaultRes.data.fileUrl}` : song1,
           title: defaultRes.data.title || 'Default Track',
           artist: media.name,
@@ -125,7 +159,7 @@ const Feed = () => {
         };
       } catch (err) {
         console.error('Default song fetch error:', err);
-        playMediaObj = { type: 'song', url: song1, title: 'Default Track', artist: media.name, artwork: media.imageUrl };
+        playMediaObj = { type: 'song', id: 'default-fallback', url: song1, title: 'Default Track', artist: media.name, artwork: media.imageUrl };
       }
     }
 
@@ -145,20 +179,20 @@ const Feed = () => {
     playMedia(playMediaObj, playlist);
   };
 
-  // Dummies (env fallback or error—limit to 5)
+  // Dummies (env fallback or error—limit to 5); align with normalized structure
   const getDummyTrending = () => [
-    { id: 'dummy1', title: 'Tony Fadd - Paranoid', artist: { userId: '1', username: 'Tony Fadd' }, artworkUrl: songArtOne, mediaUrl: song1, type: 'song', score: 100 },
-    { id: 'dummy2', title: 'SD Boomin - Waited All Night', artist: { userId: '2', username: 'SD Boomin' }, artworkUrl: songArtTwo, mediaUrl: song2, type: 'song', score: 80 },
-    { id: 'dummy3', title: 'Bad Video', artist: { userId: '3', username: 'some guy' }, artworkUrl: songArtThree, mediaUrl: video1, type: 'video', score: 60 },
-    { id: 'dummy4', title: 'Song 4', artist: { userId: '4', username: 'Artist 4' }, artworkUrl: songArtFour, mediaUrl: song1, type: 'song', score: 50 },
-    { id: 'dummy5', title: 'Song 5', artist: { userId: '5', username: 'Artist 5' }, artworkUrl: songArtFive, mediaUrl: song2, type: 'song', score: 40 }
+    { id: 'dummy1', title: 'Tony Fadd - Paranoid', artistData: { userId: '1', username: 'Tony Fadd' }, artworkUrl: songArtOne, mediaUrl: song1, type: 'song', score: 100 },
+    { id: 'dummy2', title: 'SD Boomin - Waited All Night', artistData: { userId: '2', username: 'SD Boomin' }, artworkUrl: songArtTwo, mediaUrl: song2, type: 'song', score: 80 },
+    { id: 'dummy3', title: 'Bad Video', artistData: { userId: '3', username: 'some guy' }, artworkUrl: songArtThree, mediaUrl: video1, type: 'video', score: 60 },
+    { id: 'dummy4', title: 'Song 4', artistData: { userId: '4', username: 'Artist 4' }, artworkUrl: songArtFour, mediaUrl: song1, type: 'song', score: 50 },
+    { id: 'dummy5', title: 'Song 5', artistData: { userId: '5', username: 'Artist 5' }, artworkUrl: songArtFive, mediaUrl: song2, type: 'song', score: 40 }
   ].slice(0, 5);
   const getDummyNew = () => [
-    { id: 'dummy6', title: 'The Outside', artist: { userId: '6', username: 'Artist Six' }, artworkUrl: songArtSix, mediaUrl: song1, type: 'song', score: 30 },
-    { id: 'dummy7', title: 'Original Man', artist: { userId: '7', username: 'Artist Seven' }, artworkUrl: songArtNine, mediaUrl: song2, type: 'song', score: 25 },
-    { id: 'dummy8', title: 'flavorfall', artist: { userId: '8', username: 'Artist Eight' }, artworkUrl: songArtTen, mediaUrl: song1, type: 'song', score: 20 },
-    { id: 'dummy9', title: 'Golden Son', artist: { userId: '9', username: 'Artist Nine' }, artworkUrl: songArtEleven, mediaUrl: song2, type: 'song', score: 15 },
-    { id: 'dummy10', title: 'New Track', artist: { userId: '10', username: 'Artist Ten' }, artworkUrl: songArtOne, mediaUrl: song1, type: 'song', score: 10 }
+    { id: 'dummy6', title: 'The Outside', artistData: { userId: '6', username: 'Artist Six' }, artworkUrl: songArtSix, mediaUrl: song1, type: 'song', score: 30 },
+    { id: 'dummy7', title: 'Original Man', artistData: { userId: '7', username: 'Artist Seven' }, artworkUrl: songArtNine, mediaUrl: song2, type: 'song', score: 25 },
+    { id: 'dummy8', title: 'flavorfall', artistData: { userId: '8', username: 'Artist Eight' }, artworkUrl: songArtTen, mediaUrl: song1, type: 'song', score: 20 },
+    { id: 'dummy9', title: 'Golden Son', artistData: { userId: '9', username: 'Artist Nine' }, artworkUrl: songArtEleven, mediaUrl: song2, type: 'song', score: 15 },
+    { id: 'dummy10', title: 'New Track', artistData: { userId: '10', username: 'Artist Ten' }, artworkUrl: songArtOne, mediaUrl: song1, type: 'song', score: 10 }
   ].slice(0, 5);
   const getDummyAwards = () => [
     { id: 'a1', name: 'Best Rap Song', winner: { id: 'w1', username: 'Tony Fadd' } },
@@ -175,11 +209,23 @@ const Feed = () => {
     { userId: 'art5', username: 'Artist Five', photoUrl: songArtFive, score: 40 }
   ].slice(0, 5);
 
-  // Data with fallbacks (limit 5)
+  // Data with fallbacks (limit 5); dedupe new if real data
   const trending = trendingMedia.length ? trendingMedia.slice(0, 5) : getDummyTrending();
-  const newMediaList = newMedia.length ? newMedia.slice(0, 5) : getDummyNew();
+  
+  const newMediaList = newMedia.length 
+  ? newMedia.slice(0, 5)  // No filter—full slice
+  : getDummyNew();
+
+
   const awardsList = awards.length ? awards.slice(0, 5) : getDummyAwards();
   const artistsList = popularArtists.length ? popularArtists.slice(0, 5) : getDummyArtists();
+
+  // Dynamic jurisdiction name (e.g., 'downtown-harlem' → 'Downtown Harlem')
+  const getJurisdictionDisplayName = (id) => {
+    const key = JURISDICTION_NAMES[id];
+    if (!key) return 'Your Area';
+    return key.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
 
   if (loading) return <div className="loading-feed" style={{ textAlign: 'center', padding: '50px' }}>Loading your feed...</div>;
 
@@ -190,13 +236,13 @@ const Feed = () => {
         <main className="feed">
           {/* Trending Carousel */}
           <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
-            <h2>Trending in {jurisdictionId === '00000000-0000-0000-0000-000000000002' ? 'Uptown Harlem' : 'Your Area'}</h2>
+            <h2>Trending in {getJurisdictionDisplayName(jurisdictionId)}</h2>
             <div className="carousel-items">
               {trending.map((item) => (
                 <div key={item.id} className="item-wrapper">
                   <div 
                     className="item" 
-                    style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})`, backgroundSize: 'cover' }}
+                    style={{ backgroundImage: `url(${item.artworkUrl || item.artwork || '/default-art.jpg'})`, backgroundSize: 'cover' }}
                     onClick={() => handleSongNav(item.id, item.type)}
                   >
                     <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
@@ -206,11 +252,14 @@ const Feed = () => {
                   </div>
                   <span 
                     className="item-artist" 
-                    onClick={() => handleArtistNav(item.artistData.userId)}
+                    onClick={() => handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown')}
                     style={{ cursor: 'pointer' }}
                   >
-                    {item.artistData.username}
+                    {item.artistData?.username || item.artist || 'Unknown'}
                   </span>
+                  <div className="item-duration">
+                    {formatDuration(item.duration)}
+                  </div>
                 </div>
               ))}
             </div>
@@ -224,7 +273,7 @@ const Feed = () => {
                 <div key={item.id} className="item-wrapper">
                   <div 
                     className="item" 
-                    style={{ backgroundImage: `url(${item.artworkUrl || '/default-art.jpg'})`, backgroundSize: 'cover' }}
+                    style={{ backgroundImage: `url(${item.artworkUrl || item.artwork || '/default-art.jpg'})`, backgroundSize: 'cover' }}
                     onClick={() => handleSongNav(item.id, item.type)}
                   >
                     <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
@@ -234,11 +283,14 @@ const Feed = () => {
                   </div>
                   <span 
                     className="item-artist" 
-                    onClick={() => handleArtistNav(item.artistData.userId)}
+                    onClick={() => handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown')}
                     style={{ cursor: 'pointer' }}
                   >
-                    {item.artistData.username}
+                    {item.artistData?.username || item.artist || 'Unknown'}
                   </span>
+                  <div className="item-duration">
+                    {formatDuration(item.duration)}
+                  </div>
                 </div>
               ))}
             </div>

@@ -33,6 +33,10 @@ $unis-silver: #918f8f;
   }
 }
 
+
+body {
+        scrollbar-color: $unis-blue;
+}
 .feed-section h2 {
   opacity: 0; // start hidden until animation
 }
@@ -272,10 +276,43 @@ $unis-silver: #918f8f;
 
     &.carousel {
       .carousel-items {
+
         display: flex;
         overflow-x: auto;
         gap: 20px; // Increase gap for separation
         padding-bottom: 10px; // Add padding for scrollbar visibility
+        display: flex;
+  overflow-x: auto;
+  gap: 20px;
+  padding-bottom: 10px;
+
+  // Firefox: color and thickness
+  scrollbar-width: thin;              // "auto" | "thin" | "none"
+  scrollbar-color: $unis-blue #e6e6e6;
+
+  // WebKit (Chrome / Safari / Edge)
+  &::-webkit-scrollbar {
+    height: 8px;                      // horizontal scrollbar thickness
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #e6e6e6;              // track (light gray)
+    border-radius: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $unis-blue;     // the actual thumb (unis blue)
+    border-radius: 8px;
+    border: 2px solid #e6e6e6;       // creates padding-like gap
+    min-width: 30px;                 // avoid an extremely small thumb
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: darken($unis-blue, 6%); // subtle hover darken
+  }
+
+
+
 
         .item {
           min-width: 180px;
@@ -326,12 +363,14 @@ $unis-silver: #918f8f;
   display: flex;
   flex-direction: column;
   align-items: center;
+  scrollbar-color: $unis-blue;
 }
 
 .item-title {
   margin-top: 8px; // spacing between image and title
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 1.3rem;
+  color: $unis-blue;
 }
 
 
@@ -465,9 +504,9 @@ $unis-silver: #918f8f;
 
 
 
-.feed::-webkit-scrollbar {
-  display: none;
-}
+// .feed::-webkit-scrollbar {
+//   display: none;
+// }
 
 /* Mobile adjustments */
 @media (max-width: 768px) {
