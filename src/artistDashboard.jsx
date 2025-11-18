@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, Play, Image, Video, Eye, Heart, Users, X } from 'lucide-react';
 import UploadWizard from './uploadWizard';
+import ChangeDefaultSongWizard from './changeDefaultSongWizard'; 
 import EditProfileWizard from './editProfileWizard';  
+import DeleteAccountWizard from './deleteAccountWizard';
 import './artistDashboard.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
@@ -18,6 +20,8 @@ const ArtistDashboard = () => {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [songs, setSongs] = useState([]);
   const [videos, setVideos] = useState([]);
+  const [showDefaultSongWizard, setShowDefaultSongWizard] = useState(false);
+  const [showDeleteWizard, setShowDeleteWizard] = useState(false); 
 
   useEffect(() => {
     if (!authLoading && user?.userId) {
@@ -160,7 +164,13 @@ const ArtistDashboard = () => {
           <div className="main-song-section card">
             <div className="section-header">
               <h3>Main Featured Song</h3>
-              <button className="link-button">Change Featured</button>
+              <button 
+                className="link-button" 
+                onClick={() => setShowDefaultSongWizard(true)}
+                style={{ fontWeight: '600', color: '#004aad' }}
+              >
+                Change Featured
+              </button>
             </div>
             <div className="main-song-card">
               <div className="song-icon"><Play size={28} fill="white" /></div>
@@ -250,6 +260,23 @@ const ArtistDashboard = () => {
             </div>
           </div>
 
+          {/* DANGER ZONE */}
+<div className="card" style={{ border: '2px solid #dc3545', marginTop: '3rem' }}>
+  <div style={{ padding: '1.5rem', textAlign: 'center' }}>
+    <h3 style={{ color: '#dc3545', marginBottom: '0.5rem' }}>Danger Zone</h3>
+    <p style={{ color: '#721c24', marginBottom: '1rem' }}>
+      Once you delete your account, there is no going back.
+    </p>
+    <button
+      className="btn btn-primary"
+      style={{ background: '#dc3545', border: 'none' }}
+      onClick={() => setShowDeleteWizard(true)}
+    >
+      Delete Account
+    </button>
+  </div>
+</div>
+
         </div>
 
         {/* Wizards */}
@@ -270,6 +297,27 @@ const ArtistDashboard = () => {
             onSuccess={handleProfileUpdate}
           />
         )}
+
+       {showDefaultSongWizard && (
+          <ChangeDefaultSongWizard
+          show={showDefaultSongWizard}
+          onClose={() => setShowDefaultSongWizard(false)}
+          userProfile={userProfile}
+          songs={songs}
+          onSuccess={() => {
+            //refetch after success
+            apiCall({ url: `/v1/users/profile/${user.userId}`, method: 'get' })
+              .then(res => setUserProfile(res.data));
+          }}
+        />
+      )}
+
+            {showDeleteWizard && (
+        <DeleteAccountWizard
+          show={showDeleteWizard}
+          onClose={() => setShowDeleteWizard(false)}
+        />
+      )}
 
       </div>
     </Layout>
