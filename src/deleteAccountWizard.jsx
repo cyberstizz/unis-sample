@@ -4,7 +4,7 @@ import { X, AlertTriangle, Trash2 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import { useAuth } from './context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import './DeleteAccountWizard.scss';
+import './deleteAccountWizard.scss';
 
 const DeleteAccountWizard = ({ show, onClose }) => {
   const [step, setStep] = useState(1);
