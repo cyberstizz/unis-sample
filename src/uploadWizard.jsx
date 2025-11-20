@@ -1,7 +1,7 @@
 // src/components/UploadWizard.jsx
 import React, { useState, useEffect } from 'react';
 import { apiCall } from './components/axiosInstance';  // Use wrapper now (imported as named)
-import './UploadWizard.scss';
+import './uploadWizard.scss';
 
 const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
   const [step, setStep] = useState(1);
