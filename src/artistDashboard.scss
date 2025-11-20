@@ -129,7 +129,7 @@ $green-500: #22c55e;
     font-size: 2.4rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
-    padding-left: 30%;
+    padding-left: 25%;
     font-family: "Bitcount Grid Double", system-ui;
   }
 
@@ -145,6 +145,7 @@ $green-500: #22c55e;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   margin-bottom: 2rem;
+  width: 100%;
 }
 
 .stat-card {

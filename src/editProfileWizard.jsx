@@ -1,8 +1,7 @@
-// src/components/wizards/EditProfileWizard.jsx
 import React, { useState } from 'react';
 import { X, Upload, Type, User } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
-import './EditProfileWizard.scss';   // We'll create this SCSS next
+import './editProfileWizard.scss'; 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 

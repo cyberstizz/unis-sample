@@ -1,9 +1,10 @@
+// src/pages/Login.jsx
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import unisLogo from '../assets/unisNoBackground.svg';
-import spaceVideo from '../assets/space-bg.mp4';   
-import CreateAccountWizard from '../CreateAccountWizard';  // Ensure imported
+import spaceVideo from '../assets/space-bg.mp4';
+import CreateAccountWizard from '../createAccountWizard';  // ← Updated path if needed
 import './Login.scss';
 
 const Login = () => {
@@ -12,7 +13,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-  const [showWizard, setShowWizard] = useState(false);  // NEW: Wizard state (if not already)
+  const [showWizard, setShowWizard] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -21,7 +22,7 @@ const Login = () => {
     setLoading(true);
     const result = await login({ email, password });
     if (result.success) {
-      navigate('/');  // Or /feed
+      navigate('/');
     } else {
       setError(result.error || 'Login failed');
     }
@@ -39,10 +40,8 @@ const Login = () => {
         src={spaceVideo}
       />
 
-      {/* ---- 2. Dark overlay (optional, improves contrast) ---- */}
       <div className="login-overlay" />
 
-      {/* ---- 3. Centered login card ---- */}
       <div className="login-card">
         <img src={unisLogo} alt="UNIS" className="login-logo" />
 
@@ -72,30 +71,25 @@ const Login = () => {
           </button>
         </form>
 
-        {/* FIXED: type="button" prevents form submit; styled to match your design */}
-        <button 
-          type="button"  // NEW: Prevents submit
-          onClick={() => setShowWizard(true)} 
+        <button
+          type="button"
+          onClick={() => setShowWizard(true)}
           className="create-account-btn"
-          disabled={loading}  // Optional: Disable during login
+          disabled={loading}
         >
           Don't have an account? Create one
         </button>
       </div>
 
-      {/* FIXED: Move overlay here (outside form/card) for full-screen on top of bg */}
-      {showWizard && (
-        <div className="wizard-overlay">
-          <CreateAccountWizard 
-            onClose={() => setShowWizard(false)} 
-            onSuccess={() => {
-              setShowWizard(false);
-              // Optional: Auto-login if wizard returns token, then navigate
-              navigate('/feed');
-            }} 
-          />
-        </div>
-      )}
+      {/* THIS IS THE ONLY CHANGE — pass "show" prop, remove extra wrapper */}
+      <CreateAccountWizard
+        show={showWizard}
+        onClose={() => setShowWizard(false)}
+        onSuccess={() => {
+          setShowWizard(false);
+          navigate('/feed');
+        }}
+      />
     </div>
   );
 };

@@ -1,104 +1,192 @@
-// src/components/Profile.js
-import React, { useState } from 'react';
-import unisLogo from './assets/unisLogo.svg'; // Adjust path
-import './profile.scss';
-import Header from './header';
+import React, { useState, useEffect } from 'react';
+import { Play, Heart, Edit3, Trash2, User } from 'lucide-react';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
+import { useAuth } from './context/AuthContext';
+import { apiCall } from './components/axiosInstance';
+import { PlayerContext } from './context/playercontext';
+import EditProfileWizard from './editProfileWizard';
+import DeleteAccountWizard from './deleteAccountWizard';
+import './profile.scss';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-const Profile = ({ isArtist = false }) => { // Prop for role; true for artist, false for listener
-  const [showPopup, setShowPopup] = useState(isArtist); // Popup for artists on load
-  const [bio, setBio] = useState('Your bio here...'); // Editable bio
+const Profile = () => {
+  const { user } = useAuth();
+  const { playMedia } = React.useContext(PlayerContext);
+  const [userProfile, setUserProfile] = useState(null);
+  const [supportedArtist, setSupportedArtist] = useState(null);
+  const [voteHistory, setVoteHistory] = useState([]);
+  const [showEditWizard, setShowEditWizard] = useState(false);
+  const [showDeleteWizard, setShowDeleteWizard] = useState(false);
 
-  // Placeholder data
-  const profileData = {
-    name: 'User Name',
-    voteHistory: ['Voted for Artist X on Daily Rap', 'Voted for Song Y on Weekly Pop'],
-    supportedArtists: isArtist ? null : ['Artist A', 'Artist B'], // For listeners
-    stats: isArtist ? { playsDaily: 100, playsWeekly: 500, supporters: 250, trends: 'Up 20%' } : null,
-    messaging: 'Open', // Options for artists
-    revenue: isArtist ? '$XXX forecast' : null,
+  useEffect(() => {
+    if (!user?.userId) return;
+
+    const fetchData = async () => {
+      try {
+        // 1. My profile
+        const profileRes = await apiCall({ url: `/v1/users/profile/${user.userId}` });
+        setUserProfile(profileRes.data);
+
+        // 2. My supported artist (if any)
+        if (profileRes.data.supportedArtistId) {
+          const artistRes = await apiCall({ url: `/v1/users/profile/${profileRes.data.supportedArtistId}` });
+          setSupportedArtist(artistRes.data);
+        }
+
+        // 3. My vote history
+        const voteRes = await apiCall({ url: '/v1/vote/history?limit=50' });
+        setVoteHistory(voteRes.data || []);
+      } catch (err) {
+        console.error('Failed to load profile data', err);
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  if (!userProfile) return <div style={{ textAlign: 'center', padding: '4rem', color: 'white' }}>Loading your profile...</div>;
+
+  const photoUrl = userProfile.photoUrl 
+    ? `${API_BASE_URL}${userProfile.photoUrl}` 
+    : backimage;
+
+  const playDefaultSong = () => {
+    if (!supportedArtist?.defaultSong) return;
+
+    playMedia({
+      type: 'song',
+      url: `${API_BASE_URL}${supportedArtist.defaultSong.fileUrl}`,
+      title: supportedArtist.defaultSong.title,
+      artist: supportedArtist.username,
+      artwork: supportedArtist.defaultSong.artworkUrl 
+        ? `${API_BASE_URL}${supportedArtist.defaultSong.artworkUrl}` 
+        : photoUrl,
+    }, []);
   };
 
-  const handleBioChange = (e) => setBio(e.target.value);
+  const refreshProfile = () => {
+    apiCall({ url: `/v1/users/profile/${user.userId}` })
+      .then(res => setUserProfile(res.data));
+  };
 
   return (
-   <Layout backgroundImage={backimage}>
-    <div className="profile-container">
-      <div className='profile-content'>
-      <header className="profile-header">
-        <img src={unisLogo} alt="UNIS Logo" className="logo" />
-        <h1>{profileData.name}'s Profile</h1>
-      </header>
+    <Layout backgroundImage={backimage}>
+      <div className="profile-container">
 
-      {showPopup && isArtist && (
-        <div className="popup">
-          <p>Thank you for making Unis possible with your creative work!</p>
-          <p>You were only 83 votes from advancing last week.</p>
-          <button onClick={() => setShowPopup(false)}>Close</button>
+        {/* Header */}
+        <div className="profile-header card" style={{ textAlign: 'center', padding: '2rem' }}>
+          <img src={photoUrl} alt={userProfile.username} className="profile-image-large" />
+          <h1>{userProfile.username}</h1>
+          <p style={{ fontSize: '1.1rem', color: '#aaa', margin: '0.5rem 0' }}>
+            {userProfile.bio || 'No bio yet — tell Harlem who you are!'}
+          </p>
+          <button className="btn btn-primary" onClick={() => setShowEditWizard(true)}>
+            <Edit3 size={16} /> Edit Profile
+          </button>
         </div>
-      )}
 
-      <section className="bio-section">
-        <h2>Bio</h2>
-        <textarea value={bio} onChange={handleBioChange} className="bio-edit" />
-        <button>Save Bio</button>
-      </section>
+        {/* Supported Artist */}
+        {supportedArtist && (
+          <div className="supported-artist card">
+            <h3><Heart size={20} style={{ verticalAlign: '-4px' }} /> I Support</h3>
+            <div className="artist-support-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <img 
+                src={supportedArtist.photoUrl ? `${API_BASE_URL}${supportedArtist.photoUrl}` : backimage} 
+                alt={supportedArtist.username}
+                style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover' }}
+              />
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: '0 0 0.5rem' }}>{supportedArtist.username}</h4>
+                {supportedArtist.defaultSong && (
+                  <button className="btn btn-secondary" onClick={playDefaultSong}>
+                    <Play size={16} /> Play Featured Song
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
-      <section className="vote-history">
-        <h2>Vote History</h2>
-        <ul>
-          {profileData.voteHistory.map((vote, index) => <li key={index}>{vote}</li>)}
-        </ul>
-      </section>
+        {/* Vote History */}
+        <div className="vote-history card">
+          <h3>Vote History ({voteHistory.length})</h3>
+          {voteHistory.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              {voteHistory.map(vote => (
+                <div key={vote.voteId} style={{
+                  padding: '0.8rem',
+                  background: '#ffffff12',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <strong>{vote.targetType === 'artist' ? 'Artist' : 'Song'}</strong> • {vote.genre?.name || 'Unknown'} • {vote.interval?.name || 'Daily'}
+                  </div>
+                  <small style={{ color: '#aaa' }}>
+                    {new Date(vote.voteDate).toLocaleDateString()}
+                  </small>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>No votes yet — go support your favorites!</p>
+          )}
+        </div>
 
-      {isArtist ? (
-        <>
-          <section className="stats">
-            <h2>Stats</h2>
-            <p>Plays (Daily/Weekly): {profileData.stats.playsDaily} / {profileData.stats.playsWeekly}</p>
-            <p>Supporters: {profileData.stats.supporters}</p>
-            <p>Trends: {profileData.stats.trends}</p>
-          </section>
+        {/* Stats */}
+        <div className="stats-grid" style={{ margin: '2rem 0' }}>
+          <div className="stat-card">
+            <User size={28} />
+            <p>Level</p>
+            <h3>{userProfile.level || 'Silver'}</h3>
+          </div>
+          <div className="stat-card">
+            <Heart size={28} />
+            <p>Total Votes</p>
+            <h3>{voteHistory.length}</h3>
+          </div>
+        </div>
 
-          <section className="messaging-settings">
-            <h2>Messaging Settings</h2>
-            <select defaultValue={profileData.messaging}>
-              <option>Open</option>
-              <option>Permission</option>
-              <option>Paid</option>
-            </select>
-          </section>
+        {/* Danger Zone */}
+        <div className="card" style={{ border: '2px solid #dc3545', marginTop: '3rem' }}>
+          <div style={{ padding: '1.5rem', textAlign: 'center' }}>
+            <h3 style={{ color: '#dc3545' }}>Danger Zone</h3>
+            <p style={{ color: '#ccc', marginBottom: '1rem' }}>
+              This cannot be undone.
+            </p>
+            <button
+              style={{ background: '#dc3545', border: 'none' }}
+              className="btn btn-primary"
+              onClick={() => setShowDeleteWizard(true)}
+            >
+              <Trash2 size={16} /> Delete Account
+            </button>
+          </div>
+        </div>
 
-          <section className="revenue">
-            <h2>Revenue & Forecasts</h2>
-            <p>{profileData.revenue}</p>
-          </section>
-        </>
-      ) : (
-        <section className="supported-artists">
-          <h2>Supported Artist</h2>
-          <ul>
-            {profileData.supportedArtists.map((artist, index) => <li key={index}>{artist}</li>)}
-          </ul>
-        </section>
-      )}
+        {/* Wizards */}
+        {showEditWizard && (
+          <EditProfileWizard
+            show={showEditWizard}
+            onClose={() => setShowEditWizard(false)}
+            userProfile={userProfile}
+            onSuccess={refreshProfile}
+          />
+        )}
 
-      <section className="settings">
-        <h2>Settings</h2>
-        <button>Change Password</button>
-        <button>Logout</button>
-        {/* Add more as needed */}
-      </section>
+        {showDeleteWizard && (
+          <DeleteAccountWizard
+            show={showDeleteWizard}
+            onClose={() => setShowDeleteWizard(false)}
+          />
+        )}
 
-      <section className="messages">
-        <h2>Messages</h2>
-        <p>No messages yet. (MVP stub)</p>
-      </section>
       </div>
-    </div>
-  </Layout>
+    </Layout>
   );
 };
 
