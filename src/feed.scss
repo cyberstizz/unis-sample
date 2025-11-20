@@ -308,7 +308,7 @@ body {
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    background-color: darken($unis-blue, 6%); // subtle hover darken
+    background-color: $unis-blue; 
   }
 
 
