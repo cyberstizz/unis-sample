@@ -44,7 +44,7 @@ const AppLayout = () => {
           <Route path="/song/:songId" element={<SongPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/voteawards" element={<VoteAwards />} />
-          <Route path="/profile" element={<ArtistDashboard />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/milestones" element={<MilestonesPage />} />
           <Route path="/leaderboards" element={<Leaderboards />} />
           <Route path="/find" element={<MapDemo />} />

@@ -17,24 +17,32 @@ const API_BASE_URL = 'http://localhost:8080/api';
 const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true';  // .env toggle: true=real, false=mock
 
 const axiosInstance = axios.create({
-  baseURL: USE_REAL_API ? API_BASE_URL : null,  // No base if mock
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: USE_REAL_API ? API_BASE_URL : null,
   timeout: 10000,
+  // REMOVE the default Content-Type header completely
+  // headers: { 'Content-Type': 'application/json' }  ← DELETE THIS
 });
 
-// Request interceptor: Attach token
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+  // Request interceptor: Attach token + smart Content-Type
+  axiosInstance.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+
+      // THIS IS THE KEY FIX:
+      // Let browser set Content-Type + boundary automatically for FormData
+      if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+      } else {
+        config.headers['Content-Type'] = 'application/json';
+      }
+
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
 
 // Response interceptor: 401 → logout
 axiosInstance.interceptors.response.use(
