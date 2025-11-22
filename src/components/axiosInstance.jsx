@@ -13,7 +13,7 @@ import songArtNine from '../assets/albumartnine.jpg';
 import songArtTen from '../assets/albumartten.jpeg';
 import songArtEleven from '../assets/rapperphotoOne.jpg';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://unis-mvp.onrender.com/api';
 const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true';  // .env toggle: true=real, false=mock
 
 const axiosInstance = axios.create({
