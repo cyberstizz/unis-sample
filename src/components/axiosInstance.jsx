@@ -13,14 +13,18 @@ import songArtNine from '../assets/albumartnine.jpg';
 import songArtTen from '../assets/albumartten.jpeg';
 import songArtEleven from '../assets/rapperphotoOne.jpg';
 
-const API_BASE_URL = 'https://unis-mvp.onrender.com/api';
-const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true';  // .env toggle: true=real, false=mock
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://unis-mvp.onrender.com/api';
+const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true';
+const IS_DEV = import.meta.env.DEV;  
+
+// In dev, force local URL if USE_REAL_API=true 
+const effectiveBaseURL = IS_DEV && USE_REAL_API 
+  ? 'http://localhost:8080/api'
+  : (USE_REAL_API ? API_BASE_URL : null);
 
 const axiosInstance = axios.create({
-  baseURL: USE_REAL_API ? API_BASE_URL : null,
+  baseURL: effectiveBaseURL,
   timeout: 10000,
-  // REMOVE the default Content-Type header completely
-  // headers: { 'Content-Type': 'application/json' }  ← DELETE THIS
 });
 
   // Request interceptor: Attach token + smart Content-Type
