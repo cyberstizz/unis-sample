@@ -34,6 +34,14 @@ const Feed = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
+  // Helper to build URLs (absolute as-is, relative prepend base)
+  const buildUrl = (url) => {
+    if (!url) return null;  // No fallback here—handle in render
+    return url.startsWith('http://') || url.startsWith('https://') 
+      ? url  // Absolute (R2/prod)—use as-is
+      : `${API_BASE_URL}${url}`;  // Relative (local)—prepend base
+  };
+
   const formatDuration = (ms) => {
     if (!ms) return '';
     const totalSec = Math.floor(ms / 1000);
@@ -104,10 +112,10 @@ const Feed = () => {
           title: item.title,
           artist: item.artist?.username || 'Unknown',  // Safe
           artistData: item.artist || { userId: 'unknown', username: 'Unknown' },  // Safe object
-          artworkUrl: item.artworkUrl ? `${API_BASE_URL}${item.artworkUrl}` : null,
-          mediaUrl: item.fileUrl ? `${API_BASE_URL}${item.fileUrl}` : null,
-          url: item.fileUrl ? `${API_BASE_URL}${item.fileUrl}` : null,
-          artwork: item.artworkUrl ? `${API_BASE_URL}${item.artworkUrl}` : null,
+          artworkUrl: buildUrl(item.artworkUrl),  // ← Use helper
+          mediaUrl: buildUrl(item.fileUrl),  // ← Use helper
+          url: buildUrl(item.fileUrl),  // ← Use helper
+          artwork: buildUrl(item.artworkUrl),  // ← Use helper
           type: item.songId ? 'song' : 'video',
           score: item.score || 0,
           artistId: item.artist?.userId || 'unknown',
@@ -123,8 +131,13 @@ const Feed = () => {
       // Combine song and artist awards, first five
       const combinedAwards = [...(songAwardsRes.data || []), ...(artistAwardsRes.data || [])].slice(0, 5);
       setAwards(combinedAwards);
-      
-      setPopularArtists(popularRes.data || []);
+
+      // Normalize artists (for photoUrl)
+      const normalizedArtists = (popularRes.data || []).map(artist => ({
+        ...artist,
+        photoUrl: buildUrl(artist.photoUrl)  // ← Use helper
+      }));
+      setPopularArtists(normalizedArtists);
     } catch (err) {
       console.error('Media load error:', err);
       console.error('Error response:', err.response?.data);
@@ -152,10 +165,10 @@ const Feed = () => {
         playMediaObj = {
           type: 'song',
           id: defaultRes.data.songId,  // Add ID for tracking
-          url: defaultRes.data.fileUrl ? `${API_BASE_URL}${defaultRes.data.fileUrl}` : song1,
+          url: buildUrl(defaultRes.data.fileUrl) || song1,  // ← Use helper
           title: defaultRes.data.title || 'Default Track',
           artist: media.name,
-          artwork: defaultRes.data.artworkUrl ? `${API_BASE_URL}${defaultRes.data.artworkUrl}` : media.imageUrl,
+          artwork: buildUrl(defaultRes.data.artworkUrl) || media.imageUrl,  // ← Use helper
         };
       } catch (err) {
         console.error('Default song fetch error:', err);
@@ -242,7 +255,7 @@ const Feed = () => {
                 <div key={item.id} className="item-wrapper">
                   <div 
                     className="item" 
-                    style={{ backgroundImage: `url(${item.artworkUrl || item.artwork || '/default-art.jpg'})`, backgroundSize: 'cover' }}
+                    style={{ backgroundImage: `url(${item.artworkUrl || item.artwork || randomRapper})`, backgroundSize: 'cover' }}
                     onClick={() => handleSongNav(item.id, item.type)}
                   >
                     <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
@@ -273,7 +286,7 @@ const Feed = () => {
                 <div key={item.id} className="item-wrapper">
                   <div 
                     className="item" 
-                    style={{ backgroundImage: `url(${item.artworkUrl || item.artwork || '/default-art.jpg'})`, backgroundSize: 'cover' }}
+                    style={{ backgroundImage: `url(${item.artworkUrl || item.artwork || randomRapper})`, backgroundSize: 'cover' }}
                     onClick={() => handleSongNav(item.id, item.type)}
                   >
                     <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
