@@ -23,6 +23,15 @@ const VoteAwards = () => {
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [userId, setUserId] = useState(null);
 
+
+
+  const buildUrl = (url) => {
+        if (!url) return backimage;  // Fallback
+        return url.startsWith('http://') || url.startsWith('https://') 
+          ? url  // Absolute (R2/prod)—use as-is
+          : `${API_BASE_URL}${url}`;  // Relative (local)—prepend base
+      };
+
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   const intervals = ['daily', 'weekly', 'monthly', 'quarterly', 'annual'];
@@ -78,7 +87,7 @@ const VoteAwards = () => {
             id: nominee.userId,
             name: nominee.username,
             type: 'artist',
-            imageUrl: nominee.photoUrl ? `${API_BASE_URL}${nominee.photoUrl}` : backimage,
+            imageUrl: buildUrl(nominee.photoUrl),  // ← Uses helper
             votes: nominee.voteCount || 0,
             jurisdiction: nominee.jurisdiction?.name || 'Unknown',
             genre: nominee.genre?.name || 'Unknown',
@@ -90,8 +99,8 @@ const VoteAwards = () => {
             type: 'song',
             artist: nominee.artist?.username || 'Unknown Artist',
             artistId: nominee.artist?.userId,
-            imageUrl: nominee.artworkUrl ? `${API_BASE_URL}${nominee.artworkUrl}` : backimage,
-            mediaUrl: nominee.fileUrl ? `${API_BASE_URL}${nominee.fileUrl}` : null,
+            imageUrl: buildUrl(nominee.artworkUrl),  // ← Uses helper
+            mediaUrl: buildUrl(nominee.fileUrl),  // ← Same for audio/video
             votes: nominee.voteCount || 0,
             jurisdiction: nominee.jurisdiction?.name || 'Unknown',
             genre: nominee.genre?.name || 'Unknown',
@@ -137,17 +146,17 @@ const VoteAwards = () => {
       playMedia(
         {
           type: 'song',
-          url: nominee.mediaUrl,
+          url: buildUrl(nominee.mediaUrl),
           title: nominee.name,
           artist: nominee.artist,
-          artwork: nominee.imageUrl,
+          artwork: buildUrl(nominee.imageUrl),
         },
         [{
           type: 'song',
-          url: nominee.mediaUrl,
+          url: buildUrl(nominee.mediaUrl),
           title: nominee.name,
           artist: nominee.artist,
-          artwork: nominee.imageUrl,
+          artwork: buildUrl(nominee.imageUrl),
         }]
       );
     }
@@ -183,7 +192,7 @@ const VoteAwards = () => {
           url: `${API_BASE_URL}${defaultSong.fileUrl}`,
           title: defaultSong.title || `${nominee.name}'s Default Track`,
           artist: nominee.name,
-          artwork: defaultSong.artworkUrl ? `${API_BASE_URL}${defaultSong.artworkUrl}` : nominee.imageUrl,
+          artwork: buildUrl(defaultSong.artworkUrl),
         };
       } else {
         // Fallback: Fetch/play sample song (add /v1/media/sample-song endpoint if needed, or hardcode a URL for MVP)
@@ -193,10 +202,10 @@ const VoteAwards = () => {
         });
         playData = {
           type: 'sample-song',
-          url: `${API_BASE_URL}${sampleResponse.data.fileUrl}`,
+          url: buildUrl(sampleResponse.data.fileUrl),
           title: sampleResponse.data.title || 'Sample Track',
           artist: `${nominee.name} (Sample)`,
-          artwork: sampleResponse.data.artworkUrl ? `${API_BASE_URL}${sampleResponse.data.artworkUrl}` : backimage,
+          artwork: buildUrl(sampleResponse.data.artworkUrl),
         };
       }
 
