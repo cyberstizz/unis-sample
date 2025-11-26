@@ -2,8 +2,8 @@ name: Build and Push Frontend Docker Image
 
 on:
   push:
-    branches: [ main, master ]  # Adjust if your default branch is different
-  workflow_dispatch:  # Allows manual trigger from GitHub UI
+    branches: [ main, master ] 
+  workflow_dispatch: 
 
 jobs:
   build-and-push:
