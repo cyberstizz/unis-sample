@@ -13,9 +13,11 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
     role: 'listener',
     jurisdictionId: '',
     genreId: '',
+    title: '',
     bio: '',
-    photoFile: null,
+    artistPhotoFile: null,
     songFile: null,
+    songArtworkFile: null,
     supportedArtistId: null,
   });
   const [artists, setArtists] = useState([]);
@@ -36,10 +38,12 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   const prev = () => setStep(s => s - 1);
 
   const submit = async () => {
-    // Validation
+    // Enhanced Validation
     if (formData.role === 'artist') {
-      if (!formData.photoFile) return setError('Photo required for artists');
-      if (!formData.songFile) return setError('Song required for artists');
+      if (!formData.title.trim()) return setError('Song title required');
+      if (!formData.artistPhotoFile) return setError('Artist profile photo required');
+      if (!formData.songFile) return setError('Debut song audio required');
+      if (!formData.songArtworkFile) return setError('Song artwork required');
       if (!formData.genreId) return setError('Genre required for artists');
     }
     
@@ -49,7 +53,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
     setError('');
 
     try {
-      // Step 1: Register user (no token returned, so we'll login after)
+      // Step 1: Register user (WITHOUT bio - we'll add it after)
       const registerPayload = {
         username: formData.username,
         email: formData.email,
@@ -57,7 +61,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         role: formData.role,
         jurisdictionId: formData.jurisdictionId,
         genreId: formData.role === 'artist' ? formData.genreId : null,
-        bio: formData.bio || '',
+        // ❌ DON'T send bio here - backend ignores it anyway
         supportedArtistId: formData.role === 'listener' ? formData.supportedArtistId : null,
       };
 
@@ -67,10 +71,18 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         data: registerPayload
       });
 
-      // Registration successful, now get the userId from the response
-      const newUserId = regRes.data.userId;
+      console.log('=== REGISTRATION RESPONSE ===', regRes.data);
+      const newUserId = regRes.data.userId || regRes.data.user_id || regRes.data.id;
+      console.log('Extracted userId:', newUserId);
+      
+      if (!newUserId) {
+        throw new Error('Failed to get user ID from registration response');
+      }
 
-      // Step 2: Login to get token (since register doesn't return it)
+      // Delay for DB propagation
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Step 2: Login to get token
       const loginRes = await apiCall({
         method: 'post',
         url: '/auth/login',
@@ -82,27 +94,16 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
 
       const token = loginRes.data.token;
       localStorage.setItem('token', token);
+      console.log('Token set');
 
-      // Small delay to ensure token is ready
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Delay for token propagation
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Step 3: Upload photo if artist
-      if (formData.role === 'artist' && formData.photoFile) {
-        const photoFD = new FormData();
-        photoFD.append('photo', formData.photoFile);
-        
-        await apiCall({
-          method: 'patch',
-          url: '/v1/users/profile/photo',
-          data: photoFD
-        });
-      }
-
-      // Step 4: Upload song if artist
+      // Step 3: Upload song if artist (BEFORE profile update)
+      let songId = null;
       if (formData.role === 'artist' && formData.songFile) {
-        // FIXED: Template literal with backticks
         const songJson = JSON.stringify({
-          title: `${formData.username}'s Debut Track`,
+          title: formData.title,
           genreId: formData.genreId,
           jurisdictionId: formData.jurisdictionId,
           artistId: newUserId,
@@ -111,9 +112,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         const songFD = new FormData();
         songFD.append('song', songJson);
         songFD.append('file', formData.songFile);
-        if (formData.photoFile) {
-          songFD.append('artwork', formData.photoFile);
-        }
+        songFD.append('artwork', formData.songArtworkFile);
 
         const songRes = await apiCall({
           method: 'post',
@@ -121,22 +120,65 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
           data: songFD
         });
 
-        console.log('Song uploaded:', songRes.data);
+        // Extract songId - backend returns Song entity with songId field
+        songId = songRes.data.songId;
+        console.log('Song uploaded with ID:', songId);
         
-        // Note: You'll need to add a PATCH endpoint for default-song
-        // or handle this differently since the endpoint doesn't exist yet
+        if (!songId) {
+          console.error('WARNING: songId is undefined!', songRes.data);
+          throw new Error('Failed to get song ID from upload response');
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Step 4: Update profile (photo + bio) - Using the SAME endpoint as EditProfileWizard
+      if (formData.role === 'artist') {
+        const profileFD = new FormData();
+        
+        if (formData.artistPhotoFile) {
+          profileFD.append('photo', formData.artistPhotoFile);
+        }
+        
+        if (formData.bio && formData.bio.trim()) {
+          profileFD.append('bio', formData.bio.trim());
+        }
+
+        await apiCall({
+          method: 'patch',
+          url: '/v1/users/profile',  // ✅ Same as EditProfileWizard
+          data: profileFD,
+          headers: { 'Content-Type': 'multipart/form-data' },  // ✅ CRITICAL!
+        });
+        
+        console.log('Profile updated (photo + bio)');
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Step 5: Set default song if artist
+      if (formData.role === 'artist' && songId) {
+        await apiCall({
+          method: 'patch',
+          url: '/v1/users/default-song',  // ✅ Fixed endpoint path
+          data: { defaultSongId: songId },
+          headers: { 'Content-Type': 'application/json' },
+        });
+        console.log('Default song set to:', songId);
       }
 
       alert('Account created successfully! Please login with your credentials.');
       onClose();
       
-      // Clear token and redirect to login instead of feed
+      // Clear token and redirect
       localStorage.removeItem('token');
       window.location.href = '/login';
 
     } catch (err) {
       console.error('Registration error:', err);
-      setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.');
+      const errorMsg = err.response?.data?.message || err.message || 'Registration failed. Please try again.';
+      setError(errorMsg);
+      localStorage.removeItem('token');
     } finally {
       setLoading(false);
     }
@@ -205,7 +247,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
             </>
           )}
 
-          {/* Step 3: Listener - Support Artist */}
+          {/* Step 3: Listener */}
           {step === 3 && formData.role === 'listener' && (
             <>
               <h3 className="upload-section-header">Support an Artist</h3>
@@ -221,10 +263,15 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
             </>
           )}
 
-          {/* Step 3: Artist - Details */}
+          {/* Step 3: Artist */}
           {step === 3 && formData.role === 'artist' && (
             <>
               <h3 className="upload-section-header">Artist Setup</h3>
+              <input
+                placeholder="Song Title (Required)"
+                value={formData.title}
+                onChange={e => update('title', e.target.value)}
+              />
               <select value={formData.genreId} onChange={e => update('genreId', e.target.value)}>
                 <option value="">Select Genre</option>
                 {Object.keys(GENRE_IDS).map(key => (
@@ -234,18 +281,25 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
                 ))}
               </select>
 
-              <h3 className="upload-section-header">Upload A Song</h3>
+              <h3 className="upload-section-header">Upload Debut Song (Required)</h3>
               <input
                 type="file"
                 accept="audio/*"
                 onChange={e => update('songFile', e.target.files[0])}
               />
 
-              <h3 className="upload-section-header">Upload Profile Photo</h3>
+              <h3 className="upload-section-header">Artist Profile Photo (Required)</h3>
               <input
                 type="file"
                 accept="image/*"
-                onChange={e => update('photoFile', e.target.files[0])}
+                onChange={e => update('artistPhotoFile', e.target.files[0])}
+              />
+
+              <h3 className="upload-section-header">Song Artwork (Required)</h3>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={e => update('songArtworkFile', e.target.files[0])}
               />
 
               <textarea
@@ -276,8 +330,11 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
               )}
               {formData.role === 'artist' && (
                 <>
-                  <p>Song: {formData.songFile?.name}</p>
-                  <p>Photo: {formData.photoFile?.name}</p>
+                  <p>Song Title: <strong>{formData.title}</strong></p>
+                  <p>Song File: <strong>{formData.songFile?.name}</strong></p>
+                  <p>Artist Photo: <strong>{formData.artistPhotoFile?.name}</strong></p>
+                  <p>Song Artwork: <strong>{formData.songArtworkFile?.name}</strong></p>
+                  {formData.bio && <p>Bio: <strong>{formData.bio.substring(0, 50)}...</strong></p>}
                 </>
               )}
             </div>
