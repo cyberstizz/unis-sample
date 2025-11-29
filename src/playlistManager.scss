@@ -1,0 +1,145 @@
+.pm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.pm-container {
+  background: #1a1a1a;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  color: white;
+}
+
+.pm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #333;
+
+  h3 {
+    margin: 0;
+    font-size: 22px;
+  }
+}
+
+.pm-close {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    color: white;
+  }
+}
+
+.pm-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.pm-loading {
+  text-align: center;
+  color: #aaa;
+  padding: 60px 20px;
+  font-size: 16px;
+}
+
+.pm-empty {
+  text-align: center;
+  color: #aaa;
+  padding: 60px 20px;
+
+  svg {
+    color: #444;
+    margin-bottom: 16px;
+  }
+
+  p {
+    margin: 8px 0;
+    font-size: 16px;
+
+    &.pm-empty-hint {
+      font-size: 14px;
+      color: #666;
+    }
+  }
+}
+
+.pm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.pm-playlist-card {
+  background: #252525;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  overflow: hidden;
+  text-align: left;
+
+  &:hover {
+    background: #2a2a2a;
+    border-color: #444;
+    transform: translateY(-2px);
+  }
+}
+
+.pm-card-artwork {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.pm-card-empty {
+  color: #444;
+}
+
+.pm-card-info {
+  padding: 12px;
+}
+
+.pm-card-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-card-count {
+  font-size: 12px;
+  color: #aaa;
+}

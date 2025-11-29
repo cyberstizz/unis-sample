@@ -1,0 +1,280 @@
+/* playlistviewer.scss - glassmorphism + wiggle */
+.pv-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.pv-container {
+  width: 92%;
+  max-width: 980px;
+  max-height: 78vh;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.pv-title {
+  color: #fff;
+  font-size: 20px;
+  margin: 0;
+  font-weight: 700;
+}
+.pv-sub {
+  color: #cfcfcf;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.pv-close-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+}
+
+.pv-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pv-list {
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* each track */
+.pv-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease, box-shadow 140ms ease;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+.pv-item:hover {
+  transform: translateY(-3px);
+  background: rgba(255,255,255,0.04);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+}
+
+.pv-left {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 200px;
+}
+
+.pv-grip {
+  color: rgba(255,255,255,0.45);
+}
+
+.pv-art {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+/* meta */
+.pv-meta {
+  flex: 1;
+  min-width: 0;
+}
+.pv-title-line {
+  color: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pv-artist-line {
+  color: #cfcfcf;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+/* right side */
+.pv-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 92px;
+  justify-content: flex-end;
+}
+
+.pv-duration {
+  color: #eaeaea;
+  font-size: 13px;
+}
+
+.pv-remove {
+  background: transparent;
+  border: none;
+  color: #ff8a8a;
+  cursor: pointer;
+}
+
+/* dragging state */
+.pv-dragging {
+  opacity: 0.95;
+  transform: scale(1.02);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.6);
+}
+
+/* pressed wiggle */
+@keyframes pv-wiggle {
+  0%,100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+.pv-pressed {
+  animation: pv-wiggle 0.16s ease-in-out;
+}
+
+
+// Add these styles to your existing playlistViewer.scss
+
+.pv-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.pv-edit-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #333;
+    color: white;
+  }
+}
+
+.pv-edit-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+
+  input {
+    flex: 1;
+    padding: 8px 12px;
+    background: #252525;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+
+    &:focus {
+      outline: none;
+      border-color: #666;
+    }
+  }
+
+  button {
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #333;
+      color: white;
+    }
+
+    &.pv-edit-save:hover {
+      color: #22c55e;
+    }
+
+    &.pv-edit-cancel:hover {
+      color: #ef4444;
+    }
+  }
+}
+
+.pv-actions {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #333;
+}
+
+.pv-play-all {
+  flex: 1;
+  padding: 10px 16px;
+  background: #3b82f6;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #2563eb;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.pv-delete-playlist {
+  padding: 10px 16px;
+  background: #dc2626;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover {
+    background: #b91c1c;
+  }
+}

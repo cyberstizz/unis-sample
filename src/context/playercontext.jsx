@@ -1,34 +1,53 @@
-// src/context/PlayerContext.js (updated for playlists)
+// src/context/PlayerContext.js (updated for backend integration)
 import React, { createContext, useState, useRef, useEffect } from 'react';
+import playlistService from '../playlistService';
 
 export const PlayerContext = createContext();
 
 export const PlayerProvider = ({ children }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentMedia, setCurrentMedia] = useState(null);
-  const [playlist, setPlaylist] = useState([]); // Current playlist
+  const [playlist, setPlaylist] = useState([]); // Current playing queue
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [playlists, setPlaylists] = useState([]); // All user playlists
+  const [playlists, setPlaylists] = useState([]); // All user playlists from backend
+  const [loading, setLoading] = useState(false);
   const audioRef = useRef(null);
 
-  // Load default playlist on mount (MVP: mock feed data)
+  // Load user playlists from backend on mount
   useEffect(() => {
-    const defaultPlaylist = [
-      // Mock feed items; replace with real feed fetch
-      { type: 'song', url: 'path/to/song1.mp3', title: 'Song 1', artist: 'Artist A', artwork: 'art1.jpg' },
-      // Add 10-20 from feed
-    ];
-    setPlaylist(defaultPlaylist);
-    setPlaylists([{ id: 'default', name: 'Default Feed Playlist', tracks: defaultPlaylist, isDefault: true }]); // Save as playlist
-    // Load from localStorage if exists
-    const savedPlaylists = JSON.parse(localStorage.getItem('unisPlaylists')) || [];
-    if (savedPlaylists.length) setPlaylists(savedPlaylists);
+    loadUserPlaylists();
   }, []);
 
-  // Save playlists to localStorage
-  useEffect(() => {
-    localStorage.setItem('unisPlaylists', JSON.stringify(playlists));
-  }, [playlists]);
+  const loadUserPlaylists = async () => {
+    try {
+      setLoading(true);
+      const data = await playlistService.getUserPlaylists();
+      // Transform backend data to frontend format
+      const transformed = data.map(pl => ({
+        id: pl.playlistId,
+        playlistId: pl.playlistId,
+        name: pl.name,
+        tracks: pl.tracks.map(track => ({
+          id: track.songId,
+          songId: track.songId,
+          playlistItemId: track.playlistItemId, // Important for deletion
+          title: track.title,
+          artist: track.artistName,
+          artistName: track.artistName,
+          artworkUrl: track.artworkUrl,
+          artwork: track.artworkUrl,
+          fileUrl: track.fileUrl,
+          url: track.fileUrl,
+          duration: track.duration
+        }))
+      }));
+      setPlaylists(transformed);
+    } catch (error) {
+      console.error('Failed to load playlists:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const playMedia = (media, newPlaylist = []) => {
     setCurrentMedia(media);
@@ -39,7 +58,7 @@ export const PlayerProvider = ({ children }) => {
       setCurrentIndex(playlist.findIndex(p => p.id === media.id) || 0);
     }
     if (audioRef.current) {
-      audioRef.current.src = media.url;
+      audioRef.current.src = media.url || media.fileUrl;
       audioRef.current.play();
     }
   };
@@ -58,37 +77,71 @@ export const PlayerProvider = ({ children }) => {
     setCurrentMedia(playlist[prevIndex]);
   };
 
-  // Create new playlist
-  const createPlaylist = (name) => {
-    const newPlaylist = { id: Date.now().toString(), name, tracks: [] };
-    setPlaylists([...playlists, newPlaylist]);
+  // Create new playlist (backend)
+  const createPlaylist = async (name) => {
+    try {
+      await playlistService.createPlaylist(name);
+      await loadUserPlaylists(); // Reload all playlists
+    } catch (error) {
+      console.error('Failed to create playlist:', error);
+      throw error;
+    }
   };
 
-  // Add track to playlist
-  const addToPlaylist = (playlistId, track) => {
-    setPlaylists(playlists.map(pl => 
-      pl.id === playlistId ? { ...pl, tracks: [...pl.tracks, track] } : pl
-    ));
+  // Add track to playlist (backend)
+  const addToPlaylist = async (playlistId, track) => {
+    try {
+      await playlistService.addTrackToPlaylist(playlistId, track.songId || track.id);
+      await loadUserPlaylists(); // Reload all playlists
+    } catch (error) {
+      console.error('Failed to add track:', error);
+      throw error;
+    }
   };
 
-  // Remove track
-  const removeFromPlaylist = (playlistId, trackId) => {
-    setPlaylists(playlists.map(pl => 
-      pl.id === playlistId ? { ...pl, tracks: pl.tracks.filter(t => t.id !== trackId) } : pl
-    ));
+  // Remove track from playlist (backend)
+  const removeFromPlaylist = async (playlistId, playlistItemId) => {
+    try {
+      await playlistService.removeTrackFromPlaylist(playlistId, playlistItemId);
+      await loadUserPlaylists(); // Reload all playlists
+    } catch (error) {
+      console.error('Failed to remove track:', error);
+      throw error;
+    }
   };
 
-  // Reorder (simple swap for MVP)
-  const reorderPlaylist = (playlistId, oldIndex, newIndex) => {
-    setPlaylists(playlists.map(pl => {
-      if (pl.id === playlistId) {
-        const newTracks = [...pl.tracks];
-        const [moved] = newTracks.splice(oldIndex, 1);
-        newTracks.splice(newIndex, 0, moved);
-        return { ...pl, tracks: newTracks };
-      }
-      return pl;
-    }));
+  // Reorder playlist (backend)
+  const reorderPlaylist = async (playlistId, newOrderedTracks) => {
+    try {
+      const orderedIds = newOrderedTracks.map(t => t.playlistItemId);
+      await playlistService.reorderPlaylist(playlistId, orderedIds);
+      await loadUserPlaylists(); // Reload all playlists
+    } catch (error) {
+      console.error('Failed to reorder playlist:', error);
+      throw error;
+    }
+  };
+
+  // Delete playlist (backend)
+  const deletePlaylist = async (playlistId) => {
+    try {
+      await playlistService.deletePlaylist(playlistId);
+      await loadUserPlaylists(); // Reload all playlists
+    } catch (error) {
+      console.error('Failed to delete playlist:', error);
+      throw error;
+    }
+  };
+
+  // Update playlist name (backend)
+  const updatePlaylistName = async (playlistId, newName) => {
+    try {
+      await playlistService.updatePlaylist(playlistId, newName);
+      await loadUserPlaylists(); // Reload all playlists
+    } catch (error) {
+      console.error('Failed to update playlist:', error);
+      throw error;
+    }
   };
 
   // Load playlist to player
@@ -100,8 +153,23 @@ export const PlayerProvider = ({ children }) => {
 
   return (
     <PlayerContext.Provider value={{ 
-      isExpanded, toggleExpand, currentMedia, playMedia, next, prev, audioRef,
-      playlists, createPlaylist, addToPlaylist, removeFromPlaylist, reorderPlaylist, loadPlaylist 
+      isExpanded, 
+      toggleExpand, 
+      currentMedia, 
+      playMedia, 
+      next, 
+      prev, 
+      audioRef,
+      playlists, 
+      loading,
+      createPlaylist, 
+      addToPlaylist, 
+      removeFromPlaylist, 
+      reorderPlaylist, 
+      deletePlaylist,
+      updatePlaylistName,
+      loadPlaylist,
+      refreshPlaylists: loadUserPlaylists
     }}>
       {children}
     </PlayerContext.Provider>

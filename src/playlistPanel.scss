@@ -1,0 +1,67 @@
+.ppanel-container {
+  padding: 20px;
+  background: #0d0d0f;
+  color: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.35);
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.ppanel-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.ppanel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ppanel-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  transition: 0.2s ease;
+  cursor: pointer;
+}
+
+.ppanel-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.ppanel-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.ppanel-name {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.ppanel-count {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.ppanel-open-btn {
+  padding: 8px 14px;
+  border: none;
+  background: #4a74ff;
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.ppanel-open-btn:hover {
+  background: #3454d1;
+}

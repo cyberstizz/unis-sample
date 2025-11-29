@@ -1,6 +1,9 @@
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { PlayerContext } from './context/playercontext';
-import { Heart, Maximize2 } from 'lucide-react';
+import { Heart, Maximize2, Headphones } from 'lucide-react';
+import PlaylistWizard from './playlistWizard';
+import PlaylistViewer from './playlistViewer';
+import PlaylistManager from './playlistManager';
 import './player.scss';
 
 const Player = () => {
@@ -9,10 +12,44 @@ const Player = () => {
   const [currentTime, setCurrentTime] = useState(0); 
   const [duration, setDuration] = useState(0); 
   const [isLiked, setIsLiked] = useState(false);
-  
-  // Single audio ref that persists across mode changes
+  const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
+  const [showPlaylistManager, setShowPlaylistManager] = useState(false);
+
+
+  const { playlists, addToPlaylist, removeFromPlaylist, reorderPlaylist, loadPlaylist, playMedia } = useContext(PlayerContext);
+// local state to show viewer
+const [showPlaylistViewer, setShowPlaylistViewer] = useState(false);
+const [viewerTracks, setViewerTracks] = useState([]); 
+const [viewerTitle, setViewerTitle] = useState("Playlist");
+
   const mediaRef = useRef(null);
   const seekbarRef = useRef(null);
+
+// When opening viewer, derive tracks from playlists (use selected or default)
+const openViewerFor = (playlistId) => {
+  const pl = playlists?.find(p => p.id === playlistId) || playlists?.[0];
+  if (!pl) {
+    setViewerTracks([]);
+    setViewerTitle("Playlist");
+  } else {
+    // ensure items have required front-end shape (id,title,artist,artworkUrl,fileUrl,duration)
+    const normalized = (pl.tracks || []).map(t => ({
+      id: t.id ?? t.songId ?? Date.now() + Math.random(),
+      title: t.title ?? t.name ?? "Untitled",
+      artist: (t.artist && (t.artist.username || t.artist.displayName)) || t.artistName || "Unknown Artist",
+      artworkUrl: t.artworkUrl || t.artwork || "/assets/placeholder.jpg",
+      fileUrl: t.fileUrl || t.url || t.audioUrl || "",
+      duration: t.duration ?? t.length ?? 0
+    }));
+    setViewerTracks(normalized);
+    setViewerTitle(pl.name || "Playlist");
+  }
+  setShowPlaylistViewer(true);
+};
+
+
+  
+
 
   // Handle media changes (new song selected)
   useEffect(() => {
@@ -275,6 +312,11 @@ const Player = () => {
               <button className="expand-button" onClick={handleExpand}>
                 <Maximize2 />
               </button>
+              <button onClick={() => setShowPlaylistWizard(true)}>➕</button>
+              <button onClick={() => setShowPlaylistManager(true)}>
+                <Headphones />
+              </button>
+
               <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
                 <Heart />
               </button>
@@ -283,8 +325,39 @@ const Player = () => {
           </div>
         </>
       )}
+
+       <PlaylistWizard
+          open={showPlaylistWizard}
+          onClose={() => setShowPlaylistWizard(false)}
+          selectedTrack={currentMedia}
+       />
+
+    {/* {showPlaylistViewer && (
+      <PlaylistViewer
+        tracks={viewerTracks}
+        title={viewerTitle}
+        onClose={() => setShowPlaylistViewer(false)}
+        onReorder={(newOrder) => {
+          setViewerTracks(newOrder);
+          // optional: reorderPlaylist(...)
+        }}
+        onRemove={(track) => {
+          setViewerTracks(prev => prev.filter(t => t.id !== track.id));
+          // optional: removeFromPlaylist(...)
+        }}
+        onSelect={(track) => playMedia(track)}
+      />
+    )} */}
+
+      <PlaylistManager
+        open={showPlaylistManager}
+        onClose={() => setShowPlaylistManager(false)}
+     />
+
     </div>
+   
   );
+
 };
 
 export default Player;
