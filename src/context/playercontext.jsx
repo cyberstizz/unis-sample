@@ -1,6 +1,6 @@
 // src/context/PlayerContext.js (updated for backend integration)
 import React, { createContext, useState, useRef, useEffect } from 'react';
-import playlistService from '../playlistService';
+import playlistService from '../services/playlistService';
 
 export const PlayerContext = createContext();
 
@@ -84,6 +84,7 @@ export const PlayerProvider = ({ children }) => {
   const createPlaylist = async (name) => {
     try {
       await playlistService.createPlaylist(name);
+      // Cache is auto-invalidated by axios interceptor
       await loadUserPlaylists(); // Reload all playlists
     } catch (error) {
       console.error('Failed to create playlist:', error);

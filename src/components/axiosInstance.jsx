@@ -1,23 +1,10 @@
 import axios from 'axios';
-import randomRapper from '../assets/randomrapper.jpeg';
-import song1 from '../assets/tonyfadd_paranoidbuy1get1free.mp3';
-import song2 from '../assets/sdboomin_waitedallnight.mp3';
-import video1 from '../assets/badVideo.mp4';
-import songArtOne from '../assets/songartworkONe.jpeg';
-import songArtTwo from '../assets/songartworktwo.jpeg';
-import songArtThree from '../assets/songartworkthree.jpeg';
-import songArtFour from '../assets/songartworkfour.jpeg';
-import songArtFive from '../assets/songartfive.jpg';
-import songArtSix from '../assets/songarteight.png';
-import songArtNine from '../assets/albumartnine.jpg';
-import songArtTen from '../assets/albumartten.jpeg';
-import songArtEleven from '../assets/rapperphotoOne.jpg';
+import cacheService from '../services/cacheService';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://unis-mvp.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true';
-const IS_DEV = import.meta.env.DEV;  
+const IS_DEV = import.meta.env.DEV;
 
-// In dev, force local URL if USE_REAL_API=true 
 const effectiveBaseURL = IS_DEV && USE_REAL_API 
   ? 'http://localhost:8080/api'
   : (USE_REAL_API ? API_BASE_URL : null);
@@ -27,40 +14,157 @@ const axiosInstance = axios.create({
   timeout: 10000,
 });
 
-  // Request interceptor: Attach token + smart Content-Type
-  axiosInstance.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+// Request interceptor: Attach token + check cache
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Let browser set Content-Type for FormData
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    } else {
+      config.headers['Content-Type'] = 'application/json';
+    }
+
+    // Cache check for GET requests only
+    if (config.method === 'get' && config.useCache !== false) {
+      const cacheKey = getCacheKeyFromUrl(config.url);
+      if (cacheKey) {
+        const cached = cacheService.get(cacheKey.type, cacheKey.id, cacheKey.params);
+        if (cached) {
+          // Return cached data (cancel request)
+          config.adapter = () => {
+            return Promise.resolve({
+              data: cached,
+              status: 200,
+              statusText: 'OK (Cached)',
+              headers: config.headers,
+              config,
+              request: {}
+            });
+          };
+        }
       }
+    }
 
-      // THIS IS THE KEY FIX:
-      // Let browser set Content-Type + boundary automatically for FormData
-      if (config.data instanceof FormData) {
-        delete config.headers['Content-Type'];
-      } else {
-        config.headers['Content-Type'] = 'application/json';
-      }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
-
-// Response interceptor: 401 → logout
+// Response interceptor: Cache responses + handle 401
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Cache successful GET responses
+    if (response.config.method === 'get' && response.config.useCache !== false) {
+      const cacheKey = getCacheKeyFromUrl(response.config.url);
+      if (cacheKey) {
+        cacheService.set(cacheKey.type, cacheKey.id, response.data, cacheKey.params);
+      }
+    }
+
+    // Invalidate related caches on mutations
+    if (['post', 'put', 'delete', 'patch'].includes(response.config.method)) {
+      invalidateCachesForMutation(response.config.url);
+    }
+
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
+      cacheService.clearAll(); // Clear cache on logout
       window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
 
-// New: Fallback wrapper (mocks on !USE_REAL_API or error)
+// Helper: Extract cache key from URL
+function getCacheKeyFromUrl(url) {
+  if (!url) return null;
+
+  // User profile: /v1/users/profile/{userId}
+  const userProfileMatch = url.match(/\/v1\/users\/profile\/([^?]+)/);
+  if (userProfileMatch) {
+    return { type: 'user', id: userProfileMatch[1], params: {} };
+  }
+
+  // Playlists: /api/playlists
+  if (url.includes('/api/playlists') && !url.includes('/tracks')) {
+    const playlistIdMatch = url.match(/\/api\/playlists\/([^?\/]+)/);
+    if (playlistIdMatch) {
+      return { type: 'playlists', id: playlistIdMatch[1], params: {} };
+    }
+    return { type: 'playlists', id: 'all', params: {} };
+  }
+
+  // Trending: /v1/media/trending?jurisdictionId=...
+  const trendingMatch = url.match(/\/v1\/media\/trending/);
+  if (trendingMatch) {
+    const params = extractQueryParams(url);
+    return { type: 'trending', id: params.jurisdictionId || 'default', params };
+  }
+
+  // New releases: /v1/media/new?jurisdictionId=...
+  const newMatch = url.match(/\/v1\/media\/new/);
+  if (newMatch) {
+    const params = extractQueryParams(url);
+    return { type: 'feed', id: params.jurisdictionId || 'default', params };
+  }
+
+  // Artist: /v1/users/artist/{artistId} or /artist/{artistId}
+  const artistMatch = url.match(/\/artist\/([^?\/]+)/);
+  if (artistMatch) {
+    return { type: 'artist', id: artistMatch[1], params: {} };
+  }
+
+  // Song: /v1/media/song/{songId}
+  const songMatch = url.match(/\/v1\/media\/song\/([^?\/]+)/);
+  if (songMatch) {
+    return { type: 'song', id: songMatch[1], params: {} };
+  }
+
+  return null;
+}
+
+// Helper: Extract query params
+function extractQueryParams(url) {
+  const params = {};
+  const urlObj = new URL(url, 'http://dummy.com');
+  urlObj.searchParams.forEach((value, key) => {
+    params[key] = value;
+  });
+  return params;
+}
+
+// Helper: Invalidate caches after mutations
+function invalidateCachesForMutation(url) {
+  // Playlist mutations
+  if (url.includes('/api/playlists')) {
+    cacheService.invalidateType('playlists');
+    console.log('[Cache] Invalidated playlists after mutation');
+  }
+
+  // Media play tracking
+  if (url.includes('/media/') && url.includes('/play')) {
+    // Don't invalidate on play tracking (too frequent)
+    return;
+  }
+
+  // User updates
+  if (url.includes('/v1/users/')) {
+    const userIdMatch = url.match(/\/v1\/users\/([^\/]+)/);
+    if (userIdMatch) {
+      cacheService.invalidate('user', userIdMatch[1]);
+    }
+  }
+}
+
+// Export cache-aware API call wrapper
 export const apiCall = async (config) => {
   if (!USE_REAL_API) {
     console.log('Using mock data (backend offline/Netlify)');
@@ -74,32 +178,24 @@ export const apiCall = async (config) => {
   }
 };
 
-// Mock helper (expand per endpoint)
+// Export function to manually invalidate cache (for UI actions)
+export const invalidateCache = (type, id) => {
+  cacheService.invalidate(type, id);
+};
+
+export const invalidateCacheType = (type) => {
+  cacheService.invalidateType(type);
+};
+
+// Mock helper (unchanged from your existing code)
 const getMockResponse = (url, method) => {
-  // Login example (for completeness)
+  // Your existing mock logic...
   if (url.includes('/auth/login') && method === 'post') {
     return { data: { token: 'mock-jwt-for-demo' } };
   }
-  // Feed endpoints (your dummies)
   if (url.includes('/v1/users/profile')) {
     return { data: { userId: 'dummy', jurisdiction: { jurisdictionId: '00000000-0000-0000-0000-000000000002' }, supportedArtistId: null } };
   }
-  if (url.includes('/v1/media/trending')) {
-    return { data: getDummyTrending() };
-  }
-  if (url.includes('/v1/media/new')) {
-    return { data: getDummyNew() };
-  }
-  if (url.includes('/v1/awards/leaderboards')) {
-    return { data: getDummyAwards() };
-  }
-  if (url.includes('/v1/users/artist/top')) {
-    return { data: getDummyArtists() };
-  }
-  if (url.includes('/v1/media/supported')) {
-    return { data: getDummyPosts() };
-  }
-  // Default empty
   return { data: [] };
 };
 
@@ -107,99 +203,12 @@ export const logoutUser = async () => {
   try {
     await axiosInstance.post('/auth/logout');
   } catch (err) {
-    console.warn('Logout request failed (likely offline or mock mode)', err);
+    console.warn('Logout request failed', err);
   } finally {
     localStorage.removeItem('token');
+    cacheService.clearAll();
     window.location.href = '/login';
   }
 };
-
-const getDummyTrending = () => [
-  { 
-    songId: '1', 
-    title: 'Tony Fadd - Paranoid', 
-    artist: { userId: 'user1', username: 'Tony Fadd' }, 
-    artworkUrl: songArtOne, 
-    fileUrl: song1, 
-    score: 100 
-  },
-  { 
-    songId: '2', 
-    title: 'SD Boomin - Waited All Night', 
-    artist: { userId: 'user2', username: 'SD Boomin' }, 
-    artworkUrl: songArtTwo, 
-    fileUrl: song2, 
-    score: 80 
-  },
-  { 
-    videoId: '3', 
-    title: 'Bad Video', 
-    artist: { userId: 'user3', username: 'some guy' }, 
-    artworkUrl: songArtThree, 
-    fileUrl: video1, 
-    score: 60 
-  },
-  { 
-    songId: '4', 
-    title: 'Song 4', 
-    artist: { userId: 'user4', username: 'Artist 4' }, 
-    artworkUrl: songArtFour, 
-    fileUrl: song1, 
-    score: 50 
-  }
-];
-
-const getDummyNew = () => [
-  { 
-    songId: '5', 
-    title: 'The Outside', 
-    artist: { userId: 'user5', username: 'Artist Five' }, 
-    artworkUrl: songArtFive, 
-    fileUrl: song2, 
-    score: 30 
-  },
-  { 
-    songId: '6', 
-    title: 'Original Man', 
-    artist: { userId: 'user6', username: 'Artist Six' }, 
-    artworkUrl: songArtSix, 
-    fileUrl: song1, 
-    score: 25 
-  },
-  { 
-    songId: '10', 
-    title: 'flavorfall', 
-    artist: { userId: 'user10', username: 'Artist Ten' }, 
-    artworkUrl: songArtTen, 
-    fileUrl: song2, 
-    score: 20 
-  },
-  { 
-    songId: '11', 
-    title: 'Golden Son', 
-    artist: { userId: 'user11', username: 'Artist Eleven' }, 
-    artworkUrl: songArtEleven, 
-    fileUrl: song1, 
-    score: 15 
-  }
-];
-
-const getDummyAwards = () => [
-  { id: 'award1', name: 'Best Rap Song', winner: { id: 'winner1', username: 'Tony Fadd' } },
-  { id: 'award2', name: 'Top Video', winner: { id: 'winner2', username: 'SD Boomin' } },
-  { id: 'award3', name: 'Rising Artist', winner: { id: 'winner3', username: 'Artist Three' } },
-  { id: 'award4', name: 'Fan Favorite', winner: { id: 'winner4', username: 'Artist Four' } },
-  { id: 'award5', name: 'Breakthrough Track', winner: { id: 'winner5', username: 'Artist Five' } }
-];
-
-const getDummyArtists = () => [
-  { userId: 'artist1', username: 'Tony Fadd', photoUrl: songArtOne, score: 100 },
-  { userId: 'artist2', username: 'SD Boomin', photoUrl: songArtTwo, score: 80 },
-  { userId: 'artist3', username: 'Artist Three', photoUrl: songArtThree, score: 60 },
-  { userId: 'artist4', username: 'Artist Four', photoUrl: songArtFour, score: 50 },
-  { userId: 'artist5', username: 'Artist Five', photoUrl: songArtFive, score: 40 }
-];
-
-const getDummyPosts = () => ['Follower Post 1', 'Follower Post 2', 'Follower Post 3'];
 
 export default axiosInstance;
