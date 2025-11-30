@@ -55,7 +55,7 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
     <div className="pw-overlay" onClick={onClose}>
       <div className="pw-container" onClick={(e) => e.stopPropagation()}>
         <div className="pw-header">
-          <h3>Add to Playlist</h3>
+          <h3>Add {selectedTrack.title} to which Playlist</h3>
           <button className="pw-close" onClick={onClose}>
             <X size={20} />
           </button>
@@ -84,12 +84,7 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
             <div className="pw-loading">Loading playlists...</div>
           ) : (
             <>
-              <button 
-                className="pw-create-btn"
-                onClick={() => setShowCreateForm(!showCreateForm)}
-              >
-                <Plus size={18} /> Create New Playlist
-              </button>
+    
 
               {showCreateForm && (
                 <div className="pw-create-form">
@@ -103,6 +98,7 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
                   />
                   <button onClick={handleCreatePlaylist}>Create</button>
                   <button onClick={() => setShowCreateForm(false)}>Cancel</button>
+                 
                 </div>
               )}
 
@@ -125,7 +121,16 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
                     </button>
                   ))
                 )}
+                <button 
+                    className="pw-create-btn"
+                    onClick={() => setShowCreateForm(!showCreateForm)}
+                  >
+                    <Plus size={18} /> Create New Playlist
+                  </button>
+                
               </div>
+
+              
             </>
           )}
         </div>
