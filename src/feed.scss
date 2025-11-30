@@ -282,9 +282,9 @@ body {
         gap: 20px; // Increase gap for separation
         padding-bottom: 10px; // Add padding for scrollbar visibility
         display: flex;
-  overflow-x: auto;
-  gap: 20px;
-  padding-bottom: 10px;
+        overflow-x: auto;
+        gap: 20px;
+        padding-bottom: 10px;
 
   // Firefox: color and thickness
   scrollbar-width: thin;              // "auto" | "thin" | "none"
@@ -317,15 +317,14 @@ body {
         .item {
           min-width: 180px;
           height: 180px;
-          // background: rgba($text-silver, 0.1);
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 12px; // Rounded corners
+          border-radius: 12px; 
           color: $unis-silver;
           font-weight: 600;
           transition: transform 0.3s ease;
-          flex-shrink: 0; // Prevent items from shrinking
+          flex-shrink: 0; 
           position: relative;
           cursor: pointer;
 
@@ -343,9 +342,9 @@ body {
             font-size: 20px;
             opacity: 0;
             transition: opacity 0.3s ease;
-            border-radius: 50%;
+            // border-radius: 50%;
             width: 45px;
-            height: 50px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -354,6 +353,7 @@ body {
 
           &:hover .play-icon {
             opacity: 1;
+            border: solid .5px greenyellow;
           }
         }
       }

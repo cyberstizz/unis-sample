@@ -1,6 +1,6 @@
 // src/context/PlayerContext.js (updated for backend integration)
 import React, { createContext, useState, useRef, useEffect } from 'react';
-import playlistService from '../services/playlistService';
+import playlistService from '../playlistService';
 
 export const PlayerContext = createContext();
 
