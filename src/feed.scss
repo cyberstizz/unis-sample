@@ -401,6 +401,21 @@ body {
         margin-bottom: 15px;
       }
     }
+
+    .item-title{
+      align-self: flex-start;
+      padding-left: .55em;
+    }
+
+    .item-artist{
+      align-self: flex-start;
+      padding-left: 1em;
+    }
+
+    .item-duration{
+      align-self: flex-start;
+      padding-left: 1em;
+    }
   }
 }
 
