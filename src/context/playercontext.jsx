@@ -22,6 +22,8 @@ export const PlayerProvider = ({ children }) => {
     try {
       setLoading(true);
       const data = await playlistService.getUserPlaylists();
+      console.log('Raw playlist data from backend:', data);
+      
       // Transform backend data to frontend format
       const transformed = data.map(pl => ({
         id: pl.playlistId,
@@ -30,7 +32,7 @@ export const PlayerProvider = ({ children }) => {
         tracks: pl.tracks.map(track => ({
           id: track.songId,
           songId: track.songId,
-          playlistItemId: track.playlistItemId, // Important for deletion
+          playlistItemId: track.playlistItemId, // Important for deletion and reordering
           title: track.title,
           artist: track.artistName,
           artistName: track.artistName,
@@ -41,6 +43,7 @@ export const PlayerProvider = ({ children }) => {
           duration: track.duration
         }))
       }));
+      console.log('Transformed playlists:', transformed);
       setPlaylists(transformed);
     } catch (error) {
       console.error('Failed to load playlists:', error);

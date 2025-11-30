@@ -59,6 +59,15 @@ const openViewerFor = (playlistId) => {
       // Reset time to 0 for new songs (this fixes the resume issue)
       media.currentTime = 0;
       setCurrentTime(0);
+
+      const mediaUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
+    
+    if (!mediaUrl) {
+      console.error('No valid media URL found in currentMedia:', currentMedia);
+      return;
+    }
+    
+    console.log('Setting media source:', mediaUrl);
       
       // Set new source
       media.src = currentMedia.url;

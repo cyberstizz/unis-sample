@@ -4,7 +4,7 @@ import { PlayerContext } from "./context/playercontext";
 import "./playlistViewer.scss";
 
 const PlaylistViewer = ({ playlistId, onClose }) => {
-  const { playlists, removeFromPlaylist, reorderPlaylist, updatePlaylistName, deletePlaylist, loadPlaylist, playMedia } = useContext(PlayerContext);
+  const { playlists, removeFromPlaylist, reorderPlaylist, updatePlaylistName, deletePlaylist, playMedia } = useContext(PlayerContext);
   
   const [localTracks, setLocalTracks] = useState([]);
   const [draggingId, setDraggingId] = useState(null);
@@ -13,13 +13,43 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
 
-  // Load the playlist data
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+  // Helper to build URLs (like in Feed)
+  const buildUrl = (url) => {
+    if (!url) return null;
+    return url.startsWith('http://') || url.startsWith('https://') 
+      ? url 
+      : `${API_BASE_URL}${url}`;
+  };
+
+  // Load the playlist data and normalize tracks
   useEffect(() => {
     if (playlistId && playlists.length > 0) {
       const pl = playlists.find(p => p.id === playlistId || p.playlistId === playlistId);
       if (pl) {
         setCurrentPlaylist(pl);
-        setLocalTracks(pl.tracks || []);
+        
+        // Normalize tracks to match player expectations (like Feed does)
+        const normalizedTracks = (pl.tracks || []).map(track => ({
+          // Keep all original fields
+          ...track,
+          // Ensure player-compatible fields
+          id: track.songId || track.id,
+          songId: track.songId || track.id,
+          playlistItemId: track.playlistItemId, // Important for deletion
+          title: track.title || 'Untitled',
+          artist: track.artistName || track.artist || 'Unknown Artist',
+          artistName: track.artistName || track.artist || 'Unknown Artist',
+          artworkUrl: buildUrl(track.artworkUrl),
+          artwork: buildUrl(track.artworkUrl),
+          fileUrl: buildUrl(track.fileUrl),
+          url: buildUrl(track.fileUrl), // Player needs 'url' field
+          duration: track.duration || 0
+        }));
+        
+        console.log('Normalized playlist tracks:', normalizedTracks);
+        setLocalTracks(normalizedTracks);
         setEditedName(pl.name);
       }
     }
@@ -48,13 +78,22 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
   };
 
   const onDragEnd = async () => {
+    if (!draggingId) return;
+    
+    const originalTracks = [...localTracks];
     setDraggingId(null);
+    
     try {
+      console.log('Reordering playlist:', currentPlaylist.id);
+      console.log('New order:', localTracks.map(t => t.playlistItemId));
+      
       await reorderPlaylist(currentPlaylist.id, localTracks);
+      console.log('Reorder successful');
     } catch (error) {
       console.error('Failed to reorder:', error);
-      // Reload to reset state
-      setLocalTracks(currentPlaylist.tracks);
+      // Revert to original order on error
+      setLocalTracks(originalTracks);
+      alert('Failed to reorder tracks');
     }
   };
 
@@ -69,20 +108,25 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
       try {
         await removeFromPlaylist(currentPlaylist.id, track.playlistItemId);
       } catch (error) {
+        console.error('Failed to remove track:', error);
         alert('Failed to remove track');
       }
     }
   };
 
   const handleSelect = (track) => {
+    console.log('Playing track:', track);
     setPressedId(track.id);
     setTimeout(() => setPressedId(null), 180);
-    playMedia(track, localTracks); // Play this track and set playlist as queue
+    
+    // Play this track with the full playlist as queue
+    playMedia(track, localTracks);
   };
 
   const handlePlayAll = () => {
     if (localTracks.length > 0) {
-      loadPlaylist(currentPlaylist);
+      console.log('Playing all tracks:', localTracks);
+      playMedia(localTracks[0], localTracks);
     }
   };
 
@@ -96,6 +140,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
       await updatePlaylistName(currentPlaylist.id, editedName.trim());
       setIsEditingName(false);
     } catch (error) {
+      console.error('Failed to update playlist name:', error);
       alert('Failed to update playlist name');
       setEditedName(currentPlaylist.name);
     }
@@ -107,6 +152,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
         await deletePlaylist(currentPlaylist.id);
         onClose();
       } catch (error) {
+        console.error('Failed to delete playlist:', error);
         alert('Failed to delete playlist');
       }
     }

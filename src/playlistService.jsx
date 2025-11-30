@@ -39,12 +39,12 @@ const playlistService = {
 
   // Remove a track from a playlist
   removeTrackFromPlaylist: async (playlistId, playlistItemId) => {
-    await axiosInstance.delete(`/api/playlists/${playlistId}/tracks/${playlistItemId}`);
+    await axiosInstance.delete(`/playlists/${playlistId}/tracks/${playlistItemId}`);
   },
 
   // Reorder tracks in a playlist
   reorderPlaylist: async (playlistId, orderedItemIds) => {
-    const response = await axiosInstance.put(`/api/playlists/${playlistId}/reorder`, orderedItemIds);
+    const response = await axiosInstance.put(`/playlists/${playlistId}/reorder`, orderedItemIds);
     return response.data;
   }
 };
