@@ -321,6 +321,8 @@ body {
           align-items: center;
           justify-content: center;
           border-radius: 12px; 
+          border-right: solid 1px $unis-blue;
+          border-left: solid 1px $unis-blue;
           color: $unis-silver;
           font-weight: 600;
           transition: transform 0.3s ease;
@@ -413,6 +415,11 @@ body {
     }
 
     .item-duration{
+      align-self: flex-start;
+      padding-left: 1em;
+    }
+
+    .time_ago{
       align-self: flex-start;
       padding-left: 1em;
     }

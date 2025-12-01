@@ -23,7 +23,7 @@ const Feed = () => {
   const { playMedia } = useContext(PlayerContext);
   const [animate, setAnimate] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [jurisdictionId, setJurisdictionId] = useState(null);  // Start null, no fallback yet
+  const [jurisdictionId, setJurisdictionId] = useState(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [trendingMedia, setTrendingMedia] = useState([]);
   const [newMedia, setNewMedia] = useState([]);
@@ -34,12 +34,11 @@ const Feed = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-  // Helper to build URLs (absolute as-is, relative prepend base)
   const buildUrl = (url) => {
-    if (!url) return null;  // No fallback here—handle in render
+    if (!url) return null;
     return url.startsWith('http://') || url.startsWith('https://') 
-      ? url  // Absolute (R2/prod)—use as-is
-      : `${API_BASE_URL}${url}`;  // Relative (local)—prepend base
+      ? url
+      : `${API_BASE_URL}${url}`;
   };
 
   const formatDuration = (ms) => {
@@ -50,17 +49,39 @@ const Feed = () => {
     return `${min}:${sec}`;
   };
 
+  // NEW: YouTube-style "time ago" formatter
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return '';
+    
+    const now = new Date();
+    const past = new Date(dateString);
+    const diffMs = now - past;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
+
+    if (diffSeconds < 60) return 'just now';
+    if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks !== 1 ? 's' : ''} ago`;
+    if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
+    return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
+  };
+
   useEffect(() => {
     setAnimate(true);
     fetchProfile();
   }, []);
 
-  // Step 1: Fetch profile and set jurisdiction (blocks until done)
   const fetchProfile = async () => {
     setLoading(true);
     setError('');
     try {
-      // Get userId from token
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('Not authenticated');
@@ -70,23 +91,21 @@ const Feed = () => {
       const uid = payload.userId;
       setUserId(uid);
 
-      // Fetch user profile
       const profileRes = await apiCall({ method: 'get', url: `/v1/users/profile/${uid}` });
       const { jurisdiction } = profileRes.data;
       const jurId = jurisdiction?.jurisdictionId;
-      setJurisdictionId(jurId || '00000000-0000-0000-0000-000000000002');  // Safe fallback
+      setJurisdictionId(jurId || '00000000-0000-0000-0000-000000000002');
       setProfileLoaded(true);
     } catch (err) {
       console.error('Profile load error:', err);
       setError('Profile unavailable—using default feed.');
-      setJurisdictionId('00000000-0000-0000-0000-000000000002');  // Fallback
+      setJurisdictionId('00000000-0000-0000-0000-000000000002');
       setProfileLoaded(true);
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 2: Fetch media once profile/jurisdiction is ready
   useEffect(() => {
     if (!profileLoaded || !userId || !jurisdictionId) return;
     fetchMediaData();
@@ -96,7 +115,6 @@ const Feed = () => {
     setLoading(true);
     setError('');
     try {
-      // Parallel fetches with correct jurisdictionId
       const [trendingRes, newRes, songAwardsRes, artistAwardsRes, popularRes] = await Promise.all([
         apiCall({ method: 'get', url: `/v1/media/trending?jurisdictionId=${jurisdictionId}&limit=5` }),
         apiCall({ method: 'get', url: `/v1/media/new?jurisdictionId=${jurisdictionId}&limit=5` }),
@@ -105,21 +123,21 @@ const Feed = () => {
         apiCall({ method: 'get', url: `/v1/users/artist/top?jurisdictionId=${jurisdictionId}&limit=5` })
       ]);
 
-      // Normalize the data (null-safe)
       const normalizeMedia = (items) => (items || []).map(item => {
         const normalized = {
           id: item.songId || item.videoId,
           title: item.title,
-          artist: item.artist?.username || 'Unknown',  // Safe
-          artistData: item.artist || { userId: 'unknown', username: 'Unknown' },  // Safe object
-          artworkUrl: buildUrl(item.artworkUrl),  // ← Use helper
-          mediaUrl: buildUrl(item.fileUrl),  // ← Use helper
-          url: buildUrl(item.fileUrl),  // ← Use helper
-          artwork: buildUrl(item.artworkUrl),  // ← Use helper
+          artist: item.artist?.username || 'Unknown',
+          artistData: item.artist || { userId: 'unknown', username: 'Unknown' },
+          artworkUrl: buildUrl(item.artworkUrl),
+          mediaUrl: buildUrl(item.fileUrl),
+          url: buildUrl(item.fileUrl),
+          artwork: buildUrl(item.artworkUrl),
           type: item.songId ? 'song' : 'video',
           score: item.score || 0,
           artistId: item.artist?.userId || 'unknown',
-          duration: item.duration || null
+          duration: item.duration || null,
+          createdAt: item.createdAt || null  // NEW: Capture upload date
         };
         console.log('Normalized item:', normalized);
         return normalized;
@@ -128,20 +146,16 @@ const Feed = () => {
       setTrendingMedia(normalizeMedia(trendingRes.data || []));
       setNewMedia(normalizeMedia(newRes.data || []));
       
-      // Combine song and artist awards, first five
       const combinedAwards = [...(songAwardsRes.data || []), ...(artistAwardsRes.data || [])].slice(0, 5);
       setAwards(combinedAwards);
 
-      // Normalize artists (for photoUrl)
       const normalizedArtists = (popularRes.data || []).map(artist => ({
         ...artist,
-        photoUrl: buildUrl(artist.photoUrl)  // ← Use helper
+        photoUrl: buildUrl(artist.photoUrl)
       }));
       setPopularArtists(normalizedArtists);
     } catch (err) {
       console.error('Media load error:', err);
-      console.error('Error response:', err.response?.data);
-      console.error('Error status:', err.response?.status);
       setError('Feed unavailable—showing demo content.');
     } finally {
       setLoading(false);
@@ -153,22 +167,20 @@ const Feed = () => {
   const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
   const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
 
-  // Play handler (immediate, uses data—no refetch)
   const handlePlayMedia = async (e, media) => {
     e.stopPropagation();
     
     let playMediaObj = media;
     if (media.type === 'artist') {
-      // Fetch default song
       try {
         const defaultRes = await apiCall({ method: 'get', url: `/v1/users/${media.artistData.userId}/default-song` });
         playMediaObj = {
           type: 'song',
-          id: defaultRes.data.songId,  // Add ID for tracking
-          url: buildUrl(defaultRes.data.fileUrl) || song1,  // ← Use helper
+          id: defaultRes.data.songId,
+          url: buildUrl(defaultRes.data.fileUrl) || song1,
           title: defaultRes.data.title || 'Default Track',
           artist: media.name,
-          artwork: buildUrl(defaultRes.data.artworkUrl) || media.imageUrl,  // ← Use helper
+          artwork: buildUrl(defaultRes.data.artworkUrl) || media.imageUrl,
         };
       } catch (err) {
         console.error('Default song fetch error:', err);
@@ -176,7 +188,6 @@ const Feed = () => {
       }
     }
 
-    // Track play
     try {
       const endpoint = playMediaObj.type === 'song' 
         ? `/v1/media/song/${playMediaObj.id}/play?userId=${userId}`
@@ -187,26 +198,27 @@ const Feed = () => {
       console.error('Failed to track play:', err);
     }
     
-    // Play
     const playlist = [playMediaObj, ...newMedia.slice(0, 2).filter(m => m.id !== playMediaObj.id)];
     playMedia(playMediaObj, playlist);
   };
 
-  // Dummies (env fallback or error—limit to 5); align with normalized structure
+  // Dummies with mock createdAt dates for testing
   const getDummyTrending = () => [
-    { id: 'dummy1', title: 'Tony Fadd - Paranoid', artistData: { userId: '1', username: 'Tony Fadd' }, artworkUrl: songArtOne, mediaUrl: song1, type: 'song', score: 100 },
-    { id: 'dummy2', title: 'SD Boomin - Waited All Night', artistData: { userId: '2', username: 'SD Boomin' }, artworkUrl: songArtTwo, mediaUrl: song2, type: 'song', score: 80 },
-    { id: 'dummy3', title: 'Bad Video', artistData: { userId: '3', username: 'some guy' }, artworkUrl: songArtThree, mediaUrl: video1, type: 'video', score: 60 },
-    { id: 'dummy4', title: 'Song 4', artistData: { userId: '4', username: 'Artist 4' }, artworkUrl: songArtFour, mediaUrl: song1, type: 'song', score: 50 },
-    { id: 'dummy5', title: 'Song 5', artistData: { userId: '5', username: 'Artist 5' }, artworkUrl: songArtFive, mediaUrl: song2, type: 'song', score: 40 }
+    { id: 'dummy1', title: 'Tony Fadd - Paranoid', artistData: { userId: '1', username: 'Tony Fadd' }, artworkUrl: songArtOne, mediaUrl: song1, type: 'song', score: 100, createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), duration: 180000 },
+    { id: 'dummy2', title: 'SD Boomin - Waited All Night', artistData: { userId: '2', username: 'SD Boomin' }, artworkUrl: songArtTwo, mediaUrl: song2, type: 'song', score: 80, createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), duration: 210000 },
+    { id: 'dummy3', title: 'Bad Video', artistData: { userId: '3', username: 'some guy' }, artworkUrl: songArtThree, mediaUrl: video1, type: 'video', score: 60, createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), duration: 120000 },
+    { id: 'dummy4', title: 'Song 4', artistData: { userId: '4', username: 'Artist 4' }, artworkUrl: songArtFour, mediaUrl: song1, type: 'song', score: 50, createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(), duration: 195000 },
+    { id: 'dummy5', title: 'Song 5', artistData: { userId: '5', username: 'Artist 5' }, artworkUrl: songArtFive, mediaUrl: song2, type: 'song', score: 40, createdAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(), duration: 240000 }
   ].slice(0, 5);
+
   const getDummyNew = () => [
-    { id: 'dummy6', title: 'The Outside', artistData: { userId: '6', username: 'Artist Six' }, artworkUrl: songArtSix, mediaUrl: song1, type: 'song', score: 30 },
-    { id: 'dummy7', title: 'Original Man', artistData: { userId: '7', username: 'Artist Seven' }, artworkUrl: songArtNine, mediaUrl: song2, type: 'song', score: 25 },
-    { id: 'dummy8', title: 'flavorfall', artistData: { userId: '8', username: 'Artist Eight' }, artworkUrl: songArtTen, mediaUrl: song1, type: 'song', score: 20 },
-    { id: 'dummy9', title: 'Golden Son', artistData: { userId: '9', username: 'Artist Nine' }, artworkUrl: songArtEleven, mediaUrl: song2, type: 'song', score: 15 },
-    { id: 'dummy10', title: 'New Track', artistData: { userId: '10', username: 'Artist Ten' }, artworkUrl: songArtOne, mediaUrl: song1, type: 'song', score: 10 }
+    { id: 'dummy6', title: 'The Outside', artistData: { userId: '6', username: 'Artist Six' }, artworkUrl: songArtSix, mediaUrl: song1, type: 'song', score: 30, createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), duration: 155000 },
+    { id: 'dummy7', title: 'Original Man', artistData: { userId: '7', username: 'Artist Seven' }, artworkUrl: songArtNine, mediaUrl: song2, type: 'song', score: 25, createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), duration: 205000 },
+    { id: 'dummy8', title: 'flavorfall', artistData: { userId: '8', username: 'Artist Eight' }, artworkUrl: songArtTen, mediaUrl: song1, type: 'song', score: 20, createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), duration: 175000 },
+    { id: 'dummy9', title: 'Golden Son', artistData: { userId: '9', username: 'Artist Nine' }, artworkUrl: songArtEleven, mediaUrl: song2, type: 'song', score: 15, createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), duration: 188000 },
+    { id: 'dummy10', title: 'New Track', artistData: { userId: '10', username: 'Artist Ten' }, artworkUrl: songArtOne, mediaUrl: song1, type: 'song', score: 10, createdAt: new Date().toISOString(), duration: 220000 }
   ].slice(0, 5);
+
   const getDummyAwards = () => [
     { id: 'a1', name: 'Best Rap Song', winner: { id: 'w1', username: 'Tony Fadd' } },
     { id: 'a2', name: 'Top Video', winner: { id: 'w2', username: 'SD Boomin' } },
@@ -214,6 +226,7 @@ const Feed = () => {
     { id: 'a4', name: 'Fan Favorite', winner: { id: 'w4', username: 'Artist Four' } },
     { id: 'a5', name: 'Breakthrough Track', winner: { id: 'w5', username: 'Artist Five' } }
   ].slice(0, 5);
+
   const getDummyArtists = () => [
     { userId: 'art1', username: 'Tony Fadd', photoUrl: songArtOne, score: 100 },
     { userId: 'art2', username: 'SD Boomin', photoUrl: songArtTwo, score: 80 },
@@ -222,18 +235,11 @@ const Feed = () => {
     { userId: 'art5', username: 'Artist Five', photoUrl: songArtFive, score: 40 }
   ].slice(0, 5);
 
-  // Data with fallbacks (limit 5); dedupe new if real data
   const trending = trendingMedia.length ? trendingMedia.slice(0, 5) : getDummyTrending();
-  
-  const newMediaList = newMedia.length 
-  ? newMedia.slice(0, 5)  // No filter—full slice
-  : getDummyNew();
-
-
+  const newMediaList = newMedia.length ? newMedia.slice(0, 5) : getDummyNew();
   const awardsList = awards.length ? awards.slice(0, 5) : getDummyAwards();
   const artistsList = popularArtists.length ? popularArtists.slice(0, 5) : getDummyArtists();
 
-  // Dynamic jurisdiction name (e.g., 'downtown-harlem' → 'Downtown Harlem')
   const getJurisdictionDisplayName = (id) => {
     const key = JURISDICTION_NAMES[id];
     if (!key) return 'Your Area';
@@ -255,23 +261,50 @@ const Feed = () => {
                 <div key={item.id} className="item-wrapper">
                   <div 
                     className="item" 
-                    style={{ backgroundImage: `url(${item.artworkUrl || item.artwork || randomRapper})`, backgroundSize: 'cover' }}
+                    style={{ 
+                      backgroundImage: `url(${item.artworkUrl || item.artwork || randomRapper})`, 
+                      backgroundSize: 'cover',
+                      position: 'relative'
+                    }}
                     onClick={() => handleSongNav(item.id, item.type)}
                   >
                     <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+                    
+                    {/* Duration Overlay - Bottom Left */}
+                    {item.duration && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        left: '8px',
+                        background: 'rgba(0, 0, 0, 0.75)',
+                        color: 'white',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}>
+                        {formatDuration(item.duration)}
+                      </div>
+                    )}
                   </div>
+                  
+                  {/* Title */}
                   <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
                     {item.title}
                   </div>
+                  
+                  {/* Artist Name */}
                   <span 
                     className="item-artist" 
                     onClick={() => handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown')}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', display: 'block', fontSize: '0.85rem', color: '#aaa' }}
                   >
                     {item.artistData?.username || item.artist || 'Unknown'}
                   </span>
-                  <div className="item-duration">
-                    {formatDuration(item.duration)}
+                  
+                  {/* Time Ago */}
+                  <div className="time_ago" style={{ fontSize: '0.75rem', color: '#888', marginTop: '2px' }}>
+                    {formatTimeAgo(item.createdAt)}
                   </div>
                 </div>
               ))}
@@ -286,23 +319,50 @@ const Feed = () => {
                 <div key={item.id} className="item-wrapper">
                   <div 
                     className="item" 
-                    style={{ backgroundImage: `url(${item.artworkUrl || item.artwork || randomRapper})`, backgroundSize: 'cover' }}
+                    style={{ 
+                      backgroundImage: `url(${item.artworkUrl || item.artwork || randomRapper})`, 
+                      backgroundSize: 'cover',
+                      position: 'relative'
+                    }}
                     onClick={() => handleSongNav(item.id, item.type)}
                   >
                     <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+                    
+                    {/* Duration Overlay - Bottom Left */}
+                    {item.duration && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        left: '8px',
+                        background: 'rgba(0, 0, 0, 0.75)',
+                        color: 'white',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}>
+                        {formatDuration(item.duration)}
+                      </div>
+                    )}
                   </div>
+                  
+                  {/* Title */}
                   <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
                     {item.title}
                   </div>
+                  
+                  {/* Artist Name */}
                   <span 
                     className="item-artist" 
                     onClick={() => handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown')}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', display: 'block', fontSize: '0.85rem', color: '#aaa' }}
                   >
                     {item.artistData?.username || item.artist || 'Unknown'}
                   </span>
-                  <div className="item-duration">
-                    {formatDuration(item.duration)}
+                  
+                  {/* Time Ago */}
+                  <div className="time_ago" style={{ fontSize: '0.75rem', color: '#888', marginTop: '2px' }}>
+                    {formatTimeAgo(item.createdAt)}
                   </div>
                 </div>
               ))}

@@ -1,49 +1,218 @@
-// SongNotification.scss
+// SongNotification.scss - Modern Design with Flashing BLUE Border
 
 .song-notification {
   position: fixed;
-  bottom: 80px; // Above player
+  bottom: 100px; // Above player
   left: 20px;
-  z-index: 101; // Above player (100)
-  animation: slideIn 0.5s ease-out forwards, slideOut 0.5s 2.5s ease-in forwards; // Slide in/out
+  z-index: 101;
+  animation: slideIn 0.5s ease-out forwards, slideOut 0.5s 2.5s ease-in forwards;
 
   .card {
     display: flex;
     align-items: center;
-    background: rgba(#1a1a1a, 0.8);
-    border-radius: 12px;
-    padding: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    gap: 10px;
+    position: relative;
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(40, 40, 40, 0.95));
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 2px 8px rgba(0, 0, 0, 0.2);
+    gap: 14px;
+    min-width: 320px;
+    overflow: visible; // Changed from hidden to show border
+    
+    // Flashing BLUE BORDER effect
+    border: 2px solid transparent;
+    animation: flashingBlueBorder 1.5s ease-in-out infinite;
+
+    // Inner glow effect
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(
+        circle at top left,
+        rgba(255, 255, 255, 0.08),
+        transparent 50%
+      );
+      border-radius: 16px;
+      pointer-events: none;
+    }
 
     .notification-artwork {
-      width: 50px;
-      height: 50px;
-      border-radius: 8px;
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
+      object-fit: cover;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      position: relative;
+      z-index: 1;
+      
+      // Subtle blue glow around artwork
+      &::after {
+        content: '';
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        right: -4px;
+        bottom: -4px;
+        background: rgba(0, 123, 255, 0.2);
+        border-radius: 12px;
+        z-index: -1;
+        opacity: 0.6;
+        filter: blur(8px);
+      }
     }
 
     .notification-info {
-      color: silver;
+      flex: 1;
+      position: relative;
+      z-index: 1;
 
       h3 {
-        font-size: 18px;
-        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0 0 4px 0;
+        color: #ffffff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        line-height: 1.3;
+        
+        // Truncate long titles
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 220px;
       }
 
       p {
-        font-size: 14px;
+        font-size: 13px;
         margin: 2px 0;
+        color: #b0b0b0;
+        line-height: 1.4;
+        
+        &:first-of-type {
+          color: #d0d0d0;
+          font-weight: 500;
+        }
+
+        &:last-of-type {
+          font-size: 12px;
+          color: #888;
+          margin-top: 4px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          
+          // Add a small icon before jurisdiction
+          &::before {
+            content: '📍';
+            font-size: 10px;
+          }
+        }
+      }
+    }
+
+    // Floating particles effect (optional subtle touch)
+    .particle {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: rgba(0, 123, 255, 0.4);
+      border-radius: 50%;
+      animation: float 3s ease-in-out infinite;
+      
+      &:nth-child(1) {
+        top: 20%;
+        left: 10%;
+        animation-delay: 0s;
+      }
+      
+      &:nth-child(2) {
+        top: 60%;
+        left: 80%;
+        animation-delay: 1s;
+      }
+      
+      &:nth-child(3) {
+        top: 80%;
+        left: 30%;
+        animation-delay: 2s;
       }
     }
   }
 }
 
-@keyframes slideIn {
-  from { transform: translateX(-100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+// Flashing BLUE border animation
+@keyframes flashingBlueBorder {
+  0%, 100% {
+    border-color: transparent;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  50% {
+    border-color: #007bff; // Bright blue
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 2px 8px rgba(0, 0, 0, 0.2),
+      0 0 20px rgba(0, 123, 255, 0.6),  // Blue glow
+      inset 0 0 20px rgba(0, 123, 255, 0.1); // Inner blue glow
+  }
 }
 
+// Slide in animation
+@keyframes slideIn {
+  from {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+// Slide out animation
 @keyframes slideOut {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(-100%); opacity: 0; }
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+}
+
+// Floating particles
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-10px) scale(1.2);
+    opacity: 0.6;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 480px) {
+  .song-notification {
+    left: 10px;
+    right: 10px;
+    
+    .card {
+      min-width: auto;
+      width: calc(100% - 20px);
+      
+      .notification-info h3 {
+        max-width: 180px;
+      }
+    }
+  }
 }

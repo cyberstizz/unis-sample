@@ -13,18 +13,22 @@ const SongNotification = () => {
       const timer = setTimeout(() => setShow(false), 3000); // Show for 3s
       return () => clearTimeout(timer);
     }
-  }, [currentMedia]); // Trigger on media change
+  }, [currentMedia]);
 
   if (!show || !currentMedia) return null;
 
   return (
     <div className="song-notification">
-      <div className="card">
-        <img src={currentMedia.artwork} alt="Artwork" className="notification-artwork" />
+      <div className="card">      
+        
+        <img 
+          src={currentMedia.artwork || '/default-artwork.png'} 
+          alt="Artwork" 
+          className="notification-artwork" 
+        />
         <div className="notification-info">
-          <h3>{currentMedia.title}</h3>
-          <p>By {currentMedia.artist}</p>
-          <p>Jurisdiction: Harlem-wide</p> {/* Hardcode or from data */}
+          <h3>{currentMedia.title || 'Unknown Track'}</h3>
+          <p>{currentMedia.artist || 'Unknown Artist'}</p>
         </div>
       </div>
     </div>
