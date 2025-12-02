@@ -316,8 +316,11 @@ const VoteAwards = () => {
                     <div className="nominee-info" onClick={() => handleNomineeClick(nominee)}>
                       <h3 id="nominee-name">{nominee.name}</h3>
                       {nominee.type === 'song' && <p className="artist-name">by {nominee.artist}</p>}
-                      <p>Votes: {nominee.votes}</p>
-                    </div>
+                      <p className="jurisdiction-label">
+                        {nominee.jurisdiction}
+                      </p>                   
+                       </div>
+                       <div className='the_buttons'>
                     {nominee.type === 'song' && nominee.mediaUrl && (
                       <button 
                         onClick={() => handlePlaySong(nominee)} 
@@ -335,7 +338,7 @@ const VoteAwards = () => {
                         Listen
                       </button>
                     )}
-
+    
 
                     <button 
                       onClick={() => handleVoteClick(nominee)} 
@@ -343,6 +346,7 @@ const VoteAwards = () => {
                     >
                       Vote
                     </button>
+                     </div>
                   </li>
                 ))
               ) : (
