@@ -15,16 +15,16 @@ $unis-silver: #918f8f;
   display: flex;
   flex-direction: column;
   min-height: 100vh; // Ensure it covers full height
-  background-color: $bg-black; // Ensure dark background behind cards
+  background-color: transparent; 
+  width: 100%;
 }
 
 .filters {
   display: flex;
-  justify-content: center;
   gap: 15px; 
   margin-bottom: 40px; 
   flex-wrap: wrap;
-  width: 100%;
+  width: 500px !important;
   max-width: 900px; 
 
   .filter-select {
@@ -71,7 +71,7 @@ $unis-silver: #918f8f;
   }
 
   .search-bar {
-    width: 100%;
+    width: 40%;
     max-width: 500px;
     padding: 12px 24px;
     border-radius: 50px;
@@ -84,6 +84,9 @@ $unis-silver: #918f8f;
     &:focus {
       outline: none;
       border-color: $unis-blue;
+    }
+    :placeholder-shown{
+      text-align: center;
     }
   }
 

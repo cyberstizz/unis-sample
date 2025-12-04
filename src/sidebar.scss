@@ -59,11 +59,11 @@ $unis-silver: #918f8f;
     "CRSV" 0.5,
     "ELSH" 0,
     "ELXP" 0;
-  top: 98px; height: calc(100vh - 98px);
+  top: 115px; 
+  height: 100vh !important;
   left: 0;
   width: 250px;
-  height: 100vh;
-  background: transparent; // Fully transparent—no bg
+  background: transparent; 
   padding: 20px;
   padding-top: 2px;
   padding-right: 5px;

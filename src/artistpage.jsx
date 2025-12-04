@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
+import { PlayerContext } from './context/playercontext';
 import Layout from './layout';
 import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
@@ -9,6 +10,7 @@ import VotingWizard from './votingWizard';
 const ArtistPage = ({ isOwnProfile = false }) => {
   const { artistId } = useParams();
   const navigate = useNavigate();
+  const { playMedia } = useContext(PlayerContext);
   const [artist, setArtist] = useState(null);
   const [songs, setSongs] = useState([]);
   const [videos, setVideos] = useState([]);
@@ -18,8 +20,14 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const [bio, setBio] = useState('');
   const [showVotingWizard, setShowVotingWizard] = useState(false);
   const [selectedNominee, setSelectedNominee] = useState(null);
+  const [defaultSong, setDefaultSong] = useState(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+  const buildUrl = (url) => {
+    if (!url) return null;
+    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  };
 
   useEffect(() => {
     fetchArtistData();
@@ -44,14 +52,31 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         method: 'get', 
         url: `/v1/media/songs/artist/${artistId}` 
       });
-      setSongs(songsRes.data || []);
+      // FIXED: Ensure songs is always an array
+      const songsData = songsRes.data;
+      setSongs(Array.isArray(songsData) ? songsData : []);
 
       // Fetch artist's videos
       const videosRes = await apiCall({ 
         method: 'get', 
         url: `/v1/media/videos/artist/${artistId}` 
       });
-      setVideos(videosRes.data || []);
+      // FIXED: Ensure videos is always an array
+      const videosData = videosRes.data;
+      setVideos(Array.isArray(videosData) ? videosData : []);
+
+      // ADDED: Fetch default song for play button
+      try {
+        const defaultSongRes = await apiCall({
+          method: 'get',
+          url: `/v1/users/${artistId}/default-song`
+        });
+        setDefaultSong(defaultSongRes.data);
+        console.log('Default song loaded:', defaultSongRes.data);
+      } catch (err) {
+        console.warn('No default song available:', err);
+        setDefaultSong(null);
+      }
 
     } catch (err) {
       console.error('Failed to load artist:', err);
@@ -95,6 +120,26 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     setShowVotingWizard(true);
   };
 
+  // ADDED: Handle playing default song
+  const handlePlayDefault = () => {
+    if (defaultSong && defaultSong.fileUrl) {
+      const fullUrl = buildUrl(defaultSong.fileUrl);
+      console.log('Playing default song:', defaultSong.title, fullUrl);
+      playMedia(
+        { 
+          type: 'song', 
+          url: fullUrl, 
+          title: defaultSong.title, 
+          artist: artist.username, 
+          artwork: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl)
+        },
+        []
+      );
+    } else {
+      alert('No default song available for this artist');
+    }
+  };
+
   const handleSongClick = (songId) => {
     navigate(`/song/${songId}`);
   };
@@ -123,17 +168,19 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     ? `${API_BASE_URL}${artist.photoUrl}` 
     : theQuiet;
 
-  // Calculate stats (you'll need to add these fields to backend or calculate)
+  // Calculate stats
   const rank = `#${artist.rank || '?'}`;
   const followers = artist.followerCount || 0;
   const supporters = artist.supporterCount || 0;
   const voteCount = artist.voteCount || 0;
 
-  // Get top song by score
-  const topSong = songs.length > 0 
-    ? songs.reduce((prev, current) => 
-        (current.score > prev.score) ? current : prev
-      )
+  // FIXED: Get top song with safety check
+  const topSong = songs.length > 0 && Array.isArray(songs)
+    ? songs.reduce((prev, current) => {
+        const prevScore = prev.score || 0;
+        const currentScore = current.score || 0;
+        return currentScore > prevScore ? current : prev;
+      }, songs[0])
     : null;
 
   return (
@@ -155,9 +202,19 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                 {isFollowing ? 'Unfollow' : 'Follow'}
               </button>
               {!isOwnProfile && (
-                <button onClick={handleVote} className="vote-button">
-                  Vote
-                </button>
+                <>
+                  <button onClick={handleVote} className="vote-button">
+                    Vote
+                  </button>
+                  {/* ADDED: Play Default Song button */}
+                  <button 
+                    onClick={handlePlayDefault} 
+                    className="play-button"
+                    disabled={!defaultSong}
+                  >
+                    Play
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -193,7 +250,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                   onClick={() => handleSongClick(topSong.songId)}
                   style={{ cursor: 'pointer' }}
                 >
-                  {topSong.title} (Score: {topSong.score})
+                  {topSong.title} (Score: {topSong.score || 0})
                 </li>
               </ul>
             </section>

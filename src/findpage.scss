@@ -10,7 +10,7 @@ $unis-blue: #163387;
 
 
 .find-page-container > * {
-  margin: 0; /* resets browser default margins for immediate children */
+  margin-left: 230px;
 }
 
 .findpageheader{
@@ -18,7 +18,7 @@ $unis-blue: #163387;
 }
 
 .find-page-header{
-margin: 0; // remove default margin
+  margin: 0; 
   padding: 0; 
   text-align: center;
 
@@ -33,11 +33,12 @@ margin: 0; // remove default margin
 .map-container {
   width: 62%; 
   max-width: 600px;
-  height: 400px; 
+  height: 600px; 
   border-radius: 12px;
   overflow: hidden;
-  margin: 10px auto 5px auto;
+  margin-bottom: 2px;
   background: transparent;
+  border: solid 2px green;
 }
 
 .territory-name {

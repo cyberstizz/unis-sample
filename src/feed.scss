@@ -62,7 +62,6 @@ body {
   width: 100%;
   max-width: 1200px; /* Adjust to match your design */
   margin: 0 auto; 
-  margin-top: -1px;
   padding-top: -15px;
   display: flex;
   flex-direction: column;
@@ -70,7 +69,6 @@ body {
 }
 
 .feed-container {
-  padding-top: 1px;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -109,9 +107,12 @@ body {
   width: 100%;
   background: linear-gradient(to bottom, #1A1A1A, $bg-black);
   padding: 8px 20px;
+  padding-bottom: 0;
+  padding-top: 1px;
   height: 98px; 
   z-index: 100;
   position: relative;
+  margin-bottom: 0;
 
   .header-top {
     display: flex;
@@ -174,62 +175,6 @@ body {
 }
 
 
-.side-menu-trigger {
-  // Position it relative to the main content
-  position: fixed; // Use fixed to ensure it stays in place
-  top: 50%; // Center it vertically
-  transform: translateY(-50%);
-  left: 0;
-  width: 45px; // Make it a bit wider
-  height: 60px; // Taller
-  background: rgba($text-silver, 0.1); // More subtle background
-  border-radius: 0 10px 10px 0; // Rounded corners only on the right
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  transition: transform 0.3s;
-
-  .arrow-icon {
-    color: $accent-white;
-    font-size: 24px;
-  }
-}
-
-.side-menu-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba($bg-black, 0.5);
-  z-index: 20;
-  display: flex;
-}
-
-.side-menu {
-  width: 250px;
-  background: #1A1A1A;
-  padding: 20px;
-  transform: translateX(0);
-  transition: transform 0.3s ease-in-out;
-
-  ul {
-    list-style: none;
-    padding: 0;
-
-    li {
-      padding: 10px;
-      cursor: pointer;
-      border-bottom: 1px solid $border-silver;
-
-      &:hover {
-        color: $accent-white;
-      }
-    }
-  }
-}
 
 .feed {
   flex: 1;
@@ -246,6 +191,7 @@ body {
     max-width: 1200px; /* Match feed-content-wrapper */
     margin: 0 auto; /* Center with parent */
     padding: 20px; 
+    padding-top: 1px;
 
     h2 {
       color: $unis-blue;
@@ -280,7 +226,6 @@ body {
         display: flex;
         overflow-x: auto;
         gap: 20px; // Increase gap for separation
-        padding-bottom: 10px; // Add padding for scrollbar visibility
         display: flex;
         overflow-x: auto;
         gap: 20px;

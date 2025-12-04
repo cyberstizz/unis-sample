@@ -1,6 +1,3 @@
-// MilestonesPage.scss
-
-// Variables (consistent with Unis)
 $bg-black: #000000;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
@@ -8,6 +5,7 @@ $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
 $unis-blue: #163387;
 $unis-silver: #918f8f;
+$subtle-black: #1a1a1a; // Added for consistency
 
 .leaderboards-page-container {
   display: flex;
@@ -20,6 +18,7 @@ $unis-silver: #918f8f;
   overflow-y: auto;
   font-family: sans-serif;
   background: transparent;
+  margin-left: 23%;
 }
 
 #leaderboardsheader {
@@ -69,12 +68,29 @@ $unis-silver: #918f8f;
   border-radius: 50px;
   font-size: 14px;
   cursor: pointer;
+  
+  // REMOVE the complicated -webkit-appearance and background-image.
+  // We want to ensure the base element renders predictably.
+  // The 'appearance: none' can be removed or kept simple.
+  
+  // Cleaned up for reliability:
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="%23C0C0C0" d="M6 9l-4-4h8z"/></svg>');
-  background-repeat: no-repeat;
-  background-position: right 10px center;
+  // REMOVED background-image: url(...) which can be volatile
+  
+  // Ensure the black background is solid
+  background-color: $bg-black; 
+  
+  // Add margin-right to separate the icon if using a custom arrow
+  padding-right: 35px; // Increase padding to make room for a custom or default arrow
+  
+  // Focus state for feedback
+  &:focus {
+      outline: 2px solid $unis-blue;
+      outline-offset: 1px;
+      border-color: $unis-blue;
+  }
 }
 
 .view-button {
@@ -104,6 +120,7 @@ $unis-silver: #918f8f;
     font-style: italic;
     padding: 50px;
     color: $text-gray;
+    margin-left: 15%;
   }
 }
 
@@ -114,58 +131,120 @@ $unis-silver: #918f8f;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 16px; 
 }
 
 .result-item {
-  background: #1a1a1a;
-  border-radius: 12px;
-  padding: 20px;
+  // Use a subtle black background for the card body
+  background: $subtle-black; 
+  border-radius: 8px; // Matching VoteAwards style
+  padding: 15px 20px;
   display: flex;
   align-items: center;
   gap: 15px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative; // Needed for Z-index
+
+  border-left: 4px solid $unis-blue;
+  border-right: 4px solid $unis-blue;
+  border-top: 1px solid rgba($border-silver, 0.05); // Subtle separator
+  border-bottom: 1px solid rgba($border-silver, 0.05); // Subtle separator
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    // Make the blue borders glow slightly on hover
+    border-left-color: $unis-blue, 10%;
+    border-right-color: $unis-blue, 10%;
   }
 }
 
 .rank {
-  font-size: 28px;
-  font-weight: bold;
-  color: $accent-white;
+  font-size: 32px; 
+  font-weight: 800;
+  color: $unis-blue; 
+  width: 50px; 
+  text-align: center;
+  flex-shrink: 0;
+  cursor: pointer;
 }
 
 .item-artwork {
   width: 60px;
   height: 60px;
-  border-radius: 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  cursor: pointer;
 }
 
 .item-info {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
 }
 
 .item-title {
-  font-size: 18px;
-  font-weight: bold;
-  color: $text-silver;
+  font-size: 16px;
+  font-weight: 600;
+  color: $accent-white; 
 }
 
 .item-artist {
-  font-size: 14px;
-  color: $text-gray;
+  font-size: 13px;
+  color: $unis-silver; 
+  margin-top: 2px;
 }
 
 .item-votes {
-  font-size: 14px;
-  color: $text-silver;
-  font-weight: bold;
+  font-size: 13px;
+  color: $text-gray;
+  font-weight: 400;
   white-space: nowrap;
+  flex-shrink: 0;
+  margin-right: 20px; 
+}
+
+.result-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+// Shared button styles
+.listen-button, .view-item-button {
+    padding: 8px 18px;
+    font-size: 13px;
+    border-radius: 4px; 
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.listen-button {
+    background: transparent;
+    border: 1px solid $text-gray;
+    color: $text-silver;
+    
+    &:hover {
+      border-color: $accent-white;
+      color: $accent-white;
+      background: rgba(255,255,255, 0.05);
+    }
+}
+
+.view-item-button { 
+    background: $unis-blue;
+    border: 1px solid $unis-blue;
+    color: $accent-white;
+    
+    &:hover {
+      background: $unis-blue, 5%;
+      box-shadow: 0 0 10px rgba($unis-blue, 0.4);
+    }
 }
 
 // Mobile
@@ -182,15 +261,42 @@ $unis-silver: #918f8f;
 
   .result-item {
     flex-direction: column;
-    text-align: center;
+    align-items: flex-start; 
+    text-align: left;
+    gap: 10px;
   }
 
-  .item-info {
-    text-align: center;
+  .rank {
+    position: absolute;
+    top: 15px;
+    right: 15px;
   }
 
   .item-artwork {
-    width: 80px;
-    height: 80px;
+    width: 60px;
+    height: 60px;
+    margin-right: 15px;
   }
+
+  .item-info {
+    text-align: left;
+    margin-bottom: 5px;
+  }
+
+  .item-votes {
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+  
+  .result-actions {
+    width: 100%; // Stack buttons full width
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 5px;
+  }
+  
+  .listen-button, .view-item-button {
+    flex-grow: 1; // Distribute buttons evenly
+  }
+
 }

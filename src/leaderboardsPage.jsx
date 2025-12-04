@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react'; 
+import { useNavigate } from 'react-router-dom'; 
+import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
 import './leaderboardsPage.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
-import rapperOne from './assets/rapperphotoOne.jpg';
-import rapperTwo from './assets/rapperphototwo.jpg';
-import rapperThree from './assets/rapperphotothree.jpg';
-import rapperFree from './assets/rapperphotofour.jpg';
+import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 
 const LeaderboardsPage = () => {
+  const navigate = useNavigate(); 
+  const { playMedia } = useContext(PlayerContext); 
   const [location, setLocation] = useState('downtown-harlem');
   const [genre, setGenre] = useState('rap-hiphop');
   const [category, setCategory] = useState('artist');
@@ -17,72 +18,168 @@ const LeaderboardsPage = () => {
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-  const handleView = async () => {
+  const buildUrl = (url) => {
+    if (!url) return null;
+    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  };
+
+  // FIXED: handlePlay now receives full media object
+  const handlePlay = async (media) => {
+    console.log('handlePlay called with:', media);
+
+    // If it's a song with fileUrl, play it directly
+    if (media.fileUrl) {
+      const fullUrl = buildUrl(media.fileUrl);
+      console.log('Playing song directly:', media.title, fullUrl);
+      playMedia(
+        { 
+          type: 'song', 
+          url: fullUrl, 
+          title: media.title || media.name, 
+          artist: media.artist || media.name, 
+          artwork: buildUrl(media.artwork)
+        },
+        []
+      );
+      return;
+    }
+    // If it's an artist, fetch and play default song
+    else if (media.type === 'artist' && media.id) {
+      console.log('Fetching default song for artist:', media.name, media.id);
+      try {
+        const response = await apiCall({
+          method: 'get',
+          url: `/v1/users/${media.id}/default-song`,
+        });
+        const defaultSong = response.data;
+        console.log('Default song response:', defaultSong);
+        
+        if (defaultSong && defaultSong.fileUrl) {
+          const fullUrl = buildUrl(defaultSong.fileUrl);
+          console.log('Playing default song:', defaultSong.title, fullUrl);
+          playMedia(
+            { 
+              type: 'default-song', 
+              url: fullUrl, 
+              title: defaultSong.title, 
+              artist: media.name, 
+              artwork: buildUrl(defaultSong.artworkUrl) || media.artwork 
+            },
+            []
+          );
+          return;
+        } else {
+          console.warn('No default song found for artist');
+        }
+      } catch (err) {
+        console.error('Default song fetch failed:', err);
+      }
+    }
+    
+    // Fallback to sample
+    console.warn('Falling back to sample song');
+    playMedia(
+      { 
+        type: 'song', 
+        url: sampleSong, 
+        title: media.title || media.name, 
+        artist: media.artist || media.name, 
+        artwork: media.artwork 
+      },
+      []
+    );
+  };
+
+  const handleViewCurrent = async () => { 
     setIsLoading(true);
     setError(null);
+    setResults([]);
+    
     try {
       const jurId = JURISDICTION_IDS[location];
       const genreId = GENRE_IDS[genre];
       const intervalId = INTERVAL_IDS[interval];
       const type = category;
 
-      console.log('Params:', { jurId, genreId, intervalId, type });  // Debug
+      console.log('Fetching leaderboards with params:', {
+        jurisdictionId: jurId,
+        genreId,
+        targetType: type,
+        intervalId
+      });
 
       const response = await apiCall({
         method: 'get',
-        url: `/v1/vote/leaderboards?jurisdictionId=${jurId}&genreId=${genreId}&targetType=${type}&intervalId=${intervalId}&limit=50`,  // Fixed: /vote prefix
+        url: `/v1/vote/leaderboards?jurisdictionId=${jurId}&genreId=${genreId}&targetType=${type}&intervalId=${intervalId}&limit=50`,
       });
 
       const rawResults = response.data;
-      const normalized = rawResults.map((item, i) => ({
-        rank: item.rank || i + 1,
-        title: item.name,
-        artist: item.artist || 'Unknown',
-        votes: item.votes || 0,
-        artwork: item.artwork ? `${API_BASE_URL}${item.artwork}` : rapperOne,
-      }));
+      console.log('Raw leaderboard results:', rawResults);
 
-      // Fallback if <5
-      if (normalized.length < 5) {
-        const fallbackResponse = await apiCall({
-          method: 'get',
-          url: `/v1/vote/leaderboards?jurisdictionId=${jurId}&genreId=${genreId}&targetType=${type}&intervalId=${intervalId}&limit=5&playsOnly=true`,  // Fixed prefix
-        });
-        const fallback = fallbackResponse.data.map((item, i) => ({
-          rank: normalized.length + i + 1,
-          title: item.name,
-          artist: item.artist || 'Unknown',
-          votes: item.votes || 0,
-          artwork: item.artwork ? `${API_BASE_URL}${item.artwork}` : rapperOne,
-        }));
-        normalized.push(...fallback);
+      if (!rawResults || rawResults.length === 0) {
+        setError('No results found for this combination. Try different filters.');
+        return;
       }
 
+      // FIXED: Proper ID extraction from backend response
+      const normalized = rawResults.map((item, i) => {
+        // DEBUG: Log to verify targetId exists
+        console.log(`Item ${i}:`, item);
+        
+        if (type === 'artist') {
+          return {
+            id: item.targetId,  // ✅ Use targetId from backend
+            type: 'artist',
+            rank: item.rank || (i + 1),
+            name: item.name || 'Unknown Artist',
+            title: item.name || 'Unknown Artist',
+            artist: item.name || 'Unknown Artist',
+            votes: item.votes || 0,
+            artwork: item.artwork ? buildUrl(item.artwork) : backimage,
+            fileUrl: null,
+          };
+        } else {
+          return {
+            id: item.targetId,  // ✅ Use targetId from backend
+            type: 'song',
+            rank: item.rank || (i + 1),
+            title: item.name || 'Unknown Song',
+            artist: item.artist || 'Unknown',
+            votes: item.votes || 0,
+            fileUrl: item.fileUrl ? buildUrl(item.fileUrl) : null,
+            artwork: item.artwork ? buildUrl(item.artwork) : backimage,
+          };
+        }
+      });
+
+      console.log('Normalized results:', normalized);
       setResults(normalized);
     } catch (err) {
       console.error('Leaderboards fetch error:', err);
-      setError('Failed to load—using dummies.');
-      setResults([
-        { rank: 1, title: 'Current Hit', artist: 'Artist K', votes: 800, artwork: rapperOne },
-        { rank: 2, title: 'Rising Star', artist: 'Artist L', votes: 750, artwork: rapperTwo },
-        { rank: 3, title: 'Beat Drop', artist: 'Artist M', votes: 700, artwork: rapperThree },
-        { rank: 4, title: 'Flow Master', artist: 'Artist N', votes: 650, artwork: rapperFree },
-        { rank: 5, title: 'Rhyme Time', artist: 'Artist O', votes: 600, artwork: rapperTwo },
-      ]);
+      console.error('Error response:', err.response?.data);
+      setError(`Failed to load leaderboards: ${err.response?.data?.message || err.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Navigation handlers
+  const handleArtistView = (id) => {
+    console.log('Navigating to artist page with ID:', id);
+    navigate(`/artist/${id}`);
+  };
+
+  const handleSongView = (id) => {
+    console.log('Navigating to song page with ID:', id);
+    navigate(`/song/${id}`);
+  };
+
   return (
     <Layout backgroundImage={backimage}>
       <div className="leaderboards-page-container">
-        <header className="header" id="leaderboardsheader">
-          <h1 id="leaderboardsheader">Leaderboards</h1>
-        </header>
-
         <main className="content-wrapper">
           <section className="filter-card">
             <div className="filter-controls">
@@ -108,7 +205,7 @@ const LeaderboardsPage = () => {
                 <option value="midterm">Midterm</option>
                 <option value="annual">Annual</option>
               </select>
-              <button onClick={handleView} className="view-button" disabled={isLoading}>
+              <button onClick={handleViewCurrent} className="view-button" disabled={isLoading}>
                 {isLoading ? 'Loading...' : 'View Current'}
               </button>
             </div>
@@ -122,15 +219,49 @@ const LeaderboardsPage = () => {
             ) : results.length > 0 ? (
               <ul className="results-list">
                 {results.map((item) => (
-                  <li key={item.rank} className="result-item">
+                  <li key={`${item.type}-${item.id}-${item.rank}`} className="result-item">
                     <div className="rank">#{item.rank}</div>
-                    <img src={item.artwork} alt={`${item.title} artwork`} className="item-artwork" />
+                    <img 
+                      src={item.artwork} 
+                      alt={item.title}
+                      className="item-artwork"
+                      onError={(e) => {
+                        console.error('Image failed to load:', item.artwork);
+                        e.target.src = backimage;
+                      }}
+                    />
                     <div className="item-info">
                       <div className="item-title">{item.title}</div>
-                      <div className="item-artist">{item.artist}</div>
+                      <div className="item-artist">{item.jurisdictionId}</div>
                     </div>
                     <div className="item-votes">
-                      <span>{item.votes} Votes</span>
+                    </div>
+                    
+                    <div className="result-actions">
+                      {/* FIXED: Pass entire item object to handlePlay */}
+                      <button 
+                        onClick={() => handlePlay(item)}
+                        className="listen-button"
+                      >
+                        Listen
+                      </button>
+                      
+                      {/* FIXED: Pass correct ID to navigation handlers */}
+                      {item.type === 'artist' ? (
+                        <button 
+                          onClick={() => handleArtistView(item.id)}
+                          className="view-item-button"
+                        >
+                          View
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleSongView(item.id)}
+                          className="view-item-button"
+                        >
+                          View Song
+                        </button>
+                      )}
                     </div>
                   </li>
                 ))}
