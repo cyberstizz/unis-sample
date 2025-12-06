@@ -36,51 +36,64 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const fetchArtistData = async () => {
     setLoading(true);
     setError('');
+    console.log('🔍 Fetching artist data for ID:', artistId);
+    
     try {
-      // Fetch artist profile
+      // Fetch artist profile - FIXED: Use correct route
+      console.log('📡 Calling: GET /v1/users/profile/' + artistId);
       const artistRes = await apiCall({ 
         method: 'get', 
-        url: `/v1/users/artist/${artistId}` 
+        url: `/v1/users/profile/${artistId}` 
       });
       
       const artistData = artistRes.data;
+      console.log('✅ Artist profile loaded:', artistData);
+      
+      if (!artistData || !artistData.username) {
+        throw new Error('Artist data is missing required fields');
+      }
+      
       setArtist(artistData);
       setBio(artistData.bio || 'No bio available');
 
       // Fetch artist's songs
+      console.log('📡 Calling: GET /v1/media/songs/artist/' + artistId);
       const songsRes = await apiCall({ 
         method: 'get', 
         url: `/v1/media/songs/artist/${artistId}` 
       });
-      // FIXED: Ensure songs is always an array
-      const songsData = songsRes.data;
+      const songsData = songsRes.data || [];
+      console.log('✅ Songs loaded:', songsData);
       setSongs(Array.isArray(songsData) ? songsData : []);
 
       // Fetch artist's videos
+      console.log('📡 Calling: GET /v1/media/videos/artist/' + artistId);
       const videosRes = await apiCall({ 
         method: 'get', 
         url: `/v1/media/videos/artist/${artistId}` 
       });
-      // FIXED: Ensure videos is always an array
-      const videosData = videosRes.data;
+      const videosData = videosRes.data || [];
+      console.log('✅ Videos loaded:', videosData);
       setVideos(Array.isArray(videosData) ? videosData : []);
 
-      // ADDED: Fetch default song for play button
+      // Fetch default song
       try {
+        console.log('📡 Calling: GET /v1/users/' + artistId + '/default-song');
         const defaultSongRes = await apiCall({
           method: 'get',
           url: `/v1/users/${artistId}/default-song`
         });
+        console.log('✅ Default song loaded:', defaultSongRes.data);
         setDefaultSong(defaultSongRes.data);
-        console.log('Default song loaded:', defaultSongRes.data);
       } catch (err) {
-        console.warn('No default song available:', err);
+        console.warn('⚠️ No default song available');
         setDefaultSong(null);
       }
 
     } catch (err) {
-      console.error('Failed to load artist:', err);
-      setError('Failed to load artist details');
+      console.error('❌ Failed to load artist:', err);
+      console.error('❌ Error message:', err.message);
+      setError(err.message || 'Failed to load artist details');
     } finally {
       setLoading(false);
     }

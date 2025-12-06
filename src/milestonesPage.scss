@@ -225,6 +225,30 @@ $unis-silver: #918f8f;
   }
 }
 
+.milestone-caption {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(0, 74, 173, 0.9), rgba(0, 123, 255, 0.9));
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  h2 {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin: 0;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    
+    @media (max-width: 768px) {
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+    }
+  }
+}
+
 
 // Mobile
 @media (max-width: 600px) {

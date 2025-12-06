@@ -12,7 +12,7 @@ const LeaderboardsPage = () => {
   const navigate = useNavigate(); 
   const { playMedia } = useContext(PlayerContext); 
   const [location, setLocation] = useState('downtown-harlem');
-  const [genre, setGenre] = useState('rap-hiphop');
+  const [genre, setGenre] = useState('rap');
   const [category, setCategory] = useState('artist');
   const [interval, setInterval] = useState('daily');
   const [results, setResults] = useState([]);
@@ -189,7 +189,7 @@ const LeaderboardsPage = () => {
                 <option value="harlem-wide">Harlem-wide</option>
               </select>
               <select value={genre} onChange={(e) => setGenre(e.target.value)} className="filter-select">
-                <option value="rap-hiphop">Rap/Hip-Hop</option>
+                <option value="rap-">Rap</option>
                 <option value="rock">Rock</option>
                 <option value="pop">Pop</option>
               </select>

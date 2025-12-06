@@ -14,14 +14,88 @@ import songArtFour from './assets/songartworkfour.jpeg';
 import { GENRE_IDS, JURISDICTION_IDS } from './utils/idMappings';
 
 const MilestonesPage = () => {
-  const [location, setLocation] = useState('downtown-harlem');  // Fixed: Hyphen
-  const [genre, setGenre] = useState('rap-hiphop');
+  const [location, setLocation] = useState('downtown-harlem');
+  const [genre, setGenre] = useState('rap');
   const [category, setCategory] = useState('song');
   const [selectedDate, setSelectedDate] = useState('');
+  const [interval, setInterval] = useState('daily');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [results, setResults] = useState([]);
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+  // Helper to format the location name
+  const formatLocation = (loc) => {
+    return loc.split('-').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ').toUpperCase();
+  };
+
+  // Helper to format the genre name
+  const formatGenre = (g) => {
+    if (g === 'rap') return 'RAP';
+    return g.toUpperCase();
+  };
+
+  // Helper to format the category
+  const formatCategory = (cat) => {
+    return cat.toUpperCase();
+  };
+
+  // Helper to get interval text
+  const getIntervalText = (int) => {
+    const intervalMap = {
+      'daily': 'OF THE DAY',
+      'weekly': 'OF THE WEEK',
+      'monthly': 'OF THE MONTH',
+      'quarterly': 'OF THE QUARTER',
+      'midterm': 'OF THE MIDTERM',
+      'annual': 'OF THE YEAR'
+    };
+    return intervalMap[int] || 'OF THE DAY';
+  };
+
+  // Helper to format the date with day of week
+  const formatDateWithDay = (dateString) => {
+    const date = new Date(dateString);
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    const dayName = days[date.getDay()];
+    const monthName = months[date.getMonth()];
+    const dayNum = date.getDate();
+    const year = date.getFullYear();
+    
+    return `${dayName}, ${monthName} ${dayNum}, ${year}`;
+  };
+
+  // Generate the caption
+  const generateCaption = () => {
+    if (!selectedDate || results.length === 0) return '';
+    
+    const locationText = formatLocation(location);
+    const genreText = formatGenre(genre);
+    const categoryText = formatCategory(category);
+    const intervalText = getIntervalText(interval);
+    const dateText = formatDateWithDay(selectedDate);
+
+    
+    return <div>{locationText} {genreText} {categoryText} {intervalText}   
+              <div style={{color: "black"}}>{dateText}</div>   
+              </div>
+  };
+
+    // Navigation handlers
+  const handleArtistView = (id) => {
+    console.log('Navigating to artist page with ID:', id);
+    navigate(`/artist/${id}`);
+  };
+
+  const handleSongView = (id) => {
+    console.log('Navigating to song page with ID:', id);
+    navigate(`/song/${id}`);
+  };
 
   const handleView = async () => {
     if (!selectedDate) {
@@ -40,14 +114,14 @@ const MilestonesPage = () => {
         throw new Error('Invalid location—check idMappings.');
       }
 
-      console.log('Params:', { location, jurId, genre, genreId, type, date });  // Debug
+      console.log('Params:', { location, jurId, genre, genreId, type, date });
 
       const response = await apiCall({
         method: 'get',
         url: `/v1/awards/past?type=${type}&startDate=${date}&endDate=${date}&jurisdictionId=${jurId}&genreId=${genreId}`,
       });
 
-      const rawResults = response.data;  // List<Award>
+      const rawResults = response.data;
       const normalized = rawResults.map((award, i) => ({
         rank: i + 1,
         title: award.targetType === 'artist' ? award.user?.username : award.song?.title || 'Unknown',
@@ -77,6 +151,7 @@ const MilestonesPage = () => {
   const maxDate = yesterday.toISOString().split('T')[0];
 
   const winner = results[0];
+  const caption = generateCaption();
 
   return (
     <Layout backgroundImage={backimage}>
@@ -89,18 +164,26 @@ const MilestonesPage = () => {
           <section className="filter-card">
             <div className="filter-controls">
               <select value={location} onChange={(e) => setLocation(e.target.value)} className="filter-select">
-                <option value="downtown-harlem">Downtown Harlem</option>  // Fixed: Hyphen
+                <option value="downtown-harlem">Downtown Harlem</option>
                 <option value="uptown-harlem">Uptown Harlem</option>
                 <option value="harlem">Harlem</option>
               </select>
               <select value={genre} onChange={(e) => setGenre(e.target.value)} className="filter-select">
-                <option value="rap-hiphop">Rap/Hip-Hop</option>
+                <option value="rap">Rap</option>
                 <option value="rock">Rock</option>
                 <option value="pop">Pop</option>
               </select>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className="filter-select">
                 <option value="artist">Artist</option>
                 <option value="song">Song</option>
+              </select>
+              <select value={interval} onChange={(e) => setInterval(e.target.value)} className="filter-select">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="midterm">Midterm</option>
+                <option value="annual">Annual</option>
               </select>
               <input
                 type="date"
@@ -115,13 +198,18 @@ const MilestonesPage = () => {
             </div>
           </section>
 
+          {caption && (
+            <section className="milestone-caption">
+              <h2>{caption}</h2>
+            </section>
+          )}
+
           {winner && (
             <section className="winner-highlight">
               <div className="winner-title">{winner.title}</div>
               <div className="winner-artist">{winner.artist}</div>
               <div className="winner-jurisdiction">{winner.jurisdiction}</div>
               <img src={winner.artwork} alt={`${winner.title} artwork`} className="winner-artwork" />
-              <div className="winner-caption">“{winner.caption}”</div>
             </section>
           )}
 
