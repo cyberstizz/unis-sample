@@ -47,7 +47,6 @@ const AppLayout = () => {
           <Route path="/profile" element={<ArtistDashboard />} />
           <Route path="/milestones" element={<MilestonesPage />} />
           <Route path="/leaderboards" element={<Leaderboards />} />
-          <Route path="/find" element={<MapDemo />} />
           <Route path="/earnings" element={<Earnings />} />
           <Route path="/findpage" element={<FindPage />} />
           <Route path="/artistDashboard" element={<ArtistDashboard />} />

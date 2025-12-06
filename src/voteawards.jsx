@@ -12,7 +12,7 @@ const VoteAwards = () => {
   const navigate = useNavigate();
   const { playMedia } = useContext(PlayerContext);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState('rap-hiphop');
+  const [selectedGenre, setSelectedGenre] = useState('rap');
   const [selectedType, setSelectedType] = useState('artist');
   const [selectedInterval, setSelectedInterval] = useState('daily');
   const [selectedJurisdiction, setSelectedJurisdiction] = useState('harlem-wide');
@@ -35,7 +35,7 @@ const VoteAwards = () => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   const intervals = ['daily', 'weekly', 'monthly', 'quarterly', 'annual'];
-  const genres = ['rap-hiphop', 'rock', 'pop'];
+  const genres = ['rap', 'rock', 'pop'];
   const types = ['artist', 'song'];
   const jurisdictions = [
     { value: 'uptown-harlem', label: 'Uptown Harlem' },

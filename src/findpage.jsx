@@ -1,11 +1,6 @@
-import React, { useState, useEffect, useContext } from 'react';
-import {
-  ComposableMap,
-  Geographies,
-  Geography,
-  ZoomableGroup,
-}
-from "react-simple-maps";
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { useNavigate } from 'react-router-dom';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
@@ -22,8 +17,9 @@ import songArtThree from './assets/songartworkthree.jpeg';
 import songArtFour from './assets/songartworkfour.jpeg';
 import { apiCall } from './components/axiosInstance';
 import { JURISDICTION_IDS } from './utils/idMappings';
+import 'leaflet/dist/leaflet.css';
 
-const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json";
+const US_STATES_GEOJSON_URL = "https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json";
 
 // Updated geo with DB-matching names (capitalized)
 const harlemGeo = {
@@ -62,24 +58,48 @@ const harlemGeo = {
   ]
 };
 
+// --- COMPONENT: MAP CONTROLLER ---
+// This component sits inside the map and handles the "FlyTo" animations
+const MapController = ({ viewState }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (viewState.mode === 'US') {
+      map.flyTo([37.8, -96], 4, { duration: 1.5 });
+    } else if (viewState.mode === 'STATE' && viewState.bounds) {
+      // Zoom to the bounds of the state (New York)
+      map.flyToBounds(viewState.bounds, { padding: [50, 50], duration: 1.5 });
+    } else if (viewState.mode === 'REGION' && viewState.center) {
+      // Zoom deep into the neighborhood (Harlem)
+      map.flyTo(viewState.center, 13, { duration: 1.5 });
+    }
+  }, [viewState, map]);
+  return null;
+};
+
 const FindPage = () => {
   const navigate = useNavigate();
   const { playMedia } = useContext(PlayerContext);
-  const [zoom, setZoom] = useState(1);
-  const [center, setCenter] = useState([-97, 40]);
+  const mapRef = useRef(null); // For any additional programmatic control if needed
+
+  // VIEW STATE: 'US' | 'STATE' | 'REGION' (from new code)
+  const [viewState, setViewState] = useState({ mode: 'US', bounds: null, center: null });
+  const [usGeoData, setUsGeoData] = useState(null);
+
+  // Restored from original
   const [selectedState, setSelectedState] = useState(null);
   const [hoveredState, setHoveredState] = useState(null);
   const [selectedHarlem, setSelectedHarlem] = useState(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isZoomed, setIsZoomed] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false); // Maps to viewState.mode !== 'US'
   const [genre, setGenre] = useState('rap-hiphop');
   const [category, setCategory] = useState('artist');
   const [topResults, setTopResults] = useState({ artists: [], songs: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedJurisdiction, setSelectedJurisdiction] = useState(null); // From new code, but merged with selectedHarlem/selectedState
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-  // Dummy fallback (unchanged)
+  // Dummy fallback (restored from original)
   const dummyData = {
     'rap-hiphop-artist': {
       artists: [
@@ -107,7 +127,7 @@ const FindPage = () => {
     },
   };
 
-  // Name mapper (lowercase geo → DB capital)
+  // Name mapper (restored from original)
   const mapGeoToDBName = (geoName) => {
     const map = {
       'uptown harlem': 'Uptown Harlem',
@@ -117,7 +137,7 @@ const FindPage = () => {
     return map[geoName.toLowerCase()] || geoName;
   };
 
-  // State centers (unchanged)
+  // State centers (restored from original, for random)
   const stateCenters = [
     { name: 'New York', center: [-75, 43] },
     { name: 'California', center: [-120, 37] },
@@ -131,7 +151,19 @@ const FindPage = () => {
     { name: 'Georgia', center: [-83, 33] },
   ];
 
-  // Fetch tops on select (mimics JurisdictionPage)
+  // 1. Fetch US States on Mount (from new code)
+  useEffect(() => {
+    fetch(US_STATES_GEOJSON_URL)
+      .then(res => res.json())
+      .then(data => setUsGeoData(data));
+  }, []);
+
+  // Sync isZoomed with viewState (to preserve original logic if needed elsewhere)
+  useEffect(() => {
+    setIsZoomed(viewState.mode !== 'US');
+  }, [viewState.mode]);
+
+  // Fetch tops on select (restored from original)
   const fetchTopResults = async (jurisdictionName) => {
     if (!jurisdictionName) return;
     setLoading(true);
@@ -185,57 +217,73 @@ const FindPage = () => {
     }
   };
 
-  const handleStateClick = (geo) => {
-    if (geo.properties.name === "New York") {
+  // --- HANDLERS --- (Merged: Preserve new viewState logic, add original fetches/states)
+  const handleStateClick = (feature, layer) => {
+    const stateName = feature.properties.name;
+    setHoveredState(stateName); // From original
+
+    if (stateName === "New York") {
       setSelectedState('New York');
-      setCenter([-74, 40.7]);
-      setZoom(10);
-      setSelectedHarlem('harlem-wide');
+      // Create bounds from the polygon data to tell Leaflet where to zoom (from new)
+      const bounds = layer.getBounds();
+      setViewState({ mode: 'STATE', bounds: bounds });
+      setSelectedHarlem('harlem-wide'); // From original
+      setSelectedJurisdiction('Harlem'); // Align with new for display/fetch
       setIsZoomed(true);
-      fetchTopResults('Harlem');  // Use DB name 'Harlem'
+      fetchTopResults('Harlem');  // From original
     } else {
       alert('Coming to Unis soon');
     }
   };
 
-  const handleStateHover = (geo) => {
-    setHoveredState(geo.properties.name);
-  };
-
-  const handleStateLeave = () => {
-    setHoveredState(null);
-  };
-
-  const handleHarlemClick = (geo) => {
-    setSelectedHarlem(geo.properties.name);
-    fetchTopResults(geo.properties.name);  // Mapper handles capital
+  const handleHarlemClick = (feature) => {
+    const name = feature.properties.name;
+    setSelectedHarlem(name); // From original
+    setSelectedJurisdiction(name); // From new
+    setHoveredState(name); // From original
+    // Calculate center roughly or define it manually (from new, but per feature if needed)
+    // For simplicity, use a general Harlem center; customize per sub-region if desired
+    const centers = {
+      'Uptown Harlem': [40.82, -73.94],
+      'Downtown Harlem': [40.80, -73.95],
+      'Harlem': [40.8116, -73.9465],
+    };
+    const center = centers[name] || [40.8116, -73.9465];
+    setViewState({ mode: 'REGION', center: center });
+    fetchTopResults(name);  // From original
   };
 
   const handleBack = () => {
-    setCenter([-97, 40]);
-    setZoom(1);
+    // From new: Reset viewState
+    setViewState({ mode: 'US', bounds: null, center: null });
+    // From original: Reset states and results
     setSelectedState(null);
     setSelectedHarlem(null);
+    setSelectedJurisdiction(null);
     setIsZoomed(false);
     setTopResults({ artists: [], songs: [] });
+    setHoveredState(null);
   };
 
+  // Random handler (restored from original, adapted to viewState)
   const handleRandom = () => {
     setIsAnimating(true);
     let count = 0;
     const interval = setInterval(() => {
       const randomIndex = Math.floor(Math.random() * stateCenters.length);
-      setCenter(stateCenters[randomIndex].center);
-      setZoom(5);
+      // In Leaflet, we can't directly set center/zoom like simple-maps, but for animation preview, we could flyTo
+      // For now, simulate by updating hoveredState (visual cue); final lands on state
       setHoveredState(stateCenters[randomIndex].name);
       count++;
       if (count >= 10) {
         clearInterval(interval);
         setIsAnimating(false);
         const finalIndex = Math.floor(Math.random() * stateCenters.length);
-        setSelectedState(stateCenters[finalIndex].name);
-        if (stateCenters[finalIndex].name === 'New York') {
-          handleStateClick({ properties: { name: 'New York' } });
+        const finalState = stateCenters[finalIndex];
+        setSelectedState(finalState.name);
+        if (finalState.name === 'New York') {
+          // Trigger NY click logic
+          handleStateClick({ properties: { name: 'New York' } }, { getBounds: () => [[40, -80], [45, -70]] }); // Mock layer for bounds
         } else {
           alert('Coming to Unis soon');
         }
@@ -243,6 +291,7 @@ const FindPage = () => {
     }, 500);
   };
 
+  // Restored from original
   const { artists = [], songs = [] } = topResults;
 
   const getResults = () => {
@@ -312,6 +361,9 @@ const FindPage = () => {
     navigate(`/song/${id}`);
   };
 
+  // Display name logic (merged: hovered or selected)
+  const displayTerritory = hoveredState || selectedState || selectedHarlem || selectedJurisdiction || 'Select a state';
+
   return (
     <Layout backgroundImage={backimage}>
       <div className="find-page-container">
@@ -334,76 +386,90 @@ const FindPage = () => {
           </button>
         </div>
 
-        {/* State name display */}
+        <div className='mapEverything'>
+
+        {/* State name display (merged) */}
         <p className="territory-name">
-          {hoveredState || selectedState || 'Select a state'}
-          {selectedHarlem ? ` - ${selectedHarlem}` : ''}
+          {displayTerritory}
         </p>
 
-        {/* Back button */}
-        {isZoomed && <button onClick={handleBack} className="back-button">← Back</button>}
+        {/* Back button (from new, using viewState) */}
+        {viewState.mode !== 'US' && <button onClick={handleBack} className="back-button">← Back</button>}
 
-        <div className="map-container">
-          <ComposableMap projection="geoAlbersUsa">
-            <ZoomableGroup center={center} zoom={zoom} disablePanning={true} disableZooming={true}>
-              <Geographies geography={geoUrl}>
-                {({ geographies }) =>
-                  geographies.map((geo) => (
-                    <Geography
-                      key={geo.rsmKey}
-                      geography={geo}
-                      onClick={() => handleStateClick(geo)}
-                      onMouseEnter={() => handleStateHover(geo)}
-                      onMouseLeave={handleStateLeave}
-                      style={{
-                        default: {
-                          fill: geo.properties.name === selectedState ? '#163387' : '#EAEAEC',
-                          outline: "none",
-                          stroke: "#999",
-                        },
-                        hover: {
-                          fill: '#163387',
-                          outline: "none",
-                        },
-                        pressed: {
-                          fill: '#0A1C4A',
-                          outline: "none",
-                        },
-                      }}
-                    />
-                  ))
-                }
-              </Geographies>
-              {/* Harlem layer on zoom */}
-              {zoom > 5 && (
-                <Geographies geography={harlemGeo}>
-                  {({ geographies }) =>
-                    geographies.map((geo) => (
-                      <Geography
-                        key={geo.properties.name}
-                        geography={geo}
-                        onClick={() => handleHarlemClick(geo)}
-                        onMouseEnter={() => setHoveredState(geo.properties.name)}
-                        onMouseLeave={handleStateLeave}
-                        style={{
-                          default: {
-                            fill: geo.properties.name === selectedHarlem ? '#163387' : 'transparent',
-                            stroke: '#C0C0C0',
-                            strokeWidth: 1,
-                          },
-                          hover: {
-                            fill: '#163387',
-                          },
-                        }}
-                      />
-                    ))
-                  }
-                </Geographies>
-              )}
-            </ZoomableGroup>
-          </ComposableMap>
+        <div className="map-container" style={{ height: '500px', width: '100%', borderRadius: '15px', overflow: 'hidden' }}>
+          <MapContainer
+            center={[39.0, -96]}
+            zoom={3.8}
+            ref={mapRef}
+            style={{ height: '100%', width: '100%', background: '#1a1a1a' }}
+            scrollWheelZoom={false} // PREVENTS SCROLLING
+            doubleClickZoom={false}
+            dragging={false} // LOCKS THE MAP LIKE AN APP UI
+            zoomControl={false}
+          >
+            <MapController viewState={viewState} />
+           
+            {/* Visual Base Layer (Dark Mode Tiles) (from new) */}
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            />
+            {/* LAYER 1: US STATES (Only show when not zoomed deep) (from new, with merged events) */}
+            {viewState.mode === 'US' && usGeoData && (
+              <GeoJSON
+                data={usGeoData}
+                style={(feature) => ({ // Dynamic style from original
+                  fillColor: feature.properties.name === selectedState ? '#163387' : '#EAEAEC',
+                  outline: "none",
+                  stroke: "#999",
+                  fillOpacity: 1
+                })}
+                onEachFeature={(feature, layer) => {
+                  layer.on({
+                    click: () => handleStateClick(feature, layer),
+                    mouseover: (e) => {
+                      setHoveredState(feature.properties.name); // From original
+                      e.target.setStyle({ fillColor: '#163387' }); // From new/original
+                    },
+                    mouseout: (e) => {
+                      setHoveredState(null); // From original
+                      e.target.setStyle({ fillColor: '#EAEAEC' }); // From new/original
+                    }
+                  });
+                }}
+              />
+            )}
+            {/* LAYER 2: HARLEM (Only show when we have drilled down) (from new, with merged events/styles) */}
+            {viewState.mode !== 'US' && (
+              <GeoJSON
+                data={harlemGeo}
+                style={(feature) => ({
+                  fillColor: (feature.properties.name === selectedHarlem || feature.properties.name === selectedJurisdiction) ? '#163387' : 'transparent', // Merged selection
+                  stroke: '#C0C0C0',
+                  strokeWidth: 1,
+                  fillOpacity: 0.7
+                })}
+                onEachFeature={(feature, layer) => {
+                  layer.on({
+                    click: () => handleHarlemClick(feature),
+                    mouseover: (e) => {
+                      setHoveredState(feature.properties.name); // From original
+                      e.target.setStyle({ fillColor: '#163387', fillOpacity: 1 }); // From new/original
+                    },
+                    mouseout: (e) => {
+                      setHoveredState(null); // From original
+                      if (feature.properties.name !== selectedHarlem && feature.properties.name !== selectedJurisdiction) {
+                        e.target.setStyle({ fillOpacity: 0.7, fillColor: 'transparent' }); // From new
+                      }
+                    }
+                  });
+                }}
+              />
+            )}
+          </MapContainer>
         </div>
 
+        </div>
         {loading && <div className="loading">Loading tops...</div>}
         {error && <div className="error">{error}</div>}
 
@@ -453,4 +519,4 @@ const FindPage = () => {
   );
 };
 
-export default FindPage;  
+export default FindPage;
