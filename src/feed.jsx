@@ -255,7 +255,8 @@ const Feed = () => {
         <main className="feed">
           {/* Trending Carousel */}
           <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
-            <h2>Trending in {getJurisdictionDisplayName(jurisdictionId)}</h2>
+            {/* <h2>Trending in {getJurisdictionDisplayName(jurisdictionId)}</h2> */}
+            <h2>Trending</h2>
             <div className="carousel-items">
               {trending.map((item) => (
                 <div key={item.id} className="item-wrapper">

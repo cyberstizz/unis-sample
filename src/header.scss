@@ -86,14 +86,13 @@ $unis-silver: #918f8f;
 
     .option-box {
       padding: 5px 14px;
-      background: $unis-silver;
-      color: $unis-blue;
+      background-color: transparent;
+      border: solid 1px $unis-blue;     
       border-radius: 50px;
       cursor: pointer;
       transition: all 0.2s ease-in-out;
       font-size: 13px;
       font-weight: bold;
-      border: 2px;
 
       &:hover {
         background: #C0C0C0;

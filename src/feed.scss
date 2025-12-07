@@ -157,17 +157,19 @@ body {
 
     .option-box {
       padding: 5px 14px;
-      background: $unis-blue; 
-      color: $unis-silver; 
+      background-color: transparent;
+      border: solid 1px $unis-blue;   
       border-radius: 50px;
       cursor: pointer;
       transition: all 0.2s ease-in-out;
-      font-size: 13px;
+      font-size: 15px;
+      letter-spacing: 1px;
       font-weight: bold;
-      border: 2px;
+      font-family: monserrat;
 
       &:hover {
-        background: #C0C0C0;
+        background: $unis-blue;
+        color: wheat;
         transform: translateY(-2px);
       }
     }
@@ -195,8 +197,9 @@ body {
 
     h2 {
       color: $unis-blue;
-      font-size: 45px;
+      font-size: 38px;
       font-family: "Bitcount Grid Double", system-ui;
+      font-family: Montserrat;
       font-weight: 400;
       letter-spacing: 1.5px;
       font-style: normal;
@@ -204,7 +207,7 @@ body {
       position: relative;
       padding-bottom: 5px;
       margin-bottom: 15px;
-      border-bottom: solid 1px white;
+      border-bottom: solid 1px silver;
 
     /* Metallic effect with text-shadow */
     // text-shadow: 
@@ -225,6 +228,7 @@ body {
 
         display: flex;
         overflow-x: auto;
+        margin-top: 30px;
         gap: 20px; // Increase gap for separation
         display: flex;
         overflow-x: auto;
@@ -317,7 +321,8 @@ body {
   margin-top: 8px; // spacing between image and title
   text-align: center;
   font-size: 1.3rem;
-  color: $unis-blue;
+  color: white;
+  font-size: Inter;
 }
 
 
@@ -357,6 +362,7 @@ body {
     .item-artist{
       align-self: flex-start;
       padding-left: 1em;
+      color: gray;
     }
 
     .item-duration{

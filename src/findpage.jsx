@@ -475,7 +475,7 @@ const FindPage = () => {
 
         <div className="results-section">
           <div className="column">
-            <h2>Top Songs</h2>
+            <h2>Top Songs in {displayTerritory}</h2>
             <ul className="results-list">
               {displaySongs.slice(0, 3).map((item, index) => (
                 <li key={item.id || index} className="result-item">
@@ -495,7 +495,7 @@ const FindPage = () => {
             </ul>
           </div>
           <div className="column">
-            <h2>Top Artists</h2>
+            <h2>Top Artists in {displayTerritory}</h2>
             <ul className="results-list">
               {displayArtists.slice(0, 3).map((item, index) => (
                 <li key={item.id || index} className="result-item">
