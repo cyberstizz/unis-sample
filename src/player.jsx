@@ -7,76 +7,79 @@ import PlaylistManager from './playlistManager';
 import './player.scss';
 
 const Player = () => {
-  const { isExpanded, toggleExpand, currentMedia, next, prev } = useContext(PlayerContext);
+  // Get audioRef from context instead of creating a new one
+  const { 
+    isExpanded, 
+    toggleExpand, 
+    currentMedia, 
+    next, 
+    prev, 
+    audioRef,  // ← Use the context's audioRef
+    playlists, 
+    addToPlaylist, 
+    removeFromPlaylist, 
+    reorderPlaylist, 
+    loadPlaylist, 
+    playMedia 
+  } = useContext(PlayerContext);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0); 
   const [duration, setDuration] = useState(0); 
   const [isLiked, setIsLiked] = useState(false);
   const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
+  const [showPlaylistViewer, setShowPlaylistViewer] = useState(false);
+  const [viewerTracks, setViewerTracks] = useState([]); 
+  const [viewerTitle, setViewerTitle] = useState("Playlist");
 
-
-  const { playlists, addToPlaylist, removeFromPlaylist, reorderPlaylist, loadPlaylist, playMedia } = useContext(PlayerContext);
-// local state to show viewer
-const [showPlaylistViewer, setShowPlaylistViewer] = useState(false);
-const [viewerTracks, setViewerTracks] = useState([]); 
-const [viewerTitle, setViewerTitle] = useState("Playlist");
-
-  const mediaRef = useRef(null);
   const seekbarRef = useRef(null);
 
-// When opening viewer, derive tracks from playlists (use selected or default)
-const openViewerFor = (playlistId) => {
-  const pl = playlists?.find(p => p.id === playlistId) || playlists?.[0];
-  if (!pl) {
-    setViewerTracks([]);
-    setViewerTitle("Playlist");
-  } else {
-    // ensure items have required front-end shape (id,title,artist,artworkUrl,fileUrl,duration)
-    const normalized = (pl.tracks || []).map(t => ({
-      id: t.id ?? t.songId ?? Date.now() + Math.random(),
-      title: t.title ?? t.name ?? "Untitled",
-      artist: (t.artist && (t.artist.username || t.artist.displayName)) || t.artistName || "Unknown Artist",
-      artworkUrl: t.artworkUrl || t.artwork || "/assets/placeholder.jpg",
-      fileUrl: t.fileUrl || t.url || t.audioUrl || "",
-      duration: t.duration ?? t.length ?? 0
-    }));
-    setViewerTracks(normalized);
-    setViewerTitle(pl.name || "Playlist");
-  }
-  setShowPlaylistViewer(true);
-};
-
-
-  
-
+  const openViewerFor = (playlistId) => {
+    const pl = playlists?.find(p => p.id === playlistId) || playlists?.[0];
+    if (!pl) {
+      setViewerTracks([]);
+      setViewerTitle("Playlist");
+    } else {
+      const normalized = (pl.tracks || []).map(t => ({
+        id: t.id ?? t.songId ?? Date.now() + Math.random(),
+        title: t.title ?? t.name ?? "Untitled",
+        artist: (t.artist && (t.artist.username || t.artist.displayName)) || t.artistName || "Unknown Artist",
+        artworkUrl: t.artworkUrl || t.artwork || "/assets/placeholder.jpg",
+        fileUrl: t.fileUrl || t.url || t.audioUrl || "",
+        duration: t.duration ?? t.length ?? 0
+      }));
+      setViewerTracks(normalized);
+      setViewerTitle(pl.name || "Playlist");
+    }
+    setShowPlaylistViewer(true);
+  };
 
   // Handle media changes (new song selected)
   useEffect(() => {
-    if (currentMedia && mediaRef.current) {
-      const media = mediaRef.current;
+    if (currentMedia && audioRef.current) {
+      const media = audioRef.current;
       
-      // Reset time to 0 for new songs (this fixes the resume issue)
+      // Reset time to 0 for new songs
       media.currentTime = 0;
       setCurrentTime(0);
 
       const mediaUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
     
-    if (!mediaUrl) {
-      console.error('No valid media URL found in currentMedia:', currentMedia);
-      return;
-    }
+      if (!mediaUrl) {
+        console.error('No valid media URL found in currentMedia:', currentMedia);
+        return;
+      }
     
-    console.log('Setting media source:', mediaUrl);
+      console.log('Setting media source:', mediaUrl);
       
       // Set new source
-      media.src = currentMedia.url;
+      media.src = mediaUrl;
       
       // Listen for when media is ready to play, then auto-start
       const handleCanPlay = () => {
         media.play().catch((error) => {
           console.error('Auto-play failed:', error);
-          // Optionally, you could setIsPlaying(false) here if you want to reflect failures
         });
         setIsPlaying(true);
         media.removeEventListener('canplay', handleCanPlay);
@@ -85,16 +88,15 @@ const openViewerFor = (playlistId) => {
       media.addEventListener('canplay', handleCanPlay);
       media.load();
       
-      // Cleanup listener if component unmounts before canplay fires
       return () => {
         media.removeEventListener('canplay', handleCanPlay);
       };
     }
-  }, [currentMedia]);
+  }, [currentMedia, audioRef]);
 
   // Set up audio event listeners
   useEffect(() => {
-    const media = mediaRef.current;
+    const media = audioRef.current;
     if (!media) return;
 
     const handlePlay = () => setIsPlaying(true);
@@ -107,7 +109,7 @@ const openViewerFor = (playlistId) => {
     };
     const handleEnded = () => {
       setIsPlaying(false);
-      next(); // Auto-play next song
+      next();
     };
 
     media.addEventListener('play', handlePlay);
@@ -123,7 +125,7 @@ const openViewerFor = (playlistId) => {
       media.removeEventListener('loadedmetadata', handleLoadedMetadata);
       media.removeEventListener('ended', handleEnded);
     };
-  }, [next]);
+  }, [next, audioRef]);
 
   if (!currentMedia) return null;
 
@@ -132,7 +134,7 @@ const openViewerFor = (playlistId) => {
 
   const handlePlayPause = (e) => {
     e.stopPropagation();
-    const media = mediaRef.current;
+    const media = audioRef.current;
     
     if (media.paused) {
       media.play().catch(console.error);
@@ -166,14 +168,12 @@ const openViewerFor = (playlistId) => {
     toggleExpand();
   };
 
-  // Handle seeking from range input (expanded mode)
   const handleSeek = (e) => {
     const newTime = (e.target.value / 100) * duration;
-    mediaRef.current.currentTime = newTime;
+    audioRef.current.currentTime = newTime;
     setCurrentTime(newTime);
   };
 
-  // Handle seeking from mini-player seekbar click
   const handleSeekbarClick = (e) => {
     e.stopPropagation();
     const seekbar = seekbarRef.current;
@@ -182,11 +182,10 @@ const openViewerFor = (playlistId) => {
     const percentage = (clickX / rect.width) * 100;
     const newTime = (percentage / 100) * duration;
     
-    mediaRef.current.currentTime = newTime;
+    audioRef.current.currentTime = newTime;
     setCurrentTime(newTime);
   };
 
-  // Format time for display
   const formatTime = (seconds) => {
     if (isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -199,10 +198,10 @@ const openViewerFor = (playlistId) => {
       className={`player ${isExpanded ? 'expanded' : ''}`}
       style={isExpanded ? { backgroundImage: `url(${currentMedia.artwork || '/assets/placeholder.jpg'})` } : {}}
     >
-      {/* Single audio/video element that persists across mode changes */}
+      {/* Single audio/video element - now using context's audioRef */}
       {isVideo ? (
         <video 
-          ref={mediaRef} 
+          ref={audioRef}  
           className={isExpanded ? "media-element" : "hidden-media"}
           controls={isExpanded}
           style={isExpanded ? {} : { display: 'none' }}
@@ -211,7 +210,7 @@ const openViewerFor = (playlistId) => {
         </video>
       ) : (
         <audio 
-          ref={mediaRef} 
+          ref={audioRef}  
           className="hidden-media"
           style={{ display: 'none' }}
         >
@@ -248,7 +247,6 @@ const openViewerFor = (playlistId) => {
             <span>{formatTime(duration)}</span>
           </div>
 
-          {/* Seek bar in expanded */}
           <input
             type="range"
             value={progress}
@@ -275,7 +273,6 @@ const openViewerFor = (playlistId) => {
         </div>
       ) : (
         <>
-          {/* Interactive Seekbar at the top */}
           <div 
             className="seekbar" 
             ref={seekbarRef}
@@ -294,7 +291,6 @@ const openViewerFor = (playlistId) => {
           </div>
           
           <div className="mini-player">
-            {/* Left: Song Info */}
             <div className="song-info">
               <img 
                 src={currentMedia.artwork || '/assets/placeholder.jpg'} 
@@ -307,7 +303,6 @@ const openViewerFor = (playlistId) => {
               </div>
             </div>
             
-            {/* Middle: Controls */}
             <div className="mini-controls">
               <button onClick={handlePrev}>◀</button>
               <button onClick={handlePlayPause} className="play-pause-btn">
@@ -316,7 +311,6 @@ const openViewerFor = (playlistId) => {
               <button onClick={handleNext}>▶</button>
             </div>
             
-            {/* Right: Expand/Like/Download */}
             <div className="like-download">
               <button className="expand-button" onClick={handleExpand}>
                 <Maximize2 />
@@ -325,7 +319,6 @@ const openViewerFor = (playlistId) => {
               <button onClick={() => setShowPlaylistManager(true)}>
                 <Headphones />
               </button>
-
               <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
                 <Heart />
               </button>
@@ -335,38 +328,18 @@ const openViewerFor = (playlistId) => {
         </>
       )}
 
-       <PlaylistWizard
-          open={showPlaylistWizard}
-          onClose={() => setShowPlaylistWizard(false)}
-          selectedTrack={currentMedia}
-       />
-
-    {/* {showPlaylistViewer && (
-      <PlaylistViewer
-        tracks={viewerTracks}
-        title={viewerTitle}
-        onClose={() => setShowPlaylistViewer(false)}
-        onReorder={(newOrder) => {
-          setViewerTracks(newOrder);
-          // optional: reorderPlaylist(...)
-        }}
-        onRemove={(track) => {
-          setViewerTracks(prev => prev.filter(t => t.id !== track.id));
-          // optional: removeFromPlaylist(...)
-        }}
-        onSelect={(track) => playMedia(track)}
+      <PlaylistWizard
+        open={showPlaylistWizard}
+        onClose={() => setShowPlaylistWizard(false)}
+        selectedTrack={currentMedia}
       />
-    )} */}
 
       <PlaylistManager
         open={showPlaylistManager}
         onClose={() => setShowPlaylistManager(false)}
-     />
-
+      />
     </div>
-   
   );
-
 };
 
 export default Player;

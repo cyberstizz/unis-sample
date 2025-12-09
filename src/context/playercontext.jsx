@@ -1,15 +1,16 @@
-// src/context/PlayerContext.js (updated for backend integration)
-import React, { createContext, useState, useRef, useEffect } from 'react';
+// src/context/PlayerContext.js (updated for spacebar control)
+import React, { createContext, useState, useRef, useEffect, useCallback } from 'react';
 import playlistService from '../playlistService';
 
 export const PlayerContext = createContext();
 
 export const PlayerProvider = ({ children }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false); // NEW: Track play state
   const [currentMedia, setCurrentMedia] = useState(null);
-  const [playlist, setPlaylist] = useState([]); // Current playing queue
+  const [playlist, setPlaylist] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [playlists, setPlaylists] = useState([]); // All user playlists from backend
+  const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(false);
   const audioRef = useRef(null);
 
@@ -24,7 +25,6 @@ export const PlayerProvider = ({ children }) => {
       const data = await playlistService.getUserPlaylists();
       console.log('Raw playlist data from backend:', data);
       
-      // Transform backend data to frontend format
       const transformed = data.map(pl => ({
         id: pl.playlistId,
         playlistId: pl.playlistId,
@@ -32,7 +32,7 @@ export const PlayerProvider = ({ children }) => {
         tracks: pl.tracks.map(track => ({
           id: track.songId,
           songId: track.songId,
-          playlistItemId: track.playlistItemId, // Important for deletion and reordering
+          playlistItemId: track.playlistItemId,
           title: track.title,
           artist: track.artistName,
           artistName: track.artistName,
@@ -62,7 +62,11 @@ export const PlayerProvider = ({ children }) => {
     }
     if (audioRef.current) {
       audioRef.current.src = media.url || media.fileUrl;
-      audioRef.current.play();
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(err => {
+        console.error('Play failed:', err);
+      });
     }
   };
 
@@ -80,12 +84,73 @@ export const PlayerProvider = ({ children }) => {
     setCurrentMedia(playlist[prevIndex]);
   };
 
+  // Toggle play/pause
+  const togglePlayPause = useCallback(() => {
+    if (audioRef.current && currentMedia) {
+      if (audioRef.current.paused) {
+        audioRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch(err => {
+          console.error('Play failed:', err);
+        });
+      } else {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  }, [currentMedia]);
+
+  // NEW: Sync isPlaying state with audio events
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      // Auto-play next track if in a playlist
+      if (playlist.length > 1) {
+        next();
+      }
+    };
+
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [playlist]);
+
+  // Global spacebar listener
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Check if user is typing in an input/textarea
+      const isInputFocused = 
+        document.activeElement.tagName === 'INPUT' ||
+        document.activeElement.tagName === 'TEXTAREA' ||
+        document.activeElement.isContentEditable;
+
+      // Only trigger if NOT typing and spacebar is pressed
+      if ((e.key === ' ' || e.keyCode === 32) && !isInputFocused) {
+        e.preventDefault(); // Stop page scroll
+        togglePlayPause();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [togglePlayPause]);
+
   // Create new playlist (backend)
   const createPlaylist = async (name) => {
     try {
       await playlistService.createPlaylist(name);
-      // Cache is auto-invalidated by axios interceptor
-      await loadUserPlaylists(); // Reload all playlists
+      await loadUserPlaylists();
     } catch (error) {
       console.error('Failed to create playlist:', error);
       throw error;
@@ -96,7 +161,7 @@ export const PlayerProvider = ({ children }) => {
   const addToPlaylist = async (playlistId, track) => {
     try {
       await playlistService.addTrackToPlaylist(playlistId, track.songId || track.id);
-      await loadUserPlaylists(); // Reload all playlists
+      await loadUserPlaylists();
     } catch (error) {
       console.error('Failed to add track:', error);
       throw error;
@@ -107,7 +172,7 @@ export const PlayerProvider = ({ children }) => {
   const removeFromPlaylist = async (playlistId, playlistItemId) => {
     try {
       await playlistService.removeTrackFromPlaylist(playlistId, playlistItemId);
-      await loadUserPlaylists(); // Reload all playlists
+      await loadUserPlaylists();
     } catch (error) {
       console.error('Failed to remove track:', error);
       throw error;
@@ -119,7 +184,7 @@ export const PlayerProvider = ({ children }) => {
     try {
       const orderedIds = newOrderedTracks.map(t => t.playlistItemId);
       await playlistService.reorderPlaylist(playlistId, orderedIds);
-      await loadUserPlaylists(); // Reload all playlists
+      await loadUserPlaylists();
     } catch (error) {
       console.error('Failed to reorder playlist:', error);
       throw error;
@@ -130,7 +195,7 @@ export const PlayerProvider = ({ children }) => {
   const deletePlaylist = async (playlistId) => {
     try {
       await playlistService.deletePlaylist(playlistId);
-      await loadUserPlaylists(); // Reload all playlists
+      await loadUserPlaylists();
     } catch (error) {
       console.error('Failed to delete playlist:', error);
       throw error;
@@ -141,7 +206,7 @@ export const PlayerProvider = ({ children }) => {
   const updatePlaylistName = async (playlistId, newName) => {
     try {
       await playlistService.updatePlaylist(playlistId, newName);
-      await loadUserPlaylists(); // Reload all playlists
+      await loadUserPlaylists();
     } catch (error) {
       console.error('Failed to update playlist:', error);
       throw error;
@@ -166,6 +231,8 @@ export const PlayerProvider = ({ children }) => {
       audioRef,
       playlists, 
       loading,
+      isPlaying, // NEW: Expose play state
+      togglePlayPause, // NEW: Expose toggle function
       createPlaylist, 
       addToPlaylist, 
       removeFromPlaylist, 

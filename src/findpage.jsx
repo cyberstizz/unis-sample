@@ -367,20 +367,20 @@ const FindPage = () => {
   return (
     <Layout backgroundImage={backimage}>
       <div className="find-page-container">
-        <header className="find-page-header">
+        {/* <header className="find-page-header">
           <h1>Search for Artists or Songs</h1>
-        </header>
+        </header> */}
 
-        <div className="filters">
-          <select value={genre} onChange={(e) => setGenre(e.target.value)} className="filter-select">
-            <option value="rap-hiphop">Rap/Hip-Hop</option>
+        <div className="findFilters">
+          <select value={genre} onChange={(e) => setGenre(e.target.value)} className="findfilter-selectt">
+            <option value="rap-hiphop">Rap</option>
             <option value="rock">Rock</option>
             <option value="pop">Pop</option>
           </select>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="filter-select">
+          {/* <select value={category} onChange={(e) => setCategory(e.target.value)} className="filter-select">
             <option value="artist">Artists</option>
             <option value="song">Songs</option>
-          </select>
+          </select> */}
           <button onClick={handleRandom} disabled={isAnimating || loading} className="random-button">
             {isAnimating ? 'Spinning...' : 'Random'}
           </button>
@@ -396,55 +396,74 @@ const FindPage = () => {
         {/* Back button (from new, using viewState) */}
         {viewState.mode !== 'US' && <button onClick={handleBack} className="back-button">← Back</button>}
 
-        <div className="map-container" style={{ height: '500px', width: '100%', borderRadius: '15px', overflow: 'hidden' }}>
+        <div className="map-container" style={{ width: '100%', borderRadius: '15px', overflow: 'hidden' }}>
           <MapContainer
             center={[39.0, -96]}
             zoom={3.8}
             ref={mapRef}
-            style={{ height: '100%', width: '100%', background: '#1a1a1a' }}
-            scrollWheelZoom={false} // PREVENTS SCROLLING
+            style={{ width: '100%' }}
+            scrollWheelZoom={false}
             doubleClickZoom={false}
-            dragging={false} // LOCKS THE MAP LIKE AN APP UI
+            dragging={false} 
             zoomControl={false}
+            attributionControl={false} // REMOVES THE COPYRIGHT TEXT
           >
             <MapController viewState={viewState} />
            
-            {/* Visual Base Layer (Dark Mode Tiles) (from new) */}
-            <TileLayer
+            {/* Visual Base Layer (Dark Mode Tiles) RESTORED BUT HIDDEN ATTRIBUTION */}
+             <TileLayer
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            />
-            {/* LAYER 1: US STATES (Only show when not zoomed deep) (from new, with merged events) */}
+            /> 
+
+            {/* LAYER 1: US STATES */}
             {viewState.mode === 'US' && usGeoData && (
               <GeoJSON
                 data={usGeoData}
-                style={(feature) => ({ // Dynamic style from original
-                  fillColor: feature.properties.name === selectedState ? '#163387' : '#EAEAEC',
-                  outline: "none",
-                  stroke: "#999",
-                  fillOpacity: 1
-                })}
+                style={(feature) => {
+                  const isSelected = feature.properties.name === selectedState;
+                  return {
+                    fillColor: isSelected ? '#163387' : '#EAEAEC',
+                    fillOpacity: 1,       
+                    color: isSelected ? '#FFFFFF' : '#999', // White border if selected       
+                    weight: isSelected ? 2 : 1
+                  };
+                }}
                 onEachFeature={(feature, layer) => {
                   layer.on({
                     click: () => handleStateClick(feature, layer),
                     mouseover: (e) => {
-                      setHoveredState(feature.properties.name); // From original
-                      e.target.setStyle({ fillColor: '#163387' }); // From new/original
+                      setHoveredState(feature.properties.name);
+                      const layer = e.target;
+                      layer.setStyle({ 
+                        fillColor: '#163387',
+                        color: '#163387',     
+                        weight: 2
+                      }); 
+                      layer.bringToFront(); // Ensures the border sits on top of neighbors
                     },
                     mouseout: (e) => {
-                      setHoveredState(null); // From original
-                      e.target.setStyle({ fillColor: '#EAEAEC' }); // From new/original
+                      setHoveredState(null); 
+                      const layer = e.target;
+                      // Logic: If this is the SELECTED state, keep it Blue/White. 
+                      // If it's NOT selected, turn it back to Gray/Silver.
+                      const isSelected = feature.properties.name === selectedState;
+                      layer.setStyle({ 
+                        fillColor: isSelected ? '#163387' : '#EAEAEC',
+                        color: isSelected ? '#FFFFFF' : '#999',
+                        weight: isSelected ? 2 : 1
+                      }); 
                     }
                   });
                 }}
               />
             )}
-            {/* LAYER 2: HARLEM (Only show when we have drilled down) (from new, with merged events/styles) */}
+            
+            {/* LAYER 2: HARLEM */}
             {viewState.mode !== 'US' && (
               <GeoJSON
                 data={harlemGeo}
                 style={(feature) => ({
-                  fillColor: (feature.properties.name === selectedHarlem || feature.properties.name === selectedJurisdiction) ? '#163387' : 'transparent', // Merged selection
+                  fillColor: (feature.properties.name === selectedHarlem || feature.properties.name === selectedJurisdiction) ? '#163387' : 'transparent', 
                   stroke: '#C0C0C0',
                   strokeWidth: 1,
                   fillOpacity: 0.7
@@ -453,13 +472,15 @@ const FindPage = () => {
                   layer.on({
                     click: () => handleHarlemClick(feature),
                     mouseover: (e) => {
-                      setHoveredState(feature.properties.name); // From original
-                      e.target.setStyle({ fillColor: '#163387', fillOpacity: 1 }); // From new/original
+                      setHoveredState(feature.properties.name);
+                      e.target.setStyle({ fillColor: '#163387', fillOpacity: 1 });
                     },
                     mouseout: (e) => {
-                      setHoveredState(null); // From original
-                      if (feature.properties.name !== selectedHarlem && feature.properties.name !== selectedJurisdiction) {
-                        e.target.setStyle({ fillOpacity: 0.7, fillColor: 'transparent' }); // From new
+                      setHoveredState(null);
+                      // Check if selected before resetting
+                      const isSelected = (feature.properties.name === selectedHarlem || feature.properties.name === selectedJurisdiction);
+                      if (!isSelected) {
+                        e.target.setStyle({ fillOpacity: 0.7, fillColor: 'transparent' });
                       }
                     }
                   });
@@ -474,6 +495,7 @@ const FindPage = () => {
         {error && <div className="error">{error}</div>}
 
         <div className="results-section">
+          {/* Results lists... */}
           <div className="column">
             <h2>Top Songs in {displayTerritory}</h2>
             <ul className="results-list">

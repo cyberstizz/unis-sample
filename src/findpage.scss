@@ -11,6 +11,7 @@ $unis-blue: #163387;
 
 .find-page-container > * {
   margin-left: 230px;
+  padding-top: 1px;
 }
 
 .findpageheader{
@@ -18,9 +19,11 @@ $unis-blue: #163387;
 }
 
 .find-page-header{
-  margin: 0; 
-  padding: 0; 
+  margin: 0 auto;
   text-align: center;
+  width: 50%;
+  margin-left: 370px;
+  margin-top: 2px;
 
   h1 {
     margin: 0 0 7px 0; 
@@ -29,15 +32,35 @@ $unis-blue: #163387;
   }
 }
 
+
+.findFilters{
+  align-items: center;
+  align-self: center;
+  align-content: center;
+  justify-items: center;
+  justify-content: center;
+  width: 30%;
+  margin-left: 300px;
+  margin-bottom: 10px;
+}
+
+.findfilter-select{
+  border-radius: 8px;
+  margin-right: 10px;
+  width: 25%;
+}
+
+
 .mapEverything{
   display: flex;
   flex-direction: column;
-  gap: 5%;
   width: 50vw;
   align-items: center;
   justify-items: center;
   align-content: center;
   justify-content: center;
+  border-top: solid 1px silver;
+  padding: 1px;
 }
 
 .leaflet-container {
@@ -53,10 +76,10 @@ $unis-blue: #163387;
 .map-container {
   width: 100%; 
   max-width: 900px; 
-  height: 600px;    
+  height: 420px;    
   border-radius: 12px;
   overflow: hidden;
-  margin-top: 20px;
+  margin-top: 5px;
   border: solid .2px silver; 
   position: relative; 
   z-index: 1;
@@ -64,14 +87,22 @@ $unis-blue: #163387;
   align-content: center;
   justify-content: center;
   justify-items: center;
+  background-color: transparent;
+  background: black;
+
+
+  :hover{
+    border: #163387;
+    fill: #163387;
+  }
 }
 
 .territory-name {
   text-align: center;
   color: $unis-blue;
   font-size: 40px;
-  margin-bottom: -30px;
   font-family: "Bitcount Grid Double", system-ui;
+  margin: 0 auto;
 }
 
 .back-button {

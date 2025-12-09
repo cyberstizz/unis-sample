@@ -26,7 +26,6 @@ const LeaderboardsPage = () => {
     return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
   };
 
-  // FIXED: handlePlay now receives full media object
   const handlePlay = async (media) => {
     console.log('handlePlay called with:', media);
 
