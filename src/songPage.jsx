@@ -17,8 +17,23 @@ const SongPage = () => {
   const [comments, setComments] = useState([]);
   const [showVotingWizard, setShowVotingWizard] = useState(false); 
   const [selectedNominee, setSelectedNominee] = useState(null);
+  const [userId, setUserId] = useState(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            setUserId(payload.userId);
+            console.log('User ID extracted from token:', payload.userId); // Debug log
+          } catch (err) {
+            console.error('Failed to get userId from token:', err);
+          }
+        }
+      }, []);
+
 
   useEffect(() => {
     fetchSongData();

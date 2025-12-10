@@ -141,26 +141,41 @@ const VoteAwards = () => {
     await fetchNominees();
   };
 
-  const handlePlaySong = (nominee) => {
-    if (nominee.type === 'song' && nominee.mediaUrl) {
-      playMedia(
-        {
-          type: 'song',
-          url: buildUrl(nominee.mediaUrl),
-          title: nominee.name,
-          artist: nominee.artist,
-          artwork: buildUrl(nominee.imageUrl),
-        },
-        [{
-          type: 'song',
-          url: buildUrl(nominee.mediaUrl),
-          title: nominee.name,
-          artist: nominee.artist,
-          artwork: buildUrl(nominee.imageUrl),
-        }]
-      );
-    }
-  };
+  const handlePlaySong = async (nominee) => {
+      if (nominee.type === 'song' && nominee.mediaUrl) {
+        // Play the song
+        playMedia(
+          {
+            type: 'song',
+            url: buildUrl(nominee.mediaUrl),
+            title: nominee.name,
+            artist: nominee.artist,
+            artwork: buildUrl(nominee.imageUrl),
+          },
+          [{
+            type: 'song',
+            url: buildUrl(nominee.mediaUrl),
+            title: nominee.name,
+            artist: nominee.artist,
+            artwork: buildUrl(nominee.imageUrl),
+          }]
+        );
+
+        // Track the play
+        if (nominee.id && userId) {
+          try {
+            const endpoint = `/v1/media/song/${nominee.id}/play?userId=${userId}`;
+            console.log('Tracking song play:', { endpoint, songId: nominee.id, userId });
+            await apiCall({ method: 'post', url: endpoint });
+            console.log('Song play tracked successfully');
+          } catch (err) {
+            console.error('Failed to track song play:', err);
+          }
+        } else {
+          console.warn('Could not track play - missing nominee.id or userId');
+        }
+      }
+    };
 
   const handleNomineeClick = (nominee) => {
     if (nominee.type === 'artist') {
@@ -175,48 +190,58 @@ const VoteAwards = () => {
 
 
   const handlePlayArtistDefault = async (nominee) => {
-    try {
-      const response = await apiCall({
-        method: 'get',
-        url: `/v1/users/${nominee.id}/default-song`,  // Your endpoint
-      });
-      const defaultSong = response.data;  // Assumes { song: { title, fileUrl, artworkUrl } } or direct { title, fileUrl, ... }
+      let trackingSongId = null;
 
-      let playData;
-      let queue = [];
-
-      if (defaultSong?.fileUrl) {
-        // Use default song
-        playData = {
-          type: 'default-song',
-          url: `${API_BASE_URL}${defaultSong.fileUrl}`,
-          title: defaultSong.title || `${nominee.name}'s Default Track`,
-          artist: nominee.name,
-          artwork: buildUrl(defaultSong.artworkUrl),
-        };
-      } else {
-        // Fallback: Fetch/play sample song (add /v1/media/sample-song endpoint if needed, or hardcode a URL for MVP)
-        const sampleResponse = await apiCall({
+      try {
+        const response = await apiCall({
           method: 'get',
-          url: '/v1/media/sample-song',  // New simple endpoint returning { title: 'Sample', fileUrl: '/uploads/sample.mp3', ... }
+          url: `/v1/users/${nominee.id}/default-song`,
         });
-        playData = {
-          type: 'sample-song',
-          url: buildUrl(sampleResponse.data.fileUrl),
-          title: sampleResponse.data.title || 'Sample Track',
-          artist: `${nominee.name} (Sample)`,
-          artwork: buildUrl(sampleResponse.data.artworkUrl),
-        };
+        const defaultSong = response.data;
+
+        let playData;
+        let queue = [];
+
+        if (defaultSong?.fileUrl) {
+          // Use default song
+          playData = {
+            type: 'default-song',
+            url: `${API_BASE_URL}${defaultSong.fileUrl}`,
+            title: defaultSong.title || `${nominee.name}'s Default Track`,
+            artist: nominee.name,
+            artwork: buildUrl(defaultSong.artworkUrl),
+          };
+
+          // Save the song ID for tracking
+          trackingSongId = defaultSong.songId;
+
+          queue = [playData];
+          playMedia(playData, queue);
+
+          // Track the play
+          if (trackingSongId && userId) {
+            try {
+              const endpoint = `/v1/media/song/${trackingSongId}/play?userId=${userId}`;
+              console.log('Tracking artist default song play:', { endpoint, songId: trackingSongId, userId });
+              await apiCall({ method: 'post', url: endpoint });
+              console.log('Artist default song play tracked successfully');
+            } catch (err) {
+              console.error('Failed to track artist default song play:', err);
+            }
+          } else {
+            console.warn('Could not track play - missing songId or userId');
+          }
+        } else {
+          // Fallback: No default song
+          console.warn('No default song found for artist:', nominee.name);
+          alert(`${nominee.name} has not set a default song yet.`);
+          return; // Don't track sample plays
+        }
+      } catch (err) {
+        console.error('Failed to fetch/play default song:', err);
+        alert('Could not load artist\'s song.');
       }
-
-      queue = [playData];  // Single-item queue like songs
-
-      playMedia(playData, queue);
-    } catch (err) {
-      console.error('Failed to fetch/play default song:', err);
-      // Optional: Toast/error message to user
-    }
-  };
+    };
 
 
 

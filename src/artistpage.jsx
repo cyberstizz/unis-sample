@@ -21,6 +21,8 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const [showVotingWizard, setShowVotingWizard] = useState(false);
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [defaultSong, setDefaultSong] = useState(null);
+  const [userId, setUserId] = useState(null);
+  
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -29,6 +31,21 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
   };
 
+
+
+    useEffect(() => {
+          const token = localStorage.getItem('token');
+          if (token) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              setUserId(payload.userId);
+              console.log('User ID extracted from token:', payload.userId); // Debug log
+            } catch (err) {
+              console.error('Failed to get userId from token:', err);
+            }
+          }
+        }, []);
+
   useEffect(() => {
     fetchArtistData();
   }, [artistId]);
@@ -36,18 +53,18 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const fetchArtistData = async () => {
     setLoading(true);
     setError('');
-    console.log('🔍 Fetching artist data for ID:', artistId);
+    console.log('Fetching artist data for ID:', artistId);
     
     try {
       // Fetch artist profile - FIXED: Use correct route
-      console.log('📡 Calling: GET /v1/users/profile/' + artistId);
+      console.log('Calling: GET /v1/users/profile/' + artistId);
       const artistRes = await apiCall({ 
         method: 'get', 
         url: `/v1/users/profile/${artistId}` 
       });
       
       const artistData = artistRes.data;
-      console.log('✅ Artist profile loaded:', artistData);
+      console.log('Artist profile loaded:', artistData);
       
       if (!artistData || !artistData.username) {
         throw new Error('Artist data is missing required fields');
@@ -57,42 +74,42 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       setBio(artistData.bio || 'No bio available');
 
       // Fetch artist's songs
-      console.log('📡 Calling: GET /v1/media/songs/artist/' + artistId);
+      console.log('Calling: GET /v1/media/songs/artist/' + artistId);
       const songsRes = await apiCall({ 
         method: 'get', 
         url: `/v1/media/songs/artist/${artistId}` 
       });
       const songsData = songsRes.data || [];
-      console.log('✅ Songs loaded:', songsData);
+      console.log('Songs loaded:', songsData);
       setSongs(Array.isArray(songsData) ? songsData : []);
 
       // Fetch artist's videos
-      console.log('📡 Calling: GET /v1/media/videos/artist/' + artistId);
+      console.log('Calling: GET /v1/media/videos/artist/' + artistId);
       const videosRes = await apiCall({ 
         method: 'get', 
         url: `/v1/media/videos/artist/${artistId}` 
       });
       const videosData = videosRes.data || [];
-      console.log('✅ Videos loaded:', videosData);
+      console.log('Videos loaded:', videosData);
       setVideos(Array.isArray(videosData) ? videosData : []);
 
       // Fetch default song
       try {
-        console.log('📡 Calling: GET /v1/users/' + artistId + '/default-song');
+        console.log('Calling: GET /v1/users/' + artistId + '/default-song');
         const defaultSongRes = await apiCall({
           method: 'get',
           url: `/v1/users/${artistId}/default-song`
         });
-        console.log('✅ Default song loaded:', defaultSongRes.data);
+        console.log('Default song loaded:', defaultSongRes.data);
         setDefaultSong(defaultSongRes.data);
       } catch (err) {
-        console.warn('⚠️ No default song available');
+        console.warn('No default song available');
         setDefaultSong(null);
       }
 
     } catch (err) {
-      console.error('❌ Failed to load artist:', err);
-      console.error('❌ Error message:', err.message);
+      console.error('Failed to load artist:', err);
+      console.error('Error message:', err.message);
       setError(err.message || 'Failed to load artist details');
     } finally {
       setLoading(false);
