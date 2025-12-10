@@ -79,6 +79,7 @@ const MapController = ({ viewState }) => {
 const FindPage = () => {
   const navigate = useNavigate();
   const { playMedia } = useContext(PlayerContext);
+  const [userId, setUserId] = useState(null);
   const mapRef = useRef(null); // For any additional programmatic control if needed
 
   // VIEW STATE: 'US' | 'STATE' | 'REGION' (from new code)
@@ -150,6 +151,21 @@ const FindPage = () => {
     { name: 'Ohio', center: [-82, 40] },
     { name: 'Georgia', center: [-83, 33] },
   ];
+
+
+  // Now all the useEffects starting with the user
+  useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            setUserId(payload.userId);
+            console.log('User ID extracted from token:', payload.userId); // Debug log
+          } catch (err) {
+            console.error('Failed to get userId from token:', err);
+          }
+        }
+      }, []);
 
   // 1. Fetch US States on Mount (from new code)
   useEffect(() => {
@@ -307,51 +323,96 @@ const FindPage = () => {
   const { artists: displayArtists, songs: displaySongs } = getResults();
 
   const handlePlay = async (media) => {
-    // If it's a song with fileUrl, play it directly
-    if (media.fileUrl) {
-      console.log('Playing song directly:', media.title, media.fileUrl);  // Debug log
-      playMedia(
-        { type: 'song', url: media.fileUrl, title: media.title || media.name, artist: media.artist || media.name, artwork: media.artwork },
-        []
-      );
-      return;  // Exit early
-    }
-    // If it's an artist, fetch and play default song
-    else if (media.id && media.name) {  // Artist check (has id/name, no fileUrl)
-      console.log('Fetching default for artist:', media.name, media.id);  // Debug
-      try {
-        const response = await apiCall({
-          method: 'get',
-          url: `/v1/users/${media.id}/default-song`,
-        });
-        const defaultSong = response.data;  // Full Song entity
-        if (defaultSong && defaultSong.fileUrl) {
-          console.log('Playing default song:', defaultSong.title, `${API_BASE_URL}${defaultSong.fileUrl}`);
+        let trackingId = null;
+        let trackingType = null;
+
+        // If it's a song with fileUrl, play it directly
+        if (media.fileUrl) {
+          console.log('Playing song directly:', media.title, media.fileUrl);
+          
           playMedia(
             { 
-              type: 'default-song', 
-              url: `${API_BASE_URL}${defaultSong.fileUrl}`, 
-              title: defaultSong.title, 
-              artist: media.name, 
-              artwork: defaultSong.artworkUrl ? `${API_BASE_URL}${defaultSong.artworkUrl}` : media.artwork 
+              type: 'song', 
+              url: media.fileUrl, 
+              title: media.title || media.name, 
+              artist: media.artist || media.name, 
+              artwork: media.artwork 
             },
             []
           );
-          return;  // Exit early
-        } else {
-          console.warn('No default song found for artist');
+          
+          // Track this play
+          trackingId = media.id || media.songId;
+          trackingType = 'song';
         }
-      } catch (err) {
-        console.error('Default song fetch failed:', err);
-      }
-    }
-    // Fallback to sample only if no song/default available
-    console.warn('Falling back to sample song');
-    playMedia(
-      { type: 'song', url: sampleSong, title: media.title || media.name, artist: media.artist || media.name, artwork: media.artwork },
-      []
-    );
-  };
+        // If it's an artist, fetch and play default song
+        else if (media.id && media.name) {
+          console.log('Fetching default for artist:', media.name, media.id);
+          try {
+            const response = await apiCall({
+              method: 'get',
+              url: `/v1/users/${media.id}/default-song`,
+            });
+            const defaultSong = response.data;
+            
+            if (defaultSong && defaultSong.fileUrl) {
+              console.log('Playing default song:', defaultSong.title, `${API_BASE_URL}${defaultSong.fileUrl}`);
+              
+              playMedia(
+                { 
+                  type: 'default-song', 
+                  url: `${API_BASE_URL}${defaultSong.fileUrl}`, 
+                  title: defaultSong.title, 
+                  artist: media.name, 
+                  artwork: defaultSong.artworkUrl ? `${API_BASE_URL}${defaultSong.artworkUrl}` : media.artwork 
+                },
+                []
+              );
+              
+              // Track this play
+              trackingId = defaultSong.songId;
+              trackingType = 'song';
+            } else {
+              console.warn('No default song found for artist');
+              return; // Exit without tracking
+            }
+          } catch (err) {
+            console.error('Default song fetch failed:', err);
+            return; // Exit without tracking
+          }
+        }
+        // Fallback to sample only if no song/default available
+        else {
+          console.warn('Falling back to sample song');
+          playMedia(
+            { 
+              type: 'song', 
+              url: sampleSong, 
+              title: media.title || media.name, 
+              artist: media.artist || media.name, 
+              artwork: media.artwork 
+            },
+            []
+          );
+          return; 
+        }
+
+        if (trackingId && trackingType && userId) {
+          try {
+            const endpoint = trackingType === 'song' 
+              ? `/v1/media/song/${trackingId}/play?userId=${userId}`
+              : `/v1/media/video/${trackingId}/play?userId=${userId}`;
+            
+            console.log('Tracking play:', { endpoint, trackingId, userId }); 
+            await apiCall({ method: 'post', url: endpoint });
+            console.log('Play tracked successfully for:', trackingId);
+          } catch (err) {
+            console.error('Failed to track play:', err);
+          }
+        } else {
+          console.warn('Could not track play - missing data:', { trackingId, trackingType, userId });
+        }
+      };
 
   const handleArtistView = (id) => {
     navigate(`/artist/${id}`);
