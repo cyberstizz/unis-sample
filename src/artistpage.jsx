@@ -33,7 +33,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
 
 
-    useEffect(() => {
+  useEffect(() => {
           const token = localStorage.getItem('token');
           if (token) {
             try {
@@ -150,25 +150,44 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     setShowVotingWizard(true);
   };
 
-  // ADDED: Handle playing default song
-  const handlePlayDefault = () => {
-    if (defaultSong && defaultSong.fileUrl) {
-      const fullUrl = buildUrl(defaultSong.fileUrl);
-      console.log('Playing default song:', defaultSong.title, fullUrl);
-      playMedia(
-        { 
-          type: 'song', 
-          url: fullUrl, 
-          title: defaultSong.title, 
-          artist: artist.username, 
-          artwork: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl)
-        },
-        []
-      );
-    } else {
-      alert('No default song available for this artist');
-    }
-  };
+  //Handle playing default song
+  const handlePlayDefault = async () => {
+      if (defaultSong && defaultSong.fileUrl) {
+        const fullUrl = buildUrl(defaultSong.fileUrl);
+        console.log('Playing default song:', defaultSong.title, fullUrl);
+        
+        // Play the song
+        playMedia(
+          { 
+            type: 'song', 
+            url: fullUrl, 
+            title: defaultSong.title, 
+            artist: artist.username, 
+            artwork: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl)
+          },
+          []
+        );
+
+        // Track the play
+        if (defaultSong.songId && userId) {
+          try {
+            const endpoint = `/v1/media/song/${defaultSong.songId}/play?userId=${userId}`;
+            console.log('Tracking default song play:', { endpoint, songId: defaultSong.songId, userId });
+            await apiCall({ method: 'post', url: endpoint });
+            console.log('Default song play tracked successfully');
+          } catch (err) {
+            console.error('Failed to track default song play:', err);
+          }
+        } else {
+          console.warn('Could not track play - missing songId or userId:', { 
+            songId: defaultSong.songId, 
+            userId 
+          });
+        }
+      } else {
+        alert('No default song available for this artist');
+      }
+    };
 
   const handleSongClick = (songId) => {
     navigate(`/song/${songId}`);

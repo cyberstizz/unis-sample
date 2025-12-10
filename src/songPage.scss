@@ -16,6 +16,9 @@ $button-hover: #D3D3D3;
   background: transparent;
   color: $text-gray;
   padding: 20px;
+  margin-left: 200px;
+  justify-self: center;
+  width: 70vw;
 }
 
 .main-content-card {
@@ -223,6 +226,12 @@ $button-hover: #D3D3D3;
 
 // Mobile adjustments
 @media (max-width: 600px) {
+
+
+  .song-page-container{
+    margin-left: 8px;
+    width: 85vw;
+  }
   .main-content-card {
     padding: 10px;
   }

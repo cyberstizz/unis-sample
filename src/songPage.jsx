@@ -100,24 +100,38 @@ useEffect(() => {
     setShowVotingWizard(true);
   };
 
-  const handlePlay = () => {
-    playMedia(
-      { 
-        type: 'song', 
-        url: song.url, 
-        title: song.title, 
-        artist: song.artist, 
-        artwork: song.artwork 
-      },
-      [{ 
-        type: 'song', 
-        url: song.url, 
-        title: song.title, 
-        artist: song.artist, 
-        artwork: song.artwork 
-      }]
-    );
-  };
+  const handlePlay = async () => {
+      playMedia(
+        { 
+          type: 'song', 
+          url: song.url, 
+          title: song.title, 
+          artist: song.artist, 
+          artwork: song.artwork 
+        },
+        [{ 
+          type: 'song', 
+          url: song.url, 
+          title: song.title, 
+          artist: song.artist, 
+          artwork: song.artwork 
+        }]
+      );
+
+      // Track the play
+      if (song.id && userId) {
+        try {
+          const endpoint = `/v1/media/song/${song.id}/play?userId=${userId}`;
+          console.log('Tracking song play:', { endpoint, songId: song.id, userId });
+          await apiCall({ method: 'post', url: endpoint });
+          console.log('Song play tracked successfully');
+        } catch (err) {
+          console.error('Failed to track song play:', err);
+        }
+      } else {
+        console.warn('Could not track play - missing song.id or userId:', { songId: song.id, userId });
+      }
+    };
 
   const handleCommentSubmit = (e) => {
     e.preventDefault();
