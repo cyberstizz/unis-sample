@@ -287,9 +287,9 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           method: 'post', 
           url: `/v1/media/song/${song.id}/play?userId=${userId}` 
         });
-        console.log('✅ Song play tracked');
+        console.log(`Song play tracked for ${song.id}`);
       } catch (err) {
-        console.error('❌ Failed to track play:', err);
+        console.error('Failed to track play:', err);
       }
     }
   };

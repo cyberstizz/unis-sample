@@ -402,7 +402,6 @@ const FindPage = () => {
             const endpoint = trackingType === 'song' 
               ? `/v1/media/song/${trackingId}/play?userId=${userId}`
               : `/v1/media/video/${trackingId}/play?userId=${userId}`;
-            
             console.log('Tracking play:', { endpoint, trackingId, userId }); 
             await apiCall({ method: 'post', url: endpoint });
             console.log('Play tracked successfully for:', trackingId);
