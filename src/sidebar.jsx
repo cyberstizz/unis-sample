@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './sidebar.scss';
 import { useNavigate } from 'react-router-dom';
-import { Vote, Search, Trophy, Settings, DollarSign } from 'lucide-react';
+import { Vote, Search, Trophy, Settings, DollarSign, House, Music } from 'lucide-react';
 
 const Sidebar = ({ onProfileClick }) => { 
   const [isOpen, setIsOpen] = useState(false); 
@@ -10,41 +10,25 @@ const Sidebar = ({ onProfileClick }) => {
 
   const navigate = useNavigate();
 
-  const handleClick = () => {
-    navigate('/voteawards'); 
-  };
+  const handleHome = () => navigate('/');
 
-  const handleEarnings = () => {
-    navigate('/earnings'); 
-  };
+  const handleClick = () => navigate('/voteawards'); 
 
-  const handleMilestones = () => {
-    navigate('/milestones'); 
-  };
+  const handleEarnings = () => navigate('/earnings'); 
 
-  const handleMap = () => {
-    navigate('/find'); 
-  };
+  const handleMilestones = () => navigate('/milestones'); 
 
-  const handleLeaderboards = () => {
-    navigate('/leaderboards'); 
-  };
+  const handleMap = () => navigate('/find');
 
-  const handleFindPage = () => {
-    navigate('/findpage'); 
-  };
+  const handleLeaderboards = () => navigate('/leaderboards'); 
 
-  const handleArtist = () => {
-    navigate('/artist'); 
-  };
+  const handleFindPage = () => navigate('/findpage');
 
-  const handleSong = () => {
-    navigate('/song'); 
-  };
+  const handleArtist = () => navigate('/artist'); 
 
-  const handleProfile = () => {
-    navigate('/profile'); 
-  };
+  const handleSong = () => navigate('/song'); 
+
+  const handleProfile = () => navigate('/profile'); 
 
   return (
     <>
@@ -56,6 +40,10 @@ const Sidebar = ({ onProfileClick }) => {
       {/* Sidebar Content */}
       <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
         <ul>
+          <li onClick={handleHome}>
+            <span className="sidebar-icon"><House size={24} /></span>
+            <span className="sidebar-text">Home</span>
+          </li>
           <li onClick={handleClick}>
             <span className="sidebar-icon"><Vote size={24} /></span>
             <span className="sidebar-text">Vote</span>
@@ -75,6 +63,10 @@ const Sidebar = ({ onProfileClick }) => {
           <li onClick={handleEarnings}>
             <span className="sidebar-icon"><DollarSign size={24} /></span>
             <span className="sidebar-text">Earnings</span>
+          </li>
+          <li onClick={handleClick}>
+            <span className="sidebar-icon"><Music size={24} /></span>
+            <span className="sidebar-text">Playlists</span>
           </li>
         </ul>
       </nav>

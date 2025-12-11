@@ -11,13 +11,15 @@ $unis-silver: #918f8f;
 .sidebar-icon {
   display: inline-block;
   width: 25px; 
+  height: 35px;
   flex-shrink: 0;
   margin-right: 7px;
-  margin-top: 2.5px;
 }
 
 .sidebar-text {
   font-size: 23px; 
+  padding-top: 2px;
+  margin-left: 3px;
 }
 
 .sidebar-trigger {
@@ -59,13 +61,11 @@ $unis-silver: #918f8f;
     "CRSV" 0.5,
     "ELSH" 0,
     "ELXP" 0;
-  top: 115px; 
+  top: 15vh !important;
   height: 100vh !important;
   left: 0;
   width: 250px;
   background: transparent; 
-  padding: 20px;
-  padding-top: 2px;
   padding-right: 5px;
   z-index: 10;
   transition: transform 0.3s ease-in-out;
@@ -79,14 +79,15 @@ $unis-silver: #918f8f;
   ul {
     list-style: none;
     padding: 0;
-    margin-top: 60px; // Space below header
+    margin-top: 5px; 
 
     li {
       display: flex; // Enable flexbox
       align-items: center; // Vertical alignment
-      padding: 15px 10px;
-      padding-top: 1px;
-      padding-right: 1px;
+      padding-top: 15px;
+      padding-right: 3px;
+      padding-left: 15px;
+      padding-bottom: 8px;
       cursor: pointer;
       border-bottom: 1px solid rgba($unis-blue, 0.5);
       color: $text-silver;
@@ -143,4 +144,15 @@ $unis-silver: #918f8f;
   .sidebar-overlay {
     display: block;
   }
+}
+
+@media (max-width: 768px) {
+  .sidebar-trigger {
+    display: flex !important; // Show on mobile
+    // ... your existing styles
+  }
+}
+
+.banner {
+  z-index: 5; // Below sidebar (10)
 }
