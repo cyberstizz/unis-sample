@@ -312,9 +312,9 @@ const Player = () => {
             </div>
             
             <div className="like-download">
-              <button className="expand-button" onClick={handleExpand}>
+              {/* <button className="expand-button" onClick={handleExpand}>
                 <Maximize2 />
-              </button>
+              </button> */}
               <button onClick={() => setShowPlaylistWizard(true)}>➕</button>
               <button onClick={() => setShowPlaylistManager(true)}>
                 <Headphones />

@@ -5,11 +5,8 @@ $bg-black: #000000;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
-$border-silver: #C0C0C0;
-$button-hover: #D3D3D3;
 $unis-blue: #163387;
 $unis-silver: #918f8f; 
-
 
 .player {
   position: fixed;
@@ -17,114 +14,22 @@ $unis-silver: #918f8f;
   left: 0;
   width: 100vw;
   background: #1A1A1A;
-  padding: 10px 10px 0 10px; // Top padding reduced for seekbar
+  // FIX: Added padding-bottom to ensure elements aren't right on the edge
+  padding: 0 0 10px 0; 
   display: flex;
-  flex-direction: column; // Stack seekbar and mini-player vertically
+  flex-direction: column;
   align-items: center;
   transition: all 0.3s ease;
-  z-index: 100;
+  z-index: 1000; // High z-index to stay above everything
+  border-top: 1px solid rgba($unis-blue, 0.3); // Subtle border top
 
-  &.expanded {
-    height: 100vh;
-    width: 100vw;
-    top: 0;
-    left: 0;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    filter: brightness(0.8);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-
-    .expanded-view {
-      text-align: center;
-      color: black;
-      width: 80vw;
-      max-width: 80vw;
-
-      .minimize-button {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        background: transparent;
-        border: none;
-        color: black;
-        font-size: 15px;
-        cursor: pointer;
-      }
-
-      .media-element {
-        width: 100%;
-        max-width: 600px;
-        border: solid 1px green;
-        position: sticky;
-        bottom: 0;
-      }
-
-      .info {
-        margin-bottom: 20px;
-        background: $unis-blue;
-        width: 20vw;
-
-        h2 {
-          font-size: 24px;
-        }
-
-        p {
-          font-size: 18px;
-        }
-      }
-
-      .controls {
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-        width: 100%;
-
-        button {
-          background: transparent;
-          border: none;
-          color: $unis-blue; // Silverish metallic base
-          font-size: 30px;
-          font-family: inherit;
-          font-weight: 400;
-          letter-spacing: 1px;
-          cursor: pointer;
-
-          /* Metallic effect with text-shadow */
-          text-shadow: 
-            1px 1px 2px rgba(#FFFFFF, 0.3), /* Slight white highlight */
-            -1px -1px 2px rgba(#000000, 0.3); /* Subtle dark edge */
-
-          /* Blue outline effect */
-          -webkit-text-stroke: 1px $unis-blue; /* For WebKit browsers */
-
-          /* Fallback box-shadow for broader support */
-          box-shadow: 
-            0 0 0 1px $unis-blue; /* Thin blue stroke around text/icon */
-
-          transition: color 0.2s ease, text-shadow 0.2s ease;
-
-          &:hover {
-            color: silver;
-            text-shadow: 
-              1px 1px 3px rgba(#FFFFFF, 0.4),
-              -1px -1px 3px rgba(#000000, 0.4);
-          }
-        }
-      }
-    }
-  }
-
-  
+  // --- SEEKBAR (Top of player) ---
   .seekbar {
     width: 100%;
     height: 4px; 
-    background: $unis-blue;
+    background: rgba($unis-blue, 0.3); // Dimmer background for contrast
     position: relative;
-    margin-bottom: 5px;
+    margin-bottom: 10px; // Give space between bar and controls
     cursor: pointer;
 
     .seekbar-track {
@@ -138,212 +43,273 @@ $unis-silver: #918f8f;
 
     .seekbar-progress {
       height: 100%;
-      background: $text-silver;
-      transition: width 0.1s ease;
+      background: $unis-blue; // Active color
+      transition: width 0.1s linear;
     }
 
-    .seekbar-thumb {
-      position: absolute;
-      top: 50%;
-      width: 12px; // Larger bubble
-      height: 12px;
-      background: $accent-white;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 0 4px rgba($accent-white, 0.5);
-      transition: left 0.1s ease;
+    // Hover effect for seekbar
+    &:hover .seekbar-progress {
+      background: $unis-blue;
     }
   }
 
-
-  .expanded-seekbar {
-  width: 80%;
-  margin-top: 20px;
-  height: 4px;
-  background: $text-gray;
-  appearance: none;
-  border-radius: 2px;
-
-  &::-webkit-slider-thumb {
-    appearance: none;
-    width: 12px;
-    height: 12px;
-    background: $accent-white;
-    border-radius: 50%;
-    cursor: pointer;
-  }
-}
-
+  // --- MINI PLAYER (The Bar) ---
   .mini-player {
     display: flex;
-    justify-content: space-between; // Distributes left/middle/right evenly, centering controls
     align-items: center;
     width: 100%;
-    gap: 0; // No gap between sections
-    padding-bottom: 10px;
+    padding: 0 20px; // Consistent side padding
+    height: 60px; // Fixed height for consistency
 
-    // Left: Song Info
+    // SECTION 1: Song Info (Left)
+    // We give this flex: 1 to push the center group to the middle
     .song-info {
+      flex: 1; 
       display: flex;
       align-items: center;
-      gap: 10px; // Space between artwork and text
-      flex-shrink: 0; // Keep compact
+      gap: 12px;
+      overflow: hidden; // Prevent text spilling
 
       .mini-artwork {
-        width: 40px; // Slightly smaller for "tiny"
-        height: 40px;
-        border-radius: 4px;
+        width: 45px;
+        height: 45px;
+        border-radius: 6px;
+        object-fit: cover;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
       }
 
       .mini-info {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+
         p {
           margin: 0;
-          font-size: 12px; // Compact text
+          font-family: 'Arial', sans-serif;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .title {
+          font-size: 14px;
+          color: $accent-white;
+          font-weight: 600;
+        }
+
+        .artist {
+          font-size: 12px;
           color: $text-silver;
-          white-space: nowrap; // Prevent wrapping
         }
       }
     }
 
-    // Middle: Controls (centered via space-between) - Metallic theme
+    // SECTION 2: Controls (Center)
+    // Flex 0 ensures it doesn't shrink, and auto margin handles centering if flex:1 fails
     .mini-controls {
+      flex: 0 0 auto; 
       display: flex;
-      gap: 15px; 
-      flex-shrink: 0;
-      background-color: black;
-      border: solid 1px $unis-silver;
-      border-radius: 15px;
-      margin-left: 170px;
-      width: 19%;
+      justify-content: center;
+      align-items: center;
+      gap: 20px; // Clean consistent gap
+      
+      // Removed the hardcoded 'margin-left' and 'width: 19%'
+      // Removed border/background to make it look cleaner (optional)
+      background-color: transparent; 
 
       button {
         background: transparent;
         border: none;
-        color: $unis-silver; // Silverish metallic base
-        font-size: 25px;
-        font-family: inherit; 
-        font-weight: 400;
-        letter-spacing: 0.5px;
+        color: $unis-silver;
+        font-size: 28px; // Slightly larger for tap targets
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s ease, color 0.2s ease;
 
-        /* Metallic effect with text-shadow */
-        text-shadow: 
-          1px 1px 2px rgba(#FFFFFF, 0.3), /* Slight white highlight */
-          -1px -1px 2px rgba(#000000, 0.3); /* Subtle dark edge */
-
-        /* Blue outline effect */
-        -webkit-text-stroke: 0.5px $unis-blue; /* Thinner for icons; WebKit browsers */
-
-        /* Fallback box-shadow for broader support */
-        // box-shadow: 
-        //   0 0 0 0.5px $unis-blue; /* Thin blue stroke around text/icon */
-
-        // transition: color 0.2s ease, text-shadow 0.2s ease;
-
+        // Metallic / Glow Effects
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        
         &:hover {
-          color: silver;
-          text-shadow: 
-            1px 1px 3px rgba(#FFFFFF, 0.4),
-            -1px -1px 3px rgba(#000000, 0.4);
+          color: $accent-white;
+          transform: scale(1.1);
+          text-shadow: 0 0 8px rgba($unis-blue, 0.6);
+        }
+
+        // Play/Pause button usually slightly bigger
+        &.play-btn {
+          font-size: 36px;
+          color: $unis-blue;
+          &:hover { color: $unis-blue; }
         }
       }
     }
 
-    // Right: Like/Download - Metallic theme
+    // SECTION 3: Actions (Right)
+    // Flex 1 aligns this group to the far right
     .like-download {
-  display: flex;
-  gap: 10px;
-  flex-shrink: 0;
+      flex: 1;
+      display: flex;
+      justify-content: flex-end; // Push items to the right
+      align-items: center;
+      gap: 15px; // Uniform spacing
 
-  .expand-button {
-    background: transparent;
-    border: none;
-    color: $unis-silver;
-    font-size: 20px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+      button {
+        background: transparent;
+        border: none;
+        color: $text-gray;
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
 
-    /* Metallic effect with text-shadow */
-    text-shadow: 
-      1px 1px 2px rgba(#FFFFFF, 0.3),
-      -1px -1px 2px rgba(#000000, 0.3);
+        &:hover {
+          color: $unis-blue;
+          transform: scale(1.1);
+        }
+      }
 
-    /* Blue outline effect */
-    -webkit-text-stroke: 0.5px $unis-blue;
-
-    &:hover {
-      color: silver;
-      text-shadow: 
-        1px 1px 3px rgba(#FFFFFF, 0.4),
-        -1px -1px 3px rgba(#000000, 0.4);
-      transform: scale(1.1);
+      .like-button {
+        &.liked {
+           color: $unis-blue; 
+           // If using SVGs via CSS filter or fill, handle here
+        }
+      }
     }
   }
 
-  .like-button {
-    background: transparent;
-    border: none;
-    position: relative;
-    width: 20px; // Icon size
-    height: 18px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+  // --- EXPANDED PLAYER ---
+  &.expanded {
+    height: 100vh;
+    top: 0;
+    padding: 0; // Reset padding
+    background-color: #000; 
 
-    .heart-icon {
+    // Background Image handling
+    &::before {
+      content: '';
       position: absolute;
-      top: 0;
-      left: 0;
+      inset: 0;
+      background-image: var(--bg-image); // Use inline style var if possible
+      background-size: cover;
+      background-position: center;
+      filter: blur(20px) brightness(0.4); // Blur effect for backdrop
+      z-index: -1;
+    }
+
+    .expanded-view {
       width: 100%;
       height: 100%;
-    }
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      position: relative;
 
-    // Hollow state (default: outline only, no fill)
-    .heart-icon {
-      background: transparent;
-    }
-
-    // Solid state (on .liked: fill with unis blue)
-    &.liked .heart-icon {
-      background: $unis-blue; // Solid fill
-
-      &::before,
-      &::after {
-        background: $unis-blue;
+      .minimize-button {
+        position: absolute;
+        top: 20px; 
+        left: 20px; // Typically left top for "Back/Down"
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        z-index: 10;
       }
 
-      &:after::after {
-        border-top-color: $unis-blue;
+      .media-element {
+         // Album Art
+         width: 100%;
+         max-width: 350px;
+         aspect-ratio: 1/1; // Perfect square
+         box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+         border-radius: 12px;
+         margin-bottom: 40px;
+         background-size: cover;
+         background-position: center;
+      }
+
+      .info {
+        text-align: center;
+        margin-bottom: 30px;
+        
+        h2 { 
+          color: white; 
+          font-size: 24px; 
+          margin-bottom: 5px;
+        }
+        p { 
+          color: $text-silver; 
+          font-size: 18px; 
+        }
+      }
+
+      .expanded-seekbar {
+        width: 100%;
+        max-width: 500px;
+        margin-bottom: 30px;
+        // ... (Keep your slider styling here)
+      }
+
+      .controls {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+        
+        button {
+          font-size: 35px;
+          background: transparent;
+          border: none;
+          color: white;
+          cursor: pointer;
+          
+          &:hover { color: $unis-blue; }
+          
+          &.play-btn-large {
+            font-size: 60px; // Huge play button
+            color: $unis-blue;
+            &:hover { transform: scale(1.05); }
+          }
+        }
       }
     }
-
-    &:hover {
-      transform: scale(1.1); // Subtle hover scale
-    }
-  }
- 
-}
   }
 }
 
-// Mobile adjustments
+// --- MOBILE ADJUSTMENTS ---
 @media (max-width: 600px) {
-  .expanded .media-element {
-    width: 100%;
-  }
+  .player {
+    padding-bottom: 15px; // More room for touch bars (iPhone home bar)
 
-  .mini-player {
-    .song-info .mini-artwork {
-      width: 30px;
-      height: 30px;
-    }
+    .mini-player {
+      padding: 0 10px;
 
-    .mini-info p {
-      font-size: 11px;
-      display: none;
-    }
+      // Shrink left section
+      .song-info {
+        gap: 8px;
+        .mini-artwork { width: 35px; height: 35px; }
+        .mini-info .title { font-size: 13px; }
+        .mini-info .artist { font-size: 11px; }
+      }
 
-    .mini-controls button {
-      font-size: 16px;
+      // Shrink middle section controls
+      .mini-controls {
+        gap: 15px;
+        button { font-size: 24px; }
+        button.play-btn { font-size: 30px; }
+      }
+
+      // Hide non-essential actions on tiny screens
+      .like-download {
+        gap: 10px;
+        // Optionally hide download on mobile to save space
+        // .download-btn { display: none; } 
+      }
     }
   }
 }
