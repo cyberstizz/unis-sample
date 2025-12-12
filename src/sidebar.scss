@@ -142,7 +142,7 @@ $unis-silver: #918f8f;
 
   .sidebar-overlay {
     display: block;
-    background: rgba(255, 255, 255, 0.15); 
+    background-color: $unis-blue; 
     backdrop-filter: blur(10px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
   }

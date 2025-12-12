@@ -4,6 +4,7 @@ import { Heart, Maximize2, Headphones } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistViewer from './playlistViewer';
 import PlaylistManager from './playlistManager';
+import UnisPlayButton from './UnisPlayButton';
 import './player.scss';
 
 const Player = () => {
@@ -304,11 +305,11 @@ const Player = () => {
             </div>
             
             <div className="mini-controls">
-              <button onClick={handlePrev}>◀</button>
+              <button className="trackToggle" onClick={handlePrev}>◀</button>
               <button onClick={handlePlayPause} className="play-pause-btn">
-                {isPlaying ? '⏸' : '▶'}
+                {isPlaying ? '⏸' : <UnisPlayButton />}
               </button>
-              <button onClick={handleNext}>▶</button>
+              <button className="trackToggle" onClick={handleNext}>▶</button>
             </div>
             
             <div className="like-download">

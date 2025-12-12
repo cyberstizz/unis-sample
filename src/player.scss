@@ -108,44 +108,46 @@ $unis-silver: #918f8f;
     // SECTION 2: Controls (Center)
     // Flex 0 ensures it doesn't shrink, and auto margin handles centering if flex:1 fails
     .mini-controls {
-      flex: 0 0 auto; 
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 20px; // Clean consistent gap
+  flex: 0 0 auto; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px; 
+  background-color: transparent; 
+
+  button {
+    background: transparent;
+    border: none;
+    color: $unis-silver;
+    font-size: 28px; 
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, color 0.2s ease;
+
+    // Metallic / Glow Effects
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    
+    &:hover {
+      color: $accent-white;
+      transform: scale(1.1);
+      text-shadow: 0 0 8px rgba($unis-blue, 0.6);
+    }
+
+    &.play-btn {
+      width: 45px; 
+      height: 45px; 
+      color: $unis-blue;
+      &:hover { color: $unis-blue; }
       
-      // Removed the hardcoded 'margin-left' and 'width: 19%'
-      // Removed border/background to make it look cleaner (optional)
-      background-color: transparent; 
-
-      button {
-        background: transparent;
-        border: none;
-        color: $unis-silver;
-        font-size: 28px; // Slightly larger for tap targets
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.2s ease, color 0.2s ease;
-
-        // Metallic / Glow Effects
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        
-        &:hover {
-          color: $accent-white;
-          transform: scale(1.1);
-          text-shadow: 0 0 8px rgba($unis-blue, 0.6);
-        }
-
-        // Play/Pause button usually slightly bigger
-        &.play-btn {
-          font-size: 36px;
-          color: $unis-blue;
-          &:hover { color: $unis-blue; }
-        }
+      .unis-play-button-icon {
+        width: 100%; 
+        height: 100%; 
       }
     }
+  }
+}
 
     // SECTION 3: Actions (Right)
     // Flex 1 aligns this group to the far right
@@ -299,16 +301,20 @@ $unis-silver: #918f8f;
 
       // Shrink middle section controls
       .mini-controls {
-        gap: 15px;
-        button { font-size: 24px; }
-        button.play-btn { font-size: 30px; }
+        gap: 3px;
+        button { font-size: 18px; }
+
+
+        .trackToggle{
+          background-color: $unis-blue;
+          color: $unis-blue;
+        }
       }
 
       // Hide non-essential actions on tiny screens
       .like-download {
-        gap: 10px;
-        // Optionally hide download on mobile to save space
-        // .download-btn { display: none; } 
+        gap: 5px;
+        display: none;
       }
     }
   }
