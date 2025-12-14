@@ -36,6 +36,7 @@ $unis-silver: #918f8f;
   align-items: center;
   justify-content: center;
   z-index: 10; // Same as sidebar
+  color: $unis-blue;
   transition: transform 0.3s;
 
   .arrow-icon {
@@ -151,6 +152,7 @@ $unis-silver: #918f8f;
 @media (max-width: 768px) {
   .sidebar-trigger {
     display: flex !important; 
+    color: $unis-blue;
   }
 
   .sidebar{

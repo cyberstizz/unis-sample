@@ -24,8 +24,10 @@ const Header = () => {
     <header className="header">
       <div className="header-top">
         {/* Left: Logo */}
+        <div className="logo-wrapper">
         <img onClick={handleHome} src={unisLogo} alt="UNIS Logo" className="logo" />
-        
+        </div>
+
         {/* Center: Search bar */}
         <input type="text" placeholder="Search artists, songs..." className="search-bar" />
 

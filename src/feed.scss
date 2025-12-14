@@ -1,274 +1,160 @@
-// Feed.scss
-
-// Variables (consistent with logo scheme)
+// --- Variables ---
 $bg-black: #000000;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
-$border-silver: #C0C0C0;
-$hover-silver: #D3D3D3;
 $unis-blue: #163387;
-$unis-silver: #918f8f; 
+$unis-silver: #918f8f;
 
-//cool handwritten font from google fonts
-@import url('https://fonts.googleapis.com/css2?family=Delicious+Handrawn&display=swap');
+// --- Fonts ---
+@import url('https://fonts.googleapis.com/css2?family=Delicious+Handrawn&family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Montserrat:wght@400;600&display=swap');
 
-
-@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Delicious+Handrawn&display=swap');
-
-// Global
+// --- Global Resets ---
 * {
   box-sizing: border-box;
 }
 
-//animation setup
-@keyframes slideInFromLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-
 body {
-        scrollbar-color: $unis-blue;
-}
-.feed-section h2 {
-  opacity: 0; // start hidden until animation
-}
-
-.feed-section.animate h2 {
-  animation: slideInFromLeft 0.6s ease-out forwards;
+  scrollbar-color: $unis-blue $bg-black;
+  background-color: $bg-black;
+  // Ensure the body doesn't scroll horizontally
+  overflow-x: hidden; 
 }
 
-.feed-section.animate:nth-of-type(1) h2 {
-  animation-delay: 0.1s;
+// --- Animations ---
+@keyframes slideInFromLeft {
+  from { opacity: 0; transform: translateX(-50px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-.feed-section.animate:nth-of-type(2) h2 {
-  animation-delay: 0.3s;
-}
+// --- MAIN LAYOUT FIXES ---
 
-.feed-section.animate:nth-of-type(3) h2 {
-  animation-delay: 0.5s;
-}
-
-
+// This wrapper controls where the Feed sits on the page
 .feed-content-wrapper {
   width: 100%;
-  max-width: 1200px; /* Adjust to match your design */
-  margin: 0 auto; 
-  padding-top: -15px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding-bottom: 120px;
+  padding-top: 8.5%; 
+  @media (min-width: 1025px) {
+    // Push the feed to the right to clear the 250px Sidebar
+    margin-left: 260px; 
+    
+    // Constrain width to leave room for Ads on the right
+    // 260px (Sidebar) + 900px (Feed) + Remaining (Ads)
+    max-width: 900px; 
+    
+    // If you want it centered in the remaining space instead of strictly left:
+    // margin: 0 auto 0 260px; 
+  }
+
+  // On Tablet/Mobile (Sidebar is hidden/toggleable)
+  @media (max-width: 1024px) {
+    margin-left: 0;
+    max-width: 100%;
+    padding: 0 10px; // Add small gutters so text doesn't touch screen edges
+  }
 }
 
 .feed-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 100vw;
+  min-height: 100vh;
+  width: 100%;
   background: $bg-black;
   color: $text-gray;
   font-family: 'Arial', sans-serif;
-  top: 0;
-  overflow: hidden; 
   position: relative;
-  align-items: center; 
   z-index: 1;
-
 
   &::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     background-image: linear-gradient(to bottom, transparent, $bg-black 90%), url('./assets/randomrapper.jpeg');
     background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
-    opacity: 0.15; 
+    opacity: 0.15;
     z-index: -1;
-    
     filter: blur(5px);
-}
+  }
 }
 
+// --- HEADER ---
+// I have commented this out so we do not break your existing header layout.
+// We can fix the header separately once the feed body is positioned correctly.
+/*
 .header {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  background: linear-gradient(to bottom, #1A1A1A, $bg-black);
-  padding: 8px 20px;
-  padding-bottom: 0;
-  padding-top: 1px;
-  height: 98px; 
-  z-index: 100;
-  position: relative;
-  margin-bottom: 0;
-
-  .header-top {
-    display: flex;
-    align-items: center;
-    justify-content: center; 
-    position: relative;
-    margin-bottom: 6px;
-
-    .logo {
-      position: absolute;
-      right: 50vw; 
-      top: -17px;
-      height: 120px; 
-      cursor: pointer;
-    }
-
-    .search-bar {
-      width: 27vw;
-      min-width: 260px;
-      padding: 8px 16px;
-      margin-top: 4px;
-      margin-right: 20px;
-      border: none;
-      border-radius: 50px;
-      background: #1a1a1a;
-      color: $accent-white;
-      font-size: 14px;
-
-      &::placeholder {
-        color: $text-gray;
-      }
-    }
-  }
-
-  .options-bar {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 7px;
-    margin-right: 20px;
-
-
-    .option-box {
-      padding: 5px 14px;
-      background-color: transparent;
-      border: solid 1px $unis-blue;   
-      border-radius: 50px;
-      cursor: pointer;
-      transition: all 0.2s ease-in-out;
-      font-size: 15px;
-      letter-spacing: 1pxa;
-      font-weight: bold;
-      font-family: monserrat;
-
-      &:hover {
-        background: $unis-blue;
-        color: wheat;
-        transform: translateY(-2px);
-      }
-    }
-  }
+  // Your original header code or specific fixes can go here later
 }
+*/
 
-
-
+// --- FEED COMPONENT ---
 .feed {
-  flex: 1;
-  overflow-y: auto;
-  max-width: 900px;
-  width: 100%; 
-  padding: 10px;
-  padding-top: 1px;
-  margin-left: 0; 
-  margin-right: 0;
+  width: 100%;
+  // Remove padding-top hacks. The margin is handled by the wrapper.
+  padding: 10px 0; 
 
   .feed-section {
     width: 100%;
-    max-width: 1200px; /* Match feed-content-wrapper */
-    margin: 0 auto; /* Center with parent */
-    padding: 20px; 
-    padding-top: 1px;
+    margin-bottom: 40px;
+
+    // Animation Classes
+    h2 { opacity: 0; }
+    &.animate h2 { animation: slideInFromLeft 0.6s ease-out forwards; }
+    &.animate:nth-of-type(1) h2 { animation-delay: 0.1s; }
+    &.animate:nth-of-type(2) h2 { animation-delay: 0.3s; }
+    &.animate:nth-of-type(3) h2 { animation-delay: 0.5s; }
 
     h2 {
       color: $unis-blue;
-      font-size: 38px;
-      font-family: "Bitcount Grid Double", system-ui;
-      font-family: Montserrat;
+      font-size: clamp(24px, 4vw, 38px); // Responsive font size
+      font-family: 'Montserrat', sans-serif;
       font-weight: 400;
       letter-spacing: 1.5px;
-      font-style: normal;
-      text-transform: uppercase; 
-      position: relative;
+      text-transform: uppercase;
       padding-bottom: 5px;
-      margin-bottom: 15px;
-      border-bottom: solid 1px silver;
+      margin-bottom: 20px;
+      margin-top: 0; // Ensures h2 sits tight to the top
+      border-bottom: 1px solid silver;
     }
 
+    // --- Carousel (Desktop & Mobile) ---
     &.carousel {
       .carousel-items {
-
-        display: flex;
-        overflow-x: auto;
-        margin-top: 30px;
-        gap: 20px; // Increase gap for separation
         display: flex;
         overflow-x: auto;
         gap: 20px;
-        padding-bottom: 10px;
+        padding-bottom: 15px;
+        scroll-behavior: smooth;
+        
+        // Scrollbars
+        scrollbar-width: thin;
+        scrollbar-color: $unis-blue #2a2a2a;
 
-  // Firefox: color and thickness
-  scrollbar-width: thin;              // "auto" | "thin" | "none"
-  scrollbar-color: $unis-blue #e6e6e6;
+        &::-webkit-scrollbar { height: 6px; }
+        &::-webkit-scrollbar-track { background: #2a2a2a; border-radius: 8px; }
+        &::-webkit-scrollbar-thumb { background-color: $unis-blue; border-radius: 8px; }
 
-  // WebKit (Chrome / Safari / Edge)
-  &::-webkit-scrollbar {
-    height: 8px;                      // horizontal scrollbar thickness
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #e6e6e6;              // track (light gray)
-    border-radius: 8px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: $unis-blue;     // the actual thumb (unis blue)
-    border-radius: 8px;
-    border: 2px solid #e6e6e6;       // creates padding-like gap
-    min-width: 30px;                 // avoid an extremely small thumb
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background-color: $unis-blue; 
-  }
-
-
-
+        .item-wrapper {
+          display: flex;
+          flex-direction: column;
+          // IMPORTANT: This prevents cards from squishing on mobile
+          flex: 0 0 auto; 
+          width: 180px; 
+        }
 
         .item {
-          min-width: 180px;
+          width: 100%;
           height: 180px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 12px; 
-          border-right: solid 1px $unis-blue;
-          border-left: solid 1px $unis-blue;
-          color: $unis-silver;
-          font-weight: 600;
-          transition: transform 0.3s ease;
-          flex-shrink: 0; 
+          border-radius: 12px;
+          border-right: 1px solid $unis-blue;
+          border-left: 1px solid $unis-blue;
           position: relative;
           cursor: pointer;
+          transition: transform 0.3s ease;
+          overflow: hidden;
 
           &:hover {
-            transform: scale(1.05); // Enlarge on hover
+            transform: scale(1.03);
+            z-index: 10;
           }
 
           .play-icon {
@@ -278,142 +164,84 @@ body {
             background: $unis-blue;
             border: none;
             color: $unis-silver;
-            font-size: 20px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            // border-radius: 50%;
-            width: 45px;
+            width: 40px;
             height: 40px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            opacity: 0;
+            transition: all 0.3s ease;
           }
+          &:hover .play-icon { opacity: 1; }
+        }
 
-          &:hover .play-icon {
-            opacity: 1;
-            border: solid .5px greenyellow;
-          }
+        .item-title {
+          margin-top: 10px;
+          font-size: 1rem;
+          color: white;
+          font-weight: 600;
+          text-align: left;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          width: 100%;
+          padding-left: 4px;
+        }
+
+        .item-artist, .time_ago {
+          padding-left: 4px;
+          text-align: left;
         }
       }
     }
 
-    .item-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  scrollbar-color: $unis-blue;
-}
-
-.item-title {
-  margin-top: 8px; // spacing between image and title
-  text-align: center;
-  font-size: 1.3rem;
-  color: white;
-  font-size: Inter;
-}
-
-
+    // --- List View ---
     &.list {
       ol {
         list-style: none;
-        padding-left: 0;
-
+        padding: 0;
         li {
           padding: 15px;
           margin-bottom: 10px;
           background: rgba($text-silver, 0.05);
           border-radius: 8px;
           transition: background 0.3s ease;
-
-          &:hover {
-            background: rgba($text-silver, 0.1);
-          }
+          display: flex;
+          align-items: center;
+          &:hover { background: rgba($text-silver, 0.1); }
         }
       }
-    }
-
-    &.posts {
-      .post {
-        padding: 20px;
-        background: rgba($text-silver, 0.1);
-        border-radius: 12px;
-        margin-bottom: 15px;
-      }
-    }
-
-    .item-title{
-      align-self: flex-start;
-      padding-left: .55em;
-    }
-
-    .item-artist{
-      align-self: flex-start;
-      padding-left: 1em;
-      color: gray;
-    }
-
-    .item-duration{
-      align-self: flex-start;
-      padding-left: 1em;
-    }
-
-    .time_ago{
-      align-self: flex-start;
-      padding-left: 1em;
     }
   }
 }
 
+// --- MOBILE ADJUSTMENTS ---
 @media (max-width: 768px) {
   .feed {
-    padding: 10px 0; // Tighter sides (old code)—centers content, no left-pull from hidden sidebar
-  }
+    // Reduce padding on small screens
+    padding: 7px 0; 
+    padding-top: 28%;
+    
+    .feed-section {
+      // Reduce vertical gaps
+      margin-bottom: 25px; 
 
-  .feed-section {
-    margin-bottom: 25px; // Reduced vertical rhythm (old)—sections stack snugly without excess white space
+      h2 {
+        font-size: 22px; // Smaller headings
+      }
 
-    h2 {
-      font-size: 22px; // Smaller, punchier headings (old)—fits better on small viewports
-      margin-bottom: 15px; // Keep my slight reduction for title breathing room
-    }
-
-    &.carousel {
-      .carousel-items {
-        gap: 12px; // Denser packing (old)—more items visible per swipe, feels "fuller"
-        // Restore horizontal scroll (no wrap)—old code's "coherent carousel" feel
-        flex-wrap: nowrap;
-        justify-content: flex-start; // Align left for natural start
-        overflow-x: auto; // Enable swipe-scroll
-        overflow-y: hidden; // Prevent vertical overflow on tall items
-
+      &.carousel .carousel-items {
+        gap: 12px; // Tighter gaps
+        
+        .item-wrapper {
+          width: 140px; // Smaller cards for phone screens
+        }
         .item {
-          // Fixed sizing from old: Uniform 140px—no min-width variance, ensures all elements (duration overlay, play icon) fit without clip
-          min-width: 140px; // Tight but touchable (old base)
-          width: 140px; // Enforce fixed width for coherence
-          height: 140px; // Matches old—scales down proportionally from desktop 160px
+          height: 140px;
         }
       }
-
-      .item-wrapper {
-        // Fixed width to match item—old code's flex:0 0 auto prevents squish
-        width: 140px; // Sync with item for pixel-perfect alignment
-        flex: 0 0 140px; // No grow/shrink—keeps titles/artists from wrapping oddly
-      }
-
-      .item-title {
-        font-size: 1rem; // Keep my tight sizing—titles stay readable, no ellipsis abuse
-        // Inherit left-align/padding from base (0.5em)—visible and coherent
-      }
-
-      .item-artist, .time_ago {
-        font-size: 0.8rem; // Slight shrink for density—ensures full visibility below title
-      }
-    }
-
-    // Lists: Minor tighten for mobile (old-inspired, but keep my base)
-    &.list ol li {
-      padding: 12px; // Reduced from 15px—faster scan
     }
   }
 }

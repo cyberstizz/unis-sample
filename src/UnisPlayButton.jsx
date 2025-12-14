@@ -2,8 +2,8 @@
 
 const UnisPlayButton = () => (
   <svg 
-    width="35px" 
-    height="35px" 
+    width="40px" 
+    height="40px" 
     viewBox="0 0 100 100" 
     xmlns="http://www.w3.org/2000/svg"
     // Apply CSS class for easy targeting/sizing in your SCSS
@@ -15,6 +15,7 @@ const UnisPlayButton = () => (
       cy="50" 
       r="48" 
       fill="#163387" 
+      style={{color: "silver"}}
     />
     
     {/* 2. The play icon (triangle) in white for contrast */}
