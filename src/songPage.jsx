@@ -180,14 +180,12 @@ useEffect(() => {
             <button onClick={handleVote} className="vote-button">Vote</button>
           </div>
 
-          <p className="artist-name">Artist: {song.artist}</p>
-          <p className="jurisdiction">Jurisdiction: {song.jurisdiction}</p>
-          <p className="genre">Genre: {song.genre}</p>
+          <p className="artist-name">{song.artist}</p>
+          <p className="jurisdiction">{song.jurisdiction}</p>
+          <p className="genre">{song.genre}</p>
 
           <div className="stats">
-            <p>Total Plays: {song.playCount}</p>
-            <p>Today's Plays: {song.todayPlayCount}</p>
-            <p>Votes: {song.voteCount}</p>
+            <p>Plays {song.playCount}</p>
           </div>
 
           <section className="description-section">

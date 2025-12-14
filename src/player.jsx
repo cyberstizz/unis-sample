@@ -6,6 +6,7 @@ import PlaylistViewer from './playlistViewer';
 import PlaylistManager from './playlistManager';
 import UnisPlayButton from './UnisPlayButton';
 import './player.scss';
+import UnisPauseButton from './UnisPauseButton';
 
 const Player = () => {
   // Get audioRef from context instead of creating a new one
@@ -260,7 +261,7 @@ const Player = () => {
           <div className="controls">
             <button onClick={handlePrev}>⏮</button>
             <button onClick={handlePlayPause} className="play-pause-btn">
-              {isPlaying ? '⏸' : '▶'}
+              {isPlaying ? <UnisPauseButton /> : <UnisPlayButton />}
             </button>
             <button onClick={handleNext}>⏭</button>
           </div>
@@ -307,7 +308,7 @@ const Player = () => {
             <div className="mini-controls">
               <button className="trackToggle" onClick={handlePrev}>◀</button>
               <button onClick={handlePlayPause} className="play-pause-btn">
-                {isPlaying ? '⏸' : <UnisPlayButton />}
+                {isPlaying ? <UnisPauseButton /> : <UnisPlayButton />}
               </button>
               <button className="trackToggle" onClick={handleNext}>▶</button>
             </div>

@@ -49,3 +49,12 @@ $text-gray: #A9A9A9;
   margin-left: 20px;
   padding-bottom: 140px;
 }
+
+@media (max-width: 600px) {
+
+  .layout-content {
+    padding-bottom: 30%;
+
+  }
+
+}

@@ -16,6 +16,7 @@ $button-hover: #D3D3D3;
   background: transparent;
   color: $text-gray;
   padding: 20px;
+  padding-top: 10%;
   margin-left: 200px;
   justify-self: center;
   width: 70vw;
@@ -230,7 +231,8 @@ $button-hover: #D3D3D3;
 
   .song-page-container{
     margin-left: 8px;
-    width: 85vw;
+    width: 90vw;
+    padding-top: 25%;
   }
   .main-content-card {
     padding: 10px;

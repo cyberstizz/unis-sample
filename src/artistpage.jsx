@@ -247,9 +247,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
               {artist.genre?.name || 'Unknown Genre'}
             </p>
             <div className="follow-actions">
-              <button onClick={handleFollow} className="follow-button">
-                {isFollowing ? 'Unfollow' : 'Follow'}
-              </button>
+             
               {!isOwnProfile && (
                 <>
                   <button onClick={handleVote} className="vote-button">
@@ -270,25 +268,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         </header>
 
         <div className="content-wrapper">
-          {/* Stats Grid */}
-          <section className="stats-grid">
-            <div className="stat-item">
-              <p className="stat-value">{rank}</p>
-              <p className="stat-label">Rank</p>
-            </div>
-            <div className="stat-item">
-              <p className="stat-value">{followers}</p>
-              <p className="stat-label">Followers</p>
-            </div>
-            <div className="stat-item">
-              <p className="stat-value">{supporters}</p>
-              <p className="stat-label">Supporters</p>
-            </div>
-            <div className="stat-item">
-              <p className="stat-value">{voteCount}</p>
-              <p className="stat-label">Votes</p>
-            </div>
-          </section>
+      
 
           {/* Fans Pick Section */}
           {topSong && (

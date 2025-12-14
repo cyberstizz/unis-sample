@@ -155,7 +155,6 @@ $unis-silver: #918f8f;
 
       .logo-wrapper .logo {
         height: 40px !important;
-        margin-bottom: 20px;
       }
 
       .logo-wrapper {
@@ -164,27 +163,25 @@ $unis-silver: #918f8f;
       align-items: center; 
       margin-left: 2%;
       margin-top: 25px;
-      width: 14%
+      width: 18%;
+      height: 6%;
       }
 
       .search-bar {
         max-width: 50vw;
         min-width: auto;
         margin: 0 auto !important;
-        margin-left: 8% !important;
+        margin-left: 3% !important;
         font-size: 13px;
       }
 
-
-
       .logout-wrapper{
-        padding: 4px 8px;
         border-width: 1px;
+        justify-content: flex-end; 
+        align-content: flex-start;
 
       } .logout-button {
-        font-size: 6px;
-        border-width: 1px;
-                border: solid 2px green !important;
+        padding: 4px 10px; 
       }
     }
 
@@ -192,7 +189,7 @@ $unis-silver: #918f8f;
       height: 40%;
       justify-content: space-around;
       gap: 8px;
-      padding: 0 10px;
+      padding: 0 17px;
       flex-wrap: wrap;
 
       .option-box {
@@ -206,12 +203,13 @@ $unis-silver: #918f8f;
 
     .user-section {
       position: static;
-      align-self: flex-end;
+      align-self: flex-start;
       margin-left: auto;
-      bottom: auto;
+      top: 0;
       right: auto;
       gap: 0.25rem;
       padding-left: 10px;
+      padding-bottom: 10px;
 
       .user-name {
         font-size: 12px;
