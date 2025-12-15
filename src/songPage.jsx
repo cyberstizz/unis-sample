@@ -61,7 +61,8 @@ useEffect(() => {
         artwork: songData.artworkUrl ? `${API_BASE_URL}${songData.artworkUrl}` : songArtwork,
         url: songData.fileUrl ? `${API_BASE_URL}${songData.fileUrl}` : null,
         description: songData.description || 'No description available',
-        playCount: songData.score || 0,  // Use score as play count for now
+        score: songData.score,
+        playCount: songData.playCount || 0,  // Use score as play count for now
         todayPlayCount: 0,  // TODO: Add daily play count endpoint
         voteCount: 0,  // TODO: Add vote count endpoint
         duration: songData.duration,
