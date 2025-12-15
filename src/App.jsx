@@ -22,6 +22,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './context/AuthContext';  
+import WinnersNotification from './winnersNotification';
 
 // New: Wrapper component for layout (useLocation inside Router)
 const AppLayout = () => {
@@ -53,6 +54,7 @@ const AppLayout = () => {
           <Route path="/jurisdictionPage" element={<JurisdictionPage />} />
         </Route>
       </Routes>
+      <WinnersNotification />
       <SongNotification />
     </div>
   );

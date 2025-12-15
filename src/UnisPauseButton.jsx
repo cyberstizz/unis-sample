@@ -26,7 +26,7 @@ const UnisPauseButton = () => (
       y="30" 
       width="10" 
       height="40" 
-      fill="silver" // White inner color
+      fill="black" // White inner color
     />
     
     {/* Second pause bar: 10 units wide, 40 units tall */}
@@ -35,7 +35,7 @@ const UnisPauseButton = () => (
       y="30" 
       width="10" 
       height="40" 
-      fill="silver" 
+      fill="black" 
     />
   </svg>
 );

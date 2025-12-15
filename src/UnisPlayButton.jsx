@@ -22,7 +22,7 @@ const UnisPlayButton = () => (
     {/* The points define an equilateral triangle centered in the circle */}
     <path 
       d="M38 30 L70 50 L38 70 Z" 
-      fill="#transparent" 
+      fill="black" 
     />
     
     {/* Note: I slightly adjusted the triangle position (M38) to visually center it, 
