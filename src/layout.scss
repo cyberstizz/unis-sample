@@ -13,9 +13,11 @@ $player-height-mobile: 320px;
   background: $bg-black;
   color: $text-gray;
   font-family: 'Arial', sans-serif;
-  position: relative;
-  margin: 0;
+ position: relative;
+  align-items: center;
+  justify-content: center;  margin: 0;
   overflow: hidden;
+  z-index: 1;
 
   &::before {
     content: '';
