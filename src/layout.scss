@@ -1,60 +1,105 @@
-// Layout.scss
-
-// Variables 
 $bg-black: #000000;
 $text-gray: #A9A9A9;
+$footer-height-desktop: 80px;
+$footer-height-mobile: 120px;
+$player-height-desktop: 280px;   
+$player-height-mobile: 320px;   
 
 .layout-container {
   display: flex;
-  gap: 0;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
   width: 100vw;
   background: $bg-black;
   color: $text-gray;
   font-family: 'Arial', sans-serif;
-  overflow-y: auto;
   position: relative;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
   margin: 0;
+  overflow: hidden;
 
   &::before {
     content: '';
-    position: absolute;
+    position: fixed;               // Fixed to viewport — this restores full background coverage on scroll
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    gap: 0;
-    background-image: linear-gradient(to bottom, transparent, $bg-black 90%), var(--background-image); 
+    width: 100vw;
+    height: 100vh;
+    background-image: linear-gradient(to bottom, transparent, $bg-black 90%), var(--background-image);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     opacity: 0.15;
     z-index: -1;
     filter: blur(5px);
+    pointer-events: none;
   }
 }
 
 .layout-content {
   display: flex;
-  gap: 0;
   width: 100%;
-  flex: 1; 
-  overflow-y: auto; 
-  padding: 0; 
-  top: 0;
-  margin-left: 20px;
-  padding-bottom: 140px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px;
+  padding-bottom: $player-height-desktop;
+
+  @media (max-width: 600px) {
+    padding: 0 16px;
+    padding-bottom: $player-height-mobile;
+  }
 }
 
-@media (max-width: 600px) {
+.layout-footer {
+  height: $footer-height-desktop;
+  background: rgba(0, 0, 0, 0.9);
+  color: $text-gray;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  z-index: 10;
 
-  .layout-content {
-    padding-bottom: 30%;
+  .footer-links {
+    display: flex;
+    gap: 16px;
+    align-items: center;
 
+    a {
+      color: $text-gray;
+      text-decoration: none;
+      transition: color 0.2s;
+
+      &:hover {
+        color: white;
+      }
+    }
+
+    .footer-separator {
+      color: rgba(255, 255, 255, 0.3);
+    }
   }
 
+  .footer-copyright {
+    font-size: 11px;
+    opacity: 0.7;
+  }
+
+  @media (max-width: 600px) {
+    height: $footer-height-mobile;
+    padding: 0 16px;
+    text-align: center;
+
+    .footer-links {
+      flex-direction: column;
+      gap: 8px;
+
+      .footer-separator {
+        display: none;
+      }
+    }
+  }
 }

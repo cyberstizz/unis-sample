@@ -1,5 +1,6 @@
 import React from 'react';
 import Header from './header'; 
+import Footer from './footer';
 import './layout.scss'; 
 
 const Layout = ({ children, backgroundImage }) => {
@@ -9,6 +10,7 @@ const Layout = ({ children, backgroundImage }) => {
       <main className="layout-content">
         {children}
       </main>
+      <Footer />  
     </div>
   );
 };
