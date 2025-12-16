@@ -179,6 +179,11 @@ const FindPage = () => {
     setIsZoomed(viewState.mode !== 'US');
   }, [viewState.mode]);
 
+
+  const handleJurisdiction = {
+    // navigate('/jri')
+  }
+
   // Fetch tops on select (restored from original)
   const fetchTopResults = async (jurisdictionName) => {
     if (!jurisdictionName) return;
@@ -557,7 +562,7 @@ const FindPage = () => {
         <div className="results-section">
           {/* Results lists... */}
           <div className="column">
-            <h2>Top Songs in {displayTerritory}</h2>
+            <h2 onClick={handleJurisdiction}>Top Songs in {displayTerritory}</h2>
             <ul className="results-list">
               {displaySongs.slice(0, 3).map((item, index) => (
                 <li key={item.id || index} className="result-item">

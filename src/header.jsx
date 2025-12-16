@@ -1,6 +1,6 @@
 import React from "react";
 import "./header.scss"; 
-import unisLogo from './assets/unisNoBackground.svg';
+import unisLogo from './assets/unisLogoThree.svg';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';  
 

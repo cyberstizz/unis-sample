@@ -112,7 +112,7 @@ $unis-silver: #918f8f;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 15px; 
+  gap: 12px; 
   background-color: transparent; 
  
   .trackToggle{
@@ -306,17 +306,16 @@ $unis-silver: #918f8f;
 
       // Shrink middle section controls
       .mini-controls {
-        gap: 1px;
+        gap: .5px;
         button { font-size: 18px; }
-        margin-right: 7px;
+        margin-right: 3px;
 
 
         .trackToggle{
           background-color: transparent;
           color: $unis-blue;
           height: 15px !important;
-          margin-right: 1px;
-          padding-left: 15%;
+          padding-left: 18%;
 
         }
       }
