@@ -211,9 +211,9 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           method: 'post', 
           url: `/v1/media/song/${data.songOfWeek.id}/play?userId=${userId}` 
         });
-        console.log('✅ Top song play tracked');
+        console.log('Top song play tracked');
       } catch (err) {
-        console.error('❌ Failed to track play:', err);
+        console.error('Failed to track play:', err);
       }
     }
   };
@@ -248,9 +248,9 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
               method: 'post', 
               url: `/v1/media/song/${defaultSong.songId}/play?userId=${userId}` 
             });
-            console.log('✅ Artist play tracked');
+            console.log('Artist play tracked');
           } catch (err) {
-            console.error('❌ Failed to track play:', err);
+            console.error('Failed to track play:', err);
           }
         }
       } else {
@@ -330,7 +330,6 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           {/* Header */}
           <div className="dashboard-header">
             <h1>{jurName}</h1>
-            <p>Discover local talent, top tracks, and rising stars in {jurName}</p>
           </div>
 
           {/* Jurisdiction Symbol Hero */}
@@ -353,7 +352,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
             {data.artistOfMonth && (
               <div className="highlight-card card">
                 <div className="section-header">
-                  <h3><Trophy size={20} /> #1 Artist in {jurName}</h3>
+                  <h3> #1 Artist in {jurName}</h3>
                 </div>
                 <div className="highlight-content">
                   <img
@@ -368,10 +367,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                       {data.artistOfMonth.name}
                     </h4>
                     <p className="bio">{data.artistOfMonth.bio}</p>
-                    <div className="item-stats">
-                      <span><Heart size={14} /> {data.artistOfMonth.supporters.toLocaleString()} supporters</span>
-                      <span><Eye size={14} /> {data.artistOfMonth.plays.toLocaleString()} plays</span>
-                    </div>
+                   
                     <button className="btn btn-primary" onClick={handlePlayTopArtist}>
                       Listen Now
                     </button>
@@ -391,7 +387,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                 }}
               >
                 <div className="section-header">
-                  <h3><Star size={20} /> #1 Song in {jurName}</h3>
+                  <h3 style={{borderRadius: '8px', backgroundColor: 'black', width: 'fit-content'}}> #1 Song in {jurName}</h3>
                 </div>
                 <div className="highlight-content">
                   <div className="song-icon">
@@ -403,8 +399,6 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                     </h4>
                     <p>by {data.songOfWeek.artist}</p>
                     <div className="item-stats">
-                      <span><Eye size={14} /> {data.songOfWeek.plays.toLocaleString()} plays</span>
-                      <span><Heart size={14} /> {data.songOfWeek.likes.toLocaleString()} likes</span>
                     </div>
                     <button className="btn btn-primary" onClick={handlePlayTopSong}>
                       Play
