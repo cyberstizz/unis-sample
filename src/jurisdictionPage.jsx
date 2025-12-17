@@ -473,7 +473,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                       />
                       <div className="item-header" onClick={() => handleViewSong(song.id)} style={{ cursor: 'pointer' }}>
                         <h4>{song.title}</h4>
-                        <p>by {song.artist}</p>
+                        <p>{song.artist}</p>
                       </div>
                       <div className="item-stats">
                         <span><Eye size={12} /> {song.plays.toLocaleString()}</span>

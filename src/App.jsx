@@ -45,13 +45,13 @@ const AppLayout = () => {
           <Route path="/song/:songId" element={<SongPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/voteawards" element={<VoteAwards />} />
-          <Route path="/profile" element={<artistDashboard />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/milestones" element={<MilestonesPage />} />
           <Route path="/leaderboards" element={<Leaderboards />} />
           <Route path="/earnings" element={<Earnings />} />
           <Route path="/findpage" element={<FindPage />} />
           <Route path="/artistDashboard" element={<ArtistDashboard />} />
-          <Route path="/jurisdictionPage" element={<JurisdictionPage />} />
+          <Route path="/jurisdiction/:jurisdiction" element={<JurisdictionPage />} />
         </Route>
       </Routes>
       <WinnersNotification />

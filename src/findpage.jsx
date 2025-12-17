@@ -180,9 +180,11 @@ const FindPage = () => {
   }, [viewState.mode]);
 
 
-  const handleJurisdiction = {
-    // navigate('/jri')
-  }
+  const handleJurisdiction = () => {
+  // Use the currently selected jurisdiction or default to Harlem
+  const jurisdictionToNavigate = selectedJurisdiction || selectedHarlem || 'Harlem';
+  navigate(`/jurisdiction/${encodeURIComponent(jurisdictionToNavigate)}`);
+};
 
   // Fetch tops on select (restored from original)
   const fetchTopResults = async (jurisdictionName) => {
@@ -560,9 +562,15 @@ const FindPage = () => {
         {error && <div className="error">{error}</div>}
 
         <div className="results-section">
-          {/* Results lists... */}
           <div className="column">
-            <h2 onClick={handleJurisdiction}>Top Songs in {displayTerritory}</h2>
+            <h2 
+              onClick={handleJurisdiction} 
+              style={{ cursor: 'pointer', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => e.target.style.color = '#163387'}
+              onMouseLeave={(e) => e.target.style.color = 'inherit'}
+            >
+              Top Songs in {displayTerritory}
+            </h2>
             <ul className="results-list">
               {displaySongs.slice(0, 3).map((item, index) => (
                 <li key={item.id || index} className="result-item">
@@ -582,7 +590,14 @@ const FindPage = () => {
             </ul>
           </div>
           <div className="column">
-            <h2>Top Artists in {displayTerritory}</h2>
+            <h2 
+              onClick={handleJurisdiction}
+              style={{ cursor: 'pointer', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => e.target.style.color = '#163387'}
+              onMouseLeave={(e) => e.target.style.color = 'inherit'}
+            >
+              Top Artists in {displayTerritory}
+            </h2>
             <ul className="results-list">
               {displayArtists.slice(0, 3).map((item, index) => (
                 <li key={item.id || index} className="result-item">

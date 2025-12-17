@@ -12,6 +12,8 @@ export const PlayerProvider = ({ children }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showPlaylistManager, setShowPlaylistManager] = useState(false);
+
   const audioRef = useRef(null);
 
   // Load user playlists from backend on mount
@@ -240,8 +242,11 @@ export const PlayerProvider = ({ children }) => {
       deletePlaylist,
       updatePlaylistName,
       loadPlaylist,
-      refreshPlaylists: loadUserPlaylists
-    }}>
+      refreshPlaylists: loadUserPlaylists,
+      showPlaylistManager,
+      openPlaylistManager: () => setShowPlaylistManager(true),
+      closePlaylistManager: () => setShowPlaylistManager(false),
+        }}>
       {children}
     </PlayerContext.Provider>
   );

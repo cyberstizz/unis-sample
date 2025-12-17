@@ -9,20 +9,23 @@ import './player.scss';
 import UnisPauseButton from './UnisPauseButton';
 
 const Player = () => {
-  // Get audioRef from context instead of creating a new one
+
   const { 
     isExpanded, 
     toggleExpand, 
     currentMedia, 
     next, 
     prev, 
-    audioRef,  // ← Use the context's audioRef
+    audioRef, 
     playlists, 
     addToPlaylist, 
     removeFromPlaylist, 
     reorderPlaylist, 
     loadPlaylist, 
-    playMedia 
+    playMedia,
+    showPlaylistManager,
+    closePlaylistManager,
+    openPlaylistManager
   } = useContext(PlayerContext);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -30,7 +33,6 @@ const Player = () => {
   const [duration, setDuration] = useState(0); 
   const [isLiked, setIsLiked] = useState(false);
   const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
-  const [showPlaylistManager, setShowPlaylistManager] = useState(false);
   const [showPlaylistViewer, setShowPlaylistViewer] = useState(false);
   const [viewerTracks, setViewerTracks] = useState([]); 
   const [viewerTitle, setViewerTitle] = useState("Playlist");
@@ -318,7 +320,7 @@ const Player = () => {
                 <Maximize2 />
               </button> */}
               <button onClick={() => setShowPlaylistWizard(true)}>➕</button>
-              <button onClick={() => setShowPlaylistManager(true)}>
+              <button onClick={() => openPlaylistManager}>
                 <Headphones />
               </button>
               <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
@@ -338,7 +340,7 @@ const Player = () => {
 
       <PlaylistManager
         open={showPlaylistManager}
-        onClose={() => setShowPlaylistManager(false)}
+        onClose={() => setShowPlaylistViewer(false)}
       />
     </div>
   );

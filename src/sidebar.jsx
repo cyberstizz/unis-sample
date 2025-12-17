@@ -1,34 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import './sidebar.scss';
 import { useNavigate } from 'react-router-dom';
 import { Vote, Search, Trophy, Settings, DollarSign, House, Music } from 'lucide-react';
+import { useAuth } from './context/AuthContext';
+import { PlayerContext } from './context/playercontext';
 
 const Sidebar = ({ onProfileClick }) => { 
   const [isOpen, setIsOpen] = useState(false); 
+  const { user } = useAuth();
+  const { openPlaylistManager } = useContext(PlayerContext); // Get playlist function
+  const navigate = useNavigate();
 
   const toggleOpen = () => setIsOpen(!isOpen);
 
-  const navigate = useNavigate();
-
   const handleHome = () => navigate('/');
-
   const handleClick = () => navigate('/voteawards'); 
-
   const handleEarnings = () => navigate('/earnings'); 
-
   const handleMilestones = () => navigate('/milestones'); 
-
   const handleMap = () => navigate('/find');
-
   const handleLeaderboards = () => navigate('/leaderboards'); 
-
   const handleFindPage = () => navigate('/findpage');
-
   const handleArtist = () => navigate('/artist'); 
+  const handleSong = () => navigate('/song');
+  
+  // ADDED: Handle playlists
+  const handlePlaylists = () => {
+    openPlaylistManager();
+  }; 
 
-  const handleSong = () => navigate('/song'); 
-
-  const handleProfile = () => navigate('/profile'); 
+  // UPDATED: Conditional routing based on user role
+  const handleProfile = () => {
+    if (user?.role === 'artist') {
+      navigate('/artistDashboard');
+    } else {
+      navigate('/profile'); // For listeners or any other role
+    }
+  };
 
   return (
     <>
@@ -64,7 +71,7 @@ const Sidebar = ({ onProfileClick }) => {
             <span className="sidebar-icon"><DollarSign size={24} /></span>
             <span className="sidebar-text">Earnings</span>
           </li>
-          <li onClick={handleClick}>
+          <li onClick={handlePlaylists}>
             <span className="sidebar-icon"><Music size={24} /></span>
             <span className="sidebar-text">Playlists</span>
           </li>

@@ -14,22 +14,21 @@ $unis-silver: #918f8f;
   left: 0;
   width: 100vw;
   background: #1A1A1A;
-  // FIX: Added padding-bottom to ensure elements aren't right on the edge
   padding: 0 0 10px 0; 
   display: flex;
   flex-direction: column;
   align-items: center;
   transition: all 0.3s ease;
-  z-index: 1000; // High z-index to stay above everything
-  border-top: 1px solid rgba($unis-blue, 0.3); // Subtle border top
+  z-index: 1000;
+  border-top: 1px solid rgba($unis-blue, 0.3);
 
   // --- SEEKBAR (Top of player) ---
   .seekbar {
     width: 100%;
     height: 4px; 
-    background: rgba($unis-blue, 0.3); // Dimmer background for contrast
+    background: rgba($unis-blue, 0.3);
     position: relative;
-    margin-bottom: 10px; // Give space between bar and controls
+    margin-bottom: 10px;
     cursor: pointer;
 
     .seekbar-track {
@@ -43,13 +42,29 @@ $unis-silver: #918f8f;
 
     .seekbar-progress {
       height: 100%;
-      background: $unis-blue; // Active color
+      background: $unis-blue;
       transition: width 0.1s linear;
+      position: relative;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        right: -6px; // Center it on the edge (12px diameter / 2)
+        top: 50%;
+        transform: translateY(-50%);
+        width: 18px;
+        height: 18px;
+        background: $unis-blue;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
     }
 
-    // Hover effect for seekbar
-    &:hover .seekbar-progress {
-      background: $unis-blue;
+    // Hover effect - make thumb larger
+    &:hover .seekbar-progress::after {
+      transform: translateY(-50%) scale(1.3);
+      box-shadow: 0 0 8px rgba($unis-blue, 0.6);
     }
   }
 
@@ -58,17 +73,15 @@ $unis-silver: #918f8f;
     display: flex;
     align-items: center;
     width: 100%;
-    padding: 0 20px; // Consistent side padding
-    height: 60px; // Fixed height for consistency
+    padding: 0 20px;
+    height: 60px;
 
-    // SECTION 1: Song Info (Left)
-    // We give this flex: 1 to push the center group to the middle
     .song-info {
       flex: 1; 
       display: flex;
       align-items: center;
       gap: 12px;
-      overflow: hidden; // Prevent text spilling
+      overflow: hidden;
 
       .mini-artwork {
         width: 45px;
@@ -105,63 +118,58 @@ $unis-silver: #918f8f;
       }
     }
 
-    // SECTION 2: Controls (Center)
-    // Flex 0 ensures it doesn't shrink, and auto margin handles centering if flex:1 fails
     .mini-controls {
-  flex: 0 0 auto; 
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px; 
-  background-color: transparent; 
- 
-  .trackToggle{
-          background-color: transparent;
-          color: $unis-blue;
-          font-size: xx-large;
-        }
-  button {
-    background: transparent;
-    border: none;
-    color: $unis-silver;
-    font-size: 14px; 
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s ease, color 0.2s ease;
-
-    // Metallic / Glow Effects
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-    
-    &:hover {
-      color: $accent-white;
-      transform: scale(1.1);
-      text-shadow: 0 0 8px rgba($unis-blue, 0.6);
-    }
-
-    &.play-btn {
-      width: 45px; 
-      height: 45px; 
-      color: $unis-blue;
-      &:hover { color: $unis-blue; }
+      flex: 0 0 auto; 
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px; 
+      background-color: transparent; 
+     
+      .trackToggle {
+        background-color: transparent;
+        color: $unis-blue;
+        font-size: xx-large;
+      }
       
-      .unis-play-button-icon {
-        width: 100%; 
-        height: 100%; 
+      button {
+        background: transparent;
+        border: none;
+        color: $unis-silver;
+        font-size: 14px; 
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s ease, color 0.2s ease;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        
+        &:hover {
+          color: $accent-white;
+          transform: scale(1.1);
+          text-shadow: 0 0 8px rgba($unis-blue, 0.6);
+        }
+
+        &.play-btn {
+          width: 45px; 
+          height: 45px; 
+          color: $unis-blue;
+          &:hover { color: $unis-blue; }
+          
+          .unis-play-button-icon {
+            width: 100%; 
+            height: 100%; 
+          }
+        }
       }
     }
-  }
-}
 
-    // SECTION 3: Actions (Right)
-    // Flex 1 aligns this group to the far right
     .like-download {
       flex: 1;
       display: flex;
-      justify-content: flex-end; // Push items to the right
+      justify-content: flex-end;
       align-items: center;
-      gap: 15px; // Uniform spacing
+      gap: 15px;
 
       button {
         background: transparent;
@@ -181,8 +189,7 @@ $unis-silver: #918f8f;
 
       .like-button {
         &.liked {
-           color: $unis-blue; 
-           // If using SVGs via CSS filter or fill, handle here
+          color: $unis-blue; 
         }
       }
     }
@@ -192,18 +199,17 @@ $unis-silver: #918f8f;
   &.expanded {
     height: 100vh;
     top: 0;
-    padding: 0; // Reset padding
+    padding: 0;
     background-color: #000; 
 
-    // Background Image handling
     &::before {
       content: '';
       position: absolute;
       inset: 0;
-      background-image: var(--bg-image); // Use inline style var if possible
+      background-image: var(--bg-image);
       background-size: cover;
       background-position: center;
-      filter: blur(20px) brightness(0.4); // Blur effect for backdrop
+      filter: blur(20px) brightness(0.4);
       z-index: -1;
     }
 
@@ -220,7 +226,7 @@ $unis-silver: #918f8f;
       .minimize-button {
         position: absolute;
         top: 20px; 
-        left: 20px; // Typically left top for "Back/Down"
+        left: 20px;
         background: transparent;
         border: none;
         color: white;
@@ -230,15 +236,14 @@ $unis-silver: #918f8f;
       }
 
       .media-element {
-         // Album Art
-         width: 100%;
-         max-width: 350px;
-         aspect-ratio: 1/1; // Perfect square
-         box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-         border-radius: 12px;
-         margin-bottom: 40px;
-         background-size: cover;
-         background-position: center;
+        width: 100%;
+        max-width: 350px;
+        aspect-ratio: 1/1;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        border-radius: 12px;
+        margin-bottom: 40px;
+        background-size: cover;
+        background-position: center;
       }
 
       .info {
@@ -260,7 +265,40 @@ $unis-silver: #918f8f;
         width: 100%;
         max-width: 500px;
         margin-bottom: 30px;
-        // ... (Keep your slider styling here)
+        height: 6px;
+        background: rgba($unis-blue, 0.3);
+        position: relative;
+        cursor: pointer;
+        border-radius: 3px;
+
+        .seekbar-progress {
+          height: 100%;
+          background: $unis-blue;
+          transition: width 0.1s linear;
+          position: relative;
+          border-radius: 3px;
+          
+          // ADDED: Larger blue circle thumb for expanded view
+          &::after {
+            content: '';
+            position: absolute;
+            right: -8px; // Center it on the edge (16px diameter / 2)
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            background: $unis-blue;
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+          }
+        }
+
+        &:hover .seekbar-progress::after {
+          transform: translateY(-50%) scale(1.3);
+          box-shadow: 0 0 12px rgba($unis-blue, 0.8);
+        }
       }
 
       .controls {
@@ -278,7 +316,7 @@ $unis-silver: #918f8f;
           &:hover { color: $unis-blue; }
           
           &.play-btn-large {
-            font-size: 60px; // Huge play button
+            font-size: 60px;
             color: $unis-blue;
             &:hover { transform: scale(1.05); }
           }
@@ -291,12 +329,19 @@ $unis-silver: #918f8f;
 // --- MOBILE ADJUSTMENTS ---
 @media (max-width: 600px) {
   .player {
-    padding-bottom: 15px; // More room for touch bars (iPhone home bar)
+    padding-bottom: 15px;
+
+    .seekbar {
+      .seekbar-progress::after {
+        width: 10px;
+        height: 10px;
+        right: -5px;
+      }
+    }
 
     .mini-player {
       padding: 0 10px;
 
-      // Shrink left section
       .song-info {
         gap: 8px;
         .mini-artwork { width: 35px; height: 35px; }
@@ -304,23 +349,19 @@ $unis-silver: #918f8f;
         .mini-info .artist { font-size: 11px; }
       }
 
-      // Shrink middle section controls
       .mini-controls {
         gap: .5px;
         button { font-size: 18px; }
         margin-right: 3px;
 
-
-        .trackToggle{
+        .trackToggle {
           background-color: transparent;
           color: $unis-blue;
           height: 15px !important;
           padding-left: 18%;
-
         }
       }
 
-      // Hide non-essential actions on tiny screens
       .like-download {
         gap: 5px;
         display: none;
