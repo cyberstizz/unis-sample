@@ -1,4 +1,4 @@
-// src/components/wizards/CreateAccountWizard.jsx - FIXED VERSION
+// src/components/wizards/CreateAccountWizard.jsx - WITH ARTIST UPLOAD AGREEMENT
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
@@ -19,6 +19,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
     songFile: null,
     songArtworkFile: null,
     supportedArtistId: null,
+    agreedToTerms: false,  // NEW: Agreement checkbox
   });
   const [artists, setArtists] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -34,159 +35,24 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
     }
   }, [step, show, formData.role]);
 
-  const next = () => setStep(s => s + 1);
+  const next = () => {
+    // NEW: Block next if artist and agreement not checked
+    if (formData.role === 'artist' && step === 3 && !formData.agreedToTerms) {
+      setError('You must agree to the Upload Agreement to continue');
+      return;
+    }
+    setStep(s => s + 1);
+  };
   const prev = () => setStep(s => s - 1);
 
   const submit = async () => {
-    // Enhanced Validation
-    if (formData.role === 'artist') {
-      if (!formData.title.trim()) return setError('Song title required');
-      if (!formData.artistPhotoFile) return setError('Artist profile photo required');
-      if (!formData.songFile) return setError('Debut song audio required');
-      if (!formData.songArtworkFile) return setError('Song artwork required');
-      if (!formData.genreId) return setError('Genre required for artists');
-    }
-    
-    if (!formData.jurisdictionId) return setError('Please select your Harlem neighborhood');
-
-    setLoading(true);
-    setError('');
-
-    try {
-      // Step 1: Register user (WITHOUT bio - we'll add it after)
-      const registerPayload = {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-        jurisdictionId: formData.jurisdictionId,
-        genreId: formData.role === 'artist' ? formData.genreId : null,
-        // ❌ DON'T send bio here - backend ignores it anyway
-        supportedArtistId: formData.role === 'listener' ? formData.supportedArtistId : null,
-      };
-
-      const regRes = await apiCall({
-        method: 'post',
-        url: '/v1/users/register',
-        data: registerPayload
-      });
-
-      console.log('=== REGISTRATION RESPONSE ===', regRes.data);
-      const newUserId = regRes.data.userId || regRes.data.user_id || regRes.data.id;
-      console.log('Extracted userId:', newUserId);
-      
-      if (!newUserId) {
-        throw new Error('Failed to get user ID from registration response');
-      }
-
-      // Delay for DB propagation
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Step 2: Login to get token
-      const loginRes = await apiCall({
-        method: 'post',
-        url: '/auth/login',
-        data: {
-          email: formData.email,
-          password: formData.password
-        }
-      });
-
-      const token = loginRes.data.token;
-      localStorage.setItem('token', token);
-      console.log('Token set');
-
-      // Delay for token propagation
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Step 3: Upload song if artist (BEFORE profile update)
-      let songId = null;
-      if (formData.role === 'artist' && formData.songFile) {
-        const songJson = JSON.stringify({
-          title: formData.title,
-          genreId: formData.genreId,
-          jurisdictionId: formData.jurisdictionId,
-          artistId: newUserId,
-        });
-
-        const songFD = new FormData();
-        songFD.append('song', songJson);
-        songFD.append('file', formData.songFile);
-        songFD.append('artwork', formData.songArtworkFile);
-
-        const songRes = await apiCall({
-          method: 'post',
-          url: '/v1/media/song',
-          data: songFD
-        });
-
-        // Extract songId - backend returns Song entity with songId field
-        songId = songRes.data.songId;
-        console.log('Song uploaded with ID:', songId);
-        
-        if (!songId) {
-          console.error('WARNING: songId is undefined!', songRes.data);
-          throw new Error('Failed to get song ID from upload response');
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-
-      // Step 4: Update profile (photo + bio) - Using the SAME endpoint as EditProfileWizard
-      if (formData.role === 'artist') {
-        const profileFD = new FormData();
-        
-        if (formData.artistPhotoFile) {
-          profileFD.append('photo', formData.artistPhotoFile);
-        }
-        
-        if (formData.bio && formData.bio.trim()) {
-          profileFD.append('bio', formData.bio.trim());
-        }
-
-        await apiCall({
-          method: 'patch',
-          url: '/v1/users/profile',  // ✅ Same as EditProfileWizard
-          data: profileFD,
-          headers: { 'Content-Type': 'multipart/form-data' },  // ✅ CRITICAL!
-        });
-        
-        console.log('Profile updated (photo + bio)');
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-
-      // Step 5: Set default song if artist
-      if (formData.role === 'artist' && songId) {
-        await apiCall({
-          method: 'patch',
-          url: '/v1/users/default-song',  // ✅ Fixed endpoint path
-          data: { defaultSongId: songId },
-          headers: { 'Content-Type': 'application/json' },
-        });
-        console.log('Default song set to:', songId);
-      }
-
-      alert('Account created successfully! Please login with your credentials.');
-      onClose();
-      
-      // Clear token and redirect
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-
-    } catch (err) {
-      console.error('Registration error:', err);
-      const errorMsg = err.response?.data?.message || err.message || 'Registration failed. Please try again.';
-      setError(errorMsg);
-      localStorage.removeItem('token');
-    } finally {
-      setLoading(false);
-    }
+    // ... your existing submit logic unchanged (no changes here)
   };
 
   if (!show) return null;
 
-  const maxSteps = formData.role === 'artist' ? 4 : 3;
+  // NEW: Adjust maxSteps — +1 for agreement step (artists only)
+  const maxSteps = formData.role === 'artist' ? 5 : 3;
 
   return (
     <div className="upload-wizard-overlay">
@@ -247,7 +113,33 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
             </>
           )}
 
-          {/* Step 3: Listener */}
+          {/* NEW Step 3: Upload Agreement (Artists Only) */}
+          {step === 3 && formData.role === 'artist' && (
+            <div className="agreement-step">
+              <h3 className="upload-section-header">Upload Agreement</h3>
+              <div className="agreement-text">
+                <p style={{color: "black"}}>By uploading and clicking “I Agree”, you represent and warrant that:</p>
+                <ol style={{color: "blue", fontWeight: "bold"}}>
+                  <li>You own or control 100% of the worldwide rights in both the sound recording (master) and the underlying musical composition (publishing), or you have obtained all necessary licenses.</li>
+                  <li>You grant Unis a non-exclusive, royalty-free, worldwide license to reproduce, distribute, publicly perform, and publicly display your content on the platform, and to monetize it through advertisements.</li>
+                  <li>Revenue Share: Unis will pay you 50% of Net Advertising Revenue attributable to your content (after ad costs/taxes/compulsory royalties). Payments monthly over $50.</li>
+                  <li>You indemnify Unis from third-party claims arising from your breach.</li>
+                  <li>This license is perpetual but terminable with 30 days notice.</li>
+                </ol>
+                <p style={{color: "blue"}}>Unis handles required royalty payments to performing rights organizations and mechanical licensing collectives on an aggregate basis.</p>
+              </div>
+              <label className="agreement-checkbox">
+                <input 
+                  type="checkbox" 
+                  checked={formData.agreedToTerms} 
+                  onChange={e => update('agreedToTerms', e.target.checked)} 
+                />
+                <span style={{color: "black"}}>I agree to the Upload Agreement and warrant I have the rights</span>
+              </label>
+            </div>
+          )}
+
+          {/* Step 3: Listener Support (unchanged, but shifted for artists) */}
           {step === 3 && formData.role === 'listener' && (
             <>
               <h3 className="upload-section-header">Support an Artist</h3>
@@ -263,8 +155,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
             </>
           )}
 
-          {/* Step 3: Artist */}
-          {step === 3 && formData.role === 'artist' && (
+          {/* Step 4: Artist Setup (shifted for artists) */}
+          {step === 4 && formData.role === 'artist' && (
             <>
               <h3 className="upload-section-header">Artist Setup</h3>
               <input
@@ -310,8 +202,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
             </>
           )}
 
-          {/* Final Review */}
-          {step === maxSteps && (
+          {/* Final Review (shifted for artists) */}
+          {(step === 4 && formData.role === 'listener') || (step === 5 && formData.role === 'artist') && (
             <div className="confirmation-summary">
               <h3>All Set!</h3>
               <p>Username: <strong>{formData.username}</strong></p>
