@@ -35,18 +35,20 @@ $unis-silver: #918f8f;
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  z-index: 10; // Same as sidebar
+  z-index: 10;
   color: $unis-blue;
-  transition: transform 0.3s;
+  transition: transform 0.3s, opacity 0.3s;
 
   .arrow-icon {
     color: $accent-white;
     font-size: 24px;
   }
 
-  // Rotate on open (mobile)
-  + .sidebar.open ~ .sidebar-trigger .arrow-icon {
-    transform: rotate(180deg);
+  // Hide trigger when sidebar is open
+  &.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%) translateX(-100%);
   }
 }
 
@@ -70,11 +72,11 @@ $unis-silver: #918f8f;
   padding-right: 1px;
   z-index: 10;
   transition: transform 0.3s ease-in-out;
-  transform: translateX(-100%); // Hidden on mobile
+  transform: translateX(-100%);
   border-right: 0.5px solid $unis-blue;
 
   &.open {
-    transform: translateX(0); // Slide in
+    transform: translateX(0);
   }
 
   ul {
@@ -83,8 +85,8 @@ $unis-silver: #918f8f;
     margin-top: 2px; 
 
     li {
-      display: flex; // Enable flexbox
-      align-items: center; // Vertical alignment
+      display: flex;
+      align-items: center;
       padding-top: 15px;
       padding-right: 1px;
       padding-left: 15px;
@@ -103,7 +105,7 @@ $unis-silver: #918f8f;
 }
 
 .sidebar-overlay {
-  display: none; // Hidden on desktop
+  display: none;
 
   .sidebar.open ~ & {
     position: fixed;
@@ -112,7 +114,7 @@ $unis-silver: #918f8f;
     width: 100vw;
     height: 100vh;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 9; // Below sidebar
+    z-index: 9;
   }
 }
 
@@ -155,18 +157,18 @@ $unis-silver: #918f8f;
     color: $unis-blue;
   }
 
-  .sidebar{
-
+  .sidebar {
     border-right-color: transparent;
-    ul{
-    li{
-      border-top: .2px solid transparent;
-      border-bottom-color: transparent;
+    
+    ul {
+      li {
+        border-top: .2px solid transparent;
+        border-bottom-color: transparent;
+      }
     }
-  }
   }
 }
 
 .banner {
-  z-index: 5; // Below sidebar (10)
+  z-index: 5;
 }

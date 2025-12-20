@@ -8,39 +8,84 @@ import { PlayerContext } from './context/playercontext';
 const Sidebar = ({ onProfileClick }) => { 
   const [isOpen, setIsOpen] = useState(false); 
   const { user } = useAuth();
-  const { openPlaylistManager } = useContext(PlayerContext); // Get playlist function
+  const { openPlaylistManager } = useContext(PlayerContext);
   const navigate = useNavigate();
 
   const toggleOpen = () => setIsOpen(!isOpen);
-
-  const handleHome = () => navigate('/');
-  const handleClick = () => navigate('/voteawards'); 
-  const handleEarnings = () => navigate('/earnings'); 
-  const handleMilestones = () => navigate('/milestones'); 
-  const handleMap = () => navigate('/find');
-  const handleLeaderboards = () => navigate('/leaderboards'); 
-  const handleFindPage = () => navigate('/findpage');
-  const handleArtist = () => navigate('/artist'); 
-  const handleSong = () => navigate('/song');
   
-  // ADDED: Handle playlists
+  // Close sidebar after navigation (mobile only)
+  const closeSidebar = () => {
+    if (window.innerWidth <= 1024) {
+      setIsOpen(false);
+    }
+  };
+
+  const handleHome = () => {
+    navigate('/');
+    closeSidebar();
+  };
+  
+  const handleClick = () => {
+    navigate('/voteawards');
+    closeSidebar();
+  };
+  
+  const handleEarnings = () => {
+    navigate('/earnings');
+    closeSidebar();
+  };
+  
+  const handleMilestones = () => {
+    navigate('/milestones');
+    closeSidebar();
+  };
+  
+  const handleMap = () => {
+    navigate('/find');
+    closeSidebar();
+  };
+  
+  const handleLeaderboards = () => {
+    navigate('/leaderboards');
+    closeSidebar();
+  };
+  
+  const handleFindPage = () => {
+    navigate('/findpage');
+    closeSidebar();
+  };
+  
+  const handleArtist = () => {
+    navigate('/artist');
+    closeSidebar();
+  };
+  
+  const handleSong = () => {
+    navigate('/song');
+    closeSidebar();
+  };
+  
   const handlePlaylists = () => {
     openPlaylistManager();
+    closeSidebar();
   }; 
 
-  // UPDATED: Conditional routing based on user role
   const handleProfile = () => {
     if (user?.role === 'artist') {
       navigate('/artistDashboard');
     } else {
-      navigate('/profile'); // For listeners or any other role
+      navigate('/profile');
     }
+    closeSidebar();
   };
 
   return (
     <>
-      {/* Mobile Trigger */}
-      <div className="sidebar-trigger" onClick={toggleOpen}>
+      {/* Mobile Trigger - hide when sidebar is open */}
+      <div 
+        className={`sidebar-trigger ${isOpen ? 'hidden' : ''}`} 
+        onClick={toggleOpen}
+      >
         <span className="arrow-icon">&#9654;</span>
       </div>
 
