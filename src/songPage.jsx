@@ -6,6 +6,7 @@ import './songPage.scss';
 import Layout from './layout';
 import { PlayerContext } from './context/playercontext'; 
 import VotingWizard from './votingWizard'; 
+import cacheService from './services/cacheService';  
 
 const SongPage = () => {
   const { songId } = useParams();
@@ -80,6 +81,7 @@ const SongPage = () => {
       };
       
       console.log('Normalized song data:', normalized); // Debug log
+      console.log('Normalized playsToday:', normalized.playsToday);
       setSong(normalized);
     } catch (err) {
       console.error('Failed to load song:', err);
@@ -128,6 +130,10 @@ const SongPage = () => {
         console.log('Tracking song play:', { endpoint, songId: song.id, userId });
         await apiCall({ method: 'post', url: endpoint });
         console.log('Song play tracked successfully');
+
+        cacheService.invalidate('song', song.id);
+        cacheService.invalidateType('trending'); 
+
         
         // Refresh song data to get updated play counts
         await fetchSongData();
@@ -214,7 +220,7 @@ const SongPage = () => {
             {/* Optionally show plays today if > 0 */}
             {song.playsToday > 0 && (
               <p style={{ color: '#ff6b35', fontWeight: 'bold' }}>
-                🔥 {song.playsToday} plays today
+                {song.playsToday} plays today
               </p>
             )}
           </div>

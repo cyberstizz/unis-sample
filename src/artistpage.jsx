@@ -242,6 +242,8 @@ const ArtistPage = ({ isOwnProfile = false }) => {
               <p className="artist-jurisdiction">
                 {artist.jurisdiction?.name || 'Unknown'}
               </p>
+
+              <img src={artist.photoUrl}></img>
             </div>
             <p className="artist-genre">
               {artist.genre?.name || 'Unknown Genre'}
