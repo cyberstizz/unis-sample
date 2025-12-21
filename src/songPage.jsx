@@ -8,7 +8,7 @@ import { PlayerContext } from './context/playercontext';
 import VotingWizard from './votingWizard'; 
 
 const SongPage = () => {
-  const { songId } = useParams();  // Get songId from URL
+  const { songId } = useParams();
   const { playMedia } = useContext(PlayerContext); 
   const [song, setSong] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,22 +18,22 @@ const SongPage = () => {
   const [showVotingWizard, setShowVotingWizard] = useState(false); 
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [showLyrics, setShowLyrics] = useState(false); // NEW: Toggle lyrics visibility
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-          try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            setUserId(payload.userId);
-            console.log('User ID extracted from token:', payload.userId); // Debug log
-          } catch (err) {
-            console.error('Failed to get userId from token:', err);
-          }
-        }
-      }, []);
-
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserId(payload.userId);
+        console.log('User ID extracted from token:', payload.userId);
+      } catch (err) {
+        console.error('Failed to get userId from token:', err);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     fetchSongData();
@@ -43,13 +43,13 @@ useEffect(() => {
     setLoading(true);
     setError('');
     try {
-      // Fetch song details - you'll need to create this endpoint in your backend
       const response = await apiCall({ 
         method: 'get', 
         url: `/v1/media/song/${songId}` 
       });
       
       const songData = response.data;
+      console.log('Raw song data from backend:', songData); // Debug log
       
       // Normalize the data
       const normalized = {
@@ -62,13 +62,14 @@ useEffect(() => {
         url: songData.fileUrl ? `${API_BASE_URL}${songData.fileUrl}` : null,
         description: songData.description || 'No description available',
         score: songData.score,
-        playCount: songData.playCount || 0,  // Use score as play count for now
-        todayPlayCount: 0,  // TODO: Add daily play count endpoint
-        voteCount: 0,  // TODO: Add vote count endpoint
+        playCount: songData.playCount || 0,
+        playsToday: songData.playsToday || 0, // NEW: Plays today
+        explicit: songData.explicit || false, // NEW: Explicit flag
+        lyrics: songData.lyrics || null, // NEW: Lyrics
+        voteCount: 0, // TODO: Add vote count endpoint
         duration: songData.duration,
         createdAt: songData.createdAt,
         genre: songData.genre?.name || 'Unknown',
-        // TODO: Add these when backend supports them
         credits: {
           producer: 'N/A',
           writer: 'N/A',
@@ -78,6 +79,7 @@ useEffect(() => {
         videos: [],
       };
       
+      console.log('Normalized song data:', normalized); // Debug log
       setSong(normalized);
     } catch (err) {
       console.error('Failed to load song:', err);
@@ -102,37 +104,40 @@ useEffect(() => {
   };
 
   const handlePlay = async () => {
-      playMedia(
-        { 
-          type: 'song', 
-          url: song.url, 
-          title: song.title, 
-          artist: song.artist, 
-          artwork: song.artwork 
-        },
-        [{ 
-          type: 'song', 
-          url: song.url, 
-          title: song.title, 
-          artist: song.artist, 
-          artwork: song.artwork 
-        }]
-      );
+    playMedia(
+      { 
+        type: 'song', 
+        url: song.url, 
+        title: song.title, 
+        artist: song.artist, 
+        artwork: song.artwork 
+      },
+      [{ 
+        type: 'song', 
+        url: song.url, 
+        title: song.title, 
+        artist: song.artist, 
+        artwork: song.artwork 
+      }]
+    );
 
-      // Track the play
-      if (song.id && userId) {
-        try {
-          const endpoint = `/v1/media/song/${song.id}/play?userId=${userId}`;
-          console.log('Tracking song play:', { endpoint, songId: song.id, userId });
-          await apiCall({ method: 'post', url: endpoint });
-          console.log('Song play tracked successfully');
-        } catch (err) {
-          console.error('Failed to track song play:', err);
-        }
-      } else {
-        console.warn('Could not track play - missing song.id or userId:', { songId: song.id, userId });
+    // Track the play
+    if (song.id && userId) {
+      try {
+        const endpoint = `/v1/media/song/${song.id}/play?userId=${userId}`;
+        console.log('Tracking song play:', { endpoint, songId: song.id, userId });
+        await apiCall({ method: 'post', url: endpoint });
+        console.log('Song play tracked successfully');
+        
+        // Refresh song data to get updated play counts
+        await fetchSongData();
+      } catch (err) {
+        console.error('Failed to track song play:', err);
       }
-    };
+    } else {
+      console.warn('Could not track play - missing song.id or userId:', { songId: song.id, userId });
+    }
+  };
 
   const handleCommentSubmit = (e) => {
     e.preventDefault();
@@ -168,7 +173,26 @@ useEffect(() => {
       <div className="song-page-container">
         <div className="main-content-card">
           
-          <h1 className="track-title">{song.title}</h1>
+          {/* Title with Explicit Badge */}
+          <h1 className="track-title">
+            {song.title}
+            {song.explicit && (
+              <span 
+                style={{
+                  marginLeft: '12px',
+                  background: 'rgba(255, 0, 0, 0.85)',
+                  color: 'white',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  fontSize: '0.5em',
+                  fontWeight: 'bold',
+                  verticalAlign: 'middle'
+                }}
+              >
+                EXPLICIT
+              </span>
+            )}
+          </h1>
 
           <img
             src={song.artwork}
@@ -181,24 +205,69 @@ useEffect(() => {
             <button onClick={handleVote} className="vote-button">Vote</button>
           </div>
 
-          <p className="artist-name">{song.artist}</p>
+          <p className="artist-name" style={{color: "blue"}}>{song.artist}</p>
           <p className="jurisdiction">{song.jurisdiction}</p>
           <p className="genre">{song.genre}</p>
 
           <div className="stats">
-            <p>Plays {song.playCount}</p>
+            <p><span style={{color: "blue"}}>Plays</span> {song.playCount}</p>
+            {/* Optionally show plays today if > 0 */}
+            {song.playsToday > 0 && (
+              <p style={{ color: '#ff6b35', fontWeight: 'bold' }}>
+                🔥 {song.playsToday} plays today
+              </p>
+            )}
           </div>
 
           <section className="description-section">
-            <h2>About</h2>
+            <h2 style={{color: "blue"}}>About</h2>
             <p>{song.description}</p>
           </section>
 
+          {/* NEW: Lyrics Section */}
+          {song.lyrics && (
+            <section className="lyrics-section">
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '15px'
+              }}>
+                <h2 style={{color: "blue"}}>Lyrics</h2>
+                <button 
+                  onClick={() => setShowLyrics(!showLyrics)}
+                  className="play-button"
+                  style={{ fontSize: '14px', padding: '8px 16px' }}
+                >
+                  {showLyrics ? 'Hide Lyrics' : 'Show Lyrics'}
+                </button>
+              </div>
+              
+              {showLyrics && (
+                <div 
+                  className="lyrics-content"
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    lineHeight: '1.8',
+                    fontSize: '18px',
+                    padding: '20px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    borderRadius: '8px',
+                    maxHeight: '400px',
+                    overflowY: 'auto'
+                  }}
+                >
+                  {song.lyrics}
+                </div>
+              )}
+            </section>
+          )}
+
           <section className="credits-section">
-            <h2>Credits</h2>
-            <p><strong>Producer:</strong> {song.credits.producer}</p>
-            <p><strong>Writer:</strong> {song.credits.writer}</p>
-            <p><strong>Mix Engineer:</strong> {song.credits.mix}</p>
+            <h2 style={{color: "blue"}}>Credits</h2>
+            <p><strong style={{color: "blue"}}>Producer:</strong> {song.credits.producer}</p>
+            <p><strong style={{color: "blue"}}>Writer:</strong> {song.credits.writer}</p>
+            <p><strong style={{color: "blue"}}>Mix Engineer:</strong> {song.credits.mix}</p>
           </section>
 
           {song.photos.length > 0 && (
