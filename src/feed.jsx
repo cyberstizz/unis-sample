@@ -17,7 +17,6 @@ import songArtNine from './assets/albumartnine.jpg';
 import songArtTen from './assets/albumartten.jpeg';
 import songArtEleven from './assets/rapperphotoOne.jpg';
 import { JURISDICTION_NAMES } from './utils/idMappings';
-import cacheService from './services/cacheService';  
 import './feed.scss';
 
 const Feed = () => {
@@ -206,10 +205,7 @@ const Feed = () => {
       await apiCall({ method: 'post', url: endpoint });
       console.log('Play tracked successfully');
 
-      // Invalidate caches
-      cacheService.invalidate('song', playMediaObj.id);
-      cacheService.invalidateType('trending');
-      cacheService.invalidateType('feed');
+    
     } catch (err) {
       console.error('Failed to track play:', err);
     }

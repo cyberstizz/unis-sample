@@ -68,7 +68,7 @@ axiosInstance.interceptors.response.use(
 
     // Invalidate related caches on mutations
     if (['post', 'put', 'delete', 'patch'].includes(response.config.method)) {
-      invalidateCachesForMutation(response.config.url);
+      invalidateCachesForMutation(response.config.url, response.config.method);
     }
 
     return response;
@@ -76,7 +76,7 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      cacheService.clearAll(); // Clear cache on logout
+      cacheService.clearAll();
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -102,14 +102,20 @@ function getCacheKeyFromUrl(url) {
     return { type: 'playlists', id: 'all', params: {} };
   }
 
-  // Trending: /v1/media/trending?jurisdictionId=...
-  const trendingMatch = url.match(/\/v1\/media\/trending/);
+  // Trending TODAY: /v1/media/trending/today
+  if (url.includes('/v1/media/trending/today')) {
+    const params = extractQueryParams(url);
+    return { type: 'trending', id: params.jurisdictionId || 'default', params };
+  }
+
+  // Trending (score-based): /v1/media/trending
+  const trendingMatch = url.match(/\/v1\/media\/trending(?!\/today)/);
   if (trendingMatch) {
     const params = extractQueryParams(url);
     return { type: 'trending', id: params.jurisdictionId || 'default', params };
   }
 
-  // New releases: /v1/media/new?jurisdictionId=...
+  // New releases: /v1/media/new
   const newMatch = url.match(/\/v1\/media\/new/);
   if (newMatch) {
     const params = extractQueryParams(url);
@@ -141,26 +147,58 @@ function extractQueryParams(url) {
   return params;
 }
 
-// Helper: Invalidate caches after mutations
-function invalidateCachesForMutation(url) {
+// UPDATED: Better cache invalidation logic
+function invalidateCachesForMutation(url, method) {
+  // Play tracking - invalidate song and trending caches
+  if (url.includes('/play')) {
+    const songIdMatch = url.match(/\/song\/([^\/\?]+)\/play/);
+    if (songIdMatch) {
+      const songId = songIdMatch[1];
+      console.log(`[Cache] Invalidating song ${songId} after play`);
+      cacheService.invalidate('song', songId);
+      cacheService.invalidateType('trending'); // Affects trending lists
+      cacheService.invalidateType('feed'); // Affects new releases
+    }
+    return;
+  }
+
   // Playlist mutations
   if (url.includes('/api/playlists')) {
     cacheService.invalidateType('playlists');
     console.log('[Cache] Invalidated playlists after mutation');
+    return;
   }
 
-  // Media play tracking
-  if (url.includes('/media/') && url.includes('/play')) {
-    // Don't invalidate on play tracking (too frequent)
+  // Vote mutations
+  if (url.includes('/vote')) {
+    const songIdMatch = url.match(/\/song\/([^\/\?]+)/);
+    if (songIdMatch) {
+      cacheService.invalidate('song', songIdMatch[1]);
+      cacheService.invalidateType('trending');
+    }
+    console.log('[Cache] Invalidated after vote');
+    return;
+  }
+
+  // Song/Video upload or delete
+  if ((url.includes('/media/song') || url.includes('/media/video')) && 
+      (method === 'post' || method === 'delete')) {
+    cacheService.invalidateType('trending');
+    cacheService.invalidateType('feed');
+    cacheService.invalidateType('artist');
+    console.log('[Cache] Invalidated after media upload/delete');
     return;
   }
 
   // User updates
-  if (url.includes('/v1/users/')) {
-    const userIdMatch = url.match(/\/v1\/users\/([^\/]+)/);
+  if (url.includes('/v1/users/') && (method === 'put' || method === 'patch')) {
+    const userIdMatch = url.match(/\/v1\/users\/([^\/\?]+)/);
     if (userIdMatch) {
       cacheService.invalidate('user', userIdMatch[1]);
+      cacheService.invalidate('artist', userIdMatch[1]);
     }
+    console.log('[Cache] Invalidated user/artist after update');
+    return;
   }
 }
 
@@ -181,15 +219,16 @@ export const apiCall = async (config) => {
 // Export function to manually invalidate cache (for UI actions)
 export const invalidateCache = (type, id) => {
   cacheService.invalidate(type, id);
+  console.log(`[Cache] Manually invalidated ${type}:${id}`);
 };
 
 export const invalidateCacheType = (type) => {
   cacheService.invalidateType(type);
+  console.log(`[Cache] Manually invalidated type: ${type}`);
 };
 
-// Mock helper (unchanged from your existing code)
+// Mock helper
 const getMockResponse = (url, method) => {
-  // Your existing mock logic...
   if (url.includes('/auth/login') && method === 'post') {
     return { data: { token: 'mock-jwt-for-demo' } };
   }

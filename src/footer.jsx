@@ -11,6 +11,8 @@ const Footer = () => {
         <Link to="/">Terms of Use</Link>
         <span className="footer-separator">|</span>
         <Link to="/">Cookie Policy</Link>
+        <span className="footer-separator">|</span>
+        <Link to="/">Report Infringement</Link>
       </div>
       <div className="footer-copyright">
         © {new Date().getFullYear()} Unis. All rights reserved.

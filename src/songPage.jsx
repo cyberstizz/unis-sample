@@ -6,7 +6,6 @@ import './songPage.scss';
 import Layout from './layout';
 import { PlayerContext } from './context/playercontext'; 
 import VotingWizard from './votingWizard'; 
-import cacheService from './services/cacheService';  
 
 const SongPage = () => {
   const { songId } = useParams();
@@ -131,8 +130,6 @@ const SongPage = () => {
         await apiCall({ method: 'post', url: endpoint });
         console.log('Song play tracked successfully');
 
-        cacheService.invalidate('song', song.id);
-        cacheService.invalidateType('trending'); 
 
         
         // Refresh song data to get updated play counts
