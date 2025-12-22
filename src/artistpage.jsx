@@ -7,9 +7,9 @@ import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
 import VotingWizard from './votingWizard';
 
+
 const ArtistPage = ({ isOwnProfile = false }) => {
   const { artistId } = useParams();
-  const navigate = useNavigate();
   const { playMedia } = useContext(PlayerContext);
   const [artist, setArtist] = useState(null);
   const [songs, setSongs] = useState([]);
@@ -31,6 +31,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
   };
 
+  const navigate = useNavigate();
 
 
   useEffect(() => {
@@ -239,7 +240,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
           <div className="artist-info">
             <div className="artist-top">
               <p className="artist-name">{artist.username}</p>
-              <p className="artist-jurisdiction">
+              <p className="artist-jurisdiction" onClick={() => navigate(`/jurisdiction/${artist.jurisdiction.name}`)} style={{cursor: 'pointer'}}>
                 {artist.jurisdiction?.name || 'Unknown'}
               </p>
 

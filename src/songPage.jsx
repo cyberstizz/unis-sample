@@ -6,6 +6,8 @@ import './songPage.scss';
 import Layout from './layout';
 import { PlayerContext } from './context/playercontext'; 
 import VotingWizard from './votingWizard'; 
+import { useNavigate } from 'react-router-dom';
+
 
 const SongPage = () => {
   const { songId } = useParams();
@@ -151,6 +153,9 @@ const SongPage = () => {
     }
   };
 
+    const navigate = useNavigate();
+  
+
   if (loading) {
     return (
       <Layout backgroundImage={songArtwork}>
@@ -209,7 +214,9 @@ const SongPage = () => {
           </div>
 
           <p className="artist-name" style={{color: "blue"}}>{song.artist}</p>
-          <p className="jurisdiction">{song.jurisdiction}</p>
+          <p className="jurisdiction" onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)} style={{cursor: 'pointer'}}>
+          {song.jurisdiction}
+          </p>
           <p className="genre">{song.genre}</p>
 
           <div className="stats">
