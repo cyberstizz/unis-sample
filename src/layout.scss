@@ -43,11 +43,9 @@ $player-height-mobile: 320px;
   flex: 1;
   overflow-y: auto;
   padding: 0 20px;
-  padding-bottom: $player-height-desktop;
 
   @media (max-width: 600px) {
     padding: 0 16px;
-    padding-bottom: $player-height-mobile;
   }
 }
 

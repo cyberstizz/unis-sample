@@ -24,17 +24,22 @@ import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './context/AuthContext';  
 import WinnersNotification from './winnersNotification';
 
-// New: Wrapper component for layout (useLocation inside Router)
+// Wrapper component for layout (useLocation inside Router)
 const AppLayout = () => {
-  const { pathname } = useLocation();  // Now inside Router
-  const isLogin = pathname === '/login';
+  const { pathname } = useLocation();
+  
+  // Check if we're on login or register pages
+  const isAuthPage = pathname === '/login' || pathname === '/register';
+  
   const handleProfileClick = () => {
     window.location.href = '/profile'; 
   };
 
   return (
-    <div className="app-wrapper"> {/* New wrapper for sidebar positioning */}
-      {!isLogin && <Sidebar onProfileClick={handleProfileClick} />} 
+    <div className="app-wrapper">
+      {/* Only show Sidebar on authenticated pages */}
+      {!isAuthPage && <Sidebar onProfileClick={handleProfileClick} />}
+      
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -54,8 +59,17 @@ const AppLayout = () => {
           <Route path="/jurisdiction/:jurisdiction" element={<JurisdictionPage />} />
         </Route>
       </Routes>
-      <WinnersNotification />
-      <SongNotification />
+      
+      {/* Only show notifications on authenticated pages */}
+      {!isAuthPage && (
+        <>
+          <WinnersNotification />
+          <SongNotification />
+        </>
+      )}
+      
+      {/* Only show Player on authenticated pages */}
+      {!isAuthPage && <Player />}
     </div>
   );
 };
@@ -65,9 +79,8 @@ const App = () => {
     <AuthProvider>
       <PlayerProvider>
         <Router>
-          <AppLayout />  {/* New: Wrap Routes + Sidebar logic */}
+          <AppLayout />
         </Router>
-        <Player />
       </PlayerProvider>
     </AuthProvider>
   );

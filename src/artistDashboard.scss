@@ -35,10 +35,11 @@ $green-500: #22c55e;
 // Main Container
 .artist-dashboard {
   min-height: 100vh;
-  background-color: $bg-black;
+  background-color: transparent;
   color: $text-white;
   margin-left: 25%;
   width: 48%;
+  margin-top: 10%;
 }
 
 // Welcome Popup
@@ -199,6 +200,8 @@ $green-500: #22c55e;
 
 // Profile Section
 .profile-section {
+  justify-content: center;
+  justify-items: center;
   .profile-content {
     display: flex;
     align-items: center;
@@ -217,6 +220,7 @@ $green-500: #22c55e;
 
     .profile-header {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 1rem;
@@ -481,6 +485,18 @@ $green-500: #22c55e;
   }
 }
 
+.profile-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  background: #666;
+  &:hover { background: #555; }
+}
+
 // Responsive Design
 @media (max-width: 1024px) {
   .artist-dashboard {
@@ -502,6 +518,17 @@ $green-500: #22c55e;
 }
 
 @media (max-width: 640px) {
+
+  .artist-dashboard {
+    margin-top: 20%;
+    justify-content: center;
+    justify-self: center;
+    justify-items: center;
+    align-content: center;
+    align-self: center;
+    align-items: center;
+    margin-left: 0;
+  }
   .images-grid {
     grid-template-columns: 1fr;
   }
