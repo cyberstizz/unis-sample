@@ -20,6 +20,7 @@ $subtle-black: #1a1a1a; // Added for consistency
   background: transparent;
   margin-left: 23%;
   padding-top: 10%;
+  margin-top: 3%;
 }
 
 #leaderboardsheader {
@@ -119,9 +120,9 @@ $subtle-black: #1a1a1a; // Added for consistency
   .no-results-message, .loading-message {
     text-align: center;
     font-style: italic;
-    padding: 50px;
+    padding: 20px;
     color: $text-gray;
-    margin-left: 15%;
+    margin-left: 2%;
   }
 }
 
@@ -250,6 +251,24 @@ $subtle-black: #1a1a1a; // Added for consistency
 
 // Mobile
 @media (max-width: 600px) {
+
+  .leaderboards-page-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    background: $bg-black;
+    color: $text-gray;
+    padding: 5px 0;
+    overflow-y: auto;
+    font-family: sans-serif;
+    background: transparent;
+    margin-left: 2%;
+    padding-top: 10%;
+    margin-top: 25%;
+    width: 90vw;
+  }
+  
   .filter-controls {
     flex-direction: column;
     align-items: center;
@@ -260,44 +279,104 @@ $subtle-black: #1a1a1a; // Added for consistency
     text-align: center;
   }
 
+  .result-section{
+    width: 100%;
+    border: solid 2px green;
+  }
+
+  .results-list {
+    width: 100%;
+    padding: 0;
+    gap: 12px; 
+    justify-content: start;
+    justify-self: start;
+    justify-items: start;
+    // ONLY ADDITION: Center the list items
+    align-items: center;
+  }
+
+  
+
   .result-item {
-    flex-direction: column;
-    align-items: flex-start; 
-    text-align: left;
-    gap: 10px;
+    // Compact layout with better use of space
+    padding: 12px;
+    width: 110%;
+    gap: 8px;
+    border-left: 3px solid $unis-blue; 
+    border-right: 3px solid $unis-blue;
+    display: grid;
+    grid-template-columns: 2px 1fr auto;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "rank artwork info"
+      "actions actions actions";
+    align-items: start;
+    justify-content: start;
+    justify-items: start;
+    align-content: start;
+    // ONLY ADDITION: Center the cards
+    
+    &:hover {
+      transform: none; // Disable transform on mobile
+    }
   }
 
   .rank {
-    position: absolute;
-    top: 15px;
-    right: 15px;
+    display: none;
+    grid-area: rank;
+    font-size: 24px; // Smaller rank on mobile
+    width: auto;
+    align-self: center;
+    text-align: left;
   }
 
   .item-artwork {
-    width: 60px;
-    height: 60px;
-    margin-right: 15px;
+    grid-area: artwork;
+    width: 55px;
+    height: 55px;
+    margin-left: 2%;
   }
 
   .item-info {
+    grid-area: info;
     text-align: left;
-    margin-bottom: 5px;
+    margin-bottom: 0;
+    align-self: center;
+    min-width: 0; // Allow text truncation
+    
+    .item-title {
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .item-artist {
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 
   .item-votes {
-    margin-right: 0;
-    margin-bottom: 10px;
+    display: none; // Hide votes on mobile to save space
   }
   
   .result-actions {
-    width: 100%; // Stack buttons full width
+    grid-area: actions;
+    width: 100%;
+    display: flex;
     flex-direction: row;
     justify-content: space-between;
-    gap: 5px;
+    gap: 8px;
+    margin-top: 8px;
   }
   
   .listen-button, .view-item-button {
-    flex-grow: 1; // Distribute buttons evenly
+    flex: 1; // Equal width buttons
+    padding: 8px 12px;
+    font-size: 11px;
+    text-align: center;
   }
-
 }

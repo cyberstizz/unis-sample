@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import unisLogo from '../assets/unisNoBackground.svg';
+import unisLogo from '../assets/UnisFireFinal.png';
 import spaceVideo from '../assets/space-bg.mp4';
 import CreateAccountWizard from '../createAccountWizard'; 
 import './Login.scss';
