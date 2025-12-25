@@ -185,9 +185,12 @@ $unis-silver: #918f8f;
 
 .winner-highlight {
   margin: 40px auto 30px;
-  max-width: 900px;
+  margin-top: 1%;
+  max-width: 95%;
+  width: 100%;
   text-align: center;
   padding: 20px;
+  padding-top: 1px;
   background: #0a0a0a;
   border: 1px solid #444;
   border-radius: 12px;
@@ -254,21 +257,29 @@ $unis-silver: #918f8f;
 // Mobile
 @media (max-width: 600px) {
   .milestones-page-container{
-    padding-top: 45%;
+    padding-top: 32%;
     width: 90vw;
-    margin-left: 25px;
+    margin-left: 5px;
   }
+  
   #milestonesHeader{
     margin: 0;
     padding-top: 45%;
     width: 50%;
-    border: solid 2px green !important;
     display: none;
   }
+
+  .milestone-caption {
+    margin-bottom: 5px;
+    margin-top: 5px;
+  }
+  // .winner-highlight{
+  // }
 
   .header{
     margin-bottom: none;
   }
+  
   .filter-controls {
     flex-direction: column;
     align-items: center;
@@ -280,16 +291,48 @@ $unis-silver: #918f8f;
   }
 
   .result-item {
-    flex-direction: column;
-    text-align: center;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    gap: 12px;
+    padding: 15px;
   }
 
-  .item-info {
-    text-align: center;
+  .rank{
+    display: none;
   }
 
   .item-artwork {
-    width: 80px;
-    height: 80px;
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+  }
+
+  .item-info {
+    width: 25vw;
+    flex-grow: 1;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    
+    .item-title {
+      font-size: 16px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .item-artist {
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .item-votes{
+    display: none;
   }
 }

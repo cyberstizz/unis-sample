@@ -190,3 +190,9 @@ $unis-silver: #918f8f;
   from { transform: scale(0.5); }
   to { transform: scale(1); }
 }
+
+@media (max-width: 600px) {
+.next-button{
+  margin-left: 115px !important;
+}  
+}

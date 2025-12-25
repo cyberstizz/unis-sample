@@ -263,64 +263,131 @@ $unis-silver: #918f8f;
 
   .voteAwardsContainer{
     margin-top: 25%;
+    width: 98vw;
+    margin-left: none;
+    margin-right: none;
+    padding-left: none;
   }
+  
   .nominees h2 {
     font-size: 20px;
   }
   
   .filters {
-    gap: 10px;
+    margin-top: 8%;
+    display: flex;
+    flex-direction: row;
+    height: fit-content;
+    width: 22% !important;
+    gap: 25px;
     .filter-select {
-      flex: 1 1 calc(50% - 10px); // 2 per row
       font-size: 12px;
-      text-align: center;
     }
   }
+
+.search-form{
+  width: 100%;
+}
+
+.search-bar{
+  width: 80% !important;
+}
   
-  .nominee-list .nominee-item {
-    flex-direction: column;
-    align-items: center;
-    align-content: center;
-    justify-content: center;
-    justify-items: center;
-    padding: 10px;
+  .nominee-list {
+    width: 100%;
+    padding: 0;
+    gap: 12px;
     
-    border-width: 0 0 0 4px; // Only left border on mobile saves space?
-    // actually, let's keep your request:
-    border-left: 4px solid $unis-blue;
-    border-right: 4px solid $unis-blue;
+    .nominee-item {
+      // FIXED: Changed to row layout like other pages
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      padding: 12px;
+      gap: 10px;
+      
+      border-left: 3px solid $unis-blue;
+      border-right: 3px solid $unis-blue;
 
-    .nominee-image {
-      width: 60px;
-      height: 60px;
-      margin-bottom: 15px;
-    }
+      .nominee-image {
+        width: 55px;
+        height: 55px;
+        margin-right: 10px;
+        margin-bottom: 0;
+        flex-shrink: 0;
+      }
 
-    .nominee-info {
-      width: 100%;
-      margin-bottom: 15px;
-      text-align: center;
-    }
+      .nominee-info {
+        flex-grow: 1;
+        text-align: left;
+        margin-bottom: 0;
+        min-width: 0; // Allow text truncation
+        
+        #nominee-name {
+          font-size: 10px !important;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          margin: 0 0 2px 0;
+        }
+        
+        .artist-name {
+          font-size: 10px !important;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          margin: 0 0 2px 0;
+        }
+        
+        .jurisdiction-label {
+          font-size: 8px !important;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
 
-    // Stack buttons on mobile
-    .nominee-actions { 
-       width: 100%;
-       display: flex;
-    }
-
-    .the_buttons{
+      .the_buttons {
         display: flex;
         flex-direction: column;
-        width: 50% !important;
-        margin-left: 8%;
-        gap: 1%;
+        width: 36% !important;
+        margin-bottom: 14px !important;
+        gap: 16px;
+        flex-shrink: 0;
       }
-    
-    // Since buttons are currently siblings in your JSX:
-    .listen-button, .vote-button {
-      width: 100%;
-      margin-bottom: 2px;
-      text-align: center;
+      
+      .listen-button, .vote-button {
+        width: 70px; 
+        padding: 6px 10px;
+        font-size: 10px;
+        text-align: center;
+        margin-bottom: 0;
+        letter-spacing: 0.5px;
+        border-radius: 4px;
+      }
+      
+      .listen-button {
+        background: transparent;
+        border: 1px solid $text-gray;
+        color: $text-silver;
+        
+        &:hover {
+          border-color: $accent-white;
+          color: $accent-white;
+          background: rgba(255,255,255, 0.05);
+        }
+      }
+      
+      .vote-button {
+        background: $unis-blue;
+        border: 1px solid $unis-blue;
+        color: $accent-white;
+        
+        &:hover {
+          background: lighten($unis-blue, 5%);
+          box-shadow: 0 0 10px rgba($unis-blue, 0.4);
+        }
+      }
     }
   }
 }
