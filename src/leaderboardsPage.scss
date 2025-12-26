@@ -267,21 +267,29 @@ $subtle-black: #1a1a1a; // Added for consistency
     padding-top: 10%;
     margin-top: 25%;
     width: 90vw;
-  }
+  
   
   .filter-controls {
+    display: flex;
     flex-direction: column;
     align-items: center;
+    width: 100% !important;
   }
 
-  .filter-select, .view-button {
-    width: 100%;
+  .filter-select{
+    width: 60% !important;
+    border-radius: 12px;
+  }
+  
+  
+  
+  .view-button {
+    width: 57%;
     text-align: center;
   }
 
   .result-section{
     width: 100%;
-    border: solid 2px green;
   }
 
   .results-list {
@@ -291,14 +299,12 @@ $subtle-black: #1a1a1a; // Added for consistency
     justify-content: start;
     justify-self: start;
     justify-items: start;
-    // ONLY ADDITION: Center the list items
     align-items: center;
   }
 
   
 
   .result-item {
-    // Compact layout with better use of space
     padding: 12px;
     width: 110%;
     gap: 8px;
@@ -314,10 +320,9 @@ $subtle-black: #1a1a1a; // Added for consistency
     justify-content: start;
     justify-items: start;
     align-content: start;
-    // ONLY ADDITION: Center the cards
     
     &:hover {
-      transform: none; // Disable transform on mobile
+      transform: none; 
     }
   }
 
@@ -339,28 +344,39 @@ $subtle-black: #1a1a1a; // Added for consistency
 
   .item-info {
     grid-area: info;
-    text-align: left;
+    text-align: right;
     margin-bottom: 0;
-    align-self: center;
-    min-width: 0; // Allow text truncation
+    margin-right:110px;
+    align-self: left;
+    width: 110px;
+    height: 100%;
+    color: white;
+    align-content: flex-start !important;
+    justify-content: flex-start !important;
+    justify-items: flex-start !important;
     
     .item-title {
       font-size: 14px;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: #FFFFFF !important;
       white-space: nowrap;
+      justify-self: flex-start !important;
+      align-self: flex-start !important;
     }
     
     .item-artist {
       font-size: 12px;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: #FFFFFF !important;
       white-space: nowrap;
+      height: 50%;
     }
   }
 
   .item-votes {
-    display: none; // Hide votes on mobile to save space
+    display: none; 
   }
   
   .result-actions {
@@ -374,9 +390,11 @@ $subtle-black: #1a1a1a; // Added for consistency
   }
   
   .listen-button, .view-item-button {
-    flex: 1; // Equal width buttons
+    flex: 1; 
     padding: 8px 12px;
     font-size: 11px;
     text-align: center;
   }
+}
+
 }

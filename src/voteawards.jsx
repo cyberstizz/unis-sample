@@ -34,13 +34,19 @@ const VoteAwards = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-  const intervals = ['daily', 'weekly', 'monthly', 'quarterly', 'annual'];
+  const intervals = [
+  { value: 'daily', label: 'Day' },
+  { value: 'weekly', label: 'Week' },
+  { value: 'monthly', label: 'Month' },
+  { value: 'quarterly', label: 'Quarter' },
+  { value: 'annual', label: 'Year' },
+];
   const genres = ['rap', 'rock', 'pop'];
   const types = ['artist', 'song'];
   const jurisdictions = [
     { value: 'uptown-harlem', label: 'Uptown Harlem' },
     { value: 'downtown-harlem', label: 'Downtown Harlem' },
-    { value: 'harlem-wide', label: 'Harlem-Wide' },
+    { value: 'harlem-wide', label: 'Harlem' },
   ];
 
   // Get userId on mount
@@ -279,8 +285,8 @@ const VoteAwards = () => {
             className="filter-select"
           >
             {intervals.map((int) => (
-              <option key={int} value={int}>
-                {int.charAt(0).toUpperCase() + int.slice(1)}
+              <option key={int.value} value={int.value}>
+                {int.label}
               </option>
             ))}
           </select>
@@ -300,10 +306,10 @@ const VoteAwards = () => {
 
         <section className="nominees">
           <h2>
-            {selectedInterval.charAt(0).toUpperCase() + selectedInterval.slice(1)}{' '}
-            {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} of{' '}
             {selectedGenre.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('/')}{' '}
-            in {jurisdictionLabel}
+            {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} of the{' '}
+            {intervals.find(i => i.value === selectedInterval)?.label || selectedInterval}{' '}
+            in <br />{jurisdictionLabel}
           </h2>
 
           <form className="search-form" onSubmit={(e) => e.preventDefault()}>

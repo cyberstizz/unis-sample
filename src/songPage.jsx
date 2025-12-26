@@ -213,7 +213,7 @@ const SongPage = () => {
             <button onClick={handleVote} className="vote-button">Vote</button>
           </div>
 
-          <p className="artist-name" style={{color: "blue"}}>{song.artist}</p>
+          <p className="artist-name" style={{color: "white"}}>{song.artist}</p>
           <p className="jurisdiction" onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)} style={{cursor: 'pointer'}}>
           {song.jurisdiction}
           </p>
@@ -222,8 +222,8 @@ const SongPage = () => {
           <div className="stats">
             <p><span style={{color: "blue"}}>Plays</span> {song.playCount}</p>
             {/* Optionally show plays today if > 0 */}
-            {song.playsToday > 0 && (
-              <p style={{ color: '#ff6b35', fontWeight: 'bold' }}>
+            {song.playsToday > 100 && (
+              <p style={{ color: 'green', fontWeight: 'bold' }}>
                 {song.playsToday} plays today
               </p>
             )}

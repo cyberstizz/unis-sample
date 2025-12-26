@@ -267,7 +267,8 @@ $unis-silver: #918f8f;
     margin-left: none;
     margin-right: none;
     padding-left: none;
-  }
+    overflow: hidden;
+  
   
   .nominees h2 {
     font-size: 20px;
@@ -276,13 +277,19 @@ $unis-silver: #918f8f;
   .filters {
     margin-top: 8%;
     display: flex;
-    flex-direction: row;
-    height: fit-content;
-    width: 22% !important;
-    gap: 25px;
+    flex-direction: row !important;
+    gap: 20px;
+    width: 80vw !important;
+    margin-left: 10px;
+
     .filter-select {
       font-size: 12px;
     }
+  }
+
+  .filter-select{
+    width: 15vw !important;
+    border: solid 1px green;
   }
 
 .search-form{
@@ -324,7 +331,7 @@ $unis-silver: #918f8f;
         min-width: 0; // Allow text truncation
         
         #nominee-name {
-          font-size: 10px !important;
+          font-size: 15px !important;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -340,7 +347,7 @@ $unis-silver: #918f8f;
         }
         
         .jurisdiction-label {
-          font-size: 8px !important;
+          font-size: 10px !important;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -350,14 +357,17 @@ $unis-silver: #918f8f;
       .the_buttons {
         display: flex;
         flex-direction: column;
-        width: 36% !important;
-        margin-bottom: 14px !important;
-        gap: 16px;
+        width: 22% !important;
+        height: 20%;
+        margin-bottom: 3px !important;
+        gap: 2px;
         flex-shrink: 0;
+        margin-left: 25px;
+        margin-top: 5px;
       }
       
       .listen-button, .vote-button {
-        width: 70px; 
+        width: 60px; 
         padding: 6px 10px;
         font-size: 10px;
         text-align: center;
@@ -370,6 +380,7 @@ $unis-silver: #918f8f;
         background: transparent;
         border: 1px solid $text-gray;
         color: $text-silver;
+        margin-bottom: 8px;
         
         &:hover {
           border-color: $accent-white;
@@ -384,10 +395,12 @@ $unis-silver: #918f8f;
         color: $accent-white;
         
         &:hover {
-          background: lighten($unis-blue, 5%);
+          background: $unis-blue;
           box-shadow: 0 0 10px rgba($unis-blue, 0.4);
         }
       }
     }
   }
+}
+
 }

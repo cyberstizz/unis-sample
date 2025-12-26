@@ -264,7 +264,7 @@ $subtle-black: #1a1a1a;
     gap: 10px;
     margin-bottom: 40px; 
     flex-wrap: wrap;
-    width: 90% !important;
+    width: 67% !important;
     max-width: 500px;
     margin-left: auto;
     margin-right: auto;
@@ -273,7 +273,7 @@ $subtle-black: #1a1a1a;
 
   .findfilter-select{
     padding: 10px 18px;
-    background: transparent;
+    background: black;
     border: 1px solid rgba($border-silver, 0.5);
     border-radius: 8px;
     color: $text-silver;
@@ -281,7 +281,8 @@ $subtle-black: #1a1a1a;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
     flex: 1;
-    min-width: 100px;
+    width: 25px !important;
+    border: solid 1px green;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -306,7 +307,7 @@ $subtle-black: #1a1a1a;
 
   .random-button {
     padding: 10px 18px;
-    background: transparent;
+    background: black;
     border: 1px solid rgba($border-silver, 0.5);
     border-radius: 8px;
     color: $text-silver;
