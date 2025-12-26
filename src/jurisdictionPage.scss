@@ -515,3 +515,9 @@ $unis-blue: #163387;
   color: #ff6b6b;
   font-size: 1.2rem;
 }
+
+  @media (max-width: 800px) {
+    .jurisdiction-dashboard{
+      width: 100%;
+    }
+  }

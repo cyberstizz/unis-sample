@@ -529,6 +529,41 @@ $green-500: #22c55e;
     align-items: center;
     margin-left: 0;
   }
+
+  h2{
+    padding-left: 0;
+    text-align: left !important;
+  }
+  
+
+  .dashboard-header{
+    width: 70vw !important;
+    padding: none;
+    align-content: left;
+    align-items: left;
+    justify-content: left;
+    justify-items: left;
+    justify-self: left;
+
+    .h2{
+      text-align: left !important;
+    }
+}
+
+.dasboardh1{
+    width: 80%;
+    padding-left: 2px;
+    text-align: left !important;
+
+}
+
+
+ .profile-info{
+  margin: 0 auto;
+  align-items: center;
+  justify-items: center;
+}
+
   .images-grid {
     grid-template-columns: 1fr;
   }

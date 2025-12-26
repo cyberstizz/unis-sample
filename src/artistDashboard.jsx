@@ -226,8 +226,7 @@ const ArtistDashboard = () => {
 
           {/* Header */}
           <div className="dashboard-header">
-            <h1 style={{ alignSelf: "center" }}>Dashboard</h1>
-            <p>Manage your content and track your performance</p>
+            <h1 className='dasboardh1'>Dashboard</h1>
           </div>
 
 
@@ -236,12 +235,11 @@ const ArtistDashboard = () => {
               <img src={displayPhoto} alt={displayName} className="profile-image" />
               <div className="profile-info">
                 <div className="profile-header">
-                  <h2>{displayName}</h2> <br />
                   <button className="btn btn-primary" onClick={() => setShowEditProfile(true)}>
                     Edit Profile
                   </button>
                 </div>
-                <p className="bio">{displayBio}</p>
+             
                 <div className="profile-actions">
                   
                   <button className="btn btn-secondary" onClick={downloadOwnershipContract}>
@@ -257,7 +255,7 @@ const ArtistDashboard = () => {
             <div className="stat-card">
               <div className="stat-content">
                 <div className="stat-info">
-                  <p className="stat-label">Total Score</p>
+                  <p className="stat-label">Score</p>
                   <p className="stat-value">{(userProfile.score || 0).toLocaleString()}</p>
                 </div>
                 <div className="stat-icon stat-icon-blue"><Eye size={28} /></div>
@@ -266,7 +264,7 @@ const ArtistDashboard = () => {
             <div className="stat-card">
               <div className="stat-content">
                 <div className="stat-info">
-                  <p className="stat-label">Total Plays</p>
+                  <p className="stat-label">Plays</p>
                   <p className="stat-value">
                     {songs.reduce((sum, s) => sum + (s.plays || 0), 0).toLocaleString()}
                   </p>
@@ -277,7 +275,7 @@ const ArtistDashboard = () => {
             <div className="stat-card">
               <div className="stat-content">
                 <div className="stat-info">
-                  <p className="stat-label">Songs Uploaded</p>
+                  <p className="stat-label">Songs</p>
                   <p className="stat-value">{songs.length}</p>
                 </div>
                 <div className="stat-icon stat-icon-green"><Users size={28} /></div>
@@ -290,13 +288,13 @@ const ArtistDashboard = () => {
           {/* Main Featured Song */}
           <div className="main-song-section card">
             <div className="section-header">
-              <h3>Main Featured Song</h3>
+              <h3>Default Song</h3>
               <button 
                 className="link-button" 
                 onClick={() => setShowDefaultSongWizard(true)}
                 style={{ fontWeight: '600', color: '#004aad' }}
               >
-                Change Featured
+                Change Default
               </button>
             </div>
             <div className="main-song-card">
@@ -318,7 +316,7 @@ const ArtistDashboard = () => {
             {/* Songs */}
             <div className="content-section card">
               <div className="section-header">
-                <h3><Play size={20} /> Your Songs</h3>
+                <h3><Play size={20} />Songs</h3>
                 <button className="btn btn-primary btn-small" onClick={() => setShowUploadWizard(true)}>
                   <Upload size={16} /> Upload
                 </button>
@@ -342,7 +340,7 @@ const ArtistDashboard = () => {
             {/* Videos */}
             <div className="content-section card">
               <div className="section-header">
-                <h3><Video size={20} /> Your Videos</h3>
+                <h3><Video size={20} /> Videos</h3>
                 <button className="btn btn-primary btn-small" onClick={() => setShowUploadWizard(true)}>
                   <Upload size={16} /> Upload
                 </button>
