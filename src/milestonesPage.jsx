@@ -82,7 +82,7 @@ const MilestonesPage = () => {
     const dateText = formatDateWithDay(selectedDate);
 
     
-    return <div>{locationText} <br />{genreText} {categoryText} {intervalText}   
+    return <div>{locationText} {genreText}<br /> {categoryText} {intervalText}   
               <div style={{color: "black"}}>{dateText}</div>   
               </div>
   };

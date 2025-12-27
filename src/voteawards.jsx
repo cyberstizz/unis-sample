@@ -305,11 +305,11 @@ const VoteAwards = () => {
         </div>
 
         <section className="nominees">
-          <h2>
+          <h2 className='intervalDeclaration'>
             {selectedGenre.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('/')}{' '}
             {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} of the{' '}
             {intervals.find(i => i.value === selectedInterval)?.label || selectedInterval}{' '}
-            in <br />{jurisdictionLabel}
+            in <br /><span className='jurisdictionLabel'>{jurisdictionLabel}</span>
           </h2>
 
           <form className="search-form" onSubmit={(e) => e.preventDefault()}>
@@ -317,7 +317,7 @@ const VoteAwards = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`Search for a ${selectedType}...`}
+              placeholder={`Search for ${selectedType}s to vote for`}
               className="search-bar"
             />
           </form>

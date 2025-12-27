@@ -27,6 +27,7 @@ $unis-silver: #918f8f;
   flex-wrap: wrap;
   width: 500px !important;
   max-width: 900px; 
+  justify-content: center;
 
   .filter-select {
     padding: 10px 18px; // Slightly tighter padding for modern feel
@@ -55,13 +56,24 @@ $unis-silver: #918f8f;
   max-width: 900px; 
   padding: 0 20px;
 
-  h2 {
-    color: $accent-white; // Changed to white for better hierarchy
-    font-size: 24px; // Slightly reduced for cleaner look
+  .intervalDeclaration{
+    color: $accent-white; 
+    font-size: 24px; 
     text-align: center;
+    justify-self: center;
     margin-bottom: 30px;
-    font-weight: 300; // Thinner font weight looks more modern
+    font-weight: 300; 
     letter-spacing: 1px;
+
+    .jurisdictionLabel{
+      justify-self: center;
+      align-self: center;
+      justify-content: center;
+      align-content: center;
+      justify-items: center;
+      align-content: center;
+      margin: 0 auto;
+    }
   }
 
   .search-form {
@@ -270,8 +282,28 @@ $unis-silver: #918f8f;
     overflow: hidden;
   
   
-  .nominees h2 {
-    font-size: 20px;
+  .nominees {
+    .intervalDeclaration{
+    color: $accent-white; // Changed to white for better hierarchy
+    font-size: 24px; // Slightly reduced for cleaner look
+    text-align: center !important;
+    justify-self: center !important;
+    margin-bottom: 30px;
+    font-weight: 300; 
+    letter-spacing: 1px;
+
+    .jurisdictionLabel{
+      text-align: center !important;
+      justify-self: center !important;
+      align-self: center !important;
+      justify-content: center !important;
+      align-content: center !important;
+      justify-items: center !important;
+      align-content: center !important;
+      margin: 0 auto !important;
+      width: 100% !important;
+    }
+  }
   }
   
   .filters {

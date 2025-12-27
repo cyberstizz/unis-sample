@@ -7,6 +7,7 @@ $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
 $button-hover: #D3D3D3;
+$unis-blue: #163387;
 
 .song-page-container {
   display: flex;
@@ -70,6 +71,10 @@ $button-hover: #D3D3D3;
   }
 }
 
+.vote-button{
+  border: solid 2px $unis-blue;
+}
+
 .artist-name,
 .jurisdiction {
   font-size: 32px; // Twice original (assuming ~16px base)
@@ -87,6 +92,98 @@ $button-hover: #D3D3D3;
 
   p {
     margin: 5px 0;
+  }
+}
+
+.secondary-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+  padding: 0 10px;
+  border-top: solid .5px gray;
+  width: 60%;
+  align-self: center;
+  justify-self: center;
+  padding-top: 20px;
+}
+
+.action-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid rgba($border-silver, 0.5);
+  color: $text-silver;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: $unis-blue;
+    background: rgba($unis-blue, 0.1);
+    color: $accent-white;
+  }
+
+  &.following {
+    background: $unis-blue;
+    border-color: $unis-blue;
+    color: $accent-white;
+
+    &:hover {
+      background: $unis-blue;
+    }
+  }
+}
+
+/* NEW: Lyrics Section */
+.lyrics-section {
+  margin-bottom: 30px;
+  
+  .lyrics-toggle-btn {
+    width: 100%;
+    padding: 12px 20px;
+    background: rgba($unis-blue, 0.2);
+    border: 1px solid rgba($unis-blue, 0.5);
+    color: $accent-white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    text-align: center;
+    margin-bottom: 15px;
+
+    &:hover {
+      background: rgba($unis-blue, 0.3);
+      border-color: $unis-blue;
+    }
+  }
+
+  .lyrics-content {
+    white-space: pre-wrap;
+    line-height: 1.8;
+    font-size: 18px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    color: $text-silver;
+    text-align: center;
+    border: 1px solid rgba($border-silver, 0.2);
+    animation: fadeIn 0.3s ease-in;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -210,6 +307,7 @@ $button-hover: #D3D3D3;
   .comments-list {
     list-style: none;
     padding: 0;
+    border-top: solid .5px $unis-blue;
 
     .comment-item {
       background: #1a1a1a;
@@ -225,51 +323,14 @@ $button-hover: #D3D3D3;
   }
 }
 
-.lyrics-section {
-  margin-bottom: 30px;
-
-  h2 {
-    color: $text-silver;
-    font-size: 36px;
-  }
-
-  .lyrics-content {
-    white-space: pre-wrap;
-    line-height: 1.8;
-    font-size: 18px;
-    padding: 20px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 8px;
-    max-height: 400px;
-    overflow-y: auto;
-    color: $text-silver;
-    
-    // Scrollbar styling
-    &::-webkit-scrollbar {
-      width: 8px;
-    }
-    
-    &::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 4px;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background: $text-silver;
-      border-radius: 4px;
-    }
-  }
-}
-
 // Mobile adjustments
 @media (max-width: 600px) {
-
-
   .song-page-container{
     margin-left: 1px;
     width: 100%;
-    padding-top: 25%;
+    padding-top: 30%;
   }
+  
   .main-content-card {
     padding: 10px;
   }
@@ -282,8 +343,38 @@ $button-hover: #D3D3D3;
     font-size: 24px;
   }
 
+  /* NEW: Mobile styles for secondary buttons */
+  .secondary-actions {
+    gap: 6px;
+    border-top: solid .5px gray;
+    width: 90%;
+    align-self: center;
+    justify-self: center;
+    padding-top: 20px;
+    
+    .action-btn {
+      padding: 6px 12px;
+      font-size: 11px;
+    }
+  }
+
+  /* NEW: Mobile styles for lyrics */
+  .lyrics-section {
+    .lyrics-toggle-btn {
+      font-size: 14px;
+      padding: 10px 15px;
+    }
+
+    .lyrics-content {
+      font-size: 16px;
+      padding: 15px;
+    }
+  }
+
   .description-section h2, .credits-section h2, .photos-section h2, .videos-section h2, .comments-section h2 {
     font-size: 28px;
+    align-self: center;
+    justify-self: center;
   }
 
   .description-section p, .credits-section p {

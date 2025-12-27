@@ -272,9 +272,13 @@ $unis-silver: #918f8f;
   .milestone-caption {
     margin-bottom: 5px;
     margin-top: 5px;
+    text-align: center;
+    justify-content: center;
+    align-content: center;
+    justify-items: center;
+    align-items: center;
   }
-  // .winner-highlight{
-  // }
+
 
   .header{
     margin-bottom: none;

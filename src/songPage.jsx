@@ -20,7 +20,9 @@ const SongPage = () => {
   const [showVotingWizard, setShowVotingWizard] = useState(false); 
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [userId, setUserId] = useState(null);
-  const [showLyrics, setShowLyrics] = useState(false); // NEW: Toggle lyrics visibility
+  const [showLyrics, setShowLyrics] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -51,9 +53,8 @@ const SongPage = () => {
       });
       
       const songData = response.data;
-      console.log('Raw song data from backend:', songData); // Debug log
+      console.log('Raw song data from backend:', songData);
       
-      // Normalize the data
       const normalized = {
         id: songData.songId,
         title: songData.title,
@@ -65,10 +66,10 @@ const SongPage = () => {
         description: songData.description || 'No description available',
         score: songData.score,
         playCount: songData.playCount || 0,
-        playsToday: songData.playsToday || 0, // NEW: Plays today
-        explicit: songData.explicit || false, // NEW: Explicit flag
-        lyrics: songData.lyrics || null, // NEW: Lyrics
-        voteCount: 0, // TODO: Add vote count endpoint
+        playsToday: songData.playsToday || 0,
+        explicit: songData.explicit || false,
+        lyrics: songData.lyrics || null,
+        voteCount: 0,
         duration: songData.duration,
         createdAt: songData.createdAt,
         genre: songData.genre?.name || 'Unknown',
@@ -81,7 +82,7 @@ const SongPage = () => {
         videos: [],
       };
       
-      console.log('Normalized song data:', normalized); // Debug log
+      console.log('Normalized song data:', normalized);
       console.log('Normalized playsToday:', normalized.playsToday);
       setSong(normalized);
     } catch (err) {
@@ -95,7 +96,6 @@ const SongPage = () => {
   const handleVoteSuccess = (id) => {
     console.log(`Vote confirmed for ID: ${id}`);
     setShowVotingWizard(false);
-    // TODO: Refresh vote count
   };
 
   const handleVote = () => {
@@ -124,17 +124,12 @@ const SongPage = () => {
       }]
     );
 
-    // Track the play
     if (song.id && userId) {
       try {
         const endpoint = `/v1/media/song/${song.id}/play?userId=${userId}`;
         console.log('Tracking song play:', { endpoint, songId: song.id, userId });
         await apiCall({ method: 'post', url: endpoint });
         console.log('Song play tracked successfully');
-
-
-        
-        // Refresh song data to get updated play counts
         await fetchSongData();
       } catch (err) {
         console.error('Failed to track song play:', err);
@@ -144,17 +139,42 @@ const SongPage = () => {
     }
   };
 
+  const handleFollow = () => {
+    setIsFollowing(!isFollowing);
+    console.log(isFollowing ? 'Unfollowed' : 'Followed');
+  };
+
+  const handleDontPlay = () => {
+    console.log('Added to do-not-play list');
+  };
+
+  const handleReport = () => {
+    console.log('Report song');
+  };
+
+  const handleShare = () => {
+    console.log('Share song');
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
+
   const handleCommentSubmit = (e) => {
     e.preventDefault();
     if (comment.trim()) {
       setComments([...comments, comment]);
       setComment('');
-      // TODO: Save comment to backend
     }
   };
 
-    const navigate = useNavigate();
-  
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -215,13 +235,12 @@ const SongPage = () => {
 
           <p className="artist-name" style={{color: "white"}}>{song.artist}</p>
           <p className="jurisdiction" onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)} style={{cursor: 'pointer'}}>
-          {song.jurisdiction}
+            {song.jurisdiction}
           </p>
           <p className="genre">{song.genre}</p>
 
           <div className="stats">
             <p><span style={{color: "blue"}}>Plays</span> {song.playCount}</p>
-            {/* Optionally show plays today if > 0 */}
             {song.playsToday > 100 && (
               <p style={{ color: 'green', fontWeight: 'bold' }}>
                 {song.playsToday} plays today
@@ -229,49 +248,41 @@ const SongPage = () => {
             )}
           </div>
 
-          <section className="description-section">
-            <h2 style={{color: "blue"}}>About</h2>
-            <p>{song.description}</p>
-          </section>
+          {/* NEW: Secondary Action Buttons - Added after stats, before lyrics */}
+          <div className="secondary-actions">
+            <button onClick={handleFollow} className={`action-btn ${isFollowing ? 'following' : ''}`}>
+              {isFollowing ? 'Following' : 'Follow'}
+            </button>
+            <button onClick={handleDontPlay} className="action-btn">Don't Play</button>
+            <button onClick={handleReport} className="action-btn">Report</button>
+            <button onClick={handleShare} className="action-btn">Share</button>
+            <button onClick={handleCopyLink} className="action-btn">
+              {copySuccess ? 'Copied!' : 'Copy Link'}
+            </button>
+          </div>
 
-          {/* NEW: Lyrics Section */}
+          {/* NEW: Lyrics Section - Added after stats and buttons, before About */}
           {song.lyrics && (
             <section className="lyrics-section">
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginBottom: '15px'
-              }}>
-                <h2 style={{color: "blue"}}>Lyrics</h2>
-                <button 
-                  onClick={() => setShowLyrics(!showLyrics)}
-                  className="play-button"
-                  style={{ fontSize: '14px', padding: '8px 16px' }}
-                >
-                  {showLyrics ? 'Hide Lyrics' : 'Show Lyrics'}
-                </button>
-              </div>
+              <button 
+                onClick={() => setShowLyrics(!showLyrics)}
+                className="lyrics-toggle-btn"
+              >
+                {showLyrics ? '▼ Hide Lyrics' : '▶ Show Lyrics'}
+              </button>
               
               {showLyrics && (
-                <div 
-                  className="lyrics-content"
-                  style={{
-                    whiteSpace: 'pre-wrap',
-                    lineHeight: '1.8',
-                    fontSize: '18px',
-                    padding: '20px',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    borderRadius: '8px',
-                    maxHeight: '400px',
-                    overflowY: 'auto'
-                  }}
-                >
+                <div className="lyrics-content">
                   {song.lyrics}
                 </div>
               )}
             </section>
           )}
+
+          <section className="description-section">
+            <h2 style={{color: "blue"}}>About</h2>
+            <p>{song.description}</p>
+          </section>
 
           <section className="credits-section">
             <h2 style={{color: "blue"}}>Credits</h2>
@@ -342,6 +353,7 @@ const SongPage = () => {
         onClose={() => setShowVotingWizard(false)}
         onVoteSuccess={handleVoteSuccess}
         nominee={selectedNominee}
+        userId={userId}
         filters={{
           selectedGenre: song.genre.toLowerCase().replace('/', '-'),
           selectedType: 'song',
