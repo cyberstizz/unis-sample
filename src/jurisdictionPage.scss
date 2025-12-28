@@ -512,10 +512,12 @@ $unis-blue: #163387;
     padding-right: 0;
   }
 
-  .dashboard-header{
+  .jurisdiction-dashboard-header{
     text-align: center;
-    margin-right: 60px;
-    margin-left: 1px;
+    margin-right: 40px !important;
+    margin-left: 40px !important;
+    font-family: "Bitcount Grid Double", system-ui;
+
   }
 
   .dashboard-content {

@@ -329,7 +329,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
       <div className="jurisdiction-dashboard">
         <div className="dashboard-content">
           {/* Header */}
-          <div className="dashboard-header">
+          <div className="jurisdiction-dashboard-header">
             <h1>{jurName}</h1>
           </div>
 
