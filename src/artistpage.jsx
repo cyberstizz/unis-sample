@@ -239,12 +239,11 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         <header className="artist-header">
           <div className="artist-info">
             <div className="artist-top">
+              <img src={artistPhoto} alt={artist.username} className="artist-profile-image" />
               <p className="artist-name">{artist.username}</p>
               <p className="artist-jurisdiction" onClick={() => navigate(`/jurisdiction/${artist.jurisdiction.name}`)} style={{cursor: 'pointer'}}>
                 {artist.jurisdiction?.name || 'Unknown'}
               </p>
-
-              <img src={artist.photoUrl}></img>
             </div>
             <p className="artist-genre">
               {artist.genre?.name || 'Unknown Genre'}
