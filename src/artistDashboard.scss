@@ -520,7 +520,7 @@ $green-500: #22c55e;
 @media (max-width: 640px) {
 
   .artist-dashboard {
-    margin-top: 20%;
+    margin-top: 35%;
     justify-content: center;
     justify-self: center;
     justify-items: center;
@@ -544,6 +544,7 @@ $green-500: #22c55e;
     justify-content: left;
     justify-items: left;
     justify-self: left;
+    margin-left: 20px !important;
 
     .h2{
       text-align: left !important;

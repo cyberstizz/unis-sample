@@ -8,6 +8,7 @@ import Layout from './layout';
 import areaSymbol from './assets/apollopic.jpg';
 import prominentArtistBg from './assets/songartworkfour.jpeg';
 import albumArt from './assets/songartworktwo.jpeg';
+import harlemGif from './assets/downtownHarlem.gif'
 
 const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {  
   const { jurisdiction: jurNameFromParams } = useParams();  
@@ -332,18 +333,13 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
             <h1>{jurName}</h1>
           </div>
 
-          {/* Jurisdiction Symbol Hero */}
-          <div className="jurisdiction-hero card">
+          {/* Jurisdiction GIF Hero - Replaced symbol with GIF */}
+          <div className="jurisdiction-hero">
             <img
-              src={data.symbolImage}
-              alt={`${jurName} symbol`}
-              className="hero-image"
+              src={harlemGif}
+              alt={`${jurName} gif`}
+              className="hero-gif"
             />
-            <div className="hero-overlay">
-              <MapPin size={32} />
-              <h2>Explore {jurName}</h2>
-              <p>{data.description}</p>
-            </div>
           </div>
 
           {/* Highlights Grid */}
@@ -352,7 +348,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
             {data.artistOfMonth && (
               <div className="highlight-card card">
                 <div className="section-header">
-                  <h3> #1 Artist in {jurName}</h3>
+                  <h3>#1 Artist in {jurName}</h3>
                 </div>
                 <div className="highlight-content">
                   <img
@@ -366,7 +362,6 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                     <h4 onClick={() => handleViewArtist(data.artistOfMonth.id)} style={{ cursor: 'pointer' }}>
                       {data.artistOfMonth.name}
                     </h4>
-                    <p className="bio">{data.artistOfMonth.bio}</p>
                    
                     <button className="btn btn-primary" onClick={handlePlayTopArtist}>
                       Listen Now
@@ -379,7 +374,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
             {/* Top Song */}
             {data.songOfWeek && (
               <div
-                className="highlight-card card"
+                className="highlight-card song-card"
                 style={{
                   backgroundImage: `url(${data.songOfWeek.image})`,
                   backgroundSize: 'cover',
@@ -387,7 +382,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                 }}
               >
                 <div className="section-header">
-                  <h3 style={{borderRadius: '8px', backgroundColor: 'black', width: 'fit-content'}}> #1 Song in {jurName}</h3>
+                  <h3>#1 Song in {jurName}</h3>
                 </div>
                 <div className="highlight-content">
                   <div className="song-icon">

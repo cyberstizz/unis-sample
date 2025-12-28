@@ -19,6 +19,7 @@ $subtle-black: #1a1a1a;
   justify-content: center;
   justify-items: center;
   margin-top: 10%;
+  width: 100vw;
 }
 
 .findpageheader{
@@ -332,7 +333,7 @@ $subtle-black: #1a1a1a;
   .mapEverything{
     display: flex;
     flex-direction: column;
-    width: 100%;
+    width: 110% !important;
     align-items: center;
     justify-items: center;
     align-content: center;
