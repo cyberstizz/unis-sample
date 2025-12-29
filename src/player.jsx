@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { PlayerContext } from './context/playercontext';
-import { Heart, Maximize2, Headphones } from 'lucide-react';
+import { Heart, Maximize2, Headphones, ChevronUp, ChevronDown } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistViewer from './playlistViewer';
 import PlaylistManager from './playlistManager';
@@ -36,6 +36,7 @@ const Player = () => {
   const [showPlaylistViewer, setShowPlaylistViewer] = useState(false);
   const [viewerTracks, setViewerTracks] = useState([]); 
   const [viewerTitle, setViewerTitle] = useState("Playlist");
+  const [showMobileActions, setShowMobileActions] = useState(false);
 
   const seekbarRef = useRef(null);
 
@@ -190,6 +191,11 @@ const Player = () => {
     setCurrentTime(newTime);
   };
 
+  const toggleMobileActions = (e) => {
+    e.stopPropagation();
+    setShowMobileActions(!showMobileActions);
+  };
+
   const formatTime = (seconds) => {
     if (isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -294,6 +300,28 @@ const Player = () => {
             </div>
           </div>
           
+          {/* Mobile Actions Tray */}
+          <div className={`mobile-actions-tray ${showMobileActions ? 'open' : ''}`}>
+            <div className="tray-content">
+              <button onClick={() => setShowPlaylistWizard(true)} className="tray-action">
+                <span className="icon">➕</span>
+                <span className="label">Add to Playlist</span>
+              </button>
+              <button onClick={openPlaylistManager} className="tray-action">
+                <Headphones />
+                <span className="label">Playlists</span>
+              </button>
+              <button onClick={handleLike} className={`tray-action ${isLiked ? 'liked' : ''}`}>
+                <Heart />
+                <span className="label">{isLiked ? 'Liked' : 'Like'}</span>
+              </button>
+              <button onClick={handleDownload} className="tray-action">
+                <span className="icon">⬇</span>
+                <span className="label">Download</span>
+              </button>
+            </div>
+          </div>
+
           <div className="mini-player">
             <div className="song-info">
               <img 
@@ -315,12 +343,10 @@ const Player = () => {
               <button className="trackToggle" onClick={handleNext}>▶</button>
             </div>
             
-            <div className="like-download">
-              {/* <button className="expand-button" onClick={handleExpand}>
-                <Maximize2 />
-              </button> */}
+            {/* Desktop Actions */}
+            <div className="like-download desktop-actions">
               <button onClick={() => setShowPlaylistWizard(true)}>➕</button>
-              <button onClick={() => openPlaylistManager}>
+              <button onClick={openPlaylistManager}>
                 <Headphones />
               </button>
               <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
@@ -328,6 +354,11 @@ const Player = () => {
               </button>
               <button onClick={handleDownload}>⬇</button>
             </div>
+
+            {/* Mobile Toggle Button */}
+            <button className="mobile-actions-toggle" onClick={toggleMobileActions}>
+              {showMobileActions ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+            </button>
           </div>
         </>
       )}

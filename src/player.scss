@@ -49,7 +49,7 @@ $unis-silver: #918f8f;
       &::after {
         content: '';
         position: absolute;
-        right: -6px; // Center it on the edge (12px diameter / 2)
+        right: -6px;
         top: 50%;
         transform: translateY(-50%);
         width: 18px;
@@ -61,10 +61,101 @@ $unis-silver: #918f8f;
       }
     }
 
-    // Hover effect - make thumb larger
     &:hover .seekbar-progress::after {
       transform: translateY(-50%) scale(1.3);
       box-shadow: 0 0 8px rgba($unis-blue, 0.6);
+    }
+  }
+
+  // --- MOBILE ACTIONS TRAY ---
+  .mobile-actions-tray {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, #1A1A1A, #242424);
+    border-top: 1px solid rgba($unis-blue, 0.3);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+
+    &.open {
+      max-height: 120px;
+      padding: 15px 20px;
+    }
+
+    .tray-content {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .tray-action {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      background: rgba($unis-blue, 0.1);
+      border: 1px solid rgba($unis-blue, 0.3);
+      border-radius: 8px;
+      padding: 10px;
+      color: $text-silver;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover, &:active {
+        background: rgba($unis-blue, 0.2);
+        border-color: $unis-blue;
+        color: $accent-white;
+      }
+
+      &.liked {
+        color: $unis-blue;
+        border-color: $unis-blue;
+      }
+
+      .icon {
+        font-size: 20px;
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .label {
+        font-size: 10px;
+        text-align: center;
+        white-space: nowrap;
+      }
+    }
+
+    @media (max-width: 600px) {
+      display: block;
+    }
+  }
+
+  // --- MOBILE ACTIONS TOGGLE ---
+  .mobile-actions-toggle {
+    display: none;
+    background: transparent;
+    border: none;
+    color: $unis-blue;
+    cursor: pointer;
+    padding: 5px;
+    margin-left: 10px;
+    transition: transform 0.2s ease;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+
+    @media (max-width: 600px) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
   }
 
@@ -75,6 +166,13 @@ $unis-silver: #918f8f;
     width: 100%;
     padding: 0 20px;
     height: 60px;
+    gap: 15px;
+    position: relative;
+
+    @media (max-width: 600px) {
+      padding: 0 10px;
+      gap: 8px;
+    }
 
     .song-info {
       flex: 1; 
@@ -82,6 +180,13 @@ $unis-silver: #918f8f;
       align-items: center;
       gap: 12px;
       overflow: hidden;
+      min-width: 0;
+
+      @media (max-width: 600px) {
+        gap: 8px;
+        flex: 0 0 auto;
+        max-width: 35%;
+      }
 
       .mini-artwork {
         width: 45px;
@@ -89,6 +194,12 @@ $unis-silver: #918f8f;
         border-radius: 6px;
         object-fit: cover;
         box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        flex-shrink: 0;
+
+        @media (max-width: 600px) {
+          width: 40px;
+          height: 40px;
+        }
       }
 
       .mini-info {
@@ -96,6 +207,7 @@ $unis-silver: #918f8f;
         flex-direction: column;
         justify-content: center;
         overflow: hidden;
+        min-width: 0;
 
         p {
           margin: 0;
@@ -105,71 +217,118 @@ $unis-silver: #918f8f;
           text-overflow: ellipsis;
         }
 
-        .title {
+        .mini-title {
           font-size: 14px;
           color: $accent-white;
           font-weight: 600;
+
+          @media (max-width: 600px) {
+            font-size: 12px;
+          }
         }
 
-        .artist {
+        .mini-artist {
           font-size: 12px;
           color: $text-silver;
+
+          @media (max-width: 600px) {
+            font-size: 10px;
+          }
         }
       }
     }
 
     .mini-controls {
-      flex: 0 0 auto; 
+      flex: 0 0 auto;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 12px; 
-      background-color: transparent; 
-     
+      gap: 24px;
+      position: absolute;
+      left: 48%;
+      transform: translateX(-50%);
+      width: 20%;
+      
+      @media (max-width: 600px) {
+        position: static;
+        transform: none;
+        gap: 8px;
+        flex: 1;
+        justify-content: center;
+        left: 40% !important;
+      }
+      
       .trackToggle {
         background-color: transparent;
         color: $unis-blue;
-        font-size: xx-large;
+        font-size: 28px;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+
+        &:hover {
+          transform: scale(1.15);
+        }
+
+        @media (max-width: 600px) {
+          font-size: 28px;
+          width: 28px;
+          height: 28px;
+        }
       }
       
       button {
         background: transparent;
         border: none;
         color: $unis-silver;
-        font-size: 14px; 
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: transform 0.2s ease, color 0.2s ease;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        padding: 0;
         
         &:hover {
           color: $accent-white;
           transform: scale(1.1);
-          text-shadow: 0 0 8px rgba($unis-blue, 0.6);
         }
 
-        &.play-btn {
-          width: 45px; 
-          height: 45px; 
-          color: $unis-blue;
-          &:hover { color: $unis-blue; }
+        &.play-pause-btn {
+          width: 45px;
+          height: 45px;
+          margin-right: 14px;
+          margin-left: 14px;
           
-          .unis-play-button-icon {
-            width: 100%; 
-            height: 100%; 
+          @media (max-width: 600px) {
+            width: 40px;
+            height: 40px;
+          }
+
+          svg, .unis-play-button-icon, .unis-pause-button-icon {
+            width: 100%;
+            height: 100%;
+            color: $unis-blue;
           }
         }
       }
     }
 
-    .like-download {
-      flex: 1;
+    .desktop-actions {
+      flex: 0 0 auto;
       display: flex;
       justify-content: flex-end;
       align-items: center;
       gap: 15px;
+
+      @media (max-width: 600px) {
+        display: none;
+      }
 
       button {
         background: transparent;
@@ -246,6 +405,18 @@ $unis-silver: #918f8f;
         background-position: center;
       }
 
+      .expanded-artwork {
+        img {
+          width: 100%;
+          max-width: 350px;
+          aspect-ratio: 1/1;
+          object-fit: cover;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+          border-radius: 12px;
+          margin-bottom: 40px;
+        }
+      }
+
       .info {
         text-align: center;
         margin-bottom: 30px;
@@ -261,43 +432,51 @@ $unis-silver: #918f8f;
         }
       }
 
+      .time-info {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        max-width: 500px;
+        margin-bottom: 10px;
+        color: $text-silver;
+        font-size: 14px;
+      }
+
       .expanded-seekbar {
         width: 100%;
         max-width: 500px;
         margin-bottom: 30px;
+        appearance: none;
         height: 6px;
         background: rgba($unis-blue, 0.3);
-        position: relative;
         cursor: pointer;
         border-radius: 3px;
+        outline: none;
 
-        .seekbar-progress {
-          height: 100%;
+        &::-webkit-slider-thumb {
+          appearance: none;
+          width: 16px;
+          height: 16px;
           background: $unis-blue;
-          transition: width 0.1s linear;
-          position: relative;
-          border-radius: 3px;
-          
-          // ADDED: Larger blue circle thumb for expanded view
-          &::after {
-            content: '';
-            position: absolute;
-            right: -8px; // Center it on the edge (16px diameter / 2)
-            top: 50%;
-            transform: translateY(-50%);
-            width: 16px;
-            height: 16px;
-            background: $unis-blue;
-            border: 2px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+          border: 2px solid white;
+          border-radius: 50%;
+          cursor: pointer;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+          transition: transform 0.2s ease;
+
+          &:hover {
+            transform: scale(1.3);
           }
         }
 
-        &:hover .seekbar-progress::after {
-          transform: translateY(-50%) scale(1.3);
-          box-shadow: 0 0 12px rgba($unis-blue, 0.8);
+        &::-moz-range-thumb {
+          width: 16px;
+          height: 16px;
+          background: $unis-blue;
+          border: 2px solid white;
+          border-radius: 50%;
+          cursor: pointer;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
         }
       }
 
@@ -305,6 +484,7 @@ $unis-silver: #918f8f;
         display: flex;
         align-items: center;
         gap: 30px;
+        margin-bottom: 20px;
         
         button {
           font-size: 35px;
@@ -313,58 +493,39 @@ $unis-silver: #918f8f;
           color: white;
           cursor: pointer;
           
-          &:hover { color: $unis-blue; }
+          &:hover { 
+            color: $unis-blue; 
+            transform: scale(1.05);
+          }
           
-          &.play-btn-large {
+          &.play-pause-btn {
             font-size: 60px;
             color: $unis-blue;
-            &:hover { transform: scale(1.05); }
           }
         }
       }
-    }
-  }
-}
 
-// --- MOBILE ADJUSTMENTS ---
-@media (max-width: 600px) {
-  .player {
-    padding-bottom: 15px;
+      .expanded-actions {
+        display: flex;
+        gap: 20px;
 
-    .seekbar {
-      .seekbar-progress::after {
-        width: 10px;
-        height: 10px;
-        right: -5px;
-      }
-    }
+        button {
+          background: transparent;
+          border: none;
+          color: $text-gray;
+          font-size: 24px;
+          cursor: pointer;
+          transition: all 0.2s ease;
 
-    .mini-player {
-      padding: 0 10px;
+          &:hover {
+            color: $unis-blue;
+            transform: scale(1.1);
+          }
 
-      .song-info {
-        gap: 8px;
-        .mini-artwork { width: 35px; height: 35px; }
-        .mini-info .title { font-size: 13px; }
-        .mini-info .artist { font-size: 11px; }
-      }
-
-      .mini-controls {
-        gap: .5px;
-        button { font-size: 18px; }
-        margin-right: 3px;
-
-        .trackToggle {
-          background-color: transparent;
-          color: $unis-blue;
-          height: 15px !important;
-          padding-left: 18%;
+          &.like-button.liked {
+            color: $unis-blue;
+          }
         }
-      }
-
-      .like-download {
-        gap: 5px;
-        display: none;
       }
     }
   }
