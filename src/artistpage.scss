@@ -66,7 +66,6 @@ $unis-blue: #163387;
   overflow-x: hidden;
   padding-top: 10%;
   padding-bottom: 5%;
-  margin-top: 10%;
 
   @media (max-width: 800px) {
     padding-top: 20%;
@@ -270,6 +269,7 @@ $unis-blue: #163387;
 
 .card {
   background: rgba($subtle-black, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 30px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
@@ -279,17 +279,27 @@ $unis-blue: #163387;
     border-radius: 10px;
   }
 
-  h2 {
-    color: $text-silver;
-    font-size: 24px;
-    border-bottom: 2px solid rgba($text-silver, 0.2);
-    padding-bottom: 10px;
-    margin: 0 0 20px 0;
+  .section-header {
+    text-align: center;
+    margin-bottom: 20px;
 
     @media (max-width: 800px) {
-      font-size: 20px;
-      margin: 0 0 15px 0;
-      padding-bottom: 8px;
+      margin-bottom: 15px;
+    }
+
+    h2 {
+      color: $text-silver;
+      font-size: 24px;
+      font-family: "Bitcount Grid Double", system-ui;
+      font-weight: 400;
+      margin: 0;
+      padding-bottom: 10px;
+      border-bottom: 2px solid rgba($text-silver, 0.2);
+
+      @media (max-width: 800px) {
+        font-size: 20px;
+        padding-bottom: 8px;
+      }
     }
   }
 }
@@ -301,18 +311,7 @@ $unis-blue: #163387;
 .events-section,
 .fans-pick-section,
 .social-section {
-  h2 {
-    color: $text-silver;
-    font-size: 24px;
-    border-bottom: 2px solid rgba($text-silver, 0.2);
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-
-    @media (max-width: 800px) {
-      font-size: 20px;
-      margin-bottom: 15px;
-    }
-  }
+  // Styles handled by .card and .section-header
 }
 
 .bio-edit {
@@ -416,25 +415,152 @@ $unis-blue: #163387;
 
 // Fans Pick
 .fans-pick-section {
-  ul {
-    list-style: none;
-    padding: 0;
+  .fans-pick-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    transition: background 0.2s;
 
-    li {
-      font-size: 16px;
-      color: $text-gray;
-      padding: 10px 0;
-      cursor: pointer;
-      transition: color 0.2s;
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
 
-      &:hover {
-        color: $accent-white;
-      }
+    @media (max-width: 800px) {
+      padding: 12px;
+      gap: 0.75rem;
+    }
+
+    .song-artwork {
+      width: 50px;
+      height: 50px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
 
       @media (max-width: 800px) {
-        font-size: 14px;
+        width: 40px;
+        height: 40px;
       }
     }
+
+    .item-info {
+      flex: 1;
+
+      h4 {
+        font-size: 16px;
+        color: $accent-white;
+        margin: 0;
+        font-weight: 600;
+
+        @media (max-width: 800px) {
+          font-size: 14px;
+        }
+      }
+    }
+
+    .btn {
+      margin-left: 1rem;
+      flex-shrink: 0;
+
+      @media (max-width: 800px) {
+        margin-left: 0.5rem;
+      }
+    }
+  }
+}
+
+// Music Section
+.music-section {
+  .songs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .song-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    @media (max-width: 800px) {
+      padding: 12px;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .song-artwork {
+      width: 50px;
+      height: 50px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+
+      @media (max-width: 800px) {
+        width: 40px;
+        height: 40px;
+      }
+    }
+
+    .item-info {
+      flex: 1;
+
+      h4 {
+        font-size: 16px;
+        color: $accent-white;
+        margin: 0;
+        font-weight: 600;
+        cursor: pointer;
+        transition: color 0.2s;
+
+        &:hover {
+          color: $unis-blue;
+        }
+
+        @media (max-width: 800px) {
+          font-size: 14px;
+        }
+      }
+    }
+
+    .btn {
+      margin-left: 1rem;
+      flex-shrink: 0;
+
+      @media (max-width: 800px) {
+        margin-left: 0;
+      }
+    }
+
+    .edit-button {
+      margin-left: 0.5rem;
+      flex-shrink: 0;
+
+      @media (max-width: 800px) {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 0.5rem;
+      }
+    }
+  }
+
+  .empty-message {
+    text-align: center;
+    color: $text-gray;
+    padding: 1rem;
+    font-size: 14px;
   }
 }
 
@@ -473,20 +599,50 @@ $unis-blue: #163387;
       gap: 10px;
       color: $text-silver;
       text-decoration: none;
-      padding: 10px;
+      padding: 12px;
       border-radius: 8px;
       transition: background 0.2s;
+      font-weight: 500;
 
       &:hover {
         background: rgba($text-silver, 0.1);
       }
 
       @media (max-width: 800px) {
-        padding: 8px;
+        padding: 10px;
         font-size: 14px;
       }
 
-      span {
+      .social-icon {
+        font-size: 24px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        
+        @media (max-width: 800px) {
+          font-size: 20px;
+          width: 28px;
+          height: 28px;
+        }
+
+        &.instagram-icon {
+          background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        }
+
+        &.twitter-icon {
+          background: #000000;
+          color: white;
+        }
+
+        &.tiktok-icon {
+          background: linear-gradient(45deg, #00f2ea 0%, #ff0050 100%);
+        }
+      }
+
+      span:not(.social-icon) {
         font-size: 18px;
 
         @media (max-width: 800px) {
@@ -500,7 +656,7 @@ $unis-blue: #163387;
 // Mobile specific adjustments
 @media (max-width: 800px) {
   .artist-page-container {
-    padding-top: 25%;
+    padding-top: 35%;
   }
 
   .content-wrapper {
@@ -514,4 +670,72 @@ $unis-blue: #163387;
   .stat-item {
     margin-bottom: 10px;
   }
+}
+
+// Buttons matching artist dashboard
+.btn {
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+
+  &.btn-primary {
+    background-color: $unis-blue;
+    color: white;
+
+    &:hover {
+      background-color: $unis-blue;
+    }
+  }
+
+  &.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: $text-silver;
+    border: 1px solid $border-silver;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  }
+
+  &.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+
+    @media (max-width: 800px) {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+    }
+  }
+
+  @media (max-width: 800px) {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+}
+
+// Bio text centering
+.bio-section {
+  .bio-text {
+    text-align: center;
+    color: $text-silver;
+    line-height: 1.6;
+    margin: 0;
+
+    @media (max-width: 800px) {
+      font-size: 14px;
+    }
+  }
+}
+
+.empty-message {
+  text-align: center;
+  color: $text-gray;
+  padding: 1rem;
+  font-size: 14px;
 }

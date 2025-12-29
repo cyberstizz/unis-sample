@@ -275,36 +275,116 @@ const ArtistPage = ({ isOwnProfile = false }) => {
           {/* Fans Pick Section */}
           {topSong && (
             <section className="fans-pick-section card">
-              <h2>Fans Pick</h2>
-              <ul>
-                <li 
-                  onClick={() => handleSongClick(topSong.songId)}
-                  style={{ cursor: 'pointer' }}
+              <div className="section-header">
+                <h2>Fans Pick</h2>
+              </div>
+              <div className="fans-pick-item">
+                <img 
+                  src={buildUrl(topSong.artworkUrl) || artistPhoto} 
+                  alt={topSong.title}
+                  className="song-artwork"
+                />
+                <div className="item-info">
+                  <h4>{topSong.title}</h4>
+                </div>
+                <button 
+                  className="btn btn-primary btn-small"
+                  onClick={async () => {
+                    const song = songs.find(s => s.songId === topSong.songId);
+                    if (song && song.fileUrl) {
+                      const fullUrl = buildUrl(song.fileUrl);
+                      
+                      playMedia(
+                        { 
+                          type: 'song', 
+                          url: fullUrl, 
+                          title: song.title, 
+                          artist: artist.username, 
+                          artwork: buildUrl(song.artworkUrl) || artistPhoto
+                        },
+                        []
+                      );
+
+                      // Track the play
+                      if (song.songId && userId) {
+                        try {
+                          await apiCall({ 
+                            method: 'post', 
+                            url: `/v1/media/song/${song.songId}/play?userId=${userId}` 
+                          });
+                          console.log('Fans pick play tracked');
+                        } catch (err) {
+                          console.error('Failed to track play:', err);
+                        }
+                      }
+                    }
+                  }}
                 >
-                  {topSong.title} (Score: {topSong.score || 0})
-                </li>
-              </ul>
+                  Play
+                </button>
+              </div>
             </section>
           )}
 
           {/* Music (Songs) Section */}
           <section className="music-section card">
-            <h2>Music</h2>
-            <ul>
+            <div className="section-header">
+              <h2>Music</h2>
+            </div>
+            <div className="songs-list">
               {songs.slice(0, 5).map((song) => (
-                <li 
-                  key={song.songId}
-                  onClick={() => handleSongClick(song.songId)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <span>{song.title}</span>
+                <div key={song.songId} className="song-item">
+                  <img 
+                    src={buildUrl(song.artworkUrl) || artistPhoto} 
+                    alt={song.title}
+                    className="song-artwork"
+                  />
+                  <div className="item-info">
+                    <h4 onClick={() => handleSongClick(song.songId)} style={{ cursor: 'pointer' }}>
+                      {song.title}
+                    </h4>
+                  </div>
+                  <button 
+                    className="btn btn-primary btn-small"
+                    onClick={async () => {
+                      if (song.fileUrl) {
+                        const fullUrl = buildUrl(song.fileUrl);
+                        
+                        playMedia(
+                          { 
+                            type: 'song', 
+                            url: fullUrl, 
+                            title: song.title, 
+                            artist: artist.username, 
+                            artwork: buildUrl(song.artworkUrl) || artistPhoto
+                          },
+                          []
+                        );
+
+                        // Track the play
+                        if (song.songId && userId) {
+                          try {
+                            await apiCall({ 
+                              method: 'post', 
+                              url: `/v1/media/song/${song.songId}/play?userId=${userId}` 
+                            });
+                            console.log(`Song play tracked for ${song.songId}`);
+                          } catch (err) {
+                            console.error('Failed to track play:', err);
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    Play
+                  </button>
                   {isOwnProfile && (
                     <button className="edit-button">Edit/Remove</button>
                   )}
-                </li>
+                </div>
               ))}
-              {songs.length === 0 && <p>No songs yet</p>}
-            </ul>
+              {songs.length === 0 && <p className="empty-message">No songs yet</p>}
+            </div>
             {isOwnProfile && songs.length < 5 && (
               <button className="upload-button">Upload Song</button>
             )}
@@ -312,7 +392,9 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
           {/* Bio Section */}
           <section className="bio-section card">
-            <h2>Bio</h2>
+            <div className="section-header">
+              <h2>Bio</h2>
+            </div>
             {isOwnProfile ? (
               <>
                 <textarea 
@@ -325,13 +407,15 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                 </button>
               </>
             ) : (
-              <p>{bio}</p>
+              <p className="bio-text">{bio}</p>
             )}
           </section>
 
           {/* Videos Section */}
-          <section className="videos-section card">
-            <h2>Videos</h2>
+          {/* <section className="videos-section card">
+            <div className="section-header">
+              <h2>Videos</h2>
+            </div>
             <ul>
               {videos.map((video) => (
                 <li key={video.videoId}>
@@ -341,17 +425,66 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                   )}
                 </li>
               ))}
-              {videos.length === 0 && <p>No videos yet</p>}
+              {videos.length === 0 && <p className="empty-message">No videos yet</p>}
             </ul>
             {isOwnProfile && (
               <button className="upload-button">Upload Video</button>
             )}
-          </section>
+          </section> */}
 
           {/* Social Media Links */}
           <section className="social-section card">
-            <h2>Social Media</h2>
+            <div className="section-header">
+              <h2>Social Media</h2>
+            </div>
             <div className="social-links">
+              {/* Top 3 social media platforms with icons */}
+              <a 
+                href={artist.instagramUrl || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-link"
+                onClick={(e) => {
+                  if (!artist.instagramUrl) {
+                    e.preventDefault();
+                    alert('Instagram link not set. Click Edit Profile to add your social links.');
+                  }
+                }}
+              >
+                <span className="social-icon instagram-icon">📷</span> Instagram
+              </a>
+              
+              <a 
+                href={artist.twitterUrl || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-link"
+                onClick={(e) => {
+                  if (!artist.twitterUrl) {
+                    e.preventDefault();
+                    alert('Twitter/X link not set. Click Edit Profile to add your social links.');
+                  }
+                }}
+              >
+                <span className="social-icon twitter-icon">𝕏</span> Twitter / X
+              </a>
+              
+              <a 
+                href={artist.tiktokUrl || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-link"
+                onClick={(e) => {
+                  if (!artist.tiktokUrl) {
+                    e.preventDefault();
+                    alert('TikTok link not set. Click Edit Profile to add your social links.');
+                  }
+                }}
+              >
+                <span className="social-icon tiktok-icon">🎵</span> TikTok
+              </a>
+
+              {/* Custom social links if any */}
               {artist.socialLinks?.map((link, index) => (
                 <a 
                   key={index} 
@@ -362,7 +495,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                 >
                   <span>{link.icon}</span> {link.label}
                 </a>
-              )) || <p>No social links added</p>}
+              ))}
             </div>
           </section>
         </div>
