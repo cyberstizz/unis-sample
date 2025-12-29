@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Play, Image, Video, Eye, Heart, Users, X, Download } from 'lucide-react';
+import { Upload, Play, Image, Video, Eye, Heart, Users, X, Download, Music } from 'lucide-react';
 import UploadWizard from './uploadWizard';
 import ChangeDefaultSongWizard from './changeDefaultSongWizard'; 
 import EditProfileWizard from './editProfileWizard';  
@@ -20,26 +20,46 @@ const ArtistDashboard = () => {
   const [showUploadWizard, setShowUploadWizard] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [songs, setSongs] = useState([]);
-  const [videos, setVideos] = useState([]);
   const [showDefaultSongWizard, setShowDefaultSongWizard] = useState(false);
-  const [showDeleteWizard, setShowDeleteWizard] = useState(false); 
+  const [showDeleteWizard, setShowDeleteWizard] = useState(false);
+  const [supporters, setSupporters] = useState(0);
+  const [followers, setFollowers] = useState(0);
+  const [totalPlays, setTotalPlays] = useState(0);
 
   useEffect(() => {
     if (!authLoading && user?.userId) {
       // Full profile
       apiCall({ url: `/v1/users/profile/${user.userId}`, method: 'get' })
-        .then(res => setUserProfile(res.data))
+        .then(res => {
+          setUserProfile(res.data);
+          console.log('User profile loaded:', res.data);
+          console.log('Default song:', res.data.defaultSong);
+        })
         .catch(err => console.error('Failed to fetch profile:', err));
 
       // Songs
       apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get' })
-        .then(res => setSongs(res.data || []))
+        .then(res => {
+          const songsData = res.data || [];
+          setSongs(songsData);
+          // Calculate total plays
+          const plays = songsData.reduce((sum, s) => sum + (s.plays || 0), 0);
+          setTotalPlays(plays);
+        })
         .catch(err => console.error('Failed to fetch songs:', err));
 
-      // Videos
-      apiCall({ url: `/v1/media/videos/artist/${user.userId}`, method: 'get' })
-        .then(res => setVideos(res.data || []))
-        .catch(err => console.error('Failed to fetch videos:', err));
+      // Fetch supporters count
+      apiCall({ url: `/v1/users/${user.userId}/supporters/count`, method: 'get' })
+        .then(res => setSupporters(res.data.count || 0))
+        .catch(err => console.error('Failed to fetch supporters:', err));
+
+      // Fetch followers count (if endpoint exists)
+      apiCall({ url: `/v1/users/${user.userId}/followers/count`, method: 'get' })
+        .then(res => setFollowers(res.data.count || 0))
+        .catch(err => {
+          console.warn('Followers endpoint not available, using 0');
+          setFollowers(0);
+        });
     }
   }, [user, authLoading]);
 
@@ -54,12 +74,6 @@ const ArtistDashboard = () => {
     : backimage;
   const displayBio = userProfile.bio || 'No bio yet. Click Edit to add one.';
   const defaultSong = userProfile.defaultSong;
-
-  // Placeholder vote history
-  const voteHistory = [
-    'Voted for Artist X on Daily Rap',
-    'Voted for Song Y on Weekly Pop'
-  ];
 
   const downloadOwnershipContract = () => {
       const doc = new jsPDF({
@@ -199,6 +213,23 @@ const ArtistDashboard = () => {
       .then(res => setUserProfile(res.data));
   };
 
+  const handleSocialMediaUpdate = async (platform, url) => {
+    try {
+      const field = `${platform}Url`;
+      await apiCall({
+        method: 'put',
+        url: `/v1/users/profile/${user.userId}`,
+        data: { [field]: url }
+      });
+      // Refresh profile
+      handleProfileUpdate();
+      alert(`${platform} link updated successfully!`);
+    } catch (err) {
+      console.error('Failed to update social media:', err);
+      alert('Failed to update link');
+    }
+  };
+
   return (
     <Layout backgroundImage={backimage}>
       <div className="artist-dashboard">
@@ -229,10 +260,9 @@ const ArtistDashboard = () => {
             <h1 className='dasboardh1'>Dashboard</h1>
           </div>
 
-
           <div className="profile-section card">
             <div className="profile-content">
-              <img src={displayPhoto} alt={displayName} className="profile-image" />
+              <img src={displayPhoto} alt={displayName} className="profile-image profile-image-bordered" />
               <div className="profile-info">
                 <div className="profile-header">
                   <button className="btn btn-primary" onClick={() => setShowEditProfile(true)}>
@@ -241,7 +271,6 @@ const ArtistDashboard = () => {
                 </div>
              
                 <div className="profile-actions">
-                  
                   <button className="btn btn-secondary" onClick={downloadOwnershipContract}>
                     <Download size={16} /> Download Ownership Contract
                   </button>
@@ -250,7 +279,7 @@ const ArtistDashboard = () => {
             </div>
           </div>
 
-          {/* Stats Overview - Using real data where possible */}
+          {/* Stats Overview - Updated with real data */}
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-content">
@@ -264,12 +293,28 @@ const ArtistDashboard = () => {
             <div className="stat-card">
               <div className="stat-content">
                 <div className="stat-info">
-                  <p className="stat-label">Plays</p>
-                  <p className="stat-value">
-                    {songs.reduce((sum, s) => sum + (s.plays || 0), 0).toLocaleString()}
-                  </p>
+                  <p className="stat-label">Supporters</p>
+                  <p className="stat-value">{supporters.toLocaleString()}</p>
                 </div>
-                <div className="stat-icon stat-icon-red"><Heart size={28} /></div>
+                <div className="stat-icon stat-icon-purple"><Users size={28} /></div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-content">
+                <div className="stat-info">
+                  <p className="stat-label">Followers</p>
+                  <p className="stat-value">{followers.toLocaleString()}</p>
+                </div>
+                <div className="stat-icon stat-icon-green"><Heart size={28} /></div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-content">
+                <div className="stat-info">
+                  <p className="stat-label">Plays</p>
+                  <p className="stat-value">{totalPlays.toLocaleString()}</p>
+                </div>
+                <div className="stat-icon stat-icon-red"><Play size={28} /></div>
               </div>
             </div>
             <div className="stat-card">
@@ -278,23 +323,21 @@ const ArtistDashboard = () => {
                   <p className="stat-label">Songs</p>
                   <p className="stat-value">{songs.length}</p>
                 </div>
-                <div className="stat-icon stat-icon-green"><Users size={28} /></div>
+                <div className="stat-icon stat-icon-orange"><Music size={28} /></div>
               </div>
             </div>
           </div>
 
-         
-
           {/* Main Featured Song */}
           <div className="main-song-section card">
             <div className="section-header">
-              <h3>Default Song</h3>
+              <h3>Featured Song</h3>
               <button 
                 className="link-button" 
                 onClick={() => setShowDefaultSongWizard(true)}
                 style={{ fontWeight: '600', color: '#004aad' }}
               >
-                Change Default
+                Change Featured
               </button>
             </div>
             <div className="main-song-card">
@@ -311,96 +354,85 @@ const ArtistDashboard = () => {
             </div>
           </div>
 
-          {/* Songs & Videos Grid */}
-          <div className="content-grid">
-            {/* Songs */}
-            <div className="content-section card">
-              <div className="section-header">
-                <h3><Play size={20} />Songs</h3>
-                <button className="btn btn-primary btn-small" onClick={() => setShowUploadWizard(true)}>
-                  <Upload size={16} /> Upload
-                </button>
-              </div>
-              <div className="content-list">
-                {songs.length > 0 ? songs.map(song => (
-                  <div key={song.songId} className="content-item">
-                    <div className="item-header">
-                      <h4>{song.title}</h4>
-                      <button className="edit-button">Edit</button>
-                    </div>
-                    <div className="item-stats">
-                      <span><Eye size={12} /> Score: {song.score || 0}</span>
-                      <span><Heart size={12} /> {(song.duration / 60000).toFixed(1)} min</span>
-                    </div>
-                  </div>
-                )) : <p>No songs yet — upload your first!</p>}
-              </div>
-            </div>
-
-            {/* Videos */}
-            <div className="content-section card">
-              <div className="section-header">
-                <h3><Video size={20} /> Videos</h3>
-                <button className="btn btn-primary btn-small" onClick={() => setShowUploadWizard(true)}>
-                  <Upload size={16} /> Upload
-                </button>
-              </div>
-              <div className="content-list">
-                {videos.length > 0 ? videos.map(video => (
-                  <div key={video.videoId || video.songId} className="content-item">
-                    <div className="item-header">
-                      <h4>{video.title}</h4>
-                      <button className="edit-button">Edit</button>
-                    </div>
-                    <div className="item-stats">
-                      <span><Eye size={12} /> Score: {video.score || 0}</span>
-                      <span><Heart size={12} /> {(video.duration / 60000).toFixed(1)} min</span>
-                    </div>
-                  </div>
-                )) : <p>No videos yet.</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Images Gallery - temporarily using song artworks */}
-          <div className="images-section card">
+          {/* Songs Section */}
+          <div className="content-section card">
             <div className="section-header">
-              <h3><Image size={20} /> Your Images</h3>
-              <button className="btn btn-primary btn-small" onClick={() => setShowEditProfile(true)}>
+              <h3><Play size={20} /> Songs</h3>
+              <button className="btn btn-primary btn-small" onClick={() => setShowUploadWizard(true)}>
                 <Upload size={16} /> Upload
               </button>
             </div>
-            <div className="images-grid">
-              {songs.filter(s => s.artworkUrl).slice(0, 6).map((song, i) => (
-                <div key={i} className="image-item">
-                  <img src={`${API_BASE_URL}${song.artworkUrl}`} alt={song.title} />
-                  <div className="image-overlay">
-                    <div className="overlay-content">
-                      <p><Eye size={14} /> {song.plays || 0} plays</p>
-                      <button className="link-button">Manage</button>
-                    </div>
+            <div className="content-list">
+              {songs.length > 0 ? songs.map(song => (
+                <div key={song.songId} className="content-item">
+                  <div className="item-header">
+                    <h4>{song.title}</h4>
+                    <button className="edit-button">Edit</button>
+                  </div>
+                  <div className="item-stats">
+                    <span><Eye size={12} /> Score: {song.score || 0}</span>
+                    <span><Heart size={12} /> {(song.duration / 60000).toFixed(1)} min</span>
                   </div>
                 </div>
-              ))}
+              )) : <p>No songs yet — upload your first!</p>}
+            </div>
+          </div>
+
+          {/* Social Media Links Section */}
+          <div className="social-media-section card">
+            <div className="section-header">
+              <h3>Social Media Links</h3>
+            </div>
+            <div className="social-links-edit">
+              <div className="social-link-item">
+                <label>📷 Instagram</label>
+                <input 
+                  type="text" 
+                  placeholder="https://instagram.com/yourprofile"
+                  defaultValue={userProfile.instagramUrl || ''}
+                  onBlur={(e) => handleSocialMediaUpdate('instagram', e.target.value)}
+                  className="social-input"
+                />
+              </div>
+              <div className="social-link-item">
+                <label>𝕏 Twitter / X</label>
+                <input 
+                  type="text" 
+                  placeholder="https://twitter.com/yourprofile"
+                  defaultValue={userProfile.twitterUrl || ''}
+                  onBlur={(e) => handleSocialMediaUpdate('twitter', e.target.value)}
+                  className="social-input"
+                />
+              </div>
+              <div className="social-link-item">
+                <label>🎵 TikTok</label>
+                <input 
+                  type="text" 
+                  placeholder="https://tiktok.com/@yourprofile"
+                  defaultValue={userProfile.tiktokUrl || ''}
+                  onBlur={(e) => handleSocialMediaUpdate('tiktok', e.target.value)}
+                  className="social-input"
+                />
+              </div>
             </div>
           </div>
 
           {/* DANGER ZONE */}
-<div className="card" style={{ border: '2px solid #dc3545', marginTop: '3rem' }}>
-  <div style={{ padding: '1.5rem', textAlign: 'center' }}>
-    <h3 style={{ color: '#dc3545', marginBottom: '0.5rem' }}>Danger Zone</h3>
-    <p style={{ color: '#721c24', marginBottom: '1rem' }}>
-      Once you delete your account, there is no going back.
-    </p>
-    <button
-      className="btn btn-primary"
-      style={{ background: '#dc3545', border: 'none' }}
-      onClick={() => setShowDeleteWizard(true)}
-    >
-      Delete Account
-    </button>
-  </div>
-</div>
+          <div className="card" style={{ border: '2px solid #dc3545', marginTop: '3rem' }}>
+            <div style={{ padding: '1.5rem', textAlign: 'center' }}>
+              <h3 style={{ color: '#dc3545', marginBottom: '0.5rem' }}>Danger Zone</h3>
+              <p style={{ color: '#721c24', marginBottom: '1rem' }}>
+                Once you delete your account, there is no going back.
+              </p>
+              <button
+                className="btn btn-primary"
+                style={{ background: '#dc3545', border: 'none' }}
+                onClick={() => setShowDeleteWizard(true)}
+              >
+                Delete Account
+              </button>
+            </div>
+          </div>
 
         </div>
 
@@ -423,26 +455,26 @@ const ArtistDashboard = () => {
           />
         )}
 
-       {showDefaultSongWizard && (
+        {showDefaultSongWizard && (
           <ChangeDefaultSongWizard
-          show={showDefaultSongWizard}
-          onClose={() => setShowDefaultSongWizard(false)}
-          userProfile={userProfile}
-          songs={songs}
-          onSuccess={() => {
-            //refetch after success
-            apiCall({ url: `/v1/users/profile/${user.userId}`, method: 'get' })
-              .then(res => setUserProfile(res.data));
-          }}
-        />
-      )}
+            show={showDefaultSongWizard}
+            onClose={() => setShowDefaultSongWizard(false)}
+            userProfile={userProfile}
+            songs={songs}
+            onSuccess={() => {
+              //refetch after success
+              apiCall({ url: `/v1/users/profile/${user.userId}`, method: 'get' })
+                .then(res => setUserProfile(res.data));
+            }}
+          />
+        )}
 
-            {showDeleteWizard && (
-        <DeleteAccountWizard
-          show={showDeleteWizard}
-          onClose={() => setShowDeleteWizard(false)}
-        />
-      )}
+        {showDeleteWizard && (
+          <DeleteAccountWizard
+            show={showDeleteWizard}
+            onClose={() => setShowDeleteWizard(false)}
+          />
+        )}
 
       </div>
     </Layout>

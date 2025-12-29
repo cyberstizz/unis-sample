@@ -90,7 +90,7 @@ const Profile = () => {
         {/* Supported Artist */}
         {supportedArtist && (
           <div className="supported-artist card">
-            <h3><Heart size={20} style={{ verticalAlign: '-4px' }} /> I Support</h3>
+            <h3>I Support</h3>
             <div className="artist-support-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <img 
                 src={supportedArtist.photoUrl ? `${API_BASE_URL}${supportedArtist.photoUrl}` : backimage} 

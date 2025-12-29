@@ -25,6 +25,7 @@ const SongPage = () => {
   const [copySuccess, setCopySuccess] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -125,14 +126,27 @@ const SongPage = () => {
     );
 
     if (song.id && userId) {
+      // Optimistically update play count immediately (no page refresh)
+      setSong(prevSong => ({
+        ...prevSong,
+        playCount: prevSong.playCount + 1,
+        playsToday: prevSong.playsToday + 1
+      }));
+
       try {
         const endpoint = `/v1/media/song/${song.id}/play?userId=${userId}`;
         console.log('Tracking song play:', { endpoint, songId: song.id, userId });
         await apiCall({ method: 'post', url: endpoint });
         console.log('Song play tracked successfully');
-        await fetchSongData();
+        // No need to refetch - we already updated the UI optimistically
       } catch (err) {
         console.error('Failed to track song play:', err);
+        // Revert the optimistic update if the API call failed
+        setSong(prevSong => ({
+          ...prevSong,
+          playCount: prevSong.playCount - 1,
+          playsToday: prevSong.playsToday - 1
+        }));
       }
     } else {
       console.warn('Could not track play - missing song.id or userId:', { songId: song.id, userId });
@@ -174,7 +188,11 @@ const SongPage = () => {
     }
   };
 
-  const navigate = useNavigate();
+  const handleArtistClick = () => {
+    if (song.artistId) {
+      navigate(`/artist/${song.artistId}`);
+    }
+  };
 
   if (loading) {
     return (
@@ -233,7 +251,13 @@ const SongPage = () => {
             <button onClick={handleVote} className="vote-button">Vote</button>
           </div>
 
-          <p className="artist-name" style={{color: "white"}}>{song.artist}</p>
+          <p 
+            className="artist-name" 
+            style={{ color: "white", cursor: "pointer" }}
+            onClick={handleArtistClick}
+          >
+            {song.artist}
+          </p>
           <p className="jurisdiction" onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)} style={{cursor: 'pointer'}}>
             {song.jurisdiction}
           </p>

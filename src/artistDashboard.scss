@@ -96,6 +96,12 @@ $green-500: #22c55e;
       font-size: 1.5rem;
       font-weight: 700;
       margin-bottom: 0.75rem;
+      align-content: center !important;
+      justify-content: center !important;
+      justify-items: center !important;
+      align-items: center !important;
+      text-align: center !important;
+      padding-right: none;
     }
 
     p {
@@ -520,7 +526,7 @@ $green-500: #22c55e;
 @media (max-width: 640px) {
 
   .artist-dashboard {
-    margin-top: 35%;
+    margin-top: 40%;
     justify-content: center;
     justify-self: center;
     justify-items: center;
@@ -556,6 +562,10 @@ $green-500: #22c55e;
     padding-left: 2px;
     text-align: left !important;
 
+}
+
+.profile-image{
+  border: solid .1px rgb(108, 92, 0);
 }
 
 

@@ -338,19 +338,19 @@ $subtle-black: #1a1a1a;
     justify-items: center;
     align-content: center;
     justify-content: center;
-    border-top: solid 1px silver;
-    padding: 10px 0;
+    padding: 1px 0;
     margin: 0;
   }
   // THE KEY FIX: Force Leaflet to be exactly the size we want
   .map-container {
-    width: 99%;
-    max-width: 99vw;
+    width: 110% !important;
+    max-width: 110% !important;
     height: 300px;
     border-radius: 12px;
     overflow: hidden;
-    margin: 5px auto;
+    margin: 1px auto;
     border: solid .2px silver; 
+    border: solid 1px silver;
     position: relative;
     background: black;
     
