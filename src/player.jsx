@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { Heart, Maximize2, Headphones, ChevronUp, ChevronDown } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
@@ -39,6 +40,22 @@ const Player = () => {
   const [showMobileActions, setShowMobileActions] = useState(false);
 
   const seekbarRef = useRef(null);
+  const navigate = useNavigate();
+
+  const handleNavigateToSong = (e) => {
+    e.stopPropagation();
+    if (currentMedia?.id || currentMedia?.songId) {
+      const songId = currentMedia.id || currentMedia.songId;
+      navigate(`/song/${songId}`);
+    }
+  };
+
+  const handleNavigateToArtist = (e) => {
+    e.stopPropagation();
+    if (currentMedia?.artistId) {
+      navigate(`/artist/${currentMedia.artistId}`);
+    }
+  };
 
   const openViewerFor = (playlistId) => {
     const pl = playlists?.find(p => p.id === playlistId) || playlists?.[0];
@@ -327,11 +344,16 @@ const Player = () => {
               <img 
                 src={currentMedia.artwork || '/assets/placeholder.jpg'} 
                 alt="Artwork" 
-                className="mini-artwork" 
+                className="mini-artwork clickable" 
+                onClick={handleNavigateToSong}
               />
               <div className="mini-info">
-                <p className="mini-title">{currentMedia.title}</p>
-                <p className="mini-artist">{currentMedia.artist}</p>
+                <p className="mini-title clickable" onClick={handleNavigateToSong}>
+                  {currentMedia.title}
+                </p>
+                <p className="mini-artist clickable" onClick={handleNavigateToArtist}>
+                  {currentMedia.artist}
+                </p>
               </div>
             </div>
             
