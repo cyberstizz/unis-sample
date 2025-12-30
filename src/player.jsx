@@ -180,9 +180,81 @@ const Player = () => {
     setIsLiked(!isLiked); 
   };
 
-  const handleDownload = (e) => {
+  const handleDownload = async (e) => {
     e.stopPropagation();
-    console.log('Download pressed');
+    
+    if (!currentMedia) {
+      alert('No media to download');
+      return;
+    }
+
+    // Get the file URL from current media
+    const fileUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
+    
+    if (!fileUrl) {
+      alert('Download not available for this track');
+      return;
+    }
+
+    // Create a clean filename: "Artist - Title.mp3"
+    const artist = currentMedia.artist || currentMedia.artistName || 'Unknown Artist';
+    const title = currentMedia.title || 'Untitled';
+    const extension = fileUrl.split('.').pop().split('?')[0] || 'mp3';
+    const filename = `${artist} - ${title}.${extension}`;
+
+    // Show downloading feedback
+    const button = e.currentTarget;
+    const originalContent = button.innerHTML;
+    button.innerHTML = '⏬';
+    button.disabled = true;
+
+    try {
+      // Try fetch first (works for CORS-enabled files)
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      
+      // Success feedback
+      button.innerHTML = '✅';
+      setTimeout(() => {
+        button.innerHTML = originalContent;
+        button.disabled = false;
+      }, 2000);
+    } catch (error) {
+      console.error('Fetch download failed, trying direct link:', error);
+      
+      // Fallback: Direct download link
+      try {
+        const link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = filename;
+        link.target = '_blank';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        button.innerHTML = '✅';
+        setTimeout(() => {
+          button.innerHTML = originalContent;
+          button.disabled = false;
+        }, 2000);
+      } catch (fallbackError) {
+        console.error('Download failed:', fallbackError);
+        alert('Download failed. The file may not be accessible.');
+        button.innerHTML = originalContent;
+        button.disabled = false;
+      }
+    }
   };
 
   const handleExpand = (e) => {
@@ -391,9 +463,10 @@ const Player = () => {
         selectedTrack={currentMedia}
       />
 
+      {/* 🎯 CRITICAL FIX: Changed from setShowPlaylistViewer to closePlaylistManager */}
       <PlaylistManager
         open={showPlaylistManager}
-        onClose={() => setShowPlaylistViewer(false)}
+        onClose={closePlaylistManager}
       />
     </div>
   );
