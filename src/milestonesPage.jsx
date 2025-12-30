@@ -157,9 +157,7 @@ const MilestonesPage = () => {
   return (
     <Layout backgroundImage={backimage}>
       <div className="milestones-page-container">
-        <header className="header" id="milestonesHeader">
-          <h1>Milestones</h1>
-        </header>
+      
 
         <main className="content-wrapper">
           <section className="filter-card">

@@ -159,11 +159,36 @@ const Feed = () => {
       const combinedAwards = [...(songAwardsRes.data || []), ...(artistAwardsRes.data || [])].slice(0, 5);
       setAwards(combinedAwards);
 
-      const normalizedArtists = (popularRes.data || []).map(artist => ({
-        ...artist,
-        photoUrl: buildUrl(artist.photoUrl)
-      }));
-      setPopularArtists(normalizedArtists);
+      const normalizedArtists = (popularRes.data || []).map(artist => {
+  // Try to find the photo property (could be named differently in backend)
+  const photoProperty = artist.photoUrl 
+    || artist.imageUrl 
+    || artist.profilePhotoUrl 
+    || artist.avatarUrl 
+    || artist.pictureUrl
+    || artist.photo
+    || artist.profilePhoto
+    || artist.avatar
+    || artist.picture;
+  
+  // Build the full URL
+  const builtPhotoUrl = photoProperty ? buildUrl(photoProperty) : null;
+  
+  // Debug log to see what we got
+  console.log('Normalizing artist:', {
+    username: artist.username,
+    originalPhoto: photoProperty,
+    builtUrl: builtPhotoUrl,
+    allKeys: Object.keys(artist)
+  });
+  
+  return {
+    ...artist,
+    photoUrl: builtPhotoUrl
+  };
+});
+
+setPopularArtists(normalizedArtists);
     } catch (err) {
       console.error('Media load error:', err);
       setError('Feed unavailable—showing demo content.');
@@ -414,17 +439,73 @@ const Feed = () => {
           </section>
 
           {/* Popular Artists */}
-          <section className={`feed-section list ${animate ? "animate" : ""}`}>
+          <section className={`feed-section artist-cards ${animate ? "animate" : ""}`}>
             <h2>Popular Artists</h2>
-            <ol>
-              {artistsList.map((artist) => (
-                <li key={artist.userId} onClick={() => handleArtistNav(artist.userId)} style={{ cursor: 'pointer' }}>
-                  {artist.username}
-                  {artist.photoUrl && <img src={artist.photoUrl} alt={artist.username} style={{ width: '24px', height: '24px', borderRadius: '50%', marginLeft: '8px' }} />}
-                  <small style={{ color: '#666' }}> (Score: {artist.score})</small>
-                </li>
-              ))}
-            </ol>
+            <div className="artist-cards-grid">
+              {(() => {
+                // Extract unique artists from songs you've already loaded
+                const artistMap = new Map();
+                
+                // Combine all loaded media
+                const allMedia = [...trendingToday, ...topRated, ...newMedia];
+                
+                // Extract unique artists with their data
+                allMedia.forEach(media => {
+                  if (media.artistData && !artistMap.has(media.artistData.userId)) {
+                    artistMap.set(media.artistData.userId, {
+                      userId: media.artistData.userId,
+                      username: media.artistData.username,
+                      photoUrl: buildUrl(media.artistData.photoUrl), // Use artist photo from song data
+                      jurisdictionId: media.artistData.jurisdiction?.jurisdictionId,
+                      score: media.artistData.score || 0
+                    });
+                  }
+                });
+                
+                // Convert to array and sort by score
+                const artists = Array.from(artistMap.values())
+                  .sort((a, b) => b.score - a.score)
+                  .slice(0, 5); // Top 5
+                
+                return artists.map((artist) => (
+                  <div 
+                    key={artist.userId} 
+                    className="artist-card"
+                    onClick={() => handleArtistNav(artist.userId)}
+                  >
+                    <div 
+                      className="artist-card-image"
+                      style={{ 
+                        backgroundImage: `url(${artist.photoUrl || randomRapper})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
+                      }}
+                    >
+                      <div className="artist-card-overlay"></div>
+                    </div>
+
+                    <div className="artist-card-info">
+                      <div className="artist-card-details">
+                        <h3 className="artist-card-name">{artist.username}</h3>
+                        <p className="artist-card-location">
+                          {getJurisdictionDisplayName(artist.jurisdictionId || jurisdictionId)}
+                        </p>
+                      </div>
+                      
+                      <button 
+                        className="artist-card-view-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArtistNav(artist.userId);
+                        }}
+                      >
+                        View
+                      </button>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
           </section>
         </main>
       </div>

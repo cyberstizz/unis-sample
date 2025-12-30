@@ -122,7 +122,7 @@ $subtle-black: #1a1a1a; // Added for consistency
     font-style: italic;
     padding: 20px;
     color: $text-gray;
-    margin-left: 2%;
+    margin-left: 11%;
   }
 }
 
@@ -303,7 +303,7 @@ $subtle-black: #1a1a1a; // Added for consistency
   }
 
   
-
+ 
   .result-item {
     padding: 12px;
     width: 110%;
@@ -325,6 +325,11 @@ $subtle-black: #1a1a1a; // Added for consistency
       transform: none; 
     }
   }
+
+
+   .no-results-message{
+      margin-right: 11% !important;
+    }
 
   .rank {
     display: none;

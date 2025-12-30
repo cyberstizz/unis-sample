@@ -440,9 +440,9 @@ const Player = () => {
             {/* Desktop Actions */}
             <div className="like-download desktop-actions">
               <button onClick={() => setShowPlaylistWizard(true)}>➕</button>
-              <button onClick={openPlaylistManager}>
+              {/* <button onClick={openPlaylistManager}>
                 <Headphones />
-              </button>
+              </button> */}
               <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
                 <Heart />
               </button>

@@ -93,6 +93,7 @@ $unis-silver: #918f8f;
     color: $accent-white;
     font-size: 16px;
     transition: border-color 0.2s;
+    margin-left: 65px;
 
     &:focus {
       outline: none;
@@ -330,6 +331,7 @@ $unis-silver: #918f8f;
 
 .search-bar{
   width: 80% !important;
+      margin-left: 10px;
 }
   
   .nominee-list {

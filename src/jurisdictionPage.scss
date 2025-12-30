@@ -10,13 +10,15 @@ $unis-blue: #163387;
   background-color: $bg-black;
   color: white;
   background: transparent;
-  padding-top: 10%;
+  padding-top: 3%;
   width: 100%;
   max-width: 100%;
   align-items: center;
   justify-items: center;
   margin-top: 10%;
   overflow-x: hidden;
+  padding-left: 8%;
+  margin-left: 6%;
 }
 
 .dashboard-content {
@@ -29,7 +31,13 @@ $unis-blue: #163387;
   }
 }
 
-// Header - Centered text inside element
+
+.jurisdiction-dashboard-header{
+    text-align: center;
+    align-content: center;
+}
+
+
 .dashboard-header {
   width: 100%;
   margin: 0 auto;

@@ -217,6 +217,197 @@ body {
   }
 }
 
+.feed-section.artist-cards {
+  
+  .artist-cards-grid {
+    display: grid;
+    gap: 20px;
+    
+    // Desktop: 2 columns
+    @media (min-width: 769px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    // Tablet: 2 columns
+    @media (min-width: 481px) and (max-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+    
+    // Mobile: 1 column
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+  }
+
+  .artist-card {
+    display: flex;
+    height: 260px;
+    background: rgba(26, 26, 26, 0.8);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid rgba(192, 192, 192, 0.15);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+
+    &:hover {
+      transform: translateY(-4px);
+      border-color: $unis-blue;
+      box-shadow: 0 8px 24px rgba(22, 51, 135, 0.3);
+      
+      .artist-card-view-btn {
+        background: $unis-blue;
+        color: $accent-white;
+        transform: translateX(0);
+      }
+    }
+
+    // Artist Photo - Left side (70% width)
+    .artist-card-image {
+      flex: 0 0 70%;
+      position: relative;
+      background-color: #1a1a1a;
+      
+      // Gradient overlay for depth
+      .artist-card-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          to right,
+          transparent 0%,
+          transparent 40%,
+          rgba(26, 26, 26, 0.4) 70%,
+          rgba(26, 26, 26, 0.9) 100%
+        );
+      }
+    }
+
+    // Info Section - Right side (30% width)
+    .artist-card-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px 14px;
+      background: rgba(26, 26, 26, 0.95);
+      border-left: 2px solid rgba(22, 51, 135, 0.3);
+    }
+
+    .artist-card-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .artist-card-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: $accent-white;
+      margin: 0;
+      line-height: 1.2;
+      letter-spacing: 0.3px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .artist-card-location {
+      font-size: 7px;
+      color: $text-gray;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .artist-card-view-btn {
+      width: 100%;
+      padding: 8px 12px;
+      background: transparent;
+      border: 2px solid $unis-blue;
+      color: $unis-blue;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateX(-2px);
+
+      &:hover {
+        transform: translateX(0) translateY(-1px);
+        box-shadow: 0 2px 8px rgba(22, 51, 135, 0.4);
+      }
+
+      &:active {
+        transform: translateX(0) translateY(0);
+      }
+    }
+  }
+
+  // --- MOBILE ADJUSTMENTS ---
+  @media (max-width: 768px) {
+    .artist-card {
+      height: 200px;
+
+      .artist-card-info {
+        padding: 12px 10px;
+      }
+
+      .artist-card-name {
+        font-size: 14px;
+      }
+
+      .artist-card-location {
+        font-size: 10px;
+      }
+
+      .artist-card-view-btn {
+        padding: 7px 10px;
+        font-size: 11px;
+      }
+    }
+  }
+
+  // --- EXTRA SMALL MOBILE ---
+  @media (max-width: 480px) {
+    .artist-card {
+      height: 200px;
+
+      .artist-card-image {
+        flex: 0 0 65%; // Slightly less image on very small screens
+      }
+
+      .artist-card-info {
+        padding: 10px 8px;
+      }
+
+      .artist-card-name {
+        font-size: 13px;
+        -webkit-line-clamp: 1; 
+      }
+
+      .artist-card-location {
+        font-size: 9px;
+      }
+
+      .artist-card-view-btn {
+        padding: 6px 8px;
+        font-size: 10px;
+      }
+    }
+  }
+}
+
 // --- MOBILE ADJUSTMENTS ---
 @media (max-width: 768px) {
   .feed {

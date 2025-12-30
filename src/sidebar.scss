@@ -65,7 +65,7 @@ $unis-silver: #918f8f;
     "ELSH" 0,
     "ELXP" 0;
   top: 15vh !important;
-  height: 100vh !important;
+  height: 99vh !important;
   left: 0;
   width: 250px;
   background: transparent; 
@@ -73,7 +73,7 @@ $unis-silver: #918f8f;
   z-index: 10;
   transition: transform 0.3s ease-in-out;
   transform: translateX(-100%);
-  border-right: 0.5px solid $unis-blue;
+  border-right: 0.5px solid silver;
 
   &.open {
     transform: translateX(0);
