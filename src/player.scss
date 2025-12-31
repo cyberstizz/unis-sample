@@ -353,7 +353,9 @@ $unis-silver: #918f8f;
       display: flex;
       justify-content: flex-end;
       align-items: center;
-      gap: 15px;
+      gap: 20px;
+      padding-right: 8px;
+      min-width: 180px;
 
       @media (max-width: 600px) {
         display: none;
@@ -363,21 +365,41 @@ $unis-silver: #918f8f;
         background: transparent;
         border: none;
         color: $text-gray;
-        font-size: 20px;
+        font-size: 22px;
         cursor: pointer;
         transition: all 0.2s ease;
         display: flex;
         align-items: center;
+        justify-content: center;
+        padding: 8px;
+        border-radius: 50%;
+        width: 42px;
+        height: 42px;
+
+        svg {
+          width: 22px;
+          height: 22px;
+        }
 
         &:hover {
           color: $unis-blue;
-          transform: scale(1.1);
+          transform: scale(1.15);
+          background: rgba($unis-blue, 0.1);
+        }
+
+        &:active {
+          transform: scale(1.05);
         }
       }
 
       .like-button {
         &.liked {
-          color: $unis-blue; 
+          color: $unis-blue;
+          background: rgba($unis-blue, 0.15);
+          
+          &:hover {
+            background: rgba($unis-blue, 0.2);
+          }
         }
       }
     }

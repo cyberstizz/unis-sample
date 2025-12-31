@@ -446,7 +446,7 @@ $orange-500: #f97316;
       &:focus {
         outline: none;
         border-color: $primary-blue;
-        background-color: lighten($bg-gray-800, 3%);
+        background-color: $bg-gray-800;
       }
 
       &::placeholder {
