@@ -18,7 +18,7 @@ $unis-blue: #163387;
   padding-bottom: 5px;
   background: transparent;
   margin-left: 240px;
-  margin-top: 10%;
+  margin-top: 7%;
 }
 
 .earningsheader {
@@ -52,10 +52,13 @@ $unis-blue: #163387;
     color: $accent-white;
     font-size: 24px;
     margin-bottom: 15px;
+    text-align: center;
   }
+
 
   p {
     color: $text-silver;
+    text-align: center;
     font-size: 16px;
     line-height: 1.6;
     margin-bottom: 10px;

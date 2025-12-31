@@ -1,3 +1,6 @@
+// Add this import at the TOP of your header.scss file (before the variables)
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+
 $bg-black: #000000;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
@@ -9,15 +12,15 @@ $unis-silver: #918f8f;
   flex-direction: column;
   width: 100%;
   background: linear-gradient(to bottom, #1A1A1A, $bg-black);
-  height: 15vh !important; // Locked height—no flex grow issues
-  min-height: 120px; // Fallback for content overflow
-  z-index: 1000; // Boosted—ensures header stays above layout/feed entirely
+  height: 11vh !important;
+  // min-height: 120px;
+  z-index: 1000;
   position: fixed;
   top: 0;
   left: 0;
   margin: 0;
   border-bottom: solid .2px silver;
-  overflow: hidden; // Clip any internal spills (options can't escape)
+  overflow: hidden;
   transition: height 0.3s ease;
 
   .header-top {
@@ -30,12 +33,12 @@ $unis-silver: #918f8f;
     width: 100vw;
 
     .logo-wrapper {
-      flex-shrink: 0; // Logo won't compress
+      flex-shrink: 0;
       display: flex;
       align-items: center; 
-      margin-left: 2%;
-      margin-top: 50px;
-      width: 12%;
+      margin-left: 4%;
+      margin-top: 43px;
+      width: 8%;
        
       .logo {
        height: 100%;
@@ -46,12 +49,12 @@ $unis-silver: #918f8f;
       }
     }
 
-    // Search Bar (Center): Now true flex-center, isolated from logo
     .search-bar {
       flex: 1;
       max-width: 27vw;
       min-width: 260px;
-      padding: 8px 16px;
+      padding: 8px 10px;
+      padding-bottom: 4px;
       border-radius: 2px !important;
       border: .5px silver solid !important;
       background: #1a1a1a;
@@ -59,7 +62,7 @@ $unis-silver: #918f8f;
       font-size: 14px;
       text-align: center;
       margin: 0 auto;
-      margin-left: 22%;
+      margin-left: 24%;
       justify-self: center;
 
       &::placeholder {
@@ -67,12 +70,11 @@ $unis-silver: #918f8f;
       }
     }
 
-    // Logout Button (Right): Flex end for isolation
     .logout-wrapper {
       flex-shrink: 0;
       display: flex;
       align-items: center;
-      justify-content: flex-end; // Right-align within wrapper
+      justify-content: flex-end;
 
       .logout-button {
         background: transparent;
@@ -95,25 +97,28 @@ $unis-silver: #918f8f;
     }
   }
 
-  // OPTIONS BAR: Explicit height + no margins for no-spill centering
+  // OPTIONS BAR - UPDATED with modern font
   .options-bar {
     display: flex;
     justify-content: center;
-    align-items: center; // Vertical center in its row
-    height: 40%; // Explicit—fills column without overflow
+    align-items: center;
+    height: 40%;
     gap: 15px;
-    padding: 0 20px; // Internal padding over margins—keeps it contained
-    margin: 0 !important; // Nuke all margins—no drift
+    padding: 0 20px;
+    padding-bottom: 10px;
+    margin: 0 !important;
 
     .option-box {
-      padding: 5px 14px;
+      padding: 3px 14px;
       background-color: transparent;
       border: solid 1px $unis-blue;
       border-radius: 50px;
       cursor: pointer;
       transition: all 0.2s ease-in-out;
-      font-size: 13px;
-      font-weight: bold;
+      font-size: 10px;
+      font-weight: 600; // Changed from bold to 600 for better readability
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; // Modern, clean font
+      letter-spacing: 0.3px; // Slightly tighter spacing for better look
       white-space: nowrap;
 
       &:hover {
@@ -134,7 +139,7 @@ $unis-silver: #918f8f;
   bottom: auto;
   padding-top: 10px;
   right: 20px;
-  z-index: 1010; // Above everything
+  z-index: 1010;
 
   .user-name {
     color: $accent-white;
@@ -144,7 +149,6 @@ $unis-silver: #918f8f;
   }
 }
 
-// Mobile: As before, but with wrappers for extra isolation
 @media (max-width: 768px) {
   .header {
     height: 10vh !important;
@@ -153,7 +157,7 @@ $unis-silver: #918f8f;
     .header-top {
       height: 60%;
       padding: 0 8px;
-      gap: 5px; // Tighter
+      gap: 5px;
 
       .logo-wrapper .logo {
         height: 80px !important;
@@ -161,13 +165,13 @@ $unis-silver: #918f8f;
       }
 
       .logo-wrapper {
-      flex-shrink: 0; // Logo won't compress
-      display: flex;
-      align-items: center; 
-      margin-left: 1%;
-      margin-top: 1px;
-      width: 19%;
-      height: 6%;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center; 
+        margin-left: 1%;
+        margin-top: 1px;
+        width: 19%;
+        height: 6%;
       }
 
       .search-bar {
@@ -194,10 +198,12 @@ $unis-silver: #918f8f;
       gap: 8px;
       padding: 0 17px;
       flex-wrap: wrap;
+      margin-bottom: 14px !important;
 
       .option-box {
         padding: 4px 10px;
         font-size: 8px;
+        font-weight: 600; // Updated for mobile too
         flex: 1;
         min-width: 60px;
         text-align: center;
@@ -209,13 +215,3 @@ $unis-silver: #918f8f;
     }
   }
 }
-
-// // Tablet: Unchanged from last
-// @media (min-width: 769px) and (max-width: 1024px) {
-//   .header {
-//     .logo-wrapper .logo { height: 60px; }
-//     .search-bar { max-width: 35vw; min-width: 220px; }
-//     .options-bar { gap: 12px; }
-//     .user-section .user-name { font-size: 13px; }
-//   }
-// }

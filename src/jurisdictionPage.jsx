@@ -346,9 +346,9 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           <div className="highlights-grid">
             {/* Top Artist */}
             {data.artistOfMonth && (
-              <div className="highlight-card card">
+              <div className="highlight-card song-card">
                 <div className="section-header">
-                  <h3>#1 Artist in {jurName}</h3>
+                  <h3 style={{color: "blue"}}>#1 Artist in {jurName}</h3>
                 </div>
                 <div className="highlight-content">
                   <img

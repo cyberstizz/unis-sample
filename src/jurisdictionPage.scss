@@ -4,6 +4,11 @@ $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
 $unis-blue: #163387;
 
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bitcount+Grid+Double:wght@100..900&family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Delicious+Handrawn&display=swap');
+
+
+
+
 // Main Container
 .jurisdiction-dashboard {
   min-height: 100vh;
@@ -15,7 +20,7 @@ $unis-blue: #163387;
   max-width: 100%;
   align-items: center;
   justify-items: center;
-  margin-top: 10%;
+  margin-top: 5%;
   overflow-x: hidden;
   padding-left: 8%;
   margin-left: 6%;
@@ -35,6 +40,12 @@ $unis-blue: #163387;
 .jurisdiction-dashboard-header{
     text-align: center;
     align-content: center;
+    font-family: "Delicious Handrawn", cursive;
+    font-weight: 400;
+    font-size: xx-large !important;
+    color: silver !important;
+    border-bottom: solid .5px silver;
+    padding: none;
 }
 
 
@@ -524,8 +535,7 @@ $unis-blue: #163387;
     text-align: center;
     margin-right: 40px !important;
     margin-left: 40px !important;
-    font-family: "Bitcount Grid Double", system-ui;
-
+    font-family: "Delicious Handrawn", cursive;
   }
 
   .dashboard-content {
