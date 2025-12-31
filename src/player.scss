@@ -30,6 +30,7 @@ $unis-silver: #918f8f;
     position: relative;
     margin-bottom: 10px;
     cursor: pointer;
+    z-index: 1;
 
     .seekbar-track {
       position: absolute;
@@ -147,6 +148,7 @@ $unis-silver: #918f8f;
     padding: 5px;
     margin-left: 10px;
     transition: transform 0.2s ease;
+    z-index: -.99;
 
     &:hover {
       transform: scale(1.1);

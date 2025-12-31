@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Heart, Edit3, Trash2, User } from 'lucide-react';
+import { Play, Heart, Edit3, Trash2, User, Music } from 'lucide-react';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import { useAuth } from './context/AuthContext';
@@ -52,18 +52,49 @@ const Profile = () => {
     ? `${API_BASE_URL}${userProfile.photoUrl}` 
     : backimage;
 
-  const playDefaultSong = () => {
-    if (!supportedArtist?.defaultSong) return;
+  const buildUrl = (url) => {
+    if (!url) return null;
+    return url.startsWith('http://') || url.startsWith('https://') 
+      ? url 
+      : `${API_BASE_URL}${url}`;
+  };
 
-    playMedia({
+  // Enhanced play function with tracking
+  const playDefaultSong = async () => {
+    if (!supportedArtist?.defaultSong) {
+      console.error('No default song available');
+      return;
+    }
+
+    const song = supportedArtist.defaultSong;
+    const songId = song.songId || song.id;
+
+    // Create media object for player
+    const mediaObject = {
       type: 'song',
-      url: `${API_BASE_URL}${supportedArtist.defaultSong.fileUrl}`,
-      title: supportedArtist.defaultSong.title,
+      id: songId,
+      songId: songId,
+      url: buildUrl(song.fileUrl),
+      title: song.title,
       artist: supportedArtist.username,
-      artwork: supportedArtist.defaultSong.artworkUrl 
-        ? `${API_BASE_URL}${supportedArtist.defaultSong.artworkUrl}` 
-        : photoUrl,
-    }, []);
+      artistName: supportedArtist.username,
+      artwork: buildUrl(song.artworkUrl) || buildUrl(supportedArtist.photoUrl) || photoUrl,
+      artworkUrl: buildUrl(song.artworkUrl) || buildUrl(supportedArtist.photoUrl) || photoUrl,
+    };
+
+    try {
+      // Track the play
+      await apiCall({ 
+        method: 'post', 
+        url: `/v1/media/song/${songId}/play?userId=${user.userId}` 
+      });
+      console.log('Play tracked successfully for song:', songId);
+    } catch (err) {
+      console.error('Failed to track play:', err);
+    }
+
+    // Play the song
+    playMedia(mediaObject, [mediaObject]);
   };
 
   const refreshProfile = () => {
@@ -76,10 +107,10 @@ const Profile = () => {
       <div className="profile-container">
 
         {/* Header */}
-        <div className="profile-header card" style={{ textAlign: 'center', padding: '2rem' }}>
+        <div className="profile-header card">
           <img src={photoUrl} alt={userProfile.username} className="profile-image-large" />
           <h1>{userProfile.username}</h1>
-          <p style={{ fontSize: '1.1rem', color: '#aaa', margin: '0.5rem 0' }}>
+          <p>
             {userProfile.bio || 'No bio yet — tell Harlem who you are!'}
           </p>
           <button className="btn btn-primary" onClick={() => setShowEditWizard(true)}>
@@ -87,58 +118,46 @@ const Profile = () => {
           </button>
         </div>
 
-        {/* Supported Artist */}
+        {/* Supported Artist - ENHANCED */}
         {supportedArtist && (
           <div className="supported-artist card">
-            <h3>I Support</h3>
-            <div className="artist-support-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <h3><Heart size={20} /> I Support</h3>
+            <div className="artist-support-card">
               <img 
-                src={supportedArtist.photoUrl ? `${API_BASE_URL}${supportedArtist.photoUrl}` : backimage} 
+                src={supportedArtist.photoUrl ? buildUrl(supportedArtist.photoUrl) : backimage} 
                 alt={supportedArtist.username}
-                style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover' }}
+                className="artist-photo"
               />
-              <div style={{ flex: 1 }}>
-                <h4 style={{ margin: '0 0 0.5rem' }}>{supportedArtist.username}</h4>
-                {supportedArtist.defaultSong && (
-                  <button className="btn btn-secondary" onClick={playDefaultSong}>
-                    <Play size={16} /> Play Featured Song
-                  </button>
+              <div className="artist-info">
+                <h4>{supportedArtist.username}</h4>
+                {supportedArtist.defaultSong ? (
+                  <div className="default-song-section">
+                    <div className="song-details">
+                      <Music size={16} className="song-icon" />
+                      <div className="song-text">
+                        <p className="song-title">{supportedArtist.defaultSong.title}</p>
+                        <p className="song-label">Featured Track</p>
+                      </div>
+                    </div>
+                    <button className="btn-play" onClick={playDefaultSong}>
+                      <Play size={20} fill="white" />
+                    </button>
+                  </div>
+                ) : (
+                  <p className="no-song">No featured song set</p>
                 )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Vote History */}
-        <div className="vote-history card">
-          <h3>Vote History ({voteHistory.length})</h3>
-          {voteHistory.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-              {voteHistory.map(vote => (
-                <div key={vote.voteId} style={{
-                  padding: '0.8rem',
-                  background: '#ffffff12',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div>
-                    <strong>{vote.targetType === 'artist' ? 'Artist' : 'Song'}</strong> • {vote.genre?.name || 'Unknown'} • {vote.interval?.name || 'Daily'}
-                  </div>
-                  <small style={{ color: '#aaa' }}>
-                    {new Date(vote.voteDate).toLocaleDateString()}
-                  </small>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p>No votes yet — go support your favorites!</p>
-          )}
-        </div>
-
-        {/* Stats */}
-        <div className="stats-grid" style={{ margin: '2rem 0' }}>
+        {/* Stats Grid - FULL WIDTH */}
+        <div className="stats-grid">
+           <div className="stat-card">
+            <Music size={28} />
+            <p>Score</p>
+            <h3>{userProfile.score || 'Silver'}</h3>
+          </div>
           <div className="stat-card">
             <User size={28} />
             <p>Level</p>
@@ -151,16 +170,34 @@ const Profile = () => {
           </div>
         </div>
 
+        {/* Vote History - FULL WIDTH */}
+        <div className="vote-history card">
+          <h3>Vote History ({voteHistory.length})</h3>
+          {voteHistory.length > 0 ? (
+            <div className="vote-list">
+              {voteHistory.map(vote => (
+                <div key={vote.voteId} className="vote-item">
+                  <div className="vote-info">
+                    <strong>{vote.targetType === 'artist' ? 'Artist' : 'Song'}</strong> • {vote.genre?.name || 'Unknown'} • {vote.interval?.name || 'Daily'}
+                  </div>
+                  <small className="vote-date">
+                    {new Date(vote.voteDate).toLocaleDateString()}
+                  </small>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state">No votes yet — go support your favorites!</p>
+          )}
+        </div>
+
         {/* Danger Zone */}
-        <div className="card" style={{ border: '2px solid #dc3545', marginTop: '3rem' }}>
-          <div style={{ padding: '1.5rem', textAlign: 'center' }}>
-            <h3 style={{ color: '#dc3545' }}>Danger Zone</h3>
-            <p style={{ color: '#ccc', marginBottom: '1rem' }}>
-              This cannot be undone.
-            </p>
+        <div className="card danger-zone">
+          <div className="danger-content">
+            <h3>Danger Zone</h3>
+            <p>This cannot be undone.</p>
             <button
-              style={{ background: '#dc3545', border: 'none' }}
-              className="btn btn-primary"
+              className="btn btn-primary btn-danger"
               onClick={() => setShowDeleteWizard(true)}
             >
               <Trash2 size={16} /> Delete Account

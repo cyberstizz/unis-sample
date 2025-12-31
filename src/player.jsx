@@ -463,7 +463,6 @@ const Player = () => {
         selectedTrack={currentMedia}
       />
 
-      {/* 🎯 CRITICAL FIX: Changed from setShowPlaylistViewer to closePlaylistManager */}
       <PlaylistManager
         open={showPlaylistManager}
         onClose={closePlaylistManager}
