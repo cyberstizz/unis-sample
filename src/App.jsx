@@ -15,6 +15,10 @@ import Leaderboards from './leaderboardsPage';
 import MapDemo from './mapDemo';
 import Earnings from './earnings';
 import FindPage from './findpage';
+import PrivacyPolicy from './privacyPolicy';
+import TermsOfService from './termsOfService';
+import CookiePolicy from './cookiePolicy';
+import ReportInfringement from './reportInfringement';
 import SongNotification from './songNotification';
 import ArtistDashboard from './artistDashboard';
 import JurisdictionPage from './jurisdictionPage';
@@ -57,6 +61,10 @@ const AppLayout = () => {
           <Route path="/findpage" element={<FindPage />} />
           <Route path="/artistDashboard" element={<ArtistDashboard />} />
           <Route path="/jurisdiction/:jurisdiction" element={<JurisdictionPage />} />
+           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/cookie" element={<CookiePolicy />} />
+          <Route path="/report" element={<ReportInfringement />} />
         </Route>
       </Routes>
       

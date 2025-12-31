@@ -1,0 +1,426 @@
+// reportInfringement.scss
+
+$bg-black: #000000;
+$text-silver: #C0C0C0;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+$unis-blue: #163387;
+$warning-red: #dc3545;
+$success-green: #22c55e;
+
+.report-container {
+  min-height: 100vh;
+  background: transparent;
+  color: $text-silver;
+  padding: 120px 20px 80px;
+  display: flex;
+  justify-content: center;
+  margin-left: 20%;
+  margin-top: 5%;
+
+  @media (max-width: 800px) {
+    padding: 100px 15px 60px;
+    margin-left: 1%;
+  }
+}
+
+.report-content {
+  max-width: 900px;
+  width: 100%;
+  background: rgba(#1a1a1a, 0.85);
+  border-radius: 16px;
+  padding: 50px 60px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  @media (max-width: 800px) {
+    padding: 30px 25px;
+    border-radius: 12px;
+  }
+}
+
+.report-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 30px;
+  border-bottom: 2px solid rgba($unis-blue, 0.3);
+
+  h1 {
+    font-size: 42px;
+    font-weight: 700;
+    color: $accent-white;
+    margin: 0 0 10px 0;
+    font-family: "Bitcount Grid Double", system-ui;
+    letter-spacing: 1px;
+
+    @media (max-width: 800px) {
+      font-size: 32px;
+    }
+  }
+
+  .subtitle {
+    font-size: 18px;
+    color: $unis-blue;
+    font-weight: 600;
+    margin: 0;
+
+    @media (max-width: 800px) {
+      font-size: 16px;
+    }
+  }
+}
+
+.report-intro {
+  margin-bottom: 40px;
+  padding: 25px;
+  background: rgba($unis-blue, 0.08);
+  border-left: 4px solid $unis-blue;
+  border-radius: 8px;
+
+  p {
+    font-size: 16px;
+    line-height: 1.8;
+    margin: 0 0 15px 0;
+    color: $text-silver;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    @media (max-width: 800px) {
+      font-size: 15px;
+      line-height: 1.7;
+    }
+  }
+
+  .warning {
+    padding: 15px;
+    background: rgba($warning-red, 0.1);
+    border: 1px solid rgba($warning-red, 0.3);
+    border-radius: 8px;
+    margin-top: 20px;
+
+    strong {
+      color: $warning-red;
+    }
+  }
+}
+
+.dmca-requirements {
+  margin-bottom: 40px;
+  padding: 25px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+
+  h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: $accent-white;
+    margin: 0 0 15px 0;
+    font-family: "Bitcount Grid Double", system-ui;
+
+    @media (max-width: 800px) {
+      font-size: 20px;
+    }
+  }
+
+  p {
+    font-size: 16px;
+    margin: 0 0 10px 0;
+    color: $text-silver;
+  }
+
+  ol {
+    margin: 15px 0;
+    padding-left: 25px;
+
+    li {
+      font-size: 15px;
+      line-height: 1.8;
+      margin-bottom: 8px;
+      color: $text-silver;
+    }
+  }
+}
+
+.dmca-form {
+  margin-bottom: 40px;
+
+  .form-section {
+    margin-bottom: 40px;
+    padding: 25px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+
+    @media (max-width: 800px) {
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    h3 {
+      font-size: 22px;
+      font-weight: 600;
+      color: $unis-blue;
+      margin: 0 0 20px 0;
+
+      @media (max-width: 800px) {
+        font-size: 19px;
+      }
+    }
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+
+    label {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      color: $accent-white;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px 15px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: $accent-white;
+      font-size: 15px;
+      transition: border-color 0.2s ease, background 0.2s ease;
+
+      &:focus {
+        outline: none;
+        border-color: $unis-blue;
+        background: rgba(0, 0, 0, 0.6);
+      }
+
+      &::placeholder {
+        color: $text-gray;
+      }
+
+      @media (max-width: 800px) {
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    small {
+      display: block;
+      font-size: 13px;
+      color: $text-gray;
+      margin-top: 5px;
+      font-style: italic;
+    }
+  }
+
+  .checkbox-group {
+    margin-bottom: 20px;
+
+    label {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      cursor: pointer;
+
+      input[type="checkbox"] {
+        margin-top: 4px;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      span {
+        font-size: 15px;
+        line-height: 1.6;
+        color: $text-silver;
+
+        @media (max-width: 800px) {
+          font-size: 14px;
+        }
+      }
+    }
+  }
+
+  .form-actions {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 2px solid rgba($unis-blue, 0.2);
+
+    .btn-primary {
+      padding: 15px 50px;
+      background: $unis-blue;
+      color: $accent-white;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease;
+
+      &:hover {
+        background: darken($unis-blue, 10%);
+        transform: translateY(-2px);
+      }
+
+      @media (max-width: 800px) {
+        width: 100%;
+        padding: 12px 30px;
+        font-size: 16px;
+      }
+    }
+
+    .submission-note {
+      font-size: 14px;
+      color: $text-gray;
+      margin-top: 15px;
+
+      strong {
+        color: $unis-blue;
+      }
+    }
+  }
+}
+
+.counter-notice-info,
+.contact-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    color: $accent-white;
+    margin: 0 0 15px 0;
+
+    @media (max-width: 800px) {
+      font-size: 19px;
+    }
+  }
+
+  p {
+    font-size: 15px;
+    line-height: 1.7;
+    color: $text-silver;
+    margin: 0;
+  }
+
+  a {
+    color: $unis-blue;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: lighten($unis-blue, 15%);
+      text-decoration: underline;
+    }
+  }
+}
+
+.success-message {
+  text-align: center;
+  padding: 60px 30px;
+
+  h1 {
+    font-size: 36px;
+    color: $success-green;
+    margin: 0 0 25px 0;
+    font-family: "Bitcount Grid Double", system-ui;
+
+    @media (max-width: 800px) {
+      font-size: 28px;
+    }
+  }
+
+  p {
+    font-size: 16px;
+    line-height: 1.8;
+    color: $text-silver;
+    margin: 0 0 20px 0;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+
+    @media (max-width: 800px) {
+      font-size: 15px;
+    }
+
+    strong {
+      color: $accent-white;
+    }
+  }
+
+  .reference-note {
+    font-size: 14px;
+    color: $text-gray;
+    font-style: italic;
+    margin-top: 30px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+  }
+
+  .btn-primary {
+    margin-top: 30px;
+    padding: 12px 40px;
+    background: $unis-blue;
+    color: $accent-white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: darken($unis-blue, 10%);
+    }
+  }
+}
+
+// Smooth scroll
+html {
+  scroll-behavior: smooth;
+}
+
+// Print styles
+@media print {
+  .report-container {
+    background: white;
+    padding: 20px;
+  }
+
+  .report-content {
+    background: white;
+    box-shadow: none;
+    border: 1px solid #ccc;
+    color: black;
+
+    h1, h2, h3, p, li, label, span {
+      color: black;
+    }
+
+    .btn-primary {
+      display: none;
+    }
+  }
+}

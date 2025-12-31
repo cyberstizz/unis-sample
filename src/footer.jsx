@@ -6,13 +6,13 @@ const Footer = () => {
   return (
     <footer className="layout-footer">
       <div className="footer-links">
-        <Link to="/">Privacy Policy</Link>
+        <Link to="/privacy">Privacy Policy</Link>
         <span className="footer-separator">|</span>
-        <Link to="/">Terms of Use</Link>
+        <Link to="/terms">Terms of Use</Link>
         <span className="footer-separator">|</span>
-        <Link to="/">Cookie Policy</Link>
+        <Link to="/cookie">Cookie Policy</Link>
         <span className="footer-separator">|</span>
-        <Link to="/">Report Infringement</Link>
+        <Link to="/report">Report Infringement</Link>
       </div>
       <div className="footer-copyright">
         © {new Date().getFullYear()} Unis. All rights reserved.

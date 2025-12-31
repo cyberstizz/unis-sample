@@ -1,0 +1,258 @@
+// privacyPolicy.scss
+
+$bg-black: #000000;
+$text-silver: #C0C0C0;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+$unis-blue: #163387;
+$unis-silver: #918f8f;
+
+.privacy-policy-container {
+  min-height: 100vh;
+  background: transparent;
+  color: $text-silver;
+  padding: 120px 20px 80px;
+  display: flex;
+  justify-content: center;
+  margin-left: 20%;
+
+  @media (max-width: 800px) {
+    padding: 100px 15px 60px;
+    margin-left: 1%;
+  }
+}
+
+.privacy-policy-content {
+  max-width: 900px;
+  width: 100%;
+  background: rgba(#1a1a1a, 0.85);
+  border-radius: 16px;
+  padding: 50px 60px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  @media (max-width: 800px) {
+    padding: 30px 25px;
+    border-radius: 12px;
+  }
+}
+
+.policy-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 30px;
+  border-bottom: 2px solid rgba($unis-blue, 0.3);
+
+  h1 {
+    font-size: 42px;
+    font-weight: 700;
+    color: $accent-white;
+    margin: 0 0 20px 0;
+    font-family: "Bitcount Grid Double", system-ui;
+    letter-spacing: 1px;
+
+    @media (max-width: 800px) {
+      font-size: 32px;
+    }
+  }
+
+  .policy-meta {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+
+    p {
+      margin: 5px 0;
+      font-size: 14px;
+      color: $text-gray;
+
+      strong {
+        color: $unis-blue;
+      }
+    }
+
+    @media (max-width: 800px) {
+      flex-direction: column;
+      gap: 8px;
+    }
+  }
+}
+
+.policy-intro {
+  margin-bottom: 40px;
+  padding: 25px;
+  background: rgba($unis-blue, 0.08);
+  border-left: 4px solid $unis-blue;
+  border-radius: 8px;
+
+  p {
+    font-size: 16px;
+    line-height: 1.8;
+    margin: 0 0 15px 0;
+    color: $text-silver;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    @media (max-width: 800px) {
+      font-size: 15px;
+      line-height: 1.7;
+    }
+  }
+
+  a {
+    color: $unis-blue;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: lighten($unis-blue, 15%);
+      text-decoration: underline;
+    }
+  }
+}
+
+.policy-section {
+  margin-bottom: 50px;
+
+  @media (max-width: 800px) {
+    margin-bottom: 35px;
+  }
+
+  h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: $accent-white;
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba($unis-blue, 0.2);
+    font-family: "Bitcount Grid Double", system-ui;
+
+    @media (max-width: 800px) {
+      font-size: 24px;
+    }
+  }
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: $unis-blue;
+    margin: 25px 0 15px 0;
+
+    @media (max-width: 800px) {
+      font-size: 18px;
+      margin: 20px 0 12px 0;
+    }
+  }
+
+  p {
+    font-size: 16px;
+    line-height: 1.8;
+    margin: 0 0 15px 0;
+    color: $text-silver;
+
+    @media (max-width: 800px) {
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    &.note {
+      font-style: italic;
+      color: $text-gray;
+      padding-left: 20px;
+      border-left: 3px solid rgba($unis-blue, 0.3);
+      margin-top: 15px;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 12px 20px;
+      border-radius: 4px;
+    }
+  }
+
+  ul {
+    margin: 15px 0;
+    padding-left: 25px;
+
+    @media (max-width: 800px) {
+      padding-left: 20px;
+    }
+
+    li {
+      font-size: 16px;
+      line-height: 1.8;
+      margin-bottom: 12px;
+      color: $text-silver;
+
+      @media (max-width: 800px) {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      strong {
+        color: $accent-white;
+        font-weight: 600;
+      }
+    }
+  }
+
+  a {
+    color: $unis-blue;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: lighten($unis-blue, 15%);
+      text-decoration: underline;
+    }
+  }
+}
+
+.policy-footer {
+  margin-top: 50px;
+  padding-top: 30px;
+  border-top: 2px solid rgba($unis-blue, 0.2);
+  text-align: center;
+
+  p {
+    font-size: 14px;
+    color: $text-gray;
+    margin: 0;
+  }
+
+  @media (max-width: 800px) {
+    margin-top: 35px;
+    padding-top: 20px;
+  }
+}
+
+// Smooth scroll behavior
+html {
+  scroll-behavior: smooth;
+}
+
+// Print styles
+@media print {
+  .privacy-policy-container {
+    background: white;
+    padding: 20px;
+  }
+
+  .privacy-policy-content {
+    background: white;
+    box-shadow: none;
+    border: 1px solid #ccc;
+    color: black;
+
+    h1, h2, h3, p, li {
+      color: black;
+    }
+
+    a {
+      color: #163387;
+    }
+  }
+}
