@@ -22,6 +22,10 @@ $unis-silver: #918f8f;
   margin-left: 3px;
 }
 
+.home-sidebar{
+  color: $unis-blue;
+}
+
 .sidebar-trigger {
   display: none; 
   position: fixed;
@@ -68,7 +72,7 @@ $unis-silver: #918f8f;
   height: 99vh !important;
   left: 0;
   width: 250px;
-  background: transparent; 
+  background: black; 
   padding-right: 1px;
   z-index: 10;
   transition: transform 0.3s ease-in-out;

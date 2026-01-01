@@ -28,7 +28,7 @@ const SongNotification = () => {
         />
         <div className="notification-info">
           <h3>{currentMedia.title || 'Unknown Track'}</h3>
-          <p>{currentMedia.artist || 'Unknown Artist'}</p>
+          <p className='artistName'>{currentMedia.artist || 'Unknown Artist'}</p>
         </div>
       </div>
     </div>

@@ -93,8 +93,8 @@ const Sidebar = ({ onProfileClick }) => {
       <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
         <ul>
           <li onClick={handleHome}>
-            <span className="sidebar-icon"><House size={24} /></span>
-            <span className="sidebar-text">Home</span>
+            <span className="sidebar-icon home-sidebar"><House size={24} /></span>
+            <span className="sidebar-text home-sidebar">Home</span>
           </li>
           <li onClick={handleClick}>
             <span className="sidebar-icon"><Vote size={24} /></span>

@@ -1,4 +1,4 @@
-// SongNotification.scss - Modern Design with Flashing BLUE Border
+$unis-blue: #163387;
 
 .song-notification {
   position: fixed;
@@ -91,7 +91,8 @@
       p {
         font-size: 13px;
         margin: 2px 0;
-        color: #b0b0b0;
+        color: $unis-blue !important;
+        font-weight: 600 !important;
         line-height: 1.4;
         
         &:first-of-type {
@@ -114,6 +115,10 @@
     }
   }
 
+
+.artistName {
+  color: $unis-blue;
+}
 
 // Flashing BLUE border animation
 @keyframes flashingBlueBorder {
