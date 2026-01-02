@@ -112,7 +112,7 @@ $unis-silver: #918f8f;
     transition: color 0.2s ease;
 
     &:hover {
-      color: lighten($unis-blue, 15%);
+      color: $unis-blue;
       text-decoration: underline;
     }
   }
