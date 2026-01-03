@@ -71,7 +71,7 @@ const FindPage = () => {
   const mapRef = useRef(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 600);
 
-  // View state - similar to original but extended
+  // View state
   const [viewState, setViewState] = useState({ mode: 'US', bounds: null, center: null, zoom: null });
   const [usGeoData, setUsGeoData] = useState(null);
   
@@ -152,23 +152,9 @@ const FindPage = () => {
   // HELPER FUNCTIONS
   // ==========================================================================
 
-  /**
-   * Check if a jurisdiction is in Harlem's parent chain
-   */
-  const isInHarlemChain = (name) => {
-    return HARLEM_PARENT_CHAIN.includes(name);
-  };
+  const isInHarlemChain = (name) => HARLEM_PARENT_CHAIN.includes(name);
+  const isActiveJurisdiction = (name) => ACTIVE_JURISDICTIONS.includes(name);
 
-  /**
-   * Check if jurisdiction is active (has real data)
-   */
-  const isActiveJurisdiction = (name) => {
-    return ACTIVE_JURISDICTIONS.includes(name);
-  };
-
-  /**
-   * Parse polygon string to GeoJSON geometry
-   */
   const parsePolygon = (polygon) => {
     if (!polygon) return null;
     try {
@@ -179,9 +165,6 @@ const FindPage = () => {
     }
   };
 
-  /**
-   * Calculate bounds from polygon
-   */
   const getBoundsFromPolygon = (polygon) => {
     const geometry = parsePolygon(polygon);
     if (!geometry || !geometry.coordinates) return null;
@@ -196,9 +179,6 @@ const FindPage = () => {
     ];
   };
 
-  /**
-   * Convert jurisdictions array to GeoJSON FeatureCollection
-   */
   const jurisdictionsToGeoJSON = useCallback((jurisdictions) => {
     const features = jurisdictions
       .filter(j => j.polygon)
@@ -228,9 +208,6 @@ const FindPage = () => {
   // API CALLS
   // ==========================================================================
 
-  /**
-   * Fetch children of a jurisdiction
-   */
   const fetchChildren = async (jurisdictionId) => {
     try {
       const response = await apiCall({
@@ -240,7 +217,6 @@ const FindPage = () => {
       return response.data || [];
     } catch (err) {
       console.error('Failed to fetch children:', err);
-      // Fallback: try the simple children endpoint
       try {
         const fallbackResponse = await apiCall({
           method: 'get',
@@ -248,7 +224,7 @@ const FindPage = () => {
         });
         return (fallbackResponse.data || []).map(j => ({
           ...j,
-          hasChildren: true, // Assume has children, will be corrected on click
+          hasChildren: true,
           isActive: isActiveJurisdiction(j.name)
         }));
       } catch (fallbackErr) {
@@ -258,9 +234,6 @@ const FindPage = () => {
     }
   };
 
-  /**
-   * Fetch jurisdiction by name
-   */
   const fetchJurisdictionByName = async (name) => {
     try {
       const response = await apiCall({
@@ -274,16 +247,12 @@ const FindPage = () => {
     }
   };
 
-  /**
-   * Fetch top results - always uses Harlem for non-active jurisdictions
-   */
   const fetchTopResults = async (jurisdictionName) => {
     setLoading(true);
     setError(null);
     setHasSelectedJurisdiction(true);
     
     try {
-      // Always fetch from Harlem since it's the only active jurisdiction with data
       const dataJurisdiction = 'Harlem';
       
       const jurResponse = await apiCall({
@@ -331,9 +300,6 @@ const FindPage = () => {
   // EVENT HANDLERS
   // ==========================================================================
 
-  /**
-   * Handle clicking on a US state
-   */
   const handleStateClick = async (feature, layer) => {
     const stateName = feature.properties.name;
     setHoveredState(stateName);
@@ -343,17 +309,14 @@ const FindPage = () => {
       return;
     }
 
-    // Fetch New York from database
     const nyData = await fetchJurisdictionByName("New York");
     if (!nyData) {
       console.error('Failed to load New York data');
       return;
     }
 
-    // Get children of New York (Tier 3)
     const children = await fetchChildren(nyData.jurisdictionId);
     
-    // Update navigation
     setNavigationStack([
       { name: 'United States', jurisdictionId: null, tier: 0 },
       { name: 'New York', jurisdictionId: nyData.jurisdictionId, tier: 2 }
@@ -362,7 +325,6 @@ const FindPage = () => {
     setCurrentJurisdictions(children);
     setSelectedJurisdiction({ name: 'New York', ...nyData.jurisdiction });
     
-    // Set view state
     const bounds = layer ? layer.getBounds() : null;
     setViewState({ 
       mode: 'STATE', 
@@ -371,25 +333,19 @@ const FindPage = () => {
       zoom: null
     });
     
-    // Fetch results (will show Harlem data)
     fetchTopResults('New York');
   };
 
-  /**
-   * Handle clicking on a jurisdiction polygon
-   */
   const handleJurisdictionClick = async (jurisdiction) => {
     const { jurisdictionId, name, hasChildren, polygon } = jurisdiction;
     
     setSelectedJurisdiction(jurisdiction);
     setHoveredState(name);
     
-    // If has children, drill down
     if (hasChildren) {
       const children = await fetchChildren(jurisdictionId);
       
       if (children.length > 0) {
-        // Update navigation stack
         setNavigationStack(prev => [...prev, {
           name,
           jurisdictionId,
@@ -398,7 +354,6 @@ const FindPage = () => {
         
         setCurrentJurisdictions(children);
         
-        // Calculate bounds from polygon
         const bounds = getBoundsFromPolygon(polygon);
         if (bounds) {
           setViewState({ mode: 'JURISDICTION', bounds, center: null, zoom: null });
@@ -406,13 +361,9 @@ const FindPage = () => {
       }
     }
     
-    // Always fetch results
     fetchTopResults(name);
   };
 
-  /**
-   * Handle back button
-   */
   const handleBack = async () => {
     if (navigationStack.length <= 1) return;
     
@@ -423,7 +374,6 @@ const FindPage = () => {
     setNavigationStack(newStack);
     
     if (previousLevel.tier === 0) {
-      // Back to US view
       setCurrentJurisdictions([]);
       setSelectedJurisdiction(null);
       setViewState({ mode: 'US', bounds: null, center: null, zoom: null });
@@ -431,11 +381,9 @@ const FindPage = () => {
       setTopResults({ artists: [], songs: [] });
       setHoveredState(null);
     } else {
-      // Back to previous jurisdiction level
       const children = await fetchChildren(previousLevel.jurisdictionId);
       setCurrentJurisdictions(children);
       
-      // Fetch parent jurisdiction for bounds
       try {
         const response = await apiCall({
           method: 'get',
@@ -455,9 +403,6 @@ const FindPage = () => {
     }
   };
 
-  /**
-   * Handle random button
-   */
   const handleRandom = () => {
     setIsAnimating(true);
     let count = 0;
@@ -582,7 +527,7 @@ const FindPage = () => {
   return (
     <Layout backgroundImage={backimage}>
       <div className="find-page-container">
-        {/* Filters */}
+        {/* Filters - Always rendered */}
         <div className="findFilters">
           <select 
             value={genre} 
@@ -602,18 +547,19 @@ const FindPage = () => {
           </button>
         </div>
 
+        {/* Map Section - Always rendered, same structure */}
         <div className='mapEverything'>
-          {/* Territory Name */}
           <p className="territory-name">{displayTerritory}</p>
 
-          {/* Back Button */}
-          {!isAtUSLevel() && (
-            <button onClick={handleBack} className="back-button">
-              ← Back
-            </button>
-          )}
+          {/* Back button - uses visibility instead of conditional render */}
+          <button 
+            onClick={handleBack} 
+            className="back-button"
+            style={{ visibility: isAtUSLevel() ? 'hidden' : 'visible', color: "white" }}
+          >
+            ← Back
+          </button>
 
-          {/* Map Container */}
           <div className="map-container">
             <MapContainer
               center={[37.8, -96]}
@@ -747,63 +693,63 @@ const FindPage = () => {
           </div>
         </div>
 
-        {/* Loading/Error */}
-        {loading && <div className="loading">Loading tops...</div>}
-        {error && <div className="error">{error}</div>}
+        {/* Results Section - Always rendered, content changes based on state */}
+        <div className="results-section" style={{ display: hasSelectedJurisdiction ? 'flex' : 'none' }}>
+          {/* Notice for Harlem parent chain */}
+          {/* {showHarlemDataNotice && (
+            <div style={{
+              width: '100%',
+              textAlign: 'center',
+              padding: '10px',
+              marginBottom: '10px',
+              backgroundColor: 'rgba(22, 51, 135, 0.1)',
+              borderRadius: '8px',
+              color: '#888',
+              fontSize: '14px'
+            }}>
+              Showing top results from Harlem (launch jurisdiction)
+            </div>
+          )} */}
 
-        {/* Results Section - Always show when a jurisdiction is selected */}
-        {hasSelectedJurisdiction && (
-          <div className="results-section">
-            {/* Notice for Harlem parent chain */}
-            {showHarlemDataNotice && (
-              <div style={{
-                width: '100%',
-                textAlign: 'center',
-                padding: '10px',
-                marginBottom: '10px',
-                backgroundColor: 'rgba(22, 51, 135, 0.1)',
-                borderRadius: '8px',
-                color: '#888',
-                fontSize: '14px'
-              }}>
-                Showing top results from Harlem (launch jurisdiction)
-              </div>
-            )}
+          {/* Coming Soon Notice for non-Harlem chain */}
+          {showComingSoon && (
+            <div style={{
+              width: '100%',
+              textAlign: 'center',
+              padding: '20px',
+              marginBottom: '10px',
+              backgroundColor: 'rgba(22, 51, 135, 0.1)',
+              borderRadius: '8px'
+            }}>
+              <p style={{ color: '#163387', fontSize: '24px', margin: '0 0 10px 0' }}>
+                {selectedJurisdiction?.name}
+              </p>
+              <p style={{ color: '#888', margin: 0 }}>
+                Coming soon to Unis! Join the waitlist to be notified when this area launches.
+              </p>
+            </div>
+          )}
 
-            {/* Coming Soon Notice for non-Harlem chain */}
-            {showComingSoon && (
-              <div style={{
-                width: '100%',
-                textAlign: 'center',
-                padding: '20px',
-                marginBottom: '10px',
-                backgroundColor: 'rgba(22, 51, 135, 0.1)',
-                borderRadius: '8px'
-              }}>
-                <p style={{ color: '#163387', fontSize: '24px', margin: '0 0 10px 0' }}>
-                  {selectedJurisdiction.name}
-                </p>
-                <p style={{ color: '#888', margin: 0 }}>
-                  Coming soon to Unis! Join the waitlist to be notified when this area launches.
-                </p>
-              </div>
-            )}
-
-            {/* Only show results if in Harlem chain */}
-            {!showComingSoon && (
-              <>
-                {/* Top Songs Column */}
-                <div className="column">
-                  <h2 
-                    onClick={handleJurisdictionNavigate}
-                    style={{ cursor: 'pointer', transition: 'color 0.2s' }}
-                    onMouseEnter={(e) => e.target.style.color = '#163387'}
-                    onMouseLeave={(e) => e.target.style.color = 'inherit'}
-                  >
-                    Top Songs in {displayTerritory}
-                  </h2>
-                  <ul className="results-list">
-                    {songs.slice(0, 3).map((item, index) => (
+          {/* Only show results if in Harlem chain */}
+          {!showComingSoon && (
+            <>
+              {/* Top Songs Column */}
+              <div className="column">
+                <h2 
+                  onClick={handleJurisdictionNavigate}
+                  style={{ cursor: 'pointer', transition: 'color 0.2s' }}
+                  onMouseEnter={(e) => e.target.style.color = '#163387'}
+                  onMouseLeave={(e) => e.target.style.color = 'inherit'}
+                >
+                  Top Songs in {displayTerritory}
+                </h2>
+                <ul className="results-list">
+                  {loading ? (
+                    <li className="result-item">
+                      <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>Loading...</p>
+                    </li>
+                  ) : songs.length > 0 ? (
+                    songs.slice(0, 3).map((item, index) => (
                       <li key={item.id || index} className="result-item">
                         <div className="rank">#{index + 1}</div>
                         <img src={item.artwork} alt={item.title} className="item-artwork" />
@@ -817,29 +763,32 @@ const FindPage = () => {
                         <button onClick={() => handlePlay(item)} className="play-button">Play</button>
                         <button onClick={() => handleSongView(item.id)} className="view-button">View</button>
                       </li>
-                    ))}
-                    {songs.length === 0 && !loading && (
-                      <li className="result-item">
-                        <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>
-                          No songs yet
-                        </p>
-                      </li>
-                    )}
-                  </ul>
-                </div>
+                    ))
+                  ) : (
+                    <li className="result-item">
+                      <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>No songs yet</p>
+                    </li>
+                  )}
+                </ul>
+              </div>
 
-                {/* Top Artists Column */}
-                <div className="column">
-                  <h2 
-                    onClick={handleJurisdictionNavigate}
-                    style={{ cursor: 'pointer', transition: 'color 0.2s' }}
-                    onMouseEnter={(e) => e.target.style.color = '#163387'}
-                    onMouseLeave={(e) => e.target.style.color = 'inherit'}
-                  >
-                    Top Artists in {displayTerritory}
-                  </h2>
-                  <ul className="results-list">
-                    {artists.slice(0, 3).map((item, index) => (
+              {/* Top Artists Column */}
+              <div className="column">
+                <h2 
+                  onClick={handleJurisdictionNavigate}
+                  style={{ cursor: 'pointer', transition: 'color 0.2s' }}
+                  onMouseEnter={(e) => e.target.style.color = '#163387'}
+                  onMouseLeave={(e) => e.target.style.color = 'inherit'}
+                >
+                  Top Artists in {displayTerritory}
+                </h2>
+                <ul className="results-list">
+                  {loading ? (
+                    <li className="result-item">
+                      <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>Loading...</p>
+                    </li>
+                  ) : artists.length > 0 ? (
+                    artists.slice(0, 3).map((item, index) => (
                       <li key={item.id || index} className="result-item">
                         <div className="rank">#{index + 1}</div>
                         <img src={item.artwork} alt={item.name} className="item-artwork" />
@@ -852,20 +801,17 @@ const FindPage = () => {
                         <button onClick={() => handlePlay(item)} className="play-button">Play</button>
                         <button onClick={() => handleArtistView(item.id)} className="view-button">View</button>
                       </li>
-                    ))}
-                    {artists.length === 0 && !loading && (
-                      <li className="result-item">
-                        <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>
-                          No artists yet
-                        </p>
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                    ))
+                  ) : (
+                    <li className="result-item">
+                      <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>No artists yet</p>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </Layout>
   );
