@@ -253,14 +253,21 @@ const FindPage = () => {
     setHasSelectedJurisdiction(true);
     
     try {
-      const dataJurisdiction = 'Harlem';
+      const dataJurisdiction = jurisdictionName;
       
-      const jurResponse = await apiCall({
-        method: 'get',
-        url: `/v1/jurisdictions/byName/${encodeURIComponent(dataJurisdiction)}`,
-      });
+     let resolvedJurisdictionName = jurisdictionName;
+
+    // If selected jurisdiction is not active, fall back to Harlem
+    if (!isActiveJurisdiction(jurisdictionName) && isInHarlemChain(jurisdictionName)) {
+      resolvedJurisdictionName = 'Harlem';
+    }
+
+    const jurResponse = await apiCall({
+      method: 'get',
+      url: `/v1/jurisdictions/byName/${encodeURIComponent(resolvedJurisdictionName)}`,
+    });
       
-      const { jurisdictionId: jurId } = jurResponse.data;
+      const { jurisdictionId: jurId } = jurResponse.data?.[0] || {};
       if (!jurId) throw new Error('Jurisdiction not found');
 
       const topsResponse = await apiCall({
@@ -310,20 +317,21 @@ const FindPage = () => {
     }
 
     const nyData = await fetchJurisdictionByName("New York");
-    if (!nyData) {
+    const jurisdiction = nyData?.[0];  
+    if (!jurisdiction) {
       console.error('Failed to load New York data');
       return;
     }
 
-    const children = await fetchChildren(nyData.jurisdictionId);
+    const children = await fetchChildren(jurisdiction.jurisdictionId);
     
     setNavigationStack([
       { name: 'United States', jurisdictionId: null, tier: 0 },
-      { name: 'New York', jurisdictionId: nyData.jurisdictionId, tier: 2 }
+      { name: 'New York', jurisdictionId: jurisdiction.jurisdictionId, tier: 2 }
     ]);
     
     setCurrentJurisdictions(children);
-    setSelectedJurisdiction({ name: 'New York', ...nyData.jurisdiction });
+    setSelectedJurisdiction(jurisdiction);
     
     const bounds = layer ? layer.getBounds() : null;
     setViewState({ 
@@ -388,6 +396,7 @@ const FindPage = () => {
         const response = await apiCall({
           method: 'get',
           url: `/v1/jurisdictions/${previousLevel.jurisdictionId}`,
+          useCache: false
         });
         setSelectedJurisdiction(response.data);
         
@@ -618,7 +627,7 @@ const FindPage = () => {
                 />
               )}
 
-              {/* Jurisdiction Polygons */}
+              {/* Jurisdiction Polygons - with permanent labels */}
               {!isAtUSLevel() && currentJurisdictions.length > 0 && (
                 <GeoJSON
                   key={`jurisdictions-${navigationStack.length}-${currentJurisdictions.length}`}
@@ -650,6 +659,13 @@ const FindPage = () => {
                     const jurisdiction = currentJurisdictions.find(
                       j => j.jurisdictionId === feature.properties.jurisdictionId
                     );
+                    
+                    // Add permanent label to each jurisdiction polygon
+                    layer.bindTooltip(feature.properties.name, {
+                      permanent: true,
+                      direction: 'center',
+                      className: 'jurisdiction-label'
+                    });
                     
                     layer.on({
                       click: () => {
@@ -691,26 +707,29 @@ const FindPage = () => {
               )}
             </MapContainer>
           </div>
+
+          {/* Mobile jurisdiction list - shows clickable list below map on mobile */}
+          {isMobile && !isAtUSLevel() && currentJurisdictions.length > 0 && (
+            <div className="jurisdiction-list-mobile">
+              <p className="jurisdiction-list-title">Tap a region or select:</p>
+              <ul className="jurisdiction-list">
+                {currentJurisdictions.map(j => (
+                  <li 
+                    key={j.jurisdictionId} 
+                    className={`jurisdiction-list-item ${selectedJurisdiction?.jurisdictionId === j.jurisdictionId ? 'selected' : ''} ${isInHarlemChain(j.name) ? 'in-chain' : ''}`}
+                    onClick={() => handleJurisdictionClick(j)}
+                  >
+                    {j.name}
+                    {isActiveJurisdiction(j.name) && <span className="active-badge">●</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Results Section - Always rendered, content changes based on state */}
         <div className="results-section" style={{ display: hasSelectedJurisdiction ? 'flex' : 'none' }}>
-          {/* Notice for Harlem parent chain */}
-          {/* {showHarlemDataNotice && (
-            <div style={{
-              width: '100%',
-              textAlign: 'center',
-              padding: '10px',
-              marginBottom: '10px',
-              backgroundColor: 'rgba(22, 51, 135, 0.1)',
-              borderRadius: '8px',
-              color: '#888',
-              fontSize: '14px'
-            }}>
-              Showing top results from Harlem (launch jurisdiction)
-            </div>
-          )} */}
-
           {/* Coming Soon Notice for non-Harlem chain */}
           {showComingSoon && (
             <div style={{
@@ -757,9 +776,7 @@ const FindPage = () => {
                           <div className="item-title">{item.title}</div>
                           <div className="item-artist">{item.artist}</div>
                         </div>
-                        <div className="item-votes">
-                          <span>{item.votes} Votes</span>
-                        </div>
+                       
                         <button onClick={() => handlePlay(item)} className="play-button">Play</button>
                         <button onClick={() => handleSongView(item.id)} className="view-button">View</button>
                       </li>
@@ -795,9 +812,7 @@ const FindPage = () => {
                         <div className="item-info">
                           <div className="item-title">{item.name}</div>
                         </div>
-                        <div className="item-votes">
-                          <span>{item.votes} Votes</span>
-                        </div>
+                        
                         <button onClick={() => handlePlay(item)} className="play-button">Play</button>
                         <button onClick={() => handleArtistView(item.id)} className="view-button">View</button>
                       </li>

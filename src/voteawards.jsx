@@ -347,7 +347,7 @@ const VoteAwards = () => {
                     <div className="nominee-info" onClick={() => handleNomineeClick(nominee)}>
                       <h3 id="nominee-name">{nominee.name}</h3>
                       {nominee.type === 'song' && <p className="artist-name">by {nominee.artist}</p>}
-                      <p className="jurisdiction-label">
+                      <p className="voteawards-jurisdiction-label">
                         {nominee.jurisdiction}
                       </p>                   
                        </div>

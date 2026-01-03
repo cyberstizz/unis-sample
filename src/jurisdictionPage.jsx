@@ -62,7 +62,10 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           method: 'get',
           url: `/v1/jurisdictions/byName/${encodeURIComponent(jurName)}`,
         });
-        const { jurisdictionId: jurId, jurisdiction: jurDetails } = jurResponse.data;
+        const firstResult = jurResponse.data?.[0];
+        if (!firstResult) throw new Error('Jurisdiction not found');
+        const jurId = firstResult.jurisdictionId;
+        const jurDetails = firstResult;        
         if (!jurId) throw new Error('Jurisdiction not found');
 
         // Step 2: Get tops

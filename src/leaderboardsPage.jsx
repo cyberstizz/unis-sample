@@ -256,7 +256,7 @@ const LeaderboardsPage = () => {
             </div>
           </section>
 
-          <section className="results-section">
+          <section className="leaderboards-results-section">
             {isLoading ? (
               <div className="loading-message">Loading leaderboards...</div>
             ) : error ? (
