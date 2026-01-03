@@ -60,10 +60,9 @@ $subtle-black: #1a1a1a;
   justify-content: center;
   gap: 10px;
   width: 30%;
-  height: fit-content;
   margin-left: 300px;
   padding: 5px;
-  margin-top: 12%;
+  margin-top: 7% !important;
   height: 40px;
 }
 
@@ -164,13 +163,16 @@ $subtle-black: #1a1a1a;
 
 .back-button {
   padding: 10px 20px;
+  padding-top: 3px;
+  padding-bottom: 3px;
   background: transparent;
   border: 1px solid $unis-blue;
   color: $unis-blue;
   border-radius: 8px;
+  font-size: 10px;
   cursor: pointer;
   margin-bottom: 10px;
-  margin-top: 5px;
+  margin-top: 0;
   // KEY: Ensure button doesn't cause layout shifts
   flex-shrink: 0;
   
@@ -184,8 +186,8 @@ $subtle-black: #1a1a1a;
   // KEY: Fixed dimensions that don't change during state transitions
   width: 100%;
   max-width: 900px;
-  height: 420px;
-  min-height: 420px; // Prevent shrinking
+  height: 400px;
+  min-height: 400px; // Prevent shrinking
   max-height: 420px; // Prevent growing
   border-radius: 12px;
   overflow: hidden;
@@ -286,31 +288,45 @@ $subtle-black: #1a1a1a;
 
 .results-section {
   display: flex;
-  gap: 20px;
-  // KEY: Match the map container width for alignment
+  gap: 10px;
   width: 80vw;
   overflow-x: visible;
-  margin-top: 2px !important;
+  margin-top: 0 !important;
   box-sizing: border-box;
   height: 70vh;
-  align-items: flex-start;
+  align-items: flex-start !important;
+  align-content: flex-start !important;
+  justify-content: flex-start !important;
+  justify-items: flex-start !important;
+  padding-top: 0 !important;
   .column {
     flex: 1;
-    min-width: 0; // Prevent flex items from overflowing
+    min-width: 0; 
+    margin-top: 0 !important;
+    align-items: flex-start !important;
+    align-content: flex-start !important;
+    align-self: flex-start !important;
+    justify-items: flex-start !important;
+    justify-self: flex-start !important;
+    padding-top: 0;
+
 
     h2 {
       color: silver;
       font-size: 24px;
       margin-bottom: 15px;
+        padding-top: 0 !important;
     }
 
     .results-list {
       list-style: none;
       padding: 0;
+      padding-top: 0 !important;
       margin: 0;
       display: flex;
       flex-direction: column;
       gap: 15px;
+      padding-top: 0 !important;
     }
 
     .result-item {
@@ -338,7 +354,7 @@ $subtle-black: #1a1a1a;
 
       .item-info {
         flex-grow: 1;
-        min-width: 0; // Allow text truncation
+        min-width: 0; 
         
         .item-title {
           color: white;
@@ -579,7 +595,7 @@ $subtle-black: #1a1a1a;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    margin-top: 15px;
+    margin-top: 25px !important;
     height: auto;
 
     .column {
