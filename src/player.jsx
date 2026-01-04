@@ -411,7 +411,7 @@ const Player = () => {
             </div>
           </div>
 
-          <div className="mini-player">
+          <div className="Unis-mini-player">
             <div className="song-info">
               <img 
                 src={currentMedia.artwork || '/assets/placeholder.jpg'} 
