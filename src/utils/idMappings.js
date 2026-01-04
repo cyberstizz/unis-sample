@@ -5,9 +5,9 @@ export const GENRE_IDS = {
 };
 
 export const JURISDICTION_IDS = {
-  'uptown-harlem': '00000000-0000-0000-0000-000000000002',
-  'downtown-harlem': '00000000-0000-0000-0000-000000000003',
-  'harlem-wide': '00000000-0000-0000-0000-000000000001',
+  'uptown-harlem': '52740de0-e4e9-4c9e-b68e-1e170f6788c4',
+  'downtown-harlem': '4b09eaa2-03bc-4778-b7c2-db8b42c9e732',
+  'harlem-wide': '1cf6ceb1-aae6-4113-98c0-d9fe8ad8b5e3',
 };
 
 export const INTERVAL_IDS = {

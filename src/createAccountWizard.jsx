@@ -10,9 +10,6 @@ import { apiCall } from './components/axiosInstance';
 import { JURISDICTION_IDS, GENRE_IDS } from './utils/idMappings';
 import './createAccountWizard.scss';
 
-// ============================================
-// SVG ILLUSTRATIONS FOR EACH STEP
-// ============================================
 
 const WelcomeIllustration = () => (
   <svg className="illustration-svg" viewBox="0 0 200 200" fill="none">
@@ -131,10 +128,6 @@ const STEP_ILLUSTRATIONS = {
   review: ReviewIllustration,
 };
 
-// ============================================
-// UTILITIES
-// ============================================
-
 const debounce = (func, wait) => {
   let timeout;
   return (...args) => {
@@ -151,9 +144,6 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// ============================================
-// MAIN COMPONENT
-// ============================================
 
 const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -182,6 +172,9 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
     supportedArtistName: '',
     agreedToTerms: false,
     agreedToArtistTerms: false,
+    address: '',
+    detectingLocation: false,
+    detectedCoords: null,
   });
   
   const [validation, setValidation] = useState({
@@ -783,11 +776,108 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
           <>
             <div className="step-header">
               <h2>Where You From?</h2>
-              <p>Your jurisdiction is permanent—it's where you're from!</p>
+              <p>Enter your address to find your jurisdiction. This is permanent!</p>
             </div>
             
             <div className="form-group">
-              <label>Select Your Jurisdiction</label>
+              <label>Your Address</label>
+              <div className="input-wrapper">
+                <input
+                  type="text"
+                  placeholder="123 W 125th St, New York, NY"
+                  value={formData.address || ''}
+                  onChange={(e) => updateForm('address', e.target.value)}
+                />
+                <MapPin className="input-icon" size={20} />
+              </div>
+              <div className="helper-text">Enter your street address in Harlem</div>
+            </div>
+            
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ width: '100%', marginBottom: 20 }}
+              onClick={async () => {
+                    if (!formData.address) return;
+                    
+                    setError('');
+                    updateForm('detectingLocation', true);
+                    
+                    try {
+                      // Geocode address using Nominatim
+                      const geoResponse = await fetch(
+                        `https://nominatim.openstreetmap.org/search?` +
+                        `q=${encodeURIComponent(formData.address)}&format=json&limit=1`,
+                        { headers: { 'User-Agent': 'UnisMusic/1.0' } }
+                      );
+                      const geoData = await geoResponse.json();
+                      
+                      if (!geoData || geoData.length === 0) {
+                        setError('Address not found. Please try a more specific address.');
+                        updateForm('detectingLocation', false);
+                        return;
+                      }
+                      
+                      const lat = parseFloat(geoData[0].lat);
+                      const lon = parseFloat(geoData[0].lon);
+                      
+                      // Harlem boundaries (approximate)
+                      const HARLEM_BOUNDS = {
+                        north: 40.8282,  // ~155th St
+                        south: 40.7967,  // ~110th St  
+                        east: -73.9262,  // East edge
+                        west: -73.9595,  // West edge
+                      };
+                      
+                      // 130th Street dividing line
+                      const DIVIDING_LINE = 40.8095;
+                      
+                      // Check if in Harlem
+                      if (lat < HARLEM_BOUNDS.south || lat > HARLEM_BOUNDS.north ||
+                          lon < HARLEM_BOUNDS.west || lon > HARLEM_BOUNDS.east) {
+                        setError('Your address is not in Harlem. Unis is currently only available in Harlem, NY.');
+                        updateForm('detectingLocation', false);
+                        return;
+                      }
+                      
+                      // Determine Uptown vs Downtown
+                      if (lat >= DIVIDING_LINE) {
+                        updateForm('jurisdictionId', JURISDICTION_IDS['uptown-harlem']);
+                        updateForm('jurisdictionName', 'Uptown Harlem');
+                      } else {
+                        updateForm('jurisdictionId', JURISDICTION_IDS['downtown-harlem']);
+                        updateForm('jurisdictionName', 'Downtown Harlem');
+                      }
+                      
+                      updateForm('detectedCoords', { lat, lon });
+                      
+                    } catch (err) {
+                      setError('Could not verify location. Please try again.');
+                    } finally {
+                      updateForm('detectingLocation', false);
+                    }
+                  }}
+              disabled={!formData.address || formData.detectingLocation}
+            >
+              {formData.detectingLocation ? (
+                <><Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> Detecting...</>
+              ) : (
+                <><MapPin size={20} /> Find My Jurisdiction</>
+              )}
+            </button>
+            
+            {formData.jurisdictionId && (
+              <div className="wizard-alert alert-success">
+                <CheckCircle2 size={20} />
+                <div className="alert-content">
+                  <div className="alert-title">Found: {formData.jurisdictionName}</div>
+                  <div className="alert-message">You'll represent this jurisdiction in all competitions. This cannot be changed!</div>
+                </div>
+              </div>
+            )}
+            
+            <div className="form-group" style={{ marginTop: 20 }}>
+              <label>Or Select Manually</label>
               <select
                 value={formData.jurisdictionId}
                 onChange={(e) => {
@@ -799,18 +889,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
                 <option value={JURISDICTION_IDS['uptown-harlem']}>Uptown Harlem</option>
                 <option value={JURISDICTION_IDS['downtown-harlem']}>Downtown Harlem</option>
               </select>
-              <div className="helper-text">More locations coming soon!</div>
             </div>
-            
-            {formData.jurisdictionId && (
-              <div className="wizard-alert alert-info">
-                <MapPin size={20} />
-                <div className="alert-content">
-                  <div className="alert-title">Your Hood Forever</div>
-                  <div className="alert-message">You'll represent <strong>{formData.jurisdictionName}</strong> in all competitions.</div>
-                </div>
-              </div>
-            )}
           </>
         );
       
@@ -1007,7 +1086,14 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
                       {artist.photoUrl ? (
                         <img src={artist.photoUrl} alt={artist.username} className="artist-photo" />
                       ) : (
-                        <div className="artist-photo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 'bold', color: 'white' }}>
+                        <div className="artist-photo" style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          fontSize: 24,
+                          fontWeight: 'bold',
+                          color: 'white'
+                        }}>
                           {artist.username?.charAt(0).toUpperCase()}
                         </div>
                       )}
@@ -1100,7 +1186,13 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
               
               <div className="review-card">
                 <h4>Supporting</h4>
-                <div className="review-item"><span className="item-label">Artist</span><span className="item-value"><Heart size={16} style={{ color: '#ec4899' }} />{formData.supportedArtistName}</span></div>
+                <div className="review-item">
+                  <span className="item-label">Artist</span>
+                  <span className="item-value">
+                    <Music size={16} style={{ color: '#22c55e' }} />
+                    {formData.supportedArtistName}
+                  </span>
+                </div>
               </div>
             </div>
             

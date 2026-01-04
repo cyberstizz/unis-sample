@@ -25,13 +25,13 @@ $warning-amber: #f59e0b;
 
 // Step-specific gradient themes
 $step-gradients: (
-  1: linear-gradient(135deg, $gradient-purple 0%, $gradient-pink 50%, $gradient-orange 100%),
+  1: linear-gradient(135deg, $unis-blue 0%, #4a90d9 50%, #6bb3f0 100%),
   2: linear-gradient(135deg, $unis-blue 0%, $gradient-teal 100%),
-  3: linear-gradient(135deg, $gradient-pink 0%, $gradient-orange 100%),
+  3: linear-gradient(135deg, $unis-blue 0%, #4a90d9 100%),
   4: linear-gradient(135deg, $gradient-teal 0%, $gradient-green 100%),
-  5: linear-gradient(135deg, $gradient-purple 0%, $unis-blue 100%),
-  6: linear-gradient(135deg, $gradient-orange 0%, $gradient-pink 100%),
-  7: linear-gradient(135deg, $gradient-blue 0%, $gradient-purple 100%),
+  5: linear-gradient(135deg, $unis-blue 0%, #4a90d9 100%),
+  6: linear-gradient(135deg, $unis-blue 0%, $gradient-teal 100%),
+  7: linear-gradient(135deg, $gradient-blue 0%, $unis-blue 100%),
   8: linear-gradient(135deg, $gradient-green 0%, $gradient-teal 50%, $unis-blue 100%)
 );
 
@@ -1197,14 +1197,14 @@ $step-gradients: (
     }
   }
   
-  .btn-primary {
-    background: linear-gradient(135deg, $gradient-purple, $gradient-pink);
+    .btn-primary {
+    background: linear-gradient(135deg, $unis-blue, #4a90d9);
     border: none;
     color: $accent-white;
     
     &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba($gradient-purple, 0.4);
+      box-shadow: 0 10px 30px rgba($unis-blue, 0.4);
     }
     
     &.loading {
