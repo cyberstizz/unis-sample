@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Layout from './layout';
 import './reportInfringement.scss';
 import backimage from './assets/randomrapper.jpeg';
-import './reportinfringement.scss'
+import './reportInfringement.scss'
 
 const ReportInfringement = () => {
   const [formData, setFormData] = useState({
