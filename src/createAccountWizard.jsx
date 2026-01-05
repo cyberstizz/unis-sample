@@ -9,6 +9,7 @@ import {
 import { apiCall } from './components/axiosInstance';
 import { JURISDICTION_IDS, GENRE_IDS } from './utils/idMappings';
 import './createAccountWizard.scss';
+import UnisLogo from './assets/unisLogoThree.svg';
 
 
 const WelcomeIllustration = () => (
@@ -641,12 +642,24 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   const renderStepContent = () => {
     switch (currentStepData?.id) {
       case 'welcome':
-        return (
-          <>
-            <div className="step-header">
-              <h2>Welcome to Unis</h2>
-              <p>Enter your referral code to join the community.</p>
-            </div>
+  return (
+    <>
+      <div className="step-header">
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          Welcome to 
+          <img 
+            src={UnisLogo} 
+            alt="Unis" 
+            style={{ 
+              height: '85px', 
+              width: 'auto', 
+              verticalAlign: 'middle',
+              marginBottom: '-12px'
+            }}
+          />
+        </h2>
+        <p>Enter your referral code to join the community.</p>
+      </div>
             
             <div className="form-group">
               <label>Referral Code</label>
