@@ -767,15 +767,15 @@ $step-gradients: (
     .play-button {
       width: 44px;
       height: 44px;
-      border: none;
       background: rgba(255, 255, 255, 0.1);
       border-radius: 50%;
       cursor: pointer;
-      display: flex;
       align-items: center;
+      align-content: center;
+      justify-items: center;
       justify-content: center;
       transition: all 0.2s ease;
-      color: $accent-white;
+      color: $unis-blue !important;
       flex-shrink: 0;
       
       &:hover {
