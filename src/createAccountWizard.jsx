@@ -433,30 +433,38 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   
   // Audio player
   const playArtistPreview = async (artist) => {
-    if (!artist.defaultSongId) return;
-    
-    if (playingArtistId === artist.userId) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-      setPlayingArtistId(null);
-      setAudioProgress(0);
-      return;
-    }
-    
-    try {
-      const response = await apiCall({ url: `/v1/users/${artist.userId}/default-song` });
+      if (!artist.defaultSongId) return;
       
-      if (response.data?.fileUrl && audioRef.current) {
-        audioRef.current.src = response.data.fileUrl;
-        audioRef.current.play();
-        setPlayingArtistId(artist.userId);
+      if (playingArtistId === artist.userId) {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+        }
+        setPlayingArtistId(null);
+        setAudioProgress(0);
+        return;
       }
-    } catch (err) {
-      console.error('Could not load preview:', err);
-    }
-  };
+      
+      try {
+        const response = await apiCall({ url: `/v1/users/${artist.userId}/default-song` });
+        
+        if (response.data?.fileUrl && audioRef.current) {
+          // Prepend base URL if it's a relative path
+          const audioUrl = response.data.fileUrl.startsWith('http') 
+            ? response.data.fileUrl 
+            : `http://localhost:8080${response.data.fileUrl}`;
+          
+          audioRef.current.src = audioUrl;
+          audioRef.current.play().catch(err => {
+            console.error('Audio playback failed:', err);
+            setError('Could not play audio preview');
+          });
+          setPlayingArtistId(artist.userId);
+        }
+      } catch (err) {
+        console.error('Could not load preview:', err);
+      }
+    };
   
   useEffect(() => {
     const audio = audioRef.current;
@@ -775,7 +783,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         return (
           <>
             <div className="step-header">
-              <h2>Where You From?</h2>
+              <h2>Where Are You From?</h2>
               <p>Enter your address to find your jurisdiction. This is permanent!</p>
             </div>
             
@@ -1084,7 +1092,11 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
                       onClick={() => { updateForm('supportedArtistId', artist.userId); updateForm('supportedArtistName', artist.username); }}
                     >
                       {artist.photoUrl ? (
-                        <img src={artist.photoUrl} alt={artist.username} className="artist-photo" />
+                        <img 
+                          src={artist.photoUrl.startsWith('http') ? artist.photoUrl : `http://localhost:8080${artist.photoUrl}`} 
+                          alt={artist.username} 
+                          className="artist-photo" 
+                        />
                       ) : (
                         <div className="artist-photo" style={{ 
                           display: 'flex', 
