@@ -815,6 +815,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         referralCode: formData.referralCode,
         bio: formData.bio || null,
         genreId: formData.role === 'artist' ? formData.genreId : null,
+        photoUrl: photoUrl,
       };
       
       const registerResponse = await apiCall({
@@ -826,15 +827,20 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
       const newUser = registerResponse.data;
       
       if (formData.role === 'artist' && formData.songFile) {
+        const songData = {
+          title: formData.songTitle,
+          artistId: newUser.userId,
+          genreId: formData.genreId,
+          jurisdictionId: formData.jurisdictionId,
+        };
+
         const songFormData = new FormData();
+        songFormData.append('song', JSON.stringify(songData));
         songFormData.append('file', formData.songFile);
-        songFormData.append('title', formData.songTitle);
-        songFormData.append('genreId', formData.genreId);
-        songFormData.append('jurisdictionId', formData.jurisdictionId);
         if (formData.songArtworkFile) {
           songFormData.append('artwork', formData.songArtworkFile);
         }
-        
+
         await apiCall({
           url: '/v1/media/song',
           method: 'post',
