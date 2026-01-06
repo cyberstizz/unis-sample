@@ -571,6 +571,33 @@ $orange-500: #f97316;
   }
 }
 
+.item-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.delete-button {
+  background: none;
+  border: none;
+  color: $text-gray-400;
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s;
+
+  &:hover {
+    color: $red-500;
+    background-color: rgba($red-500, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
 .profile-actions {
   display: flex;
   gap: 10px;

@@ -6,14 +6,14 @@ import './changeDefaultSongWizard.scss';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-const ChangeDefaultSongWizard = ({ show, onClose, userProfile, songs, onSuccess }) => {
-  const [selectedSongId, setSelectedSongId] = useState(userProfile?.defaultSong?.songId || null);
+const ChangeDefaultSongWizard = ({ show, onClose, songs, currentDefaultSongId, onSuccess }) => {
+  const [selectedSongId, setSelectedSongId] = useState(currentDefaultSongId || null);
   const [loading, setLoading] = useState(false);
 
   if (!show) return null;
 
   const handleSave = async () => {
-    if (selectedSongId === userProfile?.defaultSong?.songId) {
+    if (selectedSongId === currentDefaultSongId) {
       onClose();
       return;
     }
@@ -21,7 +21,7 @@ const ChangeDefaultSongWizard = ({ show, onClose, userProfile, songs, onSuccess 
     setLoading(true);
     try {
       await apiCall({
-        method: 'put',
+        method: 'patch',
         url: '/v1/users/default-song',
         data: { defaultSongId: selectedSongId },
       });
@@ -133,7 +133,7 @@ const ChangeDefaultSongWizard = ({ show, onClose, userProfile, songs, onSuccess 
           <button
             className="submit-upload-button"
             onClick={handleSave}
-            disabled={loading || selectedSongId === userProfile?.defaultSong?.songId}
+            disabled={loading || selectedSongId === currentDefaultSongId}
           >
             {loading ? 'Saving...' : 'Save as Featured'}
           </button>

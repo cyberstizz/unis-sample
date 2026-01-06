@@ -1,3 +1,5 @@
+// EditSongWizard.scss - Reuses upload-wizard styles for consistency
+
 .upload-wizard-overlay {
   position: fixed;
   top: 0;
@@ -40,42 +42,8 @@
       text-align: center;
       font-size: 1.6rem;
       font-weight: 600;
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
       color: #004aad;
-    }
-
-    .edit-profile-tabs {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-      border-bottom: 2px solid #eee;
-      padding-bottom: 0.75rem;
-
-      .tab-button {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 0.6rem 1.2rem;
-        border: none;
-        background: #f5f5f5;
-        border-radius: 8px 8px 0 0;
-        font-size: 0.95rem;
-        font-weight: 500;
-        color: #666;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &:hover {
-          background: #e8e8e8;
-          color: #004aad;
-        }
-
-        &.active {
-          background: #004aad;
-          color: white;
-        }
-      }
     }
 
     .wizard-intro {
@@ -83,6 +51,10 @@
       color: #666;
       margin-bottom: 1.5rem;
       font-size: 0.95rem;
+
+      strong {
+        color: #333;
+      }
     }
 
     .step-content {
@@ -95,7 +67,7 @@
         color: #004aad;
         text-align: left;
         font-size: 1.1rem;
-        margin-top: 1rem;
+        margin-top: 0.5rem;
         margin-bottom: 0.5rem;
         border-left: 3px solid #004aad;
         padding-left: 0.5rem;
@@ -117,7 +89,8 @@
           font-size: 0.95rem;
           box-sizing: border-box;
           resize: vertical;
-          min-height: 90px;
+          min-height: 100px;
+          font-family: inherit;
           &:focus {
             outline: none;
             border-color: #004aad;
@@ -131,6 +104,7 @@
           border-radius: 6px;
           text-align: center;
           transition: all 0.2s;
+          cursor: pointer;
           &:hover { border-color: #004aad; }
         }
 
@@ -139,6 +113,7 @@
           color: #666;
           margin-top: 0.4rem;
           word-break: break-word;
+          text-align: center;
         }
       }
     }

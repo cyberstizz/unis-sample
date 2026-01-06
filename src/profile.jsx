@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Heart, Edit3, Trash2, User, Music } from 'lucide-react';
+import { Play, Heart, Edit3, Trash2, User, Music, History } from 'lucide-react';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import { useAuth } from './context/AuthContext';
@@ -7,6 +7,7 @@ import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
 import EditProfileWizard from './editProfileWizard';
 import DeleteAccountWizard from './deleteAccountWizard';
+import VoteHistoryModal from './voteHistoryModal';
 import './profile.scss';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -19,6 +20,7 @@ const Profile = () => {
   const [voteHistory, setVoteHistory] = useState([]);
   const [showEditWizard, setShowEditWizard] = useState(false);
   const [showDeleteWizard, setShowDeleteWizard] = useState(false);
+  const [showVoteHistory, setShowVoteHistory] = useState(false);
 
   useEffect(() => {
     if (!user?.userId) return;
@@ -172,23 +174,26 @@ const Profile = () => {
 
         {/* Vote History - FULL WIDTH */}
         <div className="vote-history card">
-          <h3>Vote History ({voteHistory.length})</h3>
-          {voteHistory.length > 0 ? (
-            <div className="vote-list">
-              {voteHistory.map(vote => (
-                <div key={vote.voteId} className="vote-item">
-                  <div className="vote-info">
-                    <strong>{vote.targetType === 'artist' ? 'Artist' : 'Song'}</strong> • {vote.genre?.name || 'Unknown'} • {vote.interval?.name || 'Daily'}
-                  </div>
-                  <small className="vote-date">
-                    {new Date(vote.voteDate).toLocaleDateString()}
-                  </small>
-                </div>
-              ))}
+          <div className="vote-history-header">
+            <h3><History size={20} /> Vote History</h3>
+            <button
+              className="btn btn-secondary btn-view-history"
+              onClick={() => setShowVoteHistory(true)}
+            >
+              View All
+            </button>
+          </div>
+          <div className="vote-summary">
+            <div className="vote-stat">
+              <span className="vote-count">{voteHistory.length}</span>
+              <span className="vote-label">Total Votes</span>
             </div>
-          ) : (
-            <p className="empty-state">No votes yet — go support your favorites!</p>
-          )}
+            <p className="vote-cta">
+              {voteHistory.length > 0
+                ? 'See your complete voting history'
+                : 'No votes yet — go support your favorites!'}
+            </p>
+          </div>
         </div>
 
         {/* Danger Zone */}
@@ -221,6 +226,13 @@ const Profile = () => {
             onClose={() => setShowDeleteWizard(false)}
           />
         )}
+
+        <VoteHistoryModal
+          show={showVoteHistory}
+          onClose={() => setShowVoteHistory(false)}
+          votes={voteHistory}
+          useDummyData={false}  // SET TO false WHEN DONE TESTING
+        />
 
       </div>
     </Layout>

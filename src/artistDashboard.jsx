@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Play, Image, Video, Eye, Heart, Users, X, Download, Music } from 'lucide-react';
+import { Upload, Play, Image, Video, Eye, Heart, Users, X, Download, Music, Trash2, Edit3 } from 'lucide-react';
 import UploadWizard from './uploadWizard';
-import ChangeDefaultSongWizard from './changeDefaultSongWizard'; 
-import EditProfileWizard from './editProfileWizard';  
+import ChangeDefaultSongWizard from './changeDefaultSongWizard';
+import EditProfileWizard from './editProfileWizard';
 import DeleteAccountWizard from './deleteAccountWizard';
+import EditSongWizard from './editSongWizard';
+import DeleteSongModal from './deleteSongModal';
 import './artistDashboard.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
@@ -25,6 +27,10 @@ const ArtistDashboard = () => {
   const [supporters, setSupporters] = useState(0);
   const [followers, setFollowers] = useState(0);
   const [totalPlays, setTotalPlays] = useState(0);
+  const [defaultSong, setDefaultSong] = useState(null);
+  const [deletingSongId, setDeletingSongId] = useState(null);
+  const [editingSong, setEditingSong] = useState(null);
+  const [songToDelete, setSongToDelete] = useState(null);
 
   useEffect(() => {
     if (!authLoading && user?.userId) {
@@ -60,6 +66,17 @@ const ArtistDashboard = () => {
           console.warn('Followers endpoint not available, using 0');
           setFollowers(0);
         });
+
+      // Fetch default song separately (more reliable than profile.defaultSong)
+      apiCall({ url: `/v1/users/${user.userId}/default-song`, method: 'get' })
+        .then(res => {
+          console.log('Default song loaded:', res.data);
+          setDefaultSong(res.data);
+        })
+        .catch(err => {
+          console.warn('No default song set yet');
+          setDefaultSong(null);
+        });
     }
   }, [user, authLoading]);
 
@@ -69,11 +86,17 @@ const ArtistDashboard = () => {
 
   // FROM userProfile
   const displayName = userProfile.username || 'Artist';
-  const displayPhoto = userProfile.photoUrl 
-    ? `${API_BASE_URL}${userProfile.photoUrl}` 
+  const displayPhoto = userProfile.photoUrl
+    ? `${API_BASE_URL}${userProfile.photoUrl}`
     : backimage;
   const displayBio = userProfile.bio || 'No bio yet. Click Edit to add one.';
-  const defaultSong = userProfile.defaultSong;
+
+  // Helper to refetch default song
+  const refetchDefaultSong = () => {
+    apiCall({ url: `/v1/users/${user.userId}/default-song`, method: 'get' })
+      .then(res => setDefaultSong(res.data))
+      .catch(() => setDefaultSong(null));
+  };
 
   const downloadOwnershipContract = () => {
       const doc = new jsPDF({
@@ -230,6 +253,45 @@ const ArtistDashboard = () => {
     }
   };
 
+  const handleDeleteSongClick = (song) => {
+    // Prevent deletion if it's the only song
+    if (songs.length <= 1) {
+      alert('You must have at least one song. Upload another song before deleting this one.');
+      return;
+    }
+
+    // If this is the default/featured song, force user to change it first
+    if (defaultSong?.songId === song.songId) {
+      alert('This is your featured song. Please change your featured song before deleting it.');
+      setShowDefaultSongWizard(true);
+      return;
+    }
+
+    // Show the delete confirmation modal
+    setSongToDelete(song);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!songToDelete) return;
+
+    setDeletingSongId(songToDelete.songId);
+    try {
+      await apiCall({
+        method: 'delete',
+        url: `/v1/media/song/${songToDelete.songId}`
+      });
+      // Refresh songs list (plays count remains unchanged - historical data)
+      const res = await apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get' });
+      setSongs(res.data || []);
+      setSongToDelete(null);
+    } catch (err) {
+      console.error('Failed to delete song:', err);
+      alert('Failed to delete song. Please try again.');
+    } finally {
+      setDeletingSongId(null);
+    }
+  };
+
   return (
     <Layout backgroundImage={backimage}>
       <div className="artist-dashboard">
@@ -367,7 +429,23 @@ const ArtistDashboard = () => {
                 <div key={song.songId} className="content-item">
                   <div className="item-header">
                     <h4>{song.title}</h4>
-                    <button className="edit-button">Edit</button>
+                    <div className="item-actions">
+                      <button
+                        className="edit-button"
+                        onClick={() => setEditingSong(song)}
+                        title="Edit song"
+                      >
+                        <Edit3 size={16} />
+                      </button>
+                      <button
+                        className="delete-button"
+                        onClick={() => handleDeleteSongClick(song)}
+                        disabled={deletingSongId === song.songId}
+                        title="Delete song"
+                      >
+                        {deletingSongId === song.songId ? '...' : <Trash2 size={16} />}
+                      </button>
+                    </div>
                   </div>
                   <div className="item-stats">
                     <span><Eye size={12} /> Score: {song.score || 0}</span>
@@ -459,12 +537,10 @@ const ArtistDashboard = () => {
           <ChangeDefaultSongWizard
             show={showDefaultSongWizard}
             onClose={() => setShowDefaultSongWizard(false)}
-            userProfile={userProfile}
             songs={songs}
+            currentDefaultSongId={defaultSong?.songId}
             onSuccess={() => {
-              //refetch after success
-              apiCall({ url: `/v1/users/profile/${user.userId}`, method: 'get' })
-                .then(res => setUserProfile(res.data));
+              refetchDefaultSong();
             }}
           />
         )}
@@ -475,6 +551,27 @@ const ArtistDashboard = () => {
             onClose={() => setShowDeleteWizard(false)}
           />
         )}
+
+        {editingSong && (
+          <EditSongWizard
+            show={!!editingSong}
+            onClose={() => setEditingSong(null)}
+            song={editingSong}
+            onSuccess={() => {
+              // Refresh songs list
+              apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get' })
+                .then(res => setSongs(res.data || []));
+            }}
+          />
+        )}
+
+        <DeleteSongModal
+          show={!!songToDelete}
+          songTitle={songToDelete?.title}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setSongToDelete(null)}
+          isDeleting={!!deletingSongId}
+        />
 
       </div>
     </Layout>
