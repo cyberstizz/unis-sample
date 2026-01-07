@@ -119,13 +119,9 @@ const ArtistDashboard = () => {
       // Title
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.text('UNIS ARTIST OWNERSHIP & REVENUE SHARE AGREEMENT', 40, 80, { align: 'center', maxWidth: 500 });
+      doc.text('UNIS ARTIST OWNERSHIP & REVENUE SHARE AGREEMENT', 40, 80, { textAlign: 'center', maxWidth: 500 });
 
-      // Subtitle
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Empowering Independent Creators – You Own Your Music', 40, 120, { align: 'center', maxWidth: 500 });
-
+    
       // Parties & Date
       doc.setFontSize(12);
       doc.text(`This Agreement is entered into as of ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 60, 180);
@@ -202,9 +198,10 @@ const ArtistDashboard = () => {
       doc.text('5. Artist Warranties & Termination', 60, y);
       y += 20;
       doc.setFontSize(11);
-      doc.text('Artist warrants ownership/control of rights and indemnifies Unis from claims. This Agreement is perpetual but terminable by Artist with 30 days notice.', 80, y);
+      doc.text('Artist warrants ownership/control of rights and indemnifies Unis from claims.', 80, y);
       y += 80;
-
+      doc.text('This Agreement is perpetual but terminable by Artist with 30 days notice.', 80, y)
+      y += 80;
       // Signature
       doc.setFontSize(12);
       doc.text('AGREED AND ACCEPTED:', 60, y);
@@ -219,7 +216,7 @@ const ArtistDashboard = () => {
 
       // Footer
       doc.setFontSize(10);
-      doc.text('Unis Music Platform – Empowering Harlem Creators Since 2025', 40, doc.internal.pageSize.height - 40, { align: 'center' });
+      doc.text('Unis Music Platform – Since 2025', 40, doc.internal.pageSize.height - 40, { align: 'center' });
 
       doc.save(`unis_ownership_agreement_${displayName.replace(/\s/g, '_')}.pdf`);
     };
@@ -232,9 +229,14 @@ const ArtistDashboard = () => {
   };
 
   const handleProfileUpdate = () => {
-    apiCall({ url: `/v1/users/profile/${user.userId}`, method: 'get' })
-      .then(res => setUserProfile(res.data));
-  };
+  apiCall({ 
+    url: `/v1/users/profile/${user.userId}`, 
+    method: 'get',
+    useCache: false   
+  })
+    .then(res => setUserProfile(res.data))
+    .catch(err => console.error('Failed to refresh profile:', err));
+};
 
   const handleSocialMediaUpdate = async (platform, url) => {
     try {

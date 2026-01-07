@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Upload, Type, User, Camera } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import cacheService from './services/cacheService';
 import './editProfileWizard.scss';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -39,11 +40,15 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
         method: 'patch',
         url: '/v1/users/profile',
         data: formData,
-        headers: { 'Content-Type': 'multipart/form-data' },
       });
+
+      cacheService.invalidate('user', userProfile.userId);
+      cacheService.invalidate('artist', userProfile.userId);
+
       onSuccess?.();
       onClose();
     } catch (err) {
+      console.error(err)
       alert('Failed to update photo. Please try again.');
     } finally {
       setLoading(false);
@@ -62,14 +67,20 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
 
     try {
       await apiCall({
-        method: 'patch',
-        url: '/v1/users/profile',
-        data: formData,
-        headers: { 'Content-Type': 'multipart/form-data' },
+        method: 'put',
+        url: `/v1/users/profile/${userProfile.userId}/bio`,
+        data:  {
+        bio: bio.trim(),
+      },
       });
+
+      cacheService.invalidate('user', userProfile.userId);
+      cacheService.invalidate('artist', userProfile.userId);
+
       onSuccess?.();
       onClose();
     } catch (err) {
+      console.error(err);
       alert('Failed to update bio. Please try again.');
     } finally {
       setLoading(false);
@@ -182,3 +193,4 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
 };
 
 export default EditProfileWizard;
+ 
