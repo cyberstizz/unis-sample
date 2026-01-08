@@ -332,6 +332,22 @@ import UnisLogo from './assets/unisLogoThree.svg';
       </svg>
     );
 
+    const ListenerProfileIllustration = () => (
+      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Person with camera taking selfie - use same gradient style as existing */}
+        {/* Copy gradient defs from existing illustrations */}
+        {/* Add figure with phone/camera, flash effect, stars */}
+      </svg>
+    );
+
+    // NEW: Listener Bio Illustration
+    const ListenerBioIllustration = () => (
+      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Person thinking/writing with notepad */}
+        {/* Thought bubbles with music notes */}
+      </svg>
+    );
+
     // ============================================
     // Don't forget to also copy the STEP_ILLUSTRATIONS map:
     // ============================================
@@ -341,6 +357,8 @@ import UnisLogo from './assets/unisLogoThree.svg';
       basicInfo: BasicInfoIllustration,
       location: LocationIllustration,
       role: RoleSelectionIllustration,
+      listenerProfile: ListenerProfileIllustration,
+      listenerBio: ListenerBioIllustration, 
       artistProfile: ArtistProfileIllustration,
       songUpload: SongUploadIllustration,
       supportArtist: SupportArtistIllustration,
@@ -378,6 +396,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
     jurisdictionId: '',
     jurisdictionName: '',
     role: '',
+    listenerPhotoFile: null,
+    listenerPhotoPreview: null,
     bio: '',
     artistPhotoFile: null,
     artistPhotoPreview: null,
@@ -438,6 +458,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
     
     return [
       ...baseSteps,
+      { id: 'listenerProfile', title: 'Your Photo', illustration: 'listenerProfile' },  // NEW
+      { id: 'listenerBio', title: 'Your Story', illustration: 'listenerBio' },  
       { id: 'supportArtist', title: 'Show Love', illustration: 'supportArtist' },
       { id: 'review', title: 'Ready!', illustration: 'review' },
     ];
@@ -446,6 +468,17 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   const steps = getSteps();
   const totalSteps = steps.length;
   const currentStepData = steps[currentStep - 1];
+
+
+  const handleListenerPhotoChange = (e) => {
+  const file = e.target.files?.[0];
+  if (file) {
+      updateForm('listenerPhotoFile', file);
+      const reader = new FileReader();
+      reader.onload = () => updateForm('listenerPhotoPreview', reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
   
   const updateForm = (key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -758,6 +791,10 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         return formData.artistPhotoFile && formData.genreId;
       case 'songUpload':
         return formData.songTitle.trim() && formData.songFile && formData.songArtworkFile;
+      case 'listenerProfile':
+        return !!formData.listenerPhotoFile;
+      case 'listenerBio':
+        return formData.bio.trim().length >= 10;
       case 'supportArtist':
         return !!formData.supportedArtistId;
       case 'review':
@@ -787,76 +824,83 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   };
   
   // Submit
-  const handleSubmit = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      let photoUrl = null;
-      if (formData.role === 'artist' && formData.artistPhotoFile) {
-        const photoFormData = new FormData();
-        photoFormData.append('photo', formData.artistPhotoFile);
+const handleSubmit = async () => {
+      setLoading(true);
+      setError('');
+      
+      try {
+        let photoUrl = null;
         
-        const photoResponse = await apiCall({
-          url: '/v1/users/profile/photo',
-          method: 'patch',
-          data: photoFormData,
-        });
-        photoUrl = photoResponse.data?.photoUrl;
-      }
-      
-      const registerPayload = {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-        jurisdictionId: formData.jurisdictionId,
-        supportedArtistId: formData.supportedArtistId,
-        referralCode: formData.referralCode,
-        bio: formData.bio || null,
-        genreId: formData.role === 'artist' ? formData.genreId : null,
-        photoUrl: photoUrl,
-      };
-      
-      const registerResponse = await apiCall({
-        url: '/v1/users/register',
-        method: 'post',
-        data: registerPayload,
-      });
-      
-      const newUser = registerResponse.data;
-      
-      if (formData.role === 'artist' && formData.songFile) {
-        const songData = {
-          title: formData.songTitle,
-          artistId: newUser.userId,
-          genreId: formData.genreId,
-          jurisdictionId: formData.jurisdictionId,
-        };
-
-        const songFormData = new FormData();
-        songFormData.append('song', JSON.stringify(songData));
-        songFormData.append('file', formData.songFile);
-        if (formData.songArtworkFile) {
-          songFormData.append('artwork', formData.songArtworkFile);
+        // UPDATED: Handle photo upload for BOTH artists and listeners
+        const photoFile = formData.role === 'artist' 
+          ? formData.artistPhotoFile 
+          : formData.listenerPhotoFile;
+          
+        if (photoFile) {
+          const photoFormData = new FormData();
+          photoFormData.append('photo', photoFile);
+          
+          const photoResponse = await apiCall({
+            url: '/v1/users/profile/photo',
+            method: 'patch',
+            data: photoFormData,
+          });
+          photoUrl = photoResponse.data?.photoUrl;
         }
-
-        await apiCall({
-          url: '/v1/media/song',
+        
+        const registerPayload = {
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          jurisdictionId: formData.jurisdictionId,
+          supportedArtistId: formData.supportedArtistId,
+          referralCode: formData.referralCode,
+          bio: formData.bio || null,  // Now both listeners and artists have bio
+          genreId: formData.role === 'artist' ? formData.genreId : null,
+          photoUrl: photoUrl,
+        };
+        
+        const registerResponse = await apiCall({
+          url: '/v1/users/register',
           method: 'post',
-          data: songFormData,
+          data: registerPayload,
         });
+        
+        const newUser = registerResponse.data;
+        
+        // Only upload song if user is an artist
+        if (formData.role === 'artist' && formData.songFile) {
+          const songData = {
+            title: formData.songTitle,
+            artistId: newUser.userId,
+            genreId: formData.genreId,
+            jurisdictionId: formData.jurisdictionId,
+          };
+
+          const songFormData = new FormData();
+          songFormData.append('song', JSON.stringify(songData));
+          songFormData.append('file', formData.songFile);
+          if (formData.songArtworkFile) {
+            songFormData.append('artwork', formData.songArtworkFile);
+          }
+
+          await apiCall({
+            url: '/v1/media/song',
+            method: 'post',
+            data: songFormData,
+          });
+        }
+        
+        setSuccess(true);
+        setTimeout(() => onSuccess?.(newUser), 2000);
+        
+      } catch (err) {
+        setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      } finally {
+        setLoading(false);
       }
-      
-      setSuccess(true);
-      setTimeout(() => onSuccess?.(newUser), 2000);
-      
-    } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
   
   if (!show) return null;
   
@@ -1295,6 +1339,101 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
             </div>
           </>
         );
+
+         // NEW: Listener Profile Photo Step
+    case 'listenerProfile':
+      return (
+        <>
+          <div className="step-header">
+            <h2>Show Your Face</h2>
+            <p>Let the community know who you are.</p>
+          </div>
+          
+          <div className="file-upload">
+            <label>Profile Photo</label>
+            <div className={`upload-zone ${formData.listenerPhotoFile ? 'has-file' : ''}`}>
+              <input type="file" accept="image/*" onChange={handleListenerPhotoChange} />
+              {formData.listenerPhotoPreview ? (
+                <div className="file-preview">
+                  <img 
+                    src={formData.listenerPhotoPreview} 
+                    alt="Preview" 
+                    style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover' }} 
+                  />
+                  <div className="file-info">
+                    <div className="file-name">{formData.listenerPhotoFile?.name}</div>
+                    <div className="file-size">{formatFileSize(formData.listenerPhotoFile?.size || 0)}</div>
+                  </div>
+                  <button 
+                    type="button" 
+                    className="remove-file" 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      updateForm('listenerPhotoFile', null); 
+                      updateForm('listenerPhotoPreview', null); 
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Image className="upload-icon" size={48} />
+                  <div className="upload-text"><strong>Click to upload</strong> your photo</div>
+                  <div className="upload-hint">PNG, JPG up to 5MB</div>
+                </>
+              )}
+            </div>
+          </div>
+          
+          <div className="wizard-alert alert-info">
+            <Sparkles size={20} />
+            <div className="alert-content">
+              <div className="alert-title">Make it memorable!</div>
+              <div className="alert-message">
+                Your profile photo helps artists and other listeners recognize you in the community.
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    
+    // NEW: Listener Bio Step
+    case 'listenerBio':
+      return (
+        <>
+          <div className="step-header">
+            <h2>Tell Your Story</h2>
+            <p>What brings you to Unis? What music moves you?</p>
+          </div>
+          
+          <div className="form-group">
+            <label>Your Bio</label>
+            <textarea 
+              placeholder="I'm a Harlem native who loves discovering new talent. Hip-hop runs through my veins, but I'm always open to vibes..."
+              value={formData.bio} 
+              onChange={(e) => updateForm('bio', e.target.value)} 
+              maxLength={500}
+              rows={8}
+              style={{ minHeight: '150px' }}
+            />
+            <div className="helper-text">
+              {formData.bio.length}/500 characters
+              {formData.bio.length < 10 && ' (minimum 10)'}
+            </div>
+          </div>
+          
+          <div className="wizard-alert alert-success">
+            <Heart size={20} />
+            <div className="alert-content">
+              <div className="alert-title">Be authentic!</div>
+              <div className="alert-message">
+                Share your music taste, favorite artists, or what you're looking for. This helps build connections.
+              </div>
+            </div>
+          </div>
+        </>
+      );
       
       case 'supportArtist':
         return (
