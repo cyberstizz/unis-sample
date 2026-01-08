@@ -212,7 +212,7 @@ const ArtistDashboard = () => {
       y += 60;
       doc.text('___________________________________', 80, y);
       y += 20;
-      doc.text('Artist Signature (Typed Name)', 80, y);
+      doc.text('Artist Signature (Sign Name)', 80, y);
 
       // Footer
       doc.setFontSize(10);
