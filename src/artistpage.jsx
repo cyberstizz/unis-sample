@@ -6,7 +6,7 @@ import Layout from './layout';
 import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
 import VotingWizard from './votingWizard';
-import { Users, Heart } from 'lucide-react'; // Added icons
+import { Users, Heart } from 'lucide-react';
 
 const ArtistPage = ({ isOwnProfile = false }) => {
   const { artistId } = useParams();
@@ -19,7 +19,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   
   // Follower states
   const [isFollowing, setIsFollowing] = useState(false);
-  const [followerCount, setFollowerCount] = useState(0); // New state for count
+  const [followerCount, setFollowerCount] = useState(0);
   
   const [bio, setBio] = useState('');
   const [showVotingWizard, setShowVotingWizard] = useState(false);
@@ -43,8 +43,9 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         setUserId(payload.userId);
+        console.log('🔑 Extracted userId from token:', payload.userId);
       } catch (err) {
-        console.error('Failed to get userId from token:', err);
+        console.error('❌ Failed to get userId from token:', err);
       }
     }
   }, []);
@@ -57,6 +58,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   // 3. Check if "I" am following "Them" (Only runs when we have both IDs)
   useEffect(() => {
     if (userId && artistId && userId !== artistId) {
+      console.log('🔍 Checking follow status for artistId:', artistId);
       checkFollowStatus();
     }
   }, [userId, artistId]);
@@ -67,9 +69,10 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         method: 'get', 
         url: `/v1/users/${artistId}/is-following` 
       });
+      console.log('✅ Follow status:', res.data.isFollowing);
       setIsFollowing(res.data.isFollowing);
     } catch (err) {
-      console.error('Failed to check follow status:', err);
+      console.error('❌ Failed to check follow status:', err);
     }
   };
 
@@ -84,12 +87,13 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       setArtist(artistData);
       setBio(artistData.bio || 'No bio available');
 
-      // 2. Fetch Real Follower Count (New Endpoint)
+      // 2. Fetch Real Follower Count
       try {
         const countRes = await apiCall({ method: 'get', url: `/v1/users/${artistId}/followers/count` });
+        console.log('📊 Follower count response:', countRes.data);
         setFollowerCount(countRes.data.count || 0);
       } catch (err) {
-        console.warn('Could not fetch follower count', err);
+        console.warn('⚠️ Could not fetch follower count', err);
       }
 
       // 3. Fetch Songs
@@ -109,15 +113,20 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       }
 
     } catch (err) {
-      console.error('Failed to load artist:', err);
+      console.error('❌ Failed to load artist:', err);
       setError('Failed to load artist details');
     } finally {
       setLoading(false);
     }
   };
 
-  // NEW: Real Follow Logic
+  // FIXED: Real Follow Logic with Better Logging
   const handleFollow = async () => {
+    console.log('🔵 FOLLOW BUTTON CLICKED');
+    console.log('Current artistId:', artistId);
+    console.log('Current userId:', userId);
+    console.log('Previous isFollowing state:', isFollowing);
+    
     // 1. Optimistic Update (UI changes immediately)
     const previousState = isFollowing;
     const previousCount = followerCount;
@@ -128,13 +137,20 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     try {
       if (!previousState) {
         // Follow
-        await apiCall({ method: 'post', url: `/v1/users/${artistId}/follow` });
+        console.log('📤 Sending FOLLOW request to:', `/v1/users/${artistId}/follow`);
+        const response = await apiCall({ method: 'post', url: `/v1/users/${artistId}/follow` });
+        console.log('✅ Follow successful:', response.data);
       } else {
         // Unfollow
-        await apiCall({ method: 'delete', url: `/v1/users/${artistId}/follow` });
+        console.log('📤 Sending UNFOLLOW request to:', `/v1/users/${artistId}/follow`);
+        const response = await apiCall({ method: 'delete', url: `/v1/users/${artistId}/follow` });
+        console.log('✅ Unfollow successful:', response.data);
       }
     } catch (err) {
-      console.error('Failed to toggle follow:', err);
+      console.error('❌ Failed to toggle follow:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      
       // Revert if API fails
       setIsFollowing(previousState);
       setFollowerCount(previousCount);
@@ -215,10 +231,11 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const artistPhoto = artist.photoUrl ? `${API_BASE_URL}${artist.photoUrl}` : theQuiet;
   const topSong = songs.length > 0 ? songs.reduce((prev, current) => (current.score || 0) > (prev.score || 0) ? current : prev, songs[0]) : null;
 
-  // Add this right before the return statement
+  // FIXED: Proper check for showing action buttons
   const isCurrentUser = userId === artistId;
-  // Use this combined check for hiding buttons
   const showActionButtons = !isOwnProfile && !isCurrentUser;
+
+  console.log('🎯 Render checks:', { userId, artistId, isCurrentUser, showActionButtons, isFollowing });
 
   return (
     <Layout backgroundImage={artistPhoto}>
@@ -235,7 +252,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
             
             <p className="artist-genre">{artist.genre?.name || 'Unknown Genre'}</p>
 
-            {/* NEW: Follower Stats */}
+            {/* Follower Stats */}
             <div className="artist-stats" style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginBottom: '15px', color: '#ccc' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                  <Users size={16} /> {followerCount} Followers
@@ -245,50 +262,43 @@ const ArtistPage = ({ isOwnProfile = false }) => {
               </span>
             </div>
 
-            <div className="follow-actions">
-              {showActionButtons && (
-                <>
+            {/* FIXED: All action buttons in one conditional block */}
+            {showActionButtons && (
+              <div className="follow-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', padding: '0 12px' }}>
+                
+                {/* Follow Button - Now properly conditional */}
+                <button 
+                  onClick={handleFollow} 
+                  className={`action-btn ${isFollowing ? 'following' : ''}`}
+                  style={{
+                      padding: '12px 30px',
+                      borderRadius: '50px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      border: '1px solid #C0C0C0',
+                      background: isFollowing ? '#163387' : 'transparent',
+                      color: isFollowing ? 'white' : '#C0C0C0',
+                      textAlign: 'center',
+                      transition: 'all 0.3s ease'
+                  }}
+                >
+                  {isFollowing ? 'Following' : 'Follow'}
+                </button>
 
-                  <button onClick={handleVote} className="vote-button">Vote</button>
-                  
+                {/* Other action buttons */}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={handleVote} className="vote-button" style={{ flex: 1 }}>Vote</button>
                   <button 
                     onClick={handlePlayDefault} 
                     className="play-button"
                     disabled={!defaultSong}
+                    style={{ flex: 1 }}
                   >
                     Play
                   </button>
-                  
-                </>
-              )}
-            </div>
-              <div style={{
-                width: '100%',
-                height: 'auto',
-                paddingLeft: '12px'
-                }}>
-            {/* NEW: Follow Button */}
-                  <button 
-                    onClick={handleFollow} 
-                    className={`action-btn ${isFollowing ? 'following' : ''}`}
-                    style={{
-                        padding: '12px 30px',
-                        borderRadius: '50px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        border: '1px solid #C0C0C0',
-                        background: isFollowing ? '#163387' : 'transparent',
-                        color: isFollowing ? 'white' : '#C0C0C0',
-                        textAlign: 'center',
-                        alignSelf: 'center',
-                        alignContent: 'center',
-                        alignItems: 'center',
-                        marginRight: '10px'
-                    }}
-                  >
-                    {isFollowing ? 'Following' : 'Follow'}
-                  </button>
-                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 

@@ -171,6 +171,10 @@ $unis-blue: #163387;
   justify-content: center;
   flex-wrap: wrap;
   margin-bottom: none;
+  width: fit-content !important;
+  align-self: center !important;
+  justify-self: center !important;
+  align-items: center;
 
   @media (max-width: 800px) {
     gap: 10px;

@@ -579,7 +579,7 @@ const FindPage = () => {
               doubleClickZoom={false}
               dragging={false}
               zoomControl={false}
-              attributionControl={false}
+              attributionControl={true}
             >
               <MapController viewState={viewState} isMobile={isMobile} />
               
