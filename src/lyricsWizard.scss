@@ -1,0 +1,86 @@
+// Unis theme variables
+$bg-black: #000000;
+$text-silver: #C0C0C0;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+$border-silver: #C0C0C0;
+$button-hover: #D3D3D3;
+$unis-blue: #163387;
+$unis-silver: #918f8f;
+ 
+
+.wizard-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.lyrics-wizard {
+  background: #111;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.wizard-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+}
+
+.wizard-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.wizard-body {
+  padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.lyrics-textarea {
+  width: 100%;
+  background: #222;
+  color: white;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: monospace;
+  font-size: 1rem;
+  resize: none;
+}
+
+.wizard-actions {
+  padding: 1.5rem;
+  border-top: 1px solid #333;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.close-button:hover {
+  color: white;
+}

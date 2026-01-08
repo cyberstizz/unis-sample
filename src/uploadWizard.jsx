@@ -5,7 +5,7 @@ import './uploadWizard.scss';
 
 const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
   const [step, setStep] = useState(1);
-  const [mediaType, setMediaType] = useState('song');  // song/video
+  const [mediaType, setMediaType] = useState('song');  
   const [genreId, setGenreId] = useState(userProfile.genreId || '00000000-0000-0000-0000-000000000101');  // Default or user's genre
   const [jurisdictionId, setJurisdictionId] = useState(userProfile.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002');  // User's home
   const [title, setTitle] = useState('');
@@ -147,7 +147,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
             <p className="wizard-intro">Add title, description, and your {mediaType} file.</p>
             {error && <p className="error-message">{error}</p>}
             <form onSubmit={(e) => e.preventDefault()}>
-              <div className="form-group">
+              <div className="upload-form-group">
                 <label htmlFor="title">Title</label>
                 <input
                   type="text"

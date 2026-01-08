@@ -200,6 +200,18 @@ function invalidateCachesForMutation(url, method) {
     console.log('[Cache] Invalidated user/artist after update');
     return;
   }
+
+  if (url.includes('/media/song') && method === 'patch') {
+  const songIdMatch = url.match(/\/song\/([^\/\?]+)/);
+  if (songIdMatch) {
+    cacheService.invalidate('song', songIdMatch[1]);
+  }
+  cacheService.invalidateType('trending');
+  cacheService.invalidateType('feed');
+  console.log('[Cache] Invalidated after song patch');
+  return;
+}
+
 }
 
 // Export cache-aware API call wrapper

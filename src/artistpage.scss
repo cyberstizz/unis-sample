@@ -170,6 +170,7 @@ $unis-blue: #163387;
   gap: 15px;
   justify-content: center;
   flex-wrap: wrap;
+  margin-bottom: none;
 
   @media (max-width: 800px) {
     gap: 10px;

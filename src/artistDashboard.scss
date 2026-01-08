@@ -339,7 +339,7 @@ $orange-500: #f97316;
   margin-bottom: 2rem;
 }
 
-// Content Section (Songs) - FIXED WIDTH
+// Content Section
 .content-section {
   width: 100% !important;
 
@@ -398,7 +398,15 @@ $orange-500: #f97316;
   }
 }
 
-// Social Media Section - FIXED WIDTH
+.supported-artist-section{
+    width: 100% !important;
+}
+
+.vote-history-section{
+    width: 100% !important;
+}
+
+// Social Media Section
 .social-media-section {
   width: 100% !important;
 
@@ -655,7 +663,7 @@ $orange-500: #f97316;
     justify-content: left;
     justify-items: left;
     justify-self: left;
-    margin-left: 100px !important;
+    margin-left: 35px !important;
 
     .h2 {
       text-align: left !important;

@@ -140,50 +140,78 @@ $unis-blue: #163387;
 
 /* NEW: Lyrics Section */
 .lyrics-section {
-  margin-bottom: 30px;
-  
-  .lyrics-toggle-btn {
-    width: 100%;
-    padding: 12px 20px;
-    background: rgba($unis-blue, 0.2);
-    border: 1px solid rgba($unis-blue, 0.5);
-    color: $accent-white;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    text-align: center;
-    margin-bottom: 15px;
+  width: 100%;
+  max-width: 650px; // Restrict width for better readability on desktop
+  margin: 40px auto; // Center the block
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 
-    &:hover {
-      background: rgba($unis-blue, 0.3);
-      border-color: $unis-blue;
-    }
+  h2 {
+    font-size: 24px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: $unis-blue; // Brand accent color
+    margin-bottom: 25px;
+    font-weight: 700;
+    opacity: 0.9;
   }
 
+  // The main card container
   .lyrics-content {
-    white-space: pre-wrap;
-    line-height: 1.8;
+    width: 100%;
+    white-space: pre-wrap; // Preserves your line breaks
+    
+    // TYPOGRAPHY
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     font-size: 18px;
-    padding: 20px;
-    background: rgba(0, 0, 0, 0.4);
-    border-radius: 8px;
-    color: $text-silver;
+    line-height: 2.4; // Loose line height is CRITICAL for lyrics readability
+    font-weight: 500;
+    color: #e0e0e0; // Brighten text slightly for contrast
     text-align: center;
-    border: 1px solid rgba($border-silver, 0.2);
-    animation: fadeIn 0.3s ease-in;
+    
+    // GLASSMORPHISM EFFECT
+    background: linear-gradient(180deg, rgba(20, 20, 20, 0.7) 0%, rgba(22, 51, 135, 0.05) 100%);
+    backdrop-filter: blur(12px); // Blurs what is behind it
+    -webkit-backdrop-filter: blur(12px); // Safari support
+    
+    // BORDER & SHAPE
+    padding: 50px 40px;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08); // Very subtle border
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); // Deep shadow for elevation
+    
+    // Animation
+    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  // OPTIONAL: A decorative subtle glow behind the lyrics
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 60%;
+    background: $unis-blue;
+    filter: blur(120px);
+    opacity: 0.15; // Faint blue glow behind the text
+    z-index: -1;
+    border-radius: 50%;
   }
 }
 
-@keyframes fadeIn {
+// Animation for smooth entry
+@keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(30px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -358,19 +386,22 @@ $unis-blue: #163387;
     }
   }
 
-  /* NEW: Mobile styles for lyrics */
   .lyrics-section {
-    .lyrics-toggle-btn {
-      font-size: 14px;
-      padding: 10px 15px;
+    width: 95%; 
+    margin: 30px auto;
+
+    h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
     }
 
     .lyrics-content {
-      font-size: 16px;
-      padding: 15px;
+      font-size: 16px; 
+      line-height: 1.8; 
+      padding: 30px 20px; 
+      border-radius: 16px;
     }
   }
-
   .description-section h2, .credits-section h2, .photos-section h2, .videos-section h2, .comments-section h2 {
     font-size: 28px;
     align-self: center;

@@ -96,9 +96,10 @@
         }
       }
 
-      .form-group {
+      .upload-form-group {
         display: flex;
         flex-direction: column;
+        color: black;
         gap: 0.5rem;
 
         label {

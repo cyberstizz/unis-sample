@@ -2,12 +2,14 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import songArtwork from './assets/theQuiet.jpg';
+import LyricsWizard from './lyricsWizard';  
+import { FileText } from 'lucide-react';
 import './songPage.scss';
 import Layout from './layout';
 import { PlayerContext } from './context/playercontext'; 
 import VotingWizard from './votingWizard'; 
 import { useNavigate } from 'react-router-dom';
-
+import { X } from 'lucide-react';  
 
 const SongPage = () => {
   const { songId } = useParams();
@@ -20,9 +22,13 @@ const SongPage = () => {
   const [showVotingWizard, setShowVotingWizard] = useState(false); 
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [userId, setUserId] = useState(null);
-  const [showLyrics, setShowLyrics] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [showLyricsWizard, setShowLyricsWizard] = useState(false);
+
+  // New states for lyrics editing modal (consistent with dashboard)
+  const [editingLyrics, setEditingLyrics] = useState(false);
+  const [currentLyrics, setCurrentLyrics] = useState('');
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
   const navigate = useNavigate();
@@ -69,7 +75,7 @@ const SongPage = () => {
         playCount: songData.playCount || 0,
         playsToday: songData.playsToday || 0,
         explicit: songData.explicit || false,
-        lyrics: songData.lyrics || null,
+        lyrics: songData.lyrics || '',
         voteCount: 0,
         duration: songData.duration,
         createdAt: songData.createdAt,
@@ -83,8 +89,6 @@ const SongPage = () => {
         videos: [],
       };
       
-      console.log('Normalized song data:', normalized);
-      console.log('Normalized playsToday:', normalized.playsToday);
       setSong(normalized);
     } catch (err) {
       console.error('Failed to load song:', err);
@@ -94,8 +98,7 @@ const SongPage = () => {
     }
   };
 
-  const handleVoteSuccess = (id) => {
-    console.log(`Vote confirmed for ID: ${id}`);
+  const handleVoteSuccess = () => {
     setShowVotingWizard(false);
   };
 
@@ -126,7 +129,6 @@ const SongPage = () => {
     );
 
     if (song.id && userId) {
-      // Optimistically update play count immediately (no page refresh)
       setSong(prevSong => ({
         ...prevSong,
         playCount: prevSong.playCount + 1,
@@ -135,27 +137,36 @@ const SongPage = () => {
 
       try {
         const endpoint = `/v1/media/song/${song.id}/play?userId=${userId}`;
-        console.log('Tracking song play:', { endpoint, songId: song.id, userId });
         await apiCall({ method: 'post', url: endpoint });
-        console.log('Song play tracked successfully');
-        // No need to refetch - we already updated the UI optimistically
       } catch (err) {
         console.error('Failed to track song play:', err);
-        // Revert the optimistic update if the API call failed
         setSong(prevSong => ({
           ...prevSong,
           playCount: prevSong.playCount - 1,
           playsToday: prevSong.playsToday - 1
         }));
       }
-    } else {
-      console.warn('Could not track play - missing song.id or userId:', { songId: song.id, userId });
     }
   };
 
-  const handleFollow = () => {
-    setIsFollowing(!isFollowing);
-    console.log(isFollowing ? 'Unfollowed' : 'Followed');
+  const handleFollow = async () => {
+    // Optimistic UI update (switch immediately)
+    const newStatus = !isFollowing;
+    setIsFollowing(newStatus);
+
+    try {
+      if (newStatus) {
+        // Follow the ARTIST of this song
+        await apiCall({ method: 'post', url: `/v1/users/${song.artistId}/follow` });
+      } else {
+        // Unfollow
+        await apiCall({ method: 'delete', url: `/v1/users/${song.artistId}/follow` });
+      }
+    } catch (err) {
+      console.error('Failed to toggle follow:', err);
+      // Revert if failed
+      setIsFollowing(!newStatus);
+    }
   };
 
   const handleDontPlay = () => {
@@ -189,10 +200,13 @@ const SongPage = () => {
   };
 
   const handleArtistClick = () => {
-    if (song.artistId) {
+    if (song?.artistId) {
       navigate(`/artist/${song.artistId}`);
     }
   };
+
+  const isOwner = userId && song?.artistId === userId;
+
 
   if (loading) {
     return (
@@ -272,7 +286,7 @@ const SongPage = () => {
             )}
           </div>
 
-          {/* NEW: Secondary Action Buttons - Added after stats, before lyrics */}
+          {/* Secondary Action Buttons */}
           <div className="secondary-actions">
             <button onClick={handleFollow} className={`action-btn ${isFollowing ? 'following' : ''}`}>
               {isFollowing ? 'Following' : 'Follow'}
@@ -285,23 +299,33 @@ const SongPage = () => {
             </button>
           </div>
 
-          {/* NEW: Lyrics Section - Added after stats and buttons, before About */}
-          {song.lyrics && (
-            <section className="lyrics-section">
-              <button 
-                onClick={() => setShowLyrics(!showLyrics)}
-                className="lyrics-toggle-btn"
-              >
-                {showLyrics ? '▼ Hide Lyrics' : '▶ Show Lyrics'}
-              </button>
-              
-              {showLyrics && (
-                <div className="lyrics-content">
-                  {song.lyrics}
-                </div>
-              )}
+          {/* Lyrics Section - now always visible, cleaner display */}
+         {song.lyrics && (
+            <section className="lyrics-section" style={{ marginTop: '2rem' }}>
+              <h2 style={{ color: "blue", marginBottom: '1rem' }}>Lyrics</h2>
+              <p style={{ 
+                whiteSpace: 'pre-wrap', 
+                lineHeight: '1.6', 
+                fontFamily: 'inherit',
+                color: '#e0e0e0' 
+              }}>
+                {song.lyrics}
+              </p>
             </section>
           )}
+
+         {/* Edit Button (Only for owner) */}
+         {isOwner && (
+          <div className="owner-actions" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setShowLyricsWizard(true)}
+            >
+              <FileText size={16} style={{ marginRight: '8px' }} />
+              {song.lyrics ? 'Edit Lyrics' : 'Add Lyrics'}
+            </button>
+          </div>
+        )}
 
           <section className="description-section">
             <h2 style={{color: "blue"}}>About</h2>
@@ -372,6 +396,16 @@ const SongPage = () => {
         </div>
       </div>
 
+      {showLyricsWizard && (
+      <LyricsWizard
+        show={showLyricsWizard}
+        onClose={() => setShowLyricsWizard(false)}
+        song={song}
+        onSuccess={fetchSongData}  // Refresh the song to get fresh lyrics if needed later
+      />
+    )}
+
+      {/* Voting Wizard */}
       <VotingWizard
         show={showVotingWizard}
         onClose={() => setShowVotingWizard(false)}
@@ -385,6 +419,8 @@ const SongPage = () => {
           selectedJurisdiction: song.jurisdiction.toLowerCase().replace(' ', '-'),
         }}
       />
+
+
     </Layout>
   );
 };
