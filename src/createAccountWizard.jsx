@@ -6,10 +6,12 @@ import {
   Loader2, CheckCircle2, XCircle, Info, Gift, Users,
   Sparkles, Heart
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { JURISDICTION_IDS, GENRE_IDS } from './utils/idMappings';
 import './createAccountWizard.scss';
 import UnisLogo from './assets/unisLogoThree.svg';
+
 
 
     const WelcomeIllustration = () => (
@@ -385,6 +387,7 @@ const formatFileSize = (bytes) => {
 const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [stepDirection, setStepDirection] = useState('forward');
+  const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
     referralCode: '',
@@ -893,7 +896,13 @@ const handleSubmit = async () => {
         }
         
         setSuccess(true);
-        setTimeout(() => onSuccess?.(newUser), 2000);
+        setTimeout(() => {
+          navigate('/login', {
+            state: {
+              message: 'Account created successfully. Please log in.'
+            }
+          });
+        }, 1500);
         
       } catch (err) {
         setError(err.response?.data?.message || 'Registration failed. Please try again.');

@@ -7,7 +7,7 @@ import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import VotingWizard from './votingWizard';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
-import { Trophy } from 'lucide-react';
+import { Trophy, Play } from 'lucide-react';
 
 const VoteAwards = () => {
   const navigate = useNavigate();
@@ -107,9 +107,10 @@ const VoteAwards = () => {
             type: 'song',
             artist: nominee.artist?.username || 'Unknown Artist',
             artistId: nominee.artist?.userId,
-            imageUrl: buildUrl(nominee.artworkUrl),  // ← Uses helper
-            mediaUrl: buildUrl(nominee.fileUrl),  // ← Same for audio/video
+            imageUrl: buildUrl(nominee.artworkUrl), 
+            mediaUrl: buildUrl(nominee.fileUrl), 
             votes: nominee.voteCount || 0,
+            plays: nominee.playCount || nominee.totalPlays || 0,  
             jurisdiction: nominee.jurisdiction?.name || 'Unknown',
             genre: nominee.genre?.name || 'Unknown',
           };
@@ -352,6 +353,12 @@ const VoteAwards = () => {
                       <p className="voteawards-jurisdiction-label">
                         {nominee.jurisdiction}
                       </p>
+                      {nominee.type === 'song' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: '#60a5fa', fontSize: '0.85rem' }}>
+                        <Play size={14} />
+                        <span>{nominee.plays} Plays</span>
+                      </div>
+                    )}
                       {nominee.type === 'artist' && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: '#fbbf24', fontSize: '0.85rem' }}>
                         <Trophy size={14} />
