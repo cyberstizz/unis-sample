@@ -208,6 +208,11 @@ $orange-500: #f97316;
       background-color: rgba($orange-500, 0.2);
       color: $orange-500;
     }
+
+    &.stat-icon-black {
+      background-color: grey;
+      color: black;
+    }
   }
 }
 

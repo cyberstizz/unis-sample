@@ -7,6 +7,7 @@ import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import VotingWizard from './votingWizard';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
+import { Trophy } from 'lucide-react';
 
 const VoteAwards = () => {
   const navigate = useNavigate();
@@ -95,6 +96,7 @@ const VoteAwards = () => {
             type: 'artist',
             imageUrl: buildUrl(nominee.photoUrl),  // ← Uses helper
             votes: nominee.voteCount || 0,
+            totalLifetimeVotes: nominee.totalVotes || 0,
             jurisdiction: nominee.jurisdiction?.name || 'Unknown',
             genre: nominee.genre?.name || 'Unknown',
           };
@@ -349,7 +351,13 @@ const VoteAwards = () => {
                       {nominee.type === 'song' && <p className="artist-name">by {nominee.artist}</p>}
                       <p className="voteawards-jurisdiction-label">
                         {nominee.jurisdiction}
-                      </p>                   
+                      </p>
+                      {nominee.type === 'artist' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: '#fbbf24', fontSize: '0.85rem' }}>
+                        <Trophy size={14} />
+                        <span>{nominee.totalLifetimeVotes} Votes</span>
+                      </div>
+                      )}                   
                        </div>
                        <div className='the_buttons'>
                     {nominee.type === 'song' && nominee.mediaUrl && (

@@ -6,7 +6,7 @@ import Layout from './layout';
 import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
 import VotingWizard from './votingWizard';
-import { Users, Heart } from 'lucide-react';
+import { Users, Heart, PlayCircle } from 'lucide-react';
 
 const ArtistPage = ({ isOwnProfile = false }) => {
   const { artistId } = useParams();
@@ -258,6 +258,9 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                  <Users size={16} /> {followerCount} Followers
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                 <PlayCircle size={16} /> {artist.totalPlays || 0} Plays
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                  <Heart size={16} /> {artist.score || 0} Score
               </span>
             </div>
@@ -375,6 +378,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         onClose={() => setShowVotingWizard(false)}
         onVoteSuccess={handleVoteSuccess}
         nominee={selectedNominee}
+        userId={userId} 
         filters={{
           selectedGenre: artist.genre?.name?.toLowerCase().replace('/', '-') || 'unknown',
           selectedType: 'artist',

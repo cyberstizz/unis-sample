@@ -5,7 +5,12 @@ import './votingWizard.scss';
 
 const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }) => {
   const [step, setStep] = useState(1);
-  const [currentFilters, setCurrentFilters] = useState(filters);
+  const [currentFilters, setCurrentFilters] = useState({
+    selectedGenre: filters?.selectedGenre || 'rap-hiphop',
+    selectedType: filters?.selectedType || 'artist',
+    selectedInterval: filters?.selectedInterval || 'daily',
+    selectedJurisdiction: filters?.selectedJurisdiction || 'uptown-harlem'
+  });
   const [artistNameForward, setArtistNameForward] = useState('');
   const [artistNameBackward, setArtistNameBackward] = useState('');
   const [error, setError] = useState('');
@@ -21,7 +26,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     }
   };
 
-  const handleConfirmVote = async (e) => {
+ const handleConfirmVote = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -36,15 +41,25 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       return;
     }
 
+    // --- FIX STARTS HERE ---
+    // 1. Define the ID variable first
+    const genreIdToSend = GENRE_IDS[currentFilters.selectedGenre];
+
+    // 2. Log it to be sure
+    console.log("DEBUG VOTE:", {
+        UserSelection: currentFilters.selectedGenre,
+        MappedID: genreIdToSend
+    });
+
     setSubmitting(true);
 
     try {
-      // Submit vote to backend
+      // 3. Use the variable in the data payload
       const voteData = {
         userId: userId,
         targetType: currentFilters.selectedType,
         targetId: selectedNominee.id,
-        genreId: GENRE_IDS[currentFilters.selectedGenre],
+        genreId: genreIdToSend, // <--- Used here
         jurisdictionId: JURISDICTION_IDS[currentFilters.selectedJurisdiction],
         intervalId: INTERVAL_IDS[currentFilters.selectedInterval],
         voteDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD format

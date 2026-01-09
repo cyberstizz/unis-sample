@@ -368,7 +368,7 @@ const ArtistDashboard = () => {
                   <p className="stat-label">Votes</p>
                   <p className="stat-value">{totalVotes.toLocaleString()}</p>
                 </div>
-                <div className="stat-icon stat-icon-orange"><Vote size={28} /></div>
+                <div className="stat-icon stat-icon-black"><Vote size={28} /></div>
               </div>
             </div>
 
