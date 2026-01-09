@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import LyricsWizard from './lyricsWizard';
-import { Upload, Play, FileText, Image, Video, Eye, Heart, Users, X, Download, Music, Trash2, Edit3, History } from 'lucide-react';
+import { Upload, Play, FileText, Image, Vote, Video, Eye, Heart, Users, X, Download, Music, Trash2, Edit3, History } from 'lucide-react';
 import UploadWizard from './uploadWizard';
 import ChangeDefaultSongWizard from './changeDefaultSongWizard';
 import EditProfileWizard from './editProfileWizard';
@@ -43,17 +43,20 @@ const ArtistDashboard = () => {
   const [supportedArtist, setSupportedArtist] = useState(null);
   const [voteHistory, setVoteHistory] = useState([]);
   const [showVoteHistory, setShowVoteHistory] = useState(false);
+  const [totalVotes, setTotalVotes] = useState(0);
 
-  // New states for lyrics editing modal
   const [editingLyricsSong, setEditingLyricsSong] = useState(null);
   const [currentLyrics, setCurrentLyrics] = useState('');
 
   useEffect(() => {
     if (!authLoading && user?.userId) {
       // 1. Full profile & Supported Artist
-      apiCall({ url: `/v1/users/profile/${user.userId}`, method: 'get' })
+      apiCall({ url: `/v1/users/profile/${user.userId}`, method: 'get', useCache: false })
         .then(res => {
           setUserProfile(res.data);
+
+          setTotalPlays(res.data.totalPlays || 0);
+          setTotalVotes(res.data.totalVotes || 0);
           
           // Fetch Supported Artist if exists
           if (res.data.supportedArtistId) {
@@ -69,8 +72,6 @@ const ArtistDashboard = () => {
         .then(res => {
           const songsData = res.data || [];
           setSongs(songsData);
-          const plays = songsData.reduce((sum, s) => sum + (s.plays || 0), 0);
-          setTotalPlays(plays);
         })
         .catch(err => console.error('Failed to fetch songs:', err));
 
@@ -357,6 +358,18 @@ const ArtistDashboard = () => {
                 <div className="stat-icon stat-icon-orange"><Music size={28} /></div>
               </div>
             </div>
+
+
+            <div className="stat-card">
+              <div className="stat-content">
+                <div className="stat-info">
+                  <p className="stat-label">Votes</p>
+                  <p className="stat-value">{totalVotes.toLocaleString()}</p>
+                </div>
+                <div className="stat-icon stat-icon-orange"><Vote size={28} /></div>
+              </div>
+            </div>
+
           </div>
 
           {/* Main Featured Song */}
@@ -377,8 +390,7 @@ const ArtistDashboard = () => {
                 <h4>{defaultSong?.title || 'No featured song set'}</h4>
                 {defaultSong && (
                   <div className="song-stats">
-                    <span><Eye size={14} /> {defaultSong.plays || 0} plays</span>
-                    <span><Heart size={14} /> {defaultSong.likes || 0} likes</span>
+                    <span><Eye size={14} /> {defaultSong.playCount || 0} plays</span>
                   </div>
                 )}
               </div>
@@ -411,8 +423,7 @@ const ArtistDashboard = () => {
                     </div>
                   </div>
                   <div className="item-stats">
-                    <span><Eye size={12} /> Score: {song.score || 0}</span>
-                    <span><Play size={12} /> {song.plays || 0} plays</span>
+                    <span><Play size={12} /> {song.playCount || song.plays || 0} plays</span>
                   </div>
                 </div>
               )) : <p>No songs yet — upload your first!</p>}
@@ -510,7 +521,7 @@ const ArtistDashboard = () => {
               <p style={{ color: '#aaa', margin: '5px 0' }}>Total Votes Cast</p>
               <p style={{ fontSize: '0.9rem', color: '#777', marginTop: '10px' }}>
                 {voteHistory.length > 0
-                  ? 'Keep voting to support Harlem talent!'
+                  ? 'Keep voting to support the best talent!'
                   : 'No votes yet. Go explore and support your favorites!'}
               </p>
             </div>
