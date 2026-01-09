@@ -149,15 +149,17 @@ function extractQueryParams(url) {
 
 // UPDATED: Better cache invalidation logic
 function invalidateCachesForMutation(url, method) {
-  // Play tracking - invalidate song and trending caches
+  // Play tracking - invalidate song, trending, user, and artist caches
   if (url.includes('/play')) {
     const songIdMatch = url.match(/\/song\/([^\/\?]+)\/play/);
     if (songIdMatch) {
       const songId = songIdMatch[1];
       console.log(`[Cache] Invalidating song ${songId} after play`);
       cacheService.invalidate('song', songId);
-      cacheService.invalidateType('trending'); // Affects trending lists
-      cacheService.invalidateType('feed'); // Affects new releases
+      cacheService.invalidateType('trending');
+      cacheService.invalidateType('feed');
+      cacheService.invalidateType('user');   // Invalidate user cache since total_plays changed
+      cacheService.invalidateType('artist'); // Artist pages also show this data
     }
     return;
   }
@@ -169,13 +171,15 @@ function invalidateCachesForMutation(url, method) {
     return;
   }
 
-  // Vote mutations
+  // Vote mutations - also invalidate user cache since total_votes changed
   if (url.includes('/vote')) {
     const songIdMatch = url.match(/\/song\/([^\/\?]+)/);
     if (songIdMatch) {
       cacheService.invalidate('song', songIdMatch[1]);
       cacheService.invalidateType('trending');
     }
+    cacheService.invalidateType('user');   // Invalidate user cache since total_votes changed
+    cacheService.invalidateType('artist'); // Artist pages also show this data
     console.log('[Cache] Invalidated after vote');
     return;
   }
@@ -201,17 +205,17 @@ function invalidateCachesForMutation(url, method) {
     return;
   }
 
+  // Song patch (lyrics, description, etc.)
   if (url.includes('/media/song') && method === 'patch') {
-  const songIdMatch = url.match(/\/song\/([^\/\?]+)/);
-  if (songIdMatch) {
-    cacheService.invalidate('song', songIdMatch[1]);
+    const songIdMatch = url.match(/\/song\/([^\/\?]+)/);
+    if (songIdMatch) {
+      cacheService.invalidate('song', songIdMatch[1]);
+    }
+    cacheService.invalidateType('trending');
+    cacheService.invalidateType('feed');
+    console.log('[Cache] Invalidated after song patch');
+    return;
   }
-  cacheService.invalidateType('trending');
-  cacheService.invalidateType('feed');
-  console.log('[Cache] Invalidated after song patch');
-  return;
-}
-
 }
 
 // Export cache-aware API call wrapper

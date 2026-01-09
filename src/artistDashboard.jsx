@@ -15,6 +15,8 @@ import { useAuth } from './context/AuthContext';
 import { PlayerContext } from './context/playercontext'; // Imported
 import { apiCall } from './components/axiosInstance';
 import { jsPDF } from 'jspdf';  
+import cacheService from './services/cacheService'; // or wherever it's located
+
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
