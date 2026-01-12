@@ -1,28 +1,28 @@
 import React, { useState, useEffect, useContext } from 'react';
 import LyricsWizard from './lyricsWizard';
-import { Upload, Play, FileText, Image, Vote, Video, Eye, Heart, Users, X, Download, Music, Trash2, Edit3, History } from 'lucide-react';
+import { Upload, Play, FileText, Image, Vote, Video, Eye, Heart, Users, X, Download, Music, Trash2, Edit3, History, Award } from 'lucide-react';
 import UploadWizard from './uploadWizard';
 import ChangeDefaultSongWizard from './changeDefaultSongWizard';
 import EditProfileWizard from './editProfileWizard';
 import DeleteAccountWizard from './deleteAccountWizard';
 import EditSongWizard from './editSongWizard';
 import DeleteSongModal from './deleteSongModal';
-import VoteHistoryModal from './voteHistoryModal'; // Imported
+import VoteHistoryModal from './voteHistoryModal';
 import './artistDashboard.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import { useAuth } from './context/AuthContext';
-import { PlayerContext } from './context/playercontext'; // Imported
+import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
 import { jsPDF } from 'jspdf';  
-import cacheService from './services/cacheService'; // or wherever it's located
+import cacheService from './services/cacheService';
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 const ArtistDashboard = () => {
   const { user, loading: authLoading } = useAuth();
-  const { playMedia } = useContext(PlayerContext); // Access Player
+  const { playMedia } = useContext(PlayerContext);
 
   const [userProfile, setUserProfile] = useState(null);
   const [showWelcomePopup, setShowWelcomePopup] = useState(true);
@@ -41,7 +41,7 @@ const ArtistDashboard = () => {
   const [showLyricsWizard, setShowLyricsWizard] = useState(false);
   const [lyricsSong, setLyricsSong] = useState(null);
 
-  // New States for Profile Features
+  // Profile Features
   const [supportedArtist, setSupportedArtist] = useState(null);
   const [voteHistory, setVoteHistory] = useState([]);
   const [showVoteHistory, setShowVoteHistory] = useState(false);
@@ -49,6 +49,12 @@ const ArtistDashboard = () => {
 
   const [editingLyricsSong, setEditingLyricsSong] = useState(null);
   const [currentLyrics, setCurrentLyrics] = useState('');
+
+  // Awards state
+  const [awards, setAwards] = useState([]);
+  const [awardsPage, setAwardsPage] = useState(0);
+  const [hasMoreAwards, setHasMoreAwards] = useState(true);
+  const [loadingAwards, setLoadingAwards] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user?.userId) {
@@ -95,6 +101,21 @@ const ArtistDashboard = () => {
       apiCall({ url: `/v1/users/${user.userId}/default-song`, method: 'get' })
         .then(res => setDefaultSong(res.data))
         .catch(() => setDefaultSong(null));
+
+      // 6. Artist Awards (initial 10)
+      apiCall({ 
+        url: `/v1/awards/artist/${user.userId}?limit=10&offset=0`,
+        method: 'get' 
+      })
+        .then(res => {
+          const awardsData = res.data || [];
+          setAwards(awardsData);
+          setHasMoreAwards(awardsData.length === 10);
+        })
+        .catch(err => {
+          console.error('Failed to fetch awards:', err);
+          setAwards([]);
+        });
     }
   }, [user, authLoading]);
 
@@ -119,7 +140,6 @@ const ArtistDashboard = () => {
     return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
   };
 
-  // Logic to play the supported artist's song
   const playSupportedArtistSong = async () => {
     if (!supportedArtist?.defaultSong) {
       alert('This artist has not set a featured song yet.');
@@ -142,7 +162,6 @@ const ArtistDashboard = () => {
       artwork: artworkUrl
     };
 
-    // Track play
     try {
       await apiCall({ 
         method: 'post', 
@@ -161,7 +180,6 @@ const ArtistDashboard = () => {
         unit: 'pt',
         format: 'a4'
       });
-      // (PDF logic kept identical to your previous code...)
       doc.setTextColor(240, 240, 240);
       doc.setFontSize(80);
       doc.setFont('helvetica', 'bold');
@@ -178,7 +196,6 @@ const ArtistDashboard = () => {
       doc.text('UNIS MUSIC PLATFORM ("Unis"), a digital music discovery service,', 80, 240);
       doc.text('and', 80, 260);
       doc.text(`${displayName} ("Artist"), an independent creator.`, 80, 280);
-      // ... (Contract content abbreviated for brevity, but functional logic remains)
       doc.save(`unis_ownership_agreement_${displayName.replace(/\s/g, '_')}.pdf`);
   };
 
@@ -263,6 +280,44 @@ const ArtistDashboard = () => {
     } catch (err) {
       console.error('Failed to save lyrics:', err);
       alert('Failed to save lyrics. Please try again.');
+    }
+  };
+
+  const loadMoreAwards = async () => {
+    setLoadingAwards(true);
+    try {
+      const nextPage = awardsPage + 1;
+      const res = await apiCall({ 
+        url: `/v1/awards/artist/${user.userId}?limit=10&offset=${nextPage * 10}`,
+        method: 'get' 
+      });
+      const newAwards = res.data || [];
+      setAwards(prev => [...prev, ...newAwards]);
+      setAwardsPage(nextPage);
+      setHasMoreAwards(newAwards.length === 10);
+    } catch (err) {
+      console.error('Failed to load more awards:', err);
+    } finally {
+      setLoadingAwards(false);
+    }
+  };
+
+  const formatAwardDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  const getAwardEmoji = (determinationMethod) => {
+    switch (determinationMethod) {
+      case 'VOTES': return '🏆';
+      case 'SCORE': return '⭐';
+      case 'SENIORITY': return '👑';
+      case 'FALLBACK': return '🎖️';
+      default: return '🏅';
     }
   };
 
@@ -361,7 +416,6 @@ const ArtistDashboard = () => {
               </div>
             </div>
 
-
             <div className="stat-card">
               <div className="stat-content">
                 <div className="stat-info">
@@ -371,7 +425,6 @@ const ArtistDashboard = () => {
                 <div className="stat-icon stat-icon-black"><Vote size={28} /></div>
               </div>
             </div>
-
           </div>
 
           {/* Main Featured Song */}
@@ -471,7 +524,7 @@ const ArtistDashboard = () => {
             </div>
           </div>
 
-          {/* NEW: Supported Artist Section */}
+          {/* Supported Artist Section */}
           {supportedArtist && (
             <div className="supported-artist-section card" style={{ marginTop: '2rem' }}>
               <div className="section-header">
@@ -507,7 +560,7 @@ const ArtistDashboard = () => {
             </div>
           )}
 
-          {/* NEW: Vote History Section */}
+          {/* Vote History Section */}
           <div className="vote-history-section card" style={{ marginTop: '1.5rem' }}>
             <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3><History size={20} /> Vote History</h3>
@@ -526,6 +579,88 @@ const ArtistDashboard = () => {
                   ? 'Keep voting to support the best talent!'
                   : 'No votes yet. Go explore and support your favorites!'}
               </p>
+            </div>
+          </div>
+
+          {/* Awards Section */}
+          <div className="awards-section card" style={{ marginTop: '1.5rem' }}>
+            <div className="section-header">
+              <h3>🏆 Awards Won</h3>
+            </div>
+            <div className="content-list">
+              {awards.length > 0 ? (
+                <>
+                  {awards.map((award, index) => (
+                    <div key={index} className="content-item" style={{ 
+                      background: 'linear-gradient(135deg, rgba(22, 51, 135, 0.1), rgba(22, 51, 135, 0.05))',
+                      borderLeft: '4px solid #163387'
+                    }}>
+                      <div className="item-header">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '1.5rem' }}>
+                            {getAwardEmoji(award.determinationMethod)}
+                          </span>
+                          <div>
+                            <h4 style={{ margin: 0, color: '#e0e0e0' }}>
+                              {award.interval?.name || 'Award'} Winner
+                            </h4>
+                            <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#aaa' }}>
+                              {award.jurisdiction?.name || 'Location'}
+                              {award.genre?.name && ` • ${award.genre.name}`}
+                            </p>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '0.85rem', color: '#888' }}>
+                          {formatAwardDate(award.awardDate)}
+                        </span>
+                      </div>
+                      <div className="item-stats" style={{ marginTop: '8px' }}>
+                        <span style={{ color: '#163387', fontWeight: '600' }}>
+                          {award.votesCount || 0} votes
+                        </span>
+                        <span style={{ color: '#666' }}>•</span>
+                        <span style={{ color: '#888' }}>
+                          {award.engagementScore || 0} score
+                        </span>
+                        {award.determinationMethod && (
+                          <>
+                            <span style={{ color: '#666' }}>•</span>
+                            <span style={{ 
+                              color: award.determinationMethod === 'VOTES' ? '#28a745' : 
+                                     award.determinationMethod === 'SCORE' ? '#ffc107' : 
+                                     award.determinationMethod === 'SENIORITY' ? '#6f42c1' : '#6c757d',
+                              fontSize: '0.8rem',
+                              fontWeight: '500'
+                            }}>
+                              Won by {award.determinationMethod.toLowerCase()}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {hasMoreAwards && (
+                    <div style={{ textAlign: 'center', padding: '15px' }}>
+                      <button
+                        className="btn btn-secondary btn-small"
+                        onClick={loadMoreAwards}
+                        disabled={loadingAwards}
+                        style={{ minWidth: '120px' }}
+                      >
+                        {loadingAwards ? 'Loading...' : 'Load More'}
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#777' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🏆</div>
+                  <p style={{ fontSize: '1.1rem', marginBottom: '5px' }}>No awards yet</p>
+                  <p style={{ fontSize: '0.9rem', color: '#888', marginTop: '10px' }}>
+                    Keep creating and engaging with your audience to earn awards!
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -609,7 +744,6 @@ const ArtistDashboard = () => {
           />
         )}
 
-        {/* Vote History Modal */}
         <VoteHistoryModal
           show={showVoteHistory}
           onClose={() => setShowVoteHistory(false)}
@@ -625,7 +759,6 @@ const ArtistDashboard = () => {
           isDeleting={!!deletingSongId}
         />
 
-        {/* Lyrics Edit Modal (Deprecated but kept for safety if Wizard fails) */}
         {editingLyricsSong && (
           <div className="modal-overlay" onClick={() => setEditingLyricsSong(null)}>
             <div className="modal-content lyrics-modal" onClick={(e) => e.stopPropagation()}>
