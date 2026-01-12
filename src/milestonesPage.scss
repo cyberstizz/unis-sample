@@ -254,6 +254,36 @@ $unis-silver: #918f8f;
   }
 }
 
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin-left: 8px;
+  
+  &.tiebreaker {
+    background: #ffd700;
+    color: #333;
+  }
+  
+  &.fallback {
+    background: #ccc;
+    color: #666;
+  }
+}
+
+.winner-votes {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.winner-caption {
+  font-style: italic;
+  margin-top: 10px;
+  color: #666;
+}
+
 
 // Mobile
 @media (max-width: 600px) {
