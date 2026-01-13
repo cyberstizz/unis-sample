@@ -8,8 +8,13 @@ import PlaylistManager from './playlistManager';
 import UnisPlayButton from './UnisPlayButton';
 import './player.scss';
 import UnisPauseButton from './UnisPauseButton';
+import { useAuth } from './context/AuthContext';
+import { apiCall } from './components/axiosInstance';
+;q
 
 const Player = () => {
+  const { user } = useAuth();
+
 
   const { 
     isExpanded, 
@@ -29,6 +34,8 @@ const Player = () => {
     openPlaylistManager
   } = useContext(PlayerContext);
 
+
+  const [likeCount, setLikeCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0); 
   const [duration, setDuration] = useState(0); 
@@ -149,6 +156,29 @@ const Player = () => {
     };
   }, [next, audioRef]);
 
+      //useEffect to check if the song is already liked or not
+  useEffect(() => {
+    if (currentMedia?.id && user?.userId) {
+      const songId = currentMedia.id || currentMedia.songId;
+      
+      // Check if already liked
+      apiCall({ 
+        url: `/v1/media/song/${songId}/is-liked?userId=${user.userId}`,
+        method: 'get'
+      })
+        .then(res => setIsLiked(res.data.isLiked || false))
+        .catch(() => setIsLiked(false));
+      
+      // Get like count
+      apiCall({ 
+        url: `/v1/media/song/${songId}/likes/count`,
+        method: 'get'
+      })
+        .then(res => setLikeCount(res.data.count || 0))
+        .catch(() => setLikeCount(0));
+    }
+  }, [currentMedia, user]);
+
   if (!currentMedia) return null;
 
   const isVideo = currentMedia.type === 'video';
@@ -175,10 +205,49 @@ const Player = () => {
     next();
   };
 
-  const handleLike = (e) => {
-    e.stopPropagation();
-    setIsLiked(!isLiked); 
-  };
+  const handleLike = async (e) => {
+  e.stopPropagation();
+  
+  if (!user?.userId) {
+    alert('Please log in to like songs');
+    return;
+  }
+  
+  if (!currentMedia?.id && !currentMedia?.songId) {
+    return;
+  }
+  
+  const songId = currentMedia.id || currentMedia.songId;
+  
+  try {
+    if (isLiked) {
+      // Unlike
+      const res = await apiCall({
+        method: 'delete',
+        url: `/v1/media/song/${songId}/like?userId=${user.userId}`
+      });
+      
+      if (res.data.success) {
+        setIsLiked(false);
+        setLikeCount(prev => Math.max(0, prev - 1));
+      }
+    } else {
+      // Like
+      const res = await apiCall({
+        method: 'post',
+        url: `/v1/media/song/${songId}/like?userId=${user.userId}`
+      });
+      
+      if (res.data.success) {
+        setIsLiked(true);
+        setLikeCount(prev => prev + 1);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to toggle like:', error);
+    alert('Failed to update like. Please try again.');
+  }
+};
 
   const handleDownload = async (e) => {
     e.stopPropagation();
