@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import songArtwork from './assets/theQuiet.jpg';
 import LyricsWizard from './lyricsWizard';  
-import { FileText } from 'lucide-react';
+import { FileText, Heart } from 'lucide-react';
 import './songPage.scss';
 import Layout from './layout';
 import { PlayerContext } from './context/playercontext'; 
@@ -25,6 +25,8 @@ const SongPage = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [showLyricsWizard, setShowLyricsWizard] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
 
   // New states for lyrics editing modal (consistent with dashboard)
   const [editingLyrics, setEditingLyrics] = useState(false);
@@ -50,13 +52,34 @@ const SongPage = () => {
     fetchSongData();
   }, [songId]);
 
+  useEffect(() => {
+    if (song?.id && userId) {
+      // Check if already liked
+      apiCall({ 
+        url: `/v1/media/song/${song.id}/is-liked?userId=${userId}`,
+        method: 'get'
+      })
+        .then(res => setIsLiked(res.data.isLiked || false))
+        .catch(() => setIsLiked(false));
+      
+      // Get like count
+      apiCall({ 
+        url: `/v1/media/song/${song.id}/likes/count`,
+        method: 'get'
+      })
+        .then(res => setLikeCount(res.data.count || 0))
+        .catch(() => setLikeCount(0));
+    }
+  }, [song, userId]);
+
   const fetchSongData = async () => {
     setLoading(true);
     setError('');
     try {
       const response = await apiCall({ 
         method: 'get', 
-        url: `/v1/media/song/${songId}` 
+        url: `/v1/media/song/${songId}`,
+        useCache: false
       });
       
       const songData = response.data;
@@ -146,6 +169,46 @@ const SongPage = () => {
           playsToday: prevSong.playsToday - 1
         }));
       }
+    }
+  };
+
+  const handleLike = async () => {
+    if (!userId) {
+      alert('Please log in to like songs');
+      return;
+    }
+    
+    if (!song?.id) {
+      return;
+    }
+    
+    try {
+      if (isLiked) {
+        // Unlike
+        const res = await apiCall({
+          method: 'delete',
+          url: `/v1/media/song/${song.id}/like?userId=${userId}`
+        });
+        
+        if (res.data.success) {
+          setIsLiked(false);
+          setLikeCount(prev => Math.max(0, prev - 1));
+        }
+      } else {
+        // Like
+        const res = await apiCall({
+          method: 'post',
+          url: `/v1/media/song/${song.id}/like?userId=${userId}`
+        });
+        
+        if (res.data.success) {
+          setIsLiked(true);
+          setLikeCount(prev => prev + 1);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to toggle like:', error);
+      alert('Failed to update like. Please try again.');
     }
   };
 
@@ -263,6 +326,25 @@ const SongPage = () => {
           <div className="follow-actions">
             <button onClick={handlePlay} className="play-button">Play</button>
             <button onClick={handleVote} className="vote-button">Vote</button>
+            <button 
+              onClick={handleLike} 
+              className={`like-button ${isLiked ? 'liked' : ''}`}
+              style={{
+                background: isLiked ? '#163387' : 'transparent',
+                border: '2px solid #163387',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                cursor: 'pointer',
+                borderRadius: '4px',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <Heart size={18} fill={isLiked ? 'white' : 'none'} />
+              {isLiked ? 'Liked' : 'Like'}
+            </button>
           </div>
 
           <p 
@@ -279,6 +361,7 @@ const SongPage = () => {
 
           <div className="stats">
             <p><span style={{color: "blue"}}>Plays</span> {song.playCount}</p>
+            <p><span style={{color: "blue"}}>Likes</span> {likeCount}</p>
             {song.playsToday > 100 && (
               <p style={{ color: 'green', fontWeight: 'bold' }}>
                 {song.playsToday} plays today
@@ -401,7 +484,7 @@ const SongPage = () => {
         show={showLyricsWizard}
         onClose={() => setShowLyricsWizard(false)}
         song={song}
-        onSuccess={fetchSongData}  // Refresh the song to get fresh lyrics if needed later
+        onSuccess={fetchSongData}
       />
     )}
 

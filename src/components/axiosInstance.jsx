@@ -216,6 +216,19 @@ function invalidateCachesForMutation(url, method) {
     console.log('[Cache] Invalidated after song patch');
     return;
   }
+
+  if (url.includes('/like')) {
+  const songIdMatch = url.match(/\/song\/([^\/\?]+)/);
+  if (songIdMatch) {
+    const songId = songIdMatch[1];
+    console.log(`[Cache] Invalidating song ${songId} after like/unlike`);
+    cacheService.invalidate('song', songId);
+    cacheService.invalidateType('trending');
+    cacheService.invalidateType('artist'); 
+  }
+  return;
+}
+
 }
 
 // Export cache-aware API call wrapper
