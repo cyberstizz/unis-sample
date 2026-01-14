@@ -193,7 +193,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
                 {IconPath}
             </svg>
         </div>
-        <h2 style={{ color: iconColor }}>{message}</h2>
+        <h2 className="success-header" style={{ color: iconColor }}>{message}</h2>
         <p className="wizard-intro">{details}</p>
         {status === 'success' && (
              <p className="success-nominee">You voted for <strong>{selectedNominee.name}</strong></p>
@@ -223,36 +223,32 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     switch (step) {
       case 1:
         return (
-            // ... (Your existing Case 1 JSX) ...
-            <div className="step-content">
+          <div className="step-content">
             <h2>Confirm Your Vote For:</h2>
             <h2 className='nominee-name'>{selectedNominee.name}</h2>
             <p className="wizard-intro">
-              Please review your selections below. You can make changes before you confirm.
+              Please review your selections below.
             </p>
-            {/* ... Rest of your inputs ... */}
-             <div className="filter-selection-grid">
+            
+            <div className="filter-selection-grid">
+              
+              {/* --- 🔒 LOCKED FIELD: GENRE --- */}
               <label>Genre</label>
-              <select 
-                value={currentFilters.selectedGenre} 
-                onChange={(e) => setCurrentFilters({...currentFilters, selectedGenre: e.target.value})} 
-                className="input-field"
-              >
-                <option value="rap-hiphop">Rap/Hip-Hop</option>
-                <option value="rock">Rock</option>
-                <option value="pop">Pop</option>
-              </select>
+              <div className="locked-input">
+                {/* Display a nice readable label instead of the raw value */}
+                {currentFilters.selectedGenre === 'rap-hiphop' ? 'Rap/Hip-Hop' : 
+                 currentFilters.selectedGenre === 'rock' ? 'Rock' : 
+                 currentFilters.selectedGenre === 'pop' ? 'Pop' : currentFilters.selectedGenre}
+              </div>
 
+              {/* --- 🔒 LOCKED FIELD: CATEGORY --- */}
               <label>Category</label>
-              <select 
-                value={currentFilters.selectedType} 
-                onChange={(e) => setCurrentFilters({...currentFilters, selectedType: e.target.value})} 
-                className="input-field"
-              >
-                <option value="artist">Artist</option>
-                <option value="song">Song</option>
-              </select>
+              <div className="locked-input">
+                 {/* Capitalize the first letter for looks */}
+                 {currentFilters.selectedType.charAt(0).toUpperCase() + currentFilters.selectedType.slice(1)}
+              </div>
 
+              {/* --- 🔓 ACTIVE FIELD: INTERVAL --- */}
               <label>Interval</label>
               <select 
                 value={currentFilters.selectedInterval} 
@@ -266,6 +262,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
                 <option value="annual">Year</option>
               </select>
 
+              {/* --- 🔓 ACTIVE FIELD: JURISDICTION --- */}
               <label>Jurisdiction</label>
               <select 
                 value={currentFilters.selectedJurisdiction} 
