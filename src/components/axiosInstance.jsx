@@ -237,10 +237,20 @@ export const apiCall = async (config) => {
     console.log('Using mock data (backend offline/Netlify)');
     return getMockResponse(config.url, config.method);
   }
+  
   try {
     return await axiosInstance(config);
   } catch (error) {
-    console.warn('API fallback to mock:', error);
+    // CRITICAL FIX:
+    // If this is a POST, PUT, DELETE, or PATCH, we MUST know if it failed.
+    // We re-throw the error so the UI (VotingWizard) handles it.
+    const method = config.method?.toLowerCase();
+    if (['post', 'put', 'patch', 'delete'].includes(method)) {
+        throw error; 
+    }
+
+    // Optional: Keep fallback ONLY for GET requests (reading data)
+    console.warn('API GET failed, falling back to mock:', error);
     return getMockResponse(config.url, config.method);
   }
 };
