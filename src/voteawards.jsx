@@ -94,6 +94,7 @@ const VoteAwards = () => {
             id: nominee.userId,
             name: nominee.username,
             type: 'artist',
+            genreKey: selectedGenre,
             imageUrl: buildUrl(nominee.photoUrl),  // ← Uses helper
             votes: nominee.voteCount || 0,
             totalLifetimeVotes: nominee.totalVotes || 0,
@@ -105,6 +106,7 @@ const VoteAwards = () => {
             id: nominee.songId,
             name: nominee.title,
             type: 'song',
+            genreKey: selectedGenre,
             artist: nominee.artist?.username || 'Unknown Artist',
             artistId: nominee.artist?.userId,
             imageUrl: buildUrl(nominee.artworkUrl), 

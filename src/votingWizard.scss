@@ -72,13 +72,13 @@ $unis-silver: #918f8f;
   }
 
   .locked-input {
-  background-color: #f5f5f5; /* Light grey background */
-  color: #666;               /* Dark grey text */
+  background-color: black; /* Light grey background */
+  color: $unis-blue;               /* Dark grey text */
   padding: 10px 12px;
   border-radius: 4px;
-  border: 1px solid #ddd;    /* Subtle border */
-  font-weight: 600;          /* Make it bold so it's readable */
-  font-size: 1rem;
+  border: 1px dashed $unis-blue;    /* Subtle border */
+  font-weight: 800;          /* Make it bold so it's readable */
+  font-size: 1.2rem;
   
   /* Flex to vertically align text if needed */
   display: flex;
@@ -300,8 +300,10 @@ $unis-silver: #918f8f;
 @media (max-width: 600px) {
 .next-button{
   margin-left: 80px !important;
-  margin-right: 60px !important;
+  margin-right: 30px !important;
 }  
+
+
 
 .success-header{
 justify-self: center;

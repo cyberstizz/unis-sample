@@ -19,8 +19,8 @@ const iconVariants = {
 const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }) => {
   const [step, setStep] = useState(1);
   const [currentFilters, setCurrentFilters] = useState({
-    selectedGenre: filters?.selectedGenre || 'rap-hiphop',
-    selectedType: filters?.selectedType || 'artist',
+    selectedGenre: nominee?.genreKey || filters?.selectedGenre || 'rap-hiphop',
+    selectedType: nominee?.type || filters?.selectedType || 'artist',
     selectedInterval: filters?.selectedInterval || 'daily',
     selectedJurisdiction: filters?.selectedJurisdiction || 'uptown-harlem'
   });
@@ -41,6 +41,20 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       setStep(step + 1);
     }
   };
+
+
+  React.useEffect(() => {
+    if (nominee) {
+      setCurrentFilters(prev => ({
+        ...prev,
+        selectedGenre: nominee.genreKey || filters?.selectedGenre || 'rap-hiphop',
+        selectedType: nominee.type || filters?.selectedType || 'artist',
+        // Preserve user's interval/jurisdiction choices if they exist, or fallback to props
+        selectedInterval: prev.selectedInterval || filters?.selectedInterval || 'daily',
+        selectedJurisdiction: prev.selectedJurisdiction || filters?.selectedJurisdiction || 'uptown-harlem'
+      }));
+    }
+  }, [nominee, filters]);
 
   const handleConfirmVote = async (e) => {
     e.preventDefault();
