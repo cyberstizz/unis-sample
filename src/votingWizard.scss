@@ -285,6 +285,13 @@ $unis-silver: #918f8f;
     }
   }
 
+  .unis-logo-result{
+    width: 100px; /* Adjust based on your preference */
+    height: auto;
+  margin: 5px 0;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+  }
+
 }
 
 @keyframes fadeIn {

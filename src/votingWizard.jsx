@@ -4,6 +4,7 @@ import { apiCall } from './components/axiosInstance';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 import confetti from 'canvas-confetti'; 
 import './votingWizard.scss';
+import unisLogo from './assets/unisLogoThree.svg';
 
 // --- ANIMATION VARIANTS ---
 const modalVariants = {
@@ -45,36 +46,50 @@ useEffect(() => {
   }, [voteResult.status]);
 
     //The Firework Logic 
-    const triggerFireworks = () => {
-      const duration = 3 * 1000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
+    // 3. The Firework Logic (Branded "Unis Rain" Preset) 
+  const triggerFireworks = () => {
+    const duration = 3 * 1000;
+    const animationEnd = Date.now() + duration;
+    
+    // UNIS BRAND PALETTE
+    // Blue (#163387), Silver (#C0C0C0), Dark Silver (#918f8f), Black (#000000)
+    // I added White (#ffffff) to create a "sparkle" effect against the dark colors
+    const unisColors = ['#163387', '#C0C0C0', '#918f8f', '#000000', '#ffffff'];
 
-      const randomInRange = (min, max) => Math.random() * (max - min) + min;
-
-      const interval = setInterval(function() {
-        const timeLeft = animationEnd - Date.now();
-
-        if (timeLeft <= 0) {
-          return clearInterval(interval);
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-        
-        // Since particles fall down, start a bit higher than random
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
-        });
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
-        });
-      }, 250);
+    const defaults = { 
+      startVelocity: 30, 
+      spread: 360, 
+      ticks: 60, 
+      zIndex: 99999,
+      colors: unisColors // <--- Applying your brand colors here
     };
 
+    const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+    const interval = setInterval(function() {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+      
+      // Cannon 1: Top Left
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+      });
+      
+      // Cannon 2: Top Right
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+      });
+    }, 250);
+  };
 
 
 
@@ -246,6 +261,7 @@ useEffect(() => {
 
     return (
       <div className="step-content result-view">
+                <img src={unisLogo} alt="Unis Logo" className="unis-logo-result"/>
         <div className="icon-container">
             <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 {IconPath}

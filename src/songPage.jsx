@@ -332,7 +332,7 @@ const SongPage = () => {
               style={{
                 background: isLiked ? '#163387' : 'transparent',
                 border: '2px solid #163387',
-                color: 'white',
+                color: 'grey',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
