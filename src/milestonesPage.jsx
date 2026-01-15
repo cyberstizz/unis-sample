@@ -70,36 +70,29 @@ const MilestonesPage = () => {
     return `${dayName}, ${monthName} ${dayNum}, ${year}`;
   };
 
-  // =========================================================================
-  // NEW: Calculate date range based on selected interval
-  // =========================================================================
+  // Calculate date range based on selected interval
   const getDateRangeForInterval = (selectedDate, intervalType) => {
     const endDate = new Date(selectedDate);
     let startDate = new Date(selectedDate);
     
     switch (intervalType) {
       case 'daily':
-        // Same day
         break;
       case 'weekly':
-        // Go back to Monday of that week
         const dayOfWeek = startDate.getDay();
         const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         startDate.setDate(startDate.getDate() - daysToMonday);
         break;
       case 'monthly':
-        // First day of month
         startDate.setDate(1);
         break;
       case 'quarterly':
-        // First day of quarter
         const month = startDate.getMonth();
         const quarterStartMonth = Math.floor(month / 3) * 3;
         startDate.setMonth(quarterStartMonth);
         startDate.setDate(1);
         break;
       case 'midterm':
-        // First day of half-year (Jan 1 or Jul 1)
         const midtermMonth = startDate.getMonth();
         if (midtermMonth >= 6) {
           startDate.setMonth(6);
@@ -109,7 +102,6 @@ const MilestonesPage = () => {
         startDate.setDate(1);
         break;
       case 'annual':
-        // First day of year
         startDate.setMonth(0);
         startDate.setDate(1);
         break;
@@ -145,12 +137,10 @@ const MilestonesPage = () => {
   // Navigation handlers
   const handleArtistView = (id) => {
     console.log('Navigating to artist page with ID:', id);
-    // navigate(`/artist/${id}`);
   };
 
   const handleSongView = (id) => {
     console.log('Navigating to song page with ID:', id);
-    // navigate(`/song/${id}`);
   };
 
   const handleView = async () => {
@@ -162,13 +152,11 @@ const MilestonesPage = () => {
     setError(null);
     
     try {
-      // Get IDs from mappings
       const jurId = JURISDICTION_IDS[location];
       const genreId = GENRE_IDS[genre];
-      const intervalId = INTERVAL_IDS[interval];  // NEW: Get interval ID
+      const intervalId = INTERVAL_IDS[interval];
       const type = category;
 
-      // Validate mappings
       if (!jurId) {
         throw new Error(`Invalid location "${location}" - check idMappings.js`);
       }
@@ -179,7 +167,6 @@ const MilestonesPage = () => {
         throw new Error(`Invalid interval "${interval}" - check idMappings.js`);
       }
 
-      // Calculate date range based on interval
       const { startDate, endDate } = getDateRangeForInterval(selectedDate, interval);
 
       console.log('Milestones API params:', { 
@@ -190,9 +177,6 @@ const MilestonesPage = () => {
         startDate, endDate 
       });
 
-      // =========================================================================
-      // UPDATED API CALL: Now includes intervalId parameter
-      // =========================================================================
       const response = await apiCall({
         method: 'get',
         url: `/v1/awards/past?type=${type}&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurId}&genreId=${genreId}&intervalId=${intervalId}`,
@@ -202,7 +186,6 @@ const MilestonesPage = () => {
       
       console.log('API response:', rawResults);
 
-      // Handle empty results
       if (!rawResults || rawResults.length === 0) {
         setError('No awards found for this date and filters. Try a different date or check if votes were cast.');
         setResults([]);
@@ -211,7 +194,6 @@ const MilestonesPage = () => {
 
       // Normalize results for display
       const normalized = rawResults.map((award, i) => {
-        // Determine name and image based on target type
         let title, artist, artwork;
         
         if (award.targetType === 'artist') {
@@ -236,8 +218,10 @@ const MilestonesPage = () => {
           artist,
           jurisdiction: award.jurisdiction?.name || location,
           votes: award.votesCount || 0,
+          weightedPoints: award.weightedPoints || 0,
+          playsCount: award.playsCount || 0,
+          likesCount: award.likesCount || 0,
           artwork,
-          // NEW: Include tiebreaker info
           determinationMethod: award.determinationMethod,
           tiedCandidatesCount: award.tiedCandidatesCount || 0,
           caption: award.caption || generateWinnerCaption(award),
@@ -257,13 +241,23 @@ const MilestonesPage = () => {
 
   // Generate a caption based on how the winner was determined
   const generateWinnerCaption = (award) => {
-    if (!award.determinationMethod || award.determinationMethod === 'VOTES') {
-      return 'Winner by popular vote!';
-    } else if (award.determinationMethod === 'SCORE') {
-      return `Won in ${award.tiedCandidatesCount}-way tiebreaker by highest score!`;
-    } else if (award.determinationMethod === 'SENIORITY') {
-      return `Won in ${award.tiedCandidatesCount}-way tiebreaker as longest-standing artist!`;
-    } else if (award.determinationMethod === 'FALLBACK') {
+    const method = award.determinationMethod;
+    const tiedCount = award.tiedCandidatesCount || 0;
+    const weightedPoints = award.weightedPoints || 0;
+    const playsCount = award.playsCount || 0;
+    const likesCount = award.likesCount || 0;
+
+    if (!method || method === 'WEIGHTED_VOTES') {
+      return `Winner with ${weightedPoints} points!`;
+    } else if (method === 'PLAYS') {
+      return `Won ${tiedCount}-way tiebreaker with ${playsCount} plays!`;
+    } else if (method === 'LIKES') {
+      return `Won ${tiedCount}-way tiebreaker with ${likesCount} likes!`;
+    } else if (method === 'SCORE') {
+      return `Won ${tiedCount}-way tiebreaker by highest score!`;
+    } else if (method === 'SENIORITY') {
+      return `Won ${tiedCount}-way tiebreaker as longest-standing artist!`;
+    } else if (method === 'FALLBACK') {
       return 'Top performer - no votes cast this period';
     }
     return 'Winner!';
@@ -278,10 +272,41 @@ const MilestonesPage = () => {
   const caption = generateCaption();
 
   // Helper to get determination badge
-  const getDeterminationBadge = (method, tiedCount) => {
-    if (!method || method === 'VOTES') return null;
-    if (method === 'FALLBACK') return <span className="badge fallback">No votes</span>;
-    return <span className="badge tiebreaker">{tiedCount}-way tie</span>;
+  const getDeterminationBadge = (method, tiedCount, weightedPoints, playsCount, likesCount) => {
+    if (!method) return null;
+    
+    switch (method) {
+      case 'WEIGHTED_VOTES':
+        return <span className="badge votes">{weightedPoints} pts</span>;
+      case 'PLAYS':
+        return (
+          <span className="badge tiebreaker plays">
+            {tiedCount}-way tie • {playsCount} plays
+          </span>
+        );
+      case 'LIKES':
+        return (
+          <span className="badge tiebreaker likes">
+            {tiedCount}-way tie • {likesCount} likes
+          </span>
+        );
+      case 'SCORE':
+        return (
+          <span className="badge tiebreaker score">
+            {tiedCount}-way tie • by score
+          </span>
+        );
+      case 'SENIORITY':
+        return (
+          <span className="badge tiebreaker seniority">
+            {tiedCount}-way tie • by seniority
+          </span>
+        );
+      case 'FALLBACK':
+        return <span className="badge fallback">No votes</span>;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -290,7 +315,6 @@ const MilestonesPage = () => {
         <main className="content-wrapper">
           <section className="filter-card">
             <div className="filter-controls">
-              {/* Location dropdown - FIXED: 'harlem' instead of 'harlem-wide' */}
               <select 
                 value={location} 
                 onChange={(e) => setLocation(e.target.value)} 
@@ -301,7 +325,6 @@ const MilestonesPage = () => {
                 <option value="harlem">Harlem (All)</option>
               </select>
 
-              {/* Genre dropdown */}
               <select 
                 value={genre} 
                 onChange={(e) => setGenre(e.target.value)} 
@@ -312,7 +335,6 @@ const MilestonesPage = () => {
                 <option value="pop">Pop</option>
               </select>
 
-              {/* Category dropdown */}
               <select 
                 value={category} 
                 onChange={(e) => setCategory(e.target.value)} 
@@ -322,7 +344,6 @@ const MilestonesPage = () => {
                 <option value="song">Song</option>
               </select>
 
-              {/* Interval dropdown - All 6 intervals */}
               <select 
                 value={interval} 
                 onChange={(e) => setInterval(e.target.value)} 
@@ -336,7 +357,6 @@ const MilestonesPage = () => {
                 <option value="annual">Annual</option>
               </select>
 
-              {/* Date picker */}
               <input
                 type="date"
                 value={selectedDate}
@@ -345,7 +365,6 @@ const MilestonesPage = () => {
                 max={maxDate}
               />
 
-              {/* View button */}
               <button 
                 onClick={handleView} 
                 className="view-button" 
@@ -356,21 +375,46 @@ const MilestonesPage = () => {
             </div>
           </section>
 
-          {/* Caption section */}
           {caption && (
             <section className="milestone-caption">
               <h2>{caption}</h2>
             </section>
           )}
 
-          {/* Winner highlight section */}
           {winner && (
             <section className="winner-highlight">
               <div className="winner-title">{winner.title}</div>
               <div className="winner-artist">{winner.artist}</div>
               <div className="winner-jurisdiction">{winner.jurisdiction}</div>
-              <div className="winner-votes">{winner.votes} votes</div>
-              {getDeterminationBadge(winner.determinationMethod, winner.tiedCandidatesCount)}
+              
+              {/* Enhanced stats display */}
+              <div className="winner-stats">
+                <div className="stat">
+                  <span className="stat-value">{winner.weightedPoints}</span>
+                  <span className="stat-label">points</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{winner.votes}</span>
+                  <span className="stat-label">votes</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{winner.playsCount}</span>
+                  <span className="stat-label">plays</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{winner.likesCount}</span>
+                  <span className="stat-label">likes</span>
+                </div>
+              </div>
+              
+              {getDeterminationBadge(
+                winner.determinationMethod, 
+                winner.tiedCandidatesCount,
+                winner.weightedPoints,
+                winner.playsCount,
+                winner.likesCount
+              )}
+              
               <img 
                 src={winner.artwork} 
                 alt={`${winner.title} artwork`} 
@@ -382,7 +426,6 @@ const MilestonesPage = () => {
             </section>
           )}
 
-          {/* Results list section */}
           <section className="results-section">
             {isLoading ? (
               <div className="loading-message">Loading milestones…</div>
@@ -406,9 +449,16 @@ const MilestonesPage = () => {
                       <div className="item-title">{item.title}</div>
                       <div className="item-artist">{item.artist}</div>
                     </div>
-                    <div className="item-votes">
-                      <span>{item.votes} Votes</span>
-                      {getDeterminationBadge(item.determinationMethod, item.tiedCandidatesCount)}
+                    <div className="item-stats">
+                      <span className="points">{item.weightedPoints} pts</span>
+                      <span className="votes">{item.votes} votes</span>
+                      {getDeterminationBadge(
+                        item.determinationMethod, 
+                        item.tiedCandidatesCount,
+                        item.weightedPoints,
+                        item.playsCount,
+                        item.likesCount
+                      )}
                     </div>
                   </li>
                 ))}

@@ -230,6 +230,8 @@ $unis-silver: #918f8f;
   }
 }
 
+
+
 .milestone-caption {
   margin: 2rem 0;
   padding: 1.5rem;
@@ -253,36 +255,103 @@ $unis-silver: #918f8f;
     }
   }
 }
+/* Add these styles to your existing milestonesPage.scss */
 
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  margin-left: 8px;
+.winner-stats {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin: 1rem 0;
   
-  &.tiebreaker {
-    background: #ffd700;
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #fff;
+    }
+    
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.7);
+    }
+  }
+}
+
+  .badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin: 0.25rem;
+    
+    &.votes {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    &.tiebreaker {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      
+      &.plays {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      }
+      
+      &.likes {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      }
+      
+      &.score {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        color: #333;
+      }
+      
+      &.seniority {
+        background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);
+        color: #333;
+      }
+    }
+    
+    &.fallback {
+      background: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  .item-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+    
+    .points {
+      font-weight: bold;
+      color: #667eea;
+    }
+    
+    .votes {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+  }
+  .winner-votes {
+    font-size: 1.2rem;
+    font-weight: bold;
     color: #333;
   }
-  
-  &.fallback {
-    background: #ccc;
+
+  .winner-caption {
+    font-style: italic;
+    margin-top: 10px;
     color: #666;
   }
-}
-
-.winner-votes {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #333;
-}
-
-.winner-caption {
-  font-style: italic;
-  margin-top: 10px;
-  color: #666;
-}
 
 
 // Mobile
