@@ -56,28 +56,37 @@ const MilestonesPage = () => {
   };
 
   // Helper to format the date with day of week
-  const formatDateWithDay = (dateString) => {
-    const date = new Date(dateString);
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                    'July', 'August', 'September', 'October', 'November', 'December'];
-    
-    const dayName = days[date.getDay()];
-    const monthName = months[date.getMonth()];
-    const dayNum = date.getDate();
-    const year = date.getFullYear();
-    
-    return `${dayName}, ${monthName} ${dayNum}, ${year}`;
-  };
+ const formatDateWithDay = (dateString) => {
+  // Parse the date string manually to avoid timezone issues
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day);  // month is 0-indexed
+  
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  const dayName = days[date.getDay()];
+  const monthName = months[date.getMonth()];
+  const dayNum = date.getDate();
+  const yearNum = date.getFullYear();
+  
+  return `${dayName}, ${monthName} ${dayNum}, ${yearNum}`;
+};
 
-  // Calculate date range based on selected interval
   const getDateRangeForInterval = (selectedDate, intervalType) => {
-    const endDate = new Date(selectedDate);
-    let startDate = new Date(selectedDate);
+    // For daily, just return the selected date string as-is (no Date object manipulation)
+    if (intervalType === 'daily') {
+      return {
+        startDate: selectedDate,
+        endDate: selectedDate
+      };
+    }
+  
+    // For other intervals, append time to force local timezone interpretation
+    const endDate = new Date(selectedDate + 'T12:00:00');  // Noon avoids timezone day-shift
+    const startDate = new Date(selectedDate + 'T12:00:00');
     
     switch (intervalType) {
-      case 'daily':
-        break;
       case 'weekly':
         const dayOfWeek = startDate.getDay();
         const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -87,8 +96,8 @@ const MilestonesPage = () => {
         startDate.setDate(1);
         break;
       case 'quarterly':
-        const month = startDate.getMonth();
-        const quarterStartMonth = Math.floor(month / 3) * 3;
+        const quarterMonth = startDate.getMonth();
+        const quarterStartMonth = Math.floor(quarterMonth / 3) * 3;
         startDate.setMonth(quarterStartMonth);
         startDate.setDate(1);
         break;
