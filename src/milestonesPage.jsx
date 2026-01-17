@@ -12,6 +12,8 @@ import songArtTwo from './assets/songartworktwo.jpeg';
 import songArtThree from './assets/songartworkthree.jpeg';
 import songArtFour from './assets/songartworkfour.jpeg';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
+import IntervalDatePicker from './intervalDatePicker';
+import './IntervalDatePicker.scss';
 
 const MilestonesPage = () => {
   const [location, setLocation] = useState('downtown-harlem');
@@ -56,73 +58,129 @@ const MilestonesPage = () => {
   };
 
   // Helper to format the date with day of week
- const formatDateWithDay = (dateString) => {
-  // Parse the date string manually to avoid timezone issues
-  const [year, month, day] = dateString.split('-').map(Number);
-  const date = new Date(year, month - 1, day);  // month is 0-indexed
-  
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                  'July', 'August', 'September', 'October', 'November', 'December'];
-  
-  const dayName = days[date.getDay()];
-  const monthName = months[date.getMonth()];
-  const dayNum = date.getDate();
-  const yearNum = date.getFullYear();
-  
-  return `${dayName}, ${monthName} ${dayNum}, ${yearNum}`;
-};
+ const formatDateDisplay = (dateString, intervalType) => {
+    if (!dateString) return '';
+    
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+
+    switch (intervalType) {
+      case 'daily':
+        return `${days[date.getDay()]}, ${months[month - 1]} ${day}, ${year}`;
+        
+      case 'weekly': {
+        const dayOfWeek = date.getDay();
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const monday = new Date(year, month - 1, day - daysToMonday);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        return `Week of ${months[monday.getMonth()]} ${monday.getDate()} - ${sunday.getDate()}, ${monday.getFullYear()}`;
+      }
+      
+      case 'monthly':
+        return `${months[month - 1]} ${year}`;
+        
+      case 'quarterly': {
+        const q = Math.floor((month - 1) / 3) + 1;
+        return `Q${q} ${year}`;
+      }
+      
+      case 'midterm': {
+        const h = month <= 6 ? 1 : 2;
+        return `${h === 1 ? 'First' : 'Second'} Half of ${year}`;
+      }
+      
+      case 'annual':
+        return `Year ${year}`;
+        
+      default:
+        return `${months[month - 1]} ${day}, ${year}`;
+    }
+  };
 
   const getDateRangeForInterval = (selectedDate, intervalType) => {
-    // For daily, just return the selected date string as-is (no Date object manipulation)
-    if (intervalType === 'daily') {
-      return {
-        startDate: selectedDate,
-        endDate: selectedDate
-      };
-    }
+  if (!selectedDate) return { startDate: null, endDate: null };
   
-    // For other intervals, append time to force local timezone interpretation
-    const endDate = new Date(selectedDate + 'T12:00:00');  // Noon avoids timezone day-shift
-    const startDate = new Date(selectedDate + 'T12:00:00');
-    
-    switch (intervalType) {
-      case 'weekly':
-        const dayOfWeek = startDate.getDay();
-        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        startDate.setDate(startDate.getDate() - daysToMonday);
-        break;
-      case 'monthly':
-        startDate.setDate(1);
-        break;
-      case 'quarterly':
-        const quarterMonth = startDate.getMonth();
-        const quarterStartMonth = Math.floor(quarterMonth / 3) * 3;
-        startDate.setMonth(quarterStartMonth);
-        startDate.setDate(1);
-        break;
-      case 'midterm':
-        const midtermMonth = startDate.getMonth();
-        if (midtermMonth >= 6) {
-          startDate.setMonth(6);
-        } else {
-          startDate.setMonth(0);
-        }
-        startDate.setDate(1);
-        break;
-      case 'annual':
+  // Parse the date safely
+  const [year, month, day] = selectedDate.split('-').map(Number);
+  const endDate = new Date(year, month - 1, day);
+  const startDate = new Date(year, month - 1, day);
+
+  switch (intervalType) {
+    case 'daily':
+      // Start and end are the same day
+      break;
+      
+    case 'weekly':
+      // Find Monday of the week
+      const dayOfWeek = startDate.getDay();
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      startDate.setDate(startDate.getDate() - daysToMonday);
+      // End date is Sunday
+      endDate.setDate(startDate.getDate() + 6);
+      break;
+      
+    case 'monthly':
+      // First day of month
+      startDate.setDate(1);
+      // Last day of month
+      endDate.setDate(new Date(year, month, 0).getDate());
+      break;
+      
+    case 'quarterly':
+      // Find quarter start month
+      const quarterStartMonth = Math.floor((month - 1) / 3) * 3;
+      startDate.setMonth(quarterStartMonth);
+      startDate.setDate(1);
+      // Quarter end is last day of quarter's last month
+      endDate.setMonth(quarterStartMonth + 2);
+      endDate.setDate(new Date(year, quarterStartMonth + 3, 0).getDate());
+      break;
+      
+    case 'midterm':
+      // H1: Jan-Jun, H2: Jul-Dec
+      if (month <= 6) {
         startDate.setMonth(0);
         startDate.setDate(1);
-        break;
-      default:
-        break;
-    }
-    
-    return {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0]
-    };
+        endDate.setMonth(5);
+        endDate.setDate(30);
+      } else {
+        startDate.setMonth(6);
+        startDate.setDate(1);
+        endDate.setMonth(11);
+        endDate.setDate(31);
+      }
+      break;
+      
+    case 'annual':
+      // Full year
+      startDate.setMonth(0);
+      startDate.setDate(1);
+      endDate.setMonth(11);
+      endDate.setDate(31);
+      break;
+      
+    default:
+      break;
+  }
+
+  // Format dates as YYYY-MM-DD
+  const formatDate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   };
+
+  return {
+    startDate: formatDate(startDate),
+    endDate: formatDate(endDate)
+  };
+};
 
   // Generate the caption
   const generateCaption = () => {
@@ -132,7 +190,7 @@ const MilestonesPage = () => {
     const genreText = formatGenre(genre);
     const categoryText = formatCategory(category);
     const intervalText = getIntervalText(interval);
-    const dateText = formatDateWithDay(selectedDate);
+    const dateText = formatDateDisplay(selectedDate, interval);
 
     return (
       <div>
@@ -142,6 +200,7 @@ const MilestonesPage = () => {
       </div>
     );
   };
+
 
   // Navigation handlers
   const handleArtistView = (id) => {
@@ -366,12 +425,11 @@ const MilestonesPage = () => {
                 <option value="annual">Annual</option>
               </select>
 
-              <input
-                type="date"
+              <IntervalDatePicker
+                interval={interval}
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="filter-select"
-                max={maxDate}
+                onChange={setSelectedDate}
+                maxDate={maxDate}
               />
 
               <button 

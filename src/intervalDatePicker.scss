@@ -1,0 +1,337 @@
+.interval-date-picker {
+  position: relative;
+  
+  .date-input {
+    padding: 10px 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+    background: black;
+    cursor: pointer;
+    min-width: 180px;
+    
+    &:focus {
+      outline: none;
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+    }
+  }
+  
+  .custom-picker {
+    position: relative;
+    
+    .picker-toggle {
+      padding: 10px 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      background: black;
+      cursor: pointer;
+      min-width: 200px;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      
+      &:hover {
+        border-color: #999;
+      }
+      
+      &:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+      }
+      
+      &::after {
+        content: '▼';
+        font-size: 10px;
+        margin-left: 10px;
+        color: #666;
+      }
+    }
+    
+    .picker-dropdown {
+      position: absolute;
+      top: calc(100% + 5px);
+      left: 0;
+      background: black;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      padding: 15px;
+      min-width: 280px;
+      
+      .picker-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        
+        span {
+          font-weight: 600;
+          font-size: 16px;
+        }
+        
+        button {
+          background: none;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          padding: 5px 12px;
+          cursor: pointer;
+          font-size: 14px;
+          
+          &:hover {
+            background: #f5f5f5;
+          }
+        }
+      }
+    }
+  }
+  
+  // Weekly picker styles
+  .weekly-picker {
+    .weekday-headers {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      margin-bottom: 5px;
+      
+      .weekday-header {
+        text-align: center;
+        font-size: 11px;
+        font-weight: 600;
+        color: #666;
+        padding: 5px;
+      }
+    }
+    
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      
+      .calendar-day {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+        
+        &:hover:not(.empty):not(.disabled) {
+          background: #e3f2fd;
+        }
+        
+        &.empty {
+          cursor: default;
+        }
+        
+        &.disabled {
+          color: #ccc;
+          cursor: not-allowed;
+        }
+        
+        &.in-week {
+          background: #2196f3;
+          color: white;
+          
+          &:hover {
+            background: #1976d2;
+          }
+        }
+      }
+    }
+    
+    .week-hint {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #888;
+      text-align: center;
+      font-style: italic;
+    }
+  }
+  
+  // Month picker styles
+  .month-picker {
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      background: black;
+      
+      .month-btn {
+        padding: 12px 8px;
+        border: 1px solid black;
+        border-radius: 8px;
+        background: black;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.15s ease;
+        
+        &:hover:not(.disabled) {
+          background: black;
+          border-color: #2196f3;
+        }
+        
+        &.disabled {
+          color: #ccc;
+          cursor: not-allowed;
+          background: #f9f9f9;
+        }
+      }
+    }
+  }
+  
+  // Quarter picker styles
+  .quarter-picker {
+    .quarter-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      
+      .quarter-btn {
+        padding: 15px 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: black;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.15s ease;
+        
+        &:hover:not(.disabled) {
+          background: #e3f2fd;
+          border-color: #2196f3;
+        }
+        
+        &.disabled {
+          color: #ccc;
+          cursor: not-allowed;
+          background: #f9f9f9;
+        }
+      }
+    }
+  }
+  
+  // Midterm picker styles
+  .midterm-picker {
+    .half-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      
+      .half-btn {
+        padding: 20px 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: black;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.15s ease;
+        
+        &:hover:not(.disabled) {
+          background: #e3f2fd;
+          border-color: #2196f3;
+        }
+        
+        &.disabled {
+          color: #ccc;
+          cursor: not-allowed;
+          background: #f9f9f9;
+        }
+      }
+    }
+  }
+  
+  // Year picker styles
+  .year-picker {
+    min-width: 200px;
+    
+    .year-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      
+      .year-btn {
+        padding: 15px 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: black;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 500;
+        transition: all 0.15s ease;
+        
+        &:hover {
+          background: #e3f2fd;
+          border-color: #2196f3;
+        }
+      }
+    }
+  }
+}
+
+// Dark mode support (optional)
+@media (prefers-color-scheme: dark) {
+  .interval-date-picker {
+    .date-input,
+    .picker-toggle {
+      background: #2a2a2a;
+      border-color: #444;
+      color: #eee;
+    }
+    
+    .picker-dropdown {
+      background: #2a2a2a;
+      border-color: #444;
+      
+      .picker-header {
+        border-color: #444;
+        
+        span {
+          color: #eee;
+        }
+        
+        button {
+          border-color: #555;
+          color: #eee;
+          
+          &:hover {
+            background: #333;
+          }
+        }
+      }
+    }
+    
+    .month-btn,
+    .quarter-btn,
+    .half-btn,
+    .year-btn {
+      background: #333;
+      border-color: #444;
+      color: #eee;
+      
+      &:hover:not(.disabled) {
+        background: #3a3a3a;
+      }
+      
+      &.disabled {
+        background: #252525;
+        color: #555;
+      }
+    }
+    
+    .calendar-day {
+      color: #eee;
+      
+      &.disabled {
+        color: #555;
+      }
+    }
+  }
+}
