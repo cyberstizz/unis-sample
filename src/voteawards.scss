@@ -269,6 +269,273 @@ $unis-silver: #918f8f;
     }
   }
 
+
+  // --- Variables (Matching your system) ---
+$bg-black: #000000;
+$text-silver: #C0C0C0;
+$text-gray: #A9A9A9;
+$accent-white: #FFFFFF;
+$unis-blue: #163387;
+$unis-silver: #918f8f; 
+$subtle-black: #1a1a1a;
+
+.voting-wizard-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85); // Darker backdrop
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.voting-wizard {
+  background: linear-gradient(145deg, rgba($subtle-black, 0.95), rgba(0, 0, 0, 1));
+  padding: 40px;
+  border-radius: 16px; // Modern rounded corners
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba($text-silver, 0.1); // Default subtle border
+  transition: all 0.5s ease-in-out; // Smooth transition for the glow
+
+  // --- THE SUCCESS GLOW ---
+  &.success-glow {
+    // 1. Solid Brand Border
+    border: 2px solid $unis-blue !important;
+    
+    // 2. The Glow
+    // We lighten the blue for the shadow so it shines against the black bg
+    box-shadow: 
+      0 0 30px rgba(lighten($unis-blue, 20%), 0.5), // Outer glow (lighter)
+      inset 0 0 20px rgba($unis-blue, 0.4) !important; // Inner glow (brand color)
+      
+    // Optional: slight scale up to emphasize the success
+    transform: scale(1.02); 
+  }
+}
+
+.close-button {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: $text-gray;
+  cursor: pointer;
+  transition: color 0.2s;
+  
+  &:hover {
+    color: $accent-white;
+  }
+}
+
+.step-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+
+  h2 {
+    color: $accent-white;
+    margin-bottom: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  
+  .nominee-name {
+    color: $unis-blue;
+    font-family: "Bitcount Grid Double", system-ui; // Matching your font
+    font-size: 28px;
+    text-transform: uppercase;
+    margin: 10px 0;
+  }
+
+  .wizard-intro {
+    color: $text-gray;
+    font-size: 14px;
+    margin-bottom: 25px;
+    line-height: 1.5;
+  }
+}
+
+// --- NEW RECEIPT / DETAILS STYLE ---
+.vote-receipt {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba($unis-blue, 0.3);
+  border-radius: 8px;
+  padding: 20px;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+
+  .receipt-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: $text-gray;
+    margin-bottom: 5px;
+  }
+
+  .receipt-name {
+    font-size: 24px;
+    color: $accent-white;
+    margin: 0 0 15px 0;
+    font-weight: 700;
+  }
+
+  .receipt-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, $unis-blue, transparent);
+    margin-bottom: 15px;
+    opacity: 0.5;
+  }
+
+  .receipt-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    text-align: left;
+    
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      
+      .meta-label {
+        font-size: 11px;
+        color: $unis-silver;
+        text-transform: uppercase;
+      }
+      
+      .meta-value {
+        font-size: 13px;
+        color: $accent-white;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// --- RESULT ICONS ---
+.result-view {
+  .unis-logo-result {
+    width: 60px;
+    margin-bottom: 20px;
+    opacity: 0.8;
+  }
+
+  .icon-container {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: 3px solid; // Color set inline in React
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    background: rgba(0,0,0,0.2);
+  }
+  
+  .result-header {
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+// --- BUTTONS ---
+.button-group, .button-group-result {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  width: 100%;
+  margin-top: 10px;
+}
+
+button {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+}
+
+.next-button, .done-button, .submit-vote-button {
+  background-color: $unis-blue;
+  color: $accent-white;
+  
+  &:hover {
+    background-color: lighten($unis-blue, 10%);
+    box-shadow: 0 0 10px rgba($unis-blue, 0.4);
+  }
+  
+  &:disabled {
+    background-color: $text-gray;
+    cursor: not-allowed;
+  }
+}
+
+.back-button {
+  background-color: transparent;
+  border: 1px solid $text-gray;
+  color: $text-silver;
+  
+  &:hover {
+    border-color: $accent-white;
+    color: $accent-white;
+  }
+}
+
+// --- FORM INPUTS ---
+.input-field, input[type="text"] {
+  width: 100%;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba($text-silver, 0.2);
+  border-radius: 6px;
+  color: $accent-white;
+  margin-bottom: 15px;
+  
+  &:focus {
+    outline: none;
+    border-color: $unis-blue;
+  }
+}
+
+.locked-input {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: $text-gray;
+  margin-bottom: 15px;
+  font-style: italic;
+}
+
+.filter-selection-grid, .form-group {
+  width: 100%;
+  text-align: left;
+  label {
+    display: block;
+    color: $text-silver;
+    font-size: 12px;
+    margin-bottom: 5px;
+    margin-left: 2px;
+  }
+}
+
 }
 
 // Mobile Responsiveness

@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
-import { Heart, Headphones, ChevronUp, ChevronDown } from 'lucide-react';
+import { Heart, Headphones, Vote, ChevronUp, ChevronDown } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
 import UnisPlayButton from './UnisPlayButton';
@@ -303,6 +303,9 @@ const Player = () => {
             </div>
             
             <div className="like-download desktop-actions">
+              <button onClick={handleDownload}>
+                <Vote size={18} />
+                </button>
               <button onClick={() => setShowPlaylistWizard(true)}>➕</button>
               <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
                 <Heart size={18} fill={isLiked ? "white" : "none"} />
