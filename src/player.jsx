@@ -1,9 +1,10 @@
-import React, { useContext, useEffect, useState, useRef } from 'react';
+import React, { useContext, useEffect, useState, useRef, useMemo } from 'react'; // Added useMemo
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { Heart, Headphones, Vote, ChevronUp, ChevronDown } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
+import VotingWizard from './VotingWizard'; // <--- 1. Import the VotingWizard
 import UnisPlayButton from './UnisPlayButton';
 import UnisPauseButton from './UnisPauseButton';
 import { apiCall } from './components/axiosInstance';
@@ -29,14 +30,31 @@ const Player = () => {
   const [duration, setDuration] = useState(0); 
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  
+  // Wizards State
   const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
+  const [showVoteWizard, setShowVoteWizard] = useState(false); // <--- 2. Add Vote Wizard State
+  
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [userId, setUserId] = useState(null);
 
   const seekbarRef = useRef(null);
   const navigate = useNavigate();
 
-  // 1. Extract User ID from token (Your preferred method)
+  // --- DERIVE VOTING DATA ---
+  // 3. Create the nominee object dynamically from the current song
+  const voteNominee = useMemo(() => {
+    if (!currentMedia) return null;
+    return {
+      id: currentMedia.id || currentMedia.songId,
+      name: currentMedia.title, // The "Name" being voted on is the Song Title
+      type: 'song', // Explicitly set type to song
+      genreKey: currentMedia.genreKey || 'rap-hiphop', // Fallback if genre missing
+      artist: currentMedia.artist
+    };
+  }, [currentMedia]);
+
+  // 1. Extract User ID
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -49,13 +67,12 @@ const Player = () => {
     }
   }, []);
 
-  // 2. Fetch Like Status when song changes
+  // 2. Fetch Like Status
   useEffect(() => {
     let isMounted = true;
     if (currentMedia?.id && userId) {
       const songId = currentMedia.id || currentMedia.songId;
       
-      // We check the backend for the real status
       apiCall({ 
         url: `/v1/media/song/${songId}/is-liked?userId=${userId}`,
         method: 'get'
@@ -94,7 +111,7 @@ const Player = () => {
     if (currentMedia?.artistId) navigate(`/artist/${currentMedia.artistId}`);
   };
 
-  // 4. Audio Listeners & Source Handling
+  // 4. Audio Listeners
   useEffect(() => {
     if (currentMedia && audioRef.current) {
       const media = audioRef.current;
@@ -176,15 +193,21 @@ const Player = () => {
     }
   };
 
+  // --- NEW HANDLER: OPEN VOTE WIZARD ---
+  const handleVoteClick = (e) => {
+    e.stopPropagation();
+    if (!userId) return alert('Please log in to vote');
+    setShowVoteWizard(true);
+  };
+
   const handleDownload = async (e) => {
     e.stopPropagation();
     const fileUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
     if (!fileUrl) return alert('Download not available');
-
+    // ... (Your existing download logic)
     const artist = currentMedia.artist || 'Unknown Artist';
     const title = currentMedia.title || 'Untitled';
     const filename = `${artist} - ${title}.mp3`;
-
     try {
       const response = await fetch(fileUrl);
       const blob = await response.blob();
@@ -264,6 +287,12 @@ const Player = () => {
             <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
               <Heart fill={isLiked ? "white" : "none"} />
             </button>
+            
+            {/* Expanded View Vote Button (Optional - added for consistency) */}
+            <button onClick={handleVoteClick}>
+                <Vote size={24} />
+            </button>
+            
             <button onClick={handleDownload}>⬇</button>
           </div>
         </div>
@@ -278,8 +307,13 @@ const Player = () => {
           
           <div className={`mobile-actions-tray ${showMobileActions ? 'open' : ''}`}>
             <div className="tray-content">
-              <button onClick={() => setShowPlaylistWizard(true)} className="tray-action"><span>➕</span><span className="label">Add to Playlist</span></button>
-              <button onClick={openPlaylistManager} className="tray-action"><Headphones /><span className="label">Playlists</span></button>
+              {/* Mobile Tray Vote Option */}
+              <button onClick={handleVoteClick} className="tray-action">
+                <Vote size={20} />
+                <span className="label">Vote</span>
+              </button>
+
+              <button onClick={() => setShowPlaylistWizard(true)} className="tray-action"><span>➕</span><span className="label">Add</span></button>
               <button onClick={handleLike} className={`tray-action ${isLiked ? 'liked' : ''}`}>
                 <Heart fill={isLiked ? "white" : "none"} /><span className="label">{isLiked ? 'Liked' : 'Like'}</span>
               </button>
@@ -303,9 +337,11 @@ const Player = () => {
             </div>
             
             <div className="like-download desktop-actions">
-              <button onClick={handleDownload}>
+              {/* --- FIX: UPDATED VOTE BUTTON --- */}
+              <button onClick={handleVoteClick} title="Vote for this song">
                 <Vote size={18} />
-                </button>
+              </button>
+              
               <button onClick={() => setShowPlaylistWizard(true)}>➕</button>
               <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
                 <Heart size={18} fill={isLiked ? "white" : "none"} />
@@ -320,8 +356,20 @@ const Player = () => {
         </>
       )}
 
+      {/* --- WIZARDS --- */}
       <PlaylistWizard open={showPlaylistWizard} onClose={() => setShowPlaylistWizard(false)} selectedTrack={currentMedia} />
       <PlaylistManager open={showPlaylistManager} onClose={closePlaylistManager} />
+      
+      {/* --- VOTING WIZARD INTEGRATION --- */}
+      {/* We pass 'filters' to explicitly set the category/type to 'song' */}
+      <VotingWizard 
+        show={showVoteWizard} 
+        onClose={() => setShowVoteWizard(false)} 
+        onVoteSuccess={(id) => setShowVoteWizard(false)}
+        nominee={voteNominee}
+        userId={userId}
+        filters={{ selectedType: 'song' }} 
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react'; // <--- ADDED useRef
 import { useParams } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import songArtwork from './assets/theQuiet.jpg';
@@ -32,8 +32,33 @@ const SongPage = () => {
   const [editingLyrics, setEditingLyrics] = useState(false);
   const [currentLyrics, setCurrentLyrics] = useState('');
 
+  // --- NEW: AMBIENT MODE STATE ---
+  // Default to a transparent value or a safe fallback
+  const [dominantColor, setDominantColor] = useState('rgba(255, 255, 255, 0.1)');
+
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
   const navigate = useNavigate();
+
+  // --- NEW: COLOR EXTRACTION LOGIC ---
+  const extractColor = (url) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous"; // Crucial for external images
+    img.src = url;
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 1;
+      canvas.height = 1;
+      
+      // Draw image at 1x1 to average all pixels
+      ctx.drawImage(img, 0, 0, 1, 1);
+      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+      
+      // Set color with transparency for the glow effect
+      setDominantColor(`rgba(${r}, ${g}, ${b}, 0.6)`);
+    };
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -51,6 +76,13 @@ const SongPage = () => {
   useEffect(() => {
     fetchSongData();
   }, [songId]);
+
+  // --- NEW: TRIGGER EXTRACTION WHEN ARTWORK LOADS ---
+  useEffect(() => {
+    if (song?.artwork) {
+      extractColor(song.artwork);
+    }
+  }, [song?.artwork]);
 
   useEffect(() => {
     if (song?.id && userId) {
@@ -294,7 +326,11 @@ const SongPage = () => {
   return (
     <Layout backgroundImage={song.artwork}>
       <div className="song-page-container">
-        <div className="main-content-card">
+        {/* --- MODIFIED: Added ambient-card class and style prop --- */}
+        <div 
+          className="main-content-card ambient-card"
+          style={{ '--ambient-glow': dominantColor }}
+        >
           
           {/* Title with Explicit Badge */}
           <h1 className="track-title">
