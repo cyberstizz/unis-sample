@@ -16,7 +16,7 @@ const VoteAwards = () => {
   const [selectedGenre, setSelectedGenre] = useState('rap');
   const [selectedType, setSelectedType] = useState('artist');
   const [selectedInterval, setSelectedInterval] = useState('daily');
-  const [selectedJurisdiction, setSelectedJurisdiction] = useState('harlem-wide');
+  const [selectedJurisdiction, setSelectedJurisdiction] = useState('harlem');
   const [nominees, setNominees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -47,7 +47,7 @@ const VoteAwards = () => {
   const jurisdictions = [
     { value: 'uptown-harlem', label: 'Uptown Harlem' },
     { value: 'downtown-harlem', label: 'Downtown Harlem' },
-    { value: 'harlem-wide', label: 'Harlem' },
+    { value: 'harlem', label: 'Harlem' },
   ];
 
   // Get userId on mount

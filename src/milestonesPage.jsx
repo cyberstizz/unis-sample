@@ -183,6 +183,7 @@ const MilestonesPage = () => {
 };
 
   // Generate the caption
+  // Generate the caption
   const generateCaption = () => {
     if (!selectedDate || results.length === 0) return '';
     
@@ -193,22 +194,18 @@ const MilestonesPage = () => {
     const dateText = formatDateDisplay(selectedDate, interval);
 
     return (
-      <div>
-        {locationText} {genreText}<br /> 
-        <span className='dramaticEffect'>{categoryText} {intervalText}</span> 
-        <div style={{color: "black"}}>{dateText}</div>   
+      <div className="caption-container">
+        <div className="caption-top">
+          {locationText} {genreText}
+        </div>
+        <div className='dramaticEffect'>
+          {categoryText} {intervalText}
+        </div>
+        <div className="milestone-date">
+          {dateText}
+        </div>   
       </div>
     );
-  };
-
-
-  // Navigation handlers
-  const handleArtistView = (id) => {
-    console.log('Navigating to artist page with ID:', id);
-  };
-
-  const handleSongView = (id) => {
-    console.log('Navigating to song page with ID:', id);
   };
 
   const handleView = async () => {
@@ -218,6 +215,7 @@ const MilestonesPage = () => {
     }
     setIsLoading(true);
     setError(null);
+    setResults([]); // Clear previous results to trigger re-render cleanly
     
     try {
       const jurId = JURISDICTION_IDS[location];
@@ -225,25 +223,13 @@ const MilestonesPage = () => {
       const intervalId = INTERVAL_IDS[interval];
       const type = category;
 
-      if (!jurId) {
-        throw new Error(`Invalid location "${location}" - check idMappings.js`);
-      }
-      if (!genreId) {
-        throw new Error(`Invalid genre "${genre}" - check idMappings.js`);
-      }
-      if (!intervalId) {
-        throw new Error(`Invalid interval "${interval}" - check idMappings.js`);
-      }
+      if (!jurId) throw new Error(`Invalid location`);
+      if (!genreId) throw new Error(`Invalid genre`);
+      if (!intervalId) throw new Error(`Invalid interval`);
 
       const { startDate, endDate } = getDateRangeForInterval(selectedDate, interval);
 
-      console.log('Milestones API params:', { 
-        location, jurId, 
-        genre, genreId, 
-        interval, intervalId,
-        type, 
-        startDate, endDate 
-      });
+      console.log('Milestones API params:', { startDate, endDate });
 
       const response = await apiCall({
         method: 'get',
@@ -251,11 +237,9 @@ const MilestonesPage = () => {
       });
 
       const rawResults = response.data;
-      
-      console.log('API response:', rawResults);
 
       if (!rawResults || rawResults.length === 0) {
-        setError('No awards found for this date and filters. Try a different date or check if votes were cast.');
+        setError('No awards found for this date. Try a different date.');
         setResults([]);
         return;
       }
@@ -300,38 +284,19 @@ const MilestonesPage = () => {
       
     } catch (err) {
       console.error('Milestones fetch error:', err);
-      setError(err.message || 'Failed to load milestones. Please try again.');
+      setError(err.message || 'Failed to load milestones.');
       setResults([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Generate a caption based on how the winner was determined
   const generateWinnerCaption = (award) => {
     const method = award.determinationMethod;
-    const tiedCount = award.tiedCandidatesCount || 0;
-    const weightedPoints = award.weightedPoints || 0;
-    const playsCount = award.playsCount || 0;
-    const likesCount = award.likesCount || 0;
-
-    if (!method || method === 'WEIGHTED_VOTES') {
-      return `Winner with ${weightedPoints} points!`;
-    } else if (method === 'PLAYS') {
-      return `Won ${tiedCount}-way tiebreaker with ${playsCount} plays!`;
-    } else if (method === 'LIKES') {
-      return `Won ${tiedCount}-way tiebreaker with ${likesCount} likes!`;
-    } else if (method === 'SCORE') {
-      return `Won ${tiedCount}-way tiebreaker by highest score!`;
-    } else if (method === 'SENIORITY') {
-      return `Won ${tiedCount}-way tiebreaker as longest-standing artist!`;
-    } else if (method === 'FALLBACK') {
-      return 'Top performer - no votes cast this period';
-    }
+    if (!method || method === 'WEIGHTED_VOTES') return `Winner with ${award.weightedPoints || 0} points!`;
     return 'Winner!';
   };
 
-  // Get yesterday's date as max selectable date
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const maxDate = yesterday.toISOString().split('T')[0];
@@ -339,41 +304,16 @@ const MilestonesPage = () => {
   const winner = results[0];
   const caption = generateCaption();
 
-  // Helper to get determination badge
   const getDeterminationBadge = (method, tiedCount, weightedPoints, playsCount, likesCount) => {
     if (!method) return null;
-    
     switch (method) {
-      case 'WEIGHTED_VOTES':
-        return <span className="badge votes">{weightedPoints} pts</span>;
-      case 'PLAYS':
-        return (
-          <span className="badge tiebreaker plays">
-            {tiedCount}-way tie • {playsCount} plays
-          </span>
-        );
-      case 'LIKES':
-        return (
-          <span className="badge tiebreaker likes">
-            {tiedCount}-way tie • {likesCount} likes
-          </span>
-        );
-      case 'SCORE':
-        return (
-          <span className="badge tiebreaker score">
-            {tiedCount}-way tie • by score
-          </span>
-        );
-      case 'SENIORITY':
-        return (
-          <span className="badge tiebreaker seniority">
-            {tiedCount}-way tie • by seniority
-          </span>
-        );
-      case 'FALLBACK':
-        return <span className="badge fallback">No votes</span>;
-      default:
-        return null;
+      case 'WEIGHTED_VOTES': return <span className="badge votes">{weightedPoints} pts</span>;
+      case 'PLAYS': return <span className="badge tiebreaker plays">{tiedCount}-way tie • {playsCount} plays</span>;
+      case 'LIKES': return <span className="badge tiebreaker likes">{tiedCount}-way tie • {likesCount} likes</span>;
+      case 'SCORE': return <span className="badge tiebreaker score">Tie • by score</span>;
+      case 'SENIORITY': return <span className="badge tiebreaker seniority">Tie • by seniority</span>;
+      case 'FALLBACK': return <span className="badge fallback">No votes</span>;
+      default: return null;
     }
   };
 
@@ -383,40 +323,21 @@ const MilestonesPage = () => {
         <main className="content-wrapper">
           <section className="filter-card">
             <div className="filter-controls">
-              <select 
-                value={location} 
-                onChange={(e) => setLocation(e.target.value)} 
-                className="filter-select"
-              >
+              <select value={location} onChange={(e) => setLocation(e.target.value)} className="filter-select">
                 <option value="downtown-harlem">Downtown Harlem</option>
                 <option value="uptown-harlem">Uptown Harlem</option>
                 <option value="harlem">Harlem (All)</option>
               </select>
-
-              <select 
-                value={genre} 
-                onChange={(e) => setGenre(e.target.value)} 
-                className="filter-select"
-              >
+              <select value={genre} onChange={(e) => setGenre(e.target.value)} className="filter-select">
                 <option value="rap">Rap</option>
                 <option value="rock">Rock</option>
                 <option value="pop">Pop</option>
               </select>
-
-              <select 
-                value={category} 
-                onChange={(e) => setCategory(e.target.value)} 
-                className="filter-select"
-              >
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="filter-select">
                 <option value="artist">Artist</option>
                 <option value="song">Song</option>
               </select>
-
-              <select 
-                value={interval} 
-                onChange={(e) => setInterval(e.target.value)} 
-                className="filter-select"
-              >
+              <select value={interval} onChange={(e) => setInterval(e.target.value)} className="filter-select">
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
@@ -424,19 +345,8 @@ const MilestonesPage = () => {
                 <option value="midterm">Midterm</option>
                 <option value="annual">Annual</option>
               </select>
-
-              <IntervalDatePicker
-                interval={interval}
-                value={selectedDate}
-                onChange={setSelectedDate}
-                maxDate={maxDate}
-              />
-
-              <button 
-                onClick={handleView} 
-                className="view-button" 
-                disabled={isLoading}
-              >
+              <IntervalDatePicker interval={interval} value={selectedDate} onChange={setSelectedDate} maxDate={maxDate}/>
+              <button onClick={handleView} className="view-button" disabled={isLoading}>
                 {isLoading ? 'Loading…' : 'View'}
               </button>
             </div>
@@ -449,47 +359,65 @@ const MilestonesPage = () => {
           )}
 
           {winner && (
-            <section className="winner-highlight">
-              <div className="winner-title">{winner.title}</div>
-              <div className="winner-artist">{winner.artist}</div>
-              <div className="winner-jurisdiction">{winner.jurisdiction}</div>
+            /* Key ensures animation restarts on new winner */
+            <section className="winner-highlight prestige-animate" key={`${winner.id}-${selectedDate}`}>
               
-              {/* Enhanced stats display */}
-              <div className="winner-stats">
-                <div className="stat">
-                  <span className="stat-value">{winner.weightedPoints}</span>
-                  <span className="stat-label">points</span>
+              {/* AMBIENT MODE LAYER: Uses the artwork as a glowing backdrop */}
+              <div 
+                className="ambient-glow" 
+                style={{ backgroundImage: `url(${winner.artwork})` }} 
+              />
+              
+              {/* CONTENT LAYER: The actual card content */}
+              <div className="winner-content-glass">
+                <div className="winner-header-animate">
+                    <div className="winner-title">{winner.title}</div>
+                    <div className="winner-artist">{winner.artist}</div>
+                    <div className="winner-jurisdiction">{winner.jurisdiction}</div>
                 </div>
-                <div className="stat">
-                  <span className="stat-value">{winner.votes}</span>
-                  <span className="stat-label">votes</span>
+
+                <div className="winner-artwork-wrapper">
+                    <img 
+                      src={winner.artwork} 
+                      alt={`${winner.title} artwork`} 
+                      className="winner-artwork" 
+                    />
+                    <div className="artwork-shine"></div>
                 </div>
-                <div className="stat">
-                  <span className="stat-value">{winner.playsCount}</span>
-                  <span className="stat-label">plays</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-value">{winner.likesCount}</span>
-                  <span className="stat-label">likes</span>
+
+                <div className="winner-stats-animate">
+                    <div className="winner-stats">
+                      <div className="stat">
+                        <span className="stat-value">{winner.weightedPoints}</span>
+                        <span className="stat-label">points</span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-value">{winner.votes}</span>
+                        <span className="stat-label">votes</span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-value">{winner.playsCount}</span>
+                        <span className="stat-label">plays</span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-value">{winner.likesCount}</span>
+                        <span className="stat-label">likes</span>
+                      </div>
+                    </div>
+                    
+                    {getDeterminationBadge(
+                      winner.determinationMethod, 
+                      winner.tiedCandidatesCount,
+                      winner.weightedPoints,
+                      winner.playsCount,
+                      winner.likesCount
+                    )}
+                    
+                    {winner.caption && (
+                      <div className="winner-caption">"{winner.caption}"</div>
+                    )}
                 </div>
               </div>
-              
-              {getDeterminationBadge(
-                winner.determinationMethod, 
-                winner.tiedCandidatesCount,
-                winner.weightedPoints,
-                winner.playsCount,
-                winner.likesCount
-              )}
-              
-              <img 
-                src={winner.artwork} 
-                alt={`${winner.title} artwork`} 
-                className="winner-artwork" 
-              />
-              {winner.caption && (
-                <div className="winner-caption">"{winner.caption}"</div>
-              )}
             </section>
           )}
 
@@ -499,33 +427,20 @@ const MilestonesPage = () => {
             ) : error ? (
               <div className="error-message">{error}</div>
             ) : results.length === 0 ? (
-              <div className="empty-message">
-                Select a date and click "View" to see past award winners.
-              </div>
+              <div className="empty-message"></div>
             ) : (
               <ul className="results-list">
-                {results.slice(1).map((item) => (
-                  <li key={item.rank} className="result-item">
+                {results.slice(1).map((item, index) => (
+                  <li key={item.rank} className="result-item" style={{ animationDelay: `${index * 0.1}s` }}>
                     <div className="rank">#{item.rank}</div>
-                    <img 
-                      src={item.artwork} 
-                      alt={`${item.title} artwork`} 
-                      className="item-artwork" 
-                    />
+                    <img src={item.artwork} alt="" className="item-artwork" />
                     <div className="item-info">
                       <div className="item-title">{item.title}</div>
                       <div className="item-artist">{item.artist}</div>
                     </div>
                     <div className="item-stats">
                       <span className="points">{item.weightedPoints} pts</span>
-                      <span className="votes">{item.votes} votes</span>
-                      {getDeterminationBadge(
-                        item.determinationMethod, 
-                        item.tiedCandidatesCount,
-                        item.weightedPoints,
-                        item.playsCount,
-                        item.likesCount
-                      )}
+                      {getDeterminationBadge(item.determinationMethod, item.tiedCandidatesCount, item.weightedPoints, item.playsCount, item.likesCount)}
                     </div>
                   </li>
                 ))}

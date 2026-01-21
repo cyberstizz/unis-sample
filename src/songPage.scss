@@ -10,6 +10,7 @@ $button-hover: #D3D3D3;
 $unis-blue: #163387;
 
 .song-page-container {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -20,7 +21,10 @@ $unis-blue: #163387;
   padding-top: 8%;
   margin-left: 200px;
   justify-self: center;
-  width: 70vw;
+  width: 80vw;
+  overflow: visible;
+  overflow-x: visible;
+  overflow: hidden;
 }
 
 .main-content-card {
@@ -376,9 +380,11 @@ $unis-blue: #163387;
 // Mobile adjustments
 @media (max-width: 600px) {
   .song-page-container{
+    box-sizing: border-box;
     margin-left: 1px;
     width: 100%;
     padding-top: 30%;
+    overflow-x: hidden !important;
   }
   
   .main-content-card {

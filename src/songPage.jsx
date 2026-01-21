@@ -161,6 +161,8 @@ const SongPage = () => {
     setSelectedNominee({
       id: song.id,
       name: song.title,
+      type: 'song',
+      jurisdiction: song.jurisdiction 
     });
     setShowVotingWizard(true);
   };
@@ -168,18 +170,24 @@ const SongPage = () => {
   const handlePlay = async () => {
     playMedia(
       { 
+        id: song.id,               
+        songId: song.id,          
         type: 'song', 
         url: song.url, 
         title: song.title, 
         artist: song.artist, 
-        artwork: song.artwork 
+        artwork: song.artwork,
+        jurisdiction: song.jurisdiction
       },
       [{ 
+        id: song.id,               
+        songId: song.id,           
         type: 'song', 
         url: song.url, 
         title: song.title, 
         artist: song.artist, 
-        artwork: song.artwork 
+        artwork: song.artwork,
+        jurisdiction: song.jurisdiction 
       }]
     );
 

@@ -45,10 +45,12 @@ export const PlayerProvider = ({ children }) => {
         playlistId: pl.playlistId,
         name: pl.name,
         tracks: pl.tracks.map(track => ({
+          ...track,
           id: track.songId,
           songId: track.songId,
           playlistItemId: track.playlistItemId,
           title: track.title,
+          jurisdiction: track.jurisdiction,
           artist: track.artistName,
           artistName: track.artistName,
           artworkUrl: track.artworkUrl,

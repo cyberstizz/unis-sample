@@ -1,35 +1,19 @@
 export const GENRE_IDS = {
   'rap': '00000000-0000-0000-0000-000000000101',
-  'rap-hiphop': '00000000-0000-0000-0000-000000000101',  // Alias
-  'hip-hop': '00000000-0000-0000-0000-000000000101',     // Alias
+  'rap-hiphop': '00000000-0000-0000-0000-000000000101',  
+  'hip-hop': '00000000-0000-0000-0000-000000000101',     
   'rock': '00000000-0000-0000-0000-000000000102',
   'pop': '00000000-0000-0000-0000-000000000103',
 };
 
-// ============================================================================
-// JURISDICTION IDs
-// ============================================================================
-// At launch: Only Harlem and its two children are active
-// 
-// FIXED: Changed 'harlem-wide' to 'harlem' to match dropdown value
-// ============================================================================
+
 export const JURISDICTION_IDS = {
-  // Child jurisdictions (depth 7)
   'uptown-harlem': '52740de0-e4e9-4c9e-b68e-1e170f6788c4',
   'downtown-harlem': '4b09eaa2-03bc-4778-b7c2-db8b42c9e732',
-  
-  // Parent jurisdiction (depth 6) - acts as "sitewide" at launch
   'harlem': '1cf6ceb1-aae6-4113-98c0-d9fe8ad8b5e3',
-  
-  // Alias for backward compatibility (if any old code uses 'harlem-wide')
-  'harlem-wide': '1cf6ceb1-aae6-4113-98c0-d9fe8ad8b5e3',
 };
 
-// ============================================================================
-// VOTING INTERVAL IDs
-// ============================================================================
-// FIXED: Added 'midterm' which was missing
-// ============================================================================
+
 export const INTERVAL_IDS = {
   'daily': '00000000-0000-0000-0000-000000000201',
   'weekly': '00000000-0000-0000-0000-000000000202',

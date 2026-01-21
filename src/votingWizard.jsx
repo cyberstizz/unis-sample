@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import { apiCall } from './components/axiosInstance';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
@@ -24,19 +24,29 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     selectedGenre: nominee?.genreKey || filters?.selectedGenre || 'rap-hiphop',
     selectedType: nominee?.type || filters?.selectedType || 'artist',
     selectedInterval: filters?.selectedInterval || 'daily',
-    selectedJurisdiction: filters?.selectedJurisdiction || 'uptown-harlem'
+    selectedJurisdiction: '' // Will set to nominee's home below
   });
   const [artistNameForward, setArtistNameForward] = useState('');
   const [artistNameBackward, setArtistNameBackward] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [eligibleJurisdictionIds, setEligibleJurisdictionIds] = useState([]);
+  const [isFetchingJurisdictions, setIsFetchingJurisdictions] = useState(false);
 
   // status: 'idle', 'success', 'duplicate', 'ineligible', 'network', 'error'
   const [voteResult, setVoteResult] = useState({ status: 'idle', message: '', details: '' });
 
   const selectedNominee = nominee;
-  const reversedNomineeName = selectedNominee ? selectedNominee.name.split('').reverse().join('') : '';
+  
+  // Memoized reversed name for accuracy in Step 3
+  const reversedNomineeName = useMemo(() => 
+    selectedNominee ? selectedNominee.name.split('').reverse().join('') : '', 
+    [selectedNominee]
+  );
 
-  // --- RESET STATE ON OPEN ---
+  // Helper to get key from ID
+  const getKeyFromId = (id) => Object.keys(JURISDICTION_IDS).find(key => JURISDICTION_IDS[key] === id);
+
+  // --- RESET STATE ON OPEN + DEFAULT TO NOMINEE'S HOME JURISDICTION ---
   useEffect(() => {
     if (show) {
       setStep(1);
@@ -44,8 +54,129 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       setArtistNameForward('');
       setArtistNameBackward('');
       setSubmitting(false);
+      setEligibleJurisdictionIds([]);
+      const homeKey = getKeyFromId(nominee?.jurisdiction?.jurisdictionId);
+      setCurrentFilters(prev => ({ 
+        ...prev, 
+        selectedJurisdiction: homeKey || filters?.selectedJurisdiction || 'harlem' 
+      }));
     }
-  }, [show]);
+  }, [show, nominee, filters]);
+
+  // --- FETCH ELIGIBLE JURISDICTIONS (BREADCRUMB) ---
+  useEffect(() => {
+    if (!show || !nominee) return;
+
+    const fetchEligibleJurisdictions = async () => {
+      setIsFetchingJurisdictions(true);
+      
+      // Get jurisdiction ID - handle both object and string cases
+      let nomineeJurisdictionId = null;
+      
+      if (nominee.jurisdiction) {
+        if (typeof nominee.jurisdiction === 'object' && nominee.jurisdiction.jurisdictionId) {
+          // Case 1: Full jurisdiction object (ideal)
+          nomineeJurisdictionId = nominee.jurisdiction.jurisdictionId;
+        } else if (typeof nominee.jurisdiction === 'string') {
+          // Case 2: Just a jurisdiction name string - look up the ID
+          const jurisdictionName = nominee.jurisdiction.toLowerCase().replace(/\s+/g, '-');
+          nomineeJurisdictionId = JURISDICTION_IDS[jurisdictionName];
+        }
+      }
+      
+      // If we don't have jurisdiction from nominee, fetch it from backend
+      if (!nomineeJurisdictionId && nominee.id && nominee.type) {
+        try {
+          console.log('Jurisdiction missing from nominee, fetching from backend...');
+          const endpoint = nominee.type === 'artist' 
+            ? `/v1/users/${nominee.id}`
+            : `/v1/media/song/${nominee.id}`;
+          
+          const response = await apiCall({ method: 'get', url: endpoint });
+          const fetchedJurisdiction = response.data.jurisdiction;
+          
+          if (fetchedJurisdiction?.jurisdictionId) {
+            nomineeJurisdictionId = fetchedJurisdiction.jurisdictionId;
+            console.log('Fetched jurisdiction from backend:', fetchedJurisdiction.name);
+          }
+        } catch (err) {
+          console.error('Failed to fetch nominee details for jurisdiction:', err);
+        }
+      }
+      
+      // If we still don't have an ID, use fallback hardcoded logic
+      if (!nomineeJurisdictionId) {
+        console.warn('Could not determine nominee jurisdiction ID, using hardcoded fallback');
+        setEligibleJurisdictionIds(Object.values(JURISDICTION_IDS));
+        setIsFetchingJurisdictions(false);
+        return;
+      }
+
+      try {
+        const response = await apiCall({
+          method: 'get',
+          url: `/v1/jurisdictions/${nomineeJurisdictionId}/breadcrumb`
+        });
+        
+        // Extract jurisdiction IDs from breadcrumb response
+        const eligibleIds = response.data
+          .filter(j => j.votingEnabled !== false)
+          .map(j => j.jurisdictionId);
+        
+        setEligibleJurisdictionIds(eligibleIds);
+        
+        // Auto-correct if current selection is invalid for this nominee
+        const currentId = JURISDICTION_IDS[currentFilters.selectedJurisdiction];
+        if (currentId && !eligibleIds.includes(currentId)) {
+          const homeKey = getKeyFromId(nomineeJurisdictionId);
+          if (homeKey) {
+            setCurrentFilters(prev => ({ ...prev, selectedJurisdiction: homeKey }));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch eligible jurisdictions:', err);
+        
+        // Fallback: Use nominee's home jurisdiction + parent (Harlem) for the 3 active jurisdictions
+        const homeKey = getKeyFromId(nomineeJurisdictionId);
+        let fallbackEligibleIds = [];
+        
+        if (homeKey === 'downtown-harlem' || homeKey === 'uptown-harlem') {
+          fallbackEligibleIds = [
+            JURISDICTION_IDS[homeKey], 
+            JURISDICTION_IDS['harlem']
+          ];
+        } else if (homeKey === 'harlem') {
+          fallbackEligibleIds = [JURISDICTION_IDS['harlem']];
+        } else {
+          // Unknown jurisdiction - show all
+          fallbackEligibleIds = Object.values(JURISDICTION_IDS);
+        }
+        
+        setEligibleJurisdictionIds(fallbackEligibleIds);
+      } finally {
+        setIsFetchingJurisdictions(false);
+      }
+    };
+    
+    fetchEligibleJurisdictions();
+  }, [show, nominee]);
+
+  // Helper to check if a jurisdiction option should be rendered
+  const isJurisdictionEligible = (optionKey) => {
+    // If we haven't fetched yet, don't show anything (prevents flash of wrong options)
+    if (isFetchingJurisdictions) return false;
+    
+    // If fetch completed but got no results, fallback to showing all (shouldn't happen but safe)
+    if (!isFetchingJurisdictions && eligibleJurisdictionIds.length === 0) {
+      console.warn('No eligible jurisdictions found, showing all as fallback');
+      return true;
+    }
+    
+    const jurisdictionId = JURISDICTION_IDS[optionKey];
+    const isEligible = eligibleJurisdictionIds.includes(jurisdictionId);
+    
+    return isEligible;
+  };
 
   // --- FIREWORKS ON SUCCESS ---
   useEffect(() => {
@@ -79,15 +210,14 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     if (step < 3) setStep(step + 1);
   };
 
-  // Sync filters if nominee changes
-  React.useEffect(() => {
+  // Sync filters if nominee changes (genre/type only, jurisdiction handled above)
+  useEffect(() => {
     if (nominee) {
       setCurrentFilters(prev => ({
         ...prev,
         selectedGenre: nominee.genreKey || filters?.selectedGenre || 'rap-hiphop',
         selectedType: nominee.type || filters?.selectedType || 'artist',
         selectedInterval: prev.selectedInterval || filters?.selectedInterval || 'daily',
-        selectedJurisdiction: prev.selectedJurisdiction || filters?.selectedJurisdiction || 'uptown-harlem'
       }));
     }
   }, [nominee, filters]);
@@ -119,36 +249,27 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         voteDate: new Date().toISOString().split('T')[0],
       };
 
-      await apiCall({ method: 'post', url: '/v1/vote/submit', data: voteData });
 
-      setVoteResult({ status: 'success', message: 'Vote Recorded' }); // Simpler header, details below
-      
-      setTimeout(() => {
-         // Optional callback
-      }, 2500);
+      console.log('=== VOTE DATA BEING SENT ===');
+      console.log('Nominee jurisdiction ID:', nominee?.jurisdiction?.jurisdictionId);
+      console.log('Selected jurisdiction key:', currentFilters.selectedJurisdiction);
+      console.log('Mapped jurisdiction UUID:', JURISDICTION_IDS[currentFilters.selectedJurisdiction]);
+      console.log('Full voteData:', voteData);
+
+      await apiCall({ method: 'post', url: '/v1/vote/submit', data: voteData });
+      setVoteResult({ status: 'success', message: 'Vote Recorded' });
 
     } catch (err) {
       console.error('Vote submission failed:', err);
-      let errorMessage = '';
-      if (err.response && err.response.data) {
-          errorMessage = typeof err.response.data === 'string' 
-              ? err.response.data 
-              : err.response.data.message || JSON.stringify(err.response.data);
-      } else {
-          errorMessage = err.message || 'Unknown error';
-      }
-      
-      const lowerMsg = errorMessage.toLowerCase();
+      let errorMessage = err.response?.data?.message || err.message || 'Unknown error';
       const status = err.response?.status;
 
-      if (status === 409 || lowerMsg.includes('already cast')) {
+      if (status === 409) {
         setVoteResult({ status: 'duplicate', message: 'Already Voted', details: 'You have already cast a vote in this category for this interval.' });
-      } else if (status === 403 || lowerMsg.includes('not eligible') || lowerMsg.includes('not enabled')) {
+      } else if (status === 403) {
         setVoteResult({ status: 'ineligible', message: 'Vote Rejected', details: errorMessage });
-      } else if (status === 400) {
-         setVoteResult({ status: 'error', message: 'Invalid Request', details: errorMessage });
       } else {
-        setVoteResult({ status: 'network', message: 'Connection Failed', details: 'We could not reach the server. Please try again later.' });
+        setVoteResult({ status: 'network', message: 'Connection Failed', details: 'We could not reach the server.' });
       }
     } finally {
       setSubmitting(false);
@@ -164,7 +285,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     
     switch(status) {
       case 'success':
-        iconColor = "#163387"; // Unis Blue for Success Icon
+        iconColor = "#163387";
         IconPath = <motion.path d="M20 6L9 17l-5-5" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" variants={iconVariants} initial="hidden" animate="visible" />;
         break;
       case 'duplicate':
@@ -180,15 +301,11 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
             </motion.g>
         );
         break;
-      case 'network':
-      case 'error':
+      default:
         iconColor = "#F44336"; 
         IconPath = <motion.path d="M18 6L6 18M6 6l12 12" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" variants={iconVariants} initial="hidden" animate="visible" />;
-        break;
-      default: return null;
     }
 
-    // Helper to format text (e.g. "uptown-harlem" -> "Uptown Harlem")
     const formatText = (str) => str ? str.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
 
     return (
@@ -203,7 +320,6 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
         <h2 className="result-header" style={{ color: status === 'success' ? '#163387' : iconColor }}>{message}</h2>
         
-        {/* NEW DETAILS SECTION */}
         {status === 'success' ? (
             <div className="vote-receipt">
                 <p className="receipt-label">CONFIRMED NOMINEE</p>
@@ -270,10 +386,24 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
                 <option value="annual">Year</option>
               </select>
               <label>Jurisdiction</label>
-              <select value={currentFilters.selectedJurisdiction} onChange={(e) => setCurrentFilters({...currentFilters, selectedJurisdiction: e.target.value})} className="input-field">
-                <option value="uptown-harlem">Uptown Harlem</option>
-                <option value="downtown-harlem">Downtown Harlem</option>
-                <option value="harlem-wide">Harlem-Wide</option>
+              <select 
+                value={currentFilters.selectedJurisdiction} 
+                onChange={(e) => setCurrentFilters({...currentFilters, selectedJurisdiction: e.target.value})} 
+                className="input-field"
+                disabled={isFetchingJurisdictions}
+              >
+                {isFetchingJurisdictions ? (
+                  <option>Loading jurisdictions...</option>
+                ) : (
+                  // FIXED: Filter first, then map to avoid rendering false values
+                  Object.keys(JURISDICTION_IDS)
+                    .filter(key => isJurisdictionEligible(key))
+                    .map(key => (
+                      <option key={key} value={key}>
+                        {key.replace(/-/g, ' ').toUpperCase()}
+                      </option>
+                    ))
+                )}
               </select>
             </div>
           </div>
@@ -298,12 +428,26 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
             <p className="wizard-intro">To prevent errors, please confirm by typing the name forward and backward.</p>
             <form onSubmit={handleConfirmVote}>
               <div className="form-group">
-                <label>Name (Forward)</label>
-                <input type="text" value={artistNameForward} onChange={(e) => setArtistNameForward(e.target.value)} placeholder={selectedNominee.name} disabled={submitting} />
+                <label>Name (Forward) — <strong>{selectedNominee.name}</strong></label>
+                <input 
+                  type="text" 
+                  value={artistNameForward} 
+                  onChange={(e) => setArtistNameForward(e.target.value)} 
+                  placeholder="Type the name forward..." 
+                  disabled={submitting} 
+                  autoComplete="off"
+                />
               </div>
               <div className="form-group">
-                <label>Name (Backward)</label>
-                <input type="text" value={artistNameBackward} onChange={(e) => setArtistNameBackward(e.target.value)} placeholder={reversedNomineeName} disabled={submitting} />
+                <label>(Backward) — <span style={{color: "blue" }}>{reversedNomineeName}</span></label>
+                <input 
+                  type="text" 
+                  value={artistNameBackward} 
+                  onChange={(e) => setArtistNameBackward(e.target.value)} 
+                  placeholder="Type the name backward..."
+                  disabled={submitting} 
+                  autoComplete="off"
+                />
               </div>
               <button type="submit" className="submit-vote-button" disabled={submitting}>{submitting ? 'Submitting...' : 'Confirm Vote'}</button>
             </form>
@@ -319,7 +463,6 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     <div className="voting-wizard-overlay" onClick={onClose}>
         <AnimatePresence>
             <motion.div 
-                // *** CHANGED: Added dynamic class based on status ***
                 className={`voting-wizard ${voteResult.status === 'success' ? 'success-glow' : ''}`}
                 onClick={e => e.stopPropagation()}
                 variants={modalVariants}

@@ -4,7 +4,7 @@ import { PlayerContext } from './context/playercontext';
 import { Heart, Headphones, Vote, ChevronUp, ChevronDown } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
-import VotingWizard from './VotingWizard'; // <--- 1. Import the VotingWizard
+import VotingWizard from './VotingWizard'; 
 import UnisPlayButton from './UnisPlayButton';
 import UnisPauseButton from './UnisPauseButton';
 import { apiCall } from './components/axiosInstance';
@@ -30,6 +30,7 @@ const Player = () => {
   const [duration, setDuration] = useState(0); 
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [specificVoteData, setSpecificVoteData] = useState(null);
   
   // Wizards State
   const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
@@ -49,6 +50,7 @@ const Player = () => {
       id: currentMedia.id || currentMedia.songId,
       name: currentMedia.title, // The "Name" being voted on is the Song Title
       type: 'song', // Explicitly set type to song
+      jurisdiction: currentMedia.jurisdiction, 
       genreKey: currentMedia.genreKey || 'rap-hiphop', // Fallback if genre missing
       artist: currentMedia.artist
     };
@@ -193,11 +195,77 @@ const Player = () => {
     }
   };
 
-  // --- NEW HANDLER: OPEN VOTE WIZARD ---
-  const handleVoteClick = (e) => {
+  const handleVoteClick = async (e) => {
     e.stopPropagation();
     if (!userId) return alert('Please log in to vote');
-    setShowVoteWizard(true);
+
+    // 1. DATA RECOVERY: Try to find ID from currentMedia, or fallback to songId
+    const safeId = currentMedia.id || currentMedia.songId;
+    
+    // 2. NAME RECOVERY: Ensure we have a name to prevent the Wizard crash
+    const safeTitle = currentMedia.title || currentMedia.name || "Unknown Song";
+    const safeArtist = currentMedia.artist || currentMedia.artistName || "Unknown Artist";
+
+    // Stop if we truly have no ID (Prevents the empty/broken wizard open)
+    if (!safeId) {
+      console.error("Player Error: Current song has no ID. Cannot fetch voting details.");
+      return alert("Cannot vote on this track (Missing ID). Try playing it from a Playlist.");
+    }
+
+    setSpecificVoteData(null);
+
+    try {
+      // 3. FORCE FRESH FETCH (The "Cache" Fix)
+      // We use useCache: false to ensure we get the full "Leaf" jurisdiction (Uptown),
+      // not a cached "Parent" version (Harlem).
+      const res = await apiCall({ 
+        method: 'get', 
+        url: `/v1/media/song/${safeId}`,
+        useCache: false 
+      });
+      
+      const songData = res.data;
+
+      // 4. STRING EXTRACTION (The "SongPage" Logic)
+      // Extract the name string exactly like SongPage does.
+      let jurisdictionName = 'Harlem'; 
+      
+      if (songData.jurisdiction) {
+        if (typeof songData.jurisdiction === 'string') {
+          jurisdictionName = songData.jurisdiction;
+        } else if (songData.jurisdiction.name) {
+          jurisdictionName = songData.jurisdiction.name;
+        }
+      }
+
+      console.log("Voting Jurisdiction Resolved:", jurisdictionName);
+
+      // 5. PASS DATA
+      setSpecificVoteData({
+        nominee: {
+          id: safeId,
+          name: safeTitle,
+          type: 'song',
+          jurisdiction: jurisdictionName, // e.g. "Uptown Harlem"
+          genreKey: songData.genre?.name || 'rap-hiphop',
+          artist: safeArtist
+        },
+        filters: {
+          selectedType: 'song',
+          selectedGenre: (songData.genre?.name || 'rap-hiphop').toLowerCase().replace('/', '-'),
+          selectedInterval: 'daily',
+          // Slugify: "Uptown Harlem" -> "uptown-harlem"
+          selectedJurisdiction: jurisdictionName.toLowerCase().replace(/\s+/g, '-')
+        }
+      });
+      
+      setShowVoteWizard(true);
+
+    } catch (err) {
+      console.error("Vote fetch error:", err);
+      // fallback safely
+      setShowVoteWizard(true);
+    }
   };
 
   const handleDownload = async (e) => {
@@ -360,15 +428,16 @@ const Player = () => {
       <PlaylistWizard open={showPlaylistWizard} onClose={() => setShowPlaylistWizard(false)} selectedTrack={currentMedia} />
       <PlaylistManager open={showPlaylistManager} onClose={closePlaylistManager} />
       
-      {/* --- VOTING WIZARD INTEGRATION --- */}
-      {/* We pass 'filters' to explicitly set the category/type to 'song' */}
       <VotingWizard 
         show={showVoteWizard} 
-        onClose={() => setShowVoteWizard(false)} 
+        onClose={() => {
+          setShowVoteWizard(false);
+          setSpecificVoteData(null); // Reset on close
+        }} 
         onVoteSuccess={(id) => setShowVoteWizard(false)}
-        nominee={voteNominee}
+        nominee={specificVoteData?.nominee || voteNominee}
         userId={userId}
-        filters={{ selectedType: 'song' }} 
+        filters={specificVoteData?.filters || { selectedType: 'song' }} 
       />
     </div>
   );

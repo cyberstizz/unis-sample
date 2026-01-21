@@ -181,6 +181,8 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     setSelectedNominee({
       id: artistId,
       name: artist.username,
+      type: 'artist',
+      jurisdiction: artist.jurisdiction 
     });
     setShowVotingWizard(true);
   };

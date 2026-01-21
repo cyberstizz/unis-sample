@@ -83,6 +83,37 @@ transition: border-color 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
   }
 }
 
+.ghost-input-container {
+  position: relative;
+  width: 100%;
+  background: #f9f9f9;
+  border-radius: 4px;
+
+  .ghost-text {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ccc; // Light gray so it looks like a guide
+    pointer-events: none; // User clicks "through" it to the input
+    font-family: inherit;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .real-input {
+    position: relative;
+    background: transparent !important; // Must be transparent to see ghost text
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    z-index: 2;
+  }
+}
+
 // --- NEW RECEIPT / DETAILS STYLE ---
 .vote-receipt {
   background: rgba(255, 255, 255, 0.03);
