@@ -301,6 +301,8 @@ const MilestonesPage = () => {
   yesterday.setDate(yesterday.getDate() - 1);
   const maxDate = yesterday.toISOString().split('T')[0];
 
+  const minDate = '2025-10-26';
+
   const winner = results[0];
   const caption = generateCaption();
 
@@ -345,7 +347,13 @@ const MilestonesPage = () => {
                 <option value="midterm">Midterm</option>
                 <option value="annual">Annual</option>
               </select>
-              <IntervalDatePicker interval={interval} value={selectedDate} onChange={setSelectedDate} maxDate={maxDate}/>
+              <IntervalDatePicker 
+              interval={interval} 
+              value={selectedDate} 
+              onChange={setSelectedDate} 
+              maxDate={maxDate}
+              minDate={minDate}
+              />
               <button onClick={handleView} className="view-button" disabled={isLoading}>
                 {isLoading ? 'Loading…' : 'View'}
               </button>

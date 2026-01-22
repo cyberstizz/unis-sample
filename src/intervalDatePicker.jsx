@@ -1,28 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import './IntervalDatePicker.scss';
 
-/**
- * Adaptive date picker that changes UI based on selected interval type.
- * - Daily: Standard date picker
- * - Weekly: Date picker with week highlighting
- * - Monthly: Month/Year selector
- * - Quarterly: Quarter/Year selector
- * - Midterm: Half-year selector (H1/H2)
- * - Annual: Year selector only
- */
-const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
+const IntervalDatePicker = ({ interval, value, onChange, maxDate, minDate }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [showCalendar, setShowCalendar] = useState(false);
 
-  // Parse maxDate
+  // 1. Parse BOTH dates safely
   const maxDateObj = maxDate ? new Date(maxDate + 'T12:00:00') : new Date();
+  const minDateObj = minDate ? new Date(minDate + 'T12:00:00') : new Date('1900-01-01');
+
   const maxYear = maxDateObj.getFullYear();
   const maxMonth = maxDateObj.getMonth();
+  
+  const minYear = minDateObj.getFullYear();
+  const minMonth = minDateObj.getMonth();
 
-  // Generate year options (last 5 years)
+  // 2. Generate years (Respecting the Min Date)
   const years = [];
-  for (let y = maxYear; y >= maxYear - 5; y--) {
+  // Only go back as far as the minYear allow
+  for (let y = maxYear; y >= minYear; y--) {
     years.push(y);
   }
 
@@ -43,7 +40,6 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
     { label: 'H2 (Jul-Dec)', value: 2, startMonth: 6, endMonth: 11 },
   ];
 
-  // Get the Monday of a given week
   const getMonday = (date) => {
     const d = new Date(date);
     const day = d.getDay();
@@ -51,7 +47,6 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
     return new Date(d.setDate(diff));
   };
 
-  // Get the Sunday of a given week
   const getSunday = (date) => {
     const monday = getMonday(date);
     const sunday = new Date(monday);
@@ -59,7 +54,6 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
     return sunday;
   };
 
-  // Format date as YYYY-MM-DD
   const formatDate = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -67,23 +61,19 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // Get display text based on interval and selection
   const getDisplayText = () => {
     if (!value) return 'Select...';
-
     const [year, month, day] = value.split('-').map(Number);
     const date = new Date(year, month - 1, day);
 
     switch (interval) {
-      case 'daily':
-        return value;
+      case 'daily': return value;
       case 'weekly': {
         const monday = getMonday(date);
         const sunday = getSunday(date);
         return `Week of ${months[monday.getMonth()]} ${monday.getDate()} - ${sunday.getDate()}, ${monday.getFullYear()}`;
       }
-      case 'monthly':
-        return `${months[month - 1]} ${year}`;
+      case 'monthly': return `${months[month - 1]} ${year}`;
       case 'quarterly': {
         const q = Math.floor((month - 1) / 3) + 1;
         return `Q${q} ${year}`;
@@ -92,53 +82,59 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
         const h = month <= 6 ? 1 : 2;
         return `H${h} ${year} (${h === 1 ? 'Jan-Jun' : 'Jul-Dec'})`;
       }
-      case 'annual':
-        return `${year}`;
-      default:
-        return value;
+      case 'annual': return `${year}`;
+      default: return value;
     }
   };
 
-  // Handle daily/weekly date selection
+  // 3. Logic: Check if date is within valid range (Min - Max)
+  const isSelectable = (date) => {
+    // Reset times to midnight for fair comparison
+    const d = new Date(date); d.setHours(0,0,0,0);
+    const max = new Date(maxDateObj); max.setHours(0,0,0,0);
+    const min = new Date(minDateObj); min.setHours(0,0,0,0);
+    
+    return d <= max && d >= min;
+  };
+
   const handleDateSelect = (date) => {
-    if (date > maxDateObj) return;
+    if (!isSelectable(date)) return;
     onChange(formatDate(date));
-    if (interval === 'daily') {
-      setShowCalendar(false);
-    }
+    if (interval === 'daily') setShowCalendar(false);
   };
 
-  // Handle month selection
   const handleMonthSelect = (monthIndex) => {
+    // Max Check
     if (selectedYear === maxYear && monthIndex > maxMonth) return;
+    // Min Check
+    if (selectedYear === minYear && monthIndex < minMonth) return;
+
     const lastDay = new Date(selectedYear, monthIndex + 1, 0).getDate();
-    const day = Math.min(lastDay, maxDateObj.getDate());
-    const selectedDate = new Date(selectedYear, monthIndex, day);
-    if (selectedDate <= maxDateObj) {
-      onChange(formatDate(new Date(selectedYear, monthIndex, lastDay)));
-      setShowCalendar(false);
-    }
+    const selectedDate = new Date(selectedYear, monthIndex, lastDay);
+    onChange(formatDate(selectedDate));
+    setShowCalendar(false);
   };
 
-  // Handle quarter selection
   const handleQuarterSelect = (quarter) => {
-    const endMonth = quarter.endMonth;
-    if (selectedYear === maxYear && endMonth > maxMonth) return;
-    const lastDay = new Date(selectedYear, endMonth + 1, 0).getDate();
-    onChange(formatDate(new Date(selectedYear, endMonth, lastDay)));
+    // Max Check
+    if (selectedYear === maxYear && quarter.endMonth > maxMonth) return;
+    // Min Check (If the quarter ENDS before the min date starts, disable it)
+    if (selectedYear === minYear && quarter.endMonth < minMonth) return;
+
+    const lastDay = new Date(selectedYear, quarter.endMonth + 1, 0).getDate();
+    onChange(formatDate(new Date(selectedYear, quarter.endMonth, lastDay)));
     setShowCalendar(false);
   };
 
-  // Handle half-year selection
   const handleHalfSelect = (half) => {
-    const endMonth = half.endMonth;
-    if (selectedYear === maxYear && endMonth > maxMonth) return;
-    const lastDay = new Date(selectedYear, endMonth + 1, 0).getDate();
-    onChange(formatDate(new Date(selectedYear, endMonth, lastDay)));
+    if (selectedYear === maxYear && half.endMonth > maxMonth) return;
+    if (selectedYear === minYear && half.endMonth < minMonth) return;
+
+    const lastDay = new Date(selectedYear, half.endMonth + 1, 0).getDate();
+    onChange(formatDate(new Date(selectedYear, half.endMonth, lastDay)));
     setShowCalendar(false);
   };
 
-  // Handle year selection
   const handleYearSelect = (year) => {
     if (interval === 'annual') {
       onChange(formatDate(new Date(year, 11, 31)));
@@ -148,29 +144,18 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
     }
   };
 
-  // Generate calendar days for weekly view
   const generateCalendarDays = () => {
     const firstDay = new Date(selectedYear, selectedMonth, 1);
     const lastDay = new Date(selectedYear, selectedMonth + 1, 0);
     const startDay = firstDay.getDay();
     const daysInMonth = lastDay.getDate();
-
     const days = [];
     
-    // Empty cells before first day
-    for (let i = 0; i < (startDay === 0 ? 6 : startDay - 1); i++) {
-      days.push(null);
-    }
-    
-    // Days of month
-    for (let d = 1; d <= daysInMonth; d++) {
-      days.push(new Date(selectedYear, selectedMonth, d));
-    }
-
+    for (let i = 0; i < (startDay === 0 ? 6 : startDay - 1); i++) days.push(null);
+    for (let d = 1; d <= daysInMonth; d++) days.push(new Date(selectedYear, selectedMonth, d));
     return days;
   };
 
-  // Check if a date is in the selected week
   const isInSelectedWeek = (date) => {
     if (!value || !date) return false;
     const [year, month, day] = value.split('-').map(Number);
@@ -180,12 +165,6 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
     return date >= selectedMonday && date <= selectedSunday;
   };
 
-  // Check if date is selectable (not in future)
-  const isSelectable = (date) => {
-    return date <= maxDateObj;
-  };
-
-  // Render the appropriate picker based on interval
   const renderPicker = () => {
     switch (interval) {
       case 'daily':
@@ -195,6 +174,7 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
             value={value}
             onChange={(e) => onChange(e.target.value)}
             max={maxDate}
+            min={minDate} // FIXED: Correct JSX Syntax
             className="date-input"
           />
         );
@@ -202,37 +182,34 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
       case 'weekly':
         return (
           <div className="custom-picker">
-            <button 
-              className="picker-toggle"
-              onClick={() => setShowCalendar(!showCalendar)}
-            >
+            <button className="picker-toggle" onClick={() => setShowCalendar(!showCalendar)}>
               {getDisplayText()}
             </button>
             {showCalendar && (
               <div className="picker-dropdown weekly-picker">
                 <div className="picker-header">
                   <button onClick={() => {
-                    if (selectedMonth === 0) {
-                      setSelectedMonth(11);
-                      setSelectedYear(selectedYear - 1);
-                    } else {
-                      setSelectedMonth(selectedMonth - 1);
-                    }
-                  }}>←</button>
+                     // Logic to go back a month
+                     if (selectedMonth === 0) {
+                         if (selectedYear > minYear) { setSelectedMonth(11); setSelectedYear(selectedYear - 1); }
+                     } else {
+                         setSelectedMonth(selectedMonth - 1);
+                     }
+                  }} disabled={selectedYear === minYear && selectedMonth <= minMonth}>←</button>
+                  
                   <span>{months[selectedMonth]} {selectedYear}</span>
+                  
                   <button onClick={() => {
-                    if (selectedMonth === 11) {
-                      setSelectedMonth(0);
-                      setSelectedYear(selectedYear + 1);
-                    } else {
-                      setSelectedMonth(selectedMonth + 1);
-                    }
-                  }}>→</button>
+                     if (selectedMonth === 11) {
+                         if (selectedYear < maxYear) { setSelectedMonth(0); setSelectedYear(selectedYear + 1); }
+                     } else {
+                         setSelectedMonth(selectedMonth + 1);
+                     }
+                  }} disabled={selectedYear === maxYear && selectedMonth >= maxMonth}>→</button>
                 </div>
+                
                 <div className="weekday-headers">
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
-                    <div key={d} className="weekday-header">{d}</div>
-                  ))}
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <div key={d} className="weekday-header">{d}</div>)}
                 </div>
                 <div className="calendar-grid">
                   {generateCalendarDays().map((date, idx) => (
@@ -245,7 +222,7 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
                     </div>
                   ))}
                 </div>
-                <div className="week-hint">Click any day to select its week (Mon-Sun)</div>
+                <div className="week-hint">Click any day to select its week</div>
               </div>
             )}
           </div>
@@ -254,30 +231,25 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
       case 'monthly':
         return (
           <div className="custom-picker">
-            <button 
-              className="picker-toggle"
-              onClick={() => setShowCalendar(!showCalendar)}
-            >
-              {getDisplayText()}
-            </button>
+            <button className="picker-toggle" onClick={() => setShowCalendar(!showCalendar)}>{getDisplayText()}</button>
             {showCalendar && (
               <div className="picker-dropdown month-picker">
                 <div className="picker-header">
-                  <button onClick={() => setSelectedYear(selectedYear - 1)}>←</button>
+                  <button onClick={() => setSelectedYear(selectedYear - 1)} disabled={selectedYear <= minYear}>←</button>
                   <span>{selectedYear}</span>
-                  <button onClick={() => setSelectedYear(selectedYear + 1)}>→</button>
+                  <button onClick={() => setSelectedYear(selectedYear + 1)} disabled={selectedYear >= maxYear}>→</button>
                 </div>
                 <div className="month-grid">
-                  {months.map((month, idx) => (
-                    <button
-                      key={month}
-                      className={`month-btn ${selectedYear === maxYear && idx > maxMonth ? 'disabled' : ''}`}
-                      onClick={() => handleMonthSelect(idx)}
-                      disabled={selectedYear === maxYear && idx > maxMonth}
-                    >
-                      {month.slice(0, 3)}
-                    </button>
-                  ))}
+                  {months.map((month, idx) => {
+                    const isTooEarly = selectedYear === minYear && idx < minMonth;
+                    const isTooLate = selectedYear === maxYear && idx > maxMonth;
+                    const disabled = isTooEarly || isTooLate;
+                    return (
+                      <button key={month} className={`month-btn ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleMonthSelect(idx)} disabled={disabled}>
+                        {month.slice(0, 3)}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -287,29 +259,21 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
       case 'quarterly':
         return (
           <div className="custom-picker">
-            <button 
-              className="picker-toggle"
-              onClick={() => setShowCalendar(!showCalendar)}
-            >
-              {getDisplayText()}
-            </button>
+            <button className="picker-toggle" onClick={() => setShowCalendar(!showCalendar)}>{getDisplayText()}</button>
             {showCalendar && (
               <div className="picker-dropdown quarter-picker">
                 <div className="picker-header">
-                  <button onClick={() => setSelectedYear(selectedYear - 1)}>←</button>
+                  <button onClick={() => setSelectedYear(selectedYear - 1)} disabled={selectedYear <= minYear}>←</button>
                   <span>{selectedYear}</span>
-                  <button onClick={() => setSelectedYear(selectedYear + 1)}>→</button>
+                  <button onClick={() => setSelectedYear(selectedYear + 1)} disabled={selectedYear >= maxYear}>→</button>
                 </div>
                 <div className="quarter-grid">
                   {quarters.map((q) => {
-                    const disabled = selectedYear === maxYear && q.endMonth > maxMonth;
+                    const isTooEarly = selectedYear === minYear && q.endMonth < minMonth;
+                    const isTooLate = selectedYear === maxYear && q.endMonth > maxMonth;
+                    const disabled = isTooEarly || isTooLate;
                     return (
-                      <button
-                        key={q.value}
-                        className={`quarter-btn ${disabled ? 'disabled' : ''}`}
-                        onClick={() => !disabled && handleQuarterSelect(q)}
-                        disabled={disabled}
-                      >
+                      <button key={q.value} className={`quarter-btn ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleQuarterSelect(q)} disabled={disabled}>
                         {q.label}
                       </button>
                     );
@@ -323,29 +287,21 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
       case 'midterm':
         return (
           <div className="custom-picker">
-            <button 
-              className="picker-toggle"
-              onClick={() => setShowCalendar(!showCalendar)}
-            >
-              {getDisplayText()}
-            </button>
+            <button className="picker-toggle" onClick={() => setShowCalendar(!showCalendar)}>{getDisplayText()}</button>
             {showCalendar && (
               <div className="picker-dropdown midterm-picker">
-                <div className="picker-header">
-                  <button onClick={() => setSelectedYear(selectedYear - 1)}>←</button>
+                 <div className="picker-header">
+                  <button onClick={() => setSelectedYear(selectedYear - 1)} disabled={selectedYear <= minYear}>←</button>
                   <span>{selectedYear}</span>
-                  <button onClick={() => setSelectedYear(selectedYear + 1)}>→</button>
+                  <button onClick={() => setSelectedYear(selectedYear + 1)} disabled={selectedYear >= maxYear}>→</button>
                 </div>
                 <div className="half-grid">
                   {halves.map((h) => {
-                    const disabled = selectedYear === maxYear && h.endMonth > maxMonth;
+                    const isTooEarly = selectedYear === minYear && h.endMonth < minMonth;
+                    const isTooLate = selectedYear === maxYear && h.endMonth > maxMonth;
+                    const disabled = isTooEarly || isTooLate;
                     return (
-                      <button
-                        key={h.value}
-                        className={`half-btn ${disabled ? 'disabled' : ''}`}
-                        onClick={() => !disabled && handleHalfSelect(h)}
-                        disabled={disabled}
-                      >
+                      <button key={h.value} className={`half-btn ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleHalfSelect(h)} disabled={disabled}>
                         {h.label}
                       </button>
                     );
@@ -359,21 +315,12 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
       case 'annual':
         return (
           <div className="custom-picker">
-            <button 
-              className="picker-toggle"
-              onClick={() => setShowCalendar(!showCalendar)}
-            >
-              {getDisplayText()}
-            </button>
+            <button className="picker-toggle" onClick={() => setShowCalendar(!showCalendar)}>{getDisplayText()}</button>
             {showCalendar && (
               <div className="picker-dropdown year-picker">
                 <div className="year-grid">
                   {years.map((year) => (
-                    <button
-                      key={year}
-                      className="year-btn"
-                      onClick={() => handleYearSelect(year)}
-                    >
+                    <button key={year} className="year-btn" onClick={() => handleYearSelect(year)}>
                       {year}
                     </button>
                   ))}
@@ -384,34 +331,19 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate }) => {
         );
 
       default:
-        return (
-          <input
-            type="date"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            max={maxDate}
-            className="date-input"
-          />
-        );
+        return <input type="date" value={value} onChange={(e) => onChange(e.target.value)} max={maxDate} min={minDate} className="date-input" />;
     }
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!e.target.closest('.custom-picker')) {
-        setShowCalendar(false);
-      }
+      if (!e.target.closest('.custom-picker')) setShowCalendar(false);
     };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  return (
-    <div className="interval-date-picker">
-      {renderPicker()}
-    </div>
-  );
+  return <div className="interval-date-picker">{renderPicker()}</div>;
 };
 
 export default IntervalDatePicker;

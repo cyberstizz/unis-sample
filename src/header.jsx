@@ -21,8 +21,8 @@ const Header = () => {
   };
 
   return (
-    <header className="header">
-      <div className="header-top">
+    <header className="app-header">
+      <div className="app-header-top">
         {/* Left: Logo */}
         <div className="logo-wrapper">
         <img onClick={handleHome} src={unisLogo} alt="UNIS Logo" className="logo" />
@@ -35,17 +35,17 @@ const Header = () => {
       </div>
 
       {/* Static options bar underneath */}
-      <div className="options-bar">
+      <div className="app-header-options-bar">
         <div onClick={handleClick} className="option-box">Vote</div>
         <div onClick={handleMilestones} className="option-box">Awards</div>
         <div onClick={handleArtist} className="option-box">Popular</div>
         <div onClick={handleEarnings} className="option-box">Earnings</div>
       </div>
       {/* Right: User name + Logout */}
-        <div className="user-section">
+        <div className="header-user-section">
           {user ? (  // New: Conditional user display
             <>
-              <span className="user-name">{user.username}</span>  
+              <span className="header-user-name">{user.username}</span>  
               <div onClick={handleLogout} className="logout-button">Logout</div>
             </>
           ) : (
