@@ -20,14 +20,11 @@ export const INTERVAL_IDS = {
   'monthly': '00000000-0000-0000-0000-000000000203',
   'quarterly': '00000000-0000-0000-0000-000000000204',
   'annual': '00000000-0000-0000-0000-000000000205',
-  'midterm': '00000000-0000-0000-0000-000000000206',  // NEW: Was missing!
+  'midterm': '00000000-0000-0000-0000-000000000206',  
 };
 
-// ============================================================================
 // REVERSE MAPPINGS (UUID to string)
-// ============================================================================
-// Useful for displaying human-readable names from API responses
-// ============================================================================
+// for displaying human-readable names from API responses
 export const GENRE_NAMES = Object.fromEntries(
   Object.entries(GENRE_IDS).map(([k, v]) => [v, k])
 );
@@ -40,10 +37,7 @@ export const INTERVAL_NAMES = Object.fromEntries(
   Object.entries(INTERVAL_IDS).map(([k, v]) => [v, k])
 );
 
-// ============================================================================
 // HELPER FUNCTIONS
-// ============================================================================
-
 /**
  * Get jurisdiction ID from key, with fallback
  */
