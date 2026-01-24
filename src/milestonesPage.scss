@@ -196,10 +196,12 @@ $unis-silver: #918f8f;
     animation: artworkPop 1s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both; // "Elastic" pop effect
     overflow: hidden;
     
+    // --- UPDATED IMAGE STYLING ---
     .winner-artwork {
       width: 100%;
-      max-width: 400px; // Slightly smaller for elegance
-      height: auto;
+      max-width: 350px;    // Universal standard size (slightly reduced from 400 for balance)
+      aspect-ratio: 1 / 1; // Forces a perfect square regardless of the upload
+      object-fit: cover;   // "Smart Crops" the image to fill the square without stretching
       display: block;
       border-radius: 12px;
     }

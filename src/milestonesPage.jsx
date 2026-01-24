@@ -16,11 +16,16 @@ import IntervalDatePicker from './intervalDatePicker';
 import './IntervalDatePicker.scss';
 
 const MilestonesPage = () => {
+  // Input State (Changes immediately as user toggles)
   const [location, setLocation] = useState('downtown-harlem');
   const [genre, setGenre] = useState('rap');
   const [category, setCategory] = useState('song');
   const [selectedDate, setSelectedDate] = useState('');
   const [interval, setInterval] = useState('daily');
+  
+  // Display State (Only updates when "View" is clicked)
+  const [displayedContext, setDisplayedContext] = useState(null); 
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [results, setResults] = useState([]);
@@ -112,37 +117,25 @@ const MilestonesPage = () => {
 
   switch (intervalType) {
     case 'daily':
-      // Start and end are the same day
-      break;
-      
+      break; 
     case 'weekly':
-      // Find Monday of the week
       const dayOfWeek = startDate.getDay();
       const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       startDate.setDate(startDate.getDate() - daysToMonday);
-      // End date is Sunday
       endDate.setDate(startDate.getDate() + 6);
       break;
-      
     case 'monthly':
-      // First day of month
       startDate.setDate(1);
-      // Last day of month
       endDate.setDate(new Date(year, month, 0).getDate());
       break;
-      
     case 'quarterly':
-      // Find quarter start month
       const quarterStartMonth = Math.floor((month - 1) / 3) * 3;
       startDate.setMonth(quarterStartMonth);
       startDate.setDate(1);
-      // Quarter end is last day of quarter's last month
       endDate.setMonth(quarterStartMonth + 2);
       endDate.setDate(new Date(year, quarterStartMonth + 3, 0).getDate());
       break;
-      
     case 'midterm':
-      // H1: Jan-Jun, H2: Jul-Dec
       if (month <= 6) {
         startDate.setMonth(0);
         startDate.setDate(1);
@@ -155,20 +148,16 @@ const MilestonesPage = () => {
         endDate.setDate(31);
       }
       break;
-      
     case 'annual':
-      // Full year
       startDate.setMonth(0);
       startDate.setDate(1);
       endDate.setMonth(11);
       endDate.setDate(31);
       break;
-      
     default:
       break;
   }
 
-  // Format dates as YYYY-MM-DD
   const formatDate = (d) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -182,16 +171,16 @@ const MilestonesPage = () => {
   };
 };
 
-  // Generate the caption
-  // Generate the caption
+  // Generate the caption using DISPLAYED context (not current state)
   const generateCaption = () => {
-    if (!selectedDate || results.length === 0) return '';
+    // If we haven't clicked View yet, or have no results, return empty
+    if (!displayedContext || results.length === 0) return '';
     
-    const locationText = formatLocation(location);
-    const genreText = formatGenre(genre);
-    const categoryText = formatCategory(category);
-    const intervalText = getIntervalText(interval);
-    const dateText = formatDateDisplay(selectedDate, interval);
+    const locationText = formatLocation(displayedContext.location);
+    const genreText = formatGenre(displayedContext.genre);
+    const categoryText = formatCategory(displayedContext.category);
+    const intervalText = getIntervalText(displayedContext.interval);
+    const dateText = formatDateDisplay(displayedContext.selectedDate, displayedContext.interval);
 
     return (
       <div className="caption-container">
@@ -215,7 +204,7 @@ const MilestonesPage = () => {
     }
     setIsLoading(true);
     setError(null);
-    setResults([]); // Clear previous results to trigger re-render cleanly
+    setResults([]); 
     
     try {
       const jurId = JURISDICTION_IDS[location];
@@ -244,7 +233,6 @@ const MilestonesPage = () => {
         return;
       }
 
-      // Normalize results for display
       const normalized = rawResults.map((award, i) => {
         let title, artist, artwork;
         
@@ -267,6 +255,7 @@ const MilestonesPage = () => {
           id: award.targetId,
           targetType: award.targetType,
           title,
+          title: title, // ensuring title property exists
           artist,
           jurisdiction: award.jurisdiction?.name || location,
           votes: award.votesCount || 0,
@@ -281,6 +270,16 @@ const MilestonesPage = () => {
       });
 
       setResults(normalized);
+      
+      // FREEZE STATE: Save the current inputs to the displayed context
+      // This ensures the UI doesn't change until the next successful search
+      setDisplayedContext({
+        location,
+        genre,
+        category,
+        interval,
+        selectedDate
+      });
       
     } catch (err) {
       console.error('Milestones fetch error:', err);
@@ -297,9 +296,18 @@ const MilestonesPage = () => {
     return 'Winner!';
   };
 
+  // --- MAX DATE LOGIC ---
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const maxDate = yesterday.toISOString().split('T')[0];
+  
+  let currentMaxDate = yesterday.toISOString().split('T')[0];
+
+  // If interval is ANNUAL, restrict max date to the end of the PREVIOUS year.
+  // This ensures 2026 is not selectable.
+  if (interval === 'annual') {
+    const currentYear = new Date().getFullYear();
+    currentMaxDate = `${currentYear - 1}-12-31`;
+  }
 
   const minDate = '2025-10-26';
 
@@ -348,11 +356,11 @@ const MilestonesPage = () => {
                 <option value="annual">Annual</option>
               </select>
               <IntervalDatePicker 
-              interval={interval} 
-              value={selectedDate} 
-              onChange={setSelectedDate} 
-              maxDate={maxDate}
-              minDate={minDate}
+                interval={interval} 
+                value={selectedDate} 
+                onChange={setSelectedDate} 
+                maxDate={currentMaxDate} 
+                minDate={minDate}
               />
               <button onClick={handleView} className="view-button" disabled={isLoading}>
                 {isLoading ? 'Loading…' : 'View'}
@@ -367,16 +375,11 @@ const MilestonesPage = () => {
           )}
 
           {winner && (
-            /* Key ensures animation restarts on new winner */
-            <section className="winner-highlight prestige-animate" key={`${winner.id}-${selectedDate}`}>
-              
-              {/* AMBIENT MODE LAYER: Uses the artwork as a glowing backdrop */}
+            <section className="winner-highlight prestige-animate" key={`${winner.id}-${displayedContext?.selectedDate}`}>
               <div 
                 className="ambient-glow" 
                 style={{ backgroundImage: `url(${winner.artwork})` }} 
               />
-              
-              {/* CONTENT LAYER: The actual card content */}
               <div className="winner-content-glass">
                 <div className="winner-header-animate">
                     <div className="winner-title">{winner.title}</div>
