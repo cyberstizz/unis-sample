@@ -45,12 +45,12 @@ $unis-silver: #918f8f;
   background: $bg-black;
   color: $text-gray;
   padding: 5px 0;
-  padding-top: 10%;
+  padding-top: 7%;
   overflow-y: auto;
   font-family: sans-serif;
   background: transparent;
   margin-left: 270px;
-  margin-top: 1%;
+  margin-top: .2%;
 }
 
 .content-wrapper {
@@ -117,7 +117,6 @@ $unis-silver: #918f8f;
   }
 }
 
-// --- NEW PRESTIGE WINNER CARD ---
 .winner-highlight {
   position: relative;
   margin: 40px auto 30px;
@@ -273,7 +272,7 @@ $unis-silver: #918f8f;
 
 .milestone-caption {
   margin: 1.5rem 0;
-  padding: 0 1rem;
+  padding: 0 .1rem !important;
   background: transparent;
   text-align: center;
   position: relative;

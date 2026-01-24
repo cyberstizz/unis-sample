@@ -729,8 +729,10 @@ const FindPage = () => {
         </div>
 
         {/* Results Section - Always rendered, content changes based on state */}
+       {/* Results Section - UPDATED WITH AMBIENT MODE */}
         <div className="results-section" style={{ display: hasSelectedJurisdiction ? 'flex' : 'none' }}>
-          {/* Coming Soon Notice for non-Harlem chain */}
+          
+          {/* Coming Soon Notice (No change here) */}
           {showComingSoon && (
             <div style={{
               width: '100%',
@@ -749,7 +751,7 @@ const FindPage = () => {
             </div>
           )}
 
-          {/* Only show results if in Harlem chain */}
+          {/* Active Harlem Data */}
           {!showComingSoon && (
             <>
               {/* Top Songs Column */}
@@ -765,25 +767,42 @@ const FindPage = () => {
                 <ul className="results-list">
                   {loading ? (
                     <li className="result-item">
-                      <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>Loading...</p>
+                      <div className="glass-content">
+                        <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>Loading...</p>
+                      </div>
                     </li>
                   ) : songs.length > 0 ? (
                     songs.slice(0, 3).map((item, index) => (
-                      <li key={item.id || index} className="result-item">
-                        <div className="rank">#{index + 1}</div>
-                        <img src={item.artwork} alt={item.title} className="item-artwork" />
-                        <div className="item-info">
-                          <div className="item-title">{item.title}</div>
-                          <div className="item-artist">{item.artist}</div>
+                      <li 
+                        key={item.id || index} 
+                        className="result-item"
+                        style={{ animationDelay: `${index * 0.15}s` }} // Staggered Animation
+                      >
+                        {/* 1. AMBIENT GLOW LAYER */}
+                        <div 
+                          className="ambient-bg" 
+                          style={{ backgroundImage: `url(${item.artwork})` }} 
+                        />
+
+                        {/* 2. GLASS CONTENT LAYER */}
+                        <div className="glass-content">
+                          <div className="rank">#{index + 1}</div>
+                          <img src={item.artwork} alt={item.title} className="item-artwork" />
+                          <div className="item-info">
+                            <div className="item-title">{item.title}</div>
+                            <div className="item-artist">{item.artist}</div>
+                          </div>
+                        
+                          <button onClick={() => handlePlay(item)} className="play-button">Play</button>
+                          <button onClick={() => handleSongView(item.id)} className="view-button">View</button>
                         </div>
-                       
-                        <button onClick={() => handlePlay(item)} className="play-button">Play</button>
-                        <button onClick={() => handleSongView(item.id)} className="view-button">View</button>
                       </li>
                     ))
                   ) : (
                     <li className="result-item">
-                      <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>No songs yet</p>
+                      <div className="glass-content">
+                        <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>No songs yet</p>
+                      </div>
                     </li>
                   )}
                 </ul>
@@ -801,25 +820,42 @@ const FindPage = () => {
                 </h2>
                 <ul className="results-list">
                   {loading ? (
-                    <li className="result-item">
-                      <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>Loading...</p>
-                    </li>
+                     <li className="result-item">
+                       <div className="glass-content">
+                         <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>Loading...</p>
+                       </div>
+                     </li>
                   ) : artists.length > 0 ? (
                     artists.slice(0, 3).map((item, index) => (
-                      <li key={item.id || index} className="result-item">
-                        <div className="rank">#{index + 1}</div>
-                        <img src={item.artwork} alt={item.name} className="item-artwork" />
-                        <div className="item-info">
-                          <div className="item-title">{item.name}</div>
+                      <li 
+                        key={item.id || index} 
+                        className="result-item"
+                        style={{ animationDelay: `${(index * 0.15) + 0.2}s` }} // Slight delay after songs
+                      >
+                         {/* 1. AMBIENT GLOW LAYER */}
+                         <div 
+                          className="ambient-bg" 
+                          style={{ backgroundImage: `url(${item.artwork})` }} 
+                        />
+
+                        {/* 2. GLASS CONTENT LAYER */}
+                        <div className="glass-content">
+                          <div className="rank">#{index + 1}</div>
+                          <img src={item.artwork} alt={item.name} className="item-artwork" />
+                          <div className="item-info">
+                            <div className="item-title">{item.name}</div>
+                          </div>
+                          
+                          <button onClick={() => handlePlay(item)} className="play-button">Play</button>
+                          <button onClick={() => handleArtistView(item.id)} className="view-button">View</button>
                         </div>
-                        
-                        <button onClick={() => handlePlay(item)} className="play-button">Play</button>
-                        <button onClick={() => handleArtistView(item.id)} className="view-button">View</button>
                       </li>
                     ))
                   ) : (
                     <li className="result-item">
-                      <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>No artists yet</p>
+                      <div className="glass-content">
+                         <p style={{ color: '#888', textAlign: 'center', width: '100%' }}>No artists yet</p>
+                      </div>
                     </li>
                   )}
                 </ul>

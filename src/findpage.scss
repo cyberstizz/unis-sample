@@ -8,6 +8,18 @@ $border-silver: #C0C0C0;
 $unis-blue: #163387;
 $subtle-black: #1a1a1a;
 
+// --- Keyframes for Ambient Animation ---
+@keyframes slideInBlur {
+  0% { opacity: 0; transform: translateX(-20px); filter: blur(5px); }
+  100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+}
+
+@keyframes glowPulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.5; }
+  100% { opacity: 0.3; }
+}
+
 .find-page-container {
   display: flex;
   flex-direction: column;
@@ -123,14 +135,13 @@ $subtle-black: #1a1a1a;
 }
 
 // =============================================================================
-// MAP SECTION - CRITICAL FOR LAYOUT STABILITY
+// MAP SECTION
 // =============================================================================
 
 .mapEverything {
   display: flex;
   flex-direction: column;
   width: 50vw;
-  // KEY: Use min/max to prevent size changes during map transitions
   min-width: 50vw;
   max-width: 50vw;
   align-items: center;
@@ -140,9 +151,7 @@ $subtle-black: #1a1a1a;
   border-top: solid 1px silver;
   padding: 1px;
   margin-top: 7px !important;
-  // KEY: Prevent any overflow from affecting layout
   overflow: visible;
-  // KEY: Ensure this container doesn't shift
   position: relative;
   box-sizing: border-box;
 }
@@ -153,7 +162,6 @@ $subtle-black: #1a1a1a;
   font-size: 30px;
   font-family: "Bitcount Grid Double", system-ui;
   margin: 0 auto;
-  // Prevent text wrapping from causing height changes
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -173,7 +181,6 @@ $subtle-black: #1a1a1a;
   cursor: pointer;
   margin-bottom: 10px;
   margin-top: 0;
-  // KEY: Ensure button doesn't cause layout shifts
   flex-shrink: 0;
   
   &:hover {
@@ -181,14 +188,12 @@ $subtle-black: #1a1a1a;
   }
 }
 
-
 .map-container {
-  // KEY: Fixed dimensions that don't change during state transitions
   width: 100%;
   max-width: 900px;
   height: 400px;
-  min-height: 400px; // Prevent shrinking
-  max-height: 420px; // Prevent growing
+  min-height: 400px;
+  max-height: 420px;
   border-radius: 12px;
   overflow: hidden;
   margin-top: 1px;
@@ -197,7 +202,6 @@ $subtle-black: #1a1a1a;
   z-index: 1;
   background: black;
   box-sizing: border-box;
-  // KEY: Flexbox centering that maintains position
   display: flex;
   justify-content: center;
 
@@ -214,7 +218,6 @@ $subtle-black: #1a1a1a;
   width: 100% !important;
   height: 100% !important;
   background-color: #1a1a1a;
-  // KEY: Absolute positioning within the map-container
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;
@@ -222,18 +225,6 @@ $subtle-black: #1a1a1a;
   bottom: 0 !important;
 }
 
-// Ensure map panes don't overflow their container
-.leaflet-map-pane,
-.leaflet-tile-pane,
-.leaflet-overlay-pane,
-.leaflet-shadow-pane,
-.leaflet-marker-pane,
-.leaflet-tooltip-pane,
-.leaflet-popup-pane {
-  // Don't set explicit dimensions - let Leaflet handle this
-}
-
-// Hide any Leaflet elements that might overflow
 .leaflet-control-container {
   display: none;
 }
@@ -283,39 +274,34 @@ $subtle-black: #1a1a1a;
 }
 
 // =============================================================================
-// RESULTS SECTION
+// RESULTS SECTION (NEW AMBIENT MODE)
 // =============================================================================
 
 .results-section {
   display: flex;
-  gap: 10px;
+  gap: 20px;
   width: 80vw;
   overflow-x: visible;
   margin-top: 0 !important;
   box-sizing: border-box;
   height: 70vh;
   align-items: flex-start !important;
-  align-content: flex-start !important;
-  justify-content: flex-start !important;
-  justify-items: flex-start !important;
-  padding-top: 0 !important;
+  padding-top: 20px !important; 
+
   .column {
     flex: 1;
-    min-width: 0; 
+    min-width: 0;
     margin-top: 0 !important;
-    align-items: flex-start !important;
-    align-content: flex-start !important;
-    align-self: flex-start !important;
-    justify-items: flex-start !important;
-    justify-self: flex-start !important;
-    padding-top: 0;
-
 
     h2 {
       color: silver;
       font-size: 24px;
-      margin-bottom: 15px;
-        padding-top: 0 !important;
+      margin-bottom: 20px;
+      padding-top: 0 !important;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 300;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
     }
 
     .results-list {
@@ -326,35 +312,85 @@ $subtle-black: #1a1a1a;
       display: flex;
       flex-direction: column;
       gap: 15px;
-      padding-top: 0 !important;
     }
 
+    // --- NEW AMBIENT CARD STYLES ---
     .result-item {
-      background: #1a1a1a;
+      position: relative;
+      background: rgba(20, 20, 20, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 12px;
-      padding: 15px;
+      padding: 0; // Padding moved to glass-content
       display: flex;
-      align-items: center;
-      gap: 10px;
+      align-items: stretch;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      
+      // Animation Entry
+      opacity: 0; 
+      animation: slideInBlur 0.6s ease forwards;
+
+      &:hover {
+        transform: translateY(-4px) scale(1.01);
+        border-color: rgba(255, 255, 255, 0.3);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+
+        .ambient-bg {
+          opacity: 0.6; 
+          transform: scale(1.2);
+        }
+      }
+
+      // 1. Ambient Background Layer
+      .ambient-bg {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background-size: cover;
+        background-position: center;
+        filter: blur(40px) saturate(180%); 
+        opacity: 0.3;
+        z-index: 0;
+        transition: all 0.5s ease;
+        pointer-events: none;
+      }
+
+      // 2. Glass Content Layer
+      .glass-content {
+        position: relative;
+        z-index: 1;
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        background: linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 100%);
+        width: 100%;
+        box-sizing: border-box;
+      }
 
       .rank {
         font-size: 24px;
-        color: white;
+        color: rgba(255,255,255,0.4);
         flex-shrink: 0;
         min-width: 40px;
       }
 
       .item-artwork {
-        width: 50px;
-        height: 50px;
+        width: 60px;
+        height: 60px;
         border-radius: 8px;
         object-fit: cover;
         flex-shrink: 0;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.1);
       }
 
       .item-info {
         flex-grow: 1;
-        min-width: 0; 
+        min-width: 0;
         
         .item-title {
           color: white;
@@ -362,6 +398,7 @@ $subtle-black: #1a1a1a;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
         
         .item-artist {
@@ -370,29 +407,51 @@ $subtle-black: #1a1a1a;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.8);
         }
       }
 
-      .item-votes {
-        font-size: 14px;
+      .play-button{
+        padding: 8px 18px;
+        background: $unis-blue;
+        border: 1px solid rgba(255,255,255,0.2);
         color: silver;
-        flex-shrink: 0;
-        white-space: nowrap;
-      }
-
-      .play-button, .view-button {
-        padding: 8px 16px;
-        background: transparent;
-        border: 1px solid silver;
-        color: silver;
-        border-radius: 8px;
+        border-radius: 50px;
         cursor: pointer;
         flex-shrink: 0;
         transition: all 0.2s ease;
+        font-weight: 600;
+        font-size: 12px;
+        backdrop-filter: blur(4px);
         
         &:hover {
-          border-color: $unis-blue;
-          color: $unis-blue;
+          background: $accent-white;
+          color: $bg-black;
+          border-color: white;
+          box-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+      }
+      
+      
+      
+      .view-button {
+        padding: 8px 18px;
+        background: black;
+        border: 1px solid rgba(255,255,255,0.2);
+        color: silver;
+        border-radius: 50px;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+        font-weight: 600;
+        font-size: 12px;
+        backdrop-filter: blur(4px);
+        
+        &:hover {
+          background: $accent-white;
+          color: $bg-black;
+          border-color: white;
+          box-shadow: 0 0 10px rgba(255,255,255,0.3);
         }
       }
     }
@@ -433,69 +492,21 @@ $subtle-black: #1a1a1a;
 
   .findfilter-select {
     padding: 10px 18px;
-    background: transparent;
-    border: 1px solid rgba($border-silver, 0.5);
-    border-radius: 8px;
-    color: $text-silver;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
     flex: 1;
     min-width: 100px;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C0C0C0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
     background-size: 14px;
     padding-right: 30px;
-    
-    &:hover, &:focus {
-      border-color: $unis-blue;
-      background-color: rgba($unis-blue, 0.1);
-      color: $accent-white;
-      outline: none;
-    }
-
-    option {
-      background: $subtle-black;
-      color: $text-silver;
-    }
   }
 
   .random-button {
     padding: 10px 18px;
-    background: transparent;
-    border: 1px solid rgba($border-silver, 0.5);
-    border-radius: 8px;
-    color: $text-silver;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
     flex: 1;
     min-width: 100px;
-    
-    &:hover:not(:disabled) {
-      border-color: $unis-blue;
-      background-color: rgba($unis-blue, 0.1);
-      color: $accent-white;
-    }
-    
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
   }
-
-  // ==========================================================================
-  // MOBILE MAP SECTION - CRITICAL FIXES
-  // ==========================================================================
   
   .mapEverything {
     display: flex;
     flex-direction: column;
-    // KEY: Full width on mobile but centered
     width: 100vw;
     min-width: 100%;
     max-width: 96vw;
@@ -504,93 +515,39 @@ $subtle-black: #1a1a1a;
     align-content: center;
     justify-content: center;
     border-top: solid 1px silver;
-    // padding: 10px 0;
     margin: 0;
     box-sizing: border-box;
   }
 
   .territory-name {
-    text-align: center;
-    color: $unis-blue;
     font-size: 28px;
-    font-family: "Bitcount Grid Double", system-ui;
     margin: 10px auto;
     padding: 0 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     max-width: 90%;
   }
 
   .back-button {
     padding: 8px 16px;
-    background: transparent;
-    border: 1px solid $unis-blue;
-    color: $unis-blue;
-    border-radius: 8px;
-    cursor: pointer;
     margin-bottom: 10px;
     margin-top: 5px;
-    
-    &:hover {
-      background: rgba($unis-blue, 0.2);
-    }
   }
-
-  // ==========================================================================
-  // MOBILE MAP CONTAINER - FIXED DIMENSIONS
-  // ==========================================================================
   
   .map-container {
-    // KEY: Fixed dimensions that don't change
     width: 90%;
     max-width: 94vw;
     height: 300px;
     min-height: 300px;
     max-height: 300px;
-    border-radius: 12px;
-    overflow: hidden;
     margin: 5px auto;
-    border: solid 0.2px silver;
-    position: relative;
-    background: black;
-    box-sizing: border-box;
-    
-    // Force Leaflet container to fill exactly this space
-    .leaflet-container {
-      width: 100% !important;
-      height: 100% !important;
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-    }
-
-    // Ensure map panes don't overflow
-    .leaflet-map-pane,
-    .leaflet-tile-pane,
-    .leaflet-overlay-pane {
-      // Let Leaflet manage these
-    }
   }
-
-  .leaflet-container {
-    width: 100% !important;
-    height: 100% !important;
-    background-color: #1a1a1a;
-  }
-
-  // ==========================================================================
-  // MOBILE RESULTS SECTION
-  // ==========================================================================
   
+  // --- UPDATED MOBILE RESULTS FOR AMBIENT MODE ---
   .results-section {
     display: flex;
     flex-direction: column;
     gap: 20px;
     padding: 0 5%;
-    padding-top:20px;
+    padding-top: 20px !important;
     margin-left: 0;
     width: 100%;
     max-width: 100%;
@@ -603,92 +560,50 @@ $subtle-black: #1a1a1a;
       width: 100%;
 
       h2 {
-        color: silver;
         font-size: 20px;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
       }
 
       .results-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
         gap: 10px;
       }
 
       .result-item {
-        background: #1a1a1a;
-        border-radius: 12px;
-        padding: 10px;
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        align-items: center;
-        gap: 8px;
+        // Target the inner glass content for padding on mobile
+        .glass-content {
+          padding: 10px;
+          gap: 10px;
+        }
 
         .rank {
-          display: none; // Hide rank on mobile to save space
+          display: none; // Hide rank on mobile
         }
 
         .item-artwork {
           width: 45px;
           height: 45px;
-          border-radius: 8px;
-          flex-shrink: 0;
-          object-fit: cover;
         }
 
         .item-info {
-          flex-grow: 1;
-          min-width: 0;
-          overflow: hidden;
-          
           .item-title {
             font-size: 14px;
-            color: white;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
           }
-
           .item-artist {
             font-size: 12px;
-            color: $text-silver;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
           }
-        }
-
-        .item-votes {
-          display: none; // Hide votes on mobile to save space
         }
 
         .play-button, .view-button {
-          padding: 6px 10px;
-          background: transparent;
-          border: 1px solid $unis-blue;
-          color: silver;
-          width: 20px;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 11px;
-          flex-shrink: 0;
-          white-space: nowrap;
+          padding: 6px 12px;
+          width: auto;
           min-width: 50px;
+          font-size: 11px;
           text-align: center;
-          
-          &:hover {
-            border-color: $unis-blue;
-            color: $unis-blue;
-          }
         }
       }
     }
   }
 
-  // Mobile coming soon message
   .coming-soon-message {
     padding: 30px 15px;
   }
@@ -735,8 +650,6 @@ $subtle-black: #1a1a1a;
   }
 }
 
-
-
 /* Leaflet jurisdiction label styling */
 .jurisdiction-label {
   background: rgba(0, 0, 0, 0.7) !important;
@@ -750,7 +663,6 @@ $subtle-black: #1a1a1a;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
 }
 
-/* Remove the default tooltip arrow */
 .jurisdiction-label::before {
   display: none !important;
 }
@@ -816,7 +728,6 @@ $subtle-black: #1a1a1a;
   font-size: 10px;
 }
 
-/* Responsive adjustments for very small screens */
 @media (max-width: 400px) {
   .jurisdiction-list-item {
     padding: 6px 12px;
