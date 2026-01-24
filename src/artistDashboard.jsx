@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import LyricsWizard from './lyricsWizard';
-import { Upload, Play, FileText, Image, Vote, Video, Eye, Heart, Users, X, Download, Music, Trash2, Edit3, History, Award } from 'lucide-react';
+import { Upload, Play, FileText, Vote, Eye, Heart, Users, X, Download, Music, Trash2, Edit3, History } from 'lucide-react';
 import UploadWizard from './uploadWizard';
 import ChangeDefaultSongWizard from './changeDefaultSongWizard';
 import EditProfileWizard from './editProfileWizard';
@@ -15,8 +15,6 @@ import { useAuth } from './context/AuthContext';
 import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
 import { jsPDF } from 'jspdf';  
-import cacheService from './services/cacheService';
-
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -58,54 +56,53 @@ const ArtistDashboard = () => {
 
   useEffect(() => {
     if (!authLoading && user?.userId) {
-      // 1. Full profile & Supported Artist
+      // 1. Full profile & Supported Artist (NO CACHE)
       apiCall({ url: `/v1/users/profile/${user.userId}`, method: 'get', useCache: false })
         .then(res => {
           setUserProfile(res.data);
-
           setTotalPlays(res.data.totalPlays || 0);
           setTotalVotes(res.data.totalVotes || 0);
           
-          // Fetch Supported Artist if exists
           if (res.data.supportedArtistId) {
-            apiCall({ url: `/v1/users/profile/${res.data.supportedArtistId}` })
+            apiCall({ url: `/v1/users/profile/${res.data.supportedArtistId}`, useCache: false })
               .then(artistRes => setSupportedArtist(artistRes.data))
               .catch(err => console.error('Failed to fetch supported artist:', err));
           }
         })
         .catch(err => console.error('Failed to fetch profile:', err));
 
-      // 2. Songs & Total Plays
-      apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get' })
+      // 2. Songs & Total Plays (NO CACHE - FIXES "Tracks not showing up")
+      apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get', useCache: false })
         .then(res => {
           const songsData = res.data || [];
           setSongs(songsData);
         })
         .catch(err => console.error('Failed to fetch songs:', err));
 
-      // 3. Stats
-      apiCall({ url: `/v1/users/${user.userId}/supporters/count`, method: 'get' })
+      // 3. Stats (Can be cached briefly, but safer without for live counts)
+      apiCall({ url: `/v1/users/${user.userId}/supporters/count`, method: 'get', useCache: false })
         .then(res => setSupporters(res.data.count || 0))
         .catch(err => console.error('Failed to fetch supporters:', err));
 
-      apiCall({ url: `/v1/users/${user.userId}/followers/count`, method: 'get' })
+      apiCall({ url: `/v1/users/${user.userId}/followers/count`, method: 'get', useCache: false })
         .then(res => setFollowers(res.data.count || 0))
         .catch(() => setFollowers(0));
 
       // 4. Vote History
-      apiCall({ url: '/v1/vote/history?limit=50' })
+      apiCall({ url: '/v1/vote/history?limit=50', useCache: false })
         .then(res => setVoteHistory(res.data || []))
         .catch(err => console.error('Failed to fetch vote history:', err));
 
       // 5. Default Song
-      apiCall({ url: `/v1/users/${user.userId}/default-song`, method: 'get' })
+      apiCall({ url: `/v1/users/${user.userId}/default-song`, method: 'get', useCache: false })
         .then(res => setDefaultSong(res.data))
         .catch(() => setDefaultSong(null));
 
-      // 6. Artist Awards (initial 10)
+      // 6. Artist Awards (NO CACHE - FIXES "Lying Awards")
       apiCall({ 
         url: `/v1/awards/artist/${user.userId}?limit=10&offset=0`,
-        method: 'get' 
+        method: 'get',
+        useCache: false 
       })
         .then(res => {
           const awardsData = res.data || [];
@@ -130,7 +127,7 @@ const ArtistDashboard = () => {
   const displayBio = userProfile.bio || 'No bio yet. Click Edit to add one.';
 
   const refetchDefaultSong = () => {
-    apiCall({ url: `/v1/users/${user.userId}/default-song`, method: 'get' })
+    apiCall({ url: `/v1/users/${user.userId}/default-song`, method: 'get', useCache: false })
       .then(res => setDefaultSong(res.data))
       .catch(() => setDefaultSong(null));
   };
@@ -201,7 +198,8 @@ const ArtistDashboard = () => {
 
   const handleUploadSuccess = () => {
     setShowUploadWizard(false);
-    apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get' })
+    // Force refresh songs without cache
+    apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get', useCache: false })
       .then(res => setSongs(res.data || []));
   };
 
@@ -252,7 +250,8 @@ const ArtistDashboard = () => {
         method: 'delete',
         url: `/v1/media/song/${songToDelete.songId}`
       });
-      const res = await apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get' });
+      // Force refresh without cache
+      const res = await apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get', useCache: false });
       setSongs(res.data || []);
       setSongToDelete(null);
     } catch (err) {
@@ -289,7 +288,8 @@ const ArtistDashboard = () => {
       const nextPage = awardsPage + 1;
       const res = await apiCall({ 
         url: `/v1/awards/artist/${user.userId}?limit=10&offset=${nextPage * 10}`,
-        method: 'get' 
+        method: 'get',
+        useCache: false 
       });
       const newAwards = res.data || [];
       setAwards(prev => [...prev, ...newAwards]);
@@ -303,7 +303,12 @@ const ArtistDashboard = () => {
   };
 
   const formatAwardDate = (dateString) => {
-    const date = new Date(dateString);
+    if (!dateString) return '';
+    // Split the "YYYY-MM-DD" string and create date using local components
+    // This prevents the "Midnight UTC -> Previous Day EST" shift.
+    const [year, month, day] = dateString.split('-');
+    const date = new Date(year, month - 1, day); 
+    
     return date.toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'short', 
@@ -461,8 +466,9 @@ const ArtistDashboard = () => {
               </button>
             </div>
             <div className="content-list">
-              {songs.length > 0 ? songs.map(song => (
-                <div key={song.songId} className="content-item">
+              {songs.length > 0 ? songs.map((song, index) => (
+                // Added fallback key to prevent rendering errors if songId is missing
+                <div key={song.songId || song.id || index} className="content-item">
                   <div className="item-header">
                     <h4>{song.title}</h4>
                     <div className="item-actions">
@@ -726,7 +732,7 @@ const ArtistDashboard = () => {
             onClose={() => setEditingSong(null)}
             song={editingSong}
             onSuccess={() => {
-              apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get' })
+              apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get', useCache: false })
                 .then(res => setSongs(res.data || []));
             }}
           />
@@ -738,7 +744,7 @@ const ArtistDashboard = () => {
             onClose={() => { setShowLyricsWizard(false); setLyricsSong(null); }}
             song={lyricsSong}
             onSuccess={() => {
-              apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get' })
+              apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get', useCache: false })
                 .then(res => setSongs(res.data || []));
             }}
           />
