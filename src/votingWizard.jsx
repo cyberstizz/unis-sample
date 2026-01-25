@@ -267,7 +267,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       if (status === 409) {
         setVoteResult({ status: 'duplicate', message: 'Already Voted', details: 'You have already cast a vote in this category for this interval.' });
       } else if (status === 403) {
-        setVoteResult({ status: 'ineligible', message: 'Vote Rejected', details: errorMessage });
+        setVoteResult({ status: 'ineligible', message: 'Vote Rejected', details: 'You are not eligible to vote in this jurisdiction' });
       } else {
         setVoteResult({ status: 'network', message: 'Connection Failed', details: 'We could not reach the server.' });
       }
