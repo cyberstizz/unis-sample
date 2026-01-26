@@ -1,0 +1,655 @@
+// Comment Section Premium Styles - AMBIENT AWARE VERSION
+// Unis Design System Variables
+$text-silver: #C0C0C0;
+$accent-white: #FFFFFF;
+$border-silver: #C0C0C0;
+$bg-dark: #1A1A1A;
+$unis-blue: #163387;
+$unis-silver: #918f8f;
+
+// Extended palette for comments
+$glow-orange: #FF6B35;
+$glow-orange-light: rgba(255, 107, 53, 0.4);
+$glow-orange-subtle: rgba(255, 107, 53, 0.15);
+$comment-bg: rgba(26, 26, 26, 0.6);
+$comment-bg-hover: rgba(26, 26, 26, 0.8);
+$reply-bg: rgba(22, 51, 135, 0.1);
+$text-muted: #6B7280;
+$success-green: #10B981;
+$danger-red: #EF4444;
+
+// Typography for comments
+$font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+.comments-section-premium {
+  margin-top: 2.5rem;
+  padding: 1.5rem;
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  
+  // AMBIENT AWARE: Inherit the glow from parent card
+  // Falls back to a subtle default if --ambient-glow isn't set
+  --ambient-color: var(--ambient-glow, rgba(255, 107, 53, 0.4));
+  
+  // Ambient-aware background gradient
+  background: linear-gradient(
+    135deg, 
+    rgba(22, 51, 135, 0.08) 0%, 
+    rgba(26, 26, 26, 0.95) 50%,
+    color-mix(in srgb, var(--ambient-color) 5%, transparent) 100%
+  );
+  
+  // Ambient-aware border
+  border: 1px solid color-mix(in srgb, var(--ambient-color) 20%, rgba(255, 255, 255, 0.05));
+  
+  // Subtle ambient glow on the section itself
+  box-shadow: 
+    inset 0 0 60px -40px var(--ambient-color),
+    0 0 40px -20px color-mix(in srgb, var(--ambient-color) 30%, transparent);
+  
+  transition: all 0.8s ease;
+
+  // Header
+  .comments-header {
+    margin-bottom: 1.5rem;
+    
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: $accent-white;
+      font-family: $font-comment;
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin: 0;
+
+      svg {
+        // Ambient-aware icon color with orange fallback
+        color: color-mix(in srgb, var(--ambient-color) 80%, $glow-orange);
+        filter: drop-shadow(0 0 8px var(--ambient-color));
+        transition: all 0.5s ease;
+      }
+
+      .comment-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 8px;
+        // Ambient-aware badge
+        background: linear-gradient(
+          135deg, 
+          color-mix(in srgb, var(--ambient-color) 70%, $glow-orange) 0%, 
+          color-mix(in srgb, var(--ambient-color) 50%, $unis-blue) 100%
+        );
+        border-radius: 14px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: white;
+        box-shadow: 0 2px 12px var(--ambient-color);
+        transition: all 0.5s ease;
+      }
+    }
+  }
+
+  // New Comment Form
+  .new-comment-form {
+    margin-bottom: 2rem;
+
+    .input-wrapper {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: $comment-bg;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:focus-within {
+        // AMBIENT AWARE: Dynamic border glow on focus
+        border-color: var(--ambient-color);
+        box-shadow: 
+          0 0 0 3px color-mix(in srgb, var(--ambient-color) 25%, transparent),
+          0 0 30px color-mix(in srgb, var(--ambient-color) 40%, transparent),
+          inset 0 0 20px color-mix(in srgb, var(--ambient-color) 10%, transparent);
+      }
+    }
+
+    .comment-textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: $accent-white;
+      font-family: $font-comment;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      resize: none;
+      min-height: 24px;
+      max-height: 150px;
+      outline: none;
+
+      &::placeholder {
+        color: $text-muted;
+      }
+    }
+
+    .submit-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      // Ambient-aware submit button
+      background: linear-gradient(
+        135deg, 
+        color-mix(in srgb, var(--ambient-color) 60%, $glow-orange) 0%, 
+        color-mix(in srgb, var(--ambient-color) 40%, $unis-blue) 100%
+      );
+      border: none;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px var(--ambient-color);
+      }
+
+      &:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  // Login Prompt
+  .login-prompt {
+    padding: 1.5rem;
+    text-align: center;
+    background: $comment-bg;
+    border-radius: 12px;
+    border: 1px dashed color-mix(in srgb, var(--ambient-color) 30%, rgba(255, 255, 255, 0.15));
+    margin-bottom: 2rem;
+
+    p {
+      color: $text-muted;
+      font-family: $font-comment;
+      margin: 0;
+    }
+  }
+
+  // Comments List
+  .comments-list-premium {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  // Individual Comment
+  .comment-item {
+    position: relative;
+    padding: 1.25rem 0;
+    
+    // AMBIENT AWARE: Dynamic gradient border-bottom
+    border-bottom: 1px solid transparent;
+    background-image: linear-gradient(
+      90deg, 
+      transparent 0%, 
+      color-mix(in srgb, var(--ambient-color) 40%, transparent) 25%,
+      var(--ambient-color) 50%, 
+      color-mix(in srgb, var(--ambient-color) 40%, transparent) 75%,
+      transparent 100%
+    );
+    background-size: 100% 1px;
+    background-repeat: no-repeat;
+    background-position: bottom;
+    transition: all 0.4s ease;
+
+    &:last-child {
+      background-image: none;
+    }
+
+    &:hover {
+      background-color: color-mix(in srgb, var(--ambient-color) 5%, transparent);
+    }
+
+    // Reply styling - ambient aware
+    &.reply {
+      padding: 1rem 0 1rem 1rem;
+      margin-left: 3.5rem;
+      // Ambient-aware reply border
+      border-left: 2px solid color-mix(in srgb, var(--ambient-color) 50%, rgba(255, 107, 53, 0.3));
+      background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--ambient-color) 8%, transparent) 0%,
+        transparent 100%
+      );
+      background-image: none; // Remove bottom border for replies
+      border-radius: 0 8px 8px 0;
+
+      .user-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.75rem;
+      }
+
+      .comment-text {
+        font-size: 0.875rem;
+      }
+    }
+
+    .comment-content {
+      display: flex;
+      gap: 1rem;
+    }
+
+    // Avatar - AMBIENT AWARE
+    .avatar-container {
+      flex-shrink: 0;
+    }
+
+    .user-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      // Ambient-aware avatar ring
+      border: 2px solid color-mix(in srgb, var(--ambient-color) 50%, rgba(255, 107, 53, 0.3));
+      box-shadow: 0 0 15px color-mix(in srgb, var(--ambient-color) 40%, transparent);
+      transition: all 0.4s ease;
+
+      &.placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        // Ambient-aware placeholder gradient
+        background: linear-gradient(
+          135deg, 
+          $unis-blue 0%, 
+          color-mix(in srgb, var(--ambient-color) 30%, $unis-blue) 100%
+        );
+        color: white;
+        font-family: $font-comment;
+        font-weight: 600;
+        font-size: 1rem;
+      }
+
+      &:hover {
+        border-color: var(--ambient-color);
+        box-shadow: 0 0 25px var(--ambient-color);
+        transform: scale(1.05);
+      }
+    }
+
+    // Comment Body
+    .comment-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .comment-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+
+      .username {
+        color: $accent-white;
+        font-family: $font-comment;
+        font-weight: 600;
+        font-size: 0.9rem;
+        letter-spacing: -0.01em;
+        transition: color 0.3s ease;
+
+        &:hover {
+          // Ambient-aware username hover
+          color: color-mix(in srgb, var(--ambient-color) 70%, $accent-white);
+          cursor: pointer;
+          text-shadow: 0 0 10px var(--ambient-color);
+        }
+      }
+
+      .timestamp {
+        color: $text-muted;
+        font-family: $font-comment;
+        font-size: 0.75rem;
+      }
+
+      // Menu
+      .comment-menu {
+        margin-left: auto;
+        position: relative;
+
+        .menu-trigger {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          background: transparent;
+          border: none;
+          border-radius: 6px;
+          color: $text-muted;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          opacity: 0;
+
+          &:hover {
+            background: color-mix(in srgb, var(--ambient-color) 15%, transparent);
+            color: $accent-white;
+          }
+        }
+
+        .menu-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          margin-top: 4px;
+          background: $bg-dark;
+          border: 1px solid color-mix(in srgb, var(--ambient-color) 20%, rgba(255, 255, 255, 0.1));
+          border-radius: 8px;
+          padding: 4px;
+          min-width: 120px;
+          box-shadow: 
+            0 10px 40px rgba(0, 0, 0, 0.5),
+            0 0 20px color-mix(in srgb, var(--ambient-color) 20%, transparent);
+          z-index: 100;
+          animation: menuSlide 0.15s ease;
+
+          .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 8px 12px;
+            background: none;
+            border: none;
+            border-radius: 4px;
+            color: $text-silver;
+            font-family: $font-comment;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+
+            &:hover {
+              background: color-mix(in srgb, var(--ambient-color) 15%, transparent);
+            }
+
+            &.delete {
+              color: $danger-red;
+
+              &:hover {
+                background: rgba(239, 68, 68, 0.15);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    &:hover .comment-menu .menu-trigger {
+      opacity: 1;
+    }
+
+    // Comment Text
+    .comment-text {
+      color: $text-silver;
+      font-family: $font-comment;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin: 0 0 0.75rem 0;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+
+    // Reply Trigger - AMBIENT AWARE
+    .reply-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      color: $text-muted;
+      font-family: $font-comment;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: var(--ambient-color);
+        color: color-mix(in srgb, var(--ambient-color) 80%, $accent-white);
+        background: color-mix(in srgb, var(--ambient-color) 15%, transparent);
+        box-shadow: 0 0 15px color-mix(in srgb, var(--ambient-color) 30%, transparent);
+      }
+    }
+
+    // Reply Input - AMBIENT AWARE
+    .reply-input-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding: 0.5rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.4s ease;
+
+      &:focus-within {
+        border-color: var(--ambient-color);
+        box-shadow: 
+          0 0 20px color-mix(in srgb, var(--ambient-color) 30%, transparent),
+          inset 0 0 10px color-mix(in srgb, var(--ambient-color) 5%, transparent);
+      }
+
+      .reply-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: $accent-white;
+        font-family: $font-comment;
+        font-size: 0.875rem;
+        padding: 8px;
+        outline: none;
+
+        &::placeholder {
+          color: $text-muted;
+        }
+      }
+
+      .reply-submit {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        // Ambient-aware reply button
+        background: linear-gradient(
+          135deg,
+          color-mix(in srgb, var(--ambient-color) 70%, $glow-orange) 0%,
+          color-mix(in srgb, var(--ambient-color) 50%, $unis-blue) 100%
+        );
+        border: none;
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover:not(:disabled) {
+          box-shadow: 0 0 15px var(--ambient-color);
+          transform: scale(1.05);
+        }
+
+        &:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+
+  // Replies Section - AMBIENT AWARE
+  .replies-section {
+    margin-top: 0.75rem;
+    margin-left: 3.5rem;
+
+    .toggle-replies {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 0;
+      background: none;
+      border: none;
+      // Ambient-aware toggle color
+      color: color-mix(in srgb, var(--ambient-color) 70%, $glow-orange);
+      font-family: $font-comment;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        color: var(--ambient-color);
+        text-shadow: 0 0 10px var(--ambient-color);
+      }
+
+      svg {
+        transition: transform 0.2s ease;
+      }
+    }
+
+    .replies-list {
+      margin-top: 0.5rem;
+      animation: fadeIn 0.3s ease;
+    }
+  }
+
+  // States
+  .loading-state,
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+
+    p {
+      color: $text-silver;
+      font-family: $font-comment;
+      font-size: 1rem;
+      margin: 1rem 0 0.25rem 0;
+    }
+
+    span {
+      color: $text-muted;
+      font-family: $font-comment;
+      font-size: 0.875rem;
+    }
+
+    svg {
+      // Ambient-aware empty state icon
+      color: color-mix(in srgb, var(--ambient-color) 50%, $text-muted);
+      opacity: 0.6;
+      filter: drop-shadow(0 0 10px var(--ambient-color));
+    }
+  }
+
+  // AMBIENT AWARE: Loading spinner
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid color-mix(in srgb, var(--ambient-color) 30%, transparent);
+    border-top-color: var(--ambient-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--ambient-color) 40%, transparent);
+  }
+}
+
+// Animations
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes menuSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// Pulse animation for ambient glow (optional enhancement)
+@keyframes ambientPulse {
+  0%, 100% {
+    box-shadow: 
+      inset 0 0 60px -40px var(--ambient-color),
+      0 0 40px -20px color-mix(in srgb, var(--ambient-color) 30%, transparent);
+  }
+  50% {
+    box-shadow: 
+      inset 0 0 80px -40px var(--ambient-color),
+      0 0 60px -20px color-mix(in srgb, var(--ambient-color) 40%, transparent);
+  }
+}
+
+// Responsive
+@media (max-width: 640px) {
+  .comments-section-premium {
+    padding: 1rem;
+    margin-top: 1.5rem;
+
+    .comment-item {
+      &.reply {
+        margin-left: 2rem;
+        padding-left: 0.75rem;
+      }
+
+      .user-avatar {
+        width: 36px;
+        height: 36px;
+
+        &.placeholder {
+          font-size: 0.85rem;
+        }
+      }
+
+      .comment-content {
+        gap: 0.75rem;
+      }
+    }
+
+    .replies-section {
+      margin-left: 2rem;
+    }
+  }
+}

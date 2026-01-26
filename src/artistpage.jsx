@@ -43,9 +43,9 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         setUserId(payload.userId);
-        console.log('🔑 Extracted userId from token:', payload.userId);
+        console.log('Extracted userId from token:', payload.userId);
       } catch (err) {
-        console.error('❌ Failed to get userId from token:', err);
+        console.error('Failed to get userId from token:', err);
       }
     }
   }, []);
@@ -69,10 +69,10 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         method: 'get', 
         url: `/v1/users/${artistId}/is-following` 
       });
-      console.log('✅ Follow status:', res.data.isFollowing);
+      console.log('Follow status:', res.data.isFollowing);
       setIsFollowing(res.data.isFollowing);
     } catch (err) {
-      console.error('❌ Failed to check follow status:', err);
+      console.error('Failed to check follow status:', err);
     }
   };
 
@@ -90,10 +90,10 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       // 2. Fetch Real Follower Count
       try {
         const countRes = await apiCall({ method: 'get', url: `/v1/users/${artistId}/followers/count` });
-        console.log('📊 Follower count response:', countRes.data);
+        console.log('Follower count response:', countRes.data);
         setFollowerCount(countRes.data.count || 0);
       } catch (err) {
-        console.warn('⚠️ Could not fetch follower count', err);
+        console.warn('Could not fetch follower count', err);
       }
 
       // 3. Fetch Songs
@@ -113,7 +113,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       }
 
     } catch (err) {
-      console.error('❌ Failed to load artist:', err);
+      console.error('Failed to load artist:', err);
       setError('Failed to load artist details');
     } finally {
       setLoading(false);
@@ -122,7 +122,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
   // FIXED: Real Follow Logic with Better Logging
   const handleFollow = async () => {
-    console.log('🔵 FOLLOW BUTTON CLICKED');
+    console.log('FOLLOW BUTTON CLICKED');
     console.log('Current artistId:', artistId);
     console.log('Current userId:', userId);
     console.log('Previous isFollowing state:', isFollowing);
@@ -137,17 +137,17 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     try {
       if (!previousState) {
         // Follow
-        console.log('📤 Sending FOLLOW request to:', `/v1/users/${artistId}/follow`);
+        console.log('Sending FOLLOW request to:', `/v1/users/${artistId}/follow`);
         const response = await apiCall({ method: 'post', url: `/v1/users/${artistId}/follow` });
-        console.log('✅ Follow successful:', response.data);
+        console.log('Follow successful:', response.data);
       } else {
         // Unfollow
-        console.log('📤 Sending UNFOLLOW request to:', `/v1/users/${artistId}/follow`);
+        console.log('Sending UNFOLLOW request to:', `/v1/users/${artistId}/follow`);
         const response = await apiCall({ method: 'delete', url: `/v1/users/${artistId}/follow` });
-        console.log('✅ Unfollow successful:', response.data);
+        console.log('Unfollow successful:', response.data);
       }
     } catch (err) {
-      console.error('❌ Failed to toggle follow:', err);
+      console.error('Failed to toggle follow:', err);
       console.error('Error response:', err.response?.data);
       console.error('Error status:', err.response?.status);
       

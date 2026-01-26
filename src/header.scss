@@ -87,7 +87,7 @@ $unis-silver: #918f8f;
         font-weight: bold;
         transition: all 0.2s ease-in-out;
         white-space: nowrap;
-        font-family: "Bitcount Grid Double", system-ui !important;
+        font-family: "Bitcount Grid Double", system-ui;
 
         &:hover {
           background: $unis-blue;
@@ -191,7 +191,7 @@ $unis-silver: #918f8f;
 
       } .logout-button {
         padding: 4px 10px; 
-        font-family: "Bitcount Grid Double", system-ui !important;
+        font-family: "Bitcount Grid Double", system-ui;
       }
     }
 

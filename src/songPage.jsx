@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from 'react'; // <--- ADDED useRef
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import songArtwork from './assets/theQuiet.jpg';
@@ -10,6 +10,7 @@ import { PlayerContext } from './context/playercontext';
 import VotingWizard from './votingWizard'; 
 import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';  
+import CommentSection from './CommentSection'; // <-- NEW IMPORT
 
 const SongPage = () => {
   const { songId } = useParams();
@@ -17,8 +18,6 @@ const SongPage = () => {
   const [song, setSong] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [comment, setComment] = useState('');
-  const [comments, setComments] = useState([]);
   const [showVotingWizard, setShowVotingWizard] = useState(false); 
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [userId, setUserId] = useState(null);
@@ -32,17 +31,16 @@ const SongPage = () => {
   const [editingLyrics, setEditingLyrics] = useState(false);
   const [currentLyrics, setCurrentLyrics] = useState('');
 
-  // --- NEW: AMBIENT MODE STATE ---
-  // Default to a transparent value or a safe fallback
+  // --- AMBIENT MODE STATE ---
   const [dominantColor, setDominantColor] = useState('rgba(255, 255, 255, 0.1)');
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
   const navigate = useNavigate();
 
-  // --- NEW: COLOR EXTRACTION LOGIC ---
+  // --- COLOR EXTRACTION LOGIC ---
   const extractColor = (url) => {
     const img = new Image();
-    img.crossOrigin = "Anonymous"; // Crucial for external images
+    img.crossOrigin = "Anonymous";
     img.src = url;
 
     img.onload = () => {
@@ -50,12 +48,8 @@ const SongPage = () => {
       const ctx = canvas.getContext('2d');
       canvas.width = 1;
       canvas.height = 1;
-      
-      // Draw image at 1x1 to average all pixels
       ctx.drawImage(img, 0, 0, 1, 1);
       const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-      
-      // Set color with transparency for the glow effect
       setDominantColor(`rgba(${r}, ${g}, ${b}, 0.6)`);
     };
   };
@@ -77,7 +71,6 @@ const SongPage = () => {
     fetchSongData();
   }, [songId]);
 
-  // --- NEW: TRIGGER EXTRACTION WHEN ARTWORK LOADS ---
   useEffect(() => {
     if (song?.artwork) {
       extractColor(song.artwork);
@@ -86,7 +79,6 @@ const SongPage = () => {
 
   useEffect(() => {
     if (song?.id && userId) {
-      // Check if already liked
       apiCall({ 
         url: `/v1/media/song/${song.id}/is-liked?userId=${userId}`,
         method: 'get'
@@ -94,7 +86,6 @@ const SongPage = () => {
         .then(res => setIsLiked(res.data.isLiked || false))
         .catch(() => setIsLiked(false));
       
-      // Get like count
       apiCall({ 
         url: `/v1/media/song/${song.id}/likes/count`,
         method: 'get'
@@ -224,7 +215,6 @@ const SongPage = () => {
     
     try {
       if (isLiked) {
-        // Unlike
         const res = await apiCall({
           method: 'delete',
           url: `/v1/media/song/${song.id}/like?userId=${userId}`
@@ -235,7 +225,6 @@ const SongPage = () => {
           setLikeCount(prev => Math.max(0, prev - 1));
         }
       } else {
-        // Like
         const res = await apiCall({
           method: 'post',
           url: `/v1/media/song/${song.id}/like?userId=${userId}`
@@ -253,21 +242,17 @@ const SongPage = () => {
   };
 
   const handleFollow = async () => {
-    // Optimistic UI update (switch immediately)
     const newStatus = !isFollowing;
     setIsFollowing(newStatus);
 
     try {
       if (newStatus) {
-        // Follow the ARTIST of this song
         await apiCall({ method: 'post', url: `/v1/users/${song.artistId}/follow` });
       } else {
-        // Unfollow
         await apiCall({ method: 'delete', url: `/v1/users/${song.artistId}/follow` });
       }
     } catch (err) {
       console.error('Failed to toggle follow:', err);
-      // Revert if failed
       setIsFollowing(!newStatus);
     }
   };
@@ -294,14 +279,6 @@ const SongPage = () => {
     }
   };
 
-  const handleCommentSubmit = (e) => {
-    e.preventDefault();
-    if (comment.trim()) {
-      setComments([...comments, comment]);
-      setComment('');
-    }
-  };
-
   const handleArtistClick = () => {
     if (song?.artistId) {
       navigate(`/artist/${song.artistId}`);
@@ -309,7 +286,6 @@ const SongPage = () => {
   };
 
   const isOwner = userId && song?.artistId === userId;
-
 
   if (loading) {
     return (
@@ -334,7 +310,6 @@ const SongPage = () => {
   return (
     <Layout backgroundImage={song.artwork}>
       <div className="song-page-container">
-        {/* --- MODIFIED: Added ambient-card class and style prop --- */}
         <div 
           className="main-content-card ambient-card"
           style={{ '--ambient-glow': dominantColor }}
@@ -426,8 +401,8 @@ const SongPage = () => {
             </button>
           </div>
 
-          {/* Lyrics Section - now always visible, cleaner display */}
-         {song.lyrics && (
+          {/* Lyrics Section */}
+          {song.lyrics && (
             <section className="lyrics-section" style={{ marginTop: '2rem' }}>
               <h2 style={{ color: "blue", marginBottom: '1rem' }}>Lyrics</h2>
               <p style={{ 
@@ -441,18 +416,18 @@ const SongPage = () => {
             </section>
           )}
 
-         {/* Edit Button (Only for owner) */}
-         {isOwner && (
-          <div className="owner-actions" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-            <button 
-              className="btn btn-primary" 
-              onClick={() => setShowLyricsWizard(true)}
-            >
-              <FileText size={16} style={{ marginRight: '8px' }} />
-              {song.lyrics ? 'Edit Lyrics' : 'Add Lyrics'}
-            </button>
-          </div>
-        )}
+          {/* Edit Button (Only for owner) */}
+          {isOwner && (
+            <div className="owner-actions" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => setShowLyricsWizard(true)}
+              >
+                <FileText size={16} style={{ marginRight: '8px' }} />
+                {song.lyrics ? 'Edit Lyrics' : 'Add Lyrics'}
+              </button>
+            </div>
+          )}
 
           <section className="description-section">
             <h2 style={{color: "blue"}}>About</h2>
@@ -500,37 +475,25 @@ const SongPage = () => {
             </section>
           )}
 
-          <section className="comments-section">
-            <h2>Comments</h2>
-            <form onSubmit={handleCommentSubmit} className="comment-form">
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Add a comment..."
-              />
-              <button type="submit" className="submit-comment-button">
-                Submit
-              </button>
-            </form>
-            <ul className="comments-list">
-              {comments.map((c, index) => (
-                <li key={index} className="comment-item">{c}</li>
-              ))}
-              {comments.length === 0 && <p className="no-comments">No comments yet.</p>}
-            </ul>
-          </section>
+          {/* ========== NEW PREMIUM COMMENT SECTION ========== */}
+          <CommentSection 
+            songId={song.id}
+            userId={userId}
+            songArtistId={song.artistId}
+          />
+          {/* ================================================= */}
 
         </div>
       </div>
 
       {showLyricsWizard && (
-      <LyricsWizard
-        show={showLyricsWizard}
-        onClose={() => setShowLyricsWizard(false)}
-        song={song}
-        onSuccess={fetchSongData}
-      />
-    )}
+        <LyricsWizard
+          show={showLyricsWizard}
+          onClose={() => setShowLyricsWizard(false)}
+          song={song}
+          onSuccess={fetchSongData}
+        />
+      )}
 
       {/* Voting Wizard */}
       <VotingWizard
@@ -546,7 +509,6 @@ const SongPage = () => {
           selectedJurisdiction: song.jurisdiction.toLowerCase().replace(' ', '-'),
         }}
       />
-
 
     </Layout>
   );
