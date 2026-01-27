@@ -303,19 +303,38 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       margin-bottom: 0.5rem;
       flex-wrap: wrap;
 
-      .username {
-        color: $accent-white;
-        font-family: $font-comment;
-        font-weight: 600;
-        font-size: 0.9rem;
-        letter-spacing: -0.01em;
-        transition: color 0.3s ease;
+      .user-info {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
 
-        &:hover {
-          // Ambient-aware username hover
-          color: color-mix(in srgb, var(--ambient-color) 70%, $accent-white);
-          cursor: pointer;
-          text-shadow: 0 0 10px var(--ambient-color);
+        .username {
+          color: $accent-white;
+          font-family: $font-comment;
+          font-weight: 600;
+          font-size: 0.9rem;
+          letter-spacing: -0.01em;
+          transition: color 0.3s ease;
+
+          &:hover {
+            color: color-mix(in srgb, var(--ambient-color) 70%, $accent-white);
+            cursor: pointer;
+            text-shadow: 0 0 10px var(--ambient-color);
+          }
+        }
+
+        .user-jurisdiction {
+          color: $unis-blue;
+          font-family: $font-comment;
+          font-size: 0.7rem;
+          font-weight: 500;
+          letter-spacing: 0.01em;
+          transition: all 0.3s ease;
+          
+          &:hover {
+            cursor: pointer;
+            text-shadow: 0 0 8px rgba($unis-blue, 0.5);
+          }
         }
       }
 

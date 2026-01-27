@@ -228,8 +228,13 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
           {/* Comment Body */}
           <div className="comment-body">
             <div className="comment-header">
-              <span className="username">{comment.username}</span>
-              <span className="timestamp">{formatTimeAgo(comment.createdAt)}</span>
+              <div className="user-info">
+                <span className="username">{comment.username}</span>
+                {comment.userJurisdictionName && (
+                  <span className="user-jurisdiction">{comment.userJurisdictionName}</span>
+                )}
+              </div>
+              <span className="timestamp">{formatTimeAgo(comment.createdAt)}</span>              
               
               {/* Actions Menu */}
               {canDelete(comment) && (
