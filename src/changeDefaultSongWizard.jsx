@@ -1,4 +1,3 @@
-// src/components/wizards/ChangeDefaultSongWizard.jsx
 import React, { useState } from 'react';
 import { X, Music, Check } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';

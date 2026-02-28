@@ -1,4 +1,3 @@
-// src/components/wizards/DeleteAccountWizard.jsx
 import React, { useState } from 'react';
 import { X, AlertTriangle, Trash2 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
@@ -31,10 +30,10 @@ const DeleteAccountWizard = ({ show, onClose }) => {
     try {
       await apiCall({
         method: 'delete',
-        url: '/v1/users/me',   // This should cascade-delete songs, votes, awards, etc.
+        url: '/v1/users/me',   
       });
 
-      logout();                    // Clear context + token
+      logout();                   
       navigate('/login');
       alert('Your account has been permanently deleted.');
     } catch (err) {
