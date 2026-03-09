@@ -834,7 +834,7 @@ const handleSubmit = async () => {
       try {
         let photoUrl = null;
         
-        // UPDATED: Handle photo upload for BOTH artists and listeners
+        // Handle photo upload for BOTH artists and listeners
         const photoFile = formData.role === 'artist' 
           ? formData.artistPhotoFile 
           : formData.listenerPhotoFile;
@@ -859,7 +859,7 @@ const handleSubmit = async () => {
           jurisdictionId: formData.jurisdictionId,
           supportedArtistId: formData.supportedArtistId,
           referralCode: formData.referralCode,
-          bio: formData.bio || null,  // Now both listeners and artists have bio
+          bio: formData.bio || null,
           genreId: formData.role === 'artist' ? formData.genreId : null,
           photoUrl: photoUrl,
         };
@@ -874,9 +874,27 @@ const handleSubmit = async () => {
         
         // Only upload song if user is an artist
         if (formData.role === 'artist' && formData.songFile) {
+
+          // C1 FIX: Song upload now requires auth, so we need to login first
+          // to get a JWT before uploading the song
+          const loginResponse = await apiCall({
+            url: '/auth/login',
+            method: 'post',
+            data: {
+              email: formData.email,
+              password: formData.password,
+            },
+          });
+          
+          // Store the token so apiCall/axiosInstance includes it in subsequent requests
+          const token = loginResponse.data?.token;
+          if (token) {
+            localStorage.setItem('token', token);
+          }
+
           const songData = {
             title: formData.songTitle,
-            artistId: newUser.userId,
+            artistId: newUser.userId, // Backend ignores this per C6, uses JWT instead
             genreId: formData.genreId,
             jurisdictionId: formData.jurisdictionId,
           };
@@ -893,6 +911,10 @@ const handleSubmit = async () => {
             method: 'post',
             data: songFormData,
           });
+
+          // Clear the token — we want the user to go through the login page
+          // so AuthContext initializes properly with their full profile
+          localStorage.removeItem('token');
         }
         
         setSuccess(true);
@@ -905,12 +927,14 @@ const handleSubmit = async () => {
         }, 1500);
         
       } catch (err) {
+        // Clean up token if something failed mid-flow
+        localStorage.removeItem('token');
         setError(err.response?.data?.message || 'Registration failed. Please try again.');
       } finally {
         setLoading(false);
       }
     };
-  
+      
   if (!show) return null;
   
   const IllustrationComponent = STEP_ILLUSTRATIONS[currentStepData?.illustration] || WelcomeIllustration;

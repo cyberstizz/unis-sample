@@ -765,3 +765,352 @@ These files exist in the repo but are not actively used in the live application.
 | `privacyPolicy.jsx` | Not routed | Same as above. |
 | `termsOfService.jsx` | Not routed | Same as above. |
 | `reportInfringement.jsx` | Not routed | Same as above. |
+
+---
+
+## 12. Additional Components (Session 2)
+
+### `Footer.jsx`
+**Purpose:** Persistent bottom navigation bar rendered on all pages via `Layout.jsx`. Contains legal page links and copyright notice.
+
+**Links (all use `react-router-dom` `<Link>`):**
+
+| Label | Route |
+|-------|-------|
+| Privacy Policy | `/privacy` |
+| Terms of Use | `/terms` |
+| Cookie Policy | `/cookie` |
+| Report Infringement | `/report` |
+
+**Note:** All four routes linked here must exist in `App.jsx`. Based on code review, these legal pages are implemented but their routes are unconfirmed — see Section 11.
+
+**Dependencies:** `react-router-dom`, `footer.scss`
+
+---
+
+### `CookiePolicy.jsx`
+**Purpose:** Static legal page explaining Unis' use of cookies, localStorage (JWT auth token), Google Analytics, and third-party OAuth cookies. Fully written and compliant with GDPR/CCPA disclosure requirements.
+
+**Key sections covered:** Essential technologies (JWT), analytics (Google), third-party (OAuth/Cloudflare), user controls (browser settings, localStorage clearing, opt-out), data retention periods, international user rights.
+
+**Status:** Fully implemented. Routed via `Layout` wrapper. **Missing its route in `App.jsx`** — Footer links to `/cookie` but no matching `<Route>` exists. Needs one line added to `App.jsx`.
+
+**Dependencies:** `Layout`, `cookiePolicy.scss`, `randomrapper.jpeg` (background fallback)
+
+---
+
+### `Earnings.jsx`
+**Purpose:** Placeholder page for the future artist earnings dashboard. Currently displays a "Coming Soon" message.
+
+**Status:** UI shell only. No API calls, no data. Stripe Connect and AdSense integration not yet implemented.
+
+**When complete, this page will show:** Ad play earnings, referred artist revenue share percentages, payout controls.
+
+**Dependencies:** `Layout`, `earnings.scss`, `randomrapper.jpeg`
+
+---
+
+### `LeaderboardsPage.jsx`
+**Purpose:** A filterable leaderboard view showing top artists or songs by votes, scoped to jurisdiction, genre, and time interval. Similar to `VoteAwards.jsx` but focused purely on ranked display rather than voting.
+
+**Filters:** `location` (jurisdiction), `genre`, `category` (artist/song), `interval` (daily/weekly/etc.)
+
+**Key Logic:**
+
+| Function | Logic |
+|----------|-------|
+| `handleViewCurrent` | Maps filter strings → UUIDs via `idMappings`. GET `/v1/vote/leaderboards` with params. Normalizes response — extracts `targetId` for both artist and song types. |
+| `handlePlay` | Songs: plays `fileUrl` directly. Artists: fetches `/v1/users/{id}/default-song` first. Fallback: plays local sample MP3. Tracks plays via POST to `/v1/media/song/{id}/play`. |
+| `handleArtistView` | Navigates to `/artist/{id}` |
+| `handleSongView` | Navigates to `/song/{id}` |
+
+**API:** GET `/v1/vote/leaderboards?jurisdictionId=&genreId=&targetType=&intervalId=&limit=50`
+
+**Known Issues:**
+- Genre dropdown has `value="rap-"` (trailing dash) — likely a typo, won't match `GENRE_IDS['rap']`. Will cause bad UUID lookup.
+- Hardcoded fallback: imports and plays `tonyfadd_paranoidbuy1get1free.mp3` as sample when no media URL exists. Should be removed for production.
+- `item.jurisdictionId` is rendered in the UI where vote count should appear — the votes div is empty and jurisdiction is shown in wrong field.
+
+**Dependencies:** `idMappings.js`, `PlayerContext`, `apiCall`, `Layout`, `leaderboardsPage.scss`
+
+---
+
+### `IntervalDatePicker.jsx`
+**Purpose:** A reusable custom date picker that adapts its UI based on the `interval` prop. Handles 6 distinct selection modes, each with min/max date boundary enforcement.
+
+**Props:**
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `interval` | String | `daily`, `weekly`, `monthly`, `quarterly`, `midterm`, `annual` |
+| `value` | String | Currently selected date in `YYYY-MM-DD` format |
+| `onChange` | Function | Callback receiving new date string |
+| `maxDate` | String | Upper boundary (`YYYY-MM-DD`) |
+| `minDate` | String | Lower boundary (`YYYY-MM-DD`) |
+
+**Picker modes:**
+
+| Interval | UI | Output |
+|----------|----|--------|
+| `daily` | Native `<input type="date">` | Selected day |
+| `weekly` | Custom calendar grid | Monday of selected week |
+| `monthly` | Month grid + year nav | Last day of selected month |
+| `quarterly` | Q1-Q4 buttons + year nav | Last day of selected quarter |
+| `midterm` | H1/H2 buttons + year nav | Last day of selected half-year |
+| `annual` | Year grid | Dec 31 of selected year |
+
+**Key Logic:**
+- `isSelectable(date)` — enforces both min and max boundaries before allowing selection
+- `getMonday` / `getSunday` — calculates week boundaries for weekly mode
+- `isInSelectedWeek` — highlights the full Mon-Sun range in the calendar grid
+- `getDisplayText` — formats the selected value into a human-readable label based on interval
+- Click-outside listener closes the dropdown via `document.addEventListener('click', ...)`
+
+**Used by:** `MilestonesPage.jsx`
+
+---
+
+### `PlaylistPanel.jsx`
+**Purpose:** A compact sidebar panel displaying the user's non-default playlists. Clicking a playlist opens it in `PlaylistViewer`. Acts as a lightweight alternative to the full `PlaylistManager` modal.
+
+**State:** `openViewer` (Boolean), `viewerTracks` (Array), `viewerTitle` (String)
+
+**Key Logic:**
+- Filters out playlists where `pl.isDefault === true` — only shows user-created lists
+- On open: passes `playlist.tracks` and `playlist.name` to `PlaylistViewer` as local state
+- `onRemove`: filters `viewerTracks` locally (optimistic UI — does not call API directly)
+- `onReorder`: replaces `viewerTracks` with new order locally
+
+**Note:** Local track mutations (remove/reorder) update panel state only. Actual persistence is handled inside `PlaylistViewer` which calls `PlayerContext` API functions.
+
+**Dependencies:** `PlayerContext` (for `playlists`), `PlaylistViewer`, `playlistpanel.scss`
+
+---
+
+## 13. Confirmed Deprecated Files (Updated)
+
+These files have been reviewed and confirmed as deprecated prototypes. Safe to delete after verifying no hidden imports remain.
+
+| File | Confirmed Status | Notes |
+|------|-----------------|-------|
+| `ExploreFind.jsx` | Deprecated prototype | Hardcoded dummy data, no API, no route. Superseded by `FindPage.jsx`. |
+| `Onboarding.jsx` | Deprecated prototype | Placeholder step UI, no API calls. Superseded by `CreateAccountWizard.jsx`. |
+| `MapDemo.jsx` | Deprecated prototype | `react-simple-maps` with dummy data. Superseded by `FindPage.jsx`. |
+| `Register.jsx` | Deprecated stub | Plain form, no styling. Superseded by `CreateAccountWizard.jsx`. |
+| `api.js` | Legacy stub | Only used by `Register.jsx`. Delete together. |
+
+**Legal pages needing routes added to `App.jsx`:**
+
+| File | Footer Link | Route Needed |
+|------|------------|--------------|
+| `CookiePolicy.jsx` | `/cookie` | Yes |
+| `privacyPolicy.jsx` | `/privacy` | Verify |
+| `termsOfService.jsx` | `/terms` | Verify |
+| `reportInfringement.jsx` | `/report` | Verify |
+
+---
+
+## 14. Final Components (Session 3 — Complete)
+
+### `playlistService.js` (`/src/services/`)
+**Purpose:** A clean service object wrapping all playlist-related API calls. Acts as an abstraction layer over `axiosInstance` for playlist CRUD operations.
+
+**Note:** This service duplicates functionality already built into `PlayerContext.js`. `PlayerContext` handles all playlist API calls directly and is what the app actually uses. `playlistService.js` appears to be an earlier or parallel implementation that is not actively consumed by any component.
+
+**Methods:**
+
+| Method | HTTP | Endpoint |
+|--------|------|----------|
+| `getUserPlaylists()` | GET | `/playlists` |
+| `getPlaylistById(id)` | GET | `/playlists/{id}` |
+| `createPlaylist(name)` | POST | `/playlists` |
+| `updatePlaylist(id, name)` | PUT | `/playlists/{id}` |
+| `deletePlaylist(id)` | DELETE | `/playlists/{id}` |
+| `addTrackToPlaylist(id, songId)` | POST | `/playlists/{id}/tracks` |
+| `removeTrackFromPlaylist(id, itemId)` | DELETE | `/playlists/{id}/tracks/{itemId}` |
+| `reorderPlaylist(id, orderedItemIds)` | PUT | `/playlists/{id}/reorder` |
+
+**Refactor Flag:** Consider deprecating in favor of `PlayerContext` which is the single source of truth for playlist state and API calls.
+
+---
+
+### `PrivacyPolicy.jsx`
+**Purpose:** Static legal page covering Unis' full privacy practices. Compliant with GDPR and CCPA disclosure requirements.
+
+**Key sections:** Data collection (personal/non-personal), usage, sharing policy, cookies, user rights (access/delete/correct/opt-out), children's privacy (COPPA, 13+), international transfers, security practices, contact information.
+
+**Status:** Fully implemented. Uses `Layout` wrapper. **Needs route `/privacy` confirmed in `App.jsx`** — Footer links to it.
+
+**Dependencies:** `Layout`, `privacyPolicy.scss`, `randomrapper.jpeg`
+
+---
+
+### `Profile.jsx`
+**Purpose:** The listener-facing profile page. Allows non-artist users to view their stats, manage their supported artist, browse vote history, edit their profile, and delete their account.
+
+**Context:** `AuthContext` (for `user`), `PlayerContext` (for `playMedia`)
+
+**Init flow (3 parallel calls):**
+1. GET `/v1/users/profile/{userId}` → sets `userProfile`
+2. GET `/v1/users/profile/{supportedArtistId}` → sets `supportedArtist` (if exists)
+3. GET `/v1/vote/history?limit=50` → sets `voteHistory`
+
+**Key Logic:**
+
+| Function | Logic |
+|----------|-------|
+| `playDefaultSong` | Builds media object from `supportedArtist.defaultSong` → tracks play via POST → calls `playMedia` |
+| `refreshProfile` | Re-fetches profile after `EditProfileWizard` saves changes |
+| `buildUrl` | Handles relative vs absolute image URLs |
+
+**UI Sections:** Profile header (photo, bio, edit button), Supported Artist card with playback, Stats grid (score, level, total votes), Vote History summary with "View All" button, Danger Zone (delete account).
+
+**Child Components:** `EditProfileWizard`, `DeleteAccountWizard`, `VoteHistoryModal`
+
+**Note:** `Profile.jsx` is the listener equivalent of `ArtistDashboard.jsx`. Artists are redirected to `/artistDashboard` via Sidebar; listeners land here at `/profile`.
+
+---
+
+### `ReportInfringement.jsx`
+**Purpose:** A fully implemented DMCA takedown notice form. Collects all legally required fields per 17 U.S.C. § 512 and displays a confirmation screen with a reference number on submission.
+
+**State:** `formData` (all form fields), `submitted` (Boolean — controls success screen)
+
+**Form fields:**
+- Contact: `fullName`, `email`, `phoneNumber`, `companyName`
+- Ownership: `copyrightOwner` (owner or authorized agent)
+- Work: `workDescription`, `originalWorkUrl`
+- Infringing content: `infringingUrl`
+- Legal statements: 3 required checkboxes (good faith, accuracy, authorized)
+- Signature: `signature` (typed), `date`
+
+**Submit logic:**
+1. Validates all 3 checkboxes are checked
+2. Logs to console (production: should POST to backend)
+3. Generates reference number: `DMCA-{Date.now().toString(36).toUpperCase()}`
+4. Shows success screen with confirmation
+
+**Backend Status:** Not yet implemented. Currently logs to console only. Needs a POST endpoint (e.g., `/v1/dmca/submit`) and email dispatch to `dmca@unis.com`.
+
+**Status:** Frontend complete. Needs route `/report` confirmed in `App.jsx` and backend integration.
+
+**Dependencies:** `Layout`, `reportInfringement.scss`, `randomrapper.jpeg`
+
+---
+
+### `TermsOfService.jsx`
+**Purpose:** Static legal page containing the full Unis Terms of Service agreement.
+
+**Key sections:** Eligibility (13+, Harlem zip requirement), accounts and security, user content licensing (grant to Unis, user retains ownership), acceptable use policy, voting and awards rules (one vote/user/day, no farming), third-party services, disclaimers, limitation of liability ($100 cap), indemnification, governing law (New York), dispute resolution (binding arbitration, class action waiver).
+
+**Status:** Fully implemented. **Needs route `/terms` confirmed in `App.jsx`** — Footer links to it.
+
+**Dependencies:** `Layout`, `termsOfService.scss`, `randomrapper.jpeg`
+
+---
+
+### `SongNotification.jsx`
+**Purpose:** A transient toast notification that appears in the bottom corner when a new track starts playing. Auto-dismisses after 3 seconds.
+
+**Consumes:** `PlayerContext` → `currentMedia`
+
+**Logic:** `useEffect` watches `currentMedia`. On change: sets `show` to true, starts 3-second timer, then sets `show` to false. Clears timer on re-trigger (cleanup function).
+
+**Displays:** Track artwork, title, and artist name.
+
+**Dependencies:** `PlayerContext`, `songNotification.scss`
+
+---
+
+### `UnisPauseButton.jsx`
+**Purpose:** Custom SVG pause button icon component. Renders a blue circle (`#163387`) with two black vertical bars.
+
+**Renders:** Inline SVG, `40x40px`, `viewBox="0 0 100 100"`, CSS class `unis-play-button-icon`.
+
+**Note:** The fill color for the pause bars is currently `black`. Based on the blue background, this was likely intended to be `white` for contrast. Worth verifying visually.
+
+**No props. No state. Pure presentational component.**
+
+---
+
+### `UnisPlayButton.jsx`
+**Purpose:** Custom SVG play button icon component. Renders a blue circle (`#163387`) with a black triangle (play arrow).
+
+**Renders:** Inline SVG, `40x40px`, `viewBox="0 0 100 100"`, CSS class `unis-play-button-icon`. Triangle path: `M38 30 L70 50 L38 70 Z`.
+
+**Note:** Same as `UnisPauseButton` — triangle fill is `black` against a blue circle. Likely should be `white`. Verify visually.
+
+**No props. No state. Pure presentational component.**
+
+---
+
+### `VoteHistoryModal.jsx`
+**Purpose:** A modal overlay displaying a user's complete voting history as a scrollable list. Each row shows nominee image, name, type (artist/song), vote date, and interval.
+
+**Props:**
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `show` | Boolean | Controls visibility |
+| `onClose` | Function | Callback to close |
+| `votes` | Array | Real vote data from API |
+| `useDummyData` | Boolean | If true, renders hardcoded dummy votes instead of real data |
+
+**Dummy data flag:** `useDummyData` defaults to `true` in component definition but is passed as `false` from `Profile.jsx`. Contains 8 hardcoded test votes with imported local images. **Remove dummy data and imports before production.**
+
+**Key functions:**
+- `formatDate` — formats `YYYY-MM-DD` → `M/DD/YY`
+- `getIntervalLabel` — maps interval keys (`day`, `week`, etc.) to display labels
+- `buildImageUrl` — handles both imported local images (dummy) and API URLs (real data)
+
+**Refactor Flag:** Remove all dummy data imports (`rapperOne`, `songArtOne`, etc.) and set `useDummyData` default to `false` before production launch.
+
+---
+
+### `WinnersNotification.jsx`
+**Purpose:** A "daily login" style notification that fires once per day when the user logs in. Fetches the current leaderboard and displays one of three randomly selected notification types highlighting the daily leader.
+
+**Notification types (randomly selected):**
+
+| Type | Content |
+|------|---------|
+| `leading` | Shows #1 artist and their vote count |
+| `trending` | Shows top 3 artist names competing |
+| `community` | Shows total votes cast today |
+
+**Logic:**
+1. Checks `localStorage.getItem('winnersNotificationShown')` against today's date
+2. If already shown today → skips entirely
+3. If not shown → fetches `/v1/vote/leaderboards` for user's jurisdiction and genre
+4. Picks random notification type → shows for 5 seconds → auto-hides
+5. Sets `localStorage.setItem('winnersNotificationShown', today)` to prevent repeat
+
+**Fallback:** If API fails, shows a generic "Welcome to UNIS" notification.
+
+**API:** GET `/v1/vote/leaderboards?jurisdictionId=&genreId=&targetType=artist&intervalId={daily}&limit=3`
+
+**Dependencies:** `AuthContext`, `apiCall`, `winnersNotification.scss`, `lucide-react`
+
+
+---
+
+## 15. Action Items Before Production Launch
+
+These are concrete tasks identified during documentation that must be addressed:
+
+| Priority | Task | File |
+|----------|------|------|
+| 🔴 High | Add routes `/privacy`, `/terms`, `/cookie`, `/report` to `App.jsx` | `App.jsx` |
+| 🔴 High | Implement backend POST endpoint for DMCA form submission | `ReportInfringement.jsx` |
+| 🔴 High | Remove dummy data imports and set `useDummyData=false` | `VoteHistoryModal.jsx` |
+| 🔴 High | Remove hardcoded referral bypass `UNIS-LAUNCH-2024` | `CreateAccountWizard.jsx` |
+| 🔴 High | Fix genre dropdown typo `value="rap-"` → `value="rap"` | `LeaderboardsPage.jsx` |
+| 🟡 Medium | Fix SVG button fill colors from `black` → `white` | `UnisPauseButton`, `UnisPlayButton` |
+| 🟡 Medium | Move Harlem geofence coordinates to backend | `CreateAccountWizard.jsx` |
+| 🟡 Medium | Replace Nominatim with paid geocoding service | `CreateAccountWizard.jsx` |
+| 🟡 Medium | Fix empty votes display in LeaderboardsPage result rows | `LeaderboardsPage.jsx` |
+| 🟡 Medium | Persist `showWelcomePopup` state in localStorage | `ArtistDashboard.jsx` |
+| 🟢 Low | Delete confirmed deprecated files: `ExploreFind`, `Onboarding`, `MapDemo`, `Register`, `api.js` | Multiple |
+| 🟢 Low | Consolidate `playlistService.js` into `PlayerContext` or delete | `playlistService.js` |
+| 🟢 Low | Add Login button to Header for unauthenticated state | `Header.jsx` |
+| 🟢 Low | Clean up unused imports in `Main.jsx` | `Main.jsx` |
