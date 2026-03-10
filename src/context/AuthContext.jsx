@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = async (credentials) => {
+const login = async (credentials) => {
     try {
       const response = await axiosInstance.post('/auth/login', credentials);
       localStorage.setItem('token', response.data.token);
@@ -54,17 +54,29 @@ export const AuthProvider = ({ children }) => {
       const userId = decodeToken(response.data.token);
       if (userId) {
         const profileRes = await axiosInstance.get(`/v1/users/profile/${userId}`);
-        setUser(profileRes.data);
+        const profileData = profileRes.data;
+
+        // Check for admin role
+        try {
+          const roleCheck = await axiosInstance.get('/v1/admin/roles');
+          const myRole = roleCheck.data?.find(r => r.user?.userId === profileData.userId);
+          profileData.adminRole = myRole ? myRole.roleLevel : null;
+        } catch (e) {
+          // 403 = not an admin, that's fine
+          profileData.adminRole = null;
+        }
+
+        setUser(profileData);
         return { success: true };
       } else {
         throw new Error('Invalid token');
       }
     } catch (error) {
-      localStorage.removeItem('token');  // Clean up on fail
+      localStorage.removeItem('token');
       return { success: false, error: error.response?.data || 'Login failed' };
     }
   };
-
+  
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
