@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiCall } from '../components/axiosInstance';
 import Layout from '../layout';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import './admin.scss';
 
 const AnalyticsPage = () => {
   const [dauData, setDauData] = useState([]);
@@ -65,7 +66,7 @@ const AnalyticsPage = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '30px 40px', maxWidth: '1200px' }}>
+        <div className="admin-page">
         <h1 style={{ color: '#fff', marginBottom: '30px' }}>Analytics</h1>
 
         <ChartCard title="Daily Active Users">

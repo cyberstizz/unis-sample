@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiCall } from '../components/axiosInstance';
 import Layout from '../layout';
+import './admin.scss';
 
 const AuditLog = () => {
   const [actions, setActions] = useState([]);
@@ -25,7 +26,7 @@ const AuditLog = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '30px 40px', maxWidth: '1200px' }}>
+        <div className="admin-page">
         <h1 style={{ color: '#fff', marginBottom: '20px' }}>Audit Log</h1>
 
         {loading ? <p style={{ color: '#A9A9A9' }}>Loading...</p> : (

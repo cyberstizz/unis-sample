@@ -4,6 +4,7 @@ import { apiCall } from '../components/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../layout';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import './admin.scss';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -65,7 +66,7 @@ const AdminDashboard = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '30px 40px', maxWidth: '1200px' }}>
+        <div className="admin-page">
         <h1 style={{ color: '#fff', fontSize: '28px', marginBottom: '8px' }}>Admin Dashboard</h1>
         <p style={{ color: '#A9A9A9', marginBottom: '30px' }}>
           Welcome, {user?.username}. Role: {user?.adminRole}

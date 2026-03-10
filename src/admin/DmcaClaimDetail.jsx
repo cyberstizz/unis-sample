@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../layout';
+import './admin.scss';
 
 const DmcaClaimDetail = () => {
   const { claimId } = useParams();
@@ -72,7 +73,7 @@ const DmcaClaimDetail = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '30px 40px', maxWidth: '900px' }}>
+        <div className="admin-page">
         <button onClick={() => navigate('/admin/moderation')}
           style={{ color: '#A9A9A9', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px' }}>
           ← Back to Moderation Queue

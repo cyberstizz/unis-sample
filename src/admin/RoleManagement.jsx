@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiCall } from '../components/axiosInstance';
 import Layout from '../layout';
+import './admin.scss';
 
 const RoleManagement = () => {
   const [roles, setRoles] = useState([]);
@@ -53,7 +54,7 @@ const RoleManagement = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '30px 40px', maxWidth: '900px' }}>
+        <div className="admin-page">
         <h1 style={{ color: '#fff', marginBottom: '20px' }}>Role Management</h1>
 
         <button onClick={() => setShowGrant(!showGrant)}

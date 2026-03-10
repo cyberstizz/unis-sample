@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
 import Layout from '../layout';
+import './admin.scss';
 
 const ModerationQueue = () => {
   const navigate = useNavigate();
@@ -78,7 +79,7 @@ const ModerationQueue = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '30px 40px', maxWidth: '1200px' }}>
+        <div className="admin-page">
         <h1 style={{ color: '#fff', marginBottom: '20px' }}>Moderation Queue</h1>
 
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '20px' }}>

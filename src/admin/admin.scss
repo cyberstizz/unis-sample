@@ -1,0 +1,12 @@
+.admin-page {
+  margin-left: 250px;
+  margin-top: 80px;
+  padding: 30px 40px;
+  max-width: 1200px;
+  min-height: 100vh;
+
+  @media (max-width: 1024px) {
+    margin-left: 0;
+    padding: 20px;
+  }
+}

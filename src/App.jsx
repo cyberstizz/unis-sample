@@ -22,7 +22,7 @@ import JurisdictionPage from './jurisdictionPage';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
 import PrivateRoute from './components/PrivateRoute';
-import AdminRoute from './components/AdminRoute';
+import AdminRoute from './AdminRoute';
 import { AuthProvider } from './context/AuthContext';
 import WinnersNotification from './winnersNotification';
 import useActivityTracker from './hooks/useActivityTracker';

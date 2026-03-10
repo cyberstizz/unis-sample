@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
 import Layout from '../layout';
+import './admin.scss';
 
 const UserManagement = () => {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ const UserManagement = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '30px 40px', maxWidth: '1200px' }}>
+        <div className="admin-page">
         <h1 style={{ color: '#fff', marginBottom: '20px' }}>User Management</h1>
 
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
