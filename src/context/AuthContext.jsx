@@ -30,7 +30,17 @@ export const AuthProvider = ({ children }) => {
       const userId = decodeToken(token);
       if (userId) {
         axiosInstance.get(`/v1/users/profile/${userId}`)  
-          .then((res) => setUser(res.data))
+          .then(async (res) => {
+            const profileData = res.data;
+            try {
+              const roleCheck = await axiosInstance.get('/v1/admin/roles');
+              const myRole = roleCheck.data?.find(r => r.user?.userId === profileData.userId);
+              profileData.adminRole = myRole ? myRole.roleLevel : null;
+            } catch (e) {
+              profileData.adminRole = null;
+            }
+            setUser(profileData);
+          })
           .catch((err) => {
             if (err.response?.status === 401 || err.response?.status === 404) {
               localStorage.removeItem('token');  
@@ -76,7 +86,7 @@ const login = async (credentials) => {
       return { success: false, error: error.response?.data || 'Login failed' };
     }
   };
-  
+
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
