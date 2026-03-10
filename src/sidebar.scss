@@ -122,6 +122,17 @@ $unis-silver: #918f8f;
   }
 }
 
+.sidebar-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 10px 15px;
+  list-style: none;
+  cursor: default;
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
 // Desktop: Always visible, transparent
 @media (min-width: 1025px) {
   .sidebar-trigger {

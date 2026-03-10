@@ -1,18 +1,15 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { PlayerProvider } from './context/playercontext';
-import Player from './player'; 
-import Sidebar from './sidebar'; 
-import Feed from './feed'; 
-import ExploreFind from './explorefind'; 
+import Player from './player';
+import Sidebar from './sidebar';
+import Feed from './feed';
 import ArtistPage from './artistpage';
 import SongPage from './songPage';
-import Onboarding from './onboarding';
 import VoteAwards from './voteawards';
 import Profile from './profile';
 import MilestonesPage from './milestonesPage';
 import Leaderboards from './leaderboardsPage';
-import MapDemo from './mapDemo';
 import Earnings from './earnings';
 import FindPage from './findpage';
 import PrivacyPolicy from './privacyPolicy';
@@ -23,36 +20,48 @@ import SongNotification from './songNotification';
 import ArtistDashboard from './artistDashboard';
 import JurisdictionPage from './jurisdictionPage';
 import Login from './pages/Login';
-import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
 import PrivateRoute from './components/PrivateRoute';
-import { AuthProvider } from './context/AuthContext';  
+import AdminRoute from './components/AdminRoute';
+import { AuthProvider } from './context/AuthContext';
 import WinnersNotification from './winnersNotification';
+import useActivityTracker from './hooks/useActivityTracker';
 
-// Wrapper component for layout (useLocation inside Router)
+// Admin pages
+import AdminDashboard from './admin/AdminDashboard';
+import ModerationQueue from './admin/ModerationQueue';
+import DmcaClaimDetail from './admin/DmcaClaimDetail';
+import UserManagement from './admin/UserManagement';
+import UserDetail from './admin/UserDetail';
+import AnalyticsPage from './admin/AnalyticsPage';
+import AuditLog from './admin/AuditLog';
+import RoleManagement from './admin/RoleManagement';
+
 const AppLayout = () => {
   const { pathname } = useLocation();
-  
-  // Check if we're on login or register pages
-  const isAuthPage = pathname === '/login' || pathname === '/register';
-  
-  const handleProfileClick = () => {
-    window.location.href = '/profile'; 
-  };
+  const isAuthPage = pathname === '/login' || pathname === '/register' || pathname.startsWith('/reset-password');
+
+  // Track page views for DAU
+  useActivityTracker();
 
   return (
     <div className="app-wrapper">
-      {/* Only show Sidebar on authenticated pages */}
-      {!isAuthPage && <Sidebar onProfileClick={handleProfileClick} />}
-      
+      {!isAuthPage && <Sidebar />}
+
       <Routes>
+        {/* Public routes */}
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/cookie" element={<CookiePolicy />} />
+        <Route path="/report" element={<ReportInfringement />} />
+
+        {/* Authenticated routes */}
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<Feed />} />
-          <Route path="/explore" element={<ExploreFind />} />
           <Route path="/artist/:artistId" element={<ArtistPage />} />
           <Route path="/song/:songId" element={<SongPage />} />
-          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/voteawards" element={<VoteAwards />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/milestones" element={<MilestonesPage />} />
@@ -61,22 +70,36 @@ const AppLayout = () => {
           <Route path="/findpage" element={<FindPage />} />
           <Route path="/artistDashboard" element={<ArtistDashboard />} />
           <Route path="/jurisdiction/:jurisdiction" element={<JurisdictionPage />} />
-           <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/terms" element={<TermsOfService />} />
-          <Route path="/cookie" element={<CookiePolicy />} />
-          <Route path="/report" element={<ReportInfringement />} />
+        </Route>
+
+        {/* Admin routes — all tiers */}
+        <Route element={<AdminRoute requiredLevel="moderator" />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/moderation" element={<ModerationQueue />} />
+          <Route path="/admin/analytics" element={<AnalyticsPage />} />
+        </Route>
+
+        {/* Admin routes — admin + super admin */}
+        <Route element={<AdminRoute requiredLevel="admin" />}>
+          <Route path="/admin/users" element={<UserManagement />} />
+          <Route path="/admin/users/:userId" element={<UserDetail />} />
+          <Route path="/admin/moderation/dmca/:claimId" element={<DmcaClaimDetail />} />
+        </Route>
+
+        {/* Admin routes — super admin only */}
+        <Route element={<AdminRoute requiredLevel="super_admin" />}>
+          <Route path="/admin/audit" element={<AuditLog />} />
+          <Route path="/admin/roles" element={<RoleManagement />} />
         </Route>
       </Routes>
-      
-      {/* Only show notifications on authenticated pages */}
+
       {!isAuthPage && (
         <>
           <WinnersNotification />
           <SongNotification />
         </>
       )}
-      
-      {/* Only show Player on authenticated pages */}
+
       {!isAuthPage && <Player />}
     </div>
   );
