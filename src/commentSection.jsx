@@ -331,8 +331,8 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
     <section className="comments-section-premium">
       {/* Header */}
       <div className="comments-header">
-        <h2>
-          <MessageCircle size={24} />
+        <h2 style={{borderBottom:'solid 1px silver'}}>
+          <MessageCircle size={24} color='blue' />
           Comments
           {commentCount.totalCount > 0 && (
             <span className="comment-count">{commentCount.totalCount}</span>

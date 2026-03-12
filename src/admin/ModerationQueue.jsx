@@ -138,7 +138,7 @@ const ModerationQueue = () => {
                   }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#A9A9A9', fontSize: '12px', marginBottom: '4px' }}>
-                      {comment.user?.username || 'Unknown'} · {new Date(comment.createdAt).toLocaleDateString()}
+                    {comment.user?.username || 'Unknown'} · on "{comment.song?.title || 'Unknown Song'}" · {new Date(comment.createdAt).toLocaleDateString()}
                     </div>
                     <div style={{ color: '#fff', fontSize: '14px' }}>{comment.content}</div>
                   </div>
