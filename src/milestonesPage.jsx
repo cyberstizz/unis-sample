@@ -234,40 +234,39 @@ const MilestonesPage = () => {
       }
 
       const normalized = rawResults.map((award, i) => {
-        let title, artist, artwork;
-        
-        if (award.targetType === 'artist') {
-          title = award.user?.username || 'Unknown Artist';
-          artist = award.user?.username || 'Unknown Artist';
-          artwork = award.user?.photoUrl 
-            ? `${API_BASE_URL}${award.user.photoUrl}` 
-            : rapperOne;
-        } else {
-          title = award.song?.title || 'Unknown Song';
-          artist = award.song?.artist?.username || 'Unknown Artist';
-          artwork = award.song?.artworkUrl 
-            ? `${API_BASE_URL}${award.song.artworkUrl}` 
-            : songArtFour;
-        }
+  let title, artist, artwork;
+  
+  if (award.targetType === 'artist') {
+    title = award.user?.username || 'Unknown Artist';
+    artist = award.user?.username || 'Unknown Artist';
+    artwork = award.user?.photoUrl 
+      ? `${API_BASE_URL}${award.user.photoUrl}` 
+      : rapperOne;
+  } else {
+    title = award.song?.title || 'Unknown Song';
+    artist = award.song?.artist?.username || 'Unknown Artist';
+    artwork = award.song?.artworkUrl 
+      ? `${API_BASE_URL}${award.song.artworkUrl}` 
+      : songArtFour;
+  }
 
-        return {
-          rank: i + 1,
-          id: award.targetId,
-          targetType: award.targetType,
-          title,
-          title: title, // ensuring title property exists
-          artist,
-          jurisdiction: award.jurisdiction?.name || location,
-          votes: award.votesCount || 0,
-          weightedPoints: award.weightedPoints || 0,
-          playsCount: award.playsCount || 0,
-          likesCount: award.likesCount || 0,
-          artwork,
-          determinationMethod: award.determinationMethod,
-          tiedCandidatesCount: award.tiedCandidatesCount || 0,
-          caption: award.caption || generateWinnerCaption(award),
-        };
-      });
+  return {
+    rank: i + 1,
+    id: award.targetId,
+    targetType: award.targetType,
+    title,                    // ← keep this (shorthand is fine)
+    artist,
+    jurisdiction: award.jurisdiction?.name || location,
+    votes: award.votesCount || 0,
+    weightedPoints: award.weightedPoints || 0,
+    playsCount: award.playsCount || 0,
+    likesCount: award.likesCount || 0,
+    artwork,
+    determinationMethod: award.determinationMethod,
+    tiedCandidatesCount: award.tiedCandidatesCount || 0,
+    caption: award.caption || generateWinnerCaption(award),
+  };
+});
 
       setResults(normalized);
       
