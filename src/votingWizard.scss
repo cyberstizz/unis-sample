@@ -225,7 +225,7 @@ button {
   color: $accent-white;
   
   &:hover {
-    background-color: lighten($unis-blue, 10%);
+    background-color: $unis-blue;
     box-shadow: 0 0 10px rgba($unis-blue, 0.4);
   }
   
