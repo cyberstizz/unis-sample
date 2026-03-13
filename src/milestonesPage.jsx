@@ -13,7 +13,7 @@ import songArtThree from './assets/songartworkthree.jpeg';
 import songArtFour from './assets/songartworkfour.jpeg';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 import IntervalDatePicker from './intervalDatePicker';
-import './IntervalDatePicker.scss';
+import './intervalDatePicker.scss';
 
 const MilestonesPage = () => {
   // Input State (Changes immediately as user toggles)
