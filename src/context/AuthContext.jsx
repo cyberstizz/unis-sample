@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }) => {
 
 const login = async (credentials) => {
     try {
-      const response = await axiosInstance.post('/auth/login', credentials);
+      const response = await axiosInstance.post('/api/auth/login', credentials);
       localStorage.setItem('token', response.data.token);
       // Decode for userId + fetch profile
       const userId = decodeToken(response.data.token);
