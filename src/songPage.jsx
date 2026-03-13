@@ -10,7 +10,7 @@ import { PlayerContext } from './context/playercontext';
 import VotingWizard from './votingWizard'; 
 import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';  
-import CommentSection from './CommentSection'; // <-- NEW IMPORT
+import CommentSection from './commentSection'; 
 
 const SongPage = () => {
   const { songId } = useParams();
