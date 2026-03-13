@@ -8,6 +8,7 @@ import { PlayerContext } from './context/playercontext';
 import EditProfileWizard from './editProfileWizard';
 import DeleteAccountWizard from './deleteAccountWizard';
 import VoteHistoryModal from './voteHistoryModal';
+import ChangePasswordWizard from '../changePasswordWizard';
 import './profile.scss';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -21,6 +22,7 @@ const Profile = () => {
   const [showEditWizard, setShowEditWizard] = useState(false);
   const [showDeleteWizard, setShowDeleteWizard] = useState(false);
   const [showVoteHistory, setShowVoteHistory] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   useEffect(() => {
     if (!user?.userId) return;
@@ -201,6 +203,14 @@ const Profile = () => {
           <div className="danger-content">
             <h3>Danger Zone</h3>
             <p>This cannot be undone.</p>
+            <button onClick={() => setShowChangePassword(true)}
+              style={{
+                padding: '10px 20px', background: 'rgba(255,255,255,0.1)', color: '#fff',
+                border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer',
+                marginRight: '12px'
+              }}>
+              Change Password
+            </button>
             <button
               className="btn btn-primary btn-danger"
               onClick={() => setShowDeleteWizard(true)}
@@ -232,6 +242,11 @@ const Profile = () => {
           onClose={() => setShowVoteHistory(false)}
           votes={voteHistory}
           useDummyData={false}  // SET TO false WHEN DONE TESTING
+        />
+
+        <ChangePasswordWizard
+          show={showChangePassword}
+          onClose={() => setShowChangePassword(false)}
         />
 
       </div>

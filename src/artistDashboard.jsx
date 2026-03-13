@@ -15,6 +15,7 @@ import { useAuth } from './context/AuthContext';
 import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
 import { jsPDF } from 'jspdf';  
+import ChangePasswordWizard from '../changePasswordWizard';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -38,6 +39,7 @@ const ArtistDashboard = () => {
   const [songToDelete, setSongToDelete] = useState(null);
   const [showLyricsWizard, setShowLyricsWizard] = useState(false);
   const [lyricsSong, setLyricsSong] = useState(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   // Profile Features
   const [supportedArtist, setSupportedArtist] = useState(null);
@@ -677,6 +679,14 @@ const ArtistDashboard = () => {
               <p style={{ color: '#721c24', marginBottom: '1rem' }}>
                 Once you delete your account, there is no going back.
               </p>
+              <button onClick={() => setShowChangePassword(true)}
+                style={{
+                  padding: '10px 20px', background: 'rgba(255,255,255,0.1)', color: '#fff',
+                  border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer',
+                  marginRight: '12px'
+                }}>
+                Change Password
+              </button>
               <button
                 className="btn btn-primary"
                 style={{ background: '#dc3545', border: 'none' }}
@@ -790,6 +800,11 @@ const ArtistDashboard = () => {
             </div>
           </div>
         )}
+
+        <ChangePasswordWizard
+          show={showChangePassword}
+          onClose={() => setShowChangePassword(false)}
+        />
 
       </div>
     </Layout>

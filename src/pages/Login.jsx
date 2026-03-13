@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import unisLogo from '../assets/UnisFireFinal.png';
 import spaceVideo from '../assets/space-bg.mp4';
 import CreateAccountWizard from '../createAccountWizard'; 
+import ForgotPasswordWizard from '../forgotPasswordWizard';
 import './Login.scss';
 
 const Login = () => {
@@ -14,6 +15,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const [showWizard, setShowWizard] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -73,6 +75,15 @@ const Login = () => {
 
         <button
           type="button"
+          onClick={() => setShowForgotPassword(true)}
+          className="forgot-password-btn"
+          disabled={loading}
+        >
+          Forgot Password?
+        </button>
+
+        <button
+          type="button"
           onClick={() => setShowWizard(true)}
           className="create-account-btn"
           disabled={loading}
@@ -82,6 +93,13 @@ const Login = () => {
       </div>
 
       {/* THIS IS THE ONLY CHANGE — pass "show" prop, remove extra wrapper */}
+      {showForgotPassword && (
+        <ForgotPasswordWizard
+          show={showForgotPassword}
+          onClose={() => setShowForgotPassword(false)}
+        />
+      )}
+
       <CreateAccountWizard
         show={showWizard}
         onClose={() => setShowWizard(false)}
