@@ -328,6 +328,13 @@ const ArtistDashboard = () => {
     }
   };
 
+
+   const formatIsrc = (isrc) => {
+      if (!isrc || isrc.length !== 12) return isrc || '';
+      return `${isrc.slice(0,2)}-${isrc.slice(2,5)}-${isrc.slice(5,7)}-${isrc.slice(7)}`;
+   };
+
+
   return (
     <Layout backgroundImage={backimage}>
       <div className="artist-dashboard">
@@ -487,6 +494,15 @@ const ArtistDashboard = () => {
                   </div>
                   <div className="item-stats">
                     <span><Play size={12} /> {song.playCount || song.plays || 0} plays</span>
+                    {song.isrc ? (
+                      <span style={{ color: '#A9A9A9', fontSize: '12px', marginLeft: '8px' }}>
+                        ISRC: {formatIsrc(song.isrc)}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#f59e0b', fontSize: '11px', marginLeft: '8px' }}>
+                        No ISRC
+                      </span>
+                    )}
                   </div>
                 </div>
               )) : <p>No songs yet — upload your first!</p>}

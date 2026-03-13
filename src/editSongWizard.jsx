@@ -8,6 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
 const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
   const [description, setDescription] = useState(song?.description || '');
   const [artworkFile, setArtworkFile] = useState(null);
+  const [isrc, setIsrc] = useState(song?.isrc || '');
   const [preview, setPreview] = useState(
     song?.artworkUrl ? `${API_BASE_URL}${song.artworkUrl}` : null
   );
@@ -33,6 +34,8 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
     const formData = new FormData();
     if (artworkFile) formData.append('artwork', artworkFile);
     if (description !== song?.description) formData.append('description', description);
+    if (isrc !== (song?.isrc || '')) formData.append('isrc', isrc || '');
+
 
     try {
       await apiCall({
@@ -51,7 +54,7 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
     }
   };
 
-  const hasChanges = artworkFile || description !== song?.description;
+  const hasChanges = artworkFile || description !== song?.description || isrc !== (song?.isrc || '');
 
   return (
     <div className="upload-wizard-overlay">
@@ -131,6 +134,19 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
               {description.length}/500
             </p>
           </div>
+
+          <div className="form-group">
+            <label>ISRC</label>
+            <input
+              type="text"
+              value={isrc}
+              onChange={(e) => setIsrc(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              placeholder="e.g., USRC17607839"
+              maxLength={15}
+            />
+            <small>12-character International Standard Recording Code</small>
+          </div>
+
         </div>
 
         {/* Buttons */}

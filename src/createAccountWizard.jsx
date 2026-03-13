@@ -439,6 +439,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [songIsrc, setSongIsrc] = useState('');
   
   // Step configuration
   const getSteps = () => {
@@ -894,9 +895,10 @@ const handleSubmit = async () => {
 
           const songData = {
             title: formData.songTitle,
-            artistId: newUser.userId, // Backend ignores this per C6, uses JWT instead
+            artistId: newUser.userId,
             genreId: formData.genreId,
             jurisdictionId: formData.jurisdictionId,
+            isrc: songIsrc || null,
           };
 
           const songFormData = new FormData();
@@ -1319,6 +1321,18 @@ const handleSubmit = async () => {
                 <input type="text" placeholder="Track name" value={formData.songTitle} onChange={(e) => updateForm('songTitle', e.target.value)} />
                 <Music className="input-icon" size={20} />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label>ISRC (Optional)</label>
+              <input
+                type="text"
+                value={songIsrc}
+                onChange={(e) => setSongIsrc(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                placeholder="e.g., USRC17607839"
+                maxLength={15}
+              />
+              <small>You can add this later from your dashboard.</small>
             </div>
             
             <div className="file-upload">
