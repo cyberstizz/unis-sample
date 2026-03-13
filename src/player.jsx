@@ -4,7 +4,7 @@ import { PlayerContext } from './context/playercontext';
 import { Heart, Headphones, Vote, ChevronUp, ChevronDown } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
-import VotingWizard from './VotingWizard'; 
+import VotingWizard from './votingWizard'; 
 import UnisPlayButton from './UnisPlayButton';
 import UnisPauseButton from './UnisPauseButton';
 import { apiCall } from './components/axiosInstance';

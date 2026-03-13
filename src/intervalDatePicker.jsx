@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './IntervalDatePicker.scss';
+import './intervalDatePicker.scss';
 
 const IntervalDatePicker = ({ interval, value, onChange, maxDate, minDate }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
