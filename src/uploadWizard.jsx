@@ -1,13 +1,13 @@
 // src/components/UploadWizard.jsx
 import React, { useState, useEffect } from 'react';
-import { apiCall } from './components/axiosInstance';  // Use wrapper now (imported as named)
+import { apiCall } from './components/axiosInstance';
 import './uploadWizard.scss';
 
 const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
   const [step, setStep] = useState(1);
-  const [mediaType, setMediaType] = useState('song');  
-  const [genreId, setGenreId] = useState(userProfile.genreId || '00000000-0000-0000-0000-000000000101');  // Default or user's genre
-  const [jurisdictionId, setJurisdictionId] = useState(userProfile.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002');  // User's home
+  const [mediaType, setMediaType] = useState('song');
+  const [genreId, setGenreId] = useState(userProfile.genreId || '00000000-0000-0000-0000-000000000101');
+  const [jurisdictionId, setJurisdictionId] = useState(userProfile.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState(null);
@@ -15,14 +15,14 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [isrc, setIsrc] = useState('');
 
-  const artistId = userProfile.userId;  // From profile
+  const artistId = userProfile.userId;
 
-  // Cleanup previews on unmount/close (memory fix)
   useEffect(() => {
     return () => {
       if (preview) URL.revokeObjectURL(preview);
-      if (artwork) URL.revokeObjectURL(URL.createObjectURL(artwork));  // If previewed
+      if (artwork) URL.revokeObjectURL(URL.createObjectURL(artwork));
     };
   }, [preview, artwork]);
 
@@ -49,7 +49,6 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
       return;
     }
 
-    // Revoke old preview
     if (preview) URL.revokeObjectURL(preview);
     setFile(selectedFile);
     setError('');
@@ -91,32 +90,29 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
         description,
         genreId,
         artistId,
-        jurisdictionId
+        jurisdictionId,
+        isrc: isrc || null
       };
       formData.append(mediaType, JSON.stringify(metadata));
       formData.append('file', file);
       if (artwork) formData.append('artwork', artwork);
 
-      // Debug: Log FormData (remove after)
       console.log('Uploading to:', `/v1/media/${mediaType}`);
       console.log('FormData keys:', Array.from(formData.keys()));
 
-      // Fix: Use apiCall wrapper for mock fallback + error handling
       const response = await apiCall({
         url: `/v1/media/${mediaType}`,
         method: 'post',
         data: formData,
-        headers: { 'Content-Type': 'multipart/form-data' }  // Optional: Axios auto-handles, but explicit for clarity
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      // Mock mode returns { data: [] }—treat as success for demo, or check response
       console.log('Upload response:', response.data);
       onUploadSuccess(response.data || { message: 'Upload successful (mock mode)' });
       onClose();
-      setStep(1);  // Reset wizard
+      setStep(1);
     } catch (err) {
       console.error('Upload error:', err);
-      // apiCall already handles 401 redirect; enhance error msg if needed
       setError(err.response?.data?.message || err.message || 'Upload failed—check console/backend');
     } finally {
       setLoading(false);
@@ -130,7 +126,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
           <div className="step-content">
             <h2>Upload New {mediaType.toUpperCase()}</h2>
             <p className="wizard-intro">Select media type (your genre and jurisdiction auto-filled).</p>
-            {error && <p className="error-message">{error}</p>}  {/* Global error */}
+            {error && <p className="error-message">{error}</p>}
             <div className="filter-selection-grid">
               <label>Media Type</label>
               <select value={mediaType} onChange={(e) => setMediaType(e.target.value)} className="input-field">
@@ -169,6 +165,20 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
                 />
               </div>
               <div className="form-group">
+                <label htmlFor="isrc">ISRC (Optional)</label>
+                <input
+                  type="text"
+                  id="isrc"
+                  value={isrc}
+                  onChange={(e) => setIsrc(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                  placeholder="e.g., USRC17607839"
+                  maxLength={15}
+                />
+                <small style={{ color: '#A9A9A9', display: 'block', marginTop: '4px' }}>
+                  12-character International Standard Recording Code. You can add this later from your dashboard.
+                </small>
+              </div>
+              <div className="form-group">
                 <label htmlFor="file">{mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} File</label>
                 <input
                   type="file"
@@ -204,6 +214,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
               <strong>Jurisdiction:</strong> Uptown Harlem (ID: {jurisdictionId})<br />
               <strong>File:</strong> {file?.name} ({mediaType})<br />
               <strong>Artwork:</strong> {artwork ? artwork.name : 'None'}<br />
+              <strong>ISRC:</strong> {isrc || 'Not provided'}<br />
               {preview && (
                 <div className="preview-media">
                   {mediaType === 'song' ? (

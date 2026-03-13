@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Layout from './layout';
-import './reportInfringement.scss';
 import backimage from './assets/randomrapper.jpeg';
 import './reportInfringement.scss'
 
@@ -31,22 +30,44 @@ const ReportInfringement = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate all checkboxes are checked
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+
     if (!formData.goodFaithStatement || !formData.accuracyStatement || !formData.authorizedStatement) {
       alert('Please check all required statements to submit your DMCA notice.');
       return;
     }
 
-    // In production, this would send to your backend
-    console.log('DMCA Notice Submitted:', formData);
-    
-    // Simulate sending email to dmca@unis.com
-    alert('Your DMCA notice has been submitted. We will review it within 24-48 hours and take appropriate action.');
-    setSubmitted(true);
+    try {
+       const response = await fetch(`${apiBase}/v1/dmca/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          claimantName: formData.fullName,
+          claimantEmail: formData.email,
+          claimantPhone: formData.phoneNumber,
+          claimantCompany: formData.companyName,
+          copyrightOwner: formData.copyrightOwner,
+          workDescription: formData.workDescription,
+          originalWorkUrl: formData.originalWorkUrl,
+          infringingUrl: formData.infringingUrl,
+          signature: formData.signature
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Submission failed');
+      }
+
+      setSubmitted(true);
+    } catch (error) {
+      console.error('DMCA submission error:', error);
+      alert('Failed to submit DMCA notice. Please try again or contact dmca@unis.com directly.');
+    }
   };
+
 
   if (submitted) {
     return (
