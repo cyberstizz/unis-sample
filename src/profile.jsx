@@ -8,7 +8,7 @@ import { PlayerContext } from './context/playercontext';
 import EditProfileWizard from './editProfileWizard';
 import DeleteAccountWizard from './deleteAccountWizard';
 import VoteHistoryModal from './voteHistoryModal';
-import ChangePasswordWizard from '../changePasswordWizard';
+import ChangePasswordWizard from './changePasswordWizard';
 import './profile.scss';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';

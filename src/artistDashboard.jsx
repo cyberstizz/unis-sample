@@ -15,7 +15,7 @@ import { useAuth } from './context/AuthContext';
 import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
 import { jsPDF } from 'jspdf';  
-import ChangePasswordWizard from '../changePasswordWizard';
+import ChangePasswordWizard from './changePasswordWizard';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
