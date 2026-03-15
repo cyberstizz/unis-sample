@@ -281,7 +281,7 @@ const FindPage = () => {
         id: artist.userId || i,
         name: artist.username,
         votes: artist.score || 0,
-        artwork: artist.photoUrl ? `${API_BASE_URL}${artist.photoUrl}` : defaultArtwork.artists[i % 4],
+        artwork: artist.photoUrl ? (artist.photoUrl.startsWith('http') ? artist.photoUrl : `${API_BASE_URL}${artist.photoUrl}`) : defaultArtwork.artists[i % 4],
       }));
 
       const topSongs = (rawData.topSongs || []).slice(0, 3).map((song, i) => ({
@@ -289,9 +289,8 @@ const FindPage = () => {
         title: song.title,
         artist: song.artist?.username || 'Unknown',
         votes: song.score || 0,
-        fileUrl: song.fileUrl ? `${API_BASE_URL}${song.fileUrl}` : null,
-        artwork: song.artworkUrl ? `${API_BASE_URL}${song.artworkUrl}` : defaultArtwork.songs[i % 4],
-      }));
+        fileUrl: song.fileUrl ? (song.fileUrl.startsWith('http') ? song.fileUrl : `${API_BASE_URL}${song.fileUrl}`) : null,
+        artwork: song.artworkUrl ? (song.artworkUrl.startsWith('http') ? song.artworkUrl : `${API_BASE_URL}${song.artworkUrl}`) : defaultArtwork.songs[i % 4],      }));
 
       setTopResults({ artists: topArtists, songs: topSongs });
     } catch (err) {
@@ -472,10 +471,10 @@ const FindPage = () => {
           playMedia(
             { 
               type: 'default-song', 
-              url: `${API_BASE_URL}${defaultSong.fileUrl}`, 
+              url: defaultSong.fileUrl.startsWith('http') ? defaultSong.fileUrl : `${API_BASE_URL}${defaultSong.fileUrl}`,
               title: defaultSong.title, 
               artist: media.name, 
-              artwork: defaultSong.artworkUrl ? `${API_BASE_URL}${defaultSong.artworkUrl}` : media.artwork 
+              artwork: defaultSong.artworkUrl ? (defaultSong.artworkUrl.startsWith('http') ? defaultSong.artworkUrl : `${API_BASE_URL}${defaultSong.artworkUrl}`) : media.artwork
             },
             []
           );

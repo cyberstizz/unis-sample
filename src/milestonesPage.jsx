@@ -240,14 +240,14 @@ const MilestonesPage = () => {
     title = award.user?.username || 'Unknown Artist';
     artist = award.user?.username || 'Unknown Artist';
     artwork = award.user?.photoUrl 
-      ? `${API_BASE_URL}${award.user.photoUrl}` 
-      : rapperOne;
+  ? (award.user.photoUrl.startsWith('http') ? award.user.photoUrl : `${API_BASE_URL}${award.user.photoUrl}`)
+  : rapperOne;
   } else {
     title = award.song?.title || 'Unknown Song';
     artist = award.song?.artist?.username || 'Unknown Artist';
     artwork = award.song?.artworkUrl 
-      ? `${API_BASE_URL}${award.song.artworkUrl}` 
-      : songArtFour;
+  ? (award.song.artworkUrl.startsWith('http') ? award.song.artworkUrl : `${API_BASE_URL}${award.song.artworkUrl}`)
+  : songArtFour;
   }
 
   return {
