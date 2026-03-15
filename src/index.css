@@ -26,20 +26,16 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  /* Removed display:flex + place-items:center — was centering the entire
+     app-wrapper which broke the sidebar/content layout */
   background-color: #000;
   overflow-x: hidden;
 }
 
 /* ─── App shell ─────────────────────────────────────────────────────────────
-   Sidebar (~260px) sits fixed on the left.
-   Page content fills the remaining space to the right via margin-left.
-   This is the SINGLE source of truth for sidebar offset —
-   no individual page SCSS should have its own margin-left hack.
-
-   Elements that should NOT get the sidebar offset:
-   - Auth pages (login, reset-password) — no sidebar present
-   - Player — fixed to bottom, spans full viewport width
-   - Notifications — fixed/absolute overlays
+   Sidebar is position:fixed, width:250px, always visible on desktop
+   (min-width: 1025px). On tablet/mobile (max-width: 1024px) it slides
+   off-screen — content should fill full width with no left offset.
 ─────────────────────────────────────────────────────────────────────────── */
 .app-wrapper {
   display: flex;
@@ -48,47 +44,11 @@ body {
   position: relative;
 }
 
-/* Sidebar — fixed on the left, doesn't participate in flex flow */
-.app-wrapper nav.sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 260px;
-  height: 100vh;
-  z-index: 100;
-  flex-shrink: 0;
-}
-
-/* ─── Page content offset ───────────────────────────────────────────────────
-   Only actual page route containers get the sidebar offset.
-   Auth wrappers, Player, and notification overlays are all excluded.
-─────────────────────────────────────────────────────────────────────────── */
-.app-wrapper > *:not(nav):not(.sidebar-trigger):not(.login-wrapper):not(.reset-password-wrapper):not(.player):not(.song-notification):not(.winners-notification) {
-  flex: 1 1 0;
-  min-width: 0;
-  margin-left: 260px;
-}
-
-/* Auth pages — full viewport, no sidebar offset */
-.app-wrapper > .login-wrapper,
-.app-wrapper > .reset-password-wrapper {
-  flex: 1 1 0;
-  min-width: 0;
-  margin-left: 0;
-}
-
-/* Fixed overlays — must not inherit flex or margin from app-wrapper */
-.app-wrapper > .player,
-.app-wrapper > .song-notification,
-.app-wrapper > .winners-notification {
-  flex: none;
-  margin-left: 0;
-}
-
-/* Mobile — sidebar collapses, content fills full width */
-@media (max-width: 600px) {
+/* Mobile/tablet: sidebar is hidden off-screen, content fills full width.
+   Per-page margin-left hacks handle desktop — this only fixes mobile. */
+@media (max-width: 1024px) {
   .app-wrapper > *:not(nav):not(.sidebar-trigger) {
-    margin-left: 0;
+    margin-left: 0 !important;
   }
 }
 
