@@ -24,10 +24,53 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  /* Removed display:flex + place-items:center — was centering the entire
+     app-wrapper which broke the sidebar/content layout */
+  background-color: #000;
+  overflow-x: hidden;
+}
+
+/* ─── App shell ─────────────────────────────────────────────────────────────
+   Sidebar (~260px) sits on the left.
+   All page content fills the remaining space to the right.
+   This is the single source of truth for the sidebar offset —
+   no individual page needs its own margin-left hack.
+─────────────────────────────────────────────────────────────────────────── */
+.app-wrapper {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+}
+
+/* The Routes outlet — everything except the sidebar */
+.app-wrapper > *:not(nav):not(.sidebar-trigger) {
+  flex: 1 1 0;
+  min-width: 0;
+  /* Push content past the sidebar on desktop.
+     The sidebar uses position:fixed or absolute, so we use margin-left
+     to create the equivalent offset. Change 260px if sidebar width changes. */
+  margin-left: 260px;
+}
+
+/* Sidebar itself stays fixed on the left, doesn't participate in flex flow */
+.app-wrapper nav.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+/* Mobile — sidebar collapses, content fills full width */
+@media (max-width: 600px) {
+  .app-wrapper > *:not(nav):not(.sidebar-trigger) {
+    margin-left: 0;
+  }
 }
 
 h1 {
