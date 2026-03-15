@@ -30,12 +30,12 @@ const Profile = () => {
     const fetchData = async () => {
       try {
         // 1. My profile
-        const profileRes = await apiCall({ url: `/v1/users/profile/${user.userId) });
+        const profileRes = await apiCall({ url: `/v1/users/profile/${user.userId}` });
         setUserProfile(profileRes.data);
 
         // 2. My supported artist (if any)
         if (profileRes.data.supportedArtistId) {
-          const artistRes = await apiCall({ url: `/v1/users/profile/${profileRes.data.supportedArtistId) });
+          const artistRes = await apiCall({ url: `/v1/users/profile/${profileRes.data.supportedArtistId}` });
           setSupportedArtist(artistRes.data);
         }
 
@@ -53,14 +53,14 @@ const Profile = () => {
   if (!userProfile) return <div style={{ textAlign: 'center', padding: '4rem', color: 'white' }}>Loading your profile...</div>;
 
   const photoUrl = userProfile.photoUrl 
-    ? buildUrl(userProfile.photoUrl) 
+    ? `${API_BASE_URL}${userProfile.photoUrl}` 
     : backimage;
 
   const buildUrl = (url) => {
     if (!url) return null;
     return url.startsWith('http://') || url.startsWith('https://') 
       ? url 
-      : buildUrl(url);
+      : `${API_BASE_URL}${url}`;
   };
 
   // Enhanced play function with tracking
@@ -90,7 +90,7 @@ const Profile = () => {
       // Track the play
       await apiCall({ 
         method: 'post', 
-        url: `/v1/media/song/${songId}/play?userId=${user.userId) 
+        url: `/v1/media/song/${songId}/play?userId=${user.userId}` 
       });
       console.log('Play tracked successfully for song:', songId);
     } catch (err) {
@@ -102,7 +102,7 @@ const Profile = () => {
   };
 
   const refreshProfile = () => {
-    apiCall({ url: `/v1/users/profile/${user.userId) })
+    apiCall({ url: `/v1/users/profile/${user.userId}` })
       .then(res => setUserProfile(res.data));
   };
 

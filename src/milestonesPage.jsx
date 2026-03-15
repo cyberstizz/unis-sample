@@ -75,7 +75,7 @@ const MilestonesPage = () => {
 
     switch (intervalType) {
       case 'daily':
-        return `${days[date.getDay()]}, ${months[month - 1]} ${day}, ${year);
+        return `${days[date.getDay()]}, ${months[month - 1]} ${day}, ${year}`;
         
       case 'weekly': {
         const dayOfWeek = date.getDay();
@@ -83,27 +83,27 @@ const MilestonesPage = () => {
         const monday = new Date(year, month - 1, day - daysToMonday);
         const sunday = new Date(monday);
         sunday.setDate(monday.getDate() + 6);
-        return `Week of ${months[monday.getMonth()]} ${monday.getDate()} - ${sunday.getDate()}, ${monday.getFullYear());
+        return `Week of ${months[monday.getMonth()]} ${monday.getDate()} - ${sunday.getDate()}, ${monday.getFullYear()}`;
       }
       
       case 'monthly':
-        return `${months[month - 1]} ${year);
+        return `${months[month - 1]} ${year}`;
         
       case 'quarterly': {
         const q = Math.floor((month - 1) / 3) + 1;
-        return `Q${q} ${year);
+        return `Q${q} ${year}`;
       }
       
       case 'midterm': {
         const h = month <= 6 ? 1 : 2;
-        return `${h === 1 ? 'First' : 'Second'} Half of ${year);
+        return `${h === 1 ? 'First' : 'Second'} Half of ${year}`;
       }
       
       case 'annual':
-        return `Year ${year);
+        return `Year ${year}`;
         
       default:
-        return `${months[month - 1]} ${day}, ${year);
+        return `${months[month - 1]} ${day}, ${year}`;
     }
   };
 
@@ -162,7 +162,7 @@ const MilestonesPage = () => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day);
+    return `${y}-${m}-${day}`;
   };
 
   return {
@@ -222,7 +222,7 @@ const MilestonesPage = () => {
 
       const response = await apiCall({
         method: 'get',
-        url: `/v1/awards/past?type=${type}&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurId}&genreId=${genreId}&intervalId=${intervalId),
+        url: `/v1/awards/past?type=${type}&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurId}&genreId=${genreId}&intervalId=${intervalId}`,
       });
 
       const rawResults = response.data;
@@ -240,13 +240,13 @@ const MilestonesPage = () => {
     title = award.user?.username || 'Unknown Artist';
     artist = award.user?.username || 'Unknown Artist';
     artwork = award.user?.photoUrl 
-      ? buildUrl(award.user.photoUrl) 
+      ? `${API_BASE_URL}${award.user.photoUrl}` 
       : rapperOne;
   } else {
     title = award.song?.title || 'Unknown Song';
     artist = award.song?.artist?.username || 'Unknown Artist';
     artwork = award.song?.artworkUrl 
-      ? buildUrl(award.song.artworkUrl) 
+      ? `${API_BASE_URL}${award.song.artworkUrl}` 
       : songArtFour;
   }
 
@@ -374,7 +374,7 @@ const MilestonesPage = () => {
           )}
 
           {winner && (
-            <section className="winner-highlight prestige-animate" key={`${winner.id}-${displayedContext?.selectedDate)}>
+            <section className="winner-highlight prestige-animate" key={`${winner.id}-${displayedContext?.selectedDate}`}>
               <div 
                 className="ambient-glow" 
                 style={{ backgroundImage: `url(${winner.artwork})` }} 

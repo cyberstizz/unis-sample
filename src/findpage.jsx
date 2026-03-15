@@ -238,7 +238,7 @@ const FindPage = () => {
     try {
       const response = await apiCall({
         method: 'get',
-        url: `/v1/jurisdictions/byName/${encodeURIComponent(name)),
+        url: `/v1/jurisdictions/byName/${encodeURIComponent(name)}`,
       });
       return response.data;
     } catch (err) {
@@ -264,7 +264,7 @@ const FindPage = () => {
 
     const jurResponse = await apiCall({
       method: 'get',
-      url: `/v1/jurisdictions/byName/${encodeURIComponent(resolvedJurisdictionName)),
+      url: `/v1/jurisdictions/byName/${encodeURIComponent(resolvedJurisdictionName)}`,
     });
       
       const { jurisdictionId: jurId } = jurResponse.data?.[0] || {};
@@ -281,7 +281,7 @@ const FindPage = () => {
         id: artist.userId || i,
         name: artist.username,
         votes: artist.score || 0,
-        artwork: artist.photoUrl ? buildUrl(artist.photoUrl) : defaultArtwork.artists[i % 4],
+        artwork: artist.photoUrl ? `${API_BASE_URL}${artist.photoUrl}` : defaultArtwork.artists[i % 4],
       }));
 
       const topSongs = (rawData.topSongs || []).slice(0, 3).map((song, i) => ({
@@ -289,8 +289,8 @@ const FindPage = () => {
         title: song.title,
         artist: song.artist?.username || 'Unknown',
         votes: song.score || 0,
-        fileUrl: song.fileUrl ? buildUrl(song.fileUrl) : null,
-        artwork: song.artworkUrl ? buildUrl(song.artworkUrl) : defaultArtwork.songs[i % 4],
+        fileUrl: song.fileUrl ? `${API_BASE_URL}${song.fileUrl}` : null,
+        artwork: song.artworkUrl ? `${API_BASE_URL}${song.artworkUrl}` : defaultArtwork.songs[i % 4],
       }));
 
       setTopResults({ artists: topArtists, songs: topSongs });
@@ -395,7 +395,7 @@ const FindPage = () => {
       try {
         const response = await apiCall({
           method: 'get',
-          url: `/v1/jurisdictions/${previousLevel.jurisdictionId),
+          url: `/v1/jurisdictions/${previousLevel.jurisdictionId}`,
           useCache: false
         });
         setSelectedJurisdiction(response.data);
@@ -439,11 +439,11 @@ const FindPage = () => {
 
   const handleJurisdictionNavigate = () => {
     const name = selectedJurisdiction?.name || 'Harlem';
-    navigate(`/jurisdiction/${encodeURIComponent(name)));
+    navigate(`/jurisdiction/${encodeURIComponent(name)}`);
   };
 
-  const handleArtistView = (id) => navigate(`/artist/${id));
-  const handleSongView = (id) => navigate(`/song/${id));
+  const handleArtistView = (id) => navigate(`/artist/${id}`);
+  const handleSongView = (id) => navigate(`/song/${id}`);
 
   const handlePlay = async (media) => {
     let trackingId = null;
@@ -472,10 +472,10 @@ const FindPage = () => {
           playMedia(
             { 
               type: 'default-song', 
-              url: buildUrl(defaultSong.fileUrl), 
+              url: `${API_BASE_URL}${defaultSong.fileUrl}`, 
               title: defaultSong.title, 
               artist: media.name, 
-              artwork: defaultSong.artworkUrl ? buildUrl(defaultSong.artworkUrl) : media.artwork 
+              artwork: defaultSong.artworkUrl ? `${API_BASE_URL}${defaultSong.artworkUrl}` : media.artwork 
             },
             []
           );
@@ -503,7 +503,7 @@ const FindPage = () => {
       try {
         await apiCall({ 
           method: 'post', 
-          url: `/v1/media/song/${trackingId}/play?userId=${userId) 
+          url: `/v1/media/song/${trackingId}/play?userId=${userId}` 
         });
       } catch (err) {
         console.error('Failed to track play:', err);
@@ -630,7 +630,7 @@ const FindPage = () => {
               {/* Jurisdiction Polygons - with permanent labels */}
               {!isAtUSLevel() && currentJurisdictions.length > 0 && (
                 <GeoJSON
-                  key={`jurisdictions-${navigationStack.length}-${currentJurisdictions.length)}
+                  key={`jurisdictions-${navigationStack.length}-${currentJurisdictions.length}`}
                   data={jurisdictionsToGeoJSON(currentJurisdictions)}
                   style={(feature) => {
                     const name = feature.properties?.name;
@@ -716,7 +716,7 @@ const FindPage = () => {
                 {currentJurisdictions.map(j => (
                   <li 
                     key={j.jurisdictionId} 
-                    className={`jurisdiction-list-item ${selectedJurisdiction?.jurisdictionId === j.jurisdictionId ? 'selected' : ''} ${isInHarlemChain(j.name) ? 'in-chain' : '')}
+                    className={`jurisdiction-list-item ${selectedJurisdiction?.jurisdictionId === j.jurisdictionId ? 'selected' : ''} ${isInHarlemChain(j.name) ? 'in-chain' : ''}`}
                     onClick={() => handleJurisdictionClick(j)}
                   >
                     {j.name}

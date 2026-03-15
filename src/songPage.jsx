@@ -80,7 +80,7 @@ const SongPage = () => {
   useEffect(() => {
     if (song?.id && userId) {
       apiCall({ 
-        url: `/v1/media/song/${song.id}/is-liked?userId=${userId),
+        url: `/v1/media/song/${song.id}/is-liked?userId=${userId}`,
         method: 'get'
       })
         .then(res => setIsLiked(res.data.isLiked || false))
@@ -101,7 +101,7 @@ const SongPage = () => {
     try {
       const response = await apiCall({ 
         method: 'get', 
-        url: `/v1/media/song/${songId),
+        url: `/v1/media/song/${songId}`,
         useCache: false
       });
       
@@ -114,8 +114,8 @@ const SongPage = () => {
         artist: songData.artist.username,
         artistId: songData.artist.userId,
         jurisdiction: songData.jurisdiction?.name || 'Unknown',
-        artwork: songData.artworkUrl ? buildUrl(songData.artworkUrl) : songArtwork,
-        url: songData.fileUrl ? buildUrl(songData.fileUrl) : null,
+        artwork: songData.artworkUrl ? `${API_BASE_URL}${songData.artworkUrl}` : songArtwork,
+        url: songData.fileUrl ? `${API_BASE_URL}${songData.fileUrl}` : null,
         description: songData.description || 'No description available',
         score: songData.score,
         playCount: songData.playCount || 0,
@@ -190,7 +190,7 @@ const SongPage = () => {
       }));
 
       try {
-        const endpoint = `/v1/media/song/${song.id}/play?userId=${userId);
+        const endpoint = `/v1/media/song/${song.id}/play?userId=${userId}`;
         await apiCall({ method: 'post', url: endpoint });
       } catch (err) {
         console.error('Failed to track song play:', err);
@@ -217,7 +217,7 @@ const SongPage = () => {
       if (isLiked) {
         const res = await apiCall({
           method: 'delete',
-          url: `/v1/media/song/${song.id}/like?userId=${userId)
+          url: `/v1/media/song/${song.id}/like?userId=${userId}`
         });
         
         if (res.data.success) {
@@ -227,7 +227,7 @@ const SongPage = () => {
       } else {
         const res = await apiCall({
           method: 'post',
-          url: `/v1/media/song/${song.id}/like?userId=${userId)
+          url: `/v1/media/song/${song.id}/like?userId=${userId}`
         });
         
         if (res.data.success) {
@@ -281,7 +281,7 @@ const SongPage = () => {
 
   const handleArtistClick = () => {
     if (song?.artistId) {
-      navigate(`/artist/${song.artistId));
+      navigate(`/artist/${song.artistId}`);
     }
   };
 
@@ -347,7 +347,7 @@ const SongPage = () => {
             <button onClick={handleVote} className="vote-button">Vote</button>
             <button 
               onClick={handleLike} 
-              className={`like-button ${isLiked ? 'liked' : '')}
+              className={`like-button ${isLiked ? 'liked' : ''}`}
               style={{
                 background: isLiked ? '#163387' : 'transparent',
                 border: '2px solid #163387',
@@ -373,7 +373,7 @@ const SongPage = () => {
           >
             {song.artist}
           </p>
-          <p className="jurisdiction" onClick={() => navigate(`/jurisdiction/${song.jurisdiction))} style={{cursor: 'pointer'}}>
+          <p className="jurisdiction" onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)} style={{cursor: 'pointer'}}>
             {song.jurisdiction}
           </p>
           <p className="genre">{song.genre}</p>
@@ -390,7 +390,7 @@ const SongPage = () => {
 
           {/* Secondary Action Buttons */}
           <div className="secondary-actions">
-            <button onClick={handleFollow} className={`action-btn ${isFollowing ? 'following' : '')}>
+            <button onClick={handleFollow} className={`action-btn ${isFollowing ? 'following' : ''}`}>
               {isFollowing ? 'Following' : 'Follow'}
             </button>
             <button onClick={handleDontPlay} className="action-btn">Don't Play</button>

@@ -30,7 +30,7 @@ const VoteAwards = () => {
         if (!url) return backimage;  // Fallback
         return url.startsWith('http://') || url.startsWith('https://') 
           ? url  // Absolute (R2/prod)—use as-is
-          : buildUrl(url);  // Relative (local)—prepend base
+          : `${API_BASE_URL}${url}`;  // Relative (local)—prepend base
       };
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -145,7 +145,7 @@ const VoteAwards = () => {
   };
 
   const handleVoteSuccess = async (nomineeId) => {
-    console.log(`Vote confirmed for nominee: ${nomineeId));
+    console.log(`Vote confirmed for nominee: ${nomineeId}`);
     setShowVotingWizard(false);
     setSelectedNominee(null);
     // Refresh nominees to show updated vote counts
@@ -175,7 +175,7 @@ const VoteAwards = () => {
         // Track the play
         if (nominee.id && userId) {
           try {
-            const endpoint = `/v1/media/song/${nominee.id}/play?userId=${userId);
+            const endpoint = `/v1/media/song/${nominee.id}/play?userId=${userId}`;
             console.log('Tracking song play:', { endpoint, songId: nominee.id, userId });
             await apiCall({ method: 'post', url: endpoint });
             console.log('Song play tracked successfully');
@@ -190,9 +190,9 @@ const VoteAwards = () => {
 
   const handleNomineeClick = (nominee) => {
     if (nominee.type === 'artist') {
-      navigate(`/artist/${nominee.id));
+      navigate(`/artist/${nominee.id}`);
     } else {
-      navigate(`/song/${nominee.id));
+      navigate(`/song/${nominee.id}`);
     }
   };
 
@@ -217,7 +217,7 @@ const VoteAwards = () => {
           // Use default song
           playData = {
             type: 'default-song',
-            url: buildUrl(defaultSong.fileUrl),
+            url: `${API_BASE_URL}${defaultSong.fileUrl}`,
             title: defaultSong.title || `${nominee.name}'s Default Track`,
             artist: nominee.name,
             artwork: buildUrl(defaultSong.artworkUrl),
@@ -232,7 +232,7 @@ const VoteAwards = () => {
           // Track the play
           if (trackingSongId && userId) {
             try {
-              const endpoint = `/v1/media/song/${trackingSongId}/play?userId=${userId);
+              const endpoint = `/v1/media/song/${trackingSongId}/play?userId=${userId}`;
               console.log('Tracking artist default song play:', { endpoint, songId: trackingSongId, userId });
               await apiCall({ method: 'post', url: endpoint });
               console.log('Artist default song play tracked successfully');
