@@ -36,7 +36,8 @@ body {
   display: flex;
   flex-direction: column;
   padding-top: 7%;
-  margin-right: 260px;
+  margin-right: 200px;
+  margin-left: 260px;
 
   @media (max-width: 1024px) {
     max-width: 100%;
