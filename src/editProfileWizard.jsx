@@ -11,7 +11,7 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
   const [bio, setBio] = useState(userProfile?.bio || '');
   const [photoFile, setPhotoFile] = useState(null);
   const [preview, setPreview] = useState(
-    userProfile?.photoUrl ? `${API_BASE_URL}${userProfile.photoUrl}` : null
+    userProfile?.photoUrl ? buildUrl(userProfile.photoUrl) : null
   );
   const [loading, setLoading] = useState(false);
 
@@ -99,13 +99,13 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
         {/* Tab Navigation */}
         <div className="edit-profile-tabs">
           <button
-            className={`tab-button ${activeTab === 'photo' ? 'active' : ''}`}
+            className={`tab-button ${activeTab === 'photo' ? 'active' : '')}
             onClick={() => setActiveTab('photo')}
           >
             <Camera size={16} /> Photo
           </button>
           <button
-            className={`tab-button ${activeTab === 'bio' ? 'active' : ''}`}
+            className={`tab-button ${activeTab === 'bio' ? 'active' : '')}
             onClick={() => setActiveTab('bio')}
           >
             <Type size={16} /> Bio
@@ -184,7 +184,7 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
             onClick={activeTab === 'photo' ? handleSavePhoto : handleSaveBio}
             disabled={loading || (activeTab === 'photo' && !photoFile) || (activeTab === 'bio' && bio === userProfile?.bio)}
           >
-            {loading ? 'Saving...' : `Save ${activeTab === 'photo' ? 'Photo' : 'Bio'}`}
+            {loading ? 'Saving...' : `Save ${activeTab === 'photo' ? 'Photo' : 'Bio')}
           </button>
         </div>
       </div>

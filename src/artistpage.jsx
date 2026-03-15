@@ -31,7 +31,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
   const buildUrl = (url) => {
     if (!url) return null;
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+    return url.startsWith('http') ? url : buildUrl(url);
   };
 
   const navigate = useNavigate();
@@ -82,7 +82,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     
     try {
       // 1. Fetch Profile
-      const artistRes = await apiCall({ method: 'get', url: `/v1/users/profile/${artistId}` });
+      const artistRes = await apiCall({ method: 'get', url: `/v1/users/profile/${artistId) });
       const artistData = artistRes.data;
       setArtist(artistData);
       setBio(artistData.bio || 'No bio available');
@@ -97,11 +97,11 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       }
 
       // 3. Fetch Songs
-      const songsRes = await apiCall({ method: 'get', url: `/v1/media/songs/artist/${artistId}` });
+      const songsRes = await apiCall({ method: 'get', url: `/v1/media/songs/artist/${artistId) });
       setSongs(songsRes.data || []);
 
       // 4. Fetch Videos
-      const videosRes = await apiCall({ method: 'get', url: `/v1/media/videos/artist/${artistId}` });
+      const videosRes = await apiCall({ method: 'get', url: `/v1/media/videos/artist/${artistId) });
       setVideos(videosRes.data || []);
 
       // 5. Fetch Default Song
@@ -204,7 +204,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
       if (defaultSong.songId && userId) {
         try {
-          await apiCall({ method: 'post', url: `/v1/media/song/${defaultSong.songId}/play?userId=${userId}` });
+          await apiCall({ method: 'post', url: `/v1/media/song/${defaultSong.songId}/play?userId=${userId) });
         } catch (err) {
           console.error('Failed to track default song play:', err);
         }
@@ -215,7 +215,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   };
 
   const handleSongClick = (songId) => {
-    navigate(`/song/${songId}`);
+    navigate(`/song/${songId));
   };
 
   if (loading) return (
@@ -230,7 +230,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     </Layout>
   );
 
-  const artistPhoto = artist.photoUrl ? `${API_BASE_URL}${artist.photoUrl}` : theQuiet;
+  const artistPhoto = artist.photoUrl ? buildUrl(artist.photoUrl) : theQuiet;
   const topSong = songs.length > 0 ? songs.reduce((prev, current) => (current.score || 0) > (prev.score || 0) ? current : prev, songs[0]) : null;
 
   // FIXED: Proper check for showing action buttons
@@ -247,7 +247,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
             <div className="artist-top">
               <img src={artistPhoto} alt={artist.username} className="artist-profile-image" />
               <p className="artist-name">{artist.username}</p>
-              <p className="artist-jurisdiction" onClick={() => navigate(`/jurisdiction/${artist.jurisdiction.name}`)} style={{cursor: 'pointer'}}>
+              <p className="artist-jurisdiction" onClick={() => navigate(`/jurisdiction/${artist.jurisdiction.name))} style={{cursor: 'pointer'}}>
                 {artist.jurisdiction?.name || 'Unknown'}
               </p>
             </div>
@@ -274,7 +274,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                 {/* Follow Button - Now properly conditional */}
                 <button 
                   onClick={handleFollow} 
-                  className={`action-btn ${isFollowing ? 'following' : ''}`}
+                  className={`action-btn ${isFollowing ? 'following' : '')}
                   style={{
                       padding: '12px 30px',
                       borderRadius: '50px',

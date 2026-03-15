@@ -10,7 +10,7 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
   const [artworkFile, setArtworkFile] = useState(null);
   const [isrc, setIsrc] = useState(song?.isrc || '');
   const [preview, setPreview] = useState(
-    song?.artworkUrl ? `${API_BASE_URL}${song.artworkUrl}` : null
+    song?.artworkUrl ? buildUrl(song.artworkUrl) : null
   );
   const [loading, setLoading] = useState(false);
 
@@ -40,7 +40,7 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
     try {
       await apiCall({
         method: 'patch',
-        url: `/v1/media/song/${song.songId}`,
+        url: `/v1/media/song/${song.songId),
         data: formData,
         headers: { 'Content-Type': 'multipart/form-data' },
       });

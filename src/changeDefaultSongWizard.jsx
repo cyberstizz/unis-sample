@@ -79,7 +79,7 @@ const ChangeDefaultSongWizard = ({ show, onClose, songs, currentDefaultSongId, o
                   onClick={() => setSelectedSongId(song.songId)}
                   style={{
                     padding: '1rem',
-                    border: `2px solid ${isSelected ? '#004aad' : '#ddd'}`,
+                    border: `2px solid ${isSelected ? '#004aad' : '#ddd'),
                     borderRadius: '10px',
                     background: isSelected ? '#f6f9ff' : '#fafafa',
                     cursor: 'pointer',
@@ -91,7 +91,7 @@ const ChangeDefaultSongWizard = ({ show, onClose, songs, currentDefaultSongId, o
                 >
                   {song.artworkUrl ? (
                     <img
-                      src={`${API_BASE_URL}${song.artworkUrl}`}
+                      src={buildUrl(song.artworkUrl)}
                       alt={song.title}
                       style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover' }}
                     />
