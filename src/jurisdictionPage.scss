@@ -7,8 +7,6 @@ $unis-blue: #163387;
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bitcount+Grid+Double:wght@100..900&family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Delicious+Handrawn&display=swap');
 
 
-
-
 // Main Container
 .jurisdiction-dashboard {
   min-height: 100vh;
@@ -22,8 +20,8 @@ $unis-blue: #163387;
   justify-items: center;
   margin-top: 5%;
   overflow-x: hidden;
-  padding-left: 8%;
-  margin-left: 6%;
+  // REMOVED: padding-left: 8% — caused double-offset with index.css sidebar margin
+  // REMOVED: margin-left: 6% — caused double-offset with index.css sidebar margin
 }
 
 .dashboard-content {
@@ -37,14 +35,14 @@ $unis-blue: #163387;
 }
 
 
-.jurisdiction-dashboard-header{
-    text-align: center;
-    align-content: center;
-    font-family: "Delicious Handrawn", cursive;
-    font-weight: 400;
-    font-size: xx-large !important;
-    color: silver !important;
-    padding: none !important;
+.jurisdiction-dashboard-header {
+  text-align: center;
+  align-content: center;
+  font-family: "Delicious Handrawn", cursive;
+  font-weight: 400;
+  font-size: xx-large !important;
+  color: silver !important;
+  padding: none !important;
 }
 
 
@@ -88,19 +86,19 @@ $unis-blue: #163387;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-// Hero Section - Now uses GIF and takes 90% of space
+// Hero Section
 .jurisdiction-hero {
   position: relative;
   overflow: hidden;
   margin-bottom: 2rem;
   border-radius: 12px;
-  height: 270px; // 90% of previous 300px
+  height: 270px;
   width: 90%;
   margin-left: auto;
   margin-right: auto;
 
   @media (max-width: 800px) {
-    height: 180px; // 90% of previous 200px
+    height: 180px;
   }
 
   .hero-gif {
@@ -109,11 +107,9 @@ $unis-blue: #163387;
     object-fit: cover;
     border-radius: 12px;
   }
-
-  // Removed hero-overlay and hero-image as they're no longer used
 }
 
-// FIXED: Highlights Grid (Top Artist & Top Song) - Equal sizes
+// Highlights Grid (Top Artist & Top Song)
 .highlights-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -130,22 +126,22 @@ $unis-blue: #163387;
   position: relative;
   overflow: hidden;
   min-height: 400px;
-  max-height: 400px; // Changed from 500px to match min-height for equal sizing
+  max-height: 400px;
   background: transparent;
 
   @media (max-width: 800px) {
     min-height: 350px;
-    max-height: 350px; // Changed from 450px to match min-height
+    max-height: 350px;
   }
 
   .section-header {
     position: relative;
     z-index: 2;
     margin-bottom: 1rem;
-    text-align: center; 
+    text-align: center;
 
     h3 {
-      display: inline-flex; // Changed from flex to inline-flex for centering
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
@@ -289,8 +285,6 @@ $unis-blue: #163387;
     }
   }
 
-  // Removed dark overlay for all highlight cards
-  // Only apply overlay to song cards that need it
   &.song-card::before {
     content: '';
     position: absolute;
@@ -298,12 +292,12 @@ $unis-blue: #163387;
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.6)); // Lighter overlay
+    background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.6));
     z-index: 1;
   }
 }
 
-// Content Grid (Top Artists & Top Songs Lists) - Black background
+// Content Grid (Top Artists & Top Songs Lists)
 .content-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -317,7 +311,7 @@ $unis-blue: #163387;
 }
 
 .content-section {
-  background: $bg-black; // Added black background
+  background: $bg-black;
   border-radius: 12px;
   padding: 1.5rem;
 
@@ -467,7 +461,7 @@ $unis-blue: #163387;
       }
 
       @media (max-width: 800px) {
-        display: none; // Hide stats on mobile to save space
+        display: none;
       }
     }
 
@@ -528,9 +522,10 @@ $unis-blue: #163387;
     width: 100%;
     padding-left: 0;
     padding-right: 0;
+    margin-left: 0;  // ensure no residual offset on mobile
   }
 
-  .jurisdiction-dashboard-header{
+  .jurisdiction-dashboard-header {
     text-align: center;
     margin-right: 40px !important;
     margin-left: 40px !important;

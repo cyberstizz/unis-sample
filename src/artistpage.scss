@@ -60,11 +60,12 @@ $unis-blue: #163387;
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
+  // width/max-width: let index.css flex layout control this
   width: 100%;
   max-width: 100%;
   color: $text-gray;
   overflow-x: hidden;
-  padding-top: 10%;
+  padding-top: 6%;   // reduced — index.css already offsets left, header is in Layout
   padding-bottom: 5%;
 
   @media (max-width: 800px) {
@@ -626,7 +627,7 @@ $unis-blue: #163387;
         align-items: center;
         justify-content: center;
         border-radius: 6px;
-        
+
         @media (max-width: 800px) {
           font-size: 20px;
           width: 28px;
@@ -655,25 +656,6 @@ $unis-blue: #163387;
         }
       }
     }
-  }
-}
-
-// Mobile specific adjustments
-@media (max-width: 800px) {
-  .artist-page-container {
-    padding-top: 35%;
-  }
-
-  .content-wrapper {
-    padding: 0 0.5rem;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .stat-item {
-    margin-bottom: 10px;
   }
 }
 
@@ -743,4 +725,23 @@ $unis-blue: #163387;
   color: $text-gray;
   padding: 1rem;
   font-size: 14px;
+}
+
+// Mobile overrides
+@media (max-width: 800px) {
+  .artist-page-container {
+    padding-top: 20%;
+  }
+
+  .content-wrapper {
+    padding: 0 0.5rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-item {
+    margin-bottom: 10px;
+  }
 }
