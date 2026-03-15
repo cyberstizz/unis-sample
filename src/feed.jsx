@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { PlayerContext } from './context/playercontext'; 
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
+import { useAuth } from './context/AuthContext';
 import Layout from './layout';
 import randomRapper from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
@@ -21,12 +22,12 @@ import './feed.scss';
 
 const Feed = () => {
   const { playMedia } = useContext(PlayerContext);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   const [animate, setAnimate] = useState(false);
-  const [userId, setUserId] = useState(null);
-  const [jurisdictionId, setJurisdictionId] = useState(null);
-  const [profileLoaded, setProfileLoaded] = useState(false);
-  const [trendingToday, setTrendingToday] = useState([]); // NEW: plays_today based
-  const [topRated, setTopRated] = useState([]); // RENAMED: score based
+  const [trendingToday, setTrendingToday] = useState([]);
+  const [topRated, setTopRated] = useState([]);
   const [newMedia, setNewMedia] = useState([]);
   const [awards, setAwards] = useState([]);
   const [popularArtists, setPopularArtists] = useState([]);
@@ -34,6 +35,10 @@ const Feed = () => {
   const [error, setError] = useState('');
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+  // Read directly from AuthContext — no JWT decode, no profile re-fetch
+  const userId = user?.userId;
+  const jurisdictionId = user?.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002';
 
   const buildUrl = (url) => {
     if (!url) return null;
@@ -73,61 +78,27 @@ const Feed = () => {
     return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
   };
 
+  // Single useEffect — fires all 6 API calls in parallel on mount
+  // No waterfall, no profile re-fetch, no JWT decode
   useEffect(() => {
     setAnimate(true);
-    fetchProfile();
-  }, []);
 
-  const fetchProfile = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-      
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const uid = payload.userId;
-      setUserId(uid);
+    if (!userId || !jurisdictionId) return;
 
-      const profileRes = await apiCall({ method: 'get', url: `/v1/users/profile/${uid}` });
-      const { jurisdiction } = profileRes.data;
-      const jurId = jurisdiction?.jurisdictionId;
-      setJurisdictionId(jurId || '00000000-0000-0000-0000-000000000002');
-      setProfileLoaded(true);
-    } catch (err) {
-      console.error('Profile load error:', err);
-      setError('Profile unavailable—using default feed.');
-      setJurisdictionId('00000000-0000-0000-0000-000000000002');
-      setProfileLoaded(true);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchMediaData = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const [trendingTodayRes, topRatedRes, newRes, songAwardsRes, artistAwardsRes, popularRes] = await Promise.all([
+          apiCall({ method: 'get', url: `/v1/media/trending/today?jurisdictionId=${jurisdictionId}&limit=10` }),
+          apiCall({ method: 'get', url: `/v1/media/trending?jurisdictionId=${jurisdictionId}&limit=5` }),
+          apiCall({ method: 'get', url: `/v1/media/new?jurisdictionId=${jurisdictionId}&limit=5` }),
+          apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=song&jurisdictionId=${jurisdictionId}` }),
+          apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=artist&jurisdictionId=${jurisdictionId}` }),
+          apiCall({ method: 'get', url: `/v1/users/artist/top?jurisdictionId=${jurisdictionId}&limit=5` })
+        ]);
 
-  useEffect(() => {
-    if (!profileLoaded || !userId || !jurisdictionId) return;
-    fetchMediaData();
-  }, [userId, jurisdictionId, profileLoaded]);
-
-  const fetchMediaData = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const [trendingTodayRes, topRatedRes, newRes, songAwardsRes, artistAwardsRes, popularRes] = await Promise.all([
-        // NEW: Fetch trending today (plays_today)
-        apiCall({ method: 'get', url: `/v1/media/trending/today?jurisdictionId=${jurisdictionId}&limit=10` }),
-        // OLD: Fetch top rated (score)
-        apiCall({ method: 'get', url: `/v1/media/trending?jurisdictionId=${jurisdictionId}&limit=5` }),
-        apiCall({ method: 'get', url: `/v1/media/new?jurisdictionId=${jurisdictionId}&limit=5` }),
-        apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=song&jurisdictionId=${jurisdictionId}` }),
-        apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=artist&jurisdictionId=${jurisdictionId}` }),
-        apiCall({ method: 'get', url: `/v1/users/artist/top?jurisdictionId=${jurisdictionId}&limit=5` })
-      ]);
-
-      const normalizeMedia = (items) => (items || []).map(item => {
-        const normalized = {
+        const normalizeMedia = (items) => (items || []).map(item => ({
           id: item.songId || item.videoId,
           title: item.title,
           artist: item.artist?.username || 'Unknown',
@@ -141,63 +112,46 @@ const Feed = () => {
           artistId: item.artist?.userId || 'unknown',
           duration: item.duration || null,
           createdAt: item.createdAt || null,
-          // NEW: Include explicit flag
           explicit: item.explicit || false,
-          // NEW: Include plays_today (only for trending today)
           playsToday: item.playsToday || 0,
-          // playCount already exists for total plays
           playCount: item.playCount || 0
-        };
-        console.log('Normalized item:', normalized);
-        return normalized;
-      });
+        }));
 
-      setTrendingToday(normalizeMedia(trendingTodayRes.data || []));
-      setTopRated(normalizeMedia(topRatedRes.data || []));
-      setNewMedia(normalizeMedia(newRes.data || []));
-      
-      const combinedAwards = [...(songAwardsRes.data || []), ...(artistAwardsRes.data || [])].slice(0, 5);
-      setAwards(combinedAwards);
+        setTrendingToday(normalizeMedia(trendingTodayRes.data || []));
+        setTopRated(normalizeMedia(topRatedRes.data || []));
+        setNewMedia(normalizeMedia(newRes.data || []));
+        
+        const combinedAwards = [...(songAwardsRes.data || []), ...(artistAwardsRes.data || [])].slice(0, 5);
+        setAwards(combinedAwards);
 
-      const normalizedArtists = (popularRes.data || []).map(artist => {
-  // Try to find the photo property (could be named differently in backend)
-  const photoProperty = artist.photoUrl 
-    || artist.imageUrl 
-    || artist.profilePhotoUrl 
-    || artist.avatarUrl 
-    || artist.pictureUrl
-    || artist.photo
-    || artist.profilePhoto
-    || artist.avatar
-    || artist.picture;
-  
-  // Build the full URL
-  const builtPhotoUrl = photoProperty ? buildUrl(photoProperty) : null;
-  
-  // Debug log to see what we got
-  console.log('Normalizing artist:', {
-    username: artist.username,
-    originalPhoto: photoProperty,
-    builtUrl: builtPhotoUrl,
-    allKeys: Object.keys(artist)
-  });
-  
-  return {
-    ...artist,
-    photoUrl: builtPhotoUrl
-  };
-});
+        const normalizedArtists = (popularRes.data || []).map(artist => {
+          const photoProperty = artist.photoUrl 
+            || artist.imageUrl 
+            || artist.profilePhotoUrl 
+            || artist.avatarUrl 
+            || artist.pictureUrl
+            || artist.photo
+            || artist.profilePhoto
+            || artist.avatar
+            || artist.picture;
+          
+          return {
+            ...artist,
+            photoUrl: photoProperty ? buildUrl(photoProperty) : null
+          };
+        });
 
-setPopularArtists(normalizedArtists);
-    } catch (err) {
-      console.error('Media load error:', err);
-      setError('Feed unavailable—showing demo content.');
-    } finally {
-      setLoading(false);
-    }
-  };
+        setPopularArtists(normalizedArtists);
+      } catch (err) {
+        console.error('Media load error:', err);
+        setError('Feed unavailable—showing demo content.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const navigate = useNavigate();
+    fetchMediaData();
+  }, [userId, jurisdictionId]);
 
   const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
   const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
@@ -228,9 +182,6 @@ setPopularArtists(normalizedArtists);
         ? `/v1/media/song/${playMediaObj.id}/play?userId=${userId}`
         : `/v1/media/video/${playMediaObj.id}/play?userId=${userId}`;
       await apiCall({ method: 'post', url: endpoint });
-      console.log('Play tracked successfully');
-
-    
     } catch (err) {
       console.error('Failed to track play:', err);
     }
@@ -291,7 +242,7 @@ setPopularArtists(normalizedArtists);
       <div className="feed-content-wrapper">
         {error && <div className="feed-error" style={{ color: 'orange', padding: '10px', textAlign: 'center' }}>{error}</div>}
         <main className="feed">
-          {/* Trending Today Carousel - NEW: plays_today based */}
+          {/* Trending Today Carousel */}
           <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
             <h2>Trending Today</h2>
             <div className="carousel-items">
@@ -308,7 +259,6 @@ setPopularArtists(normalizedArtists);
                   >
                     <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
                     
-                    {/* Duration Overlay - Bottom Left */}
                     {item.duration && (
                       <div style={{
                         position: 'absolute',
@@ -325,7 +275,6 @@ setPopularArtists(normalizedArtists);
                       </div>
                     )}
                     
-                    {/* NEW: Explicit Badge - Top Right */}
                     {item.explicit && (
                       <div style={{
                         position: 'absolute',
@@ -343,12 +292,10 @@ setPopularArtists(normalizedArtists);
                     )}
                   </div>
                   
-                  {/* Title */}
                   <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
                     {item.title}
                   </div>
                   
-                  {/* Artist Name */}
                   <span 
                     className="item-artist" 
                     onClick={() => handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown')}
@@ -357,7 +304,6 @@ setPopularArtists(normalizedArtists);
                     {item.artistData?.username || item.artist || 'Unknown'}
                   </span>
                   
-                  {/* Time Ago */}
                   <div className="time_ago" style={{ fontSize: '0.75rem', color: '#888', marginTop: '2px' }}>
                     {formatTimeAgo(item.createdAt)}
                   </div>
@@ -383,7 +329,6 @@ setPopularArtists(normalizedArtists);
                   >
                     <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
                     
-                    {/* Duration */}
                     {item.duration && (
                       <div style={{
                         position: 'absolute',
@@ -400,7 +345,6 @@ setPopularArtists(normalizedArtists);
                       </div>
                     )}
                     
-                    {/* Explicit Badge */}
                     {item.explicit && (
                       <div style={{
                         position: 'absolute',
@@ -443,29 +387,24 @@ setPopularArtists(normalizedArtists);
             <h2>Popular Artists</h2>
             <div className="artist-cards-grid">
               {(() => {
-                // Extract unique artists from songs you've already loaded
                 const artistMap = new Map();
-                
-                // Combine all loaded media
                 const allMedia = [...trendingToday, ...topRated, ...newMedia];
                 
-                // Extract unique artists with their data
                 allMedia.forEach(media => {
                   if (media.artistData && !artistMap.has(media.artistData.userId)) {
                     artistMap.set(media.artistData.userId, {
                       userId: media.artistData.userId,
                       username: media.artistData.username,
-                      photoUrl: buildUrl(media.artistData.photoUrl), // Use artist photo from song data
+                      photoUrl: buildUrl(media.artistData.photoUrl),
                       jurisdictionId: media.artistData.jurisdiction?.jurisdictionId,
                       score: media.artistData.score || 0
                     });
                   }
                 });
                 
-                // Convert to array and sort by score
                 const artists = Array.from(artistMap.values())
                   .sort((a, b) => b.score - a.score)
-                  .slice(0, 5); // Top 5
+                  .slice(0, 5);
                 
                 return artists.map((artist) => (
                   <div 
