@@ -52,9 +52,6 @@ const Profile = () => {
 
   if (!userProfile) return <div style={{ textAlign: 'center', padding: '4rem', color: 'white' }}>Loading your profile...</div>;
 
-  const photoUrl = userProfile.photoUrl 
-    ? `${API_BASE_URL}${userProfile.photoUrl}` 
-    : backimage;
 
   const buildUrl = (url) => {
     if (!url) return null;
@@ -62,6 +59,11 @@ const Profile = () => {
       ? url 
       : `${API_BASE_URL}${url}`;
   };
+
+  const photoUrl = userProfile.photoUrl 
+    ? buildUrl(userProfile.photoUrl) 
+    : backimage;
+
 
   // Enhanced play function with tracking
   const playDefaultSong = async () => {

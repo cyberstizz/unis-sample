@@ -124,8 +124,10 @@ const ArtistDashboard = () => {
 
   const displayName = userProfile.username || 'Artist';
   const displayPhoto = userProfile.photoUrl
-    ? `${API_BASE_URL}${userProfile.photoUrl}`
+    ? (userProfile.photoUrl.startsWith('http') ? userProfile.photoUrl : `${API_BASE_URL}${userProfile.photoUrl}`)
     : backimage;
+
+
   const displayBio = userProfile.bio || 'No bio yet. Click Edit to add one.';
 
   const refetchDefaultSong = () => {
