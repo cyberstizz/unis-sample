@@ -17,7 +17,6 @@ $unis-silver: #918f8f;
 body {
   scrollbar-color: $unis-blue $bg-black;
   background-color: $bg-black;
-  // Ensure the body doesn't scroll horizontally
   overflow-x: hidden; 
 }
 
@@ -27,31 +26,20 @@ body {
   to { opacity: 1; transform: translateX(0); }
 }
 
-// --- MAIN LAYOUT FIXES ---
+// --- MAIN LAYOUT ---
+// Sidebar offset is handled globally by index.css .app-wrapper rules.
+// DO NOT add margin-left here — it will double-offset.
 
-// This wrapper controls where the Feed sits on the page
 .feed-content-wrapper {
   width: 100%;
+  max-width: 900px;
   display: flex;
   flex-direction: column;
-  padding-top: 7%; 
-  @media (min-width: 1025px) {
-    // Push the feed to the right to clear the 250px Sidebar
-    margin-left: 260px; 
-    
-    // Constrain width to leave room for Ads on the right
-    // 260px (Sidebar) + 900px (Feed) + Remaining (Ads)
-    max-width: 900px; 
-    
-    // If you want it centered in the remaining space instead of strictly left:
-    // margin: 0 auto 0 260px; 
-  }
+  padding-top: 7%;
 
-  // On Tablet/Mobile (Sidebar is hidden/toggleable)
   @media (max-width: 1024px) {
-    margin-left: 0;
     max-width: 100%;
-    padding: 0 10px; // Add small gutters so text doesn't touch screen edges
+    padding: 0 10px;
   }
 }
 
@@ -77,19 +65,9 @@ body {
   }
 }
 
-// --- HEADER ---
-// I have commented this out so we do not break your existing header layout.
-// We can fix the header separately once the feed body is positioned correctly.
-/*
-.header {
-  // Your original header code or specific fixes can go here later
-}
-*/
-
 // --- FEED COMPONENT ---
 .feed {
   width: 100%;
-  // Remove padding-top hacks. The margin is handled by the wrapper.
   padding: 10px 0; 
 
   .feed-section {
@@ -105,14 +83,14 @@ body {
 
     h2 {
       color: $unis-blue;
-      font-size: clamp(24px, 4vw, 38px); // Responsive font size
+      font-size: clamp(24px, 4vw, 38px);
       font-family: 'Montserrat', sans-serif;
       font-weight: 400;
       letter-spacing: 1.5px;
       text-transform: uppercase;
       padding-bottom: 5px;
       margin-bottom: 20px;
-      margin-top: 0; // Ensures h2 sits tight to the top
+      margin-top: 0;
       border-bottom: 1px solid silver;
     }
 
@@ -125,7 +103,6 @@ body {
         padding-bottom: 15px;
         scroll-behavior: smooth;
         
-        // Scrollbars
         scrollbar-width: thin;
         scrollbar-color: $unis-blue #2a2a2a;
 
@@ -136,7 +113,6 @@ body {
         .item-wrapper {
           display: flex;
           flex-direction: column;
-          // IMPORTANT: This prevents cards from squishing on mobile
           flex: 0 0 auto; 
           width: 180px; 
         }
@@ -223,18 +199,15 @@ body {
     display: grid;
     gap: 20px;
     
-    // Desktop: 2 columns
     @media (min-width: 769px) {
       grid-template-columns: repeat(2, 1fr);
     }
     
-    // Tablet: 2 columns
     @media (min-width: 481px) and (max-width: 768px) {
       grid-template-columns: repeat(2, 1fr);
       gap: 15px;
     }
     
-    // Mobile: 1 column
     @media (max-width: 480px) {
       grid-template-columns: 1fr;
       gap: 15px;
@@ -264,13 +237,11 @@ body {
       }
     }
 
-    // Artist Photo - Left side (70% width)
     .artist-card-image {
       flex: 0 0 70%;
       position: relative;
       background-color: #1a1a1a;
       
-      // Gradient overlay for depth
       .artist-card-overlay {
         position: absolute;
         inset: 0;
@@ -284,7 +255,6 @@ body {
       }
     }
 
-    // Info Section - Right side (30% width)
     .artist-card-info {
       flex: 1;
       display: flex;
@@ -354,7 +324,6 @@ body {
     }
   }
 
-  // --- MOBILE ADJUSTMENTS ---
   @media (max-width: 768px) {
     .artist-card {
       height: 200px;
@@ -378,13 +347,12 @@ body {
     }
   }
 
-  // --- EXTRA SMALL MOBILE ---
   @media (max-width: 480px) {
     .artist-card {
       height: 200px;
 
       .artist-card-image {
-        flex: 0 0 65%; // Slightly less image on very small screens
+        flex: 0 0 65%;
       }
 
       .artist-card-info {
@@ -411,23 +379,21 @@ body {
 // --- MOBILE ADJUSTMENTS ---
 @media (max-width: 768px) {
   .feed {
-    // Reduce padding on small screens
     padding: 7px 0; 
     padding-top: 28%;
     
     .feed-section {
-      // Reduce vertical gaps
       margin-bottom: 25px; 
 
       h2 {
-        font-size: 22px; // Smaller headings
+        font-size: 22px;
       }
 
       &.carousel .carousel-items {
-        gap: 12px; // Tighter gaps
+        gap: 12px;
         
         .item-wrapper {
-          width: 140px; // Smaller cards for phone screens
+          width: 140px;
         }
         .item {
           height: 140px;
