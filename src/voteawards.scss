@@ -10,38 +10,42 @@ $unis-blue: #163387;
 $unis-silver: #918f8f; 
 
 // Base container
+// index.css already applies margin-left: 260px to this element's parent flex child.
+// We just need to center content within the remaining viewport space.
 .voteAwardsContainer {
-  align-items: center;
   display: flex;
   flex-direction: column;
-  min-height: 100vh; 
-  background-color: transparent; 
+  align-items: center;
+  min-height: 100vh;
   width: 100%;
-  margin-top: 12%;
+  background-color: transparent;
+  padding-top: 6%;
+  padding-bottom: 5%;
+  box-sizing: border-box;
 }
 
 .filters {
   display: flex;
-  gap: 15px; 
-  margin-bottom: 40px; 
+  gap: 15px;
+  margin-bottom: 40px;
   flex-wrap: wrap;
-  width: 500px !important;
-  max-width: 900px; 
+  width: auto;
+  max-width: 900px;
   justify-content: center;
 
   .filter-select {
-    padding: 10px 18px; // Slightly tighter padding for modern feel
-    background: rgba($subtle-black, 0.8); // Slight transparency
-    border: 1px solid rgba($border-silver, 0.2); 
-    border-radius: 50px; 
+    padding: 10px 18px;
+    background: rgba($subtle-black, 0.8);
+    border: 1px solid rgba($border-silver, 0.2);
+    border-radius: 50px;
     color: $text-silver;
-    font-size: 14px; // Slightly smaller text for elegance
+    font-size: 14px;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
     
     &:hover, &:focus {
-      border-color: $unis-blue; // Highlight border on hover
-      background: rgba($unis-blue, 0.1); // Very subtle blue tint
+      border-color: $unis-blue;
+      background: rgba($unis-blue, 0.1);
       color: $accent-white;
     }
 
@@ -53,25 +57,22 @@ $unis-silver: #918f8f;
 
 .nominees {
   width: 100%;
-  max-width: 900px; 
+  max-width: 900px;
   padding: 0 20px;
+  box-sizing: border-box;
 
-  .intervalDeclaration{
-    color: $accent-white; 
-    font-size: 24px; 
+  .intervalDeclaration {
+    color: $accent-white;
+    font-size: 24px;
     text-align: center;
     justify-self: center;
     margin-bottom: 30px;
-    font-weight: 300; 
+    font-weight: 300;
     letter-spacing: 1px;
 
-    .jurisdictionLabel{
-      justify-self: center;
-      align-self: center;
-      justify-content: center;
-      align-content: center;
-      justify-items: center;
-      align-content: center;
+    .jurisdictionLabel {
+      display: block;
+      text-align: center;
       margin: 0 auto;
     }
   }
@@ -84,7 +85,7 @@ $unis-silver: #918f8f;
   }
 
   .search-bar {
-    width: 40%;
+    width: 60%;
     max-width: 500px;
     padding: 12px 24px;
     border-radius: 50px;
@@ -93,13 +94,14 @@ $unis-silver: #918f8f;
     color: $accent-white;
     font-size: 16px;
     transition: border-color 0.2s;
-    margin-left: 65px;
+    // REMOVED: margin-left: 65px — was offsetting the centered search bar
 
     &:focus {
       outline: none;
       border-color: $unis-blue;
     }
-    :placeholder-shown{
+
+    &::placeholder {
       text-align: center;
     }
   }
@@ -107,9 +109,10 @@ $unis-silver: #918f8f;
   .nominee-list {
     list-style: none;
     padding: 0;
+    margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 16px; // Use gap instead of margin-bottom for consistent spacing
+    gap: 16px;
 
     .nominee-item {
       display: flex;
@@ -117,41 +120,31 @@ $unis-silver: #918f8f;
       background: linear-gradient(90deg, 
         rgba($subtle-black, 0.95) 0%, 
         rgba($subtle-black, 0.85) 100%
-      ); // Subtle gradient for depth
-      
-      border-radius: 8px; // Slightly sharper corners look more "tech/modern"
+      );
+      border-radius: 8px;
       padding: 20px 24px;
       position: relative;
       overflow: hidden;
       transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-
-      // --- THE UNIS BLUE BORDERS ---
       border-left: 4px solid $unis-blue;
       border-right: 4px solid $unis-blue;
-      // -----------------------------
-      
-      // Remove top/bottom borders or keep them very subtle
       border-top: 1px solid rgba($border-silver, 0.05);
       border-bottom: 1px solid rgba($border-silver, 0.05);
 
       &:hover {
-        transform: translateY(-2px); // Subtle lift
+        transform: translateY(-2px);
         background: linear-gradient(90deg, 
           rgba($subtle-black, 1) 0%, 
           rgba($subtle-black, 0.95) 100%
         );
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3); // Smoother shadow
-        
-        // Make the blue borders glow slightly on hover
-        border-left-color: $unis-blue, 10%;
-        border-right-color: $unis-blue, 10%;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
       }
 
       .nominee-image {
-        width: 70px; // Slightly smaller for better proportions
+        width: 70px;
         height: 70px;
-        flex-shrink: 0; // Prevent squishing
-        border-radius: 12px; // Matching card radius style (squircle)
+        flex-shrink: 0;
+        border-radius: 12px;
         margin-right: 20px;
         background-size: cover;
         background-position: center;
@@ -170,14 +163,15 @@ $unis-silver: #918f8f;
         flex-direction: column;
         justify-content: center;
         cursor: pointer;
+        min-width: 0; // prevent text overflow pushing buttons off screen
         
         #nominee-name {
-          font-family: "Bitcount Grid Double", system-ui; // Your custom font
-          color: $accent-white; // Changed from blue to white for readability
-          font-size: 22px; // Adjusted for balance
+          font-family: "Bitcount Grid Double", system-ui;
+          color: $accent-white;
+          font-size: 22px;
           margin: 0 0 4px 0;
           letter-spacing: 0.5px;
-          text-transform: uppercase; // Optional: adds "poster" feel
+          text-transform: uppercase;
         }
 
         .artist-name {
@@ -191,39 +185,39 @@ $unis-silver: #918f8f;
           margin: 4px 0 0 0;
           color: $text-gray;
           
-          // Style the "Votes: X" specifically if you want
           &.votes-count {
-             color: $unis-blue;
-             font-weight: 600;
+            color: $unis-blue;
+            font-weight: 600;
           }
         }
 
-    .voteawards-jurisdiction-label {
-      color: $unis-blue; 
-      font-size: 14px;
-      margin-top: 4px; 
-      font-weight: 500;
-    }
+        .voteawards-jurisdiction-label {
+          color: $unis-blue;
+          font-size: 14px;
+          margin-top: 4px;
+          font-weight: 500;
+        }
       }
 
-      // Button Container to keep right side tidy
       .nominee-actions {
         display: flex;
         align-items: center;
         gap: 10px;
       }
 
-      .the_buttons{
+      .the_buttons {
         display: flex;
-        width: 27%;
-        gap: 5%;
+        flex-direction: row;
+        gap: 10px;
+        flex-shrink: 0;
+        margin-left: auto;
+        padding-left: 16px;
       }
 
-      // Shared button styles
       button {
         padding: 8px 20px;
         font-size: 13px;
-        border-radius: 4px; // Sharper buttons match the card borders
+        border-radius: 4px;
         cursor: pointer;
         transition: all 0.2s ease;
         text-transform: uppercase;
@@ -235,9 +229,7 @@ $unis-silver: #918f8f;
         background: transparent;
         border: 1px solid $text-gray;
         color: $text-silver;
-        width: 80%;
-
-        
+        white-space: nowrap;
         
         &:hover {
           border-color: $accent-white;
@@ -248,14 +240,12 @@ $unis-silver: #918f8f;
 
       .vote-button {
         background: $unis-blue;
-        border: 1px solid $unis-blue; // Match border
+        border: 1px solid $unis-blue;
         color: $accent-white;
-        width: 80%;
-
+        white-space: nowrap;
         
         &:hover {
-          background: $unis-blue, 5%;
-          box-shadow: 0 0 10px rgba($unis-blue, 0.4); // Subtle glow
+          box-shadow: 0 0 10px rgba($unis-blue, 0.4);
         }
       }
     }
@@ -268,9 +258,10 @@ $unis-silver: #918f8f;
       font-weight: 300;
     }
   }
+}
 
 
-  // --- Variables (Matching your system) ---
+// --- Variables (Matching your system) ---
 $bg-black: #000000;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
@@ -285,7 +276,7 @@ $subtle-black: #1a1a1a;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.85); // Darker backdrop
+  background-color: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -296,26 +287,19 @@ $subtle-black: #1a1a1a;
 .voting-wizard {
   background: linear-gradient(145deg, rgba($subtle-black, 0.95), rgba(0, 0, 0, 1));
   padding: 40px;
-  border-radius: 16px; // Modern rounded corners
+  border-radius: 16px;
   width: 90%;
   max-width: 500px;
   position: relative;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba($text-silver, 0.1); // Default subtle border
-  transition: all 0.5s ease-in-out; // Smooth transition for the glow
+  border: 1px solid rgba($text-silver, 0.1);
+  transition: all 0.5s ease-in-out;
 
-  // --- THE SUCCESS GLOW ---
   &.success-glow {
-    // 1. Solid Brand Border
     border: 2px solid $unis-blue !important;
-    
-    // 2. The Glow
-    // We lighten the blue for the shadow so it shines against the black bg
     box-shadow: 
-      0 0 30px rgba(lighten($unis-blue, 20%), 0.5), // Outer glow (lighter)
-      inset 0 0 20px rgba($unis-blue, 0.4) !important; // Inner glow (brand color)
-      
-    // Optional: slight scale up to emphasize the success
+      0 0 30px rgba(lighten($unis-blue, 20%), 0.5),
+      inset 0 0 20px rgba($unis-blue, 0.4) !important;
     transform: scale(1.02); 
   }
 }
@@ -351,7 +335,7 @@ $subtle-black: #1a1a1a;
   
   .nominee-name {
     color: $unis-blue;
-    font-family: "Bitcount Grid Double", system-ui; // Matching your font
+    font-family: "Bitcount Grid Double", system-ui;
     font-size: 28px;
     text-transform: uppercase;
     margin: 10px 0;
@@ -365,7 +349,6 @@ $subtle-black: #1a1a1a;
   }
 }
 
-// --- NEW RECEIPT / DETAILS STYLE ---
 .vote-receipt {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba($unis-blue, 0.3);
@@ -423,7 +406,6 @@ $subtle-black: #1a1a1a;
   }
 }
 
-// --- RESULT ICONS ---
 .result-view {
   .unis-logo-result {
     width: 60px;
@@ -435,7 +417,7 @@ $subtle-black: #1a1a1a;
     width: 70px;
     height: 70px;
     border-radius: 50%;
-    border: 3px solid; // Color set inline in React
+    border: 3px solid;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -450,7 +432,6 @@ $subtle-black: #1a1a1a;
   }
 }
 
-// --- BUTTONS ---
 .button-group, .button-group-result {
   display: flex;
   gap: 15px;
@@ -497,7 +478,6 @@ button {
   }
 }
 
-// --- FORM INPUTS ---
 .input-field, input[type="text"] {
   width: 100%;
   padding: 12px;
@@ -536,70 +516,48 @@ button {
   }
 }
 
-}
 
 // Mobile Responsiveness
 @media (max-width: 600px) {
-
-  .voteAwardsContainer{
-    margin-top: 25%;
-    width: 98vw;
-    margin-left: none;
-    margin-right: none;
-    padding-left: none;
+  .voteAwardsContainer {
+    padding-top: 25%;
+    width: 100%;
     overflow: hidden;
-  
-  
-  .nominees {
-    .intervalDeclaration{
-    color: $accent-white; // Changed to white for better hierarchy
-    font-size: 24px; // Slightly reduced for cleaner look
-    text-align: center !important;
-    justify-self: center !important;
-    margin-bottom: 30px;
-    font-weight: 300; 
-    letter-spacing: 1px;
-
-    .jurisdictionLabel{
-      text-align: center !important;
-      justify-self: center !important;
-      align-self: center !important;
-      justify-content: center !important;
-      align-content: center !important;
-      justify-items: center !important;
-      align-content: center !important;
-      margin: 0 auto !important;
-      width: 100% !important;
-    }
   }
+
+  .nominees {
+    .intervalDeclaration {
+      font-size: 20px;
+      text-align: center;
+
+      .jurisdictionLabel {
+        display: block;
+        text-align: center;
+        margin: 0 auto;
+      }
+    }
   }
   
   .filters {
     margin-top: 8%;
     display: flex;
     flex-direction: row !important;
-    gap: 20px;
-    width: 80vw !important;
-    margin-left: 10px;
+    gap: 10px;
+    width: 90vw !important;
 
     .filter-select {
       font-size: 12px;
+      padding: 8px 12px;
     }
   }
 
-  .filter-select{
-    width: 15vw !important;
-    border: solid 1px green;
+  .search-form {
+    width: 100%;
   }
 
-.search-form{
-  width: 100%;
-}
-
-.search-bar{
-  width: 80% !important;
-      margin-left: 10px;
-}
+  .search-bar {
+    width: 85% !important;
+  }
   
   .nominee-list {
     width: 100%;
@@ -607,13 +565,11 @@ button {
     gap: 12px;
     
     .nominee-item {
-      // FIXED: Changed to row layout like other pages
       display: flex;
       flex-direction: row;
       align-items: center;
       padding: 12px;
       gap: 10px;
-      
       border-left: 3px solid $unis-blue;
       border-right: 3px solid $unis-blue;
 
@@ -621,15 +577,13 @@ button {
         width: 55px;
         height: 55px;
         margin-right: 10px;
-        margin-bottom: 0;
         flex-shrink: 0;
       }
 
       .nominee-info {
-        flex-grow: 1;
+        flex: 1;
         text-align: left;
-        margin-bottom: 0;
-        min-width: 0; // Allow text truncation
+        min-width: 0;
         
         #nominee-name {
           font-size: 15px !important;
@@ -658,50 +612,20 @@ button {
       .the_buttons {
         display: flex;
         flex-direction: column;
-        width: 22% !important;
-        height: 20%;
-        margin-bottom: 3px !important;
-        gap: 2px;
+        gap: 6px;
         flex-shrink: 0;
-        margin-left: 25px;
-        margin-top: 5px;
+        margin-left: auto;
+        padding-left: 8px;
       }
       
       .listen-button, .vote-button {
-        width: 60px; 
+        width: 64px;
         padding: 6px 10px;
         font-size: 10px;
         text-align: center;
-        margin-bottom: 0;
         letter-spacing: 0.5px;
         border-radius: 4px;
       }
-      
-      .listen-button {
-        background: transparent;
-        border: 1px solid $text-gray;
-        color: $text-silver;
-        margin-bottom: 8px;
-        
-        &:hover {
-          border-color: $accent-white;
-          color: $accent-white;
-          background: rgba(255,255,255, 0.05);
-        }
-      }
-      
-      .vote-button {
-        background: $unis-blue;
-        border: 1px solid $unis-blue;
-        color: $accent-white;
-        
-        &:hover {
-          background: $unis-blue;
-          box-shadow: 0 0 10px rgba($unis-blue, 0.4);
-        }
-      }
     }
   }
-}
-
 }

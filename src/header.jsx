@@ -13,7 +13,7 @@ const Header = () => {
   const handleEarnings = () => navigate('/earnings');
   const handleHome = () => navigate('/');
   const handleMilestones = () => navigate('/milestones');
-  const handleArtist = () => navigate('/findpage');
+  const handleFind = () => navigate('/findpage');
   const handleSong = () => navigate('/song');
   const handleProfile = () => navigate('/profile');
   const handleLogout = async () => {
