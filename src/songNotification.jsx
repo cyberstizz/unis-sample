@@ -10,26 +10,38 @@ const SongNotification = () => {
   useEffect(() => {
     if (currentMedia) {
       setShow(true);
-      const timer = setTimeout(() => setShow(false), 3000); // Show for 3s
+      const timer = setTimeout(() => setShow(false), 3000);
       return () => clearTimeout(timer);
     }
   }, [currentMedia]);
 
   if (!show || !currentMedia) return null;
 
+  const artworkSrc = currentMedia.artwork || '/default-artwork.png';
+
   return (
     <div className="song-notification">
-      <div className="card">      
-        
-        <img 
-          src={currentMedia.artwork || '/default-artwork.png'} 
-          alt="Artwork" 
-          className="notification-artwork" 
+      <div className="card">
+
+        {/* Ambient blurred background sourced from artwork */}
+        <div
+          className="ambient-bg"
+          style={{ backgroundImage: `url(${artworkSrc})` }}
         />
-        <div className="notification-info">
-          <h3>{currentMedia.title || 'Unknown Track'}</h3>
-          <p className='artistName'>{currentMedia.artist || 'Unknown Artist'}</p>
+
+        {/* Foreground content */}
+        <div className="glass-content">
+          <img
+            src={artworkSrc}
+            alt="Artwork"
+            className="notification-artwork"
+          />
+          <div className="notification-info">
+            <h3>{currentMedia.title || 'Unknown Track'}</h3>
+            <p className="artistName">{currentMedia.artist || 'Unknown Artist'}</p>
+          </div>
         </div>
+
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ $unis-blue: #163387;
 
 .song-notification {
   position: fixed;
-  bottom: 100px; // Above player
+  bottom: 100px;
   left: 20px;
   z-index: 101;
   animation: slideIn 0.5s ease-out forwards, slideOut 0.5s 2.5s ease-in forwards;
@@ -11,36 +11,45 @@ $unis-blue: #163387;
     display: flex;
     align-items: center;
     position: relative;
-    background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(40, 40, 40, 0.95));
+    background: rgba(20, 20, 20, 0.6); // base fallback, ambient-bg paints over this
+    border: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border-radius: 16px;
-    padding: 14px;
+    padding: 0;
     box-shadow: 
       0 8px 32px rgba(0, 0, 0, 0.4),
       0 2px 8px rgba(0, 0, 0, 0.2);
-    gap: 14px;
     min-width: 320px;
-    overflow: visible; // Changed from hidden to show border
-    
-    // Flashing BLUE BORDER effect
-    border: 2px solid transparent;
+    overflow: hidden;
     animation: flashingBlueBorder 1.5s ease-in-out infinite;
 
-    // Inner glow effect
-    &::after {
-      content: '';
+    // --- Ambient blurred image background ---
+    .ambient-bg {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(
-        circle at top left,
-        rgba(255, 255, 255, 0.08),
-        transparent 50%
-      );
-      border-radius: 16px;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background-size: cover;
+      background-position: center;
+      filter: blur(40px) saturate(180%);
+      opacity: 0.4;
+      z-index: 0;
       pointer-events: none;
+      transition: all 0.5s ease;
+    }
+
+    // --- Glass content layer on top ---
+    .glass-content {
+      position: relative;
+      z-index: 1;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      box-sizing: border-box;
+      background: linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 100%);
     }
 
     .notification-artwork {
@@ -49,29 +58,12 @@ $unis-blue: #163387;
       border-radius: 10px;
       object-fit: cover;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      position: relative;
-      z-index: 1;
-      
-      // Subtle blue glow around artwork
-      &::after {
-        content: '';
-        position: absolute;
-        top: -4px;
-        left: -4px;
-        right: -4px;
-        bottom: -4px;
-        background: rgba(0, 123, 255, 0.2);
-        border-radius: 12px;
-        z-index: -1;
-        opacity: 0.6;
-        filter: blur(8px);
-      }
+      flex-shrink: 0;
     }
 
     .notification-info {
       flex: 1;
-      position: relative;
-      z-index: 1;
+      min-width: 0;
 
       h3 {
         font-size: 16px;
@@ -80,8 +72,6 @@ $unis-blue: #163387;
         color: #ffffff;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         line-height: 1.3;
-        
-        // Truncate long titles
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -91,10 +81,8 @@ $unis-blue: #163387;
       p {
         font-size: 13px;
         margin: 2px 0;
-        color: $unis-blue !important;
-        font-weight: 600 !important;
         line-height: 1.4;
-        
+
         &:first-of-type {
           color: #d0d0d0;
           font-weight: 500;
@@ -107,20 +95,17 @@ $unis-blue: #163387;
           display: flex;
           align-items: center;
           gap: 4px;
-        
         }
       }
     }
-
-    }
   }
-
+}
 
 .artistName {
   color: $unis-blue;
+  font-weight: 600 !important;
 }
 
-// Flashing BLUE border animation
 @keyframes flashingBlueBorder {
   0%, 100% {
     border-color: transparent;
@@ -129,51 +114,34 @@ $unis-blue: #163387;
       0 2px 8px rgba(0, 0, 0, 0.2);
   }
   50% {
-    border-color: #007bff; // Bright blue
+    border-color: #007bff;
     box-shadow: 
       0 8px 32px rgba(0, 0, 0, 0.4),
       0 2px 8px rgba(0, 0, 0, 0.2),
-      0 0 20px rgba(0, 123, 255, 0.6),  // Blue glow
-      inset 0 0 20px rgba(0, 123, 255, 0.1); // Inner blue glow
+      0 0 20px rgba(0, 123, 255, 0.6),
+      inset 0 0 20px rgba(0, 123, 255, 0.1);
   }
 }
 
-// Slide in animation
 @keyframes slideIn {
-  from {
-    transform: translateX(-120%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  from { transform: translateX(-120%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
 }
 
-// Slide out animation
 @keyframes slideOut {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(-120%);
-    opacity: 0;
-  }
+  from { transform: translateX(0);     opacity: 1; }
+  to   { transform: translateX(-120%); opacity: 0; }
 }
 
-
-
-// Responsive adjustments
 @media (max-width: 480px) {
   .song-notification {
     left: 10px;
     right: 10px;
-    
+
     .card {
       min-width: auto;
       width: calc(100% - 20px);
-      
+
       .notification-info h3 {
         max-width: 180px;
       }
