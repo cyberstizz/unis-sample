@@ -24,33 +24,13 @@ a:hover {
 
 body {
   margin: 0;
+  display: flex;
+  place-items: center;
   min-width: 320px;
   min-height: 100vh;
-  /* Removed display:flex + place-items:center — was centering the entire
-     app-wrapper which broke the sidebar/content layout */
-  background-color: #000;
-  overflow-x: hidden;
 }
 
-/* ─── App shell ─────────────────────────────────────────────────────────────
-   Sidebar is position:fixed, width:250px, always visible on desktop
-   (min-width: 1025px). On tablet/mobile (max-width: 1024px) it slides
-   off-screen — content should fill full width with no left offset.
-─────────────────────────────────────────────────────────────────────────── */
-.app-wrapper {
-  display: flex;
-  min-height: 100vh;
-  width: 100%;
-  position: relative;
-}
 
-/* Mobile/tablet: sidebar is hidden off-screen, content fills full width.
-   Per-page margin-left hacks handle desktop — this only fixes mobile. */
-@media (max-width: 1024px) {
-  .app-wrapper > *:not(nav):not(.sidebar-trigger) {
-    margin-left: 0 !important;
-  }
-}
 
 h1 {
   font-size: 3.2em;
@@ -86,12 +66,5 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
-  }
-}
-
-@media (max-width: 500px) {
-  body {
-    display: flex;
-    place-items: center;
   }
 }
