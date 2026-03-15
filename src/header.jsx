@@ -1,12 +1,14 @@
 import React from "react";
-import "./header.scss";
+import "./header.scss"; 
+import unisLogo from './assets/unisLogoThree.svg';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';  
 
 const Header = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuth();  
 
+  
   const handleClick = () => navigate('/voteawards');
   const handleEarnings = () => navigate('/earnings');
   const handleHome = () => navigate('/');
@@ -14,26 +16,42 @@ const Header = () => {
   const handleArtist = () => navigate('/artist');
   const handleSong = () => navigate('/song');
   const handleProfile = () => navigate('/profile');
-  const handleLogout = async () => { logout(); };
+  const handleLogout = async () => {
+    logout(); 
+  };
 
   return (
-    <header className="topbar">
-      {/* ─── Search ─── */}
-      <div className="search-container">
-        <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input className="search-input" type="text" placeholder="Search artists, songs, neighborhoods..." />
+    <header className="app-header">
+      <div className="app-header-top">
+        {/* Left: Logo */}
+        <div className="logo-wrapper">
+        <img onClick={handleHome} src={unisLogo} alt="UNIS Logo" className="logo" />
+        </div>
+
+        {/* Center: Search bar */}
+        <input type="text" placeholder="Search artists, songs..." className="search-bar" />
+
+        
       </div>
 
-      {/* ─── User area ─── */}
-      <div className="user-area">
-        {user && <span className="user-name">{user.username}</span>}
-        <div className="user-avatar" onClick={handleLogout} title="Logout">
-          {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
-        </div>
+      {/* Static options bar underneath */}
+      <div className="app-header-options-bar">
+        <div onClick={handleClick} className="option-box">Vote</div>
+        <div onClick={handleMilestones} className="option-box">Awards</div>
+        <div onClick={handleArtist} className="option-box">Popular</div>
+        <div onClick={handleEarnings} className="option-box">Earnings</div>
       </div>
+      {/* Right: User name + Logout */}
+        <div className="header-user-section">
+          {user ? (  // New: Conditional user display
+            <>
+              <span className="header-user-name">{user.username}</span>  
+              <div onClick={handleLogout} className="logout-button">Logout</div>
+            </>
+          ) : (
+            <div className="logout-button" onClick={handleLogout}>Logout</div>  // Fallback
+          )}
+        </div>
     </header>
   );
 };
