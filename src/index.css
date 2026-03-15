@@ -26,17 +26,20 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  /* Removed display:flex + place-items:center — was centering the entire
-     app-wrapper which broke the sidebar/content layout */
   background-color: #000;
   overflow-x: hidden;
 }
 
 /* ─── App shell ─────────────────────────────────────────────────────────────
-   Sidebar (~260px) sits on the left.
-   All page content fills the remaining space to the right.
-   This is the single source of truth for the sidebar offset —
-   no individual page needs its own margin-left hack.
+   Sidebar (~260px) sits fixed on the left.
+   Page content fills the remaining space to the right via margin-left.
+   This is the SINGLE source of truth for sidebar offset —
+   no individual page SCSS should have its own margin-left hack.
+
+   Auth pages (login, register, reset-password) render inside .app-wrapper
+   but WITHOUT the sidebar, so they are explicitly excluded from the offset.
+   Overlay components (Player, notifications) are also excluded since they
+   use fixed/absolute positioning and don't participate in document flow.
 ─────────────────────────────────────────────────────────────────────────── */
 .app-wrapper {
   display: flex;
@@ -45,17 +48,7 @@ body {
   position: relative;
 }
 
-/* The Routes outlet — everything except the sidebar */
-.app-wrapper > *:not(nav):not(.sidebar-trigger) {
-  flex: 1 1 0;
-  min-width: 0;
-  /* Push content past the sidebar on desktop.
-     The sidebar uses position:fixed or absolute, so we use margin-left
-     to create the equivalent offset. Change 260px if sidebar width changes. */
-  margin-left: 260px;
-}
-
-/* Sidebar itself stays fixed on the left, doesn't participate in flex flow */
+/* Sidebar — fixed on the left, doesn't participate in flex flow */
 .app-wrapper nav.sidebar {
   position: fixed;
   top: 0;
@@ -64,6 +57,25 @@ body {
   height: 100vh;
   z-index: 100;
   flex-shrink: 0;
+}
+
+/* ─── Page content offset ───────────────────────────────────────────────────
+   Only actual page route containers get the sidebar offset.
+   We use a specific list of exclusions so nothing unexpected gets pushed.
+   Auth wrappers, Player, and notification overlays are all excluded.
+─────────────────────────────────────────────────────────────────────────── */
+.app-wrapper > *:not(nav):not(.sidebar-trigger):not(.login-wrapper):not(.reset-password-wrapper):not(.player-container):not(.song-notification):not(.winners-notification) {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-left: 260px;
+}
+
+/* Auth pages — full viewport, no sidebar offset */
+.app-wrapper > .login-wrapper,
+.app-wrapper > .reset-password-wrapper {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-left: 0;
 }
 
 /* Mobile — sidebar collapses, content fills full width */
