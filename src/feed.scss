@@ -349,6 +349,9 @@ body {
   }
 
   @media (max-width: 480px) {
+    .feed-content-wrapper{
+        margin-left: 20px;
+    }
     .artist-card {
       height: 200px;
 
