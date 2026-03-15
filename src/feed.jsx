@@ -40,13 +40,17 @@ const Feed = () => {
   const userId = user?.userId;
   const jurisdictionId = user?.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002';
 
-  const buildUrl = (url) => {
-    if (!url) return null;
-    return url.startsWith('http://') || url.startsWith('https://') 
-      ? url
-      : `${API_BASE_URL}${url}`;
-  };
+const buildUrl = (url) => {
+  if (!url) return null;
 
+  const fullUrl =
+      url.startsWith('http://') || url.startsWith('https://')
+        ? url
+        : `${API_BASE_URL}${url}`;
+
+    return encodeURI(fullUrl);
+  };
+  
   const formatDuration = (ms) => {
     if (!ms) return '';
     const totalSec = Math.floor(ms / 1000);
