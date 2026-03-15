@@ -31,6 +31,10 @@ const SongPage = () => {
   const [showLyricsWizard, setShowLyricsWizard] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  // Kept for future implementation — do-not-play and report features
+  const [editingLyrics, setEditingLyrics] = useState(false);
+  const [currentLyrics, setCurrentLyrics] = useState('');
+
   const [dominantColor, setDominantColor] = useState('rgba(255, 255, 255, 0.1)');
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -234,6 +238,22 @@ const SongPage = () => {
     }
   };
 
+  // Kept as named functions for future implementation
+  const handleDontPlay = () => {
+    console.log('Added to do-not-play list');
+    // TODO: implement do-not-play list feature
+  };
+
+  const handleReport = () => {
+    console.log('Report song');
+    // TODO: implement report flow
+  };
+
+  const handleShare = () => {
+    console.log('Share song');
+    // TODO: implement share flow
+  };
+
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -353,11 +373,9 @@ const SongPage = () => {
             <button onClick={handleFollow} className={`action-btn ${isFollowing ? 'following' : ''}`}>
               {isFollowing ? 'Following' : 'Follow'}
             </button>
-            <button onClick={() => console.log('Added to do-not-play list')} className="action-btn">
-              Don't Play
-            </button>
-            <button onClick={() => console.log('Report song')} className="action-btn">Report</button>
-            <button onClick={() => console.log('Share song')} className="action-btn">Share</button>
+            <button onClick={handleDontPlay} className="action-btn">Don't Play</button>
+            <button onClick={handleReport} className="action-btn">Report</button>
+            <button onClick={handleShare} className="action-btn">Share</button>
             <button onClick={handleCopyLink} className="action-btn">
               {copySuccess ? 'Copied!' : 'Copy Link'}
             </button>
