@@ -13,7 +13,7 @@ const Header = () => {
   const handleEarnings = () => navigate('/earnings');
   const handleHome = () => navigate('/');
   const handleMilestones = () => navigate('/milestones');
-  const handleArtist = () => navigate('/artist');
+  const handleArtist = () => navigate('/findpage');
   const handleSong = () => navigate('/song');
   const handleProfile = () => navigate('/profile');
   const handleLogout = async () => {
@@ -38,7 +38,7 @@ const Header = () => {
       <div className="app-header-options-bar">
         <div onClick={handleClick} className="option-box">Vote</div>
         <div onClick={handleMilestones} className="option-box">Awards</div>
-        <div onClick={handleArtist} className="option-box">Popular</div>
+        <div onClick={handleFind} className="option-box">Find</div>
         <div onClick={handleEarnings} className="option-box">Earnings</div>
       </div>
       {/* Right: User name + Logout */}
