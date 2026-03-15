@@ -91,7 +91,7 @@ const ChangeDefaultSongWizard = ({ show, onClose, songs, currentDefaultSongId, o
                 >
                   {song.artworkUrl ? (
                     <img
-                      src={`${API_BASE_URL}${song.artworkUrl}`}
+                      src={song.artworkUrl.startsWith('http') ? song.artworkUrl : `${API_BASE_URL}${song.artworkUrl}`}
                       alt={song.title}
                       style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover' }}
                     />

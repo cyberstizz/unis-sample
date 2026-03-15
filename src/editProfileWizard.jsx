@@ -11,7 +11,9 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
   const [bio, setBio] = useState(userProfile?.bio || '');
   const [photoFile, setPhotoFile] = useState(null);
   const [preview, setPreview] = useState(
-    userProfile?.photoUrl ? `${API_BASE_URL}${userProfile.photoUrl}` : null
+    userProfile?.photoUrl 
+  ? (userProfile.photoUrl.startsWith('http') ? userProfile.photoUrl : `${API_BASE_URL}${userProfile.photoUrl}`)
+  : null
   );
   const [loading, setLoading] = useState(false);
 

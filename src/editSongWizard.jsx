@@ -10,7 +10,9 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
   const [artworkFile, setArtworkFile] = useState(null);
   const [isrc, setIsrc] = useState(song?.isrc || '');
   const [preview, setPreview] = useState(
-    song?.artworkUrl ? `${API_BASE_URL}${song.artworkUrl}` : null
+    song?.artworkUrl 
+  ? (song.artworkUrl.startsWith('http') ? song.artworkUrl : `${API_BASE_URL}${song.artworkUrl}`)
+  : null
   );
   const [loading, setLoading] = useState(false);
 

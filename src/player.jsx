@@ -1,62 +1,57 @@
-import React, { useContext, useEffect, useState, useRef, useMemo } from 'react'; // Added useMemo
+import React, { useContext, useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
-import { Heart, Headphones, Vote, ChevronUp, ChevronDown } from 'lucide-react';
+import { Heart, Vote, ChevronUp, ChevronDown, SkipBack, SkipForward, Pause, Play, Repeat, List, Volume2, Download } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
-import VotingWizard from './votingWizard'; 
-import UnisPlayButton from './UnisPlayButton';
-import UnisPauseButton from './UnisPauseButton';
+import VotingWizard from './votingWizard';
 import { apiCall } from './components/axiosInstance';
 import './player.scss';
 
 const Player = () => {
-  const { 
-    isExpanded, 
-    toggleExpand, 
-    currentMedia, 
-    next, 
-    prev, 
-    audioRef, 
-    playlists, 
+  const {
+    isExpanded,
+    toggleExpand,
+    currentMedia,
+    next,
+    prev,
+    audioRef,
+    playlists,
     openPlaylistManager,
     showPlaylistManager,
     closePlaylistManager
   } = useContext(PlayerContext);
 
-  // --- LOCAL STATE ---
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0); 
-  const [duration, setDuration] = useState(0); 
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [specificVoteData, setSpecificVoteData] = useState(null);
-  
-  // Wizards State
   const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
-  const [showVoteWizard, setShowVoteWizard] = useState(false); // <--- 2. Add Vote Wizard State
-  
+  const [showVoteWizard, setShowVoteWizard] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [volume, setVolume] = useState(0.7);
 
-  const seekbarRef = useRef(null);
+  const progressBarRef = useRef(null);
+  const volumeBarRef = useRef(null);
   const navigate = useNavigate();
 
   // --- DERIVE VOTING DATA ---
-  // 3. Create the nominee object dynamically from the current song
   const voteNominee = useMemo(() => {
     if (!currentMedia) return null;
     return {
       id: currentMedia.id || currentMedia.songId,
-      name: currentMedia.title, // The "Name" being voted on is the Song Title
-      type: 'song', // Explicitly set type to song
-      jurisdiction: currentMedia.jurisdiction, 
-      genreKey: currentMedia.genreKey || 'rap-hiphop', // Fallback if genre missing
+      name: currentMedia.title,
+      type: 'song',
+      jurisdiction: currentMedia.jurisdiction,
+      genreKey: currentMedia.genreKey || 'rap-hiphop',
       artist: currentMedia.artist
     };
   }, [currentMedia]);
 
-  // 1. Extract User ID
+  // Extract User ID
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -69,39 +64,24 @@ const Player = () => {
     }
   }, []);
 
-  // 2. Fetch Like Status
+  // Fetch Like Status
   useEffect(() => {
     let isMounted = true;
     if (currentMedia?.id && userId) {
       const songId = currentMedia.id || currentMedia.songId;
-      
-      apiCall({ 
-        url: `/v1/media/song/${songId}/is-liked?userId=${userId}`,
-        method: 'get'
-      })
-      .then(res => {
-        if (isMounted) setIsLiked(res.data.isLiked || false);
-      })
-      .catch(() => {
-        if (isMounted) setIsLiked(false);
-      });
-      
-      apiCall({ 
-        url: `/v1/media/song/${songId}/likes/count`,
-        method: 'get'
-      })
-      .then(res => {
-        if (isMounted) setLikeCount(res.data.count || 0);
-      })
-      .catch(() => {
-        if (isMounted) setLikeCount(0);
-      });
-    }
 
+      apiCall({ url: `/v1/media/song/${songId}/is-liked?userId=${userId}`, method: 'get' })
+        .then(res => { if (isMounted) setIsLiked(res.data.isLiked || false); })
+        .catch(() => { if (isMounted) setIsLiked(false); });
+
+      apiCall({ url: `/v1/media/song/${songId}/likes/count`, method: 'get' })
+        .then(res => { if (isMounted) setLikeCount(res.data.count || 0); })
+        .catch(() => { if (isMounted) setLikeCount(0); });
+    }
     return () => { isMounted = false; };
   }, [currentMedia?.id, currentMedia?.songId, userId]);
 
-  // 3. Navigation
+  // Navigation
   const handleNavigateToSong = (e) => {
     e.stopPropagation();
     const id = currentMedia?.id || currentMedia?.songId;
@@ -113,16 +93,14 @@ const Player = () => {
     if (currentMedia?.artistId) navigate(`/artist/${currentMedia.artistId}`);
   };
 
-  // 4. Audio Listeners
+  // Audio Listeners
   useEffect(() => {
     if (currentMedia && audioRef.current) {
       const media = audioRef.current;
       media.currentTime = 0;
       setCurrentTime(0);
-
       const mediaUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
       if (!mediaUrl) return;
-
       media.src = mediaUrl;
       const handleCanPlay = () => {
         media.play().catch(err => console.error('Play failed:', err));
@@ -138,7 +116,6 @@ const Player = () => {
   useEffect(() => {
     const media = audioRef.current;
     if (!media) return;
-
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
     const handleTimeUpdate = () => setCurrentTime(media.currentTime);
@@ -150,7 +127,6 @@ const Player = () => {
     media.addEventListener('timeupdate', handleTimeUpdate);
     media.addEventListener('loadedmetadata', handleLoadedMetadata);
     media.addEventListener('ended', handleEnded);
-
     return () => {
       media.removeEventListener('play', handlePlay);
       media.removeEventListener('pause', handlePause);
@@ -165,7 +141,7 @@ const Player = () => {
   const isVideo = currentMedia.type === 'video';
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // 5. Functional Handlers
+  // Handlers
   const handlePlayPause = (e) => {
     e.stopPropagation();
     const media = audioRef.current;
@@ -179,7 +155,6 @@ const Player = () => {
   const handleLike = async (e) => {
     e.stopPropagation();
     if (!userId) return alert('Please log in to like songs');
-    
     const songId = currentMedia.id || currentMedia.songId;
     try {
       const res = await apiCall({
@@ -190,80 +165,35 @@ const Player = () => {
         setIsLiked(!isLiked);
         setLikeCount(prev => isLiked ? Math.max(0, prev - 1) : prev + 1);
       }
-    } catch (err) {
-      console.error('Like toggle failed:', err);
-    }
+    } catch (err) { console.error('Like toggle failed:', err); }
   };
 
   const handleVoteClick = async (e) => {
     e.stopPropagation();
     if (!userId) return alert('Please log in to vote');
-
-    // 1. DATA RECOVERY: Try to find ID from currentMedia, or fallback to songId
     const safeId = currentMedia.id || currentMedia.songId;
-    
-    // 2. NAME RECOVERY: Ensure we have a name to prevent the Wizard crash
     const safeTitle = currentMedia.title || currentMedia.name || "Unknown Song";
     const safeArtist = currentMedia.artist || currentMedia.artistName || "Unknown Artist";
-
-    // Stop if we truly have no ID (Prevents the empty/broken wizard open)
     if (!safeId) {
-      console.error("Player Error: Current song has no ID. Cannot fetch voting details.");
-      return alert("Cannot vote on this track (Missing ID). Try playing it from a Playlist.");
+      console.error("Player Error: Current song has no ID.");
+      return alert("Cannot vote on this track (Missing ID).");
     }
-
     setSpecificVoteData(null);
-
     try {
-      // 3. FORCE FRESH FETCH (The "Cache" Fix)
-      // We use useCache: false to ensure we get the full "Leaf" jurisdiction (Uptown),
-      // not a cached "Parent" version (Harlem).
-      const res = await apiCall({ 
-        method: 'get', 
-        url: `/v1/media/song/${safeId}`,
-        useCache: false 
-      });
-      
+      const res = await apiCall({ method: 'get', url: `/v1/media/song/${safeId}`, useCache: false });
       const songData = res.data;
-
-      // 4. STRING EXTRACTION (The "SongPage" Logic)
-      // Extract the name string exactly like SongPage does.
-      let jurisdictionName = 'Harlem'; 
-      
+      let jurisdictionName = 'Harlem';
       if (songData.jurisdiction) {
-        if (typeof songData.jurisdiction === 'string') {
-          jurisdictionName = songData.jurisdiction;
-        } else if (songData.jurisdiction.name) {
-          jurisdictionName = songData.jurisdiction.name;
-        }
+        if (typeof songData.jurisdiction === 'string') jurisdictionName = songData.jurisdiction;
+        else if (songData.jurisdiction.name) jurisdictionName = songData.jurisdiction.name;
       }
-
-      console.log("Voting Jurisdiction Resolved:", jurisdictionName);
-
-      // 5. PASS DATA
       setSpecificVoteData({
-        nominee: {
-          id: safeId,
-          name: safeTitle,
-          type: 'song',
-          jurisdiction: jurisdictionName, // e.g. "Uptown Harlem"
-          genreKey: songData.genre?.name || 'rap-hiphop',
-          artist: safeArtist
-        },
-        filters: {
-          selectedType: 'song',
-          selectedGenre: (songData.genre?.name || 'rap-hiphop').toLowerCase().replace('/', '-'),
-          selectedInterval: 'daily',
-          // Slugify: "Uptown Harlem" -> "uptown-harlem"
-          selectedJurisdiction: jurisdictionName.toLowerCase().replace(/\s+/g, '-')
-        }
+        nominee: { id: safeId, name: safeTitle, type: 'song', jurisdiction: jurisdictionName, genreKey: songData.genre?.name || 'rap-hiphop', artist: safeArtist },
+        filters: { selectedType: 'song', selectedGenre: (songData.genre?.name || 'rap-hiphop').toLowerCase().replace('/', '-'), selectedInterval: 'daily', selectedJurisdiction: jurisdictionName.toLowerCase().replace(/\s+/g, '-') }
       });
-      
       setShowVoteWizard(true);
-
     } catch (err) {
       console.error("Vote fetch error:", err);
-      // fallback safely
       setShowVoteWizard(true);
     }
   };
@@ -272,7 +202,6 @@ const Player = () => {
     e.stopPropagation();
     const fileUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
     if (!fileUrl) return alert('Download not available');
-    // ... (Your existing download logic)
     const artist = currentMedia.artist || 'Unknown Artist';
     const title = currentMedia.title || 'Untitled';
     const filename = `${artist} - ${title}.mp3`;
@@ -287,22 +216,28 @@ const Player = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      window.open(fileUrl, '_blank');
-    }
+    } catch (err) { window.open(fileUrl, '_blank'); }
   };
 
-  const handleSeek = (e) => {
-    const newTime = (e.target.value / 100) * duration;
+  const handleProgressClick = (e) => {
+    e.stopPropagation();
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const percentage = ((e.clientX - rect.left) / rect.width);
+    const newTime = percentage * duration;
     audioRef.current.currentTime = newTime;
     setCurrentTime(newTime);
   };
 
-  const handleSeekbarClick = (e) => {
+  const handleVolumeClick = (e) => {
     e.stopPropagation();
-    const rect = seekbarRef.current.getBoundingClientRect();
-    const percentage = ((e.clientX - rect.left) / rect.width) * 100;
-    const newTime = (percentage / 100) * duration;
+    const rect = volumeBarRef.current.getBoundingClientRect();
+    const newVol = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    setVolume(newVol);
+    if (audioRef.current) audioRef.current.volume = newVol;
+  };
+
+  const handleSeek = (e) => {
+    const newTime = (e.target.value / 100) * duration;
     audioRef.current.currentTime = newTime;
     setCurrentTime(newTime);
   };
@@ -321,6 +256,8 @@ const Player = () => {
 
   return (
     <div className={`player ${isExpanded ? 'expanded' : ''}`} style={isExpanded ? { backgroundImage: `url(${currentMedia.artwork || '/assets/placeholder.jpg'})` } : {}}>
+
+      {/* Hidden audio/video element */}
       {isVideo ? (
         <video ref={audioRef} className={isExpanded ? "media-element" : "hidden-media"} style={isExpanded ? {} : { display: 'none' }}>
           <source src={currentMedia.url} type="video/mp4" />
@@ -332,6 +269,7 @@ const Player = () => {
       )}
 
       {isExpanded ? (
+        /* ═══════════ EXPANDED VIEW ═══════════ */
         <div className="expanded-view">
           <button className="minimize-button" onClick={(e) => { e.stopPropagation(); toggleExpand(); }}>Minimize</button>
           <div className="expanded-artwork">
@@ -348,96 +286,122 @@ const Player = () => {
           <input type="range" value={progress} onChange={handleSeek} className="expanded-seekbar" min="0" max="100" />
           <div className="controls">
             <button onClick={handlePrev}>⏮</button>
-            <button onClick={handlePlayPause} className="play-pause-btn">{isPlaying ? <UnisPauseButton /> : <UnisPlayButton />}</button>
+            <button onClick={handlePlayPause} className="play-pause-btn">
+              {isPlaying ? <Pause size={24} /> : <Play size={24} />}
+            </button>
             <button onClick={handleNext}>⏭</button>
           </div>
           <div className="expanded-actions">
             <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
               <Heart fill={isLiked ? "white" : "none"} />
             </button>
-            
-            {/* Expanded View Vote Button (Optional - added for consistency) */}
-            <button onClick={handleVoteClick}>
-                <Vote size={24} />
-            </button>
-            
-            <button onClick={handleDownload}>⬇</button>
+            <button onClick={handleVoteClick}><Vote size={24} /></button>
+            <button onClick={handleDownload}><Download size={24} /></button>
           </div>
         </div>
       ) : (
+        /* ═══════════════════════════════════════════════════════════════
+           MINI PLAYER — EXACT prototype structure:
+           [player-track]  [player-controls]  [player-right]
+        ═══════════════════════════════════════════════════════════════ */
         <>
-          <div className="seekbar" ref={seekbarRef} onClick={handleSeekbarClick}>
-            <div className="seekbar-track">
-              <div className="seekbar-progress" style={{ width: `${progress}%` }}></div>
-              <div className="seekbar-thumb" style={{ left: `calc(${progress}% - 6px)` }}></div>
-            </div>
-          </div>
-          
+          {/* Mobile actions tray */}
           <div className={`mobile-actions-tray ${showMobileActions ? 'open' : ''}`}>
             <div className="tray-content">
-              {/* Mobile Tray Vote Option */}
               <button onClick={handleVoteClick} className="tray-action">
-                <Vote size={20} />
-                <span className="label">Vote</span>
+                <Vote size={20} /><span className="label">Vote</span>
               </button>
-
-              <button onClick={() => setShowPlaylistWizard(true)} className="tray-action"><span>➕</span><span className="label">Add</span></button>
+              <button onClick={() => setShowPlaylistWizard(true)} className="tray-action">
+                <List size={20} /><span className="label">Playlist</span>
+              </button>
               <button onClick={handleLike} className={`tray-action ${isLiked ? 'liked' : ''}`}>
-                <Heart fill={isLiked ? "white" : "none"} /><span className="label">{isLiked ? 'Liked' : 'Like'}</span>
+                <Heart size={20} fill={isLiked ? "white" : "none"} /><span className="label">{isLiked ? 'Liked' : 'Like'}</span>
               </button>
-              <button onClick={handleDownload} className="tray-action"><span>⬇</span><span className="label">Download</span></button>
+              <button onClick={handleDownload} className="tray-action">
+                <Download size={20} /><span className="label">Save</span>
+              </button>
             </div>
           </div>
 
-          <div className="Unis-mini-player">
-            <div className="song-info">
-              <img src={currentMedia.artwork || '/assets/placeholder.jpg'} alt="Artwork" className="mini-artwork clickable" onClick={handleNavigateToSong} />
-              <div className="mini-info">
-                <p className="mini-title clickable" onClick={handleNavigateToSong}>{currentMedia.title}</p>
-                <p className="mini-artist clickable" onClick={handleNavigateToArtist}>{currentMedia.artist}</p>
-              </div>
+          {/* ─── LEFT: Track info ─── */}
+          <div className="player-track">
+            <div className="player-art" onClick={handleNavigateToSong} style={{ cursor: 'pointer' }}>
+              <img src={currentMedia.artwork || '/assets/placeholder.jpg'} alt="Artwork" />
             </div>
-            
-            <div className="mini-controls">
-              <button className="trackToggle" onClick={handlePrev}>◀</button>
-              <button onClick={handlePlayPause} className="play-pause-btn">{isPlaying ? <UnisPauseButton /> : <UnisPlayButton />}</button>
-              <button className="trackToggle" onClick={handleNext}>▶</button>
+            <div className="player-track-info">
+              <div className="player-track-title clickable" onClick={handleNavigateToSong}>{currentMedia.title}</div>
+              <div className="player-track-artist clickable" onClick={handleNavigateToArtist}>{currentMedia.artist}</div>
             </div>
-            
-            <div className="like-download desktop-actions">
-              {/* --- FIX: UPDATED VOTE BUTTON --- */}
-              <button onClick={handleVoteClick} title="Vote for this song">
+            <div className={`player-heart ${isLiked ? 'liked' : ''}`} onClick={handleLike}>
+              <Heart size={18} fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} />
+            </div>
+          </div>
+
+          {/* ─── CENTER: Controls + Progress ─── */}
+          <div className="player-controls">
+            <div className="player-buttons">
+              <button className="player-btn player-btn-vote" onClick={handleVoteClick} title="Vote">
                 <Vote size={18} />
               </button>
-              
-              <button onClick={() => setShowPlaylistWizard(true)}>➕</button>
-              <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
-                <Heart size={18} fill={isLiked ? "white" : "none"} />
+              <button className="player-btn" onClick={handlePrev} title="Previous">
+                <SkipBack size={18} fill="currentColor" />
               </button>
-              <button onClick={handleDownload}>⬇</button>
+              <button className="player-btn-play" onClick={handlePlayPause} title={isPlaying ? 'Pause' : 'Play'}>
+                {isPlaying ? (
+                  <Pause size={16} fill="white" stroke="white" />
+                ) : (
+                  <Play size={16} fill="white" stroke="white" style={{ marginLeft: '1px' }} />
+                )}
+              </button>
+              <button className="player-btn" onClick={handleNext} title="Next">
+                <SkipForward size={18} fill="currentColor" />
+              </button>
+              <button className="player-btn" title="Repeat">
+                <Repeat size={18} />
+              </button>
             </div>
+            <div className="player-progress">
+              <span className="player-time">{formatTime(currentTime)}</span>
+              <div className="progress-bar" ref={progressBarRef} onClick={handleProgressClick}>
+                <div className="progress-fill" style={{ width: `${progress}%` }}></div>
+              </div>
+              <span className="player-time">{formatTime(duration)}</span>
+            </div>
+          </div>
 
-            <button className="mobile-actions-toggle" onClick={toggleMobileActions}>
+          {/* ─── RIGHT: Queue, Volume, Download ─── */}
+          <div className="player-right">
+            <button className="player-btn" onClick={() => setShowPlaylistWizard(true)} title="Queue">
+              <List size={16} />
+            </button>
+            <button className="player-btn" title="Volume">
+              <Volume2 size={16} />
+            </button>
+            <div className="volume-bar" ref={volumeBarRef} onClick={handleVolumeClick}>
+              <div className="volume-fill" style={{ width: `${volume * 100}%` }}></div>
+            </div>
+            <button className="player-btn" onClick={handleDownload} title="Download">
+              <Download size={16} />
+            </button>
+
+            {/* Mobile tray toggle */}
+            <button className="mobile-tray-toggle" onClick={toggleMobileActions}>
               {showMobileActions ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
             </button>
           </div>
         </>
       )}
 
-      {/* --- WIZARDS --- */}
+      {/* Wizards */}
       <PlaylistWizard open={showPlaylistWizard} onClose={() => setShowPlaylistWizard(false)} selectedTrack={currentMedia} />
       <PlaylistManager open={showPlaylistManager} onClose={closePlaylistManager} />
-      
-      <VotingWizard 
-        show={showVoteWizard} 
-        onClose={() => {
-          setShowVoteWizard(false);
-          setSpecificVoteData(null); // Reset on close
-        }} 
+      <VotingWizard
+        show={showVoteWizard}
+        onClose={() => { setShowVoteWizard(false); setSpecificVoteData(null); }}
         onVoteSuccess={(id) => setShowVoteWizard(false)}
         nominee={specificVoteData?.nominee || voteNominee}
         userId={userId}
-        filters={specificVoteData?.filters || { selectedType: 'song' }} 
+        filters={specificVoteData?.filters || { selectedType: 'song' }}
       />
     </div>
   );

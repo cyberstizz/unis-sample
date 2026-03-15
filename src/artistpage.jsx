@@ -230,7 +230,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     </Layout>
   );
 
-  const artistPhoto = artist.photoUrl ? `${API_BASE_URL}${artist.photoUrl}` : theQuiet;
+  const artistPhoto = artist.photoUrl ? buildUrl(artist.photoUrl) : theQuiet;
   const topSong = songs.length > 0 ? songs.reduce((prev, current) => (current.score || 0) > (prev.score || 0) ? current : prev, songs[0]) : null;
 
   // FIXED: Proper check for showing action buttons

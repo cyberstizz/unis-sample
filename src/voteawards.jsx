@@ -24,6 +24,7 @@ const VoteAwards = () => {
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [userId, setUserId] = useState(null);
 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 
   const buildUrl = (url) => {
@@ -33,7 +34,6 @@ const VoteAwards = () => {
           : `${API_BASE_URL}${url}`;  // Relative (local)—prepend base
       };
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   const intervals = [
   { value: 'daily', label: 'Day' },
@@ -217,7 +217,7 @@ const VoteAwards = () => {
           // Use default song
           playData = {
             type: 'default-song',
-            url: `${API_BASE_URL}${defaultSong.fileUrl}`,
+            url: buildUrl(defaultSong.fileUrl),
             title: defaultSong.title || `${nominee.name}'s Default Track`,
             artist: nominee.name,
             artwork: buildUrl(defaultSong.artworkUrl),

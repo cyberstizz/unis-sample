@@ -1,190 +1,190 @@
-// fonts
-@import url('https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double:wght@100..900&family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Delicious+Handrawn&display=swap');
+// ═══════════════════════════════════════════════════════════════
+// UNIS SIDEBAR — Exact prototype CSS + mobile behavior
+// ═══════════════════════════════════════════════════════════════
 
-$text-silver: #C0C0C0;
-$accent-white: #FFFFFF;
-$border-silver: #C0C0C0;
-$bg-dark: #1A1A1A;
-$unis-blue: #163387;
-$unis-silver: #918f8f; 
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
 
-.sidebar-icon {
-  display: inline-block;
-  width: 25px; 
-  height: 35px;
-  flex-shrink: 0;
-  margin-right: 7px;
-}
-
-.sidebar-text {
-  font-size: 23px; 
-  padding-top: 2px;
-  margin-left: 3px;
-}
-
-.home-sidebar{
-  color: $unis-blue;
-}
-
-.sidebar-trigger {
-  display: none; 
-  position: fixed;
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%);
-  width: 45px;
-  height: 60px;
-  background: rgba($text-silver, 0.1);
-  border-radius: 0 10px 10px 0;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  color: $unis-blue;
-  transition: transform 0.3s, opacity 0.3s;
-
-  .arrow-icon {
-    color: $accent-white;
-    font-size: 24px;
-  }
-
-  // Hide trigger when sidebar is open
-  &.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(-50%) translateX(-100%);
-  }
-}
-
+// ─── Sidebar container ───
 .sidebar {
   position: fixed;
-  font-size: 28px;
-  font-family: "Bitcount Grid Double", system-ui;
-  font-optical-sizing: auto;
-  font-weight: normal;
-  font-style: normal;
-  font-variation-settings:
-    "slnt" 0,
-    "CRSV" 0.5,
-    "ELSH" 0,
-    "ELXP" 0;
-  top: 11vh !important;
-  height: 99vh !important;
   left: 0;
-  width: 250px;
-  background: black; 
-  padding-right: 1px;
-  z-index: 10;
+  top: 0;
+  bottom: var(--player-height);
+  width: var(--sidebar-width);
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  padding: 0;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   transition: transform 0.3s ease-in-out;
-  transform: translateX(-100%);
-  border-right: 0.5px solid silver;
+
+  // Mobile: hidden by default
+  @media (max-width: 1024px) {
+    transform: translateX(-100%);
+    bottom: 0; // Full height on mobile overlay
+  }
 
   &.open {
     transform: translateX(0);
   }
 
-  ul {
-    list-style: none;
-    padding: 0;
-    margin-top: 2px; 
+  // Desktop: always visible
+  @media (min-width: 1025px) {
+    transform: translateX(0) !important;
+  }
+}
 
-    li {
-      display: flex;
-      align-items: center;
-      padding-top: 15px;
-      padding-right: 1px;
-      padding-left: 15px;
-      padding-bottom: 8px;
-      cursor: pointer;
-      border-bottom: .2px solid silver;
-      color: $text-silver;
-      transition: color 0.3s, background 0.3s;
+// ─── Logo ───
+.sidebar-logo {
+  padding: 24px 20px 20px;
+  display: flex;
+  align-items: center;
 
-      &:hover {
-        color: $unis-blue;
-        background: rgba($unis-silver, 0.1);
-      }
+  img {
+    height: 76px; // Doubled from prototype's 38px
+    width: auto;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 0.8;
     }
   }
 }
 
-.sidebar-overlay {
-  display: none;
-
-  .sidebar.open ~ & {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 9;
-  }
+// ─── Nav container ───
+.sidebar-nav {
+  flex: 1;
+  padding: 4px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.sidebar-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 10px 15px;
-  list-style: none;
-  cursor: default;
+// ─── Nav items ───
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: var(--text-secondary);
+  position: relative;
+
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-hover);
+    color: var(--text-primary);
+
+    svg { opacity: 1; }
+  }
+
+  // Active state — blue highlight with left bar
+  &.active {
+    background: var(--accent-subtle);
+    color: var(--accent-text);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 0 3px 3px 0;
+    }
+
+    svg { opacity: 1; }
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity 0.2s;
   }
 }
 
-// Desktop: Always visible, transparent
+// ─── Nav label ───
+.nav-label {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+// ─── Divider ───
+.nav-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 8px 14px;
+}
+
+// ─── Mobile trigger ───
+.sidebar-trigger {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 0 10px 10px 0;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  z-index: 101;
+  transition: transform 0.3s, opacity 0.3s;
+
+  .arrow-icon {
+    color: var(--text-secondary);
+    font-size: 16px;
+  }
+
+  &.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%) translateX(-100%);
+  }
+
+  @media (max-width: 768px) {
+    display: flex !important;
+  }
+}
+
+// Desktop: hide trigger and overlay
 @media (min-width: 1025px) {
   .sidebar-trigger {
     display: none !important;
   }
-
-  .sidebar {
-    transform: translateX(0) !important; 
-  }
-
   .sidebar-overlay {
     display: none !important;
   }
 }
 
-// Mobile: Slide-out
-@media (max-width: 1024px) {
-  .sidebar {
-    transform: translateX(-100%);
-  }
-
-  .sidebar.open {
-    transform: translateX(0);
-  }
-
-  .sidebar-overlay {
-    display: block;
-    background-color: $unis-blue; 
-    backdrop-filter: blur(10px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
-  }
+// ─── Overlay ───
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 99;
 }
 
+// Mobile sidebar styling
 @media (max-width: 768px) {
-  .sidebar-trigger {
-    display: flex !important; 
-    color: $unis-blue;
-  }
-
   .sidebar {
-    border-right-color: transparent;
-    background: transparent;
-    
-    ul {
-      li {
-        border-top: .2px solid transparent;
-        border-bottom-color: transparent;
-      }
-    }
+    background: rgba(17, 17, 20, 0.97);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
-}
-
-.banner {
-  z-index: 5;
 }
