@@ -36,10 +36,10 @@ body {
    This is the SINGLE source of truth for sidebar offset —
    no individual page SCSS should have its own margin-left hack.
 
-   Auth pages (login, register, reset-password) render inside .app-wrapper
-   but WITHOUT the sidebar, so they are explicitly excluded from the offset.
-   Overlay components (Player, notifications) are also excluded since they
-   use fixed/absolute positioning and don't participate in document flow.
+   Elements that should NOT get the sidebar offset:
+   - Auth pages (login, reset-password) — no sidebar present
+   - Player — fixed to bottom, spans full viewport width
+   - Notifications — fixed/absolute overlays
 ─────────────────────────────────────────────────────────────────────────── */
 .app-wrapper {
   display: flex;
@@ -61,10 +61,9 @@ body {
 
 /* ─── Page content offset ───────────────────────────────────────────────────
    Only actual page route containers get the sidebar offset.
-   We use a specific list of exclusions so nothing unexpected gets pushed.
    Auth wrappers, Player, and notification overlays are all excluded.
 ─────────────────────────────────────────────────────────────────────────── */
-.app-wrapper > *:not(nav):not(.sidebar-trigger):not(.login-wrapper):not(.reset-password-wrapper):not(.player-container):not(.song-notification):not(.winners-notification) {
+.app-wrapper > *:not(nav):not(.sidebar-trigger):not(.login-wrapper):not(.reset-password-wrapper):not(.player):not(.song-notification):not(.winners-notification) {
   flex: 1 1 0;
   min-width: 0;
   margin-left: 260px;
@@ -75,6 +74,14 @@ body {
 .app-wrapper > .reset-password-wrapper {
   flex: 1 1 0;
   min-width: 0;
+  margin-left: 0;
+}
+
+/* Fixed overlays — must not inherit flex or margin from app-wrapper */
+.app-wrapper > .player,
+.app-wrapper > .song-notification,
+.app-wrapper > .winners-notification {
+  flex: none;
   margin-left: 0;
 }
 
