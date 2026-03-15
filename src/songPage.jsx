@@ -1,48 +1,44 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import songArtwork from './assets/theQuiet.jpg';
-import LyricsWizard from './lyricsWizard';  
+import LyricsWizard from './lyricsWizard';
 import { FileText, Heart } from 'lucide-react';
 import './songPage.scss';
 import Layout from './layout';
-import { PlayerContext } from './context/playercontext'; 
-import VotingWizard from './votingWizard'; 
+import { PlayerContext } from './context/playercontext';
+import VotingWizard from './votingWizard';
 import { useNavigate } from 'react-router-dom';
-import { X } from 'lucide-react';  
-import CommentSection from './commentSection'; 
+import CommentSection from './commentSection';
+import { useAuth } from './context/AuthContext';
 
 const SongPage = () => {
   const { songId } = useParams();
-  const { playMedia } = useContext(PlayerContext); 
+  const { playMedia } = useContext(PlayerContext);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Derive userId directly from AuthContext — no token decode needed
+  const userId = user?.userId;
+
   const [song, setSong] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showVotingWizard, setShowVotingWizard] = useState(false); 
+  const [showVotingWizard, setShowVotingWizard] = useState(false);
   const [selectedNominee, setSelectedNominee] = useState(null);
-  const [userId, setUserId] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [showLyricsWizard, setShowLyricsWizard] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
-
-  // New states for lyrics editing modal (consistent with dashboard)
-  const [editingLyrics, setEditingLyrics] = useState(false);
-  const [currentLyrics, setCurrentLyrics] = useState('');
-
-  // --- AMBIENT MODE STATE ---
   const [dominantColor, setDominantColor] = useState('rgba(255, 255, 255, 0.1)');
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-  const navigate = useNavigate();
 
-  // --- COLOR EXTRACTION LOGIC ---
   const extractColor = (url) => {
     const img = new Image();
-    img.crossOrigin = "Anonymous";
+    img.crossOrigin = 'Anonymous';
     img.src = url;
-
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -54,149 +50,137 @@ const SongPage = () => {
     };
   };
 
+  // Single effect — fires all requests in parallel as soon as songId is known.
+  // userId may be null on first render if AuthContext is still loading; the
+  // is-liked call gracefully handles that by using a query-param fallback.
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
+    if (!songId) return;
+
+    const fetchAll = async () => {
+      setLoading(true);
+      setError('');
+
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUserId(payload.userId);
-        console.log('User ID extracted from token:', payload.userId);
+        // Fire song fetch + like status + like count all at once.
+        // is-liked and likes/count do not depend on the song response.
+        const likedUrl = userId
+          ? `/v1/media/song/${songId}/is-liked?userId=${userId}`
+          : `/v1/media/song/${songId}/is-liked`;
+
+        const [songRes, likedRes, likeCountRes] = await Promise.all([
+          apiCall({ method: 'get', url: `/v1/media/song/${songId}`, useCache: false }),
+          apiCall({ method: 'get', url: likedUrl }).catch(() => ({ data: { isLiked: false } })),
+          apiCall({ method: 'get', url: `/v1/media/song/${songId}/likes/count` }).catch(() => ({ data: { count: 0 } })),
+        ]);
+
+        const songData = songRes.data;
+
+        const normalized = {
+          id: songData.songId,
+          title: songData.title,
+          artist: songData.artist.username,
+          artistId: songData.artist.userId,
+          jurisdiction: songData.jurisdiction?.name || 'Unknown',
+          artwork: songData.artworkUrl
+            ? songData.artworkUrl.startsWith('http')
+              ? songData.artworkUrl
+              : `${API_BASE_URL}${songData.artworkUrl}`
+            : songArtwork,
+          url: songData.fileUrl
+            ? songData.fileUrl.startsWith('http')
+              ? songData.fileUrl
+              : `${API_BASE_URL}${songData.fileUrl}`
+            : null,
+          description: songData.description || 'No description available',
+          score: songData.score,
+          playCount: songData.playCount || 0,
+          playsToday: songData.playsToday || 0,
+          explicit: songData.explicit || false,
+          lyrics: songData.lyrics || '',
+          voteCount: 0,
+          duration: songData.duration,
+          createdAt: songData.createdAt,
+          genre: songData.genre?.name || 'Unknown',
+          credits: { producer: 'N/A', writer: 'N/A', mix: 'N/A' },
+          photos: [],
+          videos: [],
+        };
+
+        setSong(normalized);
+        setIsLiked(likedRes.data.isLiked || false);
+        setLikeCount(likeCountRes.data.count || 0);
+
+        if (normalized.artwork) {
+          extractColor(normalized.artwork);
+        }
       } catch (err) {
-        console.error('Failed to get userId from token:', err);
+        console.error('Failed to load song:', err);
+        setError('Failed to load song details');
+      } finally {
+        setLoading(false);
       }
-    }
-  }, []);
+    };
 
-  useEffect(() => {
-    fetchSongData();
-  }, [songId]);
-
-  useEffect(() => {
-    if (song?.artwork) {
-      extractColor(song.artwork);
-    }
-  }, [song?.artwork]);
-
-  useEffect(() => {
-    if (song?.id && userId) {
-      apiCall({ 
-        url: `/v1/media/song/${song.id}/is-liked?userId=${userId}`,
-        method: 'get'
-      })
-        .then(res => setIsLiked(res.data.isLiked || false))
-        .catch(() => setIsLiked(false));
-      
-      apiCall({ 
-        url: `/v1/media/song/${song.id}/likes/count`,
-        method: 'get'
-      })
-        .then(res => setLikeCount(res.data.count || 0))
-        .catch(() => setLikeCount(0));
-    }
-  }, [song, userId]);
+    fetchAll();
+  }, [songId, userId]);
 
   const fetchSongData = async () => {
-    setLoading(true);
-    setError('');
     try {
-      const response = await apiCall({ 
-        method: 'get', 
+      const response = await apiCall({
+        method: 'get',
         url: `/v1/media/song/${songId}`,
-        useCache: false
+        useCache: false,
       });
-      
       const songData = response.data;
-      console.log('Raw song data from backend:', songData);
-      
-      const normalized = {
-        id: songData.songId,
-        title: songData.title,
-        artist: songData.artist.username,
-        artistId: songData.artist.userId,
-        jurisdiction: songData.jurisdiction?.name || 'Unknown',
-        artwork: songData.artworkUrl ? (songData.artworkUrl.startsWith('http') ? songData.artworkUrl : `${API_BASE_URL}${songData.artworkUrl}`) : songArtwork,
-        url: songData.fileUrl ? (songData.fileUrl.startsWith('http') ? songData.fileUrl : `${API_BASE_URL}${songData.fileUrl}`) : null,        description: songData.description || 'No description available',
-        score: songData.score,
-        playCount: songData.playCount || 0,
-        playsToday: songData.playsToday || 0,
-        explicit: songData.explicit || false,
+      setSong(prev => ({
+        ...prev,
         lyrics: songData.lyrics || '',
-        voteCount: 0,
-        duration: songData.duration,
-        createdAt: songData.createdAt,
-        genre: songData.genre?.name || 'Unknown',
-        credits: {
-          producer: 'N/A',
-          writer: 'N/A',
-          mix: 'N/A',
-        },
-        photos: [],
-        videos: [],
-      };
-      
-      setSong(normalized);
+        description: songData.description || prev.description,
+      }));
     } catch (err) {
-      console.error('Failed to load song:', err);
-      setError('Failed to load song details');
-    } finally {
-      setLoading(false);
+      console.error('Failed to refresh song:', err);
     }
   };
 
-  const handleVoteSuccess = () => {
-    setShowVotingWizard(false);
-  };
+  const handleVoteSuccess = () => setShowVotingWizard(false);
 
   const handleVote = () => {
     setSelectedNominee({
       id: song.id,
       name: song.title,
       type: 'song',
-      jurisdiction: song.jurisdiction 
+      jurisdiction: song.jurisdiction,
     });
     setShowVotingWizard(true);
   };
 
   const handlePlay = async () => {
-    playMedia(
-      { 
-        id: song.id,               
-        songId: song.id,          
-        type: 'song', 
-        url: song.url, 
-        title: song.title, 
-        artist: song.artist, 
-        artwork: song.artwork,
-        jurisdiction: song.jurisdiction
-      },
-      [{ 
-        id: song.id,               
-        songId: song.id,           
-        type: 'song', 
-        url: song.url, 
-        title: song.title, 
-        artist: song.artist, 
-        artwork: song.artwork,
-        jurisdiction: song.jurisdiction 
-      }]
-    );
+    const track = {
+      id: song.id,
+      songId: song.id,
+      type: 'song',
+      url: song.url,
+      title: song.title,
+      artist: song.artist,
+      artwork: song.artwork,
+      jurisdiction: song.jurisdiction,
+    };
+    playMedia(track, [track]);
 
     if (song.id && userId) {
-      setSong(prevSong => ({
-        ...prevSong,
-        playCount: prevSong.playCount + 1,
-        playsToday: prevSong.playsToday + 1
+      setSong(prev => ({
+        ...prev,
+        playCount: prev.playCount + 1,
+        playsToday: prev.playsToday + 1,
       }));
-
       try {
-        const endpoint = `/v1/media/song/${song.id}/play?userId=${userId}`;
-        await apiCall({ method: 'post', url: endpoint });
+        await apiCall({ method: 'post', url: `/v1/media/song/${song.id}/play?userId=${userId}` });
       } catch (err) {
         console.error('Failed to track song play:', err);
-        setSong(prevSong => ({
-          ...prevSong,
-          playCount: prevSong.playCount - 1,
-          playsToday: prevSong.playsToday - 1
+        setSong(prev => ({
+          ...prev,
+          playCount: prev.playCount - 1,
+          playsToday: prev.playsToday - 1,
         }));
       }
     }
@@ -207,18 +191,14 @@ const SongPage = () => {
       alert('Please log in to like songs');
       return;
     }
-    
-    if (!song?.id) {
-      return;
-    }
-    
+    if (!song?.id) return;
+
     try {
       if (isLiked) {
         const res = await apiCall({
           method: 'delete',
-          url: `/v1/media/song/${song.id}/like?userId=${userId}`
+          url: `/v1/media/song/${song.id}/like?userId=${userId}`,
         });
-        
         if (res.data.success) {
           setIsLiked(false);
           setLikeCount(prev => Math.max(0, prev - 1));
@@ -226,9 +206,8 @@ const SongPage = () => {
       } else {
         const res = await apiCall({
           method: 'post',
-          url: `/v1/media/song/${song.id}/like?userId=${userId}`
+          url: `/v1/media/song/${song.id}/like?userId=${userId}`,
         });
-        
         if (res.data.success) {
           setIsLiked(true);
           setLikeCount(prev => prev + 1);
@@ -243,7 +222,6 @@ const SongPage = () => {
   const handleFollow = async () => {
     const newStatus = !isFollowing;
     setIsFollowing(newStatus);
-
     try {
       if (newStatus) {
         await apiCall({ method: 'post', url: `/v1/users/${song.artistId}/follow` });
@@ -254,18 +232,6 @@ const SongPage = () => {
       console.error('Failed to toggle follow:', err);
       setIsFollowing(!newStatus);
     }
-  };
-
-  const handleDontPlay = () => {
-    console.log('Added to do-not-play list');
-  };
-
-  const handleReport = () => {
-    console.log('Report song');
-  };
-
-  const handleShare = () => {
-    console.log('Share song');
   };
 
   const handleCopyLink = async () => {
@@ -279,9 +245,7 @@ const SongPage = () => {
   };
 
   const handleArtistClick = () => {
-    if (song?.artistId) {
-      navigate(`/artist/${song.artistId}`);
-    }
+    if (song?.artistId) navigate(`/artist/${song.artistId}`);
   };
 
   const isOwner = userId && song?.artistId === userId;
@@ -309,16 +273,14 @@ const SongPage = () => {
   return (
     <Layout backgroundImage={song.artwork}>
       <div className="song-page-container">
-        <div 
+        <div
           className="main-content-card ambient-card"
           style={{ '--ambient-glow': dominantColor }}
         >
-          
-          {/* Title with Explicit Badge */}
           <h1 className="track-title">
             {song.title}
             {song.explicit && (
-              <span 
+              <span
                 style={{
                   marginLeft: '12px',
                   background: 'rgba(255, 0, 0, 0.85)',
@@ -327,7 +289,7 @@ const SongPage = () => {
                   borderRadius: '4px',
                   fontSize: '0.5em',
                   fontWeight: 'bold',
-                  verticalAlign: 'middle'
+                  verticalAlign: 'middle',
                 }}
               >
                 EXPLICIT
@@ -335,17 +297,13 @@ const SongPage = () => {
             )}
           </h1>
 
-          <img
-            src={song.artwork}
-            alt={`${song.title} artwork`}
-            className="song-artwork"
-          />
+          <img src={song.artwork} alt={`${song.title} artwork`} className="song-artwork" />
 
           <div className="follow-actions">
             <button onClick={handlePlay} className="play-button">Play</button>
             <button onClick={handleVote} className="vote-button">Vote</button>
-            <button 
-              onClick={handleLike} 
+            <button
+              onClick={handleLike}
               className={`like-button ${isLiked ? 'liked' : ''}`}
               style={{
                 background: isLiked ? '#163387' : 'transparent',
@@ -357,7 +315,7 @@ const SongPage = () => {
                 padding: '10px 20px',
                 cursor: 'pointer',
                 borderRadius: '4px',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
               }}
             >
               <Heart size={18} fill={isLiked ? 'white' : 'none'} />
@@ -365,21 +323,25 @@ const SongPage = () => {
             </button>
           </div>
 
-          <p 
-            className="artist-name" 
-            style={{ color: "white", cursor: "pointer" }}
+          <p
+            className="artist-name"
+            style={{ color: 'white', cursor: 'pointer' }}
             onClick={handleArtistClick}
           >
             {song.artist}
           </p>
-          <p className="jurisdiction" onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)} style={{cursor: 'pointer'}}>
+          <p
+            className="jurisdiction"
+            onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)}
+            style={{ cursor: 'pointer' }}
+          >
             {song.jurisdiction}
           </p>
           <p className="genre">{song.genre}</p>
 
           <div className="stats">
-            <p><span style={{color: "blue"}}>Plays</span> {song.playCount}</p>
-            <p><span style={{color: "blue"}}>Likes</span> {likeCount}</p>
+            <p><span style={{ color: 'blue' }}>Plays</span> {song.playCount}</p>
+            <p><span style={{ color: 'blue' }}>Likes</span> {likeCount}</p>
             {song.playsToday > 100 && (
               <p style={{ color: 'green', fontWeight: 'bold' }}>
                 {song.playsToday} plays today
@@ -387,41 +349,32 @@ const SongPage = () => {
             )}
           </div>
 
-          {/* Secondary Action Buttons */}
           <div className="secondary-actions">
             <button onClick={handleFollow} className={`action-btn ${isFollowing ? 'following' : ''}`}>
               {isFollowing ? 'Following' : 'Follow'}
             </button>
-            <button onClick={handleDontPlay} className="action-btn">Don't Play</button>
-            <button onClick={handleReport} className="action-btn">Report</button>
-            <button onClick={handleShare} className="action-btn">Share</button>
+            <button onClick={() => console.log('Added to do-not-play list')} className="action-btn">
+              Don't Play
+            </button>
+            <button onClick={() => console.log('Report song')} className="action-btn">Report</button>
+            <button onClick={() => console.log('Share song')} className="action-btn">Share</button>
             <button onClick={handleCopyLink} className="action-btn">
               {copySuccess ? 'Copied!' : 'Copy Link'}
             </button>
           </div>
 
-          {/* Lyrics Section */}
           {song.lyrics && (
             <section className="lyrics-section" style={{ marginTop: '2rem' }}>
-              <h2 style={{ color: "blue", marginBottom: '1rem' }}>Lyrics</h2>
-              <p style={{ 
-                whiteSpace: 'pre-wrap', 
-                lineHeight: '1.6', 
-                fontFamily: 'inherit',
-                color: '#e0e0e0' 
-              }}>
+              <h2 style={{ color: 'blue', marginBottom: '1rem' }}>Lyrics</h2>
+              <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', fontFamily: 'inherit', color: '#e0e0e0' }}>
                 {song.lyrics}
               </p>
             </section>
           )}
 
-          {/* Edit Button (Only for owner) */}
           {isOwner && (
             <div className="owner-actions" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-              <button 
-                className="btn btn-primary" 
-                onClick={() => setShowLyricsWizard(true)}
-              >
+              <button className="btn btn-primary" onClick={() => setShowLyricsWizard(true)}>
                 <FileText size={16} style={{ marginRight: '8px' }} />
                 {song.lyrics ? 'Edit Lyrics' : 'Add Lyrics'}
               </button>
@@ -429,15 +382,15 @@ const SongPage = () => {
           )}
 
           <section className="description-section">
-            <h2 style={{color: "blue"}}>About</h2>
+            <h2 style={{ color: 'blue' }}>About</h2>
             <p>{song.description}</p>
           </section>
 
           <section className="credits-section">
-            <h2 style={{color: "blue"}}>Credits</h2>
-            <p><strong style={{color: "blue"}}>Producer:</strong> {song.credits.producer}</p>
-            <p><strong style={{color: "blue"}}>Writer:</strong> {song.credits.writer}</p>
-            <p><strong style={{color: "blue"}}>Mix Engineer:</strong> {song.credits.mix}</p>
+            <h2 style={{ color: 'blue' }}>Credits</h2>
+            <p><strong style={{ color: 'blue' }}>Producer:</strong> {song.credits.producer}</p>
+            <p><strong style={{ color: 'blue' }}>Writer:</strong> {song.credits.writer}</p>
+            <p><strong style={{ color: 'blue' }}>Mix Engineer:</strong> {song.credits.mix}</p>
           </section>
 
           {song.photos.length > 0 && (
@@ -474,14 +427,7 @@ const SongPage = () => {
             </section>
           )}
 
-          {/* ========== NEW PREMIUM COMMENT SECTION ========== */}
-          <CommentSection 
-            songId={song.id}
-            userId={userId}
-            songArtistId={song.artistId}
-          />
-          {/* ================================================= */}
-
+          <CommentSection songId={song.id} userId={userId} songArtistId={song.artistId} />
         </div>
       </div>
 
@@ -494,7 +440,6 @@ const SongPage = () => {
         />
       )}
 
-      {/* Voting Wizard */}
       <VotingWizard
         show={showVotingWizard}
         onClose={() => setShowVotingWizard(false)}
@@ -508,7 +453,6 @@ const SongPage = () => {
           selectedJurisdiction: song.jurisdiction.toLowerCase().replace(' ', '-'),
         }}
       />
-
     </Layout>
   );
 };
