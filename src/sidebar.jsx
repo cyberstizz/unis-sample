@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import './sidebar.scss';
 import { useNavigate } from 'react-router-dom';
 import { Vote, Search, Trophy, Settings, DollarSign, House, Music, Shield } from 'lucide-react';
@@ -12,6 +12,27 @@ const Sidebar = () => {
   const navigate = useNavigate();
 
   const toggleOpen = () => setIsOpen(!isOpen);
+
+  const sidebarRef = useRef(null);
+
+  useEffect(() => {
+    const updateSidebarWidth = () => {
+      const width = sidebarRef.current ? sidebarRef.current.offsetWidth : 0;
+
+      document.documentElement.style.setProperty(
+        "--sidebar-width",
+        `${width}px`
+      );
+    };
+
+    updateSidebarWidth();
+
+    window.addEventListener("resize", updateSidebarWidth);
+
+    return () => {
+      window.removeEventListener("resize", updateSidebarWidth);
+    };
+  }, []);
 
   const closeSidebar = () => {
     if (window.innerWidth <= 1024) {
@@ -46,7 +67,7 @@ const Sidebar = () => {
         <span className="arrow-icon">&#9654;</span>
       </div>
 
-      <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <nav className={`sidebar ${isOpen ? 'open' : ''}`} ref={sidebarRef}>
         <ul>
           <li onClick={() => handleNav('/')}>
             <span className="sidebar-icon home-sidebar"><House size={24} /></span>
