@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef, useeffect } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import './sidebar.scss';
 import { useNavigate } from 'react-router-dom';
 import { Vote, Search, Trophy, Settings, DollarSign, House, Music, Shield } from 'lucide-react';
