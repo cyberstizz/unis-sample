@@ -172,12 +172,19 @@ const buildUrl = (url) => {
           id: defaultRes.data.songId,
           url: buildUrl(defaultRes.data.fileUrl) || song1,
           title: defaultRes.data.title || 'Default Track',
-          artist: media.name,
-          artwork: buildUrl(defaultRes.data.artworkUrl) || media.imageUrl,
+          artist: media.artistData?.username || media.artist,
+          artwork: buildUrl(defaultRes.data.artworkUrl) || media.artworkUrl, // ← was media.imageUrl
         };
       } catch (err) {
         console.error('Default song fetch error:', err);
-        playMediaObj = { type: 'song', id: 'default-fallback', url: song1, title: 'Default Track', artist: media.name, artwork: media.imageUrl };
+        playMediaObj = { 
+          type: 'song', 
+          id: 'default-fallback', 
+          url: song1, 
+          title: 'Default Track', 
+          artist: media.artistData?.username || media.artist,
+          artwork: media.artworkUrl // ← was media.imageUrl
+        };
       }
     }
 
@@ -193,6 +200,7 @@ const buildUrl = (url) => {
     const playlist = [playMediaObj, ...newMedia.slice(0, 2).filter(m => m.id !== playMediaObj.id)];
     playMedia(playMediaObj, playlist);
   };
+
 
   // Dummies (keep for fallback)
   const getDummyTrending = () => [
