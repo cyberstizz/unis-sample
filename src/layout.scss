@@ -25,7 +25,8 @@ $player-height-mobile: 320px;
     position: fixed;               // Fixed to viewport — this restores full background coverage on scroll
     top: 0;
     left: 0;
-    width: 100vw;
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
     height: 100vh;
     background-image: linear-gradient(to bottom, transparent, $bg-black 90%), var(--background-image);
     background-size: cover;
