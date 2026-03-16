@@ -30,7 +30,9 @@ $subtle-black: #1a1a1a;
   position: relative;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba($text-silver, 0.1); // Default subtle border
-transition: border-color 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
+  transition: border-color 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
+  border: 2px solid transparent;
+  animation: unisBluePulse 3.5s ease-in-out infinite;
   // --- THE SUCCESS GLOW ---
   &.success-glow {
     border: 2px solid $unis-blue;
@@ -80,6 +82,40 @@ transition: border-color 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
     font-size: 14px;
     margin-bottom: 25px;
     line-height: 1.5;
+  }
+}
+
+// Unis blue glow pulse — on ~1–1.5s, off ~1s, repeating
+@keyframes unisBluePulse {
+  0% {
+    border-color: transparent;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+  // Ramp up
+  15% {
+    border-color: $unis-blue;
+    box-shadow:
+      0 10px 30px rgba(0, 0, 0, 0.5),
+      0 0 18px rgba($unis-blue, 0.6),
+      inset 0 0 12px rgba($unis-blue, 0.15);
+  }
+  // Hold on — peak glow sustained until ~43%
+  43% {
+    border-color: $unis-blue;
+    box-shadow:
+      0 10px 30px rgba(0, 0, 0, 0.5),
+      0 0 18px rgba($unis-blue, 0.6),
+      inset 0 0 12px rgba($unis-blue, 0.15);
+  }
+  // Ramp down to off
+  57% {
+    border-color: transparent;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+  // Hold off until cycle ends (~1s of off time out of 3.5s total)
+  100% {
+    border-color: transparent;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   }
 }
 
