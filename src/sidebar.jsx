@@ -1,6 +1,6 @@
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext, useRef, useeffect } from 'react';
 import './sidebar.scss';
-import { useNavigate, useEffect } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Vote, Search, Trophy, Settings, DollarSign, House, Music, Shield } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { PlayerContext } from './context/playercontext';
