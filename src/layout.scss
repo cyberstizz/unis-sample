@@ -11,18 +11,20 @@ $player-height-mobile: 320px;
   min-height: 100vh;
   margin-left: var(--sidebar-width);
   width: calc(100% - var(--sidebar-width));
+  padding-top: 11vh; // clears the fixed header
   background: $bg-black;
   color: $text-gray;
   font-family: 'Arial', sans-serif;
- position: relative;
+  position: relative;
   align-items: center;
-  justify-content: center;  margin: 0;
+  justify-content: center;
+  // margin: 0; <-- REMOVE THIS, it was killing margin-left
   overflow: hidden;
   z-index: 1;
 
   &::before {
     content: '';
-    position: fixed;               // Fixed to viewport — this restores full background coverage on scroll
+    position: fixed;
     top: 0;
     left: 0;
     margin-left: var(--sidebar-width);
@@ -38,6 +40,7 @@ $player-height-mobile: 320px;
     pointer-events: none;
   }
 }
+
 
 .layout-content {
   display: flex;

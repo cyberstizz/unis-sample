@@ -16,23 +16,24 @@ const Sidebar = () => {
   const sidebarRef = useRef(null);
 
   useEffect(() => {
-    const updateSidebarWidth = () => {
-      const width = sidebarRef.current ? sidebarRef.current.offsetWidth : 0;
+      const updateSidebarWidth = () => {
+        const isMobile = window.innerWidth <= 1024;
+        const width = isMobile ? 0 : (sidebarRef.current ? sidebarRef.current.offsetWidth : 0);
+        
+        document.documentElement.style.setProperty(
+          "--sidebar-width",
+          `${width}px`
+        );
+      };
 
-      document.documentElement.style.setProperty(
-        "--sidebar-width",
-        `${width}px`
-      );
-    };
+      updateSidebarWidth();
+      window.addEventListener("resize", updateSidebarWidth);
 
-    updateSidebarWidth();
+      return () => {
+        window.removeEventListener("resize", updateSidebarWidth);
+      };
+    }, []);
 
-    window.addEventListener("resize", updateSidebarWidth);
-
-    return () => {
-      window.removeEventListener("resize", updateSidebarWidth);
-    };
-  }, []);
 
   const closeSidebar = () => {
     if (window.innerWidth <= 1024) {
