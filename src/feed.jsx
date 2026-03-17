@@ -407,7 +407,7 @@ const Feed = () => {
                     artistMap.set(media.artistData.userId, {
                       userId: media.artistData.userId,
                       username: media.artistData.username,
-                      photoUrl: buildUrl(media.artistData.photoUrl),
+                      photoUrl: encodeURI(media.artistData.photoUrl),
                       jurisdictionId: media.artistData.jurisdiction?.jurisdictionId,
                       score: media.artistData.score || 0
                     });
