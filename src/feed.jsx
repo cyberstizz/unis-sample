@@ -41,18 +41,14 @@ const Feed = () => {
   const jurisdictionId = user?.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002';
 
   const buildUrl = (url) => {
-    if (!url || typeof url !== 'string') return null;
+    if (!url || typeof url !== 'string') return '';
 
     const cleaned = url.trim();
+    if (!cleaned) return '';
 
-    if (!cleaned) return null;
-
-    const full =
-      cleaned.startsWith('http')
-        ? cleaned
-        : `${API_BASE_URL}${cleaned}`;
-
-    return full;
+    return cleaned.startsWith('http')
+      ? cleaned
+      : `${API_BASE_URL}${cleaned}`;
   };
 
   const formatDuration = (ms) => {
