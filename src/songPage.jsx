@@ -39,6 +39,23 @@ const SongPage = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
+  const buildUrl = (url) => {
+  if (!url || typeof url !== 'string') return '';
+  const cleaned = url.trim();
+  if (!cleaned) return '';
+
+  if (cleaned.includes('r2.cloudflarestorage.com')) {
+    const uploadsIndex = cleaned.indexOf('/uploads/');
+    if (uploadsIndex !== -1) {
+      const path = cleaned.slice(uploadsIndex);
+      return `https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev${path}`;
+    }
+  }
+
+  if (cleaned.startsWith('http')) return cleaned;
+  return `${API_BASE_URL}${cleaned}`;
+};
+
   const extractColor = (url) => {
     const img = new Image();
     img.crossOrigin = 'Anonymous';
@@ -163,10 +180,10 @@ const SongPage = () => {
       id: song.id,
       songId: song.id,
       type: 'song',
-      url: song.url,
+      url: buildUrl(songData.fileUrl) || null,
       title: song.title,
       artist: song.artist,
-      artwork: song.artwork,
+      artwork: buildUrl(songData.artworkUrl) || songArtwork,
       jurisdiction: song.jurisdiction,
     };
     playMedia(track, [track]);
