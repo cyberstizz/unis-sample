@@ -26,29 +26,30 @@ const VoteAwards = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-
   const buildUrl = (url) => {
     if (!url || typeof url !== 'string') return null;
-
     const cleaned = url.trim();
-
     if (!cleaned) return null;
 
-    const full =
-      cleaned.startsWith('http')
-        ? cleaned
-        : `${API_BASE_URL}${cleaned}`;
+    if (cleaned.includes('r2.cloudflarestorage.com')) {
+      const uploadsIndex = cleaned.indexOf('/uploads/');
+      if (uploadsIndex !== -1) {
+        const path = cleaned.slice(uploadsIndex);
+        return `https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev${path}`;
+      }
+    }
 
-    return full;
+    if (cleaned.startsWith('http')) return cleaned;
+    return `${API_BASE_URL}${cleaned}`;
   };
 
   const intervals = [
-  { value: 'daily', label: 'Day' },
-  { value: 'weekly', label: 'Week' },
-  { value: 'monthly', label: 'Month' },
-  { value: 'quarterly', label: 'Quarter' },
-  { value: 'annual', label: 'Year' },
-];
+    { value: 'daily', label: 'Day' },
+    { value: 'weekly', label: 'Week' },
+    { value: 'monthly', label: 'Month' },
+    { value: 'quarterly', label: 'Quarter' },
+    { value: 'annual', label: 'Year' },
+  ];
   const genres = ['rap', 'rock', 'pop'];
   const types = ['artist', 'song'];
   const jurisdictions = [
@@ -57,7 +58,6 @@ const VoteAwards = () => {
     { value: 'harlem', label: 'Harlem' },
   ];
 
-  // Get userId on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -70,7 +70,6 @@ const VoteAwards = () => {
     }
   }, []);
 
-  // Fetch nominees whenever filters change
   useEffect(() => {
     if (userId) {
       fetchNominees();
@@ -90,11 +89,8 @@ const VoteAwards = () => {
         url: `/v1/vote/nominees?targetType=${selectedType}&genreId=${genreId}&jurisdictionId=${jurisdictionId}&intervalId=${intervalId}&limit=20`
       });
 
-      
-
       const nomineesData = response.data || [];
-      
-      // Normalize nominees (artists or songs)
+
       const normalized = nomineesData.map((nominee) => {
         if (selectedType === 'artist') {
           return {
@@ -102,7 +98,7 @@ const VoteAwards = () => {
             name: nominee.username,
             type: 'artist',
             genreKey: selectedGenre,
-            imageUrl: buildUrl(nominee.photoUrl),  // ← Uses helper
+            imageUrl: buildUrl(nominee.photoUrl),
             votes: nominee.voteCount || 0,
             totalLifetimeVotes: nominee.totalVotes || 0,
             jurisdiction: nominee.jurisdiction?.name || 'Unknown',
@@ -116,10 +112,10 @@ const VoteAwards = () => {
             genreKey: selectedGenre,
             artist: nominee.artist?.username || 'Unknown Artist',
             artistId: nominee.artist?.userId,
-            imageUrl: buildUrl(nominee.artworkUrl), 
-            mediaUrl: buildUrl(nominee.fileUrl), 
+            imageUrl: buildUrl(nominee.artworkUrl),
+            mediaUrl: buildUrl(nominee.fileUrl),
             votes: nominee.voteCount || 0,
-            plays: nominee.playCount || nominee.totalPlays || 0,  
+            plays: nominee.playCount || nominee.totalPlays || 0,
             jurisdiction: nominee.jurisdiction?.name || 'Unknown',
             genre: nominee.genre?.name || 'Unknown',
           };
@@ -127,8 +123,8 @@ const VoteAwards = () => {
       });
 
       setNominees(normalized);
-      console.log('Raw backend response:', response.data);  // []? Check logs above
-      console.log('Normalized nominees:', normalized);  // Empty → backend issue
+      console.log('Raw backend response:', response.data);
+      console.log('Normalized nominees:', normalized);
 
     } catch (err) {
       console.error('Failed to fetch nominees:', err);
@@ -136,11 +132,8 @@ const VoteAwards = () => {
     } finally {
       setLoading(false);
     }
-
   };
 
-
-  // Client-side search filtering
   const filteredNominees = nominees.filter((nominee) => {
     if (searchQuery.length === 0) return true;
     return nominee.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -155,7 +148,6 @@ const VoteAwards = () => {
     console.log(`Vote confirmed for nominee: ${nomineeId}`);
     setShowVotingWizard(false);
     setSelectedNominee(null);
-    // Refresh nominees to show updated vote counts
     await fetchNominees();
   };
 
@@ -164,10 +156,10 @@ const VoteAwards = () => {
       playMedia(
         {
           type: 'song',
-          url: nominee.mediaUrl,     
+          url: nominee.mediaUrl,
           title: nominee.name,
           artist: nominee.artist,
-          artwork: nominee.imageUrl,  
+          artwork: nominee.imageUrl,
         },
         [{
           type: 'song',
@@ -196,9 +188,7 @@ const VoteAwards = () => {
     }
   };
 
-  // Format jurisdiction name for display
   const jurisdictionLabel = jurisdictions.find(j => j.value === selectedJurisdiction)?.label || 'Unknown';
-
 
   const handlePlayArtistDefault = async (nominee) => {
     try {
@@ -211,10 +201,10 @@ const VoteAwards = () => {
       if (defaultSong?.fileUrl) {
         const playData = {
           type: 'default-song',
-          url: buildUrl(defaultSong.fileUrl),       // ← raw from API, needs building
+          url: buildUrl(defaultSong.fileUrl),
           title: defaultSong.title || `${nominee.name}'s Default Track`,
           artist: nominee.name,
-          artwork: buildUrl(defaultSong.artworkUrl), // ← raw from API, needs building
+          artwork: buildUrl(defaultSong.artworkUrl),
         };
 
         playMedia(playData, [playData]);
@@ -235,15 +225,13 @@ const VoteAwards = () => {
     }
   };
 
-
-
   return (
     <Layout backgroundImage={backimage}>
       <div className='voteawards-container'>
         <div className="voteawards-filters">
-          <select 
-            value={selectedGenre} 
-            onChange={(e) => setSelectedGenre(e.target.value)} 
+          <select
+            value={selectedGenre}
+            onChange={(e) => setSelectedGenre(e.target.value)}
             className="voteawards-filter-select"
           >
             {genres.map((g) => (
@@ -253,9 +241,9 @@ const VoteAwards = () => {
             ))}
           </select>
 
-          <select 
-            value={selectedType} 
-            onChange={(e) => setSelectedType(e.target.value)} 
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
             className="voteawards-filter-select"
           >
             {types.map((t) => (
@@ -265,9 +253,9 @@ const VoteAwards = () => {
             ))}
           </select>
 
-          <select 
-            value={selectedInterval} 
-            onChange={(e) => setSelectedInterval(e.target.value)} 
+          <select
+            value={selectedInterval}
+            onChange={(e) => setSelectedInterval(e.target.value)}
             className="voteawards-filter-select"
           >
             {intervals.map((int) => (
@@ -277,9 +265,9 @@ const VoteAwards = () => {
             ))}
           </select>
 
-          <select 
-            value={selectedJurisdiction} 
-            onChange={(e) => setSelectedJurisdiction(e.target.value)} 
+          <select
+            value={selectedJurisdiction}
+            onChange={(e) => setSelectedJurisdiction(e.target.value)}
             className="voteawards-filter-select"
           >
             {jurisdictions.map((jur) => (
@@ -325,8 +313,8 @@ const VoteAwards = () => {
               {filteredNominees.length > 0 ? (
                 filteredNominees.map((nominee) => (
                   <li key={nominee.id} className="voteawards-nominee-item">
-                    <div 
-                      className="voteawards-nominee-image" 
+                    <div
+                      className="voteawards-nominee-image"
                       style={{ backgroundImage: `url(${nominee.imageUrl})` }}
                       onClick={() => handleNomineeClick(nominee)}
                     />
@@ -337,45 +325,44 @@ const VoteAwards = () => {
                         {nominee.jurisdiction}
                       </p>
                       {nominee.type === 'song' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: '#60a5fa', fontSize: '0.85rem' }}>
-                        <Play size={14} />
-                        <span>{nominee.plays} Plays</span>
-                      </div>
-                    )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: '#60a5fa', fontSize: '0.85rem' }}>
+                          <Play size={14} />
+                          <span>{nominee.plays} Plays</span>
+                        </div>
+                      )}
                       {nominee.type === 'artist' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: '#fbbf24', fontSize: '0.85rem' }}>
-                        <Trophy size={14} />
-                        <span>{nominee.totalLifetimeVotes} Votes</span>
-                      </div>
-                      )}                   
-                       </div>
-                       <div className='voteawards-the_buttons'>
-                    {nominee.type === 'song' && nominee.mediaUrl && (
-                      <button 
-                        onClick={() => handlePlaySong(nominee)} 
-                        className="voteawards-listen-button"
-                      >
-                        Listen
-                      </button>
-                    )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: '#fbbf24', fontSize: '0.85rem' }}>
+                          <Trophy size={14} />
+                          <span>{nominee.totalLifetimeVotes} Votes</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className='voteawards-the_buttons'>
+                      {nominee.type === 'song' && nominee.mediaUrl && (
+                        <button
+                          onClick={() => handlePlaySong(nominee)}
+                          className="voteawards-listen-button"
+                        >
+                          Listen
+                        </button>
+                      )}
 
-                    {nominee.type === 'artist' && (
-                    <button 
-                        onClick={() => handlePlayArtistDefault(nominee)} 
-                        className="voteawards-listen-button"
-                      >
-                        Listen
-                      </button>
-                    )}
-    
+                      {nominee.type === 'artist' && (
+                        <button
+                          onClick={() => handlePlayArtistDefault(nominee)}
+                          className="voteawards-listen-button"
+                        >
+                          Listen
+                        </button>
+                      )}
 
-                    <button 
-                      onClick={() => handleVoteClick(nominee)} 
-                      className="voteawards-vote-button"
-                    >
-                      Vote
-                    </button>
-                     </div>
+                      <button
+                        onClick={() => handleVoteClick(nominee)}
+                        className="voteawards-vote-button"
+                      >
+                        Vote
+                      </button>
+                    </div>
                   </li>
                 ))
               ) : (
