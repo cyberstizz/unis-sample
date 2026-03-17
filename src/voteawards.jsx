@@ -232,12 +232,12 @@ const VoteAwards = () => {
 
   return (
     <Layout backgroundImage={backimage}>
-      <div className='voteAwardsContainer'>
-        <div className="filters">
+      <div className='voteawards-container'>
+        <div className="voteawards-filters">
           <select 
             value={selectedGenre} 
             onChange={(e) => setSelectedGenre(e.target.value)} 
-            className="filter-select"
+            className="voteawards-filter-select"
           >
             {genres.map((g) => (
               <option key={g} value={g}>
@@ -249,7 +249,7 @@ const VoteAwards = () => {
           <select 
             value={selectedType} 
             onChange={(e) => setSelectedType(e.target.value)} 
-            className="filter-select"
+            className="voteawards-filter-select"
           >
             {types.map((t) => (
               <option key={t} value={t}>
@@ -261,7 +261,7 @@ const VoteAwards = () => {
           <select 
             value={selectedInterval} 
             onChange={(e) => setSelectedInterval(e.target.value)} 
-            className="filter-select"
+            className="voteawards-filter-select"
           >
             {intervals.map((int) => (
               <option key={int.value} value={int.value}>
@@ -273,7 +273,7 @@ const VoteAwards = () => {
           <select 
             value={selectedJurisdiction} 
             onChange={(e) => setSelectedJurisdiction(e.target.value)} 
-            className="filter-select"
+            className="voteawards-filter-select"
           >
             {jurisdictions.map((jur) => (
               <option key={jur.value} value={jur.value}>
@@ -283,21 +283,21 @@ const VoteAwards = () => {
           </select>
         </div>
 
-        <section className="nominees">
-          <h2 className='intervalDeclaration'>
+        <section className="voteawards-nominees-section">
+          <h2 className='voteawards-interval-declaration'>
             {selectedGenre.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('/')}{' '}
             {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} of the{' '}
             {intervals.find(i => i.value === selectedInterval)?.label || selectedInterval}{' '}
-            in <br /><span className='jurisdictionLabel'>{jurisdictionLabel}</span>
+            in <br /><span className='voteawards-jurisdiction-label'>{jurisdictionLabel}</span>
           </h2>
 
-          <form className="search-form" onSubmit={(e) => e.preventDefault()}>
+          <form className="voteawards-search-form" onSubmit={(e) => e.preventDefault()}>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={`Search for ${selectedType}s to vote for`}
-              className="search-bar"
+              className="voteawards-search-bar"
             />
           </form>
 
@@ -314,19 +314,19 @@ const VoteAwards = () => {
           )}
 
           {!loading && !error && (
-            <ul className="nominee-list">
+            <ul className="voteawards-nominee-list">
               {filteredNominees.length > 0 ? (
                 filteredNominees.map((nominee) => (
-                  <li key={nominee.id} className="nominee-item">
+                  <li key={nominee.id} className="voteawards-nominee-item">
                     <div 
-                      className="nominee-image" 
+                      className="voteawards-nominee-image" 
                       style={{ backgroundImage: `url(${nominee.imageUrl})` }}
                       onClick={() => handleNomineeClick(nominee)}
                     />
-                    <div className="nominee-info" onClick={() => handleNomineeClick(nominee)}>
-                      <h3 id="nominee-name">{nominee.name}</h3>
-                      {nominee.type === 'song' && <p className="artist-name">by {nominee.artist}</p>}
-                      <p className="voteawards-jurisdiction-label">
+                    <div className="voteawards-nominee-info" onClick={() => handleNomineeClick(nominee)}>
+                      <h3 id="voteawards-nominee-name">{nominee.name}</h3>
+                      {nominee.type === 'song' && <p className="voteawards-artist-name">by {nominee.artist}</p>}
+                      <p className="voteawards-item-jurisdiction-label">
                         {nominee.jurisdiction}
                       </p>
                       {nominee.type === 'song' && (
@@ -342,11 +342,11 @@ const VoteAwards = () => {
                       </div>
                       )}                   
                        </div>
-                       <div className='the_buttons'>
+                       <div className='voteawards-the_buttons'>
                     {nominee.type === 'song' && nominee.mediaUrl && (
                       <button 
                         onClick={() => handlePlaySong(nominee)} 
-                        className="listen-button"
+                        className="voteawards-listen-button"
                       >
                         Listen
                       </button>
@@ -355,7 +355,7 @@ const VoteAwards = () => {
                     {nominee.type === 'artist' && (
                     <button 
                         onClick={() => handlePlayArtistDefault(nominee)} 
-                        className="listen-button"
+                        className="voteawards-listen-button"
                       >
                         Listen
                       </button>
@@ -364,7 +364,7 @@ const VoteAwards = () => {
 
                     <button 
                       onClick={() => handleVoteClick(nominee)} 
-                      className="vote-button"
+                      className="voteawards-vote-button"
                     >
                       Vote
                     </button>
@@ -372,7 +372,7 @@ const VoteAwards = () => {
                   </li>
                 ))
               ) : (
-                <p className="no-nominees">
+                <p className="voteawards-no-nominees">
                   {searchQuery ? 'No nominees match your search.' : 'No nominees found for this category yet.'}
                 </p>
               )}

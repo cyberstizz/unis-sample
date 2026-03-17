@@ -694,8 +694,8 @@ const FindPage = () => {
                             <div className="item-title">{item.title}</div>
                             <div className="item-artist">{item.artist}</div>
                           </div>
-                          <button onClick={() => handlePlay(item)} className="play-button">Play</button>
-                          <button onClick={() => handleSongView(item.id)} className="song-view-button">View</button>
+                          <button onClick={() => handlePlay(item)} className="findpage-play-button">Play</button>
+                          <button onClick={() => handleSongView(item.id)} className="findpage-view-button">View</button>
                         </div>
                       </li>
                     ))
@@ -735,8 +735,8 @@ const FindPage = () => {
                           <div className="item-info">
                             <div className="item-title">{item.name}</div>
                           </div>
-                          <button onClick={() => handlePlay(item)} className="play-button">Play</button>
-                          <button onClick={() => handleArtistView(item.id)} className="song-view-button">View</button>
+                          <button onClick={() => handlePlay(item)} className="findpage-play-button">Play</button>
+                          <button onClick={() => handleArtistView(item.id)} className="findpage-view-button">View</button>
                         </div>
                       </li>
                     ))
