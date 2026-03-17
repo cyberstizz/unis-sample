@@ -263,13 +263,13 @@ const Feed = () => {
                   <div 
                     className="item" 
                     style={{ 
-                      backgroundImage: `url(${item.artworkUrl || item.artwork || randomRapper})`, 
+                      backgroundImage: `url(${item.artworkUrl ? encodeURI(item.artworkUrl) : item.artwork ? encodeURI(item.artwork) : randomRapper})`, 
                       backgroundSize: 'cover',
                       position: 'relative'
                     }}
                     onClick={() => handleSongNav(item.id, item.type)}
                   >
-                    <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+                      <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
                     
                     {item.duration && (
                       <div style={{
