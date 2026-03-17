@@ -37,6 +37,7 @@ const Feed = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
+  // Read directly from AuthContext — no JWT decode, no profile re-fetch
   const userId = user?.userId;
   const jurisdictionId = user?.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002';
 
@@ -44,14 +45,20 @@ const Feed = () => {
     if (!url || typeof url !== 'string') return '';
     const cleaned = url.trim();
     if (!cleaned) return '';
+
+    // Fix private R2 URLs → rewrite to public CDN
     if (cleaned.includes('r2.cloudflarestorage.com')) {
       const uploadsIndex = cleaned.indexOf('/uploads/');
       if (uploadsIndex !== -1) {
-        const path = cleaned.slice(uploadsIndex);
+        const path = cleaned.slice(uploadsIndex); // "/uploads/filename.mp3"
         return `https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev${path}`;
       }
     }
+
+    // Already a full public URL
     if (cleaned.startsWith('http')) return cleaned;
+
+    // Relative path → prepend API base
     return `${API_BASE_URL}${cleaned}`;
   };
 
@@ -65,6 +72,7 @@ const Feed = () => {
 
   const formatTimeAgo = (dateString) => {
     if (!dateString) return '';
+    
     const now = new Date();
     const past = new Date(dateString);
     const diffMs = now - past;
@@ -75,6 +83,7 @@ const Feed = () => {
     const diffWeeks = Math.floor(diffDays / 7);
     const diffMonths = Math.floor(diffDays / 30);
     const diffYears = Math.floor(diffDays / 365);
+
     if (diffSeconds < 60) return 'just now';
     if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
     if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
@@ -84,8 +93,11 @@ const Feed = () => {
     return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
   };
 
+  // Single useEffect — fires all 6 API calls in parallel on mount
+  // No waterfall, no profile re-fetch, no JWT decode
   useEffect(() => {
     setAnimate(true);
+
     if (!userId || !jurisdictionId) return;
 
     const fetchMediaData = async () => {
@@ -123,20 +135,21 @@ const Feed = () => {
         setTrendingToday(normalizeMedia(trendingTodayRes.data || []));
         setTopRated(normalizeMedia(topRatedRes.data || []));
         setNewMedia(normalizeMedia(newRes.data || []));
-
+        
         const combinedAwards = [...(songAwardsRes.data || []), ...(artistAwardsRes.data || [])].slice(0, 5);
         setAwards(combinedAwards);
 
         const normalizedArtists = (popularRes.data || []).map(artist => {
-          const photoProperty = artist.photoUrl
-            || artist.imageUrl
-            || artist.profilePhotoUrl
-            || artist.avatarUrl
+          const photoProperty = artist.photoUrl 
+            || artist.imageUrl 
+            || artist.profilePhotoUrl 
+            || artist.avatarUrl 
             || artist.pictureUrl
             || artist.photo
             || artist.profilePhoto
             || artist.avatar
             || artist.picture;
+          
           return {
             ...artist,
             photoUrl: photoProperty ? buildUrl(photoProperty) : null
@@ -160,6 +173,7 @@ const Feed = () => {
 
   const handlePlayMedia = async (e, media) => {
     e.stopPropagation();
+    
     let playMediaObj = media;
     if (media.type === 'artist') {
       try {
@@ -170,32 +184,36 @@ const Feed = () => {
           url: buildUrl(defaultRes.data.fileUrl) || song1,
           title: defaultRes.data.title || 'Default Track',
           artist: media.artistData?.username || media.artist,
-          artwork: buildUrl(defaultRes.data.artworkUrl) || media.artworkUrl,
+          artwork: buildUrl(defaultRes.data.artworkUrl) || media.artworkUrl, // ← was media.imageUrl
         };
       } catch (err) {
         console.error('Default song fetch error:', err);
-        playMediaObj = {
-          type: 'song',
-          id: 'default-fallback',
-          url: song1,
-          title: 'Default Track',
+        playMediaObj = { 
+          type: 'song', 
+          id: 'default-fallback', 
+          url: song1, 
+          title: 'Default Track', 
           artist: media.artistData?.username || media.artist,
-          artwork: media.artworkUrl
+          artwork: media.artworkUrl // ← was media.imageUrl
         };
       }
     }
+
     try {
-      const endpoint = playMediaObj.type === 'song'
+      const endpoint = playMediaObj.type === 'song' 
         ? `/v1/media/song/${playMediaObj.id}/play?userId=${userId}`
         : `/v1/media/video/${playMediaObj.id}/play?userId=${userId}`;
       await apiCall({ method: 'post', url: endpoint });
     } catch (err) {
       console.error('Failed to track play:', err);
     }
+    
     const playlist = [playMediaObj, ...newMedia.slice(0, 2).filter(m => m.id !== playMediaObj.id)];
     playMedia(playMediaObj, playlist);
   };
 
+
+  // Dummies (keep for fallback)
   const getDummyTrending = () => [
     { id: 'dummy1', title: 'Tony Fadd - Paranoid', artistData: { userId: '1', username: 'Tony Fadd' }, artworkUrl: songArtOne, mediaUrl: song1, type: 'song', score: 100, createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), duration: 180000, explicit: false, playsToday: 45 },
     { id: 'dummy2', title: 'SD Boomin - Waited All Night', artistData: { userId: '2', username: 'SD Boomin' }, artworkUrl: songArtTwo, mediaUrl: song2, type: 'song', score: 80, createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), duration: 210000, explicit: true, playsToday: 32 },
@@ -221,59 +239,23 @@ const Feed = () => {
   ].slice(0, 5);
 
   const getDummyArtists = () => [
-    { userId: 'art1', username: 'Tony Fadd', photoUrl: songArtOne, score: 100, jurisdictionName: 'Your Area' },
-    { userId: 'art2', username: 'SD Boomin', photoUrl: songArtTwo, score: 80, jurisdictionName: 'Your Area' },
-    { userId: 'art3', username: 'Artist Three', photoUrl: songArtThree, score: 60, jurisdictionName: 'Your Area' },
-    { userId: 'art4', username: 'Artist Four', photoUrl: songArtFour, score: 50, jurisdictionName: 'Your Area' },
-    { userId: 'art5', username: 'Artist Five', photoUrl: songArtFive, score: 40, jurisdictionName: 'Your Area' }
+    { userId: 'art1', username: 'Tony Fadd', photoUrl: songArtOne, score: 100 },
+    { userId: 'art2', username: 'SD Boomin', photoUrl: songArtTwo, score: 80 },
+    { userId: 'art3', username: 'Artist Three', photoUrl: songArtThree, score: 60 },
+    { userId: 'art4', username: 'Artist Four', photoUrl: songArtFour, score: 50 },
+    { userId: 'art5', username: 'Artist Five', photoUrl: songArtFive, score: 40 }
   ].slice(0, 5);
 
   const trendingTodayList = trendingToday.length ? trendingToday.slice(0, 10) : getDummyTrending();
-  const topRatedList      = topRated.length ? topRated.slice(0, 5) : getDummyTrending();
-  const newMediaList      = newMedia.length ? newMedia.slice(0, 5) : getDummyNew();
-  const awardsList        = awards.length ? awards.slice(0, 5) : getDummyAwards();
-  const artistsList       = popularArtists.length ? popularArtists.slice(0, 5) : getDummyArtists();
+  const topRatedList = topRated.length ? topRated.slice(0, 5) : getDummyTrending();
+  const newMediaList = newMedia.length ? newMedia.slice(0, 5) : getDummyNew();
+  const awardsList = awards.length ? awards.slice(0, 5) : getDummyAwards();
+  const artistsList = popularArtists.length ? popularArtists.slice(0, 5) : getDummyArtists();
 
   const getJurisdictionDisplayName = (id) => {
     const key = JURISDICTION_NAMES[id];
     if (!key) return 'Your Area';
     return key.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
-
-  // Build the artist list for the cards — derives from media data, falls back to popularArtists API list
-  const getArtistCards = () => {
-    const artistMap = new Map();
-    const allMedia = [...trendingToday, ...topRated, ...newMedia];
-
-    allMedia.forEach(media => {
-      if (media.artistData && !artistMap.has(media.artistData.userId)) {
-        artistMap.set(media.artistData.userId, {
-          userId: media.artistData.userId,
-          username: media.artistData.username,
-          photoUrl: media.artistData.photoUrl ? buildUrl(media.artistData.photoUrl) : null,
-          jurisdictionName: getJurisdictionDisplayName(
-            media.artistData.jurisdiction?.jurisdictionId || jurisdictionId
-          ),
-          score: media.artistData.score || 0,
-        });
-      }
-    });
-
-    // If media-derived map is empty, fall back to the dedicated artists API response
-    if (artistMap.size === 0) {
-      artistsList.forEach(artist => {
-        if (!artistMap.has(artist.userId)) {
-          artistMap.set(artist.userId, {
-            ...artist,
-            jurisdictionName: getJurisdictionDisplayName(artist.jurisdictionId || jurisdictionId),
-          });
-        }
-      });
-    }
-
-    return Array.from(artistMap.values())
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
   };
 
   if (loading) return <div className="loading-feed" style={{ textAlign: 'center', padding: '50px' }}>Loading your feed...</div>;
@@ -283,38 +265,68 @@ const Feed = () => {
       <div className="feed-content-wrapper">
         {error && <div className="feed-error" style={{ color: 'orange', padding: '10px', textAlign: 'center' }}>{error}</div>}
         <main className="feed">
-
           {/* Trending Today Carousel */}
           <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
             <h2>Trending Today</h2>
             <div className="carousel-items">
               {trendingTodayList.map((item) => (
                 <div key={item.id} className="item-wrapper">
-                  <div
-                    className="item"
-                    style={{
-                      backgroundImage: `url(${item.artworkUrl ? encodeURI(item.artworkUrl) : item.artwork ? encodeURI(item.artwork) : randomRapper})`,
+                  <div 
+                    className="item" 
+                    style={{ 
+                      backgroundImage: `url(${item.artworkUrl ? encodeURI(item.artworkUrl) : item.artwork ? encodeURI(item.artwork) : randomRapper})`, 
                       backgroundSize: 'cover',
                       position: 'relative'
                     }}
                     onClick={() => handleSongNav(item.id, item.type)}
                   >
-                    <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+                      <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+                    
                     {item.duration && (
-                      <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.75)', color: 'white', padding: '2px 6px', borderRadius: '3px', fontSize: '0.75rem', fontWeight: '600' }}>
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        left: '8px',
+                        background: 'rgba(0, 0, 0, 0.75)',
+                        color: 'white',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}>
                         {formatDuration(item.duration)}
                       </div>
                     )}
+                    
                     {item.explicit && (
-                      <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,0,0,0.85)', color: 'white', padding: '2px 6px', borderRadius: '3px', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        background: 'rgba(255, 0, 0, 0.85)',
+                        color: 'white',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        fontSize: '0.7rem',
+                        fontWeight: 'bold'
+                      }}>
                         E
                       </div>
                     )}
                   </div>
-                  <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>{item.title}</div>
-                  <span className="item-artist" onClick={() => handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown')} style={{ cursor: 'pointer', display: 'block', fontSize: '0.85rem', color: '#aaa' }}>
+                  
+                  <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
+                    {item.title}
+                  </div>
+                  
+                  <span 
+                    className="item-artist" 
+                    onClick={() => handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown')}
+                    style={{ cursor: 'pointer', display: 'block', fontSize: '0.85rem', color: '#aaa' }}
+                  >
                     {item.artistData?.username || item.artist || 'Unknown'}
                   </span>
+                  
                   <div className="time_ago" style={{ fontSize: '0.75rem', color: '#888', marginTop: '2px' }}>
                     {formatTimeAgo(item.createdAt)}
                   </div>
@@ -329,31 +341,62 @@ const Feed = () => {
             <div className="carousel-items">
               {newMediaList.map((item) => (
                 <div key={item.id} className="item-wrapper">
-                  <div
-                    className="item"
-                    style={{
-                      backgroundImage: `url(${item.artworkUrl ? encodeURI(item.artworkUrl) : item.artwork ? encodeURI(item.artwork) : randomRapper})`,
+                  <div 
+                    className="item" 
+                    style={{ 
+                      backgroundImage: `url(${item.artworkUrl ? encodeURI(item.artworkUrl) : item.artwork ? encodeURI(item.artwork) : randomRapper})`, 
                       backgroundSize: 'cover',
                       position: 'relative'
                     }}
                     onClick={() => handleSongNav(item.id, item.type)}
                   >
                     <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
+                    
                     {item.duration && (
-                      <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.75)', color: 'white', padding: '2px 6px', borderRadius: '3px', fontSize: '0.75rem', fontWeight: '600' }}>
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        left: '8px',
+                        background: 'rgba(0, 0, 0, 0.75)',
+                        color: 'white',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}>
                         {formatDuration(item.duration)}
                       </div>
                     )}
+                    
                     {item.explicit && (
-                      <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,0,0,0.85)', color: 'white', padding: '2px 6px', borderRadius: '3px', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        background: 'rgba(255, 0, 0, 0.85)',
+                        color: 'white',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        fontSize: '0.7rem',
+                        fontWeight: 'bold'
+                      }}>
                         E
                       </div>
                     )}
                   </div>
-                  <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>{item.title}</div>
-                  <span className="item-artist" onClick={() => handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown')} style={{ cursor: 'pointer', display: 'block', fontSize: '0.85rem', color: '#aaa' }}>
+                  
+                  <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
+                    {item.title}
+                  </div>
+                  
+                  <span 
+                    className="item-artist" 
+                    onClick={() => handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown')}
+                    style={{ cursor: 'pointer', display: 'block', fontSize: '0.85rem', color: '#aaa' }}
+                  >
                     {item.artistData?.username || item.artist || 'Unknown'}
                   </span>
+                  
                   <div className="time_ago" style={{ fontSize: '0.75rem', color: '#888', marginTop: '2px' }}>
                     {formatTimeAgo(item.createdAt)}
                   </div>
@@ -362,22 +405,45 @@ const Feed = () => {
             </div>
           </section>
 
-          {/* Popular Artists — now uses ArtistCard */}
+          {/* Popular Artists */}
           <section className={`feed-section artist-cards ${animate ? "animate" : ""}`}>
             <h2>Popular Artists</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {getArtistCards().map((artist, i) => (
-                <ArtistCard
-                  key={artist.userId}
-                  artist={artist}
-                  index={i}
-                  onPress={() => handleArtistNav(artist.userId)}
-                  onViewPress={() => handleArtistNav(artist.userId)}
-                />
-              ))}
+            <div className="artist-cards-grid">
+              {(() => {
+                const artistMap = new Map();
+                const allMedia = [...trendingToday, ...topRated, ...newMedia];
+                
+                allMedia.forEach(media => {
+                  if (media.artistData && !artistMap.has(media.artistData.userId)) {
+                    artistMap.set(media.artistData.userId, {
+                      userId: media.artistData.userId,
+                      username: media.artistData.username,
+                      photoUrl: encodeURI(media.artistData.photoUrl),
+                      jurisdictionId: media.artistData.jurisdiction?.jurisdictionId,
+                      jurisdictionName: getJurisdictionDisplayName(
+                        media.artistData.jurisdiction?.jurisdictionId || jurisdictionId
+                      ),
+                      score: media.artistData.score || 0
+                    });
+                  }
+                });
+                
+                const artists = Array.from(artistMap.values())
+                  .sort((a, b) => b.score - a.score)
+                  .slice(0, 5);
+                
+                return artists.map((artist, i) => (
+                  <ArtistCard
+                    key={artist.userId}
+                    artist={artist}
+                    index={i}
+                    onPress={() => handleArtistNav(artist.userId)}
+                    onViewPress={() => handleArtistNav(artist.userId)}
+                  />
+                ));
+              })()}
             </div>
           </section>
-
         </main>
       </div>
     </Layout>
