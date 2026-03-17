@@ -28,12 +28,20 @@ const VoteAwards = () => {
 
 
   const buildUrl = (url) => {
-        if (!url) return backimage;  // Fallback
-        return url.startsWith('http://') || url.startsWith('https://') 
-          ? url  // Absolute (R2/prod)—use as-is
-          : `${API_BASE_URL}${url}`;  // Relative (local)—prepend base
-      };
+    if (!url) return backimage;
 
+    const cleaned = url.trim();
+
+    try {
+      const decoded = decodeURIComponent(cleaned);
+      return decoded.startsWith('http')
+        ? decoded
+        : `${API_BASE_URL}${decoded}`;
+    } catch (e) {
+      console.warn('Bad URL:', url);
+      return cleaned;
+    }
+  };
 
   const intervals = [
   { value: 'daily', label: 'Day' },
