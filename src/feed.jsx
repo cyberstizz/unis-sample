@@ -333,7 +333,7 @@ const Feed = () => {
                   <div 
                     className="item" 
                     style={{ 
-                      backgroundImage: `url(${item.artworkUrl || item.artwork || randomRapper})`, 
+                      backgroundImage: `url(${item.artworkUrl ? encodeURI(item.artworkUrl) : item.artwork ? encodeURI(item.artwork) : randomRapper})`, 
                       backgroundSize: 'cover',
                       position: 'relative'
                     }}
