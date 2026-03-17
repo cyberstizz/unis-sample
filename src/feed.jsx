@@ -47,8 +47,11 @@ const Feed = () => {
 
     // Fix private R2 URLs → rewrite to public CDN
     if (cleaned.includes('r2.cloudflarestorage.com')) {
-      const filename = cleaned.split('/').pop();
-      return `https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev/${filename}`;
+      const uploadsIndex = cleaned.indexOf('/uploads/');
+      if (uploadsIndex !== -1) {
+        const path = cleaned.slice(uploadsIndex); // "/uploads/filename.mp3"
+        return `https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev${path}`;
+      }
     }
 
     // Already a full public URL
