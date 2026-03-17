@@ -102,7 +102,6 @@ const Sidebar = () => {
           {/* Admin section — only visible to admin role holders */}
           {user && user.adminRole && (
             <>
-              <li className="sidebar-divider"></li>
               <li onClick={() => handleNav('/admin')}>
                 <span className="sidebar-icon"><Shield size={24} /></span>
                 <span className="sidebar-text">Admin</span>
