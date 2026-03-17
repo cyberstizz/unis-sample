@@ -28,19 +28,18 @@ const VoteAwards = () => {
 
 
   const buildUrl = (url) => {
-    if (!url) return backimage;
+    if (!url || typeof url !== 'string') return null;
 
     const cleaned = url.trim();
 
-    try {
-      const decoded = decodeURIComponent(cleaned);
-      return decoded.startsWith('http')
-        ? decoded
-        : `${API_BASE_URL}${decoded}`;
-    } catch (e) {
-      console.warn('Bad URL:', url);
-      return cleaned;
-    }
+    if (!cleaned) return null;
+
+    const full =
+      cleaned.startsWith('http')
+        ? cleaned
+        : `${API_BASE_URL}${cleaned}`;
+
+    return full;
   };
 
   const intervals = [
