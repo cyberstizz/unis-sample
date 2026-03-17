@@ -18,7 +18,6 @@ const SongPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Derive userId directly from AuthContext — no token decode needed
   const userId = user?.userId;
 
   const [song, setSong] = useState(null);
@@ -31,30 +30,28 @@ const SongPage = () => {
   const [showLyricsWizard, setShowLyricsWizard] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
-  // Kept for future implementation — do-not-play and report features
   const [editingLyrics, setEditingLyrics] = useState(false);
   const [currentLyrics, setCurrentLyrics] = useState('');
-
   const [dominantColor, setDominantColor] = useState('rgba(255, 255, 255, 0.1)');
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   const buildUrl = (url) => {
-  if (!url || typeof url !== 'string') return '';
-  const cleaned = url.trim();
-  if (!cleaned) return '';
+    if (!url || typeof url !== 'string') return '';
+    const cleaned = url.trim();
+    if (!cleaned) return '';
 
-  if (cleaned.includes('r2.cloudflarestorage.com')) {
-    const uploadsIndex = cleaned.indexOf('/uploads/');
-    if (uploadsIndex !== -1) {
-      const path = cleaned.slice(uploadsIndex);
-      return `https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev${path}`;
+    if (cleaned.includes('r2.cloudflarestorage.com')) {
+      const uploadsIndex = cleaned.indexOf('/uploads/');
+      if (uploadsIndex !== -1) {
+        const path = cleaned.slice(uploadsIndex);
+        return `https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev${path}`;
+      }
     }
-  }
 
-  if (cleaned.startsWith('http')) return cleaned;
-  return `${API_BASE_URL}${cleaned}`;
-};
+    if (cleaned.startsWith('http')) return cleaned;
+    return `${API_BASE_URL}${cleaned}`;
+  };
 
   const extractColor = (url) => {
     const img = new Image();
@@ -71,9 +68,6 @@ const SongPage = () => {
     };
   };
 
-  // Single effect — fires all requests in parallel as soon as songId is known.
-  // userId may be null on first render if AuthContext is still loading; the
-  // is-liked call gracefully handles that by using a query-param fallback.
   useEffect(() => {
     if (!songId) return;
 
@@ -82,8 +76,6 @@ const SongPage = () => {
       setError('');
 
       try {
-        // Fire song fetch + like status + like count all at once.
-        // is-liked and likes/count do not depend on the song response.
         const likedUrl = userId
           ? `/v1/media/song/${songId}/is-liked?userId=${userId}`
           : `/v1/media/song/${songId}/is-liked`;
@@ -102,16 +94,8 @@ const SongPage = () => {
           artist: songData.artist.username,
           artistId: songData.artist.userId,
           jurisdiction: songData.jurisdiction?.name || 'Unknown',
-          artwork: songData.artworkUrl
-            ? songData.artworkUrl.startsWith('http')
-              ? songData.artworkUrl
-              : `${API_BASE_URL}${songData.artworkUrl}`
-            : songArtwork,
-          url: buildUrl(songData.fileUrl)
-            ? songData.fileUrl.startsWith('http')
-              ? buildUrl(songData.fileUrl)
-              : `${API_BASE_URL}${songData.fileUrl}`
-            : null,
+          artwork: buildUrl(songData.artworkUrl) || songArtwork,
+          url: buildUrl(songData.fileUrl) || null,
           description: songData.description || 'No description available',
           score: songData.score,
           playCount: songData.playCount || 0,
@@ -180,10 +164,10 @@ const SongPage = () => {
       id: song.id,
       songId: song.id,
       type: 'song',
-      url: buildUrl(songData.fileUrl) || null,
+      url: song.url,
       title: song.title,
       artist: song.artist,
-      artwork: buildUrl(songData.artworkUrl) || songArtwork,
+      artwork: song.artwork,
       jurisdiction: song.jurisdiction,
     };
     playMedia(track, [track]);
@@ -255,20 +239,16 @@ const SongPage = () => {
     }
   };
 
-  // Kept as named functions for future implementation
   const handleDontPlay = () => {
     console.log('Added to do-not-play list');
-    // TODO: implement do-not-play list feature
   };
 
   const handleReport = () => {
     console.log('Report song');
-    // TODO: implement report flow
   };
 
   const handleShare = () => {
     console.log('Share song');
-    // TODO: implement share flow
   };
 
   const handleCopyLink = async () => {
