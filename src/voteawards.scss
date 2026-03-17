@@ -520,113 +520,96 @@ button {
 
 
 // Mobile Responsiveness
+// Mobile Responsiveness
 @media (max-width: 600px) {
   .voteawards-container {
-    padding-top: .5%;
+    display: flex;
+    padding-top: 10px;
     width: 100%;
-    overflow: hidden;
-    margin-right: 0;
+    overflow-x: hidden;
+    margin-right: 0; // Ensures the 150px desktop margin is killed
   }
 
   .voteawards-nominees-section {
-    .voteawards-interval-declaration {
-      font-size: 20px;
-      text-align: center;
+    padding: 0 10px; // Tighter padding for mobile screens
 
-      .voteawards-jurisdiction-label {
-        display: block;
-        text-align: center;
-        margin: 0 auto;
-      }
+    .voteawards-interval-declaration {
+      font-size: 18px;
+      margin-bottom: 20px;
     }
   }
   
   .voteawards-filters {
-    margin-top: 8%;
-    display: flex;
-    flex-direction: row !important;
-    gap: 10px;
-    width: 90vw !important;
+    margin-top: 20px;
+    gap: 8px;
+    width: 100% !important;
+    justify-content: center;
 
     .voteawards-filter-select {
-      font-size: 12px;
-      padding: 8px 12px;
+      font-size: 11px;
+      padding: 6px 10px;
     }
   }
 
-  .voteawards-search-form {
-    width: 100%;
-  }
-
   .voteawards-search-bar {
-    width: 85% !important;
+    width: 90% !important;
+    font-size: 14px;
   }
   
   .voteawards-nominee-list {
-    width: 100%;
-    padding: 0;
-    gap: 12px;
+    gap: 10px;
     
     .voteawards-nominee-item {
-      display: flex;
+      padding: 10px;
+      gap: 12px;
+      /* Ensure the item stays a row, but handles its children strictly */
+      display: flex; 
       flex-direction: row;
       align-items: center;
-      padding: 12px;
-      gap: 10px;
-      border-left: 3px solid $unis-blue;
-      border-right: 3px solid $unis-blue;
+      justify-content: space-between; 
 
       .voteawards-nominee-image {
-        width: 55px;
-        height: 55px;
-        margin-right: 10px;
-        flex-shrink: 0;
+        width: 50px;
+        height: 50px;
+        margin-right: 0; // Gap handles spacing now
       }
 
       .voteawards-nominee-info {
         flex: 1;
-        text-align: left;
-        min-width: 0;
+        min-width: 0; // Essential for ellipsis to work
         
         #voteawards-nominee-name {
-          font-size: 15px !important;
+          font-size: 14px !important;
+          white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          white-space: nowrap;
-          margin: 0 0 2px 0;
         }
         
-        .voteawards-artist-name {
+        .voteawards-artist-name, 
+        .voteawards-item-jurisdiction-label,
+        div[style*="font-size: 0.85rem"] { /* Targets the Play/Trophy icons */
           font-size: 10px !important;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          margin: 0 0 2px 0;
-        }
-        
-        .voteawards-item-jurisdiction-label {
-          font-size: 10px !important;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
         }
       }
 
       .voteawards-the_buttons {
         display: flex;
-        flex-direction: column;
-        gap: 6px;
-        flex-shrink: 0;
-        margin-left: auto;
+        flex-direction: column !important;
+        gap: 4px;
+        margin-left: 8px;
+        flex-shrink: 0; // Prevents the button container from squishing
+        width: 80px; // Defines a strict area for the buttons
       }
       
-      .voteawards-listen-button, .voteawards-vote-button {
-        width: 76px;
-        padding: 6px 10px;
-        font-size: 10px;
-        text-align: center;
-        letter-spacing: 0.5px;
-        border-radius: 4px;
+      button {
+        width: 100% !important; 
+        box-sizing: border-box;
+        padding: 6px 0 !important; 
+        font-size: 10px !important;
+        height: 28px; // Uniform height
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
     }
   }
