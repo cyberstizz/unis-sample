@@ -180,10 +180,10 @@ const SongPage = () => {
       id: song.id,
       songId: song.id,
       type: 'song',
-      url: buildUrl(songData.fileUrl) || null,
+      url: encodeURI(songData.fileUrl) || null,
       title: song.title,
       artist: song.artist,
-      artwork: buildUrl(songData.artworkUrl) || songArtwork,
+      artwork: encodeURI(songData.artworkUrl) || songArtwork,
       jurisdiction: song.jurisdiction,
     };
     playMedia(track, [track]);
