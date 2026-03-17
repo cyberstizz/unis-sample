@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { useAuth } from './context/AuthContext';
 import Layout from './layout';
-import ArtistCard from './components/ArtistCard';
+import ArtistCard from './artistCard';
 import randomRapper from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import song2 from './assets/sdboomin_waitedallnight.mp3';
