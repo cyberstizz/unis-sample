@@ -23,16 +23,12 @@ $subtle-black: #1a1a1a;
 .find-page-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  // Use calc to subtract the sidebar width (240px) so the container
-  // never overflows into the sidebar or off the right edge
   width: calc(100vw - 260px);
   max-width: calc(100vw - 260px);
   box-sizing: border-box;
   margin-left: 0;
-  margin-left: 100px;
   overflow: hidden;
-  padding-top: 8%;
+  padding-top: 1%;
 }
 
 // Remove the blanket margin-left that was pushing everything right
@@ -436,7 +432,7 @@ $subtle-black: #1a1a1a;
         }
       }
 
-      .view-button {
+      .song-view-button {
         padding: 7px 14px;
         background: black;
         border: 1px solid rgba(255,255,255,0.2);
