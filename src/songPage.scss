@@ -17,13 +17,11 @@ $unis-blue: #163387;
   min-height: 100vh;
   background: transparent;
   color: $text-gray;
-  padding: 20px;
-  padding-top: 8%;
-  // REMOVED: margin-left: 200px — index.css handles sidebar offset globally
-  // REMOVED: width: 80vw — causes overflow now that parent already has margin-left: 260px
+  padding-top: 2%;
   width: 100%;
   justify-self: center;
   overflow: hidden;
+  margin-right: 120px;
 }
 
 .main-content-card {
@@ -380,9 +378,9 @@ $unis-blue: #163387;
 @media (max-width: 600px) {
   .song-page-container {
     box-sizing: border-box;
-    margin-left: 0;
+    margin-right: 0;
     width: 100%;
-    padding-top: 30%;
+    padding-top: 10%;
     overflow-x: hidden !important;
   }
   

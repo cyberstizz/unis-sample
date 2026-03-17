@@ -39,9 +39,9 @@ $orange-500: #f97316;
   min-height: 100vh;
   background-color: transparent;
   color: $text-white;
-  margin-left: 19%;
+  margin-left: 10%;
   width: 68%;
-  margin-top: 10%;
+  margin-top: 5%;
 }
 
 // Welcome Popup
@@ -649,7 +649,7 @@ $orange-500: #f97316;
 
 @media (max-width: 640px) {
   .artist-dashboard {
-    margin-top: 40%;
+    margin-top: 10%;
     justify-content: center;
     justify-self: center;
     justify-items: center;

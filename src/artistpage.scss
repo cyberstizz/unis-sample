@@ -44,9 +44,9 @@ $unis-blue: #163387;
   overflow-x: hidden;
   // padding-top clears the Layout header (~60px) plus breathing room.
   // index.css handles the horizontal sidebar offset — no margin-left here.
-  padding-top: 160px;
+  padding-top: 80px;
   padding-bottom: 5%;
-  margin-right: 80px;
+  margin-right: 100px;
   box-sizing: border-box;
 
   @media (max-width: 800px) {
@@ -463,4 +463,12 @@ $unis-blue: #163387;
   .content-wrapper {
     padding: 0 0.5rem;
   }
+}
+
+@media (max-width: 600px) {
+  .artist-page-container{
+  margin-right: 0;
+  padding-top: 50px;
+}
+
 }
