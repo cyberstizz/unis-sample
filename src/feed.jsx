@@ -42,28 +42,20 @@ const Feed = () => {
 
   const buildUrl = (url) => {
     if (!url || typeof url !== 'string') return '';
+    const cleaned = url.trim();
+    if (!cleaned) return '';
 
-    const R2_PRIVATE_PATTERN = /^https?:\/\/[a-f0-9]+\.r2\.cloudflarestorage\.com\/([^/]+)\/(.+)$/i;
-const R2_PUBLIC_BASE = import.meta.env.VITE_R2_PUBLIC_URL; // e.g. https://pub-XXX.r2.dev OR your custom domain
+    // Fix private R2 URLs → rewrite to public CDN
+    if (cleaned.includes('r2.cloudflarestorage.com')) {
+      const filename = cleaned.split('/').pop();
+      return `https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev/${filename}`;
+    }
 
-const buildUrl = (url) => {
-  if (!url || typeof url !== 'string') return '';
-  const cleaned = url.trim();
-  if (!cleaned) return '';
+    // Already a full public URL
+    if (cleaned.startsWith('http')) return cleaned;
 
-  // Fix: private R2 URL → public R2 URL
-  const r2Match = cleaned.match(R2_PRIVATE_PATTERN);
-  if (r2Match) {
-    const filePath = r2Match[2]; // everything after the bucket name
-    return `${R2_PUBLIC_BASE}/${filePath}`;
-  }
-
-  // Already a full public URL
-  if (cleaned.startsWith('http')) return cleaned;
-
-  // Relative path → prepend API base
-  return `${API_BASE_URL}${cleaned}`;
-};
+    // Relative path → prepend API base
+    return `${API_BASE_URL}${cleaned}`;
   };
 
   const formatDuration = (ms) => {
