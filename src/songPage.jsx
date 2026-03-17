@@ -107,9 +107,9 @@ const SongPage = () => {
               ? songData.artworkUrl
               : `${API_BASE_URL}${songData.artworkUrl}`
             : songArtwork,
-          url: songData.fileUrl
+          url: buildUrl(songData.fileUrl)
             ? songData.fileUrl.startsWith('http')
-              ? songData.fileUrl
+              ? buildUrl(songData.fileUrl)
               : `${API_BASE_URL}${songData.fileUrl}`
             : null,
           description: songData.description || 'No description available',
@@ -180,10 +180,10 @@ const SongPage = () => {
       id: song.id,
       songId: song.id,
       type: 'song',
-      url: encodeURI(songData.fileUrl) || null,
+      url: buildUrl(songData.fileUrl) || null,
       title: song.title,
       artist: song.artist,
-      artwork: encodeURI(songData.artworkUrl) || songArtwork,
+      artwork: buildUrl(songData.artworkUrl) || songArtwork,
       jurisdiction: song.jurisdiction,
     };
     playMedia(track, [track]);
