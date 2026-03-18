@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState, useRef, useMemo } from 'react'; // Added useMemo
+import React, { useContext, useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { Heart, Headphones, Vote, ChevronUp, ChevronDown } from 'lucide-react';
@@ -31,10 +31,11 @@ const Player = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [specificVoteData, setSpecificVoteData] = useState(null);
+  const [volume, setVolume] = useState(0.7);
   
   // Wizards State
   const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
-  const [showVoteWizard, setShowVoteWizard] = useState(false); // <--- 2. Add Vote Wizard State
+  const [showVoteWizard, setShowVoteWizard] = useState(false);
   
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [userId, setUserId] = useState(null);
@@ -43,15 +44,14 @@ const Player = () => {
   const navigate = useNavigate();
 
   // --- DERIVE VOTING DATA ---
-  // 3. Create the nominee object dynamically from the current song
   const voteNominee = useMemo(() => {
     if (!currentMedia) return null;
     return {
       id: currentMedia.id || currentMedia.songId,
-      name: currentMedia.title, // The "Name" being voted on is the Song Title
-      type: 'song', // Explicitly set type to song
+      name: currentMedia.title,
+      type: 'song',
       jurisdiction: currentMedia.jurisdiction, 
-      genreKey: currentMedia.genreKey || 'rap-hiphop', // Fallback if genre missing
+      genreKey: currentMedia.genreKey || 'rap-hiphop',
       artist: currentMedia.artist
     };
   }, [currentMedia]);
@@ -160,6 +160,13 @@ const Player = () => {
     };
   }, [next, audioRef]);
 
+  // Set initial volume
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume, audioRef]);
+
   if (!currentMedia) return null;
 
   const isVideo = currentMedia.type === 'video';
@@ -199,14 +206,10 @@ const Player = () => {
     e.stopPropagation();
     if (!userId) return alert('Please log in to vote');
 
-    // 1. DATA RECOVERY: Try to find ID from currentMedia, or fallback to songId
     const safeId = currentMedia.id || currentMedia.songId;
-    
-    // 2. NAME RECOVERY: Ensure we have a name to prevent the Wizard crash
     const safeTitle = currentMedia.title || currentMedia.name || "Unknown Song";
     const safeArtist = currentMedia.artist || currentMedia.artistName || "Unknown Artist";
 
-    // Stop if we truly have no ID (Prevents the empty/broken wizard open)
     if (!safeId) {
       console.error("Player Error: Current song has no ID. Cannot fetch voting details.");
       return alert("Cannot vote on this track (Missing ID). Try playing it from a Playlist.");
@@ -215,9 +218,6 @@ const Player = () => {
     setSpecificVoteData(null);
 
     try {
-      // 3. FORCE FRESH FETCH (The "Cache" Fix)
-      // We use useCache: false to ensure we get the full "Leaf" jurisdiction (Uptown),
-      // not a cached "Parent" version (Harlem).
       const res = await apiCall({ 
         method: 'get', 
         url: `/v1/media/song/${safeId}`,
@@ -226,8 +226,6 @@ const Player = () => {
       
       const songData = res.data;
 
-      // 4. STRING EXTRACTION (The "SongPage" Logic)
-      // Extract the name string exactly like SongPage does.
       let jurisdictionName = 'Harlem'; 
       
       if (songData.jurisdiction) {
@@ -240,13 +238,12 @@ const Player = () => {
 
       console.log("Voting Jurisdiction Resolved:", jurisdictionName);
 
-      // 5. PASS DATA
       setSpecificVoteData({
         nominee: {
           id: safeId,
           name: safeTitle,
           type: 'song',
-          jurisdiction: jurisdictionName, // e.g. "Uptown Harlem"
+          jurisdiction: jurisdictionName,
           genreKey: songData.genre?.name || 'rap-hiphop',
           artist: safeArtist
         },
@@ -254,7 +251,6 @@ const Player = () => {
           selectedType: 'song',
           selectedGenre: (songData.genre?.name || 'rap-hiphop').toLowerCase().replace('/', '-'),
           selectedInterval: 'daily',
-          // Slugify: "Uptown Harlem" -> "uptown-harlem"
           selectedJurisdiction: jurisdictionName.toLowerCase().replace(/\s+/g, '-')
         }
       });
@@ -263,7 +259,6 @@ const Player = () => {
 
     } catch (err) {
       console.error("Vote fetch error:", err);
-      // fallback safely
       setShowVoteWizard(true);
     }
   };
@@ -272,7 +267,6 @@ const Player = () => {
     e.stopPropagation();
     const fileUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
     if (!fileUrl) return alert('Download not available');
-    // ... (Your existing download logic)
     const artist = currentMedia.artist || 'Unknown Artist';
     const title = currentMedia.title || 'Untitled';
     const filename = `${artist} - ${title}.mp3`;
@@ -302,9 +296,19 @@ const Player = () => {
     e.stopPropagation();
     const rect = seekbarRef.current.getBoundingClientRect();
     const percentage = ((e.clientX - rect.left) / rect.width) * 100;
-    const newTime = (percentage / 100) * duration;
+    const newTime = (Math.max(0, Math.min(100, percentage)) / 100) * duration;
     audioRef.current.currentTime = newTime;
     setCurrentTime(newTime);
+  };
+
+  const handleVolumeChange = (e) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percentage = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    setVolume(percentage);
+    if (audioRef.current) {
+      audioRef.current.volume = percentage;
+    }
   };
 
   const toggleMobileActions = (e) => {
@@ -317,6 +321,26 @@ const Player = () => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Volume icon based on level
+  const VolumeIcon = () => {
+    if (volume === 0) {
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+          <line x1="23" y1="9" x2="17" y2="15" />
+          <line x1="17" y1="9" x2="23" y2="15" />
+        </svg>
+      );
+    }
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+        {volume > 0.3 && <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />}
+      </svg>
+    );
   };
 
   return (
@@ -355,32 +379,21 @@ const Player = () => {
             <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
               <Heart fill={isLiked ? "white" : "none"} />
             </button>
-            
-            {/* Expanded View Vote Button (Optional - added for consistency) */}
             <button onClick={handleVoteClick}>
                 <Vote size={24} />
             </button>
-            
             <button onClick={handleDownload}>⬇</button>
           </div>
         </div>
       ) : (
         <>
-          <div className="seekbar" ref={seekbarRef} onClick={handleSeekbarClick}>
-            <div className="seekbar-track">
-              <div className="seekbar-progress" style={{ width: `${progress}%` }}></div>
-              <div className="seekbar-thumb" style={{ left: `calc(${progress}% - 6px)` }}></div>
-            </div>
-          </div>
-          
+          {/* ═══════ MOBILE ACTIONS TRAY ═══════ */}
           <div className={`mobile-actions-tray ${showMobileActions ? 'open' : ''}`}>
             <div className="tray-content">
-              {/* Mobile Tray Vote Option */}
               <button onClick={handleVoteClick} className="tray-action">
                 <Vote size={20} />
                 <span className="label">Vote</span>
               </button>
-
               <button onClick={() => setShowPlaylistWizard(true)} className="tray-action"><span>➕</span><span className="label">Add</span></button>
               <button onClick={handleLike} className={`tray-action ${isLiked ? 'liked' : ''}`}>
                 <Heart fill={isLiked ? "white" : "none"} /><span className="label">{isLiked ? 'Liked' : 'Like'}</span>
@@ -389,34 +402,69 @@ const Player = () => {
             </div>
           </div>
 
+          {/* ═══════ 3-COLUMN MINI PLAYER ═══════ */}
           <div className="Unis-mini-player">
-            <div className="song-info">
-              <img src={currentMedia.artwork || '/assets/placeholder.jpg'} alt="Artwork" className="mini-artwork clickable" onClick={handleNavigateToSong} />
-              <div className="mini-info">
-                <p className="mini-title clickable" onClick={handleNavigateToSong}>{currentMedia.title}</p>
-                <p className="mini-artist clickable" onClick={handleNavigateToArtist}>{currentMedia.artist}</p>
+
+            {/* LEFT — Track info */}
+            <div className="player-track">
+              <div className="player-art" onClick={handleNavigateToSong}>
+                <img src={currentMedia.artwork || '/assets/placeholder.jpg'} alt="Artwork" />
               </div>
-            </div>
-            
-            <div className="mini-controls">
-              <button className="trackToggle" onClick={handlePrev}>◀</button>
-              <button onClick={handlePlayPause} className="play-pause-btn">{isPlaying ? <UnisPauseButton /> : <UnisPlayButton />}</button>
-              <button className="trackToggle" onClick={handleNext}>▶</button>
-            </div>
-            
-            <div className="like-download desktop-actions">
-              {/* --- FIX: UPDATED VOTE BUTTON --- */}
-              <button onClick={handleVoteClick} title="Vote for this song">
-                <Vote size={18} />
+              <div className="player-track-info">
+                <div className="player-track-title clickable" onClick={handleNavigateToSong}>{currentMedia.title}</div>
+                <div className="player-track-artist clickable" onClick={handleNavigateToArtist}>{currentMedia.artist}</div>
+              </div>
+              <button className="player-heart" onClick={handleLike}>
+                <Heart size={18} fill={isLiked ? "currentColor" : "none"} className={isLiked ? 'liked' : ''} />
               </button>
-              
-              <button onClick={() => setShowPlaylistWizard(true)}>➕</button>
-              <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
-                <Heart size={18} fill={isLiked ? "white" : "none"} />
-              </button>
-              <button onClick={handleDownload}>⬇</button>
             </div>
 
+            {/* CENTER — Controls + progress */}
+            <div className="player-controls">
+              <div className="player-buttons">
+                <button className="player-btn" onClick={handleVoteClick} title="Vote for this song">
+                  <Vote size={18} />
+                </button>
+                <button className="player-btn" onClick={handlePrev} title="Previous">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                </button>
+                <button className="player-btn-play" onClick={handlePlayPause} title={isPlaying ? 'Pause' : 'Play'}>
+                  {isPlaying ? (
+                    <svg viewBox="0 0 24 24" fill="var(--player-bg)"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="var(--player-bg)"><polygon points="5,3 19,12 5,21"/></svg>
+                  )}
+                </button>
+                <button className="player-btn" onClick={handleNext} title="Next">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zm-10 0l8.5 6L6 18z"/></svg>
+                </button>
+                <button className="player-btn" onClick={() => setShowPlaylistWizard(true)} title="Add to playlist">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+              </div>
+              <div className="player-progress">
+                <span className="player-time">{formatTime(currentTime)}</span>
+                <div className="progress-bar" ref={seekbarRef} onClick={handleSeekbarClick}>
+                  <div className="progress-fill" style={{ width: `${progress}%` }} />
+                </div>
+                <span className="player-time">{formatTime(duration)}</span>
+              </div>
+            </div>
+
+            {/* RIGHT — Volume + actions */}
+            <div className="player-right">
+              <button className="player-btn" onClick={handleDownload} title="Download">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </button>
+              <button className="player-btn player-volume-icon" title="Volume" onClick={() => setVolume(volume === 0 ? 0.7 : 0)}>
+                <VolumeIcon />
+              </button>
+              <div className="volume-bar" onClick={handleVolumeChange}>
+                <div className="volume-fill" style={{ width: `${volume * 100}%` }} />
+              </div>
+            </div>
+
+            {/* MOBILE toggle */}
             <button className="mobile-actions-toggle" onClick={toggleMobileActions}>
               {showMobileActions ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
             </button>
@@ -432,7 +480,7 @@ const Player = () => {
         show={showVoteWizard} 
         onClose={() => {
           setShowVoteWizard(false);
-          setSpecificVoteData(null); // Reset on close
+          setSpecificVoteData(null);
         }} 
         onVoteSuccess={(id) => setShowVoteWizard(false)}
         nominee={specificVoteData?.nominee || voteNominee}

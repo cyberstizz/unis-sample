@@ -184,7 +184,7 @@ const Feed = () => {
           url: buildUrl(defaultRes.data.fileUrl) || song1,
           title: defaultRes.data.title || 'Default Track',
           artist: media.artistData?.username || media.artist,
-          artwork: buildUrl(defaultRes.data.artworkUrl) || media.artworkUrl, // ← was media.imageUrl
+          artwork: buildUrl(defaultRes.data.artworkUrl) || media.artworkUrl,
         };
       } catch (err) {
         console.error('Default song fetch error:', err);
@@ -194,7 +194,7 @@ const Feed = () => {
           url: song1, 
           title: 'Default Track', 
           artist: media.artistData?.username || media.artist,
-          artwork: media.artworkUrl // ← was media.imageUrl
+          artwork: media.artworkUrl
         };
       }
     }
@@ -258,156 +258,149 @@ const Feed = () => {
     return key.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
-  if (loading) return <div className="loading-feed" style={{ textAlign: 'center', padding: '50px' }}>Loading your feed...</div>;
+  if (loading) return (
+    <Layout backgroundImage={randomRapper}>
+      <div className="feed-loading">
+        <div className="feed-loading-spinner" />
+        <span>Loading your feed...</span>
+      </div>
+    </Layout>
+  );
 
   return (
     <Layout backgroundImage={randomRapper}>
       <div className="feed-content-wrapper">
-        {error && <div className="feed-error" style={{ color: 'orange', padding: '10px', textAlign: 'center' }}>{error}</div>}
+        {error && <div className="feed-error">{error}</div>}
         <main className="feed">
-          {/* Trending Today Carousel */}
-          <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
-            <h2>Trending Today</h2>
-            <div className="carousel-items">
-              {trendingTodayList.map((item) => (
-                <div key={item.id} className="item-wrapper">
-                  <div 
-                    className="item" 
-                    style={{ 
-                      backgroundImage: `url(${item.artworkUrl ? encodeURI(item.artworkUrl) : item.artwork ? encodeURI(item.artwork) : randomRapper})`, 
-                      backgroundSize: 'cover',
-                      position: 'relative'
-                    }}
-                    onClick={() => handleSongNav(item.id, item.type)}
-                  >
-                      <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
-                    
+
+          {/* ═══════ HERO BANNER ═══════ */}
+          <div className="hero-banner" onClick={() => navigate('/voteawards')}>
+            <div className="hero-gradient" />
+            <div className="hero-particles">
+              <div className="hero-particle hero-particle--1" />
+              <div className="hero-particle hero-particle--2" />
+              <div className="hero-particle hero-particle--3" />
+            </div>
+            <div className="hero-content">
+              <span className="hero-label">Featured in {getJurisdictionDisplayName(jurisdictionId)}</span>
+              <h1 className="hero-title">Vote for This Week's Top Track</h1>
+              <p className="hero-subtitle">
+                Your vote decides who tops the neighborhood leaderboard. Listen, discover, and support local artists.
+              </p>
+              <button className="hero-cta" onClick={(e) => { e.stopPropagation(); navigate('/voteawards'); }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Vote Now
+              </button>
+            </div>
+          </div>
+
+          {/* ═══════ TRENDING TODAY ═══════ */}
+          <section className={`feed-section ${animate ? 'animate' : ''}`}>
+            <div className="section-header">
+              <h2 className="section-title">Trending Today</h2>
+              <span className="section-see-all" onClick={() => navigate('/findpage')}>Show all</span>
+            </div>
+            <div className="card-row">
+              {trendingTodayList.map((item, index) => (
+                <div 
+                  key={item.id} 
+                  className="song-card"
+                  style={{ animationDelay: `${0.05 * (index + 1)}s` }}
+                  onClick={() => handleSongNav(item.id, item.type)}
+                >
+                  <div className="card-artwork">
+                    <img 
+                      src={item.artworkUrl || item.artwork || randomRapper} 
+                      alt={item.title}
+                      onError={(e) => { e.target.src = randomRapper; }}
+                    />
                     {item.duration && (
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '8px',
-                        left: '8px',
-                        background: 'rgba(0, 0, 0, 0.75)',
-                        color: 'white',
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600'
-                      }}>
-                        {formatDuration(item.duration)}
-                      </div>
+                      <span className="card-duration">{formatDuration(item.duration)}</span>
                     )}
-                    
                     {item.explicit && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        background: 'rgba(255, 0, 0, 0.85)',
-                        color: 'white',
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        fontSize: '0.7rem',
-                        fontWeight: 'bold'
-                      }}>
-                        E
-                      </div>
+                      <span className="card-explicit">E</span>
                     )}
+                    <button className="card-play" onClick={(e) => handlePlayMedia(e, item)}>
+                      <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" /></svg>
+                    </button>
                   </div>
-                  
-                  <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
-                    {item.title}
-                  </div>
-                  
-                  <span 
-                    className="item-artist" 
-                    onClick={() => handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown')}
-                    style={{ cursor: 'pointer', display: 'block', fontSize: '0.85rem', color: '#aaa' }}
-                  >
-                    {item.artistData?.username || item.artist || 'Unknown'}
-                  </span>
-                  
-                  <div className="time_ago" style={{ fontSize: '0.75rem', color: '#888', marginTop: '2px' }}>
-                    {formatTimeAgo(item.createdAt)}
+                  <div className="card-info">
+                    <div className="card-title">{item.title}</div>
+                    <div 
+                      className="card-artist"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown');
+                      }}
+                    >
+                      {item.artistData?.username || item.artist || 'Unknown'}
+                    </div>
+                    {item.createdAt && (
+                      <div className="card-meta">{formatTimeAgo(item.createdAt)}</div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* New Releases Carousel */}
-          <section className={`feed-section carousel ${animate ? "animate" : ""}`}>
-            <h2>New Releases</h2>
-            <div className="carousel-items">
-              {newMediaList.map((item) => (
-                <div key={item.id} className="item-wrapper">
-                  <div 
-                    className="item" 
-                    style={{ 
-                      backgroundImage: `url(${item.artworkUrl ? encodeURI(item.artworkUrl) : item.artwork ? encodeURI(item.artwork) : randomRapper})`, 
-                      backgroundSize: 'cover',
-                      position: 'relative'
-                    }}
-                    onClick={() => handleSongNav(item.id, item.type)}
-                  >
-                    <button className="play-icon" onClick={(e) => handlePlayMedia(e, item)}>▶</button>
-                    
+          {/* ═══════ NEW RELEASES ═══════ */}
+          <section className={`feed-section ${animate ? 'animate' : ''}`}>
+            <div className="section-header">
+              <h2 className="section-title">New Releases</h2>
+              <span className="section-see-all" onClick={() => navigate('/findpage')}>Show all</span>
+            </div>
+            <div className="card-row">
+              {newMediaList.map((item, index) => (
+                <div 
+                  key={item.id} 
+                  className="song-card"
+                  style={{ animationDelay: `${0.05 * (index + 1)}s` }}
+                  onClick={() => handleSongNav(item.id, item.type)}
+                >
+                  <div className="card-artwork">
+                    <img 
+                      src={item.artworkUrl || item.artwork || randomRapper} 
+                      alt={item.title}
+                      onError={(e) => { e.target.src = randomRapper; }}
+                    />
                     {item.duration && (
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '8px',
-                        left: '8px',
-                        background: 'rgba(0, 0, 0, 0.75)',
-                        color: 'white',
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600'
-                      }}>
-                        {formatDuration(item.duration)}
-                      </div>
+                      <span className="card-duration">{formatDuration(item.duration)}</span>
                     )}
-                    
                     {item.explicit && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        background: 'rgba(255, 0, 0, 0.85)',
-                        color: 'white',
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        fontSize: '0.7rem',
-                        fontWeight: 'bold'
-                      }}>
-                        E
-                      </div>
+                      <span className="card-explicit">E</span>
                     )}
+                    <button className="card-play" onClick={(e) => handlePlayMedia(e, item)}>
+                      <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" /></svg>
+                    </button>
                   </div>
-                  
-                  <div className="item-title" onClick={() => handleSongNav(item.id, item.type)}>
-                    {item.title}
-                  </div>
-                  
-                  <span 
-                    className="item-artist" 
-                    onClick={() => handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown')}
-                    style={{ cursor: 'pointer', display: 'block', fontSize: '0.85rem', color: '#aaa' }}
-                  >
-                    {item.artistData?.username || item.artist || 'Unknown'}
-                  </span>
-                  
-                  <div className="time_ago" style={{ fontSize: '0.75rem', color: '#888', marginTop: '2px' }}>
-                    {formatTimeAgo(item.createdAt)}
+                  <div className="card-info">
+                    <div className="card-title">{item.title}</div>
+                    <div 
+                      className="card-artist"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown');
+                      }}
+                    >
+                      {item.artistData?.username || item.artist || 'Unknown'}
+                    </div>
+                    {item.createdAt && (
+                      <div className="card-meta">{formatTimeAgo(item.createdAt)}</div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* Popular Artists */}
+          {/* ═══════ POPULAR ARTISTS — untouched ═══════ */}
           <section className={`feed-section artist-cards ${animate ? "animate" : ""}`}>
-            <h2>Popular Artists</h2>
+            <div className="section-header">
+              <h2 className="section-title">Popular Artists</h2>
+            </div>
             <div className="artist-cards-grid">
               {(() => {
                 const artistMap = new Map();
@@ -444,6 +437,7 @@ const Feed = () => {
               })()}
             </div>
           </section>
+
         </main>
       </div>
     </Layout>

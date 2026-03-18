@@ -1,82 +1,65 @@
-// Player.scss
+// Player.scss — 3-column layout matching the new feed aesthetic
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
 
-// Variables
-$bg-black: #000000;
+// ═══════════════════════════════════════
+//  DESIGN TOKENS — matches feed.scss
+// ═══════════════════════════════════════
+$bg-base: #0a0a0c;
+$bg-surface: #111114;
+$bg-elevated: #18181c;
+$bg-hover: #1f1f24;
+
+$border-subtle: rgba(255, 255, 255, 0.06);
+$border-medium: rgba(255, 255, 255, 0.1);
+
+$text-primary: #f0f0f2;
+$text-secondary: rgba(255, 255, 255, 0.55);
+$text-tertiary: rgba(255, 255, 255, 0.35);
+
+$accent: #4ea8f5;
+$accent-hover: #6ab8ff;
+
+// Legacy tokens for expanded view / mobile tray
+$unis-blue: #163387;
+$unis-silver: #918f8f;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
-$unis-blue: #163387;
-$unis-silver: #918f8f; 
 
+$player-height: 80px;
+$radius-sm: 6px;
+
+// ═══════════════════════════════════════
+//  PLAYER SHELL
+// ═══════════════════════════════════════
 .player {
+  --player-bg: #{$bg-surface};
+
   position: fixed;
   bottom: 0;
   left: 0;
-  width: 100vw;
-  background: linear-gradient(to bottom, #1A1A1A, $bg-black);
-  padding: 0 0 10px 0; 
+  right: 0;
+  height: $player-height;
+  background: var(--player-bg);
+  border-top: 1px solid $border-subtle;
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: all 0.3s ease;
   z-index: 1000;
-  border-top: 1px solid rgba($unis-blue, 0.3);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: all 0.3s ease;
 
-  // --- SEEKBAR (Top of player) ---
-  .seekbar {
-    width: 100%;
-    height: 4px; 
-    background: rgba($unis-blue, 0.3);
-    position: relative;
-    margin-bottom: 10px;
-    cursor: pointer;
-    z-index: 1;
-
-    .seekbar-track {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: transparent;
-    }
-
-    .seekbar-progress {
-      height: 100%;
-      background: $unis-blue;
-      transition: width 0.1s linear;
-      position: relative;
-      
-      &::after {
-        content: '';
-        position: absolute;
-        right: -6px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 18px;
-        height: 18px;
-        background: $unis-blue;
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-      }
-    }
-
-    &:hover .seekbar-progress::after {
-      transform: translateY(-50%) scale(1.3);
-      box-shadow: 0 0 8px rgba($unis-blue, 0.6);
-    }
-  }
-
-  // --- MOBILE ACTIONS TRAY ---
+  // ═══════════════════════════════════════
+  //  MOBILE ACTIONS TRAY — preserved
+  // ═══════════════════════════════════════
   .mobile-actions-tray {
     display: none;
     position: absolute;
     bottom: 100%;
     left: 0;
     right: 0;
-    background: linear-gradient(to top, #1A1A1A, #242424);
-    border-top: 1px solid rgba($unis-blue, 0.3);
+    background: linear-gradient(to top, $bg-surface, $bg-elevated);
+    border-top: 1px solid $border-subtle;
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease, padding 0.3s ease;
@@ -102,23 +85,19 @@ $unis-silver: #918f8f;
       border: 1px solid rgba($unis-blue, 0.3);
       border-radius: 8px;
       padding: 10px;
-      color: $text-silver;
+      color: $text-secondary;
       cursor: pointer;
       transition: all 0.2s ease;
 
       &:hover, &:active {
         background: rgba($unis-blue, 0.2);
         border-color: $unis-blue;
-        color: $accent-white;
+        color: $text-primary;
       }
 
       &.liked {
         color: $unis-blue;
         border-color: $unis-blue;
-      }
-
-      .icon {
-        font-size: 20px;
       }
 
       svg {
@@ -138,19 +117,21 @@ $unis-silver: #918f8f;
     }
   }
 
-  // --- MOBILE ACTIONS TOGGLE ---
+  // ═══════════════════════════════════════
+  //  MOBILE ACTIONS TOGGLE
+  // ═══════════════════════════════════════
   .mobile-actions-toggle {
     display: none;
     background: transparent;
     border: none;
-    color: $unis-blue;
+    color: $text-secondary;
     cursor: pointer;
     padding: 5px;
     margin-left: 10px;
-    transition: transform 0.2s ease;
-    z-index: -.99;
+    transition: all 0.2s ease;
 
     &:hover {
+      color: $text-primary;
       transform: scale(1.1);
     }
 
@@ -161,256 +142,336 @@ $unis-silver: #918f8f;
     }
   }
 
-  // --- MINI PLAYER (The Bar) ---
+  // ═══════════════════════════════════════
+  //  3-COLUMN MINI PLAYER
+  // ═══════════════════════════════════════
   .Unis-mini-player {
     display: flex;
     align-items: center;
     width: 100%;
+    height: 100%;
     padding: 0 20px;
-    height: 60px;
-    gap: 15px;
-    position: relative;
 
     @media (max-width: 600px) {
       padding: 0 10px;
-      gap: 8px;
     }
+  }
 
-    .song-info {
-      flex: 1; 
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      overflow: hidden;
+  // --- LEFT: Track info ---
+  .player-track {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 260px;
+    min-width: 200px;
+
+    @media (max-width: 600px) {
+      width: auto;
       min-width: 0;
+      flex: 0 0 auto;
+      max-width: 35%;
+      gap: 10px;
+    }
+  }
 
-      @media (max-width: 600px) {
-        gap: 8px;
-        flex: 0 0 auto;
-        max-width: 35%;
-      }
+  .player-art {
+    width: 50px;
+    height: 50px;
+    border-radius: $radius-sm;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.2s ease;
 
-      .mini-artwork {
-        width: 45px;
-        height: 45px;
-        border-radius: 6px;
-        object-fit: cover;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        flex-shrink: 0;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-
-        &.clickable {
-          cursor: pointer;
-
-          &:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 8px rgba($unis-blue, 0.4);
-          }
-        }
-
-        @media (max-width: 600px) {
-          width: 40px;
-          height: 40px;
-        }
-      }
-
-      .mini-info {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        overflow: hidden;
-        min-width: 0;
-
-        p {
-          margin: 0;
-          font-family: 'Arial', sans-serif;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .mini-title {
-          font-size: 14px;
-          color: $accent-white;
-          font-weight: 600;
-          transition: color 0.2s ease;
-
-          &.clickable {
-            cursor: pointer;
-
-            &:hover {
-              color: $unis-blue;
-            }
-          }
-
-          @media (max-width: 600px) {
-            font-size: 12px;
-          }
-        }
-
-        .mini-artist {
-          font-size: 12px;
-          color: $text-silver;
-          transition: color 0.2s ease;
-
-          &.clickable {
-            cursor: pointer;
-
-            &:hover {
-              color: $unis-blue;
-            }
-          }
-
-          @media (max-width: 600px) {
-            font-size: 10px;
-          }
-        }
-      }
+    &:hover {
+      transform: scale(1.05);
     }
 
-    .mini-controls {
-      flex: 0 0 auto;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 20px;
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      
-      @media (max-width: 600px) {
-        position: static;
-        transform: none;
-        gap: 8px;
-        flex: 1;
-        justify-content: center;
-      }
-      
-      .trackToggle {
-        background-color: transparent;
-        color: $unis-blue;
-        font-size: 24px;
-        border: none;
-        cursor: pointer;
-        transition: transform 0.2s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-        width: 32px;
-        height: 32px;
-
-        &:hover {
-          transform: scale(1.15);
-        }
-
-        @media (max-width: 600px) {
-          font-size: 24px;
-          width: 28px;
-          height: 28px;
-        }
-      }
-      
-      button {
-        background: transparent;
-        border: none;
-        color: $unis-silver;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.2s ease, color 0.2s ease;
-        padding: 0;
-        
-        &:hover {
-          color: $accent-white;
-          transform: scale(1.1);
-        }
-
-        &.play-pause-btn {
-          width: 45px;
-          height: 45px;
-         
-          
-          @media (max-width: 600px) {
-            width: 40px;
-            height: 40px;
-            margin-left: 13px;
-            margin-right: 13px;
-          }
-
-          svg, .unis-play-button-icon, .unis-pause-button-icon {
-            width: 100%;
-            height: 100%;
-            color: $unis-blue;
-          }
-        }
-      }
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
-    .desktop-actions {
-      flex: 0 0 auto;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 20px;
-      padding-right: 8px;
-      min-width: 180px;
+    @media (max-width: 600px) {
+      width: 42px;
+      height: 42px;
+    }
+  }
 
-      @media (max-width: 600px) {
+  .player-track-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .player-track-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: $text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.2s;
+
+    &.clickable {
+      cursor: pointer;
+      &:hover { color: $accent; }
+    }
+
+    @media (max-width: 600px) {
+      font-size: 12px;
+    }
+  }
+
+  .player-track-artist {
+    font-size: 12px;
+    color: $text-secondary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.2s;
+
+    &.clickable {
+      cursor: pointer;
+      &:hover { color: $text-primary; }
+    }
+
+    @media (max-width: 600px) {
+      font-size: 10px;
+    }
+  }
+
+  .player-heart {
+    background: none;
+    border: none;
+    color: $text-tertiary;
+    cursor: pointer;
+    transition: color 0.2s;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+
+    &:hover {
+      color: #e8455f;
+    }
+
+    .liked {
+      color: #e8455f;
+    }
+
+    @media (max-width: 600px) {
+      display: none;
+    }
+  }
+
+  // --- CENTER: Controls + progress ---
+  .player-controls {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    max-width: 600px;
+    margin: 0 auto;
+
+    @media (max-width: 600px) {
+      flex: 1;
+      max-width: none;
+      gap: 4px;
+    }
+  }
+
+  .player-buttons {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+
+    @media (max-width: 600px) {
+      gap: 10px;
+
+      // Hide vote and playlist on mobile (they're in the tray)
+      .player-btn:first-child,
+      .player-btn:last-child {
         display: none;
-      }
-
-      button {
-        background: transparent;
-        border: none;
-        color: $text-gray;
-        font-size: 22px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 8px;
-        border-radius: 50%;
-        width: 42px;
-        height: 42px;
-
-        svg {
-          width: 22px;
-          height: 22px;
-        }
-
-        &:hover {
-          color: $unis-blue;
-          transform: scale(1.15);
-          background: rgba($unis-blue, 0.1);
-        }
-
-        &:active {
-          transform: scale(1.05);
-        }
-      }
-
-      .like-button {
-        &.liked {
-          color: $unis-blue;
-          background: rgba($unis-blue, 0.15);
-          
-          &:hover {
-            background: rgba($unis-blue, 0.2);
-          }
-        }
       }
     }
   }
 
-  // --- EXPANDED PLAYER ---
+  .player-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: $text-secondary;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+
+    &:hover {
+      color: $text-primary;
+      transform: scale(1.1);
+    }
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .player-btn-play {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: $text-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.06);
+      box-shadow: 0 2px 12px rgba(255, 255, 255, 0.2);
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      margin-left: 1px;
+    }
+
+    @media (max-width: 600px) {
+      width: 36px;
+      height: 36px;
+
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+    }
+  }
+
+  .player-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 500px;
+
+    @media (max-width: 600px) {
+      max-width: 100%;
+      gap: 6px;
+    }
+  }
+
+  .player-time {
+    font-size: 11px;
+    color: $text-tertiary;
+    font-variant-numeric: tabular-nums;
+    min-width: 36px;
+    text-align: center;
+
+    @media (max-width: 600px) {
+      font-size: 10px;
+      min-width: 28px;
+    }
+  }
+
+  .progress-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: height 0.15s;
+
+    &:hover {
+      height: 6px;
+
+      .progress-fill::after {
+        content: '';
+        position: absolute;
+        right: -5px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: $accent;
+      }
+    }
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: $accent;
+    border-radius: 2px;
+    position: relative;
+    transition: width 0.1s linear;
+  }
+
+  // --- RIGHT: Volume + actions ---
+  .player-right {
+    width: 260px;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+
+    .player-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    @media (max-width: 600px) {
+      display: none;
+    }
+  }
+
+  .player-volume-icon {
+    flex-shrink: 0;
+  }
+
+  .volume-bar {
+    width: 90px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+    transition: height 0.15s;
+
+    &:hover {
+      height: 6px;
+    }
+  }
+
+  .volume-fill {
+    height: 100%;
+    background: $text-primary;
+    border-radius: 2px;
+    transition: width 0.05s linear;
+  }
+
+  // ═══════════════════════════════════════
+  //  EXPANDED PLAYER — preserved from original
+  // ═══════════════════════════════════════
   &.expanded {
     height: 100vh;
     top: 0;
     padding: 0;
-    background-color: #000; 
+    background-color: #000;
 
     &::before {
       content: '';
@@ -435,7 +496,7 @@ $unis-silver: #918f8f;
 
       .minimize-button {
         position: absolute;
-        top: 20px; 
+        top: 20px;
         left: 20px;
         background: transparent;
         border: none;
@@ -443,13 +504,14 @@ $unis-silver: #918f8f;
         font-size: 24px;
         cursor: pointer;
         z-index: 10;
+        font-family: 'DM Sans', sans-serif;
       }
 
       .media-element {
         width: 100%;
         max-width: 350px;
         aspect-ratio: 1/1;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         border-radius: 12px;
         margin-bottom: 40px;
         background-size: cover;
@@ -462,7 +524,7 @@ $unis-silver: #918f8f;
           max-width: 350px;
           aspect-ratio: 1/1;
           object-fit: cover;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
           border-radius: 12px;
           margin-bottom: 40px;
         }
@@ -471,15 +533,16 @@ $unis-silver: #918f8f;
       .info {
         text-align: center;
         margin-bottom: 30px;
-        
-        h2 { 
-          color: white; 
-          font-size: 24px; 
+
+        h2 {
+          color: white;
+          font-size: 24px;
           margin-bottom: 5px;
+          font-family: 'DM Sans', sans-serif;
         }
-        p { 
-          color: $text-silver; 
-          font-size: 18px; 
+        p {
+          color: $text-silver;
+          font-size: 18px;
         }
       }
 
@@ -489,8 +552,9 @@ $unis-silver: #918f8f;
         width: 100%;
         max-width: 500px;
         margin-bottom: 10px;
-        color: $text-silver;
+        color: $text-secondary;
         font-size: 14px;
+        font-variant-numeric: tabular-nums;
       }
 
       .expanded-seekbar {
@@ -499,7 +563,7 @@ $unis-silver: #918f8f;
         margin-bottom: 30px;
         appearance: none;
         height: 6px;
-        background: rgba($unis-blue, 0.3);
+        background: rgba(255, 255, 255, 0.15);
         cursor: pointer;
         border-radius: 3px;
         outline: none;
@@ -508,7 +572,7 @@ $unis-silver: #918f8f;
           appearance: none;
           width: 16px;
           height: 16px;
-          background: $unis-blue;
+          background: $accent;
           border: 2px solid white;
           border-radius: 50%;
           cursor: pointer;
@@ -523,7 +587,7 @@ $unis-silver: #918f8f;
         &::-moz-range-thumb {
           width: 16px;
           height: 16px;
-          background: $unis-blue;
+          background: $accent;
           border: 2px solid white;
           border-radius: 50%;
           cursor: pointer;
@@ -536,22 +600,23 @@ $unis-silver: #918f8f;
         align-items: center;
         gap: 30px;
         margin-bottom: 20px;
-        
+
         button {
           font-size: 35px;
           background: transparent;
           border: none;
           color: white;
           cursor: pointer;
-          
-          &:hover { 
-            color: $unis-blue; 
+          transition: all 0.2s;
+
+          &:hover {
+            color: $accent;
             transform: scale(1.05);
           }
-          
+
           &.play-pause-btn {
             font-size: 60px;
-            color: $unis-blue;
+            color: $accent;
           }
         }
       }
@@ -563,18 +628,18 @@ $unis-silver: #918f8f;
         button {
           background: transparent;
           border: none;
-          color: $text-gray;
+          color: $text-secondary;
           font-size: 24px;
           cursor: pointer;
           transition: all 0.2s ease;
 
           &:hover {
-            color: $unis-blue;
+            color: $accent;
             transform: scale(1.1);
           }
 
           &.like-button.liked {
-            color: $unis-blue;
+            color: #e8455f;
           }
         }
       }
