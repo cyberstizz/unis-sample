@@ -5,10 +5,79 @@ import { Heart, Headphones, Vote, ChevronUp, ChevronDown } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
 import VotingWizard from './votingWizard'; 
-import UnisPlayButton from './UnisPlayButton';
-import UnisPauseButton from './UnisPauseButton';
 import { apiCall } from './components/axiosInstance';
 import './player.scss';
+
+// ─── Inline SVG icons with guaranteed visibility ───
+// These use inline style to prevent ANY external CSS from overriding fill/dimensions.
+const PlayIcon = ({ size = 24 }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    style={{ width: size, height: size, display: 'block', fill: '#FFFFFF', flexShrink: 0 }}
+  >
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const PauseIcon = ({ size = 24 }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    style={{ width: size, height: size, display: 'block', fill: '#FFFFFF', flexShrink: 0 }}
+  >
+    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+  </svg>
+);
+
+const PrevIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" style={{ width: 18, height: 18, fill: 'currentColor', display: 'block' }}>
+    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+  </svg>
+);
+
+const NextIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" style={{ width: 18, height: 18, fill: 'currentColor', display: 'block' }}>
+    <path d="M16 6h2v12h-2zm-10 0l8.5 6L6 18z"/>
+  </svg>
+);
+
+const PlusIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" style={{ width: 18, height: 18, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="12" y1="5" x2="12" y2="19"/>
+    <line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+);
+
+const DownloadIcon = ({ size = 16 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} style={{ width: size, height: size, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+    <polyline points="7 10 12 15 17 10"/>
+    <line x1="12" y1="15" x2="12" y2="3"/>
+  </svg>
+);
+
+const VolumeIcon = ({ level }) => {
+  if (level === 0) {
+    return (
+      <svg viewBox="0 0 24 24" width="16" height="16" style={{ width: 16, height: 16, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <line x1="23" y1="9" x2="17" y2="15" />
+        <line x1="17" y1="9" x2="23" y2="15" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" style={{ width: 16, height: 16, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+      {level > 0.3 && <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />}
+    </svg>
+  );
+};
+
 
 const Player = () => {
   const { 
@@ -323,26 +392,6 @@ const Player = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Volume icon based on level
-  const VolumeIcon = () => {
-    if (volume === 0) {
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-          <line x1="23" y1="9" x2="17" y2="15" />
-          <line x1="17" y1="9" x2="23" y2="15" />
-        </svg>
-      );
-    }
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-        {volume > 0.3 && <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />}
-      </svg>
-    );
-  };
-
   return (
     <div className={`player ${isExpanded ? 'expanded' : ''}`} style={isExpanded ? { backgroundImage: `url(${currentMedia.artwork || '/assets/placeholder.jpg'})` } : {}}>
       {isVideo ? (
@@ -357,7 +406,6 @@ const Player = () => {
 
       {isExpanded ? (
         <div className="expanded-view">
-
           <button className="minimize-button" onClick={(e) => { e.stopPropagation(); toggleExpand(); }}>Minimize</button>
           <div className="expanded-artwork">
             {!isVideo && <img src={currentMedia.artwork || '/assets/placeholder.jpg'} alt="Artwork" className="expanded-album-art" />}
@@ -373,18 +421,9 @@ const Player = () => {
           <input type="range" value={progress} onChange={handleSeek} className="expanded-seekbar" min="0" max="100" />
           <div className="controls">
             <button onClick={handlePrev}>⏮</button>
-            <button 
-              onClick={handlePlayPause} 
-              className={`player-btn-play is-expanded-btn ${isPlaying ? 'is-playing' : ''}`}
-            >
-              <svg className="play-icon" viewBox="0 0 24 24" width="32" height="32">
-                <path d="M8 5v14l11-7z" fill="#FFFFFF" />
-              </svg>
-              <svg className="pause-icon" viewBox="0 0 24 24" width="32" height="32">
-                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="#FFFFFF" />
-              </svg>
+            <button className="player-btn-play" onClick={handlePlayPause} title={isPlaying ? 'Pause' : 'Play'}>
+              {isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
             </button>
-
             <button onClick={handleNext}>⏭</button>
           </div>
           <div className="expanded-actions">
@@ -392,7 +431,7 @@ const Player = () => {
               <Heart fill={isLiked ? "white" : "none"} />
             </button>
             <button onClick={handleVoteClick}>
-                <Vote size={24} />
+              <Vote size={24} />
             </button>
             <button onClick={handleDownload}>⬇</button>
           </div>
@@ -438,29 +477,23 @@ const Player = () => {
                   <Vote size={18} />
                 </button>
                 <button className="player-btn" onClick={handlePrev} title="Previous">
-                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                  <PrevIcon />
                 </button>
+
+                {/* ─── THE PLAY/PAUSE BUTTON ─── */}
                 <button 
-                  className={`player-btn-play ${isPlaying ? 'is-playing' : ''}`} 
+                  className="player-btn-play" 
                   onClick={handlePlayPause} 
                   title={isPlaying ? 'Pause' : 'Play'}
                 >
-                  {/* Play Icon */}
-                  <svg className="play-icon" viewBox="0 0 24 24" width="24" height="24">
-                    <path d="M8 5v14l11-7z" fill="#FFFFFF" />
-                  </svg>
-                  
-                  {/* Pause Icon */}
-                  <svg className="pause-icon" viewBox="0 0 24 24" width="24" height="24">
-                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="#FFFFFF" />
-                  </svg>
+                  {isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
                 </button>
 
                 <button className="player-btn" onClick={handleNext} title="Next">
-                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zm-10 0l8.5 6L6 18z"/></svg>
+                  <NextIcon />
                 </button>
                 <button className="player-btn" onClick={() => setShowPlaylistWizard(true)} title="Add to playlist">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <PlusIcon />
                 </button>
               </div>
               <div className="player-progress">
@@ -475,10 +508,10 @@ const Player = () => {
             {/* RIGHT — Volume + actions */}
             <div className="player-right">
               <button className="player-btn" onClick={handleDownload} title="Download">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <DownloadIcon />
               </button>
               <button className="player-btn player-volume-icon" title="Volume" onClick={() => setVolume(volume === 0 ? 0.7 : 0)}>
-                <VolumeIcon />
+                <VolumeIcon level={volume} />
               </button>
               <div className="volume-bar" onClick={handleVolumeChange}>
                 <div className="volume-fill" style={{ width: `${volume * 100}%` }} />

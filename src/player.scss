@@ -57,7 +57,7 @@ $radius-sm: 6px;
   transition: all 0.3s ease;
 
   // ═══════════════════════════════════════
-  //  MOBILE ACTIONS TRAY — preserved
+  //  MOBILE ACTIONS TRAY
   // ═══════════════════════════════════════
   .mobile-actions-tray {
     display: none;
@@ -332,45 +332,53 @@ $radius-sm: 6px;
     }
   }
 
-// 2. The Updated Play Button
-.player-btn-play {
-  width: 50px !important;
-  height: 50px !important;
-  border-radius: 50% !important;
-  background-color: #163387 !important; // Unis Blue
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-  position: relative;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s ease;
+  // ─── THE PLAY/PAUSE BUTTON ───
+  // This is intentionally high-specificity to prevent any global
+  // SVG rule from eating the icon.
+  .player-btn-play {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: $unis-blue;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    padding: 0;
+    overflow: visible;
+    flex-shrink: 0;
 
-  &:hover { transform: scale(1.05); }
-  &:active { transform: scale(0.95); }
+    &:hover {
+      transform: scale(1.05);
+      background-color: #1c41ad;
+    }
 
-  // This part is the "Force-Show" logic for the icons
-  svg {
-    width: 24px !important;   // Force size
-    height: 24px !important;  // Force size
-    fill: #FFFFFF !important; // Force white color
-    display: block;           // Ensure it's not hidden by default
-    
-    path {
-      fill: #FFFFFF !important; // Some SVGs need the path targeted directly
+    &:active {
+      transform: scale(0.95);
+    }
+
+    // Nuclear specificity: guarantee the SVG inside is visible
+    svg {
+      width: 24px !important;
+      height: 24px !important;
+      display: block !important;
+      fill: #FFFFFF !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      overflow: visible !important;
+      flex-shrink: 0;
+      pointer-events: none;
+
+      path {
+        fill: #FFFFFF !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
     }
   }
-
-  // Handle the toggle
-  .pause-icon { display: none !important; }
-  .play-icon  { display: block !important; margin-left: 2px; }
-
-  &.is-playing {
-    .play-icon  { display: none !important; }
-    .pause-icon { display: block !important; margin-left: 0; }
-  }
-}
 
   .player-progress {
     display: flex;
@@ -478,7 +486,7 @@ $radius-sm: 6px;
   }
 
   // ═══════════════════════════════════════
-  //  EXPANDED PLAYER — preserved from original
+  //  EXPANDED PLAYER
   // ═══════════════════════════════════════
   &.expanded {
     height: 100vh;
