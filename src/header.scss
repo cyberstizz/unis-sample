@@ -75,6 +75,13 @@ $header-height: 75px;
   }
 }
 
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 // ─── SEARCH BAR ─────────────────────────────────────────────────
 // True-centered between logo and nav via flex wrapper
 .header-center {

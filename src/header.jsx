@@ -120,14 +120,21 @@ const Header = () => {
 
           {/* User Avatar / Menu */}
           <div className="header-user" ref={menuRef}>
-            <button
-              className="user-avatar"
-              onClick={() => setUserMenuOpen(!userMenuOpen)}
-              aria-label="User menu"
-            >
+          <button
+            className="user-avatar"
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            aria-label="User menu"
+          >
+            {user?.profileImage ? (
+              <img
+                src={user.profileImage}
+                alt="User avatar"
+                className="avatar-image"
+              />
+            ) : (
               <span className="avatar-initial">{getInitial()}</span>
-            </button>
-
+            )}
+          </button>
             {userMenuOpen && (
               <div className="user-dropdown">
                 {user && (
