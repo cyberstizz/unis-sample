@@ -21,6 +21,18 @@ import songArtEleven from './assets/rapperphotoOne.jpg';
 import { JURISDICTION_NAMES } from './utils/idMappings';
 import './feed.scss';
 
+// ─── Inline-styled play icon — immune to CSS overrides ───
+const CardPlayIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    width="18"
+    height="18"
+    style={{ width: 18, height: 18, display: 'block', marginLeft: 2 }}
+  >
+    <polygon points="5,3 19,12 5,21" style={{ fill: '#ffffff' }} />
+  </svg>
+);
+
 const Feed = () => {
   const { playMedia } = useContext(PlayerContext);
   const { user } = useAuth();
@@ -37,7 +49,6 @@ const Feed = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-  // Read directly from AuthContext — no JWT decode, no profile re-fetch
   const userId = user?.userId;
   const jurisdictionId = user?.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002';
 
@@ -46,19 +57,15 @@ const Feed = () => {
     const cleaned = url.trim();
     if (!cleaned) return '';
 
-    // Fix private R2 URLs → rewrite to public CDN
     if (cleaned.includes('r2.cloudflarestorage.com')) {
       const uploadsIndex = cleaned.indexOf('/uploads/');
       if (uploadsIndex !== -1) {
-        const path = cleaned.slice(uploadsIndex); // "/uploads/filename.mp3"
+        const path = cleaned.slice(uploadsIndex);
         return `https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev${path}`;
       }
     }
 
-    // Already a full public URL
     if (cleaned.startsWith('http')) return cleaned;
-
-    // Relative path → prepend API base
     return `${API_BASE_URL}${cleaned}`;
   };
 
@@ -93,8 +100,6 @@ const Feed = () => {
     return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
   };
 
-  // Single useEffect — fires all 6 API calls in parallel on mount
-  // No waterfall, no profile re-fetch, no JWT decode
   useEffect(() => {
     setAnimate(true);
 
@@ -323,7 +328,7 @@ const Feed = () => {
                       <span className="card-explicit">E</span>
                     )}
                     <button className="card-play" onClick={(e) => handlePlayMedia(e, item)}>
-                      <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" /></svg>
+                      <CardPlayIcon />
                     </button>
                   </div>
                   <div className="card-info">
@@ -373,7 +378,7 @@ const Feed = () => {
                       <span className="card-explicit">E</span>
                     )}
                     <button className="card-play" onClick={(e) => handlePlayMedia(e, item)}>
-                      <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" /></svg>
+                      <CardPlayIcon />
                     </button>
                   </div>
                   <div className="card-info">

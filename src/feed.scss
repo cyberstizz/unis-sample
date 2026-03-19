@@ -259,7 +259,6 @@ $text-gray: #A9A9A9;
 .feed-section {
   margin-bottom: 40px;
 
-  // Animate section titles on mount
   .section-title {
     opacity: 0;
   }
@@ -373,7 +372,7 @@ $text-gray: #A9A9A9;
   }
 }
 
-// Play button overlay
+// Play button overlay — with nuclear SVG visibility rules
 .card-play {
   position: absolute;
   bottom: 10px;
@@ -392,12 +391,28 @@ $text-gray: #A9A9A9;
   border: none;
   cursor: pointer;
   z-index: 2;
+  padding: 0;
+  overflow: visible;
 
+  // Nuclear specificity: guarantee the SVG play triangle is visible
   svg {
-    width: 18px;
-    height: 18px;
-    fill: white;
+    width: 18px !important;
+    height: 18px !important;
+    display: block !important;
+    fill: #FFFFFF !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    overflow: visible !important;
     margin-left: 2px;
+    flex-shrink: 0;
+    pointer-events: none;
+
+    polygon,
+    path {
+      fill: #FFFFFF !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
   }
 
   &:hover {
@@ -677,8 +692,8 @@ $text-gray: #A9A9A9;
     height: 36px;
 
     svg {
-      width: 14px;
-      height: 14px;
+      width: 14px !important;
+      height: 14px !important;
     }
   }
 
