@@ -16,7 +16,7 @@ $text-primary: #f0f0f2;
 $text-secondary: rgba(255, 255, 255, 0.55);
 $text-tertiary: rgba(255, 255, 255, 0.35);
 
-$accent: #4ea8f5;
+$accent: #163387;
 $accent-hover: #6ab8ff;
 
 // Legacy tokens for expanded view / mobile tray
@@ -480,7 +480,7 @@ $radius-sm: 6px;
 
   .volume-fill {
     height: 100%;
-    background: $text-primary;
+    background: $unis-blue;
     border-radius: 2px;
     transition: width 0.05s linear;
   }
