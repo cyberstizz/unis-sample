@@ -6,6 +6,10 @@ $bg-dark: #1A1A1A;
 $unis-blue: #163387;
 $unis-silver: #918f8f;
 
+// ─── MATCH HEADER HEIGHT ─────────────────────────────────────────
+// Header is now 88px fixed. Sidebar starts right below it.
+$header-height: 88px;
+
 .sidebar-icon {
   display: inline-block;
   width: 25px;
@@ -61,8 +65,8 @@ $unis-silver: #918f8f;
   font-weight: normal;
   font-style: normal;
   font-variation-settings: "slnt" 0, "CRSV" 0.5, "ELSH" 0, "ELXP" 0;
-  top: 11vh;
-  height: calc(100vh - 11vh);
+  top: $header-height;                          // ← changed from 11vh
+  height: calc(100vh - #{$header-height});      // ← changed from calc(100vh - 11vh)
   left: 0;
   width: 250px;
   background: black;
@@ -71,7 +75,6 @@ $unis-silver: #918f8f;
   transition: transform 0.3s ease-in-out;
   border-right: 0.5px solid silver;
 
-  // Desktop: always visible, never translated
   transform: translateX(0);
 
   ul {
@@ -145,6 +148,8 @@ $unis-silver: #918f8f;
 // Mobile: transparent shell
 @media (max-width: 768px) {
   .sidebar {
+    top: 72px;                          // matches mobile header height
+    height: calc(100vh - 72px);
     border-right-color: transparent;
     background: transparent;
 

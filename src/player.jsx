@@ -357,6 +357,7 @@ const Player = () => {
 
       {isExpanded ? (
         <div className="expanded-view">
+
           <button className="minimize-button" onClick={(e) => { e.stopPropagation(); toggleExpand(); }}>Minimize</button>
           <div className="expanded-artwork">
             {!isVideo && <img src={currentMedia.artwork || '/assets/placeholder.jpg'} alt="Artwork" className="expanded-album-art" />}
@@ -372,7 +373,18 @@ const Player = () => {
           <input type="range" value={progress} onChange={handleSeek} className="expanded-seekbar" min="0" max="100" />
           <div className="controls">
             <button onClick={handlePrev}>⏮</button>
-            <button onClick={handlePlayPause} className="play-pause-btn">{isPlaying ? <UnisPauseButton /> : <UnisPlayButton />}</button>
+            <button 
+              onClick={handlePlayPause} 
+              className={`player-btn-play is-expanded-btn ${isPlaying ? 'is-playing' : ''}`}
+            >
+              <svg className="play-icon" viewBox="0 0 24 24" width="32" height="32">
+                <path d="M8 5v14l11-7z" fill="#FFFFFF" />
+              </svg>
+              <svg className="pause-icon" viewBox="0 0 24 24" width="32" height="32">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="#FFFFFF" />
+              </svg>
+            </button>
+
             <button onClick={handleNext}>⏭</button>
           </div>
           <div className="expanded-actions">
@@ -428,13 +440,22 @@ const Player = () => {
                 <button className="player-btn" onClick={handlePrev} title="Previous">
                   <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                 </button>
-                <button className="player-btn-play" onClick={handlePlayPause} title={isPlaying ? 'Pause' : 'Play'}>
-                  {isPlaying ? (
-                    <svg viewBox="0 0 24 24" fill="var(--player-bg)"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" fill="var(--player-bg)"><polygon points="5,3 19,12 5,21"/></svg>
-                  )}
+                <button 
+                  className={`player-btn-play ${isPlaying ? 'is-playing' : ''}`} 
+                  onClick={handlePlayPause} 
+                  title={isPlaying ? 'Pause' : 'Play'}
+                >
+                  {/* Play Icon */}
+                  <svg className="play-icon" viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M8 5v14l11-7z" fill="#FFFFFF" />
+                  </svg>
+                  
+                  {/* Pause Icon */}
+                  <svg className="pause-icon" viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="#FFFFFF" />
+                  </svg>
                 </button>
+
                 <button className="player-btn" onClick={handleNext} title="Next">
                   <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zm-10 0l8.5 6L6 18z"/></svg>
                 </button>
