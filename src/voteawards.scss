@@ -177,6 +177,31 @@ $green-badge: #22c55e;
   margin-bottom: 6px;
 }
 
+.va-live-badge {
+  color: #22c55e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+.va-live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  margin-right: 4px;
+  vertical-align: middle;
+  animation: va-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes va-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
 .va-headline {
   font-family: 'DM Sans', sans-serif;
   font-size: 34px;

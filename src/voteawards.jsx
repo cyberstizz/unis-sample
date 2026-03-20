@@ -321,8 +321,7 @@ const VoteAwards = () => {
         {/* ── Hero headline + countdown ── */}
         <div className="va-hero">
           <div className="va-hero-text">
-            <span className="va-active-poll">Active poll</span>
-            <h1 className="va-headline">
+          <span className="va-active-poll">Active poll <span className="va-live-badge"><span className="va-live-dot" />LIVE</span></span>            <h1 className="va-headline">
               {genreLabel} {typeLabel}{' '}
               <span className="va-headline-accent">of the {intervalLabel}</span>
               <br />
