@@ -1,10 +1,10 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { PlayerContext } from './context/playercontext'; 
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { useAuth } from './context/AuthContext';
-import Layout from './layout';
 import { buildUrl } from './utils/buildUrl';
+import Layout from './layout';
 import ArtistCard from './artistCard';
 import randomRapper from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
@@ -23,7 +23,7 @@ import { JURISDICTION_NAMES } from './utils/idMappings';
 import LastWonNotification from './LastWonNotification';
 import './feed.scss';
 
-// ─── Inline-styled play icon — immune to CSS overrides ───
+// ─── Inline-styled play icon ───
 const CardPlayIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -34,6 +34,13 @@ const CardPlayIcon = () => (
     <polygon points="5,3 19,12 5,21" style={{ fill: '#ffffff' }} />
   </svg>
 );
+
+// ─── Active jurisdictions (matches backend hardcoded list) ───
+const ACTIVE_JURISDICTIONS = [
+  { id: '1cf6ceb1-aae6-4113-98c0-d9fe8ad8b5e3', name: 'Harlem' },
+  { id: '52740de0-e4e9-4c9e-b68e-1e170f6788c4', name: 'Uptown Harlem' },
+  { id: '4b09eaa2-03bc-4778-b7c2-db8b42c9e732', name: 'Downtown Harlem' },
+];
 
 const Feed = () => {
   const { playMedia } = useContext(PlayerContext);
@@ -48,8 +55,23 @@ const Feed = () => {
   const [popularArtists, setPopularArtists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
   const userId = user?.userId;
-  const jurisdictionId = user?.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002';
+  const userJurisdictionId = user?.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002';
+
+  // ─── Jurisdiction selector state ───
+  const [selectedJurisdictionId, setSelectedJurisdictionId] = useState(userJurisdictionId);
+
+  // Update selected jurisdiction when user data loads
+  useEffect(() => {
+    if (userJurisdictionId) {
+      setSelectedJurisdictionId(userJurisdictionId);
+    }
+  }, [userJurisdictionId]);
+
+  const selectedJurisdictionName = ACTIVE_JURISDICTIONS.find(
+    (j) => j.id === selectedJurisdictionId
+  )?.name || 'Your Area';
 
   const formatDuration = (ms) => {
     if (!ms) return '';
@@ -61,7 +83,6 @@ const Feed = () => {
 
   const formatTimeAgo = (dateString) => {
     if (!dateString) return '';
-    
     const now = new Date();
     const past = new Date(dateString);
     const diffMs = now - past;
@@ -82,42 +103,44 @@ const Feed = () => {
     return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
   };
 
+  const normalizeMedia = useCallback((items) => (items || []).map(item => ({
+    id: item.songId || item.videoId,
+    title: item.title,
+    artist: item.artist?.username || 'Unknown',
+    artistData: item.artist || { userId: 'unknown', username: 'Unknown' },
+    artworkUrl: buildUrl(item.artworkUrl),
+    mediaUrl: buildUrl(item.fileUrl),
+    url: buildUrl(item.fileUrl),
+    artwork: buildUrl(item.artworkUrl),
+    type: item.songId ? 'song' : 'video',
+    score: item.score || 0,
+    artistId: item.artist?.userId || 'unknown',
+    duration: item.duration || null,
+    createdAt: item.createdAt || null,
+    explicit: item.explicit || false,
+    playsToday: item.playsToday || 0,
+    playCount: item.playCount || 0
+  })), []);
+
+  // Fetch feed data — fires on mount AND when jurisdiction changes
   useEffect(() => {
     setAnimate(true);
-
-    if (!userId || !jurisdictionId) return;
+    if (!userId || !selectedJurisdictionId) return;
 
     const fetchMediaData = async () => {
       setLoading(true);
       setError('');
       try {
-        const [trendingTodayRes, topRatedRes, newRes, songAwardsRes, artistAwardsRes, popularRes] = await Promise.all([
-          apiCall({ method: 'get', url: `/v1/media/trending/today?jurisdictionId=${jurisdictionId}&limit=10` }),
-          apiCall({ method: 'get', url: `/v1/media/trending?jurisdictionId=${jurisdictionId}&limit=5` }),
-          apiCall({ method: 'get', url: `/v1/media/new?jurisdictionId=${jurisdictionId}&limit=5` }),
-          apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=song&jurisdictionId=${jurisdictionId}` }),
-          apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=artist&jurisdictionId=${jurisdictionId}` }),
-          apiCall({ method: 'get', url: `/v1/users/artist/top?jurisdictionId=${jurisdictionId}&limit=5` })
-        ]);
+        const jId = selectedJurisdictionId;
 
-        const normalizeMedia = (items) => (items || []).map(item => ({
-          id: item.songId || item.videoId,
-          title: item.title,
-          artist: item.artist?.username || 'Unknown',
-          artistData: item.artist || { userId: 'unknown', username: 'Unknown' },
-          artworkUrl: buildUrl(item.artworkUrl),
-          mediaUrl: buildUrl(item.fileUrl),
-          url: buildUrl(item.fileUrl),
-          artwork: buildUrl(item.artworkUrl),
-          type: item.songId ? 'song' : 'video',
-          score: item.score || 0,
-          artistId: item.artist?.userId || 'unknown',
-          duration: item.duration || null,
-          createdAt: item.createdAt || null,
-          explicit: item.explicit || false,
-          playsToday: item.playsToday || 0,
-          playCount: item.playCount || 0
-        }));
+        const [trendingTodayRes, topRatedRes, newRes, songAwardsRes, artistAwardsRes, popularRes] = await Promise.all([
+          apiCall({ method: 'get', url: `/v1/media/trending/today?jurisdictionId=${jId}&limit=10` }),
+          apiCall({ method: 'get', url: `/v1/media/trending?jurisdictionId=${jId}&limit=5` }),
+          apiCall({ method: 'get', url: `/v1/media/new?jurisdictionId=${jId}&limit=5` }),
+          apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=song&jurisdictionId=${jId}` }),
+          apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=artist&jurisdictionId=${jId}` }),
+          apiCall({ method: 'get', url: `/v1/users/artist/top?jurisdictionId=${jId}&limit=5` })
+        ]);
 
         setTrendingToday(normalizeMedia(trendingTodayRes.data || []));
         setTopRated(normalizeMedia(topRatedRes.data || []));
@@ -153,7 +176,7 @@ const Feed = () => {
     };
 
     fetchMediaData();
-  }, [userId, jurisdictionId]);
+  }, [userId, selectedJurisdictionId, normalizeMedia]);
 
   const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
   const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
@@ -198,6 +221,27 @@ const Feed = () => {
     const playlist = [playMediaObj, ...newMedia.slice(0, 2).filter(m => m.id !== playMediaObj.id)];
     playMedia(playMediaObj, playlist);
   };
+
+  const handleJurisdictionChange = (e) => {
+    setSelectedJurisdictionId(e.target.value);
+  };
+
+  // ─── Ghost jurisdiction dropdown component ───
+  const JurisdictionSelect = () => (
+    <span className="ghost-select-wrapper">
+      <select
+        className="ghost-select"
+        value={selectedJurisdictionId}
+        onChange={handleJurisdictionChange}
+      >
+        {ACTIVE_JURISDICTIONS.map((j) => (
+          <option key={j.id} value={j.id}>{j.name}</option>
+        ))}
+      </select>
+      <span className="ghost-select-label">{selectedJurisdictionName}</span>
+      <span className="ghost-select-arrow">&#9662;</span>
+    </span>
+  );
 
 
   // Dummies (keep for fallback)
@@ -269,7 +313,7 @@ const Feed = () => {
               <div className="hero-particle hero-particle--3" />
             </div>
             <div className="hero-content">
-              <span className="hero-label">Featured in {getJurisdictionDisplayName(jurisdictionId)}</span>
+              <span className="hero-label">Featured in {selectedJurisdictionName}</span>
               <h1 className="hero-title">Vote for This Week's Top Track</h1>
               <p className="hero-subtitle">
                 Your vote decides who tops the neighborhood leaderboard. Listen, discover, and support local artists.
@@ -286,7 +330,9 @@ const Feed = () => {
           {/* ═══════ TRENDING TODAY ═══════ */}
           <section className={`feed-section ${animate ? 'animate' : ''}`}>
             <div className="section-header">
-              <h2 className="section-title">Trending Today</h2>
+              <h2 className="section-title">
+                Trending Today in <JurisdictionSelect />
+              </h2>
               <span className="section-see-all" onClick={() => navigate('/findpage')}>Show all</span>
             </div>
             <div className="card-row">
@@ -336,7 +382,9 @@ const Feed = () => {
           {/* ═══════ NEW RELEASES ═══════ */}
           <section className={`feed-section ${animate ? 'animate' : ''}`}>
             <div className="section-header">
-              <h2 className="section-title">New Releases</h2>
+              <h2 className="section-title">
+                New Releases
+              </h2>
               <span className="section-see-all" onClick={() => navigate('/findpage')}>Show all</span>
             </div>
             <div className="card-row">
@@ -383,10 +431,12 @@ const Feed = () => {
             </div>
           </section>
 
-          {/* ═══════ POPULAR ARTISTS — untouched ═══════ */}
+          {/* ═══════ POPULAR ARTISTS ═══════ */}
           <section className={`feed-section artist-cards ${animate ? "animate" : ""}`}>
             <div className="section-header">
-              <h2 className="section-title">Popular Artists</h2>
+              <h2 className="section-title">
+                Popular Artists 
+              </h2>
             </div>
             <div className="artist-cards-grid">
               {(() => {
@@ -401,7 +451,7 @@ const Feed = () => {
                       photoUrl: encodeURI(media.artistData.photoUrl),
                       jurisdictionId: media.artistData.jurisdiction?.jurisdictionId,
                       jurisdictionName: getJurisdictionDisplayName(
-                        media.artistData.jurisdiction?.jurisdictionId || jurisdictionId
+                        media.artistData.jurisdiction?.jurisdictionId || selectedJurisdictionId
                       ),
                       score: media.artistData.score || 0
                     });
@@ -427,8 +477,8 @@ const Feed = () => {
 
         </main>
       </div>
-      <LastWonNotification />
 
+      <LastWonNotification />
     </Layout>
   );
 };

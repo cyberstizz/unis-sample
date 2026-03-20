@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 // ═══════════════════════════════════════
-//  DESIGN TOKENS — layered darks like Spotify/TIDAL
+//  DESIGN TOKENS
 // ═══════════════════════════════════════
 $bg-base: #0a0a0c;
 $bg-surface: #111114;
@@ -29,7 +29,6 @@ $radius-xl: 20px;
 
 $shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.05);
 
-// Keep these for the artist-cards section which is untouched
 $bg-black: #000000;
 $unis-blue: #163387;
 $unis-silver: #918f8f;
@@ -44,14 +43,8 @@ $text-gray: #A9A9A9;
 //  ANIMATIONS
 // ═══════════════════════════════════════
 @keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes float {
@@ -116,12 +109,69 @@ $text-gray: #A9A9A9;
   margin-bottom: 20px;
 }
 
-// ═══════════════════════════════════════
-//  FEED MAIN
-// ═══════════════════════════════════════
 .feed {
   width: 100%;
   padding: 0;
+}
+
+// ═══════════════════════════════════════
+//  GHOST JURISDICTION SELECT
+//  Looks like plain text. Reveals as interactive on hover.
+// ═══════════════════════════════════════
+.ghost-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin: 0 -6px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  border: 1px solid transparent;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+
+    .ghost-select-arrow {
+      opacity: 0.6;
+    }
+  }
+}
+
+.ghost-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px; // prevents iOS zoom
+  z-index: 2;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: none;
+  background: none;
+}
+
+.ghost-select-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.1rem;
+  font-weight: inherit;
+  color: white;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.ghost-select-arrow {
+  margin-left: 4px;
+  font-size: 10px;
+  color: $accent;
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  line-height: 1;
 }
 
 // ═══════════════════════════════════════
@@ -267,17 +317,9 @@ $text-gray: #A9A9A9;
     animation: fadeUp 0.5s ease forwards;
   }
 
-  &.animate:nth-of-type(2) .section-title {
-    animation-delay: 0.1s;
-  }
-
-  &.animate:nth-of-type(3) .section-title {
-    animation-delay: 0.2s;
-  }
-
-  &.animate:nth-of-type(4) .section-title {
-    animation-delay: 0.3s;
-  }
+  &.animate:nth-of-type(2) .section-title { animation-delay: 0.1s; }
+  &.animate:nth-of-type(3) .section-title { animation-delay: 0.2s; }
+  &.animate:nth-of-type(4) .section-title { animation-delay: 0.3s; }
 }
 
 .section-header {
@@ -303,6 +345,7 @@ $text-gray: #A9A9A9;
   cursor: pointer;
   transition: color 0.2s;
   text-decoration: none;
+  flex-shrink: 0;
 
   &:hover {
     color: $text-primary;
@@ -310,7 +353,7 @@ $text-gray: #A9A9A9;
 }
 
 // ═══════════════════════════════════════
-//  CARD ROW — Horizontal scroll
+//  CARD ROW
 // ═══════════════════════════════════════
 .card-row {
   display: flex;
@@ -372,7 +415,6 @@ $text-gray: #A9A9A9;
   }
 }
 
-// Play button overlay — with nuclear SVG visibility rules
 .card-play {
   position: absolute;
   bottom: 10px;
@@ -394,7 +436,6 @@ $text-gray: #A9A9A9;
   padding: 0;
   overflow: visible;
 
-  // Nuclear specificity: guarantee the SVG play triangle is visible
   svg {
     width: 18px !important;
     height: 18px !important;
@@ -407,8 +448,7 @@ $text-gray: #A9A9A9;
     flex-shrink: 0;
     pointer-events: none;
 
-    polygon,
-    path {
+    polygon, path {
       fill: #FFFFFF !important;
       opacity: 1 !important;
       visibility: visible !important;
@@ -421,7 +461,6 @@ $text-gray: #A9A9A9;
   }
 }
 
-// Duration badge
 .card-duration {
   position: absolute;
   bottom: 10px;
@@ -437,7 +476,6 @@ $text-gray: #A9A9A9;
   z-index: 2;
 }
 
-// Explicit badge
 .card-explicit {
   position: absolute;
   top: 10px;
@@ -491,7 +529,7 @@ $text-gray: #A9A9A9;
 }
 
 // ═══════════════════════════════════════
-//  ARTIST CARDS — PRESERVED AS-IS
+//  ARTIST CARDS — PRESERVED
 // ═══════════════════════════════════════
 .feed-section.artist-cards {
   .artist-cards-grid {
@@ -534,13 +572,7 @@ $text-gray: #A9A9A9;
       .artist-card-overlay {
         position: absolute;
         inset: 0;
-        background: linear-gradient(
-          to right,
-          transparent 0%,
-          transparent 40%,
-          rgba(26, 26, 26, 0.4) 70%,
-          rgba(26, 26, 26, 0.9) 100%
-        );
+        background: linear-gradient(to right, transparent 0%, transparent 40%, rgba(26, 26, 26, 0.4) 70%, rgba(26, 26, 26, 0.9) 100%);
       }
     }
 
@@ -554,61 +586,12 @@ $text-gray: #A9A9A9;
       border-left: 2px solid rgba(22, 51, 135, 0.3);
     }
 
-    .artist-card-details {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    .artist-card-name {
-      font-size: 14px;
-      font-weight: 700;
-      color: $accent-white;
-      margin: 0;
-      line-height: 1.2;
-      letter-spacing: 0.3px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-    }
-
-    .artist-card-location {
-      font-size: 7px;
-      color: $text-gray;
-      margin: 0;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .artist-card-view-btn {
-      width: 100%;
-      padding: 8px 12px;
-      background: transparent;
-      border: 2px solid $unis-blue;
-      color: $unis-blue;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      transform: translateX(-2px);
-
-      &:hover {
-        transform: translateX(0) translateY(-1px);
-        box-shadow: 0 2px 8px rgba(22, 51, 135, 0.4);
-      }
-      &:active {
-        transform: translateX(0) translateY(0);
-      }
+    .artist-card-details { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+    .artist-card-name { font-size: 14px; font-weight: 700; color: $accent-white; margin: 0; line-height: 1.2; letter-spacing: 0.3px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .artist-card-location { font-size: 7px; color: $text-gray; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .artist-card-view-btn { width: 100%; padding: 8px 12px; background: transparent; border: 2px solid $unis-blue; color: $unis-blue; border-radius: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); transform: translateX(-2px);
+      &:hover { transform: translateX(0) translateY(-1px); box-shadow: 0 2px 8px rgba(22, 51, 135, 0.4); }
+      &:active { transform: translateX(0) translateY(0); }
     }
   }
 
@@ -640,6 +623,7 @@ $text-gray: #A9A9A9;
 @media (max-width: 600px) {
   .feed-content-wrapper {
     padding: 16px 16px 32px;
+    padding-top: 2px;
   }
 
   .hero-banner {
@@ -703,5 +687,10 @@ $text-gray: #A9A9A9;
 
   .card-artist {
     font-size: 12px;
+  }
+
+  .section-header {
+    flex-wrap: wrap;
+    gap: 4px;
   }
 }
