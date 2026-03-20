@@ -5,6 +5,7 @@ import { apiCall } from './components/axiosInstance';
 import { buildUrl } from './utils/buildUrl';
 import { useAuth } from './context/AuthContext';
 import { INTERVAL_IDS } from './utils/idMappings';
+import unisLogo from './assets/unisLogoThree.svg';
 import './lastWonNotification.scss';
 
 const DISPLAY_DURATION = 5000;
@@ -272,7 +273,7 @@ const LastWonNotification = () => {
           <div className="lwn-left">
             <div className="lwn-left-top">
               <div className="lwn-top-row">
-                <div className="lwn-logo">UNIS</div>
+                <unisLogo />
               </div>
 
               <div className={`lwn-tag ${cat.badgeClass}`}>
