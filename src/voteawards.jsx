@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
@@ -7,13 +7,15 @@ import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import VotingWizard from './votingWizard';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
-import { Trophy, Play } from 'lucide-react';
+import { Trophy, Play, Search, X } from 'lucide-react';
 import { buildUrl } from './utils/buildUrl';
 
 const VoteAwards = () => {
   const navigate = useNavigate();
   const { playMedia } = useContext(PlayerContext);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef(null);
   const [selectedGenre, setSelectedGenre] = useState('rap');
   const [selectedType, setSelectedType] = useState('artist');
   const [selectedInterval, setSelectedInterval] = useState('daily');
@@ -24,15 +26,15 @@ const VoteAwards = () => {
   const [showVotingWizard, setShowVotingWizard] = useState(false);
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [userId, setUserId] = useState(null);
-
+  const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
 
   const intervals = [
-  { value: 'daily', label: 'Day' },
-  { value: 'weekly', label: 'Week' },
-  { value: 'monthly', label: 'Month' },
-  { value: 'quarterly', label: 'Quarter' },
-  { value: 'annual', label: 'Year' },
-];
+    { value: 'daily', label: 'Day' },
+    { value: 'weekly', label: 'Week' },
+    { value: 'monthly', label: 'Month' },
+    { value: 'quarterly', label: 'Quarter' },
+    { value: 'annual', label: 'Year' },
+  ];
   const genres = ['rap', 'rock', 'pop'];
   const types = ['artist', 'song'];
   const jurisdictions = [
@@ -40,6 +42,39 @@ const VoteAwards = () => {
     { value: 'downtown-harlem', label: 'Downtown Harlem' },
     { value: 'harlem', label: 'Harlem' },
   ];
+
+  // Countdown timer — resets at midnight EST daily
+  useEffect(() => {
+    const calcTimeLeft = () => {
+      const now = new Date();
+      // Get current time in EST
+      const estString = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
+      const estNow = new Date(estString);
+      
+      // Next midnight EST
+      const nextMidnight = new Date(estString);
+      nextMidnight.setDate(nextMidnight.getDate() + 1);
+      nextMidnight.setHours(0, 0, 0, 0);
+      
+      const diff = nextMidnight - estNow;
+      return {
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
+        seconds: Math.floor((diff / 1000) % 60),
+      };
+    };
+
+    setCountdown(calcTimeLeft());
+    const timer = setInterval(() => setCountdown(calcTimeLeft()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Focus search input when opened
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchOpen]);
 
   // Get userId on mount
   useEffect(() => {
@@ -74,11 +109,8 @@ const VoteAwards = () => {
         url: `/v1/vote/nominees?targetType=${selectedType}&genreId=${genreId}&jurisdictionId=${jurisdictionId}&intervalId=${intervalId}&limit=20`
       });
 
-      
-
       const nomineesData = response.data || [];
-      
-      // Normalize nominees (artists or songs)
+
       const normalized = nomineesData.map((nominee) => {
         if (selectedType === 'artist') {
           return {
@@ -86,7 +118,7 @@ const VoteAwards = () => {
             name: nominee.username,
             type: 'artist',
             genreKey: selectedGenre,
-            imageUrl: buildUrl(nominee.photoUrl),  // ← Uses helper
+            imageUrl: buildUrl(nominee.photoUrl),
             votes: nominee.voteCount || 0,
             totalLifetimeVotes: nominee.totalVotes || 0,
             jurisdiction: nominee.jurisdiction?.name || 'Unknown',
@@ -100,10 +132,10 @@ const VoteAwards = () => {
             genreKey: selectedGenre,
             artist: nominee.artist?.username || 'Unknown Artist',
             artistId: nominee.artist?.userId,
-            imageUrl: buildUrl(nominee.artworkUrl), 
-            mediaUrl: buildUrl(nominee.fileUrl), 
+            imageUrl: buildUrl(nominee.artworkUrl),
+            mediaUrl: buildUrl(nominee.fileUrl),
             votes: nominee.voteCount || 0,
-            plays: nominee.playCount || nominee.totalPlays || 0,  
+            plays: nominee.playCount || nominee.totalPlays || 0,
             jurisdiction: nominee.jurisdiction?.name || 'Unknown',
             genre: nominee.genre?.name || 'Unknown',
           };
@@ -111,18 +143,15 @@ const VoteAwards = () => {
       });
 
       setNominees(normalized);
-      console.log('Raw backend response:', response.data);  // []? Check logs above
-      console.log('Normalized nominees:', normalized);  // Empty → backend issue
-
+      console.log('Raw backend response:', response.data);
+      console.log('Normalized nominees:', normalized);
     } catch (err) {
       console.error('Failed to fetch nominees:', err);
       setError('Failed to load nominees. Please try again.');
     } finally {
       setLoading(false);
     }
-
   };
-
 
   // Client-side search filtering
   const filteredNominees = nominees.filter((nominee) => {
@@ -139,7 +168,6 @@ const VoteAwards = () => {
     console.log(`Vote confirmed for nominee: ${nomineeId}`);
     setShowVotingWizard(false);
     setSelectedNominee(null);
-    // Refresh nominees to show updated vote counts
     await fetchNominees();
   };
 
@@ -148,10 +176,10 @@ const VoteAwards = () => {
       playMedia(
         {
           type: 'song',
-          url: nominee.mediaUrl,     
+          url: nominee.mediaUrl,
           title: nominee.name,
           artist: nominee.artist,
-          artwork: nominee.imageUrl,  
+          artwork: nominee.imageUrl,
         },
         [{
           type: 'song',
@@ -180,10 +208,6 @@ const VoteAwards = () => {
     }
   };
 
-  // Format jurisdiction name for display
-  const jurisdictionLabel = jurisdictions.find(j => j.value === selectedJurisdiction)?.label || 'Unknown';
-
-
   const handlePlayArtistDefault = async (nominee) => {
     try {
       const response = await apiCall({
@@ -195,10 +219,10 @@ const VoteAwards = () => {
       if (defaultSong?.fileUrl) {
         const playData = {
           type: 'default-song',
-          url: buildUrl(defaultSong.fileUrl),       // ← raw from API, needs building
+          url: buildUrl(defaultSong.fileUrl),
           title: defaultSong.title || `${nominee.name}'s Default Track`,
           artist: nominee.name,
-          artwork: buildUrl(defaultSong.artworkUrl), // ← raw from API, needs building
+          artwork: buildUrl(defaultSong.artworkUrl),
         };
 
         playMedia(playData, [playData]);
@@ -219,155 +243,189 @@ const VoteAwards = () => {
     }
   };
 
+  const jurisdictionLabel = jurisdictions.find(j => j.value === selectedJurisdiction)?.label || 'Unknown';
+  const intervalLabel = intervals.find(i => i.value === selectedInterval)?.label || selectedInterval;
+  const genreLabel = selectedGenre.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('/');
+  const typeLabel = selectedType.charAt(0).toUpperCase() + selectedType.slice(1);
 
+  const pad = (n) => String(n).padStart(2, '0');
 
   return (
     <Layout backgroundImage={backimage}>
-      <div className='voteawards-container'>
-        <div className="voteawards-filters">
-          <select 
-            value={selectedGenre} 
-            onChange={(e) => setSelectedGenre(e.target.value)} 
-            className="voteawards-filter-select"
-          >
-            {genres.map((g) => (
-              <option key={g} value={g}>
-                {g.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('/')}
-              </option>
-            ))}
-          </select>
+      <div className="va-container">
+        {/* ── Filter pills ── */}
+        <div className="va-filters">
+          <div className="va-pill">
+            <select value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)}>
+              {genres.map((g) => (
+                <option key={g} value={g}>
+                  {g.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('/')}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <select 
-            value={selectedType} 
-            onChange={(e) => setSelectedType(e.target.value)} 
-            className="voteawards-filter-select"
-          >
-            {types.map((t) => (
-              <option key={t} value={t}>
-                {t.charAt(0).toUpperCase() + t.slice(1)}
-              </option>
-            ))}
-          </select>
+          <div className="va-pill">
+            <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
+              {types.map((t) => (
+                <option key={t} value={t}>
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <select 
-            value={selectedInterval} 
-            onChange={(e) => setSelectedInterval(e.target.value)} 
-            className="voteawards-filter-select"
-          >
-            {intervals.map((int) => (
-              <option key={int.value} value={int.value}>
-                {int.label}
-              </option>
-            ))}
-          </select>
+          <div className="va-pill">
+            <select value={selectedInterval} onChange={(e) => setSelectedInterval(e.target.value)}>
+              {intervals.map((int) => (
+                <option key={int.value} value={int.value}>
+                  {int.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <select 
-            value={selectedJurisdiction} 
-            onChange={(e) => setSelectedJurisdiction(e.target.value)} 
-            className="voteawards-filter-select"
+          <div className="va-pill">
+            <select value={selectedJurisdiction} onChange={(e) => setSelectedJurisdiction(e.target.value)}>
+              {jurisdictions.map((jur) => (
+                <option key={jur.value} value={jur.value}>
+                  {jur.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Search toggle */}
+          <button
+            className={`va-search-toggle ${searchOpen ? 'active' : ''}`}
+            onClick={() => {
+              setSearchOpen(!searchOpen);
+              if (searchOpen) setSearchQuery('');
+            }}
+            aria-label="Toggle search"
           >
-            {jurisdictions.map((jur) => (
-              <option key={jur.value} value={jur.value}>
-                {jur.label}
-              </option>
-            ))}
-          </select>
+            {searchOpen ? <X size={16} /> : <Search size={16} />}
+          </button>
         </div>
 
-        <section className="voteawards-nominees-section">
-          <h2 className='voteawards-interval-declaration'>
-            {selectedGenre.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('/')}{' '}
-            {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} of the{' '}
-            {intervals.find(i => i.value === selectedInterval)?.label || selectedInterval}{' '}
-            in <br /><span className='voteawards-jurisdiction-label'>{jurisdictionLabel}</span>
-          </h2>
-
-          <form className="voteawards-search-form" onSubmit={(e) => e.preventDefault()}>
+        {/* ── Expandable search bar ── */}
+        {searchOpen && (
+          <div className="va-search-expand">
             <input
+              ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`Search for ${selectedType}s to vote for`}
-              className="voteawards-search-bar"
+              placeholder={`Search ${selectedType}s...`}
+              className="va-search-input"
             />
-          </form>
+          </div>
+        )}
 
+        {/* ── Hero headline + countdown ── */}
+        <div className="va-hero">
+          <div className="va-hero-text">
+            <span className="va-active-poll">ACTIVE POLL</span>
+            <h1 className="va-headline">
+              {genreLabel} {typeLabel}{' '}
+              <span className="va-headline-accent">of the {intervalLabel}</span>
+              <br />
+              <span className="va-headline-jurisdiction">in {jurisdictionLabel}</span>
+            </h1>
+          </div>
+          <div className="va-countdown">
+            <span className="va-countdown-label">Poll ends in</span>
+            <span className="va-countdown-time">
+              {pad(countdown.hours)}:{pad(countdown.minutes)}:{pad(countdown.seconds)}
+            </span>
+          </div>
+        </div>
+
+        {/* ── Nominees grid ── */}
+        <section className="va-grid-section">
           {loading && (
-            <div style={{ textAlign: 'center', padding: '50px', color: 'white' }}>
-              Loading nominees...
-            </div>
+            <div className="va-loading">Loading nominees...</div>
           )}
 
           {error && (
-            <div style={{ textAlign: 'center', padding: '20px', color: 'red' }}>
-              {error}
-            </div>
+            <div className="va-error">{error}</div>
           )}
 
           {!loading && !error && (
-            <ul className="voteawards-nominee-list">
+            <div className="va-grid">
               {filteredNominees.length > 0 ? (
-                filteredNominees.map((nominee) => (
-                  <li key={nominee.id} className="voteawards-nominee-item">
-                    <div 
-                      className="voteawards-nominee-image" 
-                      style={{ backgroundImage: `url(${nominee.imageUrl})` }}
-                      onClick={() => handleNomineeClick(nominee)}
-                    />
-                    <div className="voteawards-nominee-info" onClick={() => handleNomineeClick(nominee)}>
-                      <h3 id="voteawards-nominee-name">{nominee.name}</h3>
-                      {nominee.type === 'song' && <p className="voteawards-artist-name">by {nominee.artist}</p>}
-                      <p className="voteawards-item-jurisdiction-label">
-                        {nominee.jurisdiction}
-                      </p>
-                      {nominee.type === 'song' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: '#60a5fa', fontSize: '0.85rem' }}>
-                        <Play size={14} />
-                        <span>{nominee.plays} Plays</span>
+                filteredNominees.map((nominee, index) => (
+                  <div key={nominee.id} className="va-card">
+                    {/* Image area: image + gradient overlay + rank badge */}
+                    <div className="va-card-visual">
+                      <div className="va-card-rank">#{index + 1}</div>
+                      <div
+                        className="va-card-image"
+                        style={{ backgroundImage: `url(${nominee.imageUrl})` }}
+                        onClick={() => handleNomineeClick(nominee)}
+                      />
+                      <div className="va-card-overlay" onClick={() => handleNomineeClick(nominee)}>
+                        <h3 className="va-card-name">{nominee.name}</h3>
+                        {nominee.type === 'song' && (
+                          <p className="va-card-artist">by {nominee.artist}</p>
+                        )}
+                        <div className="va-card-jurisdiction">
+                          <span className="va-jurisdiction-dot" />
+                          {nominee.jurisdiction}
+                        </div>
                       </div>
-                    )}
-                      {nominee.type === 'artist' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: '#fbbf24', fontSize: '0.85rem' }}>
-                        <Trophy size={14} />
-                        <span>{nominee.totalLifetimeVotes} Votes</span>
+                    </div>
+
+                    {/* Stats + buttons below image */}
+                    <div className="va-card-footer">
+                      <div className="va-card-stats">
+                        {nominee.type === 'artist' ? (
+                          <div className="va-stat">
+                            <span className="va-stat-label">Total Votes</span>
+                            <span className="va-stat-value">
+                              {nominee.totalLifetimeVotes.toLocaleString()}
+                              {nominee.votes > 0 && (
+                                <span className="va-stat-badge">+{nominee.votes}</span>
+                              )}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="va-stat">
+                            <span className="va-stat-label">Plays</span>
+                            <span className="va-stat-value">
+                              {nominee.plays.toLocaleString()}
+                              {nominee.votes > 0 && (
+                                <span className="va-stat-badge">+{nominee.votes}</span>
+                              )}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      )}                   
-                       </div>
-                       <div className='voteawards-the_buttons'>
-                    {nominee.type === 'song' && nominee.mediaUrl && (
-                      <button 
-                        onClick={() => handlePlaySong(nominee)} 
-                        className="voteawards-listen-button"
-                      >
-                        Listen
-                      </button>
-                    )}
 
-                    {nominee.type === 'artist' && (
-                    <button 
-                        onClick={() => handlePlayArtistDefault(nominee)} 
-                        className="voteawards-listen-button"
-                      >
-                        Listen
-                      </button>
-                    )}
-    
-
-                    <button 
-                      onClick={() => handleVoteClick(nominee)} 
-                      className="voteawards-vote-button"
-                    >
-                      Vote
-                    </button>
-                     </div>
-                  </li>
+                      <div className="va-card-buttons">
+                        {nominee.type === 'song' && nominee.mediaUrl && (
+                          <button onClick={() => handlePlaySong(nominee)} className="va-btn-listen">
+                            Listen
+                          </button>
+                        )}
+                        {nominee.type === 'artist' && (
+                          <button onClick={() => handlePlayArtistDefault(nominee)} className="va-btn-listen">
+                            Listen
+                          </button>
+                        )}
+                        <button onClick={() => handleVoteClick(nominee)} className="va-btn-vote">
+                          Vote
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 ))
               ) : (
-                <p className="voteawards-no-nominees">
+                <p className="va-no-nominees">
                   {searchQuery ? 'No nominees match your search.' : 'No nominees found for this category yet.'}
                 </p>
               )}
-            </ul>
+            </div>
           )}
         </section>
       </div>

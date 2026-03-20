@@ -1,276 +1,463 @@
-// Variables
+// ═══════════════════════════════════════════════════════════════
+//  UNIS — Vote & Awards Page (Redesigned)
+//  Matches the Stitch prototype: card grid, bold headline, 
+//  countdown timer, pill filters, full-bleed nominee cards
+// ═══════════════════════════════════════════════════════════════
+
+// --- Design Tokens ---
+$unis-blue: #163387;
+$unis-blue-light: lighten($unis-blue, 15%);
+$unis-blue-glow: rgba($unis-blue, 0.4);
 $bg-black: #000000;
+$subtle-black: #1a1a1a;
+$card-bg: #111111;
+$text-white: #FFFFFF;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
-$accent-white: #FFFFFF;
-$border-silver: #C0C0C0;
-$button-hover: #D3D3D3;
-$subtle-black: #1a1a1a;
-$unis-blue: #163387;
-$unis-silver: #918f8f; 
+$text-muted: #6b6b6b;
+$border-dim: rgba(255, 255, 255, 0.08);
+$border-active: rgba($unis-blue, 0.5);
 
-// Base container
-// index.css already applies margin-left: 260px to this element's parent flex child.
-// We just need to center content within the remaining viewport space.
-.voteawards-container {
+// ─── Container ───────────────────────────────────────────────
+.va-container {
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
   min-height: 100vh;
-  width: 100%;
-  background-color: transparent;
-  padding-top: 2%;
-  padding-bottom: 5%;
+  padding: 24px 24px 80px;
   box-sizing: border-box;
-  margin-left: 0;
-  margin-right: 150px;
+  margin-right: 150px; // matches existing desktop offset from sidebar
 }
 
-.voteawards-filters {
+// ─── Filter Pills ────────────────────────────────────────────
+.va-filters {
   display: flex;
-  gap: 15px;
-  margin-bottom: 40px;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
-  width: auto;
-  max-width: 900px;
   justify-content: center;
+  margin-bottom: 32px;
+}
 
-  .voteawards-filter-select {
-    padding: 10px 18px;
-    background: rgba($subtle-black, 0.8);
-    border: 1px solid rgba($border-silver, 0.2);
-    border-radius: 50px;
+.va-pill {
+  position: relative;
+
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 9px 32px 9px 16px;
+    background: rgba($subtle-black, 0.85);
+    border: 1px solid $border-dim;
+    border-radius: 100px;
     color: $text-silver;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    
-    &:hover, &:focus {
+    transition: all 0.2s ease;
+    outline: none;
+
+    &:hover,
+    &:focus {
       border-color: $unis-blue;
-      background: rgba($unis-blue, 0.1);
-      color: $accent-white;
+      background: rgba($unis-blue, 0.08);
+      color: $text-white;
     }
 
-    &:focus {
-      outline: none;
+    option {
+      background: $subtle-black;
+      color: $text-silver;
     }
+  }
+
+  // Custom dropdown arrow
+  &::after {
+    content: '';
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid $text-gray;
+    pointer-events: none;
   }
 }
 
-.voteawards-nominees-section {
+.va-search-toggle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba($subtle-black, 0.85);
+  border: 1px solid $border-dim;
+  color: $text-gray;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+
+  &:hover,
+  &.active {
+    border-color: $unis-blue;
+    color: $text-white;
+    background: rgba($unis-blue, 0.08);
+  }
+}
+
+// ─── Expandable Search ───────────────────────────────────────
+.va-search-expand {
   width: 100%;
-  max-width: 900px;
-  padding: 0 20px;
-  box-sizing: border-box;
+  max-width: 400px;
+  margin-bottom: 24px;
+  animation: searchSlideIn 0.25s ease-out;
+}
 
-  .voteawards-interval-declaration {
-    color: $accent-white;
-    font-size: 24px;
-    text-align: center;
-    justify-self: center;
-    margin-bottom: 30px;
-    font-weight: 300;
-    letter-spacing: 1px;
-
-    .voteawards-jurisdiction-label {
-      display: block;
-      text-align: center;
-      margin: 0 auto;
-    }
+@keyframes searchSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
   }
-
-  .voteawards-search-form {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    margin-bottom: 30px;
-  }
-
-  .voteawards-search-bar {
-    width: 60%;
-    max-width: 500px;
-    padding: 12px 24px;
-    border-radius: 50px;
-    border: 1px solid rgba($border-silver, 0.2);
-    background: rgba($subtle-black, 0.5);
-    color: $accent-white;
-    font-size: 16px;
-    transition: border-color 0.2s;
-    // REMOVED: margin-left: 65px — was offsetting the centered search bar
-
-    &:focus {
-      outline: none;
-      border-color: $unis-blue;
-    }
-
-    &::placeholder {
-      text-align: center;
-    }
-  }
-
-  .voteawards-nominee-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-
-    .voteawards-nominee-item {
-      display: flex;
-      align-items: center;
-      background: linear-gradient(90deg, 
-        rgba($subtle-black, 0.95) 0%, 
-        rgba($subtle-black, 0.85) 100%
-      );
-      border-radius: 8px;
-      padding: 20px 24px;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-      border-left: 4px solid $unis-blue;
-      border-right: 4px solid $unis-blue;
-      border-top: 1px solid rgba($border-silver, 0.05);
-      border-bottom: 1px solid rgba($border-silver, 0.05);
-
-      &:hover {
-        transform: translateY(-2px);
-        background: linear-gradient(90deg, 
-          rgba($subtle-black, 1) 0%, 
-          rgba($subtle-black, 0.95) 100%
-        );
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-      }
-
-      .voteawards-nominee-image {
-        width: 70px;
-        height: 70px;
-        flex-shrink: 0;
-        border-radius: 12px;
-        margin-right: 20px;
-        background-size: cover;
-        background-position: center;
-        border: 1px solid rgba($border-silver, 0.2);
-        cursor: pointer;
-        transition: opacity 0.2s;
-
-        &:hover {
-          opacity: 0.8;
-        }
-      }
-
-      .voteawards-nominee-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        cursor: pointer;
-        min-width: 0; // prevent text overflow pushing buttons off screen
-        
-        #voteawards-nominee-name {
-          font-family: "Bitcount Grid Double", system-ui;
-          color: $accent-white;
-          font-size: 22px;
-          margin: 0 0 4px 0;
-          letter-spacing: 0.5px;
-          text-transform: uppercase;
-        }
-
-        .voteawards-artist-name {
-          color: $unis-silver;
-          font-size: 14px;
-          margin: 0;
-        }
-
-        p {
-          font-size: 13px;
-          margin: 4px 0 0 0;
-          color: $text-gray;
-          
-          &.votes-count {
-            color: $unis-blue;
-            font-weight: 600;
-          }
-        }
-
-        .voteawards-item-jurisdiction-label {
-          color: $unis-blue;
-          font-size: 14px;
-          margin-top: 4px;
-          font-weight: 500;
-        }
-      }
-
-      .voteawards-action-buttons {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .voteawards-the_buttons {
-        display: flex;
-        flex-direction: row;
-        gap: 10px;
-        flex-shrink: 0;
-        margin-left: auto;
-        padding-left: 16px;
-      }
-
-      button {
-        padding: 8px 20px;
-        font-size: 13px;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-weight: 600;
-      }
-
-      .voteawards-listen-button {
-        background: transparent;
-        border: 1px solid $text-gray;
-        color: $text-silver;
-        white-space: nowrap;
-        
-        &:hover {
-          border-color: $accent-white;
-          color: $accent-white;
-          background: rgba(255,255,255, 0.05);
-        }
-      }
-
-      .voteawards-vote-button {
-        background: $unis-blue;
-        border: 1px solid $unis-blue;
-        color: $accent-white;
-        white-space: nowrap;
-        
-        &:hover {
-          box-shadow: 0 0 10px rgba($unis-blue, 0.4);
-        }
-      }
-    }
-    
-    .voteawards-no-nominees {
-      color: $text-gray;
-      text-align: center;
-      font-size: 16px;
-      margin-top: 50px;
-      font-weight: 300;
-    }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
+.va-search-input {
+  width: 100%;
+  padding: 10px 20px;
+  background: rgba($subtle-black, 0.6);
+  border: 1px solid $border-dim;
+  border-radius: 100px;
+  color: $text-white;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
 
-// --- Variables (Matching your system) ---
-$bg-black: #000000;
-$text-silver: #C0C0C0;
-$text-gray: #A9A9A9;
-$accent-white: #FFFFFF;
-$unis-blue: #163387;
-$unis-silver: #918f8f; 
-$subtle-black: #1a1a1a;
+  &:focus {
+    border-color: $unis-blue;
+  }
+
+  &::placeholder {
+    color: $text-muted;
+  }
+}
+
+// ─── Hero Headline + Countdown ───────────────────────────────
+.va-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 960px;
+  margin-bottom: 40px;
+  gap: 24px;
+}
+
+.va-hero-text {
+  flex: 1;
+}
+
+.va-active-poll {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: $text-muted;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.va-headline {
+  font-family: "Bitcount Grid Double", system-ui, sans-serif;
+  font-size: 42px;
+  line-height: 1.1;
+  color: $text-white;
+  text-transform: uppercase;
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.va-headline-accent {
+  color: $unis-blue;
+  font-style: italic;
+}
+
+.va-headline-jurisdiction {
+  color: $text-white;
+}
+
+.va-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.va-countdown-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: $text-muted;
+  margin-bottom: 4px;
+}
+
+.va-countdown-time {
+  font-family: "Bitcount Grid Double", monospace, system-ui;
+  font-size: 36px;
+  color: $text-white;
+  letter-spacing: 2px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+// ─── Grid Section ────────────────────────────────────────────
+.va-grid-section {
+  width: 100%;
+  max-width: 960px;
+}
+
+.va-loading {
+  text-align: center;
+  padding: 60px 0;
+  color: $text-gray;
+  font-size: 15px;
+}
+
+.va-error {
+  text-align: center;
+  padding: 30px 0;
+  color: #e74c3c;
+  font-size: 14px;
+}
+
+// ─── Card Grid ───────────────────────────────────────────────
+.va-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+// ─── Individual Card ─────────────────────────────────────────
+.va-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: $card-bg;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid $border-dim;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  &:hover {
+    border-color: $border-active;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px $unis-blue-glow;
+  }
+}
+
+.va-card-visual {
+  position: relative;
+  overflow: hidden;
+}
+
+.va-card-rank {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  color: $text-silver;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  z-index: 3;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.va-card-image {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background-size: cover;
+  background-position: center top;
+  cursor: pointer;
+  transition: transform 0.4s ease;
+
+  .va-card:hover & {
+    transform: scale(1.03);
+  }
+}
+
+.va-card-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 60px 16px 14px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.5) 60%,
+    transparent 100%
+  );
+  cursor: pointer;
+  z-index: 2;
+}
+
+.va-card-name {
+  font-family: "Bitcount Grid Double", system-ui, sans-serif;
+  font-size: 18px;
+  color: $text-white;
+  text-transform: uppercase;
+  margin: 0 0 2px;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  // Truncate long names
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.va-card-artist {
+  font-size: 12px;
+  color: $text-gray;
+  margin: 0 0 4px;
+}
+
+.va-card-jurisdiction {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: $text-gray;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.va-jurisdiction-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: $unis-blue;
+  flex-shrink: 0;
+}
+
+// ─── Card Footer (stats + buttons) ──────────────────────────
+.va-card-footer {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: $card-bg;
+  position: relative;
+  z-index: 2;
+}
+
+.va-card-stats {
+  display: flex;
+  justify-content: center;
+}
+
+.va-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.va-stat-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: $text-muted;
+}
+
+.va-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: $unis-blue;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.va-stat-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  padding: 2px 6px;
+  border-radius: 100px;
+}
+
+// ─── Buttons ─────────────────────────────────────────────────
+.va-card-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.va-btn-listen,
+.va-btn-vote {
+  flex: 1;
+  padding: 9px 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  border: none;
+}
+
+.va-btn-listen {
+  background: transparent;
+  border: 1px solid rgba($text-gray, 0.4);
+  color: $text-silver;
+
+  &:hover {
+    border-color: $text-white;
+    color: $text-white;
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.va-btn-vote {
+  background: $unis-blue;
+  color: $text-white;
+
+  &:hover {
+    background: $unis-blue-light;
+    box-shadow: 0 0 14px $unis-blue-glow;
+  }
+}
+
+.va-no-nominees {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: $text-gray;
+  font-size: 15px;
+  padding: 60px 0;
+  font-weight: 300;
+}
+
+
+// ═════════════════════════════════════════════════════════════
+//  VOTING WIZARD (preserved from original — no changes)
+// ═════════════════════════════════════════════════════════════
 
 .voting-wizard-overlay {
   position: fixed;
@@ -299,10 +486,10 @@ $subtle-black: #1a1a1a;
 
   &.success-glow {
     border: 2px solid $unis-blue !important;
-    box-shadow: 
-      0 0 30px rgba(lighten($unis-blue, 20%), 0.5),
+    box-shadow:
+      0 0 30px rgba($unis-blue-light, 0.5),
       inset 0 0 20px rgba($unis-blue, 0.4) !important;
-    transform: scale(1.02); 
+    transform: scale(1.02);
   }
 }
 
@@ -316,9 +503,9 @@ $subtle-black: #1a1a1a;
   color: $text-gray;
   cursor: pointer;
   transition: color 0.2s;
-  
+
   &:hover {
-    color: $accent-white;
+    color: $text-white;
   }
 }
 
@@ -329,12 +516,12 @@ $subtle-black: #1a1a1a;
   text-align: center;
 
   h2 {
-    color: $accent-white;
+    color: $text-white;
     margin-bottom: 10px;
     font-weight: 600;
     letter-spacing: 0.5px;
   }
-  
+
   .nominee-name {
     color: $unis-blue;
     font-family: "Bitcount Grid Double", system-ui;
@@ -371,7 +558,7 @@ $subtle-black: #1a1a1a;
 
   .receipt-name {
     font-size: 24px;
-    color: $accent-white;
+    color: $text-white;
     margin: 0 0 15px 0;
     font-weight: 700;
   }
@@ -388,20 +575,20 @@ $subtle-black: #1a1a1a;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
     text-align: left;
-    
+
     .meta-item {
       display: flex;
       flex-direction: column;
-      
+
       .meta-label {
         font-size: 11px;
-        color: $unis-silver;
+        color: $text-muted;
         text-transform: uppercase;
       }
-      
+
       .meta-value {
         font-size: 13px;
-        color: $accent-white;
+        color: $text-white;
         font-weight: 500;
       }
     }
@@ -424,9 +611,9 @@ $subtle-black: #1a1a1a;
     align-items: center;
     justify-content: center;
     margin-bottom: 15px;
-    background: rgba(0,0,0,0.2);
+    background: rgba(0, 0, 0, 0.2);
   }
-  
+
   .result-header {
     font-size: 22px;
     text-transform: uppercase;
@@ -434,7 +621,8 @@ $subtle-black: #1a1a1a;
   }
 }
 
-.button-group, .button-group-result {
+.button-group,
+.button-group-result {
   display: flex;
   gap: 15px;
   justify-content: center;
@@ -442,27 +630,32 @@ $subtle-black: #1a1a1a;
   margin-top: 10px;
 }
 
-button {
-  padding: 12px 24px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: none;
+// Wizard buttons (scoped to wizard context via specificity)
+.voting-wizard {
+  button {
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+  }
 }
 
-.next-button, .done-button, .submit-vote-button {
+.next-button,
+.done-button,
+.submit-vote-button {
   background-color: $unis-blue;
-  color: $accent-white;
-  
+  color: $text-white;
+
   &:hover {
-    background-color: lighten($unis-blue, 10%);
-    box-shadow: 0 0 10px rgba($unis-blue, 0.4);
+    background-color: $unis-blue-light;
+    box-shadow: 0 0 10px $unis-blue-glow;
   }
-  
+
   &:disabled {
     background-color: $text-gray;
     cursor: not-allowed;
@@ -473,22 +666,23 @@ button {
   background-color: transparent;
   border: 1px solid $text-gray;
   color: $text-silver;
-  
+
   &:hover {
-    border-color: $accent-white;
-    color: $accent-white;
+    border-color: $text-white;
+    color: $text-white;
   }
 }
 
-.input-field, input[type="text"] {
+.input-field,
+input[type='text'] {
   width: 100%;
   padding: 12px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba($text-silver, 0.2);
   border-radius: 6px;
-  color: $accent-white;
+  color: $text-white;
   margin-bottom: 15px;
-  
+
   &:focus {
     outline: none;
     border-color: $unis-blue;
@@ -506,7 +700,8 @@ button {
   font-style: italic;
 }
 
-.filter-selection-grid, .form-group {
+.filter-selection-grid,
+.form-group {
   width: 100%;
   text-align: left;
   label {
@@ -519,98 +714,100 @@ button {
 }
 
 
-// Mobile Responsiveness
-// Mobile Responsiveness
+// ═════════════════════════════════════════════════════════════
+//  RESPONSIVE — Tablet
+// ═════════════════════════════════════════════════════════════
+@media (max-width: 900px) {
+  .va-container {
+    margin-right: 0;
+  }
+
+  .va-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .va-headline {
+    font-size: 32px;
+  }
+
+  .va-countdown-time {
+    font-size: 28px;
+  }
+}
+
+// ═════════════════════════════════════════════════════════════
+//  RESPONSIVE — Mobile
+// ═════════════════════════════════════════════════════════════
 @media (max-width: 600px) {
-  .voteawards-container {
-    display: flex;
-    padding-top: 10px;
-    width: 100%;
-    overflow-x: hidden;
-    margin-right: 0; // Ensures the 150px desktop margin is killed
+  .va-container {
+    padding: 16px 12px 80px;
+    margin-right: 0;
   }
 
-  .voteawards-nominees-section {
-    padding: 0 10px; // Tighter padding for mobile screens
-
-    .voteawards-interval-declaration {
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-  }
-  
-  .voteawards-filters {
-    margin-top: 20px;
-    gap: 8px;
-    width: 100% !important;
-    justify-content: center;
-
-    .voteawards-filter-select {
-      font-size: 11px;
-      padding: 6px 10px;
-    }
+  .va-filters {
+    gap: 6px;
+    margin-bottom: 20px;
   }
 
-  .voteawards-search-bar {
-    width: 90% !important;
+  .va-pill select {
+    font-size: 11px;
+    padding: 7px 26px 7px 12px;
+  }
+
+  .va-search-toggle {
+    width: 34px;
+    height: 34px;
+  }
+
+  .va-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .va-headline {
+    font-size: 26px;
+  }
+
+  .va-countdown {
+    align-items: flex-start;
+  }
+
+  .va-countdown-time {
+    font-size: 24px;
+  }
+
+  .va-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .va-card-name {
     font-size: 14px;
   }
-  
-  .voteawards-nominee-list {
-    gap: 10px;
-    
-    .voteawards-nominee-item {
-      padding: 10px;
-      gap: 12px;
-      /* Ensure the item stays a row, but handles its children strictly */
-      display: flex; 
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between; 
 
-      .voteawards-nominee-image {
-        width: 50px;
-        height: 50px;
-        margin-right: 0; // Gap handles spacing now
-      }
+  .va-card-overlay {
+    padding: 40px 10px 10px;
+  }
 
-      .voteawards-nominee-info {
-        flex: 1;
-        min-width: 0; // Essential for ellipsis to work
-        
-        #voteawards-nominee-name {
-          font-size: 14px !important;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        
-        .voteawards-artist-name, 
-        .voteawards-item-jurisdiction-label,
-        div[style*="font-size: 0.85rem"] { /* Targets the Play/Trophy icons */
-          font-size: 10px !important;
-        }
-      }
+  .va-card-footer {
+    padding: 10px 10px 12px;
+    gap: 8px;
+  }
 
-      .voteawards-the_buttons {
-        display: flex;
-        flex-direction: column !important;
-        gap: 4px;
-        margin-left: 8px;
-        flex-shrink: 0; // Prevents the button container from squishing
-        width: 80px; // Defines a strict area for the buttons
-      }
-      
-      button {
-        width: 100% !important; 
-        box-sizing: border-box;
-        padding: 6px 0 !important; 
-        font-size: 10px !important;
-        height: 28px; // Uniform height
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-    }
+  .va-stat-value {
+    font-size: 16px;
+  }
+
+  .va-btn-listen,
+  .va-btn-vote {
+    padding: 7px 0;
+    font-size: 10px;
+  }
+
+  .va-card-jurisdiction {
+    font-size: 9px;
   }
 }
