@@ -273,7 +273,11 @@ const LastWonNotification = () => {
           <div className="lwn-left">
             <div className="lwn-left-top">
               <div className="lwn-top-row">
-                <unisLogo />
+                <img
+                src={unisLogo}
+                alt="UNIS"
+                className="lwn-logo"
+                />
               </div>
 
               <div className={`lwn-tag ${cat.badgeClass}`}>
