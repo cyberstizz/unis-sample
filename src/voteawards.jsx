@@ -7,7 +7,7 @@ import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import VotingWizard from './votingWizard';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
-import { Trophy, Play, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { buildUrl } from './utils/buildUrl';
 
 const VoteAwards = () => {
@@ -47,15 +47,13 @@ const VoteAwards = () => {
   useEffect(() => {
     const calcTimeLeft = () => {
       const now = new Date();
-      // Get current time in EST
       const estString = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
       const estNow = new Date(estString);
-      
-      // Next midnight EST
+
       const nextMidnight = new Date(estString);
       nextMidnight.setDate(nextMidnight.getDate() + 1);
       nextMidnight.setHours(0, 0, 0, 0);
-      
+
       const diff = nextMidnight - estNow;
       return {
         hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
@@ -153,7 +151,6 @@ const VoteAwards = () => {
     }
   };
 
-  // Client-side search filtering
   const filteredNominees = nominees.filter((nominee) => {
     if (searchQuery.length === 0) return true;
     return nominee.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -253,7 +250,7 @@ const VoteAwards = () => {
   return (
     <Layout backgroundImage={backimage}>
       <div className="va-container">
-        {/* ── Filter pills ── */}
+        {/* ── Filters ── */}
         <div className="va-filters">
           <div className="va-pill">
             <select value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)}>
@@ -295,7 +292,6 @@ const VoteAwards = () => {
             </select>
           </div>
 
-          {/* Search toggle */}
           <button
             className={`va-search-toggle ${searchOpen ? 'active' : ''}`}
             onClick={() => {
@@ -304,11 +300,11 @@ const VoteAwards = () => {
             }}
             aria-label="Toggle search"
           >
-            {searchOpen ? <X size={16} /> : <Search size={16} />}
+            {searchOpen ? <X size={15} /> : <Search size={15} />}
           </button>
         </div>
 
-        {/* ── Expandable search bar ── */}
+        {/* ── Expandable search ── */}
         {searchOpen && (
           <div className="va-search-expand">
             <input
@@ -325,12 +321,12 @@ const VoteAwards = () => {
         {/* ── Hero headline + countdown ── */}
         <div className="va-hero">
           <div className="va-hero-text">
-            <span className="va-active-poll">ACTIVE POLL</span>
+            <span className="va-active-poll">Active poll</span>
             <h1 className="va-headline">
               {genreLabel} {typeLabel}{' '}
               <span className="va-headline-accent">of the {intervalLabel}</span>
               <br />
-              <span className="va-headline-jurisdiction">in {jurisdictionLabel}</span>
+              in {jurisdictionLabel}
             </h1>
           </div>
           <div className="va-countdown">
@@ -356,9 +352,10 @@ const VoteAwards = () => {
               {filteredNominees.length > 0 ? (
                 filteredNominees.map((nominee, index) => (
                   <div key={nominee.id} className="va-card">
-                    {/* Image area: image + gradient overlay + rank badge */}
                     <div className="va-card-visual">
-                      <div className="va-card-rank">#{index + 1}</div>
+                      <div className="va-card-rank">
+                        #{String(index + 1).padStart(2, '0')}
+                      </div>
                       <div
                         className="va-card-image"
                         style={{ backgroundImage: `url(${nominee.imageUrl})` }}
@@ -376,7 +373,6 @@ const VoteAwards = () => {
                       </div>
                     </div>
 
-                    {/* Stats + buttons below image */}
                     <div className="va-card-footer">
                       <div className="va-card-stats">
                         {nominee.type === 'artist' ? (

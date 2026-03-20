@@ -1,43 +1,47 @@
 // ═══════════════════════════════════════════════════════════════
-//  UNIS — Vote & Awards Page (Redesigned)
-//  Matches the Stitch prototype: card grid, bold headline, 
-//  countdown timer, pill filters, full-bleed nominee cards
+//  UNIS — Vote & Awards Page
+//  Typography: DM Sans (body) + Playfair Display (accent)
+//  Aesthetic: Premium dark, compact above-fold, card grid
 // ═══════════════════════════════════════════════════════════════
 
-// --- Design Tokens ---
-$unis-blue: #163387;
-$unis-blue-light: lighten($unis-blue, 15%);
-$unis-blue-glow: rgba($unis-blue, 0.4);
-$bg-black: #000000;
-$subtle-black: #1a1a1a;
-$card-bg: #111111;
-$text-white: #FFFFFF;
-$text-silver: #C0C0C0;
-$text-gray: #A9A9A9;
-$text-muted: #6b6b6b;
-$border-dim: rgba(255, 255, 255, 0.08);
-$border-active: rgba($unis-blue, 0.5);
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
 
-// ─── Container ───────────────────────────────────────────────
+// ── Design Tokens ────────────────────────────────────────────
+$unis-blue: #163387;
+$unis-blue-light: #1e44a8;
+$unis-blue-glow: rgba(22, 51, 135, 0.35);
+$card-bg: #111111;
+$surface-dim: rgba(255, 255, 255, 0.04);
+$border-dim: rgba(255, 255, 255, 0.08);
+$border-hover: rgba(255, 255, 255, 0.12);
+$border-active: rgba(22, 51, 135, 0.5);
+$text-white: #ffffff;
+$text-silver: #c0c0c0;
+$text-gray: #aaaaaa;
+$text-muted: #555555;
+$green-badge: #22c55e;
+
+// ── Container ────────────────────────────────────────────────
 .va-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
   min-height: 100vh;
-  padding: 24px 24px 80px;
+  padding: 20px 28px 80px;
   box-sizing: border-box;
-  margin-right: 150px; // matches existing desktop offset from sidebar
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  margin-right: 150px;
 }
 
-// ─── Filter Pills ────────────────────────────────────────────
+// ── Filter Toggles (squarish, matching Stitch prototype) ─────
 .va-filters {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 .va-pill {
@@ -46,17 +50,18 @@ $border-active: rgba($unis-blue, 0.5);
   select {
     appearance: none;
     -webkit-appearance: none;
-    padding: 9px 32px 9px 16px;
-    background: rgba($subtle-black, 0.85);
+    background: $surface-dim;
     border: 1px solid $border-dim;
-    border-radius: 100px;
+    border-radius: 6px;
     color: $text-silver;
+    font-family: 'DM Sans', sans-serif;
     font-size: 13px;
     font-weight: 500;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
     text-transform: uppercase;
+    padding: 10px 34px 10px 14px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
     outline: none;
 
     &:hover,
@@ -67,39 +72,38 @@ $border-active: rgba($unis-blue, 0.5);
     }
 
     option {
-      background: $subtle-black;
+      background: #1a1a1a;
       color: $text-silver;
     }
   }
 
-  // Custom dropdown arrow
   &::after {
     content: '';
     position: absolute;
-    right: 14px;
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
     width: 0;
     height: 0;
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
-    border-top: 5px solid $text-gray;
+    border-top: 5px solid #666;
     pointer-events: none;
   }
 }
 
 .va-search-toggle {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: rgba($subtle-black, 0.85);
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: $surface-dim;
   border: 1px solid $border-dim;
-  color: $text-gray;
+  color: #888;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
   flex-shrink: 0;
   padding: 0;
 
@@ -111,32 +115,27 @@ $border-active: rgba($unis-blue, 0.5);
   }
 }
 
-// ─── Expandable Search ───────────────────────────────────────
+// ── Expandable Search ────────────────────────────────────────
 .va-search-expand {
   width: 100%;
-  max-width: 400px;
-  margin-bottom: 24px;
-  animation: searchSlideIn 0.25s ease-out;
+  max-width: 380px;
+  margin-bottom: 20px;
+  animation: va-searchSlide 0.2s ease-out;
 }
 
-@keyframes searchSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes va-searchSlide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .va-search-input {
   width: 100%;
-  padding: 10px 20px;
-  background: rgba($subtle-black, 0.6);
+  padding: 9px 18px;
+  background: $surface-dim;
   border: 1px solid $border-dim;
-  border-radius: 100px;
+  border-radius: 6px;
   color: $text-white;
+  font-family: 'DM Sans', sans-serif;
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
@@ -151,49 +150,49 @@ $border-active: rgba($unis-blue, 0.5);
   }
 }
 
-// ─── Hero Headline + Countdown ───────────────────────────────
+// ── Hero: Headline + Countdown ───────────────────────────────
+// Compact: ~110px total height so cards start well inside the fold.
 .va-hero {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   width: 100%;
   max-width: 960px;
-  margin-bottom: 40px;
-  gap: 24px;
+  margin-bottom: 28px;
+  gap: 20px;
 }
 
 .va-hero-text {
   flex: 1;
+  min-width: 0;
 }
 
 .va-active-poll {
   display: inline-block;
   font-size: 11px;
-  letter-spacing: 3px;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
   color: $text-muted;
-  margin-bottom: 8px;
   font-weight: 500;
+  margin-bottom: 6px;
 }
 
 .va-headline {
-  font-family: "Bitcount Grid Double", system-ui, sans-serif;
-  font-size: 42px;
-  line-height: 1.1;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.08;
   color: $text-white;
   text-transform: uppercase;
   margin: 0;
-  font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: -0.3px;
 }
 
 .va-headline-accent {
   color: $unis-blue;
   font-style: italic;
-}
-
-.va-headline-jurisdiction {
-  color: $text-white;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700;
 }
 
 .va-countdown {
@@ -208,19 +207,19 @@ $border-active: rgba($unis-blue, 0.5);
   text-transform: uppercase;
   letter-spacing: 2px;
   color: $text-muted;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .va-countdown-time {
-  font-family: "Bitcount Grid Double", monospace, system-ui;
-  font-size: 36px;
-  color: $text-white;
-  letter-spacing: 2px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 30px;
   font-weight: 700;
+  color: $text-white;
+  letter-spacing: 1px;
   font-variant-numeric: tabular-nums;
 }
 
-// ─── Grid Section ────────────────────────────────────────────
+// ── Grid Section ─────────────────────────────────────────────
 .va-grid-section {
   width: 100%;
   max-width: 960px;
@@ -228,40 +227,44 @@ $border-active: rgba($unis-blue, 0.5);
 
 .va-loading {
   text-align: center;
-  padding: 60px 0;
+  padding: 50px 0;
   color: $text-gray;
-  font-size: 15px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .va-error {
   text-align: center;
-  padding: 30px 0;
+  padding: 24px 0;
   color: #e74c3c;
   font-size: 14px;
 }
 
-// ─── Card Grid ───────────────────────────────────────────────
+// ── Card Grid ────────────────────────────────────────────────
+// auto-fill with 200px min so we get 4 cols on wide screens,
+// 3 on medium, 2 on narrow — cards stay compact.
 .va-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
 }
 
-// ─── Individual Card ─────────────────────────────────────────
+// ── Card ─────────────────────────────────────────────────────
 .va-card {
-  position: relative;
   display: flex;
   flex-direction: column;
   background: $card-bg;
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
-  border: 1px solid $border-dim;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 
   &:hover {
     border-color: $border-active;
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px $unis-blue-glow;
+    transform: translateY(-3px);
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.4),
+      0 0 16px $unis-blue-glow;
   }
 }
 
@@ -272,30 +275,31 @@ $border-active: rgba($unis-blue, 0.5);
 
 .va-card-rank {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  color: $text-silver;
-  font-size: 11px;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  color: $text-gray;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 100px;
-  z-index: 3;
+  padding: 3px 9px;
+  border-radius: 4px;
   letter-spacing: 0.5px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 3;
 }
 
 .va-card-image {
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 1 / 1.15;
   background-size: cover;
   background-position: center top;
   cursor: pointer;
   transition: transform 0.4s ease;
 
   .va-card:hover & {
-    transform: scale(1.03);
+    transform: scale(1.04);
   }
 }
 
@@ -304,11 +308,11 @@ $border-active: rgba($unis-blue, 0.5);
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 60px 16px 14px;
+  padding: 44px 12px 10px;
   background: linear-gradient(
     to top,
     rgba(0, 0, 0, 0.92) 0%,
-    rgba(0, 0, 0, 0.5) 60%,
+    rgba(0, 0, 0, 0.4) 60%,
     transparent 100%
   );
   cursor: pointer;
@@ -316,65 +320,63 @@ $border-active: rgba($unis-blue, 0.5);
 }
 
 .va-card-name {
-  font-family: "Bitcount Grid Double", system-ui, sans-serif;
-  font-size: 18px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
   color: $text-white;
   text-transform: uppercase;
+  letter-spacing: 0.3px;
   margin: 0 0 2px;
-  letter-spacing: 0.5px;
-  font-weight: 700;
   line-height: 1.2;
-  // Truncate long names
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .va-card-artist {
-  font-size: 12px;
-  color: $text-gray;
-  margin: 0 0 4px;
+  font-size: 11px;
+  color: #888;
+  margin: 0 0 3px;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .va-card-jurisdiction {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: $text-gray;
+  gap: 5px;
+  font-size: 10px;
+  color: #777;
   text-transform: uppercase;
   letter-spacing: 1px;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .va-jurisdiction-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: $unis-blue;
   flex-shrink: 0;
 }
 
-// ─── Card Footer (stats + buttons) ──────────────────────────
+// ── Card Footer ──────────────────────────────────────────────
 .va-card-footer {
-  padding: 14px 16px 16px;
+  padding: 10px 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   background: $card-bg;
-  position: relative;
-  z-index: 2;
 }
 
 .va-card-stats {
-  display: flex;
-  justify-content: center;
+  text-align: center;
 }
 
 .va-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
 }
 
 .va-stat-label {
@@ -382,56 +384,59 @@ $border-active: rgba($unis-blue, 0.5);
   text-transform: uppercase;
   letter-spacing: 1.5px;
   color: $text-muted;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .va-stat-value {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   color: $unis-blue;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .va-stat-badge {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.1);
-  padding: 2px 6px;
-  border-radius: 100px;
+  color: $green-badge;
+  background: rgba($green-badge, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
 }
 
-// ─── Buttons ─────────────────────────────────────────────────
+// ── Buttons ──────────────────────────────────────────────────
 .va-card-buttons {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .va-btn-listen,
 .va-btn-vote {
   flex: 1;
-  padding: 9px 0;
-  font-size: 11px;
+  padding: 7px 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
-  transition: all 0.2s ease;
   text-align: center;
+  transition: all 0.2s ease;
   border: none;
 }
 
 .va-btn-listen {
   background: transparent;
-  border: 1px solid rgba($text-gray, 0.4);
-  color: $text-silver;
+  border: 1px solid $border-hover;
+  color: $text-gray;
 
   &:hover {
     border-color: $text-white;
     color: $text-white;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.03);
   }
 }
 
@@ -441,7 +446,7 @@ $border-active: rgba($unis-blue, 0.5);
 
   &:hover {
     background: $unis-blue-light;
-    box-shadow: 0 0 14px $unis-blue-glow;
+    box-shadow: 0 0 12px $unis-blue-glow;
   }
 }
 
@@ -449,15 +454,18 @@ $border-active: rgba($unis-blue, 0.5);
   grid-column: 1 / -1;
   text-align: center;
   color: $text-gray;
-  font-size: 15px;
-  padding: 60px 0;
-  font-weight: 300;
+  font-size: 14px;
+  padding: 50px 0;
+  font-weight: 400;
+  font-family: 'DM Sans', sans-serif;
 }
 
 
 // ═════════════════════════════════════════════════════════════
-//  VOTING WIZARD (preserved from original — no changes)
+//  VOTING WIZARD (preserved — no visual changes)
 // ═════════════════════════════════════════════════════════════
+
+$wizard-subtle-black: #1a1a1a;
 
 .voting-wizard-overlay {
   position: fixed;
@@ -474,7 +482,7 @@ $border-active: rgba($unis-blue, 0.5);
 }
 
 .voting-wizard {
-  background: linear-gradient(145deg, rgba($subtle-black, 0.95), rgba(0, 0, 0, 1));
+  background: linear-gradient(145deg, rgba($wizard-subtle-black, 0.95), rgba(0, 0, 0, 1));
   padding: 40px;
   border-radius: 16px;
   width: 90%;
@@ -524,8 +532,9 @@ $border-active: rgba($unis-blue, 0.5);
 
   .nominee-name {
     color: $unis-blue;
-    font-family: "Bitcount Grid Double", system-ui;
+    font-family: 'DM Sans', sans-serif;
     font-size: 28px;
+    font-weight: 700;
     text-transform: uppercase;
     margin: 10px 0;
   }
@@ -630,7 +639,6 @@ $border-active: rgba($unis-blue, 0.5);
   margin-top: 10px;
 }
 
-// Wizard buttons (scoped to wizard context via specificity)
 .voting-wizard {
   button {
     padding: 12px 24px;
@@ -642,6 +650,7 @@ $border-active: rgba($unis-blue, 0.5);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border: none;
+    font-family: 'DM Sans', sans-serif;
   }
 }
 
@@ -674,7 +683,7 @@ $border-active: rgba($unis-blue, 0.5);
 }
 
 .input-field,
-input[type='text'] {
+.voting-wizard input[type='text'] {
   width: 100%;
   padding: 12px;
   background: rgba(0, 0, 0, 0.3);
@@ -682,6 +691,7 @@ input[type='text'] {
   border-radius: 6px;
   color: $text-white;
   margin-bottom: 15px;
+  font-family: 'DM Sans', sans-serif;
 
   &:focus {
     outline: none;
@@ -704,6 +714,7 @@ input[type='text'] {
 .form-group {
   width: 100%;
   text-align: left;
+
   label {
     display: block;
     color: $text-silver;
@@ -715,64 +726,16 @@ input[type='text'] {
 
 
 // ═════════════════════════════════════════════════════════════
-//  RESPONSIVE — Tablet
+//  RESPONSIVE — Tablet (≤900px)
 // ═════════════════════════════════════════════════════════════
 @media (max-width: 900px) {
   .va-container {
     margin-right: 0;
-  }
-
-  .va-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    padding: 20px 20px 80px;
   }
 
   .va-headline {
-    font-size: 32px;
-  }
-
-  .va-countdown-time {
     font-size: 28px;
-  }
-}
-
-// ═════════════════════════════════════════════════════════════
-//  RESPONSIVE — Mobile
-// ═════════════════════════════════════════════════════════════
-@media (max-width: 600px) {
-  .va-container {
-    padding: 16px 12px 80px;
-    margin-right: 0;
-  }
-
-  .va-filters {
-    gap: 6px;
-    margin-bottom: 20px;
-  }
-
-  .va-pill select {
-    font-size: 11px;
-    padding: 7px 26px 7px 12px;
-  }
-
-  .va-search-toggle {
-    width: 34px;
-    height: 34px;
-  }
-
-  .va-hero {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 28px;
-  }
-
-  .va-headline {
-    font-size: 26px;
-  }
-
-  .va-countdown {
-    align-items: flex-start;
   }
 
   .va-countdown-time {
@@ -780,34 +743,83 @@ input[type='text'] {
   }
 
   .va-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+}
+
+// ═════════════════════════════════════════════════════════════
+//  RESPONSIVE — Mobile (≤600px)
+// ═════════════════════════════════════════════════════════════
+@media (max-width: 600px) {
+  .va-container {
+    padding: 12px 10px 80px;
+    margin-right: 0;
+  }
+
+  .va-filters {
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+
+  .va-pill select {
+    font-size: 11px;
+    padding: 8px 28px 8px 10px;
+  }
+
+  .va-search-toggle {
+    width: 32px;
+    height: 32px;
+  }
+
+  .va-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .va-headline {
+    font-size: 22px;
+  }
+
+  .va-countdown {
+    align-items: flex-start;
+  }
+
+  .va-countdown-time {
+    font-size: 20px;
+  }
+
+  .va-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-
-  .va-card-name {
-    font-size: 14px;
-  }
-
-  .va-card-overlay {
-    padding: 40px 10px 10px;
-  }
-
-  .va-card-footer {
-    padding: 10px 10px 12px;
     gap: 8px;
   }
 
+  .va-card-overlay {
+    padding: 36px 8px 8px;
+  }
+
+  .va-card-name {
+    font-size: 12px;
+  }
+
+  .va-card-jurisdiction {
+    font-size: 8px;
+  }
+
+  .va-card-footer {
+    padding: 8px 8px 10px;
+    gap: 6px;
+  }
+
   .va-stat-value {
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .va-btn-listen,
   .va-btn-vote {
-    padding: 7px 0;
-    font-size: 10px;
-  }
-
-  .va-card-jurisdiction {
+    padding: 6px 0;
     font-size: 9px;
   }
 }
