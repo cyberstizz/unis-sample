@@ -25,8 +25,6 @@ const VoteAwards = () => {
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [userId, setUserId] = useState(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
 
   const intervals = [
   { value: 'daily', label: 'Day' },
