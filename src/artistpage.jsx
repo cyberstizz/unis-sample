@@ -8,6 +8,7 @@ import theQuiet from './assets/theQuiet.jpg';
 import VotingWizard from './votingWizard';
 import { Users, Heart, PlayCircle } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
+import { buildUrl } from './utils/buildUrl';
 
 const ArtistPage = ({ isOwnProfile = false }) => {
   const { artistId } = useParams();
@@ -31,10 +32,6 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-  const buildUrl = (url) => {
-    if (!url) return null;
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-  };
 
   // Single effect — fires all requests in parallel on mount.
   // Follow status check is included only when we have both IDs and it's not our own profile.
