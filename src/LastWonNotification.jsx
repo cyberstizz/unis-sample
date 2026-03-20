@@ -4,37 +4,46 @@ import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
 import { buildUrl } from './utils/buildUrl';
 import { useAuth } from './context/AuthContext';
+import { INTERVAL_IDS } from './utils/idMappings';
 import './lastWonNotification.scss';
 
-const DISPLAY_DURATION = 5000; // 5 seconds auto-dismiss
+const DISPLAY_DURATION = 5000;
 
 // ─── Award category definitions ───
 const CATEGORIES = [
   {
     key: 'song-daily',
-    targetType: 'song',
-    interval: 'daily',
+    type: 'song',
+    intervalId: INTERVAL_IDS['daily'],
     badge: 'Song of the day',
     badgeClass: 'daily',
     icon: '🎵',
   },
   {
     key: 'song-weekly',
-    targetType: 'song',
-    interval: 'weekly',
+    type: 'song',
+    intervalId: INTERVAL_IDS['weekly'],
     badge: 'Song of the week',
     badgeClass: 'weekly',
     icon: '🏆',
   },
   {
     key: 'artist-daily',
-    targetType: 'artist',
-    interval: 'daily',
+    type: 'artist',
+    intervalId: INTERVAL_IDS['daily'],
     badge: 'Artist of the day',
     badgeClass: 'artist',
     icon: '👑',
   },
 ];
+
+// Format date as YYYY-MM-DD for the backend's LocalDate param
+const formatDate = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 
 const LastWonNotification = () => {
   const [visible, setVisible] = useState(false);
@@ -61,23 +70,31 @@ const LastWonNotification = () => {
     hasFetchedRef.current = true;
 
     const fetchWinners = async () => {
+      // Build date range: last 30 days to today
+      const today = new Date();
+      const thirtyDaysAgo = new Date(today);
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const endDate = formatDate(today);
+      const startDate = formatDate(thirtyDaysAgo);
+
       try {
-        // Fetch recent awards for all 3 categories in parallel
         const results = await Promise.all(
           CATEGORIES.map(async (cat) => {
             try {
               const res = await apiCall({
                 method: 'get',
-                url: `/v1/awards/past?targetType=${cat.targetType}&intervalName=${cat.interval}&jurisdictionId=${jurisdictionId}&limit=1`,
+                url: `/v1/awards/past?type=${cat.type}&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurisdictionId}&intervalId=${cat.intervalId}`,
               });
 
               const awards = res.data || [];
               if (awards.length === 0) return null;
 
+              // Take the most recent award (first in list, assuming sorted by date desc)
               const award = awards[0];
               let displayData = null;
 
-              if (cat.targetType === 'song' && award.song) {
+              if (cat.type === 'song' && award.song) {
                 displayData = {
                   category: cat,
                   title: award.song.title || 'Unknown Song',
@@ -92,7 +109,7 @@ const LastWonNotification = () => {
                   navigateTo: `/song/${award.song.songId || award.targetId}`,
                   voteNavigate: '/voteawards',
                 };
-              } else if (cat.targetType === 'artist' && award.user) {
+              } else if (cat.type === 'artist' && award.user) {
                 displayData = {
                   category: cat,
                   title: award.user.username || 'Unknown Artist',
@@ -109,7 +126,8 @@ const LastWonNotification = () => {
               }
 
               return displayData;
-            } catch {
+            } catch (err) {
+              console.warn(`LastWonNotification: Failed to fetch ${cat.key}`, err);
               return null;
             }
           })
@@ -117,7 +135,10 @@ const LastWonNotification = () => {
 
         // Filter out nulls, pick one randomly
         const valid = results.filter(Boolean);
-        if (valid.length === 0) return;
+        if (valid.length === 0) {
+          console.log('LastWonNotification: No award winners found for any category');
+          return;
+        }
 
         const picked = valid[Math.floor(Math.random() * valid.length)];
         setNotification(picked);
@@ -165,7 +186,6 @@ const LastWonNotification = () => {
     dismiss();
 
     if (notification?.songData) {
-      // Play the song
       const song = notification.songData;
       const mediaObj = {
         type: 'song',
@@ -191,7 +211,6 @@ const LastWonNotification = () => {
     if (typeof val === 'number') {
       return val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toLocaleString();
     }
-    // Capitalize level strings
     if (typeof val === 'string') {
       return val.charAt(0).toUpperCase() + val.slice(1);
     }
@@ -206,7 +225,6 @@ const LastWonNotification = () => {
       onClick={handleOverlayClick}
     >
       <div className="lwn-card">
-        {/* Ambient background glow */}
         {notification.image && (
           <div className="lwn-ambient">
             <img src={notification.image} alt="" />
@@ -216,7 +234,6 @@ const LastWonNotification = () => {
         <div className="lwn-glass" />
 
         <div className="lwn-content">
-          {/* Hero image */}
           <div className="lwn-image-wrap">
             {notification.image ? (
               <img src={notification.image} alt={notification.title} />
@@ -228,7 +245,6 @@ const LastWonNotification = () => {
             <div className="lwn-image-gradient" />
           </div>
 
-          {/* Badge */}
           <div className={`lwn-badge ${notification.category.badgeClass}`}>
             <svg width="12" height="12" viewBox="0 0 24 24" style={{ fill: 'currentColor', display: 'block' }}>
               <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
@@ -236,7 +252,6 @@ const LastWonNotification = () => {
             {notification.category.badge}
           </div>
 
-          {/* Close button */}
           <button className="lwn-close" onClick={dismiss} aria-label="Dismiss">
             <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, stroke: 'rgba(255,255,255,0.7)', strokeWidth: 2, fill: 'none' }}>
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -244,7 +259,6 @@ const LastWonNotification = () => {
             </svg>
           </button>
 
-          {/* Body */}
           <div className="lwn-body">
             <div className="lwn-crown">{notification.category.icon}</div>
             <h2 className="lwn-title">{notification.title}</h2>
@@ -273,7 +287,6 @@ const LastWonNotification = () => {
           </div>
         </div>
 
-        {/* Auto-dismiss progress bar */}
         <div className="lwn-progress">
           <div className="lwn-progress-fill" ref={progressRef} style={{ width: '100%' }} />
         </div>
