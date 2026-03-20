@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }) => {
       if (userId) {
         axiosInstance.get(`/v1/users/profile/${userId}`)  
           .then(async (res) => {
+              console.log('PROFILE RESPONSE:', res.data); // ← add this
             const profileData = res.data;
             try {
               const roleCheck = await axiosInstance.get('/v1/admin/roles');

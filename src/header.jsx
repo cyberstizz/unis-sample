@@ -3,6 +3,8 @@ import "./header.scss";
 import unisLogo from './assets/unisLogoThree.svg';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { buildUrl } from './utils/buildUrl';
+
 
 const Header = () => {
   const navigate = useNavigate();
@@ -28,6 +30,15 @@ const Header = () => {
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
   }, []);
+
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+  const getPhotoUrl = () => {
+    if (!user?.photoUrl) return null;
+    if (user.photoUrl.startsWith('http')) return user.photoUrl; // R2 prod — already absolute
+    return `${API_BASE_URL}${user.photoUrl}`; // local or Railway — prepend base without /api
+  };
 
   const currentPath = location.pathname;
 
@@ -125,9 +136,9 @@ const Header = () => {
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             aria-label="User menu"
           >
-            {user?.profileImage ? (
+            {buildUrl(user?.photoUrl) ? (
               <img
-                src={user.profileImage}
+                src={buildUrl(user.photoUrl)}
                 alt="User avatar"
                 className="avatar-image"
               />
