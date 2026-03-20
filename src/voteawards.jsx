@@ -8,6 +8,7 @@ import backimage from './assets/randomrapper.jpeg';
 import VotingWizard from './votingWizard';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 import { Trophy, Play } from 'lucide-react';
+import { buildUrl } from './utils/buildUrl';
 
 const VoteAwards = () => {
   const navigate = useNavigate();
@@ -26,21 +27,6 @@ const VoteAwards = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-
-  const buildUrl = (url) => {
-    if (!url || typeof url !== 'string') return null;
-
-    const cleaned = url.trim();
-
-    if (!cleaned) return null;
-
-    const full =
-      cleaned.startsWith('http')
-        ? cleaned
-        : `${API_BASE_URL}${cleaned}`;
-
-    return full;
-  };
 
   const intervals = [
   { value: 'daily', label: 'Day' },

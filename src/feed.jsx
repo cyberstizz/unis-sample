@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { useAuth } from './context/AuthContext';
 import Layout from './layout';
+import { buildUrl } from './utils/buildUrl';
 import ArtistCard from './artistCard';
 import randomRapper from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
@@ -51,23 +52,6 @@ const Feed = () => {
 
   const userId = user?.userId;
   const jurisdictionId = user?.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002';
-
-  const buildUrl = (url) => {
-    if (!url || typeof url !== 'string') return '';
-    const cleaned = url.trim();
-    if (!cleaned) return '';
-
-    if (cleaned.includes('r2.cloudflarestorage.com')) {
-      const uploadsIndex = cleaned.indexOf('/uploads/');
-      if (uploadsIndex !== -1) {
-        const path = cleaned.slice(uploadsIndex);
-        return `https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev${path}`;
-      }
-    }
-
-    if (cleaned.startsWith('http')) return cleaned;
-    return `${API_BASE_URL}${cleaned}`;
-  };
 
   const formatDuration = (ms) => {
     if (!ms) return '';

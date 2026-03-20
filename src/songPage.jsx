@@ -14,6 +14,7 @@ import { PlayerContext } from './context/playercontext';
 import VotingWizard from './votingWizard';
 import CommentSection from './commentSection';
 import { useAuth } from './context/AuthContext';
+import { buildUrl } from './utils/buildUrl';
 
 const SongPage = () => {
   const { songId } = useParams();
@@ -50,23 +51,6 @@ const SongPage = () => {
   // ═══════════════════════════════════════════
   // HELPERS — identical to original
   // ═══════════════════════════════════════════
-
-  const buildUrl = (url) => {
-    if (!url || typeof url !== 'string') return '';
-    const cleaned = url.trim();
-    if (!cleaned) return '';
-
-    if (cleaned.includes('r2.cloudflarestorage.com')) {
-      const uploadsIndex = cleaned.indexOf('/uploads/');
-      if (uploadsIndex !== -1) {
-        const path = cleaned.slice(uploadsIndex);
-        return `https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev${path}`;
-      }
-    }
-
-    if (cleaned.startsWith('http')) return cleaned;
-    return `${API_BASE_URL}${cleaned}`;
-  };
 
   const extractColor = (url) => {
     const img = new Image();
