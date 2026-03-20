@@ -1,0 +1,383 @@
+// lastWonNotification.scss
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+// ═══════════════════════════════════════
+//  DESIGN TOKENS — matches feed.scss / player.scss
+// ═══════════════════════════════════════
+$bg-base: #0a0a0c;
+$bg-surface: #111114;
+$bg-elevated: #18181c;
+
+$border-subtle: rgba(255, 255, 255, 0.06);
+$border-medium: rgba(255, 255, 255, 0.1);
+
+$text-primary: #f0f0f2;
+$text-secondary: rgba(255, 255, 255, 0.55);
+$text-tertiary: rgba(255, 255, 255, 0.35);
+
+$accent: #4ea8f5;
+$accent-hover: #6ab8ff;
+
+$unis-blue: #163387;
+$unis-blue-hover: #1c41ad;
+
+// ═══════════════════════════════════════
+//  OVERLAY
+// ═══════════════════════════════════════
+.lwn-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+
+  &.lwn-visible {
+    opacity: 1;
+    pointer-events: auto;
+
+    .lwn-card {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+//  CARD
+// ═══════════════════════════════════════
+.lwn-card {
+  width: 420px;
+  max-width: 92vw;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  transform: translateY(40px) scale(0.95);
+  opacity: 0;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.4s ease;
+  cursor: default;
+}
+
+// ═══════════════════════════════════════
+//  AMBIENT GLOW — blurred artwork behind card
+// ═══════════════════════════════════════
+.lwn-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(40px) brightness(0.5) saturate(1.6);
+    transform: scale(1.4);
+  }
+}
+
+// ═══════════════════════════════════════
+//  GLASS LAYER — dark overlay on ambient
+// ═══════════════════════════════════════
+.lwn-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(175deg, rgba($bg-base, 0.55) 0%, rgba($bg-base, 0.85) 100%);
+  border: 1px solid $border-subtle;
+  border-radius: 16px;
+}
+
+// ═══════════════════════════════════════
+//  CONTENT WRAPPER
+// ═══════════════════════════════════════
+.lwn-content {
+  position: relative;
+  z-index: 2;
+  padding: 0;
+}
+
+// ═══════════════════════════════════════
+//  HERO IMAGE
+// ═══════════════════════════════════════
+.lwn-image-wrap {
+  width: 100%;
+  height: 220px;
+  position: relative;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.lwn-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, $bg-elevated, $bg-surface);
+  font-size: 48px;
+}
+
+.lwn-image-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(to top, rgba($bg-base, 0.95), transparent);
+}
+
+// ═══════════════════════════════════════
+//  BADGE
+// ═══════════════════════════════════════
+.lwn-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 40px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  z-index: 3;
+
+  &.daily {
+    background: rgba($accent, 0.2);
+    border: 1px solid rgba($accent, 0.35);
+    color: $accent-hover;
+  }
+
+  &.weekly {
+    background: rgba(245, 166, 35, 0.2);
+    border: 1px solid rgba(245, 166, 35, 0.35);
+    color: #f5c875;
+  }
+
+  &.artist {
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    color: #c4a5f7;
+  }
+}
+
+// ═══════════════════════════════════════
+//  CLOSE BUTTON
+// ═══════════════════════════════════════
+.lwn-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  transition: all 0.2s;
+  padding: 0;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.7);
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+}
+
+// ═══════════════════════════════════════
+//  BODY
+// ═══════════════════════════════════════
+.lwn-body {
+  padding: 20px 24px 24px;
+}
+
+.lwn-crown {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.lwn-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: $text-primary;
+  letter-spacing: -0.3px;
+  margin: 0 0 4px;
+  line-height: 1.2;
+}
+
+.lwn-subtitle {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: $text-secondary;
+  margin: 0 0 16px;
+  line-height: 1.4;
+}
+
+// ═══════════════════════════════════════
+//  STATS ROW
+// ═══════════════════════════════════════
+.lwn-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.lwn-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.lwn-stat-value {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.lwn-stat-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: $text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+// ═══════════════════════════════════════
+//  ACTION BUTTONS
+// ═══════════════════════════════════════
+.lwn-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.lwn-btn-primary {
+  flex: 1;
+  padding: 11px 20px;
+  border-radius: 10px;
+  border: none;
+  background: $unis-blue;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  &:hover {
+    background: $unis-blue-hover;
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.lwn-btn-secondary {
+  padding: 11px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// ═══════════════════════════════════════
+//  PROGRESS BAR (auto-dismiss countdown)
+// ═══════════════════════════════════════
+.lwn-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+  z-index: 3;
+}
+
+.lwn-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, $unis-blue, $accent);
+  border-radius: 0 0 16px 16px;
+  transition: width 0.1s linear;
+}
+
+// ═══════════════════════════════════════
+//  MOBILE RESPONSIVE
+// ═══════════════════════════════════════
+@media (max-width: 480px) {
+  .lwn-card {
+    max-width: 95vw;
+    border-radius: 14px;
+  }
+
+  .lwn-image-wrap {
+    height: 180px;
+  }
+
+  .lwn-body {
+    padding: 16px 20px 20px;
+  }
+
+  .lwn-title {
+    font-size: 20px;
+  }
+
+  .lwn-stats {
+    gap: 16px;
+  }
+
+  .lwn-stat-value {
+    font-size: 18px;
+  }
+
+  .lwn-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .lwn-btn-secondary {
+    text-align: center;
+  }
+}

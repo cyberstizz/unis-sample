@@ -20,6 +20,7 @@ import songArtNine from './assets/albumartnine.jpg';
 import songArtTen from './assets/albumartten.jpeg';
 import songArtEleven from './assets/rapperphotoOne.jpg';
 import { JURISDICTION_NAMES } from './utils/idMappings';
+import LastWonNotification from './LastWonNotification';
 import './feed.scss';
 
 // ─── Inline-styled play icon — immune to CSS overrides ───
@@ -47,9 +48,6 @@ const Feed = () => {
   const [popularArtists, setPopularArtists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
   const userId = user?.userId;
   const jurisdictionId = user?.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002';
 
@@ -429,6 +427,8 @@ const Feed = () => {
 
         </main>
       </div>
+      <LastWonNotification />
+
     </Layout>
   );
 };

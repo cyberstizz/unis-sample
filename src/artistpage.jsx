@@ -30,8 +30,6 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [defaultSong, setDefaultSong] = useState(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
 
   // Single effect — fires all requests in parallel on mount.
   // Follow status check is included only when we have both IDs and it's not our own profile.

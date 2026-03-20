@@ -1,24 +1,3 @@
-// src/utils/buildUrl.js
-//
-// Universal URL normalizer for Unis media assets.
-//
-// Handles all URL patterns found in the database:
-//
-// 1. Public R2 (no /uploads/):
-//    https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev/4eba2ed5-...-1762729433893.mp3
-//
-// 2. Public R2 (with /uploads/):
-//    https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev/uploads/25435e26-...-My fav.JPG
-//
-// 3. Private R2 (with /unis-media/uploads/):
-//    https://b9cdcab49fa03c52a7b4d440cbc370c3.r2.cloudflarestorage.com/unis-media/uploads/...
-//
-// 4. Private R2 (with just /uploads/):
-//    https://b9cdcab49fa03c52a7b4d440cbc370c3.r2.cloudflarestorage.com/uploads/...
-//
-// All returned URLs are passed through encodeURI() to handle spaces and
-// special characters in filenames (e.g. "My fav.JPG" → "My%20fav.JPG").
-
 const PUBLIC_R2_BASE = 'https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev';
 
 const API_BASE_URL = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL
