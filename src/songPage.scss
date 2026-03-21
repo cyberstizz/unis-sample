@@ -1,5 +1,11 @@
 // songPage.scss — Unis Song Page (Premium Ambient Design)
-// Complete replacement — all logic preserved, presentation transformed
+// 
+// CHANGES FROM PREVIOUS VERSION:
+// 1. Play button: Unis blue (#163387) + explicit `color: white` so icon always shows
+// 2. Sidebar: ambient artwork backdrop layer added
+// 3. Sidebar labels: switched from Space Mono to DM Sans for premium consistency
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&display=swap');
 
 // ═══════════════════════════════════════════
 // DESIGN TOKENS
@@ -15,6 +21,11 @@ $text-primary: #e8e6e1;
 $text-secondary: #9a978f;
 $text-tertiary: #5f5d58;
 $text-hint: #44423d;
+
+$unis-blue: #163387;
+$unis-blue-hover: #1e44a8;
+$unis-blue-dim: rgba(22, 51, 135, 0.15);
+$unis-blue-glow: rgba(22, 51, 135, 0.4);
 
 $accent-blue: #4a8fe7;
 $accent-blue-hover: #5a9bef;
@@ -104,11 +115,11 @@ $transition-ambient: 1.2s ease;
 .song-page-grid {
   display: grid;
   grid-template-columns: 1fr 300px;
-  min-height: calc(100vh - 56px); // account for header
+  min-height: calc(100vh - 56px);
 }
 
 .song-page-main {
-  min-width: 0; // prevent grid blowout
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -130,8 +141,6 @@ $transition-ambient: 1.2s ease;
   z-index: 0;
   transition: all $transition-ambient;
 
-  // The ambient gradient is driven by --ambient-r, --ambient-g, --ambient-b
-  // extracted from the album artwork
   background:
     radial-gradient(
       ellipse 90% 70% at 25% 15%,
@@ -182,7 +191,6 @@ $transition-ambient: 1.2s ease;
     display: block;
   }
 
-  // Subtle light reflection overlay
   &::after {
     content: '';
     position: absolute;
@@ -202,7 +210,7 @@ $transition-ambient: 1.2s ease;
 
 .song-hero-info {
   padding-bottom: 8px;
-  min-width: 0; // prevent text overflow
+  min-width: 0;
   animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
 }
 
@@ -277,7 +285,6 @@ $transition-ambient: 1.2s ease;
     object-fit: cover;
   }
 
-  // Placeholder when no image
   &.placeholder {
     display: flex;
     align-items: center;
@@ -339,18 +346,20 @@ $transition-ambient: 1.2s ease;
   flex-wrap: wrap;
 }
 
+// ─── CHANGE 1: Play button uses Unis blue + explicit white color ───
 .action-play-btn {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: $accent-blue;
+  background: $unis-blue;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: white;
   transition: transform $transition-fast, background $transition-fast, box-shadow $transition-fast;
-  box-shadow: 0 4px 16px $accent-blue-glow;
+  box-shadow: 0 4px 16px $unis-blue-glow;
   flex-shrink: 0;
 
   svg {
@@ -362,8 +371,8 @@ $transition-ambient: 1.2s ease;
 
   &:hover {
     transform: scale(1.06);
-    background: $accent-blue-hover;
-    box-shadow: 0 6px 24px $accent-blue-glow;
+    background: $unis-blue-hover;
+    box-shadow: 0 6px 24px $unis-blue-glow;
   }
 
   &:active {
@@ -540,14 +549,12 @@ $transition-ambient: 1.2s ease;
 }
 
 // ═══════════════════════════════════════════
-// MAIN CONTENT SECTIONS (lyrics, about, etc.)
+// MAIN CONTENT SECTIONS
 // ═══════════════════════════════════════════
 
 .song-main-content {
   padding: 0 40px 40px;
 }
-
-// --- Lyrics Section ---
 
 .song-lyrics-section {
   padding: 32px 0;
@@ -605,7 +612,6 @@ $transition-ambient: 1.2s ease;
     overflow-y: auto;
     padding-right: 8px;
 
-    // Custom scrollbar
     &::-webkit-scrollbar {
       width: 4px;
     }
@@ -619,8 +625,6 @@ $transition-ambient: 1.2s ease;
   }
 }
 
-// --- Comments wrapper ---
-
 .song-comments-wrapper {
   padding-top: 8px;
   animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s both;
@@ -630,13 +634,15 @@ $transition-ambient: 1.2s ease;
 // RIGHT SIDEBAR
 // ═══════════════════════════════════════════
 
+// ─── CHANGE 2: Sidebar now has position:relative + overflow:hidden
+//     to contain the ambient backdrop layer ───
 .song-right-sidebar {
+  position: relative;
+  overflow: hidden;
   border-left: 1px solid $border-default;
   padding: 32px 24px;
   background: $bg-secondary;
-  overflow-y: auto;
 
-  // Custom scrollbar
   &::-webkit-scrollbar {
     width: 4px;
   }
@@ -649,7 +655,26 @@ $transition-ambient: 1.2s ease;
   }
 }
 
+// ─── CHANGE 2 (cont): The ambient backdrop — blurred artwork behind sidebar ───
+.sidebar-ambient-bg {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(50px) saturate(200%);
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+// All sidebar sections sit above the ambient layer
 .sidebar-section {
+  position: relative;
+  z-index: 1;
   margin-bottom: 32px;
   animation: fadeIn 0.5s ease both;
 
@@ -660,10 +685,12 @@ $transition-ambient: 1.2s ease;
   }
 }
 
+// ─── CHANGE 3: Sidebar labels use DM Sans instead of Space Mono ───
 .sidebar-section-title {
-  font-family: $font-mono;
-  font-size: 10px;
-  letter-spacing: 1.5px;
+  font-family: $font-body;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.8px;
   text-transform: uppercase;
   color: $text-tertiary;
   margin-bottom: 14px;
@@ -687,11 +714,13 @@ $transition-ambient: 1.2s ease;
     background: rgba(255, 255, 255, 0.05);
   }
 
+  // ─── CHANGE 3 (cont): Detail labels use DM Sans ───
   .detail-label {
     font-size: 10px;
     color: $text-tertiary;
-    font-family: $font-mono;
-    letter-spacing: 0.5px;
+    font-family: $font-body;
+    font-weight: 500;
+    letter-spacing: 0.8px;
     text-transform: uppercase;
     margin-bottom: 4px;
   }
@@ -749,17 +778,20 @@ $transition-ambient: 1.2s ease;
     text-overflow: ellipsis;
   }
 
+  // ─── CHANGE 3 (cont): Jurisdiction uses DM Sans ───
   .artist-card-jurisdiction {
     font-size: 11px;
     color: $text-tertiary;
-    font-family: $font-mono;
+    font-family: $font-body;
+    font-weight: 400;
     letter-spacing: 0.3px;
   }
 }
 
 .sidebar-follow-btn {
-  font-family: $font-mono;
+  font-family: $font-body;
   font-size: 10px;
+  font-weight: 600;
   letter-spacing: 0.8px;
   text-transform: uppercase;
   color: $accent-blue;
@@ -812,11 +844,13 @@ $transition-ambient: 1.2s ease;
       border-bottom: 1px solid $border-default;
     }
 
+    // ─── CHANGE 3 (cont): Credit roles use DM Sans ───
     .credit-role {
       font-size: 11px;
       color: $text-tertiary;
-      font-family: $font-mono;
-      letter-spacing: 0.3px;
+      font-family: $font-body;
+      font-weight: 500;
+      letter-spacing: 0.5px;
       text-transform: uppercase;
     }
 
@@ -945,7 +979,6 @@ $transition-ambient: 1.2s ease;
     border-top: 1px solid $border-default;
     padding: 28px 24px;
 
-    // On tablet, show details in a horizontal flow
     .song-details-grid {
       grid-template-columns: repeat(4, 1fr);
     }

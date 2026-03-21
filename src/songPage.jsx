@@ -24,10 +24,6 @@ const SongPage = () => {
 
   const userId = user?.userId;
 
-  // ═══════════════════════════════════════════
-  // STATE — identical to original
-  // ═══════════════════════════════════════════
-
   const [song, setSong] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,16 +36,9 @@ const SongPage = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [dominantColor, setDominantColor] = useState('rgba(255, 255, 255, 0.1)');
-
-  // Ambient mode RGB channels (for CSS variable approach)
   const [ambientRGB, setAmbientRGB] = useState({ r: 80, g: 60, b: 40 });
 
   const moreMenuRef = useRef(null);
-
-
-  // ═══════════════════════════════════════════
-  // HELPERS — identical to original
-  // ═══════════════════════════════════════════
 
   const extractColor = (url) => {
     const img = new Image();
@@ -95,10 +84,6 @@ const SongPage = () => {
     return num.toLocaleString();
   };
 
-  // ═══════════════════════════════════════════
-  // DATA FETCHING — identical to original
-  // ═══════════════════════════════════════════
-
   useEffect(() => {
     if (!songId) return;
 
@@ -134,9 +119,10 @@ const SongPage = () => {
           explicit: songData.explicit || false,
           lyrics: songData.lyrics || '',
           voteCount: 0,
-          duration: songData.duration,
+          duration: songData.duration ? Math.round(songData.duration / 1000) : null,
           createdAt: songData.createdAt,
           genre: songData.genre?.name || 'Unknown',
+          artistPhoto: buildUrl(songData.artist?.photoUrl) || null,
           credits: { producer: 'N/A', writer: 'N/A', mix: 'N/A' },
           photos: [],
           videos: [],
@@ -177,10 +163,6 @@ const SongPage = () => {
       console.error('Failed to refresh song:', err);
     }
   };
-
-  // ═══════════════════════════════════════════
-  // HANDLERS — identical to original
-  // ═══════════════════════════════════════════
 
   const handleVoteSuccess = () => setShowVotingWizard(false);
 
@@ -304,7 +286,6 @@ const SongPage = () => {
     if (song?.artistId) navigate(`/artist/${song.artistId}`);
   };
 
-  // Close more menu on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
@@ -316,10 +297,6 @@ const SongPage = () => {
   }, []);
 
   const isOwner = userId && song?.artistId === userId;
-
-  // ═══════════════════════════════════════════
-  // RENDER — Loading State
-  // ═══════════════════════════════════════════
 
   if (loading) {
     return (
@@ -339,10 +316,6 @@ const SongPage = () => {
     );
   }
 
-  // ═══════════════════════════════════════════
-  // RENDER — Error State
-  // ═══════════════════════════════════════════
-
   if (error || !song) {
     return (
       <Layout backgroundImage={songArtwork}>
@@ -354,10 +327,6 @@ const SongPage = () => {
       </Layout>
     );
   }
-
-  // ═══════════════════════════════════════════
-  // RENDER — Main Song Page
-  // ═══════════════════════════════════════════
 
   return (
     <Layout backgroundImage={song.artwork}>
@@ -379,12 +348,10 @@ const SongPage = () => {
               <div className="song-hero-ambient" />
 
               <div className="song-hero-content">
-                {/* Album Art */}
                 <div className="song-album-art">
                   <img src={song.artwork} alt={`${song.title} artwork`} />
                 </div>
 
-                {/* Song Info */}
                 <div className="song-hero-info">
                   <div
                     className="song-jurisdiction-label"
@@ -401,8 +368,10 @@ const SongPage = () => {
                   </h1>
 
                   <div className="song-artist-row" onClick={handleArtistClick}>
-                    <div className="song-artist-avatar placeholder">
-                      {song.artist?.charAt(0).toUpperCase() || '?'}
+                    <div className={`song-artist-avatar ${song.artistPhoto ? '' : 'placeholder'}`}>
+                      {song.artistPhoto
+                        ? <img src={song.artistPhoto} alt={song.artist} />
+                        : song.artist?.charAt(0).toUpperCase() || '?'}
                     </div>
                     <span className="song-artist-name">{song.artist}</span>
                   </div>
@@ -421,12 +390,12 @@ const SongPage = () => {
 
             {/* ── ACTION BAR ── */}
             <div className="song-action-bar">
-              {/* Play */}
-              <button className="action-play-btn" onClick={handlePlay} title="Play">
-                <Play size={20} fill="white" />
-              </button>
-
-              {/* Vote */}
+              {/* FIXED: Added stroke="white" so the play triangle is always visible */}
+<button className="action-play-btn" onClick={handlePlay} title="Play">
+  <svg viewBox="0 0 24 24" width={20} height={20} style={{ width: 20, height: 20, display: 'block', fill: '#FFFFFF', flexShrink: 0 }}>
+    <path d="M8 5v14l11-7z" />
+  </svg>
+</button>
               <button
                 className="action-text-btn"
                 onClick={handleVote}
@@ -436,7 +405,6 @@ const SongPage = () => {
                 Vote
               </button>
 
-              {/* Like */}
               <button
                 className={`action-icon-btn ${isLiked ? 'active-like' : ''}`}
                 onClick={handleLike}
@@ -445,7 +413,6 @@ const SongPage = () => {
                 <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
               </button>
 
-              {/* Share / Copy Link */}
               <button
                 className={`action-icon-btn ${copySuccess ? 'active-vote' : ''}`}
                 onClick={handleCopyLink}
@@ -454,7 +421,6 @@ const SongPage = () => {
                 {copySuccess ? <Check size={16} /> : <Link2 size={16} />}
               </button>
 
-              {/* Follow */}
               <button
                 className={`action-text-btn ${isFollowing ? 'active' : ''}`}
                 onClick={handleFollow}
@@ -464,7 +430,6 @@ const SongPage = () => {
                 {isFollowing ? 'Following' : 'Follow'}
               </button>
 
-              {/* More actions */}
               <div className="more-actions-container" ref={moreMenuRef}>
                 <button
                   className="action-icon-btn"
@@ -492,10 +457,8 @@ const SongPage = () => {
                 )}
               </div>
 
-              {/* Spacer */}
               <div className="action-bar-spacer" />
 
-              {/* Stats */}
               <div className="action-bar-stats">
                 <span className="stat-item">
                   <Heart size={13} />
@@ -515,8 +478,6 @@ const SongPage = () => {
 
             {/* ── MAIN CONTENT AREA ── */}
             <div className="song-main-content">
-
-              {/* Lyrics Section */}
               {(song.lyrics || isOwner) && (
                 <div className="song-lyrics-section">
                   <div className="lyrics-header">
@@ -539,7 +500,6 @@ const SongPage = () => {
                 </div>
               )}
 
-              {/* Comments — same component, same props */}
               <div className="song-comments-wrapper">
                 <CommentSection
                   songId={song.id}
@@ -552,8 +512,12 @@ const SongPage = () => {
 
           {/* ━━━ RIGHT SIDEBAR ━━━ */}
           <aside className="song-right-sidebar">
+            {/* NEW: Ambient artwork backdrop for the entire sidebar */}
+            <div
+              className="sidebar-ambient-bg"
+              style={{ backgroundImage: `url(${song.artwork})` }}
+            />
 
-            {/* Song Details */}
             <div className="sidebar-section">
               <div className="sidebar-section-title">Song details</div>
               <div className="song-details-grid">
@@ -576,14 +540,15 @@ const SongPage = () => {
               </div>
             </div>
 
-            {/* Artist Card */}
             <div className="sidebar-section">
               <div className="sidebar-section-title">Artist</div>
               <div className="sidebar-artist-card" onClick={handleArtistClick}>
-                <div className="artist-card-avatar">
-                  {song.artist?.charAt(0).toUpperCase() || '?'}
+                <div className={`artist-card-avatar ${song.artistPhoto ? 'has-photo' : ''}`}>
+                  {song.artistPhoto
+                    ? <img src={song.artistPhoto} alt={song.artist} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                    : song.artist?.charAt(0).toUpperCase() || '?'}
                 </div>
-                <div className="artist-card-info">
+                  <div className="artist-card-info">
                   <div className="artist-card-name">{song.artist}</div>
                   <div className="artist-card-jurisdiction">{song.jurisdiction}</div>
                 </div>
@@ -599,7 +564,6 @@ const SongPage = () => {
               </div>
             </div>
 
-            {/* About */}
             {song.description && song.description !== 'No description available' && (
               <div className="sidebar-section">
                 <div className="sidebar-section-title">About</div>
@@ -609,7 +573,6 @@ const SongPage = () => {
               </div>
             )}
 
-            {/* Credits */}
             <div className="sidebar-section">
               <div className="sidebar-section-title">Credits</div>
               <div className="sidebar-credits">
@@ -628,7 +591,6 @@ const SongPage = () => {
               </div>
             </div>
 
-            {/* Photos (conditional) */}
             {song.photos.length > 0 && (
               <div className="sidebar-section">
                 <div className="sidebar-section-title">Photos</div>
@@ -645,7 +607,6 @@ const SongPage = () => {
               </div>
             )}
 
-            {/* Videos (conditional) */}
             {song.videos.length > 0 && (
               <div className="sidebar-section">
                 <div className="sidebar-section-title">Videos</div>
@@ -670,8 +631,6 @@ const SongPage = () => {
 
         </div>
       </div>
-
-      {/* ━━━ MODALS — identical to original ━━━ */}
 
       {showLyricsWizard && (
         <LyricsWizard
