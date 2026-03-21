@@ -321,7 +321,8 @@ const VoteAwards = () => {
         {/* ── Hero headline + countdown ── */}
         <div className="va-hero">
           <div className="va-hero-text">
-          <span className="va-active-poll">Active poll <span className="va-live-badge"><span className="va-live-dot" />LIVE</span></span>            <h1 className="va-headline">
+            <span className="va-active-poll">Active poll</span>
+            <h1 className="va-headline">
               {genreLabel} {typeLabel}{' '}
               <span className="va-headline-accent">of the {intervalLabel}</span>
               <br />
@@ -329,7 +330,7 @@ const VoteAwards = () => {
             </h1>
           </div>
           <div className="va-countdown">
-            <span className="va-countdown-label">Poll ends in</span>
+            <span className="va-countdown-label"><span className="va-live-badge"><span className="va-live-dot" />LIVE</span>  Poll ends in</span>
             <span className="va-countdown-time">
               {pad(countdown.hours)}:{pad(countdown.minutes)}:{pad(countdown.seconds)}
             </span>
@@ -352,9 +353,6 @@ const VoteAwards = () => {
                 filteredNominees.map((nominee, index) => (
                   <div key={nominee.id} className="va-card">
                     <div className="va-card-visual">
-                      <div className="va-card-rank">
-                        #{String(index + 1).padStart(2, '0')}
-                      </div>
                       <div
                         className="va-card-image"
                         style={{ backgroundImage: `url(${nominee.imageUrl})` }}
@@ -373,6 +371,7 @@ const VoteAwards = () => {
                     </div>
 
                     <div className="va-card-footer">
+                     <div className="va-card-ambient" style={{ backgroundImage: `url(${nominee.imageUrl})` }} />
                       <div className="va-card-stats">
                         {nominee.type === 'artist' ? (
                           <div className="va-stat">

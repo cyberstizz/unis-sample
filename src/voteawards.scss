@@ -356,6 +356,8 @@ $green-badge: #22c55e;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  background-color: black;
+  width: fit-content;
 }
 
 .va-card-artist {
@@ -391,6 +393,41 @@ $green-badge: #22c55e;
   flex-direction: column;
   gap: 8px;
   background: $card-bg;
+  position: relative;
+  overflow: hidden;
+}
+
+// ── Ambient glow behind card footer ──────────────────────────
+.va-card-footer {
+  position: relative;
+  overflow: hidden;
+}
+
+.va-card-ambient {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(40px) saturate(180%);
+  opacity: 0.3;
+  z-index: 0;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  pointer-events: none;
+
+  .va-card:hover & {
+    opacity: 0.55;
+    transform: scale(1.15);
+  }
+}
+
+// Ensure footer content sits above the ambient layer
+.va-card-stats,
+.va-card-buttons {
+  position: relative;
+  z-index: 1;
 }
 
 .va-card-stats {
