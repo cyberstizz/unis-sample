@@ -154,7 +154,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
                   required
                 />
               </div>
-              <div className="form-group">
+              <div className="upload-form-group">
                 <label htmlFor="description">Description</label>
                 <textarea
                   id="description"
@@ -164,7 +164,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
                   rows="3"
                 />
               </div>
-              <div className="form-group">
+              <div className="upload-form-group">
                 <label htmlFor="isrc">ISRC (Optional)</label>
                 <input
                   type="text"
