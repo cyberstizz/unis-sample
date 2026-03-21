@@ -4,6 +4,8 @@ import unisLogo from './assets/unisLogoThree.svg';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
+import { DollarSign, House, Music } from 'lucide-react';
+
 
 
 const Header = () => {
@@ -72,9 +74,10 @@ const Header = () => {
         );
       case "earnings":
         return (
-          <svg className="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 1V13M4 3.5H8.5C9.9 3.5 11 4.4 11 5.5C11 6.6 9.9 7.5 8.5 7.5H4M4 7.5H9C10.4 7.5 11.5 8.4 11.5 9.5C11.5 10.6 10.4 11.5 9 11.5H4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <DollarSign height={15} />
+          // <svg className="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+          //   <path d="M7 1V13M4 3.5H8.5C9.9 3.5 11 4.4 11 5.5C11 6.6 9.9 7.5 8.5 7.5H4M4 7.5H9C10.4 7.5 11.5 8.4 11.5 9.5C11.5 10.6 10.4 11.5 9 11.5H4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          // </svg>
         );
       default:
         return null;
