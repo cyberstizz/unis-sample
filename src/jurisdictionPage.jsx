@@ -249,14 +249,14 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           <p className="jp-hero-desc">{data.description}</p>
 
           <div className="jp-hero-stats">
-            <div className="jp-stat-card">
+            {/* <div className="jp-stat-card">
               <span className="jp-stat-label">Top Artists</span>
               <span className="jp-stat-value">{data.topArtists.length}</span>
             </div>
             <div className="jp-stat-card">
               <span className="jp-stat-label">Top Songs</span>
               <span className="jp-stat-value">{data.topSongs.length}</span>
-            </div>
+            </div> */}
           </div>
         </header>
 
