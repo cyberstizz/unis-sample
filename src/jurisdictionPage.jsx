@@ -260,6 +260,14 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           </div>
         </header>
 
+        {/* ═══════ SEARCH BAR ═══════ */}
+        <div className="jp-search">
+          <svg viewBox="0 0 24 24" width="16" height="16" style={{ width: 16, height: 16, display: 'block', flexShrink: 0 }} fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="21" y2="21" />
+          </svg>
+          <span className="jp-search-text">Search artists...</span>
+        </div>
+
         {/* ═══════ TWO-COLUMN: Top Artists + Local Anthems ═══════ */}
         <div className="jp-main-grid">
 
@@ -281,6 +289,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                     className="jp-artist-row"
                     onClick={() => handleViewArtist(artist.id)}
                   >
+                    <div className="jp-ambient-bg" style={{ backgroundImage: `url(${artist.thumbnail})` }} />
                     <span className="jp-artist-rank">
                       {String(artist.rank).padStart(2, '0')}
                     </span>
@@ -361,6 +370,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                   className="jp-anthem-row"
                   onClick={() => handleViewSong(song.id)}
                 >
+                  <div className="jp-ambient-bg" style={{ backgroundImage: `url(${song.thumbnail})` }} />
                   <img src={song.thumbnail} alt={song.title} className="jp-anthem-thumb" />
                   <div className="jp-anthem-info">
                     <span className="jp-anthem-rank">#{song.rank}</span>

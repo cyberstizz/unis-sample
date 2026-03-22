@@ -498,6 +498,45 @@ $radius-lg: 14px;
   &:hover { transform: scale(1.1); }
 }
 
+// ── Ambient glow for artist + song rows ──────────
+.jp-artist-row,
+.jp-anthem-row {
+  position: relative;
+  overflow: hidden;
+}
+
+.jp-ambient-bg {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(40px) saturate(180%);
+  opacity: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+
+  .jp-artist-row:hover &,
+  .jp-anthem-row:hover & {
+    opacity: 0.25;
+  }
+}
+
+// Ensure all row content sits above the ambient layer
+.jp-artist-rank,
+.jp-artist-photo,
+.jp-artist-info,
+.jp-artist-arrow,
+.jp-anthem-thumb,
+.jp-anthem-info,
+.jp-anthem-play {
+  position: relative;
+  z-index: 1;
+}
+
 // ═════════════════════════════════════════════════
 // EDITORIAL — "Discover the Rhythm of Your Streets"
 // ═════════════════════════════════════════════════
