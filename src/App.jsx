@@ -57,6 +57,7 @@ const AppLayout = () => {
         <Route path="/cookie" element={<CookiePolicy />} />
         <Route path="/report" element={<ReportInfringement />} />
 
+
         {/* Authenticated routes */}
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<Feed />} />
