@@ -281,7 +281,7 @@ $green-badge: #22c55e;
   background: $card-bg;
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid $unis-blue;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 
   &:hover {
