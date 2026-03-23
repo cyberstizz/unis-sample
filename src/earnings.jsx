@@ -5,7 +5,7 @@ import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import {
   DollarSign, Users, TrendingUp, ArrowUpRight,
-  Clock, CheckCircle, AlertCircle, ChevronRight, RefreshCw
+  Clock, CheckCircle, AlertCircle, RefreshCw
 } from 'lucide-react';
 import './earnings.scss';
 
@@ -56,7 +56,8 @@ const Earnings = () => {
   const formatMoney = (amount) => {
     if (amount === null || amount === undefined) return '$0.00';
     const num = typeof amount === 'number' ? amount : parseFloat(amount);
-    return `$${num.toFixed(num < 1 && num > 0 ? 4 : 2)}`;
+    if (isNaN(num)) return '$0.00';
+    return `$${num.toFixed(num < 0.01 && num > 0 ? 6 : num < 1 && num > 0 ? 4 : 2)}`;
   };
 
   if (loading) {
@@ -176,20 +177,62 @@ const Earnings = () => {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="overview-content">
+
+              {/* 3-Level Referral Breakdown */}
+              <div className="chart-card">
+                <h3>Referral Earnings by Level</h3>
+                <div className="level-breakdown">
+                  <div className="level-row">
+                    <div className="level-label">
+                      <span className="level-dot" style={{ background: '#3b82f6' }} />
+                      <span className="level-name">Level 1 — Direct Referrals</span>
+                      <span className="level-pct">10%</span>
+                    </div>
+                    <span className="level-amount">{formatMoney(summary?.referralEarnings?.level1?.lifetime)}</span>
+                  </div>
+                  <div className="level-row">
+                    <div className="level-label">
+                      <span className="level-dot" style={{ background: '#8b5cf6' }} />
+                      <span className="level-name">Level 2 — Your Referrals' Referrals</span>
+                      <span className="level-pct">5%</span>
+                    </div>
+                    <span className="level-amount">{formatMoney(summary?.referralEarnings?.level2?.lifetime)}</span>
+                  </div>
+                  <div className="level-row">
+                    <div className="level-label">
+                      <span className="level-dot" style={{ background: '#06b6d4' }} />
+                      <span className="level-name">Level 3 — Third Degree</span>
+                      <span className="level-pct">2%</span>
+                    </div>
+                    <span className="level-amount">{formatMoney(summary?.referralEarnings?.level3?.lifetime)}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Daily Chart */}
               <div className="chart-card">
                 <h3>Last 30 Days</h3>
                 {history.length > 0 ? (
                   <div className="mini-chart">
-                    {history.map((day, i) => {
-                      const maxTotal = Math.max(...history.map(d => parseFloat(d.total) || 0), 0.001);
-                      const height = Math.max(4, (parseFloat(day.total) / maxTotal) * 100);
-                      return (
-                        <div key={i} className="chart-bar-wrap" title={`${day.date}: ${formatMoney(day.total)}`}>
-                          <div className="chart-bar" style={{ height: `${height}%` }} />
-                        </div>
-                      );
-                    })}
+                    {(() => {
+                      const values = history.map(d => parseFloat(d.total) || 0);
+                      const maxVal = Math.max(...values);
+                      const minVal = Math.min(...values);
+                      const range = maxVal - minVal;
+
+                      return history.map((day, i) => {
+                        const val = parseFloat(day.total) || 0;
+                        const height = range === 0
+                          ? 50
+                          : Math.max(6, ((val - minVal) / range) * 90 + 10);
+                        return (
+                          <div key={i} className="chart-bar-wrap" title={`${day.date}: ${formatMoney(day.total)}`}>
+                            <div className="chart-bar" style={{ height: `${height}%` }} />
+                            <span className="chart-date">{day.date.slice(5)}</span>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 ) : (
                   <div className="empty-chart">
@@ -205,8 +248,8 @@ const Earnings = () => {
                   <div className="split-item">
                     <div className="split-dot" style={{ background: '#3b82f6' }} />
                     <div className="split-info">
-                      <strong>Referral Income (10%)</strong>
-                      <p>Every user you refer generates ad revenue. You earn 10% of that revenue — forever.</p>
+                      <strong>Referral Income (up to 17%)</strong>
+                      <p>Level 1: 10% from users you directly referred. Level 2: 5% from their referrals. Level 3: 2% from their referrals' referrals. Lifetime passive income — forever.</p>
                     </div>
                   </div>
                   {isArtist && (
@@ -222,7 +265,7 @@ const Earnings = () => {
                     <div className="split-dot" style={{ background: '#f59e0b' }} />
                     <div className="split-info">
                       <strong>Audio Ad Revenue (Coming Soon)</strong>
-                      <p>Pre-roll ads on songs. Artists earn 60% of net revenue from their streams.</p>
+                      <p>Pre-roll ads on songs. Artists earn 60% of net revenue. Referral pool splits 10/5/2% across 3 levels.</p>
                     </div>
                   </div>
                 </div>
@@ -270,18 +313,31 @@ const Earnings = () => {
                 <h3>Display Ad Revenue Split</h3>
                 <div className="how-visual">
                   <div className="how-bar">
-                    <div className="how-segment" style={{ width: '75%', background: '#163387' }}>
-                      <span>Unis 75%</span>
+                    <div className="how-segment" style={{ width: '68%', background: '#163387' }}>
+                      <span>Unis 68%</span>
                     </div>
                     <div className="how-segment" style={{ width: '15%', background: '#a855f7' }}>
                       <span>Artist 15%</span>
                     </div>
                     <div className="how-segment" style={{ width: '10%', background: '#3b82f6' }}>
-                      <span>Referrer 10%</span>
+                      <span>L1 10%</span>
+                    </div>
+                    <div className="how-segment" style={{ width: '5%', background: '#8b5cf6' }}>
+                      <span>L2</span>
+                    </div>
+                    <div className="how-segment" style={{ width: '2%', background: '#06b6d4' }}>
+                      <span></span>
                     </div>
                   </div>
+                  <div className="how-legend">
+                    <span><span className="legend-dot" style={{ background: '#163387' }} /> Unis (68%)</span>
+                    <span><span className="legend-dot" style={{ background: '#a855f7' }} /> Supported Artist (15%)</span>
+                    <span><span className="legend-dot" style={{ background: '#3b82f6' }} /> Level 1 Referrer (10%)</span>
+                    <span><span className="legend-dot" style={{ background: '#8b5cf6' }} /> Level 2 Referrer (5%)</span>
+                    <span><span className="legend-dot" style={{ background: '#06b6d4' }} /> Level 3 Referrer (2%)</span>
+                  </div>
                 </div>
-                <p className="how-note">Every ad view is tracked and attributed. Your referrer earns when you browse. The artist you support earns when you browse. Everyone wins.</p>
+                <p className="how-note">Every ad view is tracked and attributed. Your referrer earns when you browse. The artist you support earns when you browse. If any referral level doesn't exist, that share goes to Unis.</p>
               </div>
 
               <div className="how-section">
@@ -291,15 +347,21 @@ const Earnings = () => {
                     <div className="how-segment" style={{ width: '60%', background: '#22c55e' }}>
                       <span>Artist 60%</span>
                     </div>
-                    <div className="how-segment" style={{ width: '20%', background: '#163387' }}>
-                      <span>Unis 20%</span>
+                    <div className="how-segment" style={{ width: '23%', background: '#163387' }}>
+                      <span>Unis 23%</span>
                     </div>
-                    <div className="how-segment" style={{ width: '20%', background: '#3b82f6' }}>
-                      <span>Referral Pool 20%</span>
+                    <div className="how-segment" style={{ width: '10%', background: '#3b82f6' }}>
+                      <span>L1 10%</span>
+                    </div>
+                    <div className="how-segment" style={{ width: '5%', background: '#8b5cf6' }}>
+                      <span>L2</span>
+                    </div>
+                    <div className="how-segment" style={{ width: '2%', background: '#06b6d4' }}>
+                      <span></span>
                     </div>
                   </div>
                 </div>
-                <p className="how-note">Pre-roll audio ads before songs. After compulsory royalty payments, the net revenue splits 60/20/20. The referral pool is distributed up to 3 levels deep (10% / 5% / 2%), with unclaimed remainder going to Unis.</p>
+                <p className="how-note">Pre-roll audio ads before songs. After compulsory royalty payments, the net revenue splits across the artist, Unis, and the 3-level referral chain.</p>
               </div>
 
               <div className="how-section">
@@ -308,9 +370,23 @@ const Earnings = () => {
                   <li>Minimum payout: <strong>$50.00</strong></li>
                   <li>Payout frequency: <strong>Monthly</strong> (first week of following month)</li>
                   <li>Earnings under $50 roll over — nothing is lost</li>
-                  <li>Payment via Stripe Connect (PayPal/direct deposit)</li>
+                  <li>Payment via Stripe Connect (bank deposit)</li>
                   <li>1099-NEC issued for US users earning over $600/year</li>
                 </ul>
+              </div>
+
+              <div className="how-section">
+                <h3>3-Level Referral Chain</h3>
+                <div className="chain-visual">
+                  <div className="chain-node chain-you">YOU</div>
+                  <div className="chain-arrow">↓ refers</div>
+                  <div className="chain-node chain-l1">User A <span className="chain-tag">You earn 10%</span></div>
+                  <div className="chain-arrow">↓ refers</div>
+                  <div className="chain-node chain-l2">User B <span className="chain-tag">You earn 5%</span></div>
+                  <div className="chain-arrow">↓ refers</div>
+                  <div className="chain-node chain-l3">User C <span className="chain-tag">You earn 2%</span></div>
+                </div>
+                <p className="how-note">When User C browses Unis and sees ads, you earn 2% of that revenue. When User B browses, you earn 5%. When User A browses, you earn 10%. This is lifetime passive income from everyone in your 3-level chain.</p>
               </div>
             </div>
           )}
