@@ -1,103 +1,54 @@
-// songPage.scss — Unis Song Page (Premium Ambient Design)
-// 
-// CHANGES FROM PREVIOUS VERSION:
-// 1. Play button: Unis blue (#163387) + explicit `color: white` so icon always shows
-// 2. Sidebar: ambient artwork backdrop layer added
-// 3. Sidebar labels: switched from Space Mono to DM Sans for premium consistency
+// songPage.scss — Unis Song Page
+// Two-column layout with text-label buttons, ambient hero + sidebar
+// DM Sans throughout
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&display=swap');
-
-// ═══════════════════════════════════════════
-// DESIGN TOKENS
-// ═══════════════════════════════════════════
 
 $bg-primary: #0d0f14;
 $bg-secondary: #141720;
 $bg-tertiary: #1a1d28;
-$bg-card: #181b24;
 $bg-surface: rgba(255, 255, 255, 0.03);
-
 $text-primary: #e8e6e1;
 $text-secondary: #9a978f;
 $text-tertiary: #5f5d58;
-$text-hint: #44423d;
-
 $unis-blue: #163387;
 $unis-blue-hover: #1e44a8;
 $unis-blue-dim: rgba(22, 51, 135, 0.15);
 $unis-blue-glow: rgba(22, 51, 135, 0.4);
-
 $accent-blue: #4a8fe7;
-$accent-blue-hover: #5a9bef;
 $accent-blue-dim: rgba(74, 143, 231, 0.15);
-$accent-blue-glow: rgba(74, 143, 231, 0.3);
 $accent-red: #e24b4b;
 $accent-red-dim: rgba(226, 75, 75, 0.15);
 $accent-green: #4ecf7a;
-
 $border-default: rgba(255, 255, 255, 0.06);
 $border-hover: rgba(255, 255, 255, 0.12);
-$border-active: rgba(255, 255, 255, 0.2);
-
 $font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-$font-mono: 'Space Mono', 'SF Mono', 'Fira Code', monospace;
-
+$font-mono: 'Space Mono', monospace;
 $radius-sm: 6px;
 $radius-md: 8px;
 $radius-lg: 12px;
-$radius-xl: 16px;
 $radius-full: 9999px;
-
 $transition-fast: 0.15s ease;
-$transition-normal: 0.25s ease;
-$transition-slow: 0.4s ease;
 $transition-ambient: 1.2s ease;
 
-// ═══════════════════════════════════════════
-// ANIMATIONS
-// ═══════════════════════════════════════════
-
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-
 @keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
-
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.7; }
-}
-
-// ═══════════════════════════════════════════
-// SONG PAGE CONTAINER
-// ═══════════════════════════════════════════
-
+// ── Container ──
 .song-page-container {
   width: 100%;
   min-height: 100vh;
@@ -105,61 +56,40 @@ $transition-ambient: 1.2s ease;
   color: $text-primary;
   font-family: $font-body;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-// ═══════════════════════════════════════════
-// TWO-COLUMN LAYOUT
-// ═══════════════════════════════════════════
-
-.song-page-grid {
+.sp-grid {
   display: grid;
   grid-template-columns: 1fr 300px;
   min-height: calc(100vh - 56px);
 }
 
-.song-page-main {
+.sp-main {
   min-width: 0;
   overflow: hidden;
 }
 
-// ═══════════════════════════════════════════
-// HERO SECTION — AMBIENT MODE
-// ═══════════════════════════════════════════
-
-.song-hero {
+// ── Hero ──
+.sp-hero {
   position: relative;
   padding: 48px 40px 0;
   overflow: hidden;
   transition: all $transition-ambient;
 }
 
-.song-hero-ambient {
+.sp-hero-ambient {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
   transition: all $transition-ambient;
-
   background:
-    radial-gradient(
-      ellipse 90% 70% at 25% 15%,
-      rgba(var(--ambient-r, 80), var(--ambient-g, 60), var(--ambient-b, 40), 0.3) 0%,
-      transparent 70%
-    ),
-    radial-gradient(
-      ellipse 60% 55% at 75% 45%,
-      rgba(var(--ambient-r, 80), var(--ambient-g, 60), var(--ambient-b, 40), 0.15) 0%,
-      transparent 55%
-    ),
-    linear-gradient(
-      180deg,
-      rgba($bg-primary, 0) 0%,
-      $bg-primary 100%
-    );
+    radial-gradient(ellipse 90% 70% at 25% 15%, rgba(var(--ambient-r, 80), var(--ambient-g, 60), var(--ambient-b, 40), 0.3) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 55% at 75% 45%, rgba(var(--ambient-r, 80), var(--ambient-g, 60), var(--ambient-b, 40), 0.15) 0%, transparent 55%),
+    linear-gradient(180deg, rgba($bg-primary, 0) 0%, $bg-primary 100%);
 }
 
-.song-hero-content {
+.sp-hero-content {
   position: relative;
   z-index: 1;
   display: flex;
@@ -168,53 +98,24 @@ $transition-ambient: 1.2s ease;
   animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-// ═══════════════════════════════════════════
-// ALBUM ART
-// ═══════════════════════════════════════════
-
-.song-album-art {
+.sp-album-art {
   width: 260px;
   height: 260px;
   border-radius: $radius-md;
   overflow: hidden;
   flex-shrink: 0;
-  position: relative;
-  box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.5),
-    0 8px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 8px 20px rgba(0, 0, 0, 0.3);
   animation: scaleIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.08) 0%,
-      transparent 50%
-    );
-    pointer-events: none;
-  }
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
 }
 
-// ═══════════════════════════════════════════
-// SONG INFO (beside artwork)
-// ═══════════════════════════════════════════
-
-.song-hero-info {
+.sp-hero-info {
   padding-bottom: 8px;
   min-width: 0;
   animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
 }
 
-.song-jurisdiction-label {
+.sp-jurisdiction {
   font-family: $font-mono;
   font-size: 10px;
   letter-spacing: 1.5px;
@@ -222,15 +123,11 @@ $transition-ambient: 1.2s ease;
   color: $accent-blue;
   margin-bottom: 8px;
   cursor: pointer;
-  transition: color $transition-fast;
   display: inline-block;
-
-  &:hover {
-    color: $accent-blue-hover;
-  }
+  &:hover { color: lighten($accent-blue, 10%); }
 }
 
-.song-title-display {
+.sp-title {
   font-size: 42px;
   font-weight: 700;
   line-height: 1.05;
@@ -238,13 +135,10 @@ $transition-ambient: 1.2s ease;
   color: $text-primary;
   margin-bottom: 12px;
   word-wrap: break-word;
-  overflow-wrap: break-word;
 }
 
-.song-explicit-badge {
+.sp-explicit {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
   margin-left: 12px;
   background: rgba($accent-red, 0.85);
   color: white;
@@ -255,36 +149,24 @@ $transition-ambient: 1.2s ease;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   vertical-align: middle;
-  font-family: $font-mono;
 }
 
-.song-artist-row {
+.sp-artist-row {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
   cursor: pointer;
-  transition: opacity $transition-fast;
-
-  &:hover {
-    opacity: 0.85;
-  }
+  &:hover { opacity: 0.85; }
 }
 
-.song-artist-avatar {
+.sp-artist-avatar {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: $bg-tertiary;
   overflow: hidden;
   flex-shrink: 0;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
+  img { width: 100%; height: 100%; object-fit: cover; }
   &.placeholder {
     display: flex;
     align-items: center;
@@ -296,367 +178,227 @@ $transition-ambient: 1.2s ease;
   }
 }
 
-.song-artist-name {
+.sp-artist-name {
   font-size: 15px;
   font-weight: 500;
   color: $text-primary;
 }
 
-.song-meta-row {
+.sp-meta {
   display: flex;
   align-items: center;
   gap: 16px;
   font-size: 13px;
   color: $text-secondary;
   flex-wrap: wrap;
-
-  .meta-dot {
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: $text-tertiary;
-    flex-shrink: 0;
-  }
-
-  .meta-genre {
-    font-family: $font-mono;
-    font-size: 11px;
-    letter-spacing: 0.5px;
-    color: $text-tertiary;
-    background: $bg-surface;
-    padding: 2px 8px;
-    border-radius: $radius-sm;
-    border: 1px solid $border-default;
-  }
 }
 
-// ═══════════════════════════════════════════
-// ACTION BAR
-// ═══════════════════════════════════════════
+.sp-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: $text-tertiary;
+}
 
-.song-action-bar {
+.sp-genre-pill {
+  font-family: $font-mono;
+  font-size: 11px;
+  color: $text-tertiary;
+  background: $bg-surface;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  border: 1px solid $border-default;
+}
+
+// ── Primary actions — TEXT BUTTONS ──
+.sp-primary-actions {
   position: relative;
   z-index: 1;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 28px 40px 24px;
-  border-bottom: 1px solid $border-default;
+  padding: 24px 40px 20px;
   animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both;
   flex-wrap: wrap;
 }
 
-// ─── CHANGE 1: Play button uses Unis blue + explicit white color ───
-.action-play-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+.sp-btn-play {
+  padding: 10px 28px;
   background: $unis-blue;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: white;
-  transition: transform $transition-fast, background $transition-fast, box-shadow $transition-fast;
-  box-shadow: 0 4px 16px $unis-blue-glow;
-  flex-shrink: 0;
-
-  svg {
-    width: 20px;
-    height: 20px;
-    color: white;
-    margin-left: 2px;
-  }
-
-  &:hover {
-    transform: scale(1.06);
-    background: $unis-blue-hover;
-    box-shadow: 0 6px 24px $unis-blue-glow;
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
-}
-
-.action-icon-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: none;
-  border: 1px solid $border-hover;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: $text-secondary;
-  transition: all $transition-fast;
-  flex-shrink: 0;
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-
-  &:hover {
-    color: $text-primary;
-    border-color: $border-active;
-    background: $bg-surface;
-  }
-
-  &.active-like {
-    color: $accent-red;
-    border-color: rgba($accent-red, 0.3);
-    background: $accent-red-dim;
-  }
-
-  &.active-vote {
-    color: $accent-blue;
-    border-color: rgba($accent-blue, 0.3);
-    background: $accent-blue-dim;
-  }
-
-  &.active-follow {
-    color: $accent-blue;
-    border-color: rgba($accent-blue, 0.3);
-    background: $accent-blue-dim;
-  }
-}
-
-.action-text-btn {
-  height: 36px;
-  padding: 0 16px;
-  border-radius: $radius-full;
-  background: none;
-  border: 1px solid $border-hover;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: $text-secondary;
+  border: none;
+  border-radius: $radius-sm;
   font-family: $font-body;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background $transition-fast, box-shadow $transition-fast;
+  &:hover { background: $unis-blue-hover; box-shadow: 0 4px 16px $unis-blue-glow; }
+}
+
+.sp-btn-vote {
+  padding: 10px 28px;
+  background: transparent;
+  color: $text-primary;
+  border: 2px solid $unis-blue;
+  border-radius: $radius-sm;
+  font-family: $font-body;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all $transition-fast;
-  white-space: nowrap;
-
-  svg {
-    width: 14px;
-    height: 14px;
-  }
-
-  &:hover {
-    color: $text-primary;
-    border-color: $border-active;
-    background: $bg-surface;
-  }
-
-  &.active {
-    color: $accent-blue;
-    border-color: rgba($accent-blue, 0.3);
-    background: $accent-blue-dim;
-  }
+  &:hover { background: $unis-blue-dim; }
 }
 
-.action-bar-spacer {
-  flex: 1;
-  min-width: 16px;
-}
-
-.action-bar-stats {
+.sp-btn-like {
+  padding: 10px 20px;
+  background: transparent;
+  color: grey;
+  border: 2px solid $unis-blue;
+  border-radius: $radius-sm;
+  font-family: $font-body;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 18px;
-  font-size: 12px;
-  color: $text-tertiary;
-  font-family: $font-mono;
-  letter-spacing: 0.3px;
+  gap: 8px;
+  transition: all 0.3s ease;
 
-  .stat-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
+  &.liked {
+    background: $unis-blue;
+    color: white;
+  }
+}
 
-    svg {
-      width: 13px;
-      height: 13px;
-    }
+// ── Stats row ──
+.sp-stats-row {
+  display: flex;
+  gap: 20px;
+  padding: 0 40px 16px;
+  font-size: 14px;
+  color: $text-secondary;
+
+  .sp-stat strong {
+    color: $unis-blue;
+    margin-right: 6px;
   }
 
-  .stat-hot {
+  .sp-stat-hot {
     color: $accent-green;
     font-weight: 600;
   }
 }
 
-// ═══════════════════════════════════════════
-// MORE ACTIONS DROPDOWN
-// ═══════════════════════════════════════════
-
-.more-actions-container {
-  position: relative;
+// ── Secondary actions — TEXT BUTTONS ──
+.sp-secondary-actions {
+  display: flex;
+  gap: 10px;
+  padding: 0 40px 24px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid $border-default;
 }
 
-.more-actions-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  background: $bg-card;
+.sp-action-btn {
+  padding: 8px 16px;
+  background: transparent;
   border: 1px solid $border-hover;
-  border-radius: $radius-lg;
-  padding: 6px;
-  min-width: 180px;
-  z-index: 50;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-  animation: fadeIn 0.15s ease;
+  border-radius: $radius-sm;
+  color: $text-secondary;
+  font-family: $font-body;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all $transition-fast;
 
-  .dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 10px 12px;
-    background: none;
-    border: none;
-    border-radius: $radius-md;
-    color: $text-secondary;
-    font-family: $font-body;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all $transition-fast;
+  &:hover {
+    color: $text-primary;
+    border-color: rgba(255, 255, 255, 0.2);
+    background: $bg-surface;
+  }
 
-    svg {
-      width: 15px;
-      height: 15px;
-      flex-shrink: 0;
-    }
-
-    &:hover {
-      background: $bg-surface;
-      color: $text-primary;
-    }
-
-    &.danger:hover {
-      background: $accent-red-dim;
-      color: $accent-red;
-    }
-
-    &.success {
-      color: $accent-green;
-    }
+  &.following {
+    color: $accent-blue;
+    border-color: rgba($accent-blue, 0.3);
+    background: $accent-blue-dim;
   }
 }
 
-// ═══════════════════════════════════════════
-// MAIN CONTENT SECTIONS
-// ═══════════════════════════════════════════
-
-.song-main-content {
-  padding: 0 40px 40px;
-}
-
-.song-lyrics-section {
-  padding: 32px 0;
+// ── Lyrics ──
+.sp-lyrics-section {
+  padding: 32px 40px;
   border-bottom: 1px solid $border-default;
   animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
-
-  .lyrics-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-  }
-
-  .lyrics-title {
-    font-family: $font-mono;
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: $text-tertiary;
-  }
-
-  .lyrics-edit-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    background: $accent-blue-dim;
-    border: none;
-    border-radius: $radius-sm;
-    color: $accent-blue;
-    font-family: $font-mono;
-    font-size: 10px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: background $transition-fast;
-
-    svg {
-      width: 13px;
-      height: 13px;
-    }
-
-    &:hover {
-      background: rgba($accent-blue, 0.25);
-    }
-  }
-
-  .lyrics-body {
-    white-space: pre-wrap;
-    font-size: 15px;
-    line-height: 2;
-    color: $text-secondary;
-    font-weight: 400;
-    max-height: 400px;
-    overflow-y: auto;
-    padding-right: 8px;
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    &::-webkit-scrollbar-thumb {
-      background: $border-hover;
-      border-radius: 2px;
-    }
-  }
 }
 
-.song-comments-wrapper {
-  padding-top: 8px;
-  animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s both;
+.sp-lyrics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
 
+.sp-lyrics-label {
+  font-family: $font-mono;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: $text-tertiary;
+}
+
+.sp-lyrics-edit {
+  padding: 6px 14px;
+  background: $accent-blue-dim;
+  border: none;
+  border-radius: $radius-sm;
+  color: $accent-blue;
+  font-family: $font-body;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { background: rgba($accent-blue, 0.25); }
+}
+
+.sp-lyrics-body {
+  white-space: pre-wrap;
+  font-size: 15px;
+  line-height: 2;
+  color: $text-secondary;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: $border-hover; border-radius: 2px; }
+}
+
+.sp-comments {
+  padding: 8px 40px 40px;
+}
+
+// ── Loading / Error ──
+.sp-loading, .sp-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  font-size: 15px;
+  color: $text-secondary;
+}
+.sp-error { color: $accent-red; }
+
 // ═══════════════════════════════════════════
-// RIGHT SIDEBAR
+// SIDEBAR — always-on ambient
 // ═══════════════════════════════════════════
 
-// ─── CHANGE 2: Sidebar now has position:relative + overflow:hidden
-//     to contain the ambient backdrop layer ───
-.song-right-sidebar {
+.sp-sidebar {
   position: relative;
   overflow: hidden;
   border-left: 1px solid $border-default;
   padding: 32px 24px;
   background: $bg-secondary;
-
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: $border-hover;
-    border-radius: 2px;
-  }
 }
 
-// ─── CHANGE 2 (cont): The ambient backdrop — blurred artwork behind sidebar ───
-.sidebar-ambient-bg {
+.sp-sidebar-ambient {
   position: absolute;
   top: -50%;
   left: -50%;
@@ -668,25 +410,19 @@ $transition-ambient: 1.2s ease;
   opacity: 0.15;
   z-index: 0;
   pointer-events: none;
-  transition: opacity 0.8s ease;
 }
 
-// All sidebar sections sit above the ambient layer
-.sidebar-section {
+.sp-sidebar-section {
   position: relative;
   z-index: 1;
   margin-bottom: 32px;
   animation: fadeIn 0.5s ease both;
-
   @for $i from 1 through 6 {
-    &:nth-child(#{$i}) {
-      animation-delay: #{0.1 + ($i * 0.08)}s;
-    }
+    &:nth-child(#{$i}) { animation-delay: #{0.1 + ($i * 0.08)}s; }
   }
 }
 
-// ─── CHANGE 3: Sidebar labels use DM Sans instead of Space Mono ───
-.sidebar-section-title {
+.sp-sidebar-title {
   font-family: $font-body;
   font-size: 11px;
   font-weight: 600;
@@ -696,45 +432,35 @@ $transition-ambient: 1.2s ease;
   margin-bottom: 14px;
 }
 
-// --- Song Details Grid ---
-
-.song-details-grid {
+.sp-details-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
 
-.detail-card {
+.sp-detail {
   background: $bg-tertiary;
   border-radius: $radius-md;
   padding: 12px;
-  transition: background $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  // ─── CHANGE 3 (cont): Detail labels use DM Sans ───
-  .detail-label {
-    font-size: 10px;
-    color: $text-tertiary;
-    font-family: $font-body;
-    font-weight: 500;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-  }
-
-  .detail-value {
-    font-size: 14px;
-    font-weight: 500;
-    color: $text-primary;
-  }
+  &:hover { background: rgba(255, 255, 255, 0.05); }
 }
 
-// --- Artist Card ---
+.sp-detail-label {
+  font-size: 10px;
+  color: $text-tertiary;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
 
-.sidebar-artist-card {
+.sp-detail-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-primary;
+}
+
+.sp-artist-card {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -742,53 +468,40 @@ $transition-ambient: 1.2s ease;
   background: $bg-tertiary;
   border-radius: $radius-lg;
   cursor: pointer;
-  transition: background $transition-fast;
+  &:hover { background: rgba(255, 255, 255, 0.06); }
+}
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.06);
+.sp-artist-card-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: $accent-blue-dim;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: $accent-blue;
+
+  &.has-photo {
+    background: none;
   }
 
-  .artist-card-avatar {
-    width: 44px;
-    height: 44px;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     border-radius: 50%;
-    background: $accent-blue-dim;
-    overflow: hidden;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600;
-    color: $accent-blue;
-  }
-
-  .artist-card-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .artist-card-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: $text-primary;
-    margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  // ─── CHANGE 3 (cont): Jurisdiction uses DM Sans ───
-  .artist-card-jurisdiction {
-    font-size: 11px;
-    color: $text-tertiary;
-    font-family: $font-body;
-    font-weight: 400;
-    letter-spacing: 0.3px;
   }
 }
 
-.sidebar-follow-btn {
+.sp-artist-card-info { flex: 1; min-width: 0; }
+.sp-artist-card-name { font-size: 14px; font-weight: 500; color: $text-primary; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-artist-card-jur { font-size: 11px; color: $text-tertiary; }
+
+.sp-sidebar-follow {
   font-family: $font-body;
   font-size: 10px;
   font-weight: 600;
@@ -800,323 +513,98 @@ $transition-ambient: 1.2s ease;
   padding: 6px 14px;
   border-radius: $radius-sm;
   cursor: pointer;
-  transition: background $transition-fast;
   flex-shrink: 0;
-
-  &:hover {
-    background: rgba($accent-blue, 0.25);
-  }
-
-  &.following {
-    background: $accent-blue;
-    color: white;
-
-    &:hover {
-      background: $accent-blue-hover;
-    }
-  }
+  &:hover { background: rgba($accent-blue, 0.25); }
+  &.following { background: $accent-blue; color: white; }
 }
 
-// --- About / Description ---
-
-.sidebar-about {
-  .about-text {
-    font-size: 13px;
-    line-height: 1.6;
-    color: $text-secondary;
-  }
-}
-
-// --- Credits ---
-
-.sidebar-credits {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-
-  .credit-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-
-    &:not(:last-child) {
-      border-bottom: 1px solid $border-default;
-    }
-
-    // ─── CHANGE 3 (cont): Credit roles use DM Sans ───
-    .credit-role {
-      font-size: 11px;
-      color: $text-tertiary;
-      font-family: $font-body;
-      font-weight: 500;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
-
-    .credit-name {
-      font-size: 13px;
-      color: $text-secondary;
-    }
-  }
-}
-
-// --- Photos / Videos in sidebar ---
-
-.sidebar-media-section {
-  .media-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-
-    figure {
-      margin: 0;
-
-      img {
-        width: 100%;
-        border-radius: $radius-sm;
-        display: block;
-      }
-
-      figcaption {
-        font-size: 10px;
-        color: $text-tertiary;
-        margin-top: 4px;
-      }
-    }
-  }
-
-  .video-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-
-    .video-item {
-      iframe {
-        width: 100%;
-        height: 140px;
-        border-radius: $radius-sm;
-        border: none;
-      }
-
-      p {
-        font-size: 11px;
-        color: $text-tertiary;
-        margin-top: 4px;
-      }
-    }
-  }
-}
-
-// ═══════════════════════════════════════════
-// LOADING & ERROR STATES
-// ═══════════════════════════════════════════
-
-.song-page-loading,
-.song-page-error {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  font-size: 15px;
+.sp-about-text {
+  font-size: 13px;
+  line-height: 1.6;
   color: $text-secondary;
 }
 
-.song-page-error {
-  color: $accent-red;
+.sp-credits {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.loading-skeleton {
+.sp-credit {
   display: flex;
-  gap: 32px;
-  padding: 48px 40px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  &:not(:last-child) { border-bottom: 1px solid $border-default; }
+}
 
-  .skeleton-art {
-    width: 260px;
-    height: 260px;
-    border-radius: $radius-md;
-    background: linear-gradient(90deg, $bg-tertiary 25%, rgba(255, 255, 255, 0.05) 50%, $bg-tertiary 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.8s infinite;
-    flex-shrink: 0;
-  }
+.sp-credit-role {
+  font-size: 11px;
+  color: $text-tertiary;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
 
-  .skeleton-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 12px;
-    padding-bottom: 8px;
-  }
+.sp-credit-name {
+  font-size: 13px;
+  color: $text-secondary;
+}
 
-  .skeleton-line {
-    height: 14px;
-    border-radius: 4px;
-    background: linear-gradient(90deg, $bg-tertiary 25%, rgba(255, 255, 255, 0.05) 50%, $bg-tertiary 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.8s infinite;
+.sp-media-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  figure { margin: 0; img { width: 100%; border-radius: $radius-sm; } figcaption { font-size: 10px; color: $text-tertiary; margin-top: 4px; } }
+}
 
-    &.w-20 { width: 20%; }
-    &.w-40 { width: 40%; }
-    &.w-60 { width: 60%; }
-    &.w-80 { width: 80%; }
-    &.h-lg { height: 42px; }
+.sp-video-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  .sp-video-item {
+    iframe { width: 100%; height: 140px; border-radius: $radius-sm; border: none; }
+    p { font-size: 11px; color: $text-tertiary; margin-top: 4px; }
   }
 }
 
 // ═══════════════════════════════════════════
-// MOBILE RESPONSIVE
+// RESPONSIVE
 // ═══════════════════════════════════════════
 
 @media (max-width: 1024px) {
-  .song-page-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .song-right-sidebar {
-    border-left: none;
-    border-top: 1px solid $border-default;
-    padding: 28px 24px;
-
-    .song-details-grid {
-      grid-template-columns: repeat(4, 1fr);
-    }
-  }
+  .sp-grid { grid-template-columns: 1fr; }
+  .sp-sidebar { border-left: none; border-top: 1px solid $border-default; padding: 28px 24px; }
+  .sp-details-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 @media (max-width: 768px) {
-  .song-hero {
-    padding: 32px 20px 0;
-  }
-
-  .song-hero-content {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .song-album-art {
-    width: 200px;
-    height: 200px;
-  }
-
-  .song-hero-info {
-    padding-bottom: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .song-title-display {
-    font-size: 28px;
-  }
-
-  .song-artist-row {
-    justify-content: center;
-  }
-
-  .song-meta-row {
-    justify-content: center;
-  }
-
-  .song-action-bar {
-    padding: 20px 20px 18px;
-    gap: 10px;
-    justify-content: center;
-  }
-
-  .action-bar-stats {
-    width: 100%;
-    justify-content: center;
-    padding-top: 12px;
-    border-top: 1px solid $border-default;
-    margin-top: 4px;
-  }
-
-  .action-bar-spacer {
-    display: none;
-  }
-
-  .song-main-content {
-    padding: 0 20px 28px;
-  }
-
-  .song-right-sidebar {
-    padding: 24px 20px;
-
-    .song-details-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  .loading-skeleton {
-    flex-direction: column;
-    align-items: center;
-    padding: 32px 20px;
-
-    .skeleton-art {
-      width: 200px;
-      height: 200px;
-    }
-
-    .skeleton-info {
-      align-items: center;
-    }
-  }
+  .sp-hero { padding: 32px 20px 0; }
+  .sp-hero-content { flex-direction: column; align-items: center; text-align: center; }
+  .sp-album-art { width: 200px; height: 200px; }
+  .sp-hero-info { display: flex; flex-direction: column; align-items: center; }
+  .sp-title { font-size: 28px; }
+  .sp-artist-row { justify-content: center; }
+  .sp-meta { justify-content: center; }
+  .sp-primary-actions { padding: 20px 20px 16px; justify-content: center; }
+  .sp-stats-row { padding: 0 20px 12px; justify-content: center; }
+  .sp-secondary-actions { padding: 0 20px 20px; justify-content: center; }
+  .sp-lyrics-section { padding: 24px 20px; }
+  .sp-comments { padding: 8px 20px 28px; }
+  .sp-sidebar { padding: 24px 20px; }
+  .sp-details-grid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 480px) {
-  .song-hero {
-    padding: 24px 16px 0;
-  }
-
-  .song-album-art {
-    width: 160px;
-    height: 160px;
-  }
-
-  .song-title-display {
-    font-size: 24px;
-    letter-spacing: -0.5px;
-  }
-
-  .song-action-bar {
-    padding: 16px;
-    gap: 8px;
-  }
-
-  .action-play-btn {
-    width: 42px;
-    height: 42px;
-
-    svg {
-      width: 18px;
-      height: 18px;
-    }
-  }
-
-  .action-icon-btn {
-    width: 34px;
-    height: 34px;
-
-    svg {
-      width: 14px;
-      height: 14px;
-    }
-  }
-
-  .action-text-btn {
-    height: 32px;
-    padding: 0 12px;
-    font-size: 12px;
-  }
-
-  .song-main-content {
-    padding: 0 16px 24px;
-  }
-
-  .song-right-sidebar {
-    padding: 20px 16px;
-  }
+  .sp-hero { padding: 24px 16px 0; }
+  .sp-album-art { width: 160px; height: 160px; }
+  .sp-title { font-size: 24px; letter-spacing: -0.5px; }
+  .sp-primary-actions { padding: 16px; gap: 8px; }
+  .sp-btn-play, .sp-btn-vote, .sp-btn-like { padding: 8px 16px; font-size: 13px; }
+  .sp-stats-row { padding: 0 16px 10px; font-size: 13px; }
+  .sp-secondary-actions { padding: 0 16px 16px; gap: 6px; }
+  .sp-action-btn { padding: 6px 12px; font-size: 12px; }
+  .sp-lyrics-section { padding: 20px 16px; }
+  .sp-comments { padding: 8px 16px 24px; }
+  .sp-sidebar { padding: 20px 16px; }
 }

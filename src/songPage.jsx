@@ -3,11 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import songArtwork from './assets/theQuiet.jpg';
 import LyricsWizard from './lyricsWizard';
-import {
-  FileText, Heart, Play, Share2, Link2, Plus, MoreHorizontal,
-  Flag, Ban, Check, Star, Eye, MessageCircle, Clock, Trophy,
-  Music, User, MapPin, CheckCircle
-} from 'lucide-react';
+import { FileText, Heart } from 'lucide-react';
 import './songPage.scss';
 import Layout from './layout';
 import { PlayerContext } from './context/playercontext';
@@ -21,7 +17,6 @@ const SongPage = () => {
   const { playMedia } = useContext(PlayerContext);
   const { user } = useAuth();
   const navigate = useNavigate();
-
   const userId = user?.userId;
 
   const [song, setSong] = useState(null);
@@ -34,11 +29,8 @@ const SongPage = () => {
   const [showLyricsWizard, setShowLyricsWizard] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [dominantColor, setDominantColor] = useState('rgba(255, 255, 255, 0.1)');
   const [ambientRGB, setAmbientRGB] = useState({ r: 80, g: 60, b: 40 });
-
-  const moreMenuRef = useRef(null);
 
   const extractColor = (url) => {
     const img = new Image();
@@ -69,7 +61,6 @@ const SongPage = () => {
     const now = new Date();
     const diffMs = now - date;
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
@@ -84,13 +75,12 @@ const SongPage = () => {
     return num.toLocaleString();
   };
 
+  // ── Data fetching ──
   useEffect(() => {
     if (!songId) return;
-
     const fetchAll = async () => {
       setLoading(true);
       setError('');
-
       try {
         const likedUrl = userId
           ? `/v1/media/song/${songId}/is-liked?userId=${userId}`
@@ -103,12 +93,12 @@ const SongPage = () => {
         ]);
 
         const songData = songRes.data;
-
         const normalized = {
           id: songData.songId,
           title: songData.title,
           artist: songData.artist.username,
           artistId: songData.artist.userId,
+          artistPhoto: buildUrl(songData.artist.photoUrl) || null,
           jurisdiction: songData.jurisdiction?.name || 'Unknown',
           artwork: buildUrl(songData.artworkUrl) || songArtwork,
           url: buildUrl(songData.fileUrl) || null,
@@ -122,7 +112,6 @@ const SongPage = () => {
           duration: songData.duration ? Math.round(songData.duration / 1000) : null,
           createdAt: songData.createdAt,
           genre: songData.genre?.name || 'Unknown',
-          artistPhoto: buildUrl(songData.artist?.photoUrl) || null,
           credits: { producer: 'N/A', writer: 'N/A', mix: 'N/A' },
           photos: [],
           videos: [],
@@ -131,10 +120,7 @@ const SongPage = () => {
         setSong(normalized);
         setIsLiked(likedRes.data.isLiked || false);
         setLikeCount(likeCountRes.data.count || 0);
-
-        if (normalized.artwork) {
-          extractColor(normalized.artwork);
-        }
+        if (normalized.artwork) extractColor(normalized.artwork);
       } catch (err) {
         console.error('Failed to load song:', err);
         setError('Failed to load song details');
@@ -142,175 +128,81 @@ const SongPage = () => {
         setLoading(false);
       }
     };
-
     fetchAll();
   }, [songId, userId]);
 
   const fetchSongData = async () => {
     try {
-      const response = await apiCall({
-        method: 'get',
-        url: `/v1/media/song/${songId}`,
-        useCache: false,
-      });
+      const response = await apiCall({ method: 'get', url: `/v1/media/song/${songId}`, useCache: false });
       const songData = response.data;
-      setSong(prev => ({
-        ...prev,
-        lyrics: songData.lyrics || '',
-        description: songData.description || prev.description,
-      }));
-    } catch (err) {
-      console.error('Failed to refresh song:', err);
-    }
+      setSong(prev => ({ ...prev, lyrics: songData.lyrics || '', description: songData.description || prev.description }));
+    } catch (err) { console.error('Failed to refresh song:', err); }
   };
 
+  // ── Handlers — all identical to original ──
   const handleVoteSuccess = () => setShowVotingWizard(false);
 
   const handleVote = () => {
-    setSelectedNominee({
-      id: song.id,
-      name: song.title,
-      type: 'song',
-      jurisdiction: song.jurisdiction,
-    });
+    setSelectedNominee({ id: song.id, name: song.title, type: 'song', jurisdiction: song.jurisdiction });
     setShowVotingWizard(true);
   };
 
   const handlePlay = async () => {
-    const track = {
-      id: song.id,
-      songId: song.id,
-      type: 'song',
-      url: song.url,
-      title: song.title,
-      artist: song.artist,
-      artwork: song.artwork,
-      jurisdiction: song.jurisdiction,
-    };
+    const track = { id: song.id, songId: song.id, type: 'song', url: song.url, title: song.title, artist: song.artist, artwork: song.artwork, jurisdiction: song.jurisdiction };
     playMedia(track, [track]);
-
     if (song.id && userId) {
-      setSong(prev => ({
-        ...prev,
-        playCount: prev.playCount + 1,
-        playsToday: prev.playsToday + 1,
-      }));
+      setSong(prev => ({ ...prev, playCount: prev.playCount + 1, playsToday: prev.playsToday + 1 }));
       try {
         await apiCall({ method: 'post', url: `/v1/media/song/${song.id}/play?userId=${userId}` });
       } catch (err) {
         console.error('Failed to track song play:', err);
-        setSong(prev => ({
-          ...prev,
-          playCount: prev.playCount - 1,
-          playsToday: prev.playsToday - 1,
-        }));
+        setSong(prev => ({ ...prev, playCount: prev.playCount - 1, playsToday: prev.playsToday - 1 }));
       }
     }
   };
 
   const handleLike = async () => {
-    if (!userId) {
-      alert('Please log in to like songs');
-      return;
-    }
+    if (!userId) { alert('Please log in to like songs'); return; }
     if (!song?.id) return;
-
     try {
       if (isLiked) {
-        const res = await apiCall({
-          method: 'delete',
-          url: `/v1/media/song/${song.id}/like?userId=${userId}`,
-        });
-        if (res.data.success) {
-          setIsLiked(false);
-          setLikeCount(prev => Math.max(0, prev - 1));
-        }
+        const res = await apiCall({ method: 'delete', url: `/v1/media/song/${song.id}/like?userId=${userId}` });
+        if (res.data.success) { setIsLiked(false); setLikeCount(prev => Math.max(0, prev - 1)); }
       } else {
-        const res = await apiCall({
-          method: 'post',
-          url: `/v1/media/song/${song.id}/like?userId=${userId}`,
-        });
-        if (res.data.success) {
-          setIsLiked(true);
-          setLikeCount(prev => prev + 1);
-        }
+        const res = await apiCall({ method: 'post', url: `/v1/media/song/${song.id}/like?userId=${userId}` });
+        if (res.data.success) { setIsLiked(true); setLikeCount(prev => prev + 1); }
       }
-    } catch (error) {
-      console.error('Failed to toggle like:', error);
-      alert('Failed to update like. Please try again.');
-    }
+    } catch (error) { console.error('Failed to toggle like:', error); alert('Failed to update like. Please try again.'); }
   };
 
   const handleFollow = async () => {
     const newStatus = !isFollowing;
     setIsFollowing(newStatus);
     try {
-      if (newStatus) {
-        await apiCall({ method: 'post', url: `/v1/users/${song.artistId}/follow` });
-      } else {
-        await apiCall({ method: 'delete', url: `/v1/users/${song.artistId}/follow` });
-      }
-    } catch (err) {
-      console.error('Failed to toggle follow:', err);
-      setIsFollowing(!newStatus);
-    }
+      if (newStatus) await apiCall({ method: 'post', url: `/v1/users/${song.artistId}/follow` });
+      else await apiCall({ method: 'delete', url: `/v1/users/${song.artistId}/follow` });
+    } catch (err) { console.error('Failed to toggle follow:', err); setIsFollowing(!newStatus); }
   };
 
-  const handleDontPlay = () => {
-    console.log('Added to do-not-play list');
-    setShowMoreMenu(false);
-  };
-
-  const handleReport = () => {
-    console.log('Report song');
-    setShowMoreMenu(false);
-  };
-
-  const handleShare = () => {
-    console.log('Share song');
-    setShowMoreMenu(false);
-  };
+  const handleDontPlay = () => console.log('Added to do-not-play list');
+  const handleReport = () => console.log('Report song');
+  const handleShare = () => console.log('Share song');
 
   const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy link:', err);
-    }
-    setShowMoreMenu(false);
+    try { await navigator.clipboard.writeText(window.location.href); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2000); }
+    catch (err) { console.error('Failed to copy link:', err); }
   };
 
-  const handleArtistClick = () => {
-    if (song?.artistId) navigate(`/artist/${song.artistId}`);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
-        setShowMoreMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const handleArtistClick = () => { if (song?.artistId) navigate(`/artist/${song.artistId}`); };
 
   const isOwner = userId && song?.artistId === userId;
 
+  // ── Loading ──
   if (loading) {
     return (
       <Layout backgroundImage={songArtwork}>
         <div className="song-page-container">
-          <div className="loading-skeleton">
-            <div className="skeleton-art" />
-            <div className="skeleton-info">
-              <div className="skeleton-line w-20" />
-              <div className="skeleton-line w-60 h-lg" />
-              <div className="skeleton-line w-40" />
-              <div className="skeleton-line w-80" />
-            </div>
-          </div>
+          <div className="sp-loading">Loading song...</div>
         </div>
       </Layout>
     );
@@ -320,9 +212,7 @@ const SongPage = () => {
     return (
       <Layout backgroundImage={songArtwork}>
         <div className="song-page-container">
-          <div className="song-page-error">
-            {error || 'Song not found'}
-          </div>
+          <div className="sp-error">{error || 'Song not found'}</div>
         </div>
       </Layout>
     );
@@ -331,233 +221,126 @@ const SongPage = () => {
   return (
     <Layout backgroundImage={song.artwork}>
       <div className="song-page-container">
-        <div className="song-page-grid">
+        <div className="sp-grid">
 
           {/* ━━━ LEFT / MAIN COLUMN ━━━ */}
-          <div className="song-page-main">
+          <div className="sp-main">
 
-            {/* ── HERO SECTION ── */}
-            <div
-              className="song-hero"
-              style={{
-                '--ambient-r': ambientRGB.r,
-                '--ambient-g': ambientRGB.g,
-                '--ambient-b': ambientRGB.b,
-              }}
-            >
-              <div className="song-hero-ambient" />
-
-              <div className="song-hero-content">
-                <div className="song-album-art">
+            {/* ── HERO ── */}
+            <div className="sp-hero" style={{ '--ambient-r': ambientRGB.r, '--ambient-g': ambientRGB.g, '--ambient-b': ambientRGB.b }}>
+              <div className="sp-hero-ambient" />
+              <div className="sp-hero-content">
+                <div className="sp-album-art">
                   <img src={song.artwork} alt={`${song.title} artwork`} />
                 </div>
-
-                <div className="song-hero-info">
-                  <div
-                    className="song-jurisdiction-label"
-                    onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)}
-                  >
+                <div className="sp-hero-info">
+                  <div className="sp-jurisdiction" onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)}>
                     {song.jurisdiction}
                   </div>
-
-                  <h1 className="song-title-display">
+                  <h1 className="sp-title">
                     {song.title}
-                    {song.explicit && (
-                      <span className="song-explicit-badge">Explicit</span>
-                    )}
+                    {song.explicit && <span className="sp-explicit">Explicit</span>}
                   </h1>
-
-                  <div className="song-artist-row" onClick={handleArtistClick}>
-                    <div className={`song-artist-avatar ${song.artistPhoto ? '' : 'placeholder'}`}>
+                  <div className="sp-artist-row" onClick={handleArtistClick}>
+                    <div className={`sp-artist-avatar ${song.artistPhoto ? '' : 'placeholder'}`}>
                       {song.artistPhoto
                         ? <img src={song.artistPhoto} alt={song.artist} />
                         : song.artist?.charAt(0).toUpperCase() || '?'}
                     </div>
-                    <span className="song-artist-name">{song.artist}</span>
+                    <span className="sp-artist-name">{song.artist}</span>
                   </div>
-
-                  <div className="song-meta-row">
+                  <div className="sp-meta">
                     <span>{formatDuration(song.duration)}</span>
-                    <div className="meta-dot" />
+                    <span className="sp-dot" />
                     <span>{formatNumber(song.playCount)} plays</span>
-                    <div className="meta-dot" />
+                    <span className="sp-dot" />
                     <span>{formatDate(song.createdAt)}</span>
-                    <span className="meta-genre">{song.genre}</span>
+                    <span className="sp-genre-pill">{song.genre}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* ── ACTION BAR ── */}
-            <div className="song-action-bar">
-              {/* FIXED: Added stroke="white" so the play triangle is always visible */}
-<button className="action-play-btn" onClick={handlePlay} title="Play">
-  <svg viewBox="0 0 24 24" width={20} height={20} style={{ width: 20, height: 20, display: 'block', fill: '#FFFFFF', flexShrink: 0 }}>
-    <path d="M8 5v14l11-7z" />
-  </svg>
-</button>
+            {/* ── PRIMARY ACTIONS — text buttons like original ── */}
+            <div className="sp-primary-actions">
+              <button onClick={handlePlay} className="sp-btn-play">Play</button>
+              <button onClick={handleVote} className="sp-btn-vote">Vote</button>
               <button
-                className="action-text-btn"
-                onClick={handleVote}
-                title="Vote for this song"
-              >
-                <Star size={14} />
-                Vote
-              </button>
-
-              <button
-                className={`action-icon-btn ${isLiked ? 'active-like' : ''}`}
                 onClick={handleLike}
-                title={isLiked ? 'Unlike' : 'Like'}
+                className={`sp-btn-like ${isLiked ? 'liked' : ''}`}
               >
-                <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+                <Heart size={16} fill={isLiked ? 'white' : 'none'} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 6 }} />
+                {isLiked ? 'Liked' : 'Like'}
               </button>
-
-              <button
-                className={`action-icon-btn ${copySuccess ? 'active-vote' : ''}`}
-                onClick={handleCopyLink}
-                title={copySuccess ? 'Copied!' : 'Copy link'}
-              >
-                {copySuccess ? <Check size={16} /> : <Link2 size={16} />}
-              </button>
-
-              <button
-                className={`action-text-btn ${isFollowing ? 'active' : ''}`}
-                onClick={handleFollow}
-                title={isFollowing ? 'Unfollow artist' : 'Follow artist'}
-              >
-                {isFollowing ? <CheckCircle size={14} /> : <Plus size={14} />}
-                {isFollowing ? 'Following' : 'Follow'}
-              </button>
-
-              <div className="more-actions-container" ref={moreMenuRef}>
-                <button
-                  className="action-icon-btn"
-                  onClick={() => setShowMoreMenu(!showMoreMenu)}
-                  title="More actions"
-                >
-                  <MoreHorizontal size={16} />
-                </button>
-
-                {showMoreMenu && (
-                  <div className="more-actions-dropdown">
-                    <button className="dropdown-item" onClick={handleShare}>
-                      <Share2 size={15} />
-                      Share
-                    </button>
-                    <button className="dropdown-item" onClick={handleDontPlay}>
-                      <Ban size={15} />
-                      Don't Play
-                    </button>
-                    <button className="dropdown-item danger" onClick={handleReport}>
-                      <Flag size={15} />
-                      Report
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="action-bar-spacer" />
-
-              <div className="action-bar-stats">
-                <span className="stat-item">
-                  <Heart size={13} />
-                  {formatNumber(likeCount)}
-                </span>
-                <span className="stat-item">
-                  <Eye size={13} />
-                  {formatNumber(song.playCount)}
-                </span>
-                {song.playsToday > 100 && (
-                  <span className="stat-item stat-hot">
-                    {formatNumber(song.playsToday)} today
-                  </span>
-                )}
-              </div>
             </div>
 
-            {/* ── MAIN CONTENT AREA ── */}
-            <div className="song-main-content">
-              {(song.lyrics || isOwner) && (
-                <div className="song-lyrics-section">
-                  <div className="lyrics-header">
-                    <span className="lyrics-title">Lyrics</span>
-                    {isOwner && (
-                      <button
-                        className="lyrics-edit-btn"
-                        onClick={() => setShowLyricsWizard(true)}
-                      >
-                        <FileText size={13} />
-                        {song.lyrics ? 'Edit' : 'Add Lyrics'}
-                      </button>
-                    )}
-                  </div>
-                  {song.lyrics && (
-                    <div className="lyrics-body">
-                      {song.lyrics}
-                    </div>
+            {/* ── STATS ROW ── */}
+            <div className="sp-stats-row">
+              {song.playsToday > 100 && (
+                <span className="sp-stat sp-stat-hot">{formatNumber(song.playsToday)} plays today</span>
+              )}
+            </div>
+
+            {/* ── SECONDARY ACTIONS — text buttons like original ── */}
+            <div className="sp-secondary-actions">
+              <button onClick={handleDontPlay} className="sp-action-btn">Don't Play</button>
+              <button onClick={handleReport} className="sp-action-btn">Report</button>
+              <button onClick={handleCopyLink} className="sp-action-btn">
+                {copySuccess ? 'Copied!' : 'Copy Link'}
+              </button>
+            </div>
+
+            {/* ── LYRICS ── */}
+            {(song.lyrics || isOwner) && (
+              <div className="sp-lyrics-section">
+                <div className="sp-lyrics-header">
+                  <span className="sp-lyrics-label">Lyrics</span>
+                  {isOwner && (
+                    <button className="sp-lyrics-edit" onClick={() => setShowLyricsWizard(true)}>
+                      <FileText size={13} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
+                      {song.lyrics ? 'Edit' : 'Add Lyrics'}
+                    </button>
                   )}
                 </div>
-              )}
-
-              <div className="song-comments-wrapper">
-                <CommentSection
-                  songId={song.id}
-                  userId={userId}
-                  songArtistId={song.artistId}
-                />
+                {song.lyrics && <div className="sp-lyrics-body">{song.lyrics}</div>}
               </div>
+            )}
+
+            {/* ── COMMENTS ── */}
+            <div className="sp-comments">
+              <CommentSection songId={song.id} userId={userId} songArtistId={song.artistId} />
             </div>
           </div>
 
           {/* ━━━ RIGHT SIDEBAR ━━━ */}
-          <aside className="song-right-sidebar">
-            {/* NEW: Ambient artwork backdrop for the entire sidebar */}
-            <div
-              className="sidebar-ambient-bg"
-              style={{ backgroundImage: `url(${song.artwork})` }}
-            />
+          <aside className="sp-sidebar">
+            <div className="sp-sidebar-ambient" style={{ backgroundImage: `url(${song.artwork})` }} />
 
-            <div className="sidebar-section">
-              <div className="sidebar-section-title">Song details</div>
-              <div className="song-details-grid">
-                <div className="detail-card">
-                  <div className="detail-label">Duration</div>
-                  <div className="detail-value">{formatDuration(song.duration)}</div>
-                </div>
-                <div className="detail-card">
-                  <div className="detail-label">Uploaded</div>
-                  <div className="detail-value">{formatDate(song.createdAt)}</div>
-                </div>
-                <div className="detail-card">
-                  <div className="detail-label">Plays</div>
-                  <div className="detail-value">{formatNumber(song.playCount)}</div>
-                </div>
-                <div className="detail-card">
-                  <div className="detail-label">Likes</div>
-                  <div className="detail-value">{formatNumber(likeCount)}</div>
-                </div>
+            <div className="sp-sidebar-section">
+              <div className="sp-sidebar-title">Song Details</div>
+              <div className="sp-details-grid">
+                <div className="sp-detail"><div className="sp-detail-label">Duration</div><div className="sp-detail-value">{formatDuration(song.duration)}</div></div>
+                <div className="sp-detail"><div className="sp-detail-label">Uploaded</div><div className="sp-detail-value">{formatDate(song.createdAt)}</div></div>
+                <div className="sp-detail"><div className="sp-detail-label">Plays</div><div className="sp-detail-value">{formatNumber(song.playCount)}</div></div>
+                <div className="sp-detail"><div className="sp-detail-label">Likes</div><div className="sp-detail-value">{formatNumber(likeCount)}</div></div>
               </div>
             </div>
 
-            <div className="sidebar-section">
-              <div className="sidebar-section-title">Artist</div>
-              <div className="sidebar-artist-card" onClick={handleArtistClick}>
-                <div className={`artist-card-avatar ${song.artistPhoto ? 'has-photo' : ''}`}>
+            <div className="sp-sidebar-section">
+              <div className="sp-sidebar-title">Artist</div>
+              <div className="sp-artist-card" onClick={handleArtistClick}>
+                <div className={`sp-artist-card-avatar ${song.artistPhoto ? 'has-photo' : ''}`}>
                   {song.artistPhoto
-                    ? <img src={song.artistPhoto} alt={song.artist} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                    ? <img src={song.artistPhoto} alt={song.artist} />
                     : song.artist?.charAt(0).toUpperCase() || '?'}
                 </div>
-                  <div className="artist-card-info">
-                  <div className="artist-card-name">{song.artist}</div>
-                  <div className="artist-card-jurisdiction">{song.jurisdiction}</div>
+                <div className="sp-artist-card-info">
+                  <div className="sp-artist-card-name">{song.artist}</div>
+                  <div className="sp-artist-card-jur">{song.jurisdiction}</div>
                 </div>
                 <button
-                  className={`sidebar-follow-btn ${isFollowing ? 'following' : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleFollow();
-                  }}
+                  className={`sp-sidebar-follow ${isFollowing ? 'following' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); handleFollow(); }}
                 >
                   {isFollowing ? 'Following' : 'Follow'}
                 </button>
@@ -565,94 +348,53 @@ const SongPage = () => {
             </div>
 
             {song.description && song.description !== 'No description available' && (
-              <div className="sidebar-section">
-                <div className="sidebar-section-title">About</div>
-                <div className="sidebar-about">
-                  <p className="about-text">{song.description}</p>
-                </div>
+              <div className="sp-sidebar-section">
+                <div className="sp-sidebar-title">About</div>
+                <p className="sp-about-text">{song.description}</p>
               </div>
             )}
 
-            <div className="sidebar-section">
-              <div className="sidebar-section-title">Credits</div>
-              <div className="sidebar-credits">
-                <div className="credit-item">
-                  <span className="credit-role">Producer</span>
-                  <span className="credit-name">{song.credits.producer}</span>
-                </div>
-                <div className="credit-item">
-                  <span className="credit-role">Writer</span>
-                  <span className="credit-name">{song.credits.writer}</span>
-                </div>
-                <div className="credit-item">
-                  <span className="credit-role">Mix</span>
-                  <span className="credit-name">{song.credits.mix}</span>
-                </div>
+            <div className="sp-sidebar-section">
+              <div className="sp-sidebar-title">Credits</div>
+              <div className="sp-credits">
+                <div className="sp-credit"><span className="sp-credit-role">Producer</span><span className="sp-credit-name">{song.credits.producer}</span></div>
+                <div className="sp-credit"><span className="sp-credit-role">Writer</span><span className="sp-credit-name">{song.credits.writer}</span></div>
+                <div className="sp-credit"><span className="sp-credit-role">Mix</span><span className="sp-credit-name">{song.credits.mix}</span></div>
               </div>
             </div>
 
             {song.photos.length > 0 && (
-              <div className="sidebar-section">
-                <div className="sidebar-section-title">Photos</div>
-                <div className="sidebar-media-section">
-                  <div className="media-grid">
-                    {song.photos.map((photo, idx) => (
-                      <figure key={idx}>
-                        <img src={photo.src} alt={photo.caption} />
-                        <figcaption>{photo.caption}</figcaption>
-                      </figure>
-                    ))}
-                  </div>
+              <div className="sp-sidebar-section">
+                <div className="sp-sidebar-title">Photos</div>
+                <div className="sp-media-grid">
+                  {song.photos.map((photo, idx) => (<figure key={idx}><img src={photo.src} alt={photo.caption} /><figcaption>{photo.caption}</figcaption></figure>))}
                 </div>
               </div>
             )}
 
             {song.videos.length > 0 && (
-              <div className="sidebar-section">
-                <div className="sidebar-section-title">Videos</div>
-                <div className="sidebar-media-section">
-                  <div className="video-list">
-                    {song.videos.map((vid, idx) => (
-                      <div key={idx} className="video-item">
-                        <iframe
-                          src={vid.url}
-                          title={vid.caption}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
-                        <p>{vid.caption}</p>
-                      </div>
-                    ))}
-                  </div>
+              <div className="sp-sidebar-section">
+                <div className="sp-sidebar-title">Videos</div>
+                <div className="sp-video-list">
+                  {song.videos.map((vid, idx) => (
+                    <div key={idx} className="sp-video-item">
+                      <iframe src={vid.url} title={vid.caption} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                      <p>{vid.caption}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
           </aside>
-
         </div>
       </div>
 
-      {showLyricsWizard && (
-        <LyricsWizard
-          show={showLyricsWizard}
-          onClose={() => setShowLyricsWizard(false)}
-          song={song}
-          onSuccess={fetchSongData}
-        />
-      )}
+      {showLyricsWizard && <LyricsWizard show={showLyricsWizard} onClose={() => setShowLyricsWizard(false)} song={song} onSuccess={fetchSongData} />}
 
       <VotingWizard
-        show={showVotingWizard}
-        onClose={() => setShowVotingWizard(false)}
-        onVoteSuccess={handleVoteSuccess}
-        nominee={selectedNominee}
-        userId={userId}
-        filters={{
-          selectedGenre: song.genre.toLowerCase().replace('/', '-'),
-          selectedType: 'song',
-          selectedInterval: 'daily',
-          selectedJurisdiction: song.jurisdiction.toLowerCase().replace(' ', '-'),
-        }}
+        show={showVotingWizard} onClose={() => setShowVotingWizard(false)} onVoteSuccess={handleVoteSuccess}
+        nominee={selectedNominee} userId={userId}
+        filters={{ selectedGenre: song.genre.toLowerCase().replace('/', '-'), selectedType: 'song', selectedInterval: 'daily', selectedJurisdiction: song.jurisdiction.toLowerCase().replace(' ', '-') }}
       />
     </Layout>
   );
