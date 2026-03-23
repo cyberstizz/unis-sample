@@ -43,6 +43,17 @@ const VoteAwards = () => {
     { value: 'harlem', label: 'Harlem' },
   ];
 
+  useEffect(() => {
+    const trackAdView = async () => {
+      try {
+        await apiCall({ url: '/v1/earnings/track-view', method: 'post' });
+      } catch (err) {
+        // Silent
+      }
+    };
+    trackAdView();
+  }, []); 
+
   // Countdown timer — resets at midnight EST daily
   useEffect(() => {
     const calcTimeLeft = () => {

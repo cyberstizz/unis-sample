@@ -62,6 +62,21 @@ const Feed = () => {
   // ─── Jurisdiction selector state ───
   const [selectedJurisdictionId, setSelectedJurisdictionId] = useState(userJurisdictionId);
 
+
+  //simulated ad impression
+  useEffect(() => {
+    const trackAdView = async () => {
+      try {
+        await apiCall({ url: '/v1/earnings/track-view', method: 'post' });
+      } catch (err) {
+        // Silent
+      }
+    };
+    trackAdView();
+  }, []); 
+
+
+
   // Update selected jurisdiction when user data loads
   useEffect(() => {
     if (userJurisdictionId) {

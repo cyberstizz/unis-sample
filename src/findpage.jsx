@@ -35,6 +35,17 @@ const MapController = ({ viewState, isMobile }) => {
   const map = useMap();
 
   useEffect(() => {
+      const trackAdView = async () => {
+        try {
+          await apiCall({ url: '/v1/earnings/track-view', method: 'post' });
+        } catch (err) {
+          // Silent
+        }
+      };
+      trackAdView();
+    }, []); 
+
+  useEffect(() => {
     const invalidate = () => setTimeout(() => map.invalidateSize(), 100);
     invalidate();
     window.addEventListener('resize', invalidate);
