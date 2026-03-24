@@ -1,16 +1,15 @@
-// lastWonNotification.scss — v3: artwork on right, controlled gradient
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+// lastWonNotification.scss — v4: Stitch design with staggered reveal animations
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
 
 // ═══════════════════════════════════════
 //  DESIGN TOKENS
 // ═══════════════════════════════════════
-$bg-base: #0a0a0c;
 $text-primary: #f0f0f2;
-$text-secondary: rgba(255, 255, 255, 0.45);
+$text-secondary: rgba(255, 255, 255, 0.55);
 $text-tertiary: rgba(255, 255, 255, 0.35);
 $unis-blue: #163387;
 $unis-blue-hover: #1c41ad;
-$accent: #4ea8f5;
+$accent-blue: #4ea8f5;
 
 // ═══════════════════════════════════════
 //  OVERLAY
@@ -18,16 +17,16 @@ $accent: #4ea8f5;
 .lwn-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.4s ease;
 
   &.lwn-visible {
     opacity: 1;
@@ -41,54 +40,140 @@ $accent: #4ea8f5;
 }
 
 // ═══════════════════════════════════════
-//  CARD
+//  CARD — vertical full-height layout
 // ═══════════════════════════════════════
 .lwn-card {
-  width: 480px;
-  max-width: 94vw;
-  border-radius: 16px;
-  overflow: visible; // change from hidden
+  width: 420px;
+  max-width: 92vw;
+  max-height: 90vh;
+  border-radius: 20px;
+  overflow: hidden;
   position: relative;
-  transform: translateY(40px) scale(0.95);
+  transform: translateY(50px) scale(0.92);
   opacity: 0;
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.4s ease;
-  cursor: default;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.5s ease;
+  display: flex;
+  flex-direction: column;
+
+  // Dark fallback when ambient color hasn't loaded yet
+  background: #0a0a0c;
 }
 
 // ═══════════════════════════════════════
-//  GRADIENT BACKGROUNDS (per category)
+//  AMBIENT GLOW — color extracted from artwork, applied via inline styles
 // ═══════════════════════════════════════
-.lwn-bg {
+.lwn-ambient-glow {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0;
+  animation: ambientPulse 4s ease-in-out infinite alternate;
+}
+
+.lwn-ambient-glow-top {
+  top: -80px;
+  left: -60px;
+  width: 400px;
+  height: 400px;
+  animation-delay: 0s;
+}
+
+.lwn-ambient-glow-bottom {
+  bottom: -60px;
+  right: -60px;
+  width: 350px;
+  height: 350px;
+  animation-delay: -2s;
+}
+
+.lwn-ambient-glow-edge {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: 20px;
+  filter: none;
+  animation-delay: -1s;
+}
+
+// Full card ambient tint overlay
+.lwn-ambient-tint {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 20px;
+  opacity: 0;
+  animation: ambientFadeIn 2s ease forwards;
+}
 
-  &.lwn-bg-song {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  }
+@keyframes ambientPulse {
+  0% { opacity: 0.5; transform: scale(1); }
+  100% { opacity: 0.8; transform: scale(1.05); }
+}
 
-  &.lwn-bg-weekly {
-    background: linear-gradient(135deg, #2e1a1a 0%, #3e2816 50%, #603a0f 100%);
-  }
-
-  &.lwn-bg-artist {
-    background: linear-gradient(135deg, #1e1a2e 0%, #2a1640 50%, #3d0f60 100%);
-  }
+@keyframes ambientFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 // ═══════════════════════════════════════
-//  CLOSE BUTTON
+//  HERO — artwork at top
 // ═══════════════════════════════════════
+.lwn-hero {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.lwn-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lwn-hero-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(22, 51, 135, 0.3), rgba(78, 168, 245, 0.1));
+}
+
+// Gradient fade from image into card background (ambient override via inline style)
+.lwn-hero-fade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70%;
+  background: linear-gradient(to top, #0a0a0c 0%, rgba(10, 10, 12, 0.6) 40%, transparent 100%);
+  pointer-events: none;
+}
+
+// Subtle vignette around edges
+.lwn-hero-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
+  pointer-events: none;
+}
+
+// ── Close button ──
 .lwn-close {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 30px;
-  height: 30px;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,141 +183,198 @@ $accent: #4ea8f5;
   padding: 0;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.6);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.7);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
   }
 }
 
 // ═══════════════════════════════════════
-//  TWO-COLUMN LAYOUT
+//  CONTENT
 // ═══════════════════════════════════════
-.lwn-layout {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  min-height: 280px;
-}
-
-// ─── LEFT: text content ───
-.lwn-left {
-  flex: 1;
-  padding: 32px 0 28px 10px;
+.lwn-content {
+  padding: 0 32px 32px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  flex: 1;
+  margin-top: -40px; // Overlap into the hero fade
+  position: relative;
+  z-index: 2;
 }
 
-.lwn-left-top {
-  padding-right: 12px;
+// ── Unis logo ──
+.lwn-logo {
+  height: 48px;
+  width: auto;
+  display: block;
+  margin-bottom: 24px;
+  transition: filter 0.5s ease;
 }
 
-.lwn-top-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 1px;
-
-  .lwn-logo {
-    height: 92px;
-    width: auto;
-    display: block;
-  }
-}
-
-// ─── Badge / tag ──
+// ═══════════════════════════════════════
+//  BADGE — slides in from left
+// ═══════════════════════════════════════
 .lwn-tag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 14px;
+  gap: 8px;
+  padding: 8px 18px;
   border-radius: 40px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   width: fit-content;
 
-  &.lwn-tag-song {
-    background: rgba(78, 168, 245, 0.15);
-    border: 1px solid rgba(78, 168, 245, 0.3);
-    color: #6ab8ff;
+  // Animation: slide from left
+  opacity: 0;
+  transform: translateX(-60px);
+  transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.lwn-tag-visible {
+    opacity: 1;
+    transform: translateX(0);
   }
 
-  &.lwn-tag-weekly {
-    background: rgba(245, 166, 35, 0.15);
-    border: 1px solid rgba(245, 166, 35, 0.3);
-    color: #f5c875;
+  .lwn-tag-icon {
+    font-size: 14px;
+    line-height: 1;
   }
 
-  &.lwn-tag-artist {
-    background: rgba(168, 85, 247, 0.15);
-    border: 1px solid rgba(168, 85, 247, 0.3);
-    color: #c4a5f7;
-  }
+  // Fallback colors when ambient hasn't loaded — inline styles override these
+  background: rgba(78, 168, 245, 0.12);
+  border: 1px solid rgba(78, 168, 245, 0.25);
+  color: #6ab8ff;
 }
 
-// ─── Date ───
+// ═══════════════════════════════════════
+//  DATE — fades in 1.5s after badge
+// ═══════════════════════════════════════
 .lwn-date {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  color: $text-tertiary;
-  letter-spacing: 0.03em;
-  margin-bottom: 6px;
-}
-
-// ─── Winner name ───
-.lwn-name {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 28px;
-  font-weight: 800;
-  color: $text-primary;
-  letter-spacing: -0.5px;
-  line-height: 1.1;
-  margin: 0 0 5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding-right: 12px;
-}
-
-// ─── Jurisdiction ───
-.lwn-jurisdiction {
-  font-family: 'DM Sans', sans-serif;
   font-size: 14px;
-  color: $text-secondary;
-  margin: 0;
+  font-weight: 500;
+  color: $text-tertiary;
+  margin-bottom: 10px;
+
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+
+  &.lwn-date-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-// ─── Actions ───
+// ═══════════════════════════════════════
+//  TITLE + ARTIST — large bold reveal
+// ═══════════════════════════════════════
+.lwn-title-block {
+  margin-bottom: 14px;
+
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.lwn-title-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lwn-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 42px;
+  font-weight: 900;
+  color: $text-primary;
+  letter-spacing: -1px;
+  line-height: 1.05;
+  margin: 0 0 6px;
+  // Allow wrapping for long titles
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.lwn-artist {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: $accent-blue;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+// ═══════════════════════════════════════
+//  JURISDICTION BADGE
+// ═══════════════════════════════════════
+.lwn-jurisdiction {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: $text-secondary;
+  margin-bottom: 28px;
+  width: fit-content;
+
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s;
+
+  &.lwn-jurisdiction-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ═══════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════
 .lwn-actions {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  padding-right: 12px;
   margin-top: auto;
-  padding-top: 20px;
+
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s;
+
+  &.lwn-actions-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .lwn-btn-primary {
-  padding: 10px 22px;
-  border-radius: 10px;
+  padding: 16px 28px;
+  border-radius: 14px;
   border: none;
   background: $unis-blue;
   color: white;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
+  letter-spacing: 0.02em;
 
   &:hover {
     background: $unis-blue-hover;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(22, 51, 135, 0.4);
   }
 
   &:active {
@@ -241,53 +383,29 @@ $accent: #4ea8f5;
 }
 
 .lwn-btn-secondary {
-  padding: 10px 22px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.7);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
+  padding: 16px 28px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.75);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.18);
   }
 
   &:active {
     transform: translateY(0);
   }
-}
-
-// ─── RIGHT: artwork ───
-.lwn-right {
-  width: 180px;
-  flex-shrink: 0;
-  position: relative;
-  overflow: hidden;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-}
-
-.lwn-right-fade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.5) 0%, transparent 40%, transparent 100%);
-  pointer-events: none;
-}
-
-.lwn-right-placeholder {
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.04);
 }
 
 // ═══════════════════════════════════════
@@ -299,52 +417,59 @@ $accent: #4ea8f5;
   left: 0;
   right: 0;
   height: 3px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
   z-index: 3;
-  border-radius: 0 0 16px 16px;
-  overflow: hidden;
 }
 
 .lwn-pfill {
   height: 100%;
-  border-radius: 0 0 16px 16px;
   transition: width 0.1s linear;
-
-  &.lwn-pfill-song {
-    background: linear-gradient(90deg, $unis-blue, $accent);
-  }
-
-  &.lwn-pfill-weekly {
-    background: linear-gradient(90deg, #854F0B, #f5c875);
-  }
-
-  &.lwn-pfill-artist {
-    background: linear-gradient(90deg, #3C3489, #c4a5f7);
-  }
+  // Background set via inline style from React using ambient color
+  background: linear-gradient(90deg, #163387, #4ea8f5); // fallback
 }
 
 // ═══════════════════════════════════════
-//  MOBILE RESPONSIVE
+//  MOBILE
 // ═══════════════════════════════════════
-@media (max-width: 500px) {
-  .lwn-right {
-    width: 120px;
+@media (max-width: 480px) {
+  .lwn-card {
+    width: 100%;
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
   }
 
-  .lwn-left {
-    padding: 24px 0 22px 24px;
+  .lwn-hero {
+    height: 220px;
   }
 
-  .lwn-name {
-    font-size: 22px;
+  .lwn-content {
+    padding: 0 24px 28px;
   }
 
-  .lwn-actions {
-    flex-direction: column;
-    gap: 8px;
+  .lwn-title {
+    font-size: 34px;
   }
 
-  .lwn-btn-secondary {
-    text-align: center;
+  .lwn-artist {
+    font-size: 18px;
+  }
+
+  .lwn-brand {
+    margin-bottom: 22px;
+  }
+}
+
+@media (max-width: 360px) {
+  .lwn-hero {
+    height: 180px;
+  }
+
+  .lwn-title {
+    font-size: 28px;
+  }
+
+  .lwn-content {
+    padding: 0 20px 24px;
   }
 }
