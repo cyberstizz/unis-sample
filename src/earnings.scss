@@ -1,13 +1,13 @@
-// earnings.scss — Unis premium dark earnings dashboard (v2 with 3-level referral)
+// earnings.scss — Unis premium dark earnings dashboard (v3 with Stripe Connect)
 
 .earnings-page {
   max-width: 900px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
   min-height: 80vh;
+  margin-left: 2%;
 }
 
-// ── Loading ──
 .earnings-loading {
   display: flex;
   flex-direction: column;
@@ -17,10 +17,7 @@
   min-height: 60vh;
   color: #9ca3af;
   font-size: 1rem;
-
-  .spin {
-    animation: spinAnim 1.2s linear infinite;
-  }
+  .spin { animation: spinAnim 1.2s linear infinite; }
 }
 
 @keyframes spinAnim {
@@ -36,90 +33,43 @@
   margin-bottom: 2rem;
 
   .earnings-header-text {
-    h1 {
-      color: #fff;
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin: 0 0 6px;
-    }
-    p {
-      color: #9ca3af;
-      font-size: 0.95rem;
-      margin: 0;
-    }
+    h1 { color: #fff; font-size: 1.8rem; font-weight: 700; margin: 0 0 6px; }
+    p { color: #9ca3af; font-size: 0.95rem; margin: 0; }
   }
 
   .refresh-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    color: #9ca3af;
-    padding: 8px 14px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: all 0.2s;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-    }
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px; color: #9ca3af; padding: 8px 14px; cursor: pointer;
+    font-size: 0.85rem; transition: all 0.2s;
+    &:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
   }
 }
 
-// ── Error ──
 .earnings-error {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(220, 53, 69, 0.12);
-  border: 1px solid rgba(220, 53, 69, 0.3);
-  border-radius: 10px;
-  padding: 12px 16px;
-  color: #ff6b7a;
-  font-size: 0.9rem;
-  margin-bottom: 1.5rem;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(220, 53, 69, 0.12); border: 1px solid rgba(220, 53, 69, 0.3);
+  border-radius: 10px; padding: 12px 16px; color: #ff6b7a; font-size: 0.9rem; margin-bottom: 1.5rem;
 }
 
 // ── Summary Cards ──
 .earnings-summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 2rem;
+  gap: 16px; margin-bottom: 2rem;
 }
 
 .summary-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  padding: 20px;
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  transition: border-color 0.2s;
-
-  &:hover {
-    border-color: rgba(255, 255, 255, 0.12);
-  }
-
-  &.summary-card-highlight {
-    border-color: rgba(34, 197, 94, 0.3);
-    background: rgba(34, 197, 94, 0.04);
-  }
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px; padding: 20px; display: flex; gap: 16px;
+  align-items: flex-start; transition: border-color 0.2s;
+  &:hover { border-color: rgba(255, 255, 255, 0.12); }
+  &.summary-card-highlight { border-color: rgba(34, 197, 94, 0.3); background: rgba(34, 197, 94, 0.04); }
 }
 
 .card-icon-wrap {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   &.card-icon-green { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
   &.card-icon-blue { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
   &.card-icon-purple { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
@@ -131,186 +81,176 @@
 .card-value { color: #fff; font-size: 1.6rem; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.02em; }
 .card-sub { color: #6b7280; font-size: 0.8rem; margin: 0; }
 
-// ── Payout Progress ──
 .payout-progress { margin-top: 8px; }
 .progress-bar { width: 100%; height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; overflow: hidden; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, #163387, #3b82f6); border-radius: 3px; transition: width 0.5s ease; }
 .progress-text { color: #6b7280; font-size: 0.75rem; margin: 6px 0 0; }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// STRIPE CONNECT BANNER
+// ═══════════════════════════════════════════════════════════════════════════
+
+.stripe-banner {
+  margin-bottom: 2rem;
+}
+
+.stripe-banner-content {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  &.stripe-banner-pending {
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  &.stripe-banner-ready {
+    border-color: rgba(34, 197, 94, 0.25);
+    background: rgba(34, 197, 94, 0.03);
+  }
+}
+
+.stripe-banner-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex: 1;
+  color: #9ca3af;
+
+  h3 { color: #fff; font-size: 1rem; font-weight: 600; margin: 0 0 4px; }
+  p { color: #6b7280; font-size: 0.85rem; margin: 0; line-height: 1.5; }
+}
+
+.stripe-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.stripe-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #163387;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) { background: #1e44a8; transform: translateY(-1px); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.stripe-btn-payout {
+  background: #22c55e;
+  &:hover:not(:disabled) { background: #16a34a; }
+}
+
+.stripe-btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px 16px;
+  color: #9ca3af;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+}
+
+.payout-message {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 500;
+
+  &.success { background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; }
+  &.error { background: rgba(220, 53, 69, 0.12); border: 1px solid rgba(220, 53, 69, 0.3); color: #ff6b7a; }
+}
+
 // ── Tabs ──
 .earnings-tabs {
-  display: flex;
-  gap: 4px;
+  display: flex; gap: 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 1.5rem;
 
   .tab {
-    background: none;
-    border: none;
-    color: #6b7280;
-    padding: 12px 20px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
-
+    background: none; border: none; color: #6b7280;
+    padding: 12px 20px; font-size: 0.9rem; font-weight: 500;
+    cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
     &:hover { color: #9ca3af; }
     &.active { color: #fff; border-bottom-color: #163387; }
   }
 }
 
-// ── Overview Tab ──
-.overview-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
+// ── Overview ──
+.overview-content { display: flex; flex-direction: column; gap: 20px; }
 
-// ── Level Breakdown ──
-.level-breakdown {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
+.level-breakdown { display: flex; flex-direction: column; gap: 12px; }
 .level-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05);
 }
+.level-label { display: flex; align-items: center; gap: 10px; flex: 1; }
+.level-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.level-name { color: #d1d5db; font-size: 0.88rem; font-weight: 500; }
+.level-pct { color: #6b7280; font-size: 0.75rem; background: rgba(255, 255, 255, 0.06); padding: 2px 8px; border-radius: 4px; }
+.level-amount { color: #22c55e; font-weight: 700; font-size: 0.95rem; }
 
-.level-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-}
-
-.level-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.level-name {
-  color: #d1d5db;
-  font-size: 0.88rem;
-  font-weight: 500;
-}
-
-.level-pct {
-  color: #6b7280;
-  font-size: 0.75rem;
-  background: rgba(255, 255, 255, 0.06);
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.level-amount {
-  color: #22c55e;
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-// ── Chart Card ──
 .chart-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  padding: 24px;
-
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px; padding: 24px;
   h3 { color: #fff; font-size: 1rem; margin: 0 0 20px; }
 }
 
-.mini-chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 120px;
-}
-
+.mini-chart { display: flex; align-items: flex-end; gap: 3px; height: 120px; }
 .chart-bar-wrap {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  cursor: pointer;
-
+  flex: 1; height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end; cursor: pointer;
   &:hover .chart-bar { background: #3b82f6; }
 }
+.chart-bar { width: 100%; min-height: 4px; background: #163387; border-radius: 2px 2px 0 0; transition: all 0.2s; }
+.chart-date { color: #4b5563; font-size: 0.55rem; text-align: center; margin-top: 4px; display: none; }
+.chart-bar-wrap:nth-child(5n) .chart-date { display: block; }
+.empty-chart { text-align: center; padding: 40px 20px; color: #6b7280; font-size: 0.9rem; }
 
-.chart-bar {
-  width: 100%;
-  min-height: 4px;
-  background: #163387;
-  border-radius: 2px 2px 0 0;
-  transition: all 0.2s;
-}
-
-.chart-date {
-  color: #4b5563;
-  font-size: 0.55rem;
-  text-align: center;
-  margin-top: 4px;
-  display: none;
-}
-
-.chart-bar-wrap:nth-child(5n) .chart-date {
-  display: block;
-}
-
-.empty-chart {
-  text-align: center;
-  padding: 40px 20px;
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-// ── Split Card ──
 .split-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  padding: 24px;
-
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px; padding: 24px;
   h3 { color: #fff; font-size: 1rem; margin: 0 0 20px; }
 }
-
 .split-items { display: flex; flex-direction: column; gap: 16px; }
-
 .split-item { display: flex; gap: 14px; align-items: flex-start; }
-
 .split-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-
 .split-info {
   strong { color: #d1d5db; font-size: 0.9rem; display: block; margin-bottom: 2px; }
   p { color: #6b7280; font-size: 0.82rem; margin: 0; line-height: 1.5; }
 }
 
-// ── Referrals Tab ──
+// ── Referrals ──
 .referral-list { display: flex; flex-direction: column; gap: 8px; }
-
 .referral-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  padding: 14px 18px;
-  transition: border-color 0.2s;
-
+  display: flex; align-items: center; gap: 14px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px; padding: 14px 18px; transition: border-color 0.2s;
   &:hover { border-color: rgba(255, 255, 255, 0.12); }
 }
-
 .referral-photo { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.1); }
 .referral-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .referral-name { color: #fff; font-weight: 600; font-size: 0.9rem; }
@@ -318,8 +258,111 @@
 .referral-earnings { display: flex; align-items: center; gap: 4px; }
 .referral-amount { color: #22c55e; font-weight: 700; font-size: 0.9rem; }
 .referral-arrow { color: #22c55e; }
-
 .empty-referrals {
+  text-align: center; padding: 60px 20px; color: #6b7280;
+  svg { margin-bottom: 16px; opacity: 0.4; }
+  h3 { color: #9ca3af; font-size: 1.1rem; margin: 0 0 8px; }
+  p { font-size: 0.9rem; max-width: 360px; margin: 0 auto; line-height: 1.5; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PAYOUTS TAB
+// ═══════════════════════════════════════════════════════════════════════════
+
+.payouts-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.payouts-setup-prompt {
+  text-align: center;
+  padding: 48px 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 14px;
+
+  svg { color: #3b82f6; margin-bottom: 16px; opacity: 0.6; }
+  h3 { color: #fff; font-size: 1.1rem; margin: 0 0 8px; }
+  p { color: #6b7280; font-size: 0.9rem; max-width: 380px; margin: 0 auto 20px; line-height: 1.5; }
+}
+
+.payout-list {
+  h3 { color: #fff; font-size: 1rem; margin: 0 0 16px; }
+}
+
+.payout-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.payout-item-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.payout-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &.completed { background: #22c55e; }
+  &.processing { background: #f59e0b; }
+  &.pending { background: #6b7280; }
+  &.failed { background: #ef4444; }
+}
+
+.payout-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.payout-item-amount {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.payout-item-period {
+  color: #6b7280;
+  font-size: 0.78rem;
+}
+
+.payout-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.payout-item-status {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  padding: 2px 10px;
+  border-radius: 4px;
+
+  &.completed { color: #22c55e; background: rgba(34, 197, 94, 0.12); }
+  &.processing { color: #f59e0b; background: rgba(245, 158, 11, 0.12); }
+  &.pending { color: #6b7280; background: rgba(107, 114, 128, 0.12); }
+  &.failed { color: #ef4444; background: rgba(239, 68, 68, 0.12); }
+}
+
+.payout-item-date {
+  color: #4b5563;
+  font-size: 0.72rem;
+}
+
+.empty-payouts {
   text-align: center;
   padding: 60px 20px;
   color: #6b7280;
@@ -329,202 +372,84 @@
   p { font-size: 0.9rem; max-width: 360px; margin: 0 auto; line-height: 1.5; }
 }
 
-// ── How It Works Tab ──
+// ── How It Works ──
 .how-content { display: flex; flex-direction: column; gap: 24px; }
-
 .how-section {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  padding: 24px;
-
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px; padding: 24px;
   h3 { color: #fff; font-size: 1rem; margin: 0 0 16px; }
 }
-
 .how-visual { margin-bottom: 14px; }
-
-.how-bar {
-  display: flex;
-  height: 36px;
-  border-radius: 8px;
-  overflow: hidden;
-  gap: 2px;
-}
-
+.how-bar { display: flex; height: 36px; border-radius: 8px; overflow: hidden; gap: 2px; }
 .how-segment {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s;
-
+  display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;
   span { color: #fff; font-size: 0.7rem; font-weight: 600; white-space: nowrap; padding: 0 4px; }
   &:hover { opacity: 0.85; }
 }
-
 .how-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 12px;
-
-  > span {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: #9ca3af;
-    font-size: 0.75rem;
-  }
+  display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;
+  > span { display: flex; align-items: center; gap: 6px; color: #9ca3af; font-size: 0.75rem; }
 }
-
-.legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .how-note { color: #6b7280; font-size: 0.85rem; line-height: 1.6; margin: 0; }
-
 .how-rules {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-
+  list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;
   li {
-    color: #9ca3af;
-    font-size: 0.88rem;
-    padding-left: 16px;
-    position: relative;
-
+    color: #9ca3af; font-size: 0.88rem; padding-left: 16px; position: relative;
     &::before { content: '→'; position: absolute; left: 0; color: #163387; }
     strong { color: #d1d5db; }
   }
 }
 
-// ── Chain Visualization (How It Works) ──
-.chain-visual {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 20px 0;
-}
-
+.chain-visual { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 20px 0; }
 .chain-node {
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 0.88rem;
-  text-align: center;
-  min-width: 200px;
-
-  &.chain-you {
-    background: rgba(22, 51, 135, 0.3);
-    border: 2px solid #163387;
-    color: #fff;
-    font-size: 1rem;
-  }
-
-  &.chain-l1 {
-    background: rgba(59, 130, 246, 0.12);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    color: #d1d5db;
-  }
-
-  &.chain-l2 {
-    background: rgba(139, 92, 246, 0.12);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    color: #d1d5db;
-  }
-
-  &.chain-l3 {
-    background: rgba(6, 182, 212, 0.12);
-    border: 1px solid rgba(6, 182, 212, 0.3);
-    color: #d1d5db;
-  }
+  padding: 12px 24px; border-radius: 10px; font-weight: 600;
+  font-size: 0.88rem; text-align: center; min-width: 200px;
+  &.chain-you { background: rgba(22, 51, 135, 0.3); border: 2px solid #163387; color: #fff; font-size: 1rem; }
+  &.chain-l1 { background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.3); color: #d1d5db; }
+  &.chain-l2 { background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.3); color: #d1d5db; }
+  &.chain-l3 { background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.3); color: #d1d5db; }
 }
-
-.chain-tag {
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 400;
-  color: #22c55e;
-  margin-top: 2px;
-}
-
-.chain-arrow {
-  color: #4b5563;
-  font-size: 0.8rem;
-  padding: 2px 0;
-}
+.chain-tag { display: block; font-size: 0.72rem; font-weight: 400; color: #22c55e; margin-top: 2px; }
+.chain-arrow { color: #4b5563; font-size: 0.8rem; padding: 2px 0; }
 
 // ── Mobile ──
 @media (max-width: 768px) {
-  .earnings-page {
-    padding: 1rem;
-    max-width: 100vw;
-    overflow-x: hidden;
-    box-sizing: border-box;
-  }
-
-  .earnings-header {
-    flex-direction: column;
-    gap: 12px;
+  .earnings-page { padding: 1rem; max-width: 100vw; overflow-x: hidden; box-sizing: border-box; }
+  .earnings-header { flex-direction: column; gap: 12px;
     .refresh-btn { align-self: flex-end; }
   }
-
   .earnings-summary-grid { grid-template-columns: 1fr; }
-
-  .earnings-tabs {
-    overflow-x: auto;
+  .summary-card { max-width: 100%; overflow: hidden; }
+  .earnings-tabs { overflow-x: auto;
     .tab { padding: 10px 14px; font-size: 0.82rem; white-space: nowrap; }
   }
-
   .how-segment span { font-size: 0.6rem; }
   .card-value { font-size: 1.3rem; }
-  .how-legend { gap: 8px; }
-  .chain-node { min-width: 160px; padding: 10px 16px; }
+  .how-legend { flex-direction: column; gap: 6px; }
+  .chain-node { min-width: 0; width: 100%; max-width: 240px; }
+  .level-row { flex-wrap: wrap; gap: 6px; }
+  .level-label { min-width: 0; }
+  .level-name { font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .how-bar { min-width: 0; }
+  .referral-item { flex-wrap: wrap; }
 
-  .summary-card {
-    max-width: 100%;
-    overflow: hidden;
-  }
-
-  .level-row {
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .level-label {
-    min-width: 0;
-  }
-
-  .level-name {
-    font-size: 0.78rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .how-bar {
-    min-width: 0;
-  }
-
-  .how-legend {
+  .stripe-banner-content {
     flex-direction: column;
-    gap: 6px;
+    align-items: stretch;
+    gap: 16px;
   }
-
-  .chain-node {
-    min-width: 0;
-    width: 100%;
-    max-width: 240px;
+  .stripe-actions {
+    flex-direction: column;
   }
-
-  .referral-item {
-    flex-wrap: wrap;
+  .payout-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .payout-item-right {
+    align-items: flex-start;
+    flex-direction: row;
+    gap: 10px;
   }
 }
