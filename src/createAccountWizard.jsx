@@ -396,6 +396,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
     email: '',
     password: '',
     passwordConfirm: '',
+    dateOfBirth: '',              
     jurisdictionId: '',
     jurisdictionName: '',
     role: '',
@@ -805,6 +806,30 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         return formData.role === 'artist' 
           ? formData.agreedToTerms && formData.agreedToArtistTerms
           : formData.agreedToTerms;
+      case 'basicInfo': {
+        // Date of birth validation
+        let dobValid = false;
+        if (formData.dateOfBirth) {
+          const dob = new Date(formData.dateOfBirth);
+          const today = new Date();
+          let age = today.getFullYear() - dob.getFullYear();
+          const monthDiff = today.getMonth() - dob.getMonth();
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+            age--;
+          }
+          dobValid = age >= 13 && dob <= today;
+        }
+ 
+        return (
+          formData.username.length >= 3 &&
+          validation.username.valid !== false &&
+          validation.email.valid !== false &&
+          formData.email &&
+          formData.password.length >= 8 &&
+          formData.passwordConfirm === formData.password &&
+          dobValid
+        );
+      }
       default:
         return true;
     }
@@ -863,6 +888,7 @@ const handleSubmit = async () => {
           bio: formData.bio || null,
           genreId: formData.role === 'artist' ? formData.genreId : null,
           photoUrl: photoUrl,
+          dateOfBirth: formData.dateOfBirth || null,   
         };
         
         const registerResponse = await apiCall({
@@ -1091,6 +1117,63 @@ const handleSubmit = async () => {
                 {validation.passwordConfirm.valid === false && <XCircle className="validation-icon invalid" size={20} />}
               </div>
               {validation.passwordConfirm.message && <div className={validation.passwordConfirm.valid ? 'helper-text' : 'error-message'}>{validation.passwordConfirm.message}</div>}
+            </div>
+
+             <div className="form-group">
+              <label>Date of Birth</label>
+              <div className="input-wrapper">
+                <input
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={(e) => {
+                    updateForm('dateOfBirth', e.target.value);
+                  }}
+                  max={new Date().toISOString().split('T')[0]}
+                  min="1900-01-01"
+                  className={
+                    formData.dateOfBirth
+                      ? (() => {
+                          const dob = new Date(formData.dateOfBirth);
+                          const today = new Date();
+                          let age = today.getFullYear() - dob.getFullYear();
+                          const m = today.getMonth() - dob.getMonth();
+                          if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+                          return age >= 13 ? 'has-success' : 'has-error';
+                        })()
+                      : ''
+                  }
+                  style={{
+                    colorScheme: 'dark',
+                  }}
+                />
+              </div>
+              {formData.dateOfBirth && (() => {
+                const dob = new Date(formData.dateOfBirth);
+                const today = new Date();
+                let age = today.getFullYear() - dob.getFullYear();
+                const m = today.getMonth() - dob.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+ 
+                if (age < 13) {
+                  return (
+                    <div className="error-message">
+                      <AlertCircle size={14} />
+                      You must be at least 13 years old to join Unis.
+                    </div>
+                  );
+                }
+                if (age < 18) {
+                  return (
+                    <div className="helper-text" style={{ color: '#f59e0b' }}>
+                      Under 18: Explicit content will be disabled on your account.
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              <div className="helper-text">
+                Your date of birth is private and never shown publicly. Used for age verification only.
+              </div>
             </div>
           </>
         );
@@ -1613,6 +1696,21 @@ const handleSubmit = async () => {
                 <div className="review-item"><span className="item-label">Email</span><span className="item-value">{formData.email}</span></div>
                 <div className="review-item"><span className="item-label">Type</span><span className="item-value" style={{ textTransform: 'capitalize' }}>{formData.role}</span></div>
                 <div className="review-item"><span className="item-label">Jurisdiction</span><span className="item-value">{formData.jurisdictionName}</span></div>
+                 <div className="review-item">
+                  <span className="item-label">Age</span>
+                  <span className="item-value">
+                    {formData.dateOfBirth
+                      ? (() => {
+                          const dob = new Date(formData.dateOfBirth);
+                          const today = new Date();
+                          let age = today.getFullYear() - dob.getFullYear();
+                          const m = today.getMonth() - dob.getMonth();
+                          if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+                          return `${age} years old${age < 18 ? ' (minor — explicit content disabled)' : ''}`;
+                        })()
+                      : 'Not provided'}
+                  </span>
+                </div>
               </div>
               
               {formData.role === 'artist' && (

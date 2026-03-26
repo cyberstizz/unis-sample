@@ -16,15 +16,44 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [isrc, setIsrc] = useState('');
+  const [explicit, setExplicit] = useState(false);
+
+  // Clean version state
+  const [uploadedSong, setUploadedSong] = useState(null); // stores the response from the explicit upload
+  const [cleanVersionChoice, setCleanVersionChoice] = useState(null); // null | 'yes' | 'no'
+  const [cleanFile, setCleanFile] = useState(null);
+  const [cleanPreview, setCleanPreview] = useState(null);
+  const [cleanLoading, setCleanLoading] = useState(false);
 
   const artistId = userProfile.userId;
+
+  // Total steps: 1=type, 2=details, 3=confirm, 4=clean version prompt (conditional)
+  const totalSteps = (explicit && uploadedSong) ? 4 : 3;
 
   useEffect(() => {
     return () => {
       if (preview) URL.revokeObjectURL(preview);
-      if (artwork) URL.revokeObjectURL(URL.createObjectURL(artwork));
+      if (cleanPreview) URL.revokeObjectURL(cleanPreview);
     };
-  }, [preview, artwork]);
+  }, [preview, cleanPreview]);
+
+  const resetWizard = () => {
+    setStep(1);
+    setTitle('');
+    setDescription('');
+    setFile(null);
+    setArtwork(null);
+    setError('');
+    setLoading(false);
+    setPreview(null);
+    setIsrc('');
+    setExplicit(false);
+    setUploadedSong(null);
+    setCleanVersionChoice(null);
+    setCleanFile(null);
+    setCleanPreview(null);
+    setCleanLoading(false);
+  };
 
   const handleNext = () => {
     setError('');
@@ -53,6 +82,25 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
     setFile(selectedFile);
     setError('');
     setPreview(URL.createObjectURL(selectedFile));
+  };
+
+  const handleCleanFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
+    if (!['audio/mpeg'].includes(selectedFile.type)) {
+      setError('Clean version must be MP3');
+      return;
+    }
+    if (selectedFile.size > 50 * 1024 * 1024) {
+      setError('File too large (max 50MB)');
+      return;
+    }
+
+    if (cleanPreview) URL.revokeObjectURL(cleanPreview);
+    setCleanFile(selectedFile);
+    setError('');
+    setCleanPreview(URL.createObjectURL(selectedFile));
   };
 
   const handleArtworkChange = (e) => {
@@ -91,6 +139,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
         genreId,
         artistId,
         jurisdictionId,
+        explicit,
         isrc: isrc || null
       };
       formData.append(mediaType, JSON.stringify(metadata));
@@ -108,15 +157,91 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
       });
 
       console.log('Upload response:', response.data);
-      onUploadSuccess(response.data || { message: 'Upload successful (mock mode)' });
-      onClose();
-      setStep(1);
+
+      // If explicit, move to clean version step instead of closing
+      if (explicit && mediaType === 'song') {
+        setUploadedSong(response.data);
+        setStep(4);
+      } else {
+        onUploadSuccess(response.data || { message: 'Upload successful (mock mode)' });
+        onClose();
+        resetWizard();
+      }
     } catch (err) {
       console.error('Upload error:', err);
       setError(err.response?.data?.message || err.message || 'Upload failed—check console/backend');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCleanVersionUpload = async () => {
+    if (!cleanFile) {
+      setError('Please select a clean version audio file');
+      return;
+    }
+
+    setError('');
+    setCleanLoading(true);
+
+    try {
+      // Step 1: Upload the clean version as a new song
+      const cleanFormData = new FormData();
+      const cleanMetadata = {
+        title: title + ' (Clean)',
+        description,
+        genreId,
+        artistId,
+        jurisdictionId,
+        explicit: false,
+        isrc: null // Clean version gets its own ISRC if needed later
+      };
+      cleanFormData.append('song', JSON.stringify(cleanMetadata));
+      cleanFormData.append('file', cleanFile);
+      if (artwork) cleanFormData.append('artwork', artwork);
+
+      const cleanResponse = await apiCall({
+        url: '/v1/media/song',
+        method: 'post',
+        data: cleanFormData,
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      console.log('Clean version uploaded:', cleanResponse.data);
+
+      const cleanSongId = cleanResponse.data?.songId;
+      const explicitSongId = uploadedSong?.songId;
+
+      // Step 2: Link the clean version to the explicit version via PATCH
+      if (cleanSongId && explicitSongId) {
+        const linkFormData = new FormData();
+        linkFormData.append('cleanVersionId', cleanSongId);
+
+        await apiCall({
+          url: `/v1/media/song/${explicitSongId}`,
+          method: 'patch',
+          data: linkFormData,
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        console.log('Linked clean version', cleanSongId, 'to explicit song', explicitSongId);
+      }
+
+      onUploadSuccess(uploadedSong || { message: 'Upload successful with clean version' });
+      onClose();
+      resetWizard();
+    } catch (err) {
+      console.error('Clean version upload error:', err);
+      setError(err.response?.data?.message || err.message || 'Clean version upload failed');
+    } finally {
+      setCleanLoading(false);
+    }
+  };
+
+  const handleSkipCleanVersion = () => {
+    onUploadSuccess(uploadedSong || { message: 'Upload successful' });
+    onClose();
+    resetWizard();
   };
 
   const renderStep = () => {
@@ -178,6 +303,32 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
                   12-character International Standard Recording Code. You can add this later from your dashboard.
                 </small>
               </div>
+
+              {/* Explicit toggle — only for songs */}
+              {mediaType === 'song' && (
+                <div className="upload-form-group">
+                  <label className="explicit-toggle-label">
+                    <span>Explicit Content</span>
+                    <div
+                      className={`explicit-toggle ${explicit ? 'active' : ''}`}
+                      onClick={() => setExplicit(!explicit)}
+                      role="switch"
+                      aria-checked={explicit}
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setExplicit(!explicit); } }}
+                    >
+                      <div className="explicit-toggle-track">
+                        <div className="explicit-toggle-thumb" />
+                      </div>
+                    </div>
+                  </label>
+                  <small style={{ color: '#A9A9A9', display: 'block', marginTop: '4px' }}>
+                    Mark this song as explicit if it contains strong language, violence, or adult themes.
+                    {explicit && ' After uploading, you\'ll be prompted to upload an optional clean version.'}
+                  </small>
+                </div>
+              )}
+
               <div className="form-group">
                 <label htmlFor="file">{mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} File</label>
                 <input
@@ -215,6 +366,9 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
               <strong>File:</strong> {file?.name} ({mediaType})<br />
               <strong>Artwork:</strong> {artwork ? artwork.name : 'None'}<br />
               <strong>ISRC:</strong> {isrc || 'Not provided'}<br />
+              {mediaType === 'song' && (
+                <><strong>Explicit:</strong> {explicit ? 'Yes' : 'No'}<br /></>
+              )}
               {preview && (
                 <div className="preview-media">
                   {mediaType === 'song' ? (
@@ -239,6 +393,86 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
             </form>
           </div>
         );
+
+      // Step 4: Clean version prompt (only shown for explicit songs after upload)
+      case 4:
+        return (
+          <div className="step-content">
+            <h2>Upload Clean Version?</h2>
+            <p className="wizard-intro">
+              Your explicit track <strong>"{title}"</strong> has been uploaded successfully.
+              Would you like to upload a clean version? This helps listeners with explicit content disabled still enjoy your music.
+            </p>
+            {error && <p className="error-message">{error}</p>}
+
+            {cleanVersionChoice === null && (
+              <div className="clean-version-choices">
+                <button
+                  className="clean-choice-button clean-choice-yes"
+                  onClick={() => setCleanVersionChoice('yes')}
+                >
+                  Yes, upload a clean version
+                </button>
+                <button
+                  className="clean-choice-button clean-choice-skip"
+                  onClick={handleSkipCleanVersion}
+                >
+                  No, skip for now
+                </button>
+                <small style={{ color: '#A9A9A9', display: 'block', marginTop: '12px', textAlign: 'center' }}>
+                  You can always add a clean version later from your dashboard.
+                </small>
+              </div>
+            )}
+
+            {cleanVersionChoice === 'yes' && (
+              <div className="clean-version-upload">
+                <div className="form-group">
+                  <label htmlFor="cleanFile">Clean Version Audio (MP3)</label>
+                  <input
+                    type="file"
+                    id="cleanFile"
+                    accept="audio/mpeg"
+                    onChange={handleCleanFileChange}
+                  />
+                  {cleanFile && (
+                    <p className="file-preview">Selected: {cleanFile.name} ({(cleanFile.size / 1024 / 1024).toFixed(1)} MB)</p>
+                  )}
+                  {cleanPreview && (
+                    <div className="preview-media" style={{ marginTop: '12px' }}>
+                      <audio controls src={cleanPreview} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="clean-version-info">
+                  <p style={{ color: '#A9A9A9', fontSize: '0.85rem' }}>
+                    The clean version will inherit the title (as "{title} (Clean)"), artwork, genre, and jurisdiction from the explicit version.
+                  </p>
+                </div>
+
+                <div className="clean-version-actions">
+                  <button
+                    className="submit-upload-button"
+                    onClick={handleCleanVersionUpload}
+                    disabled={!cleanFile || cleanLoading}
+                  >
+                    {cleanLoading ? 'Uploading Clean Version...' : 'Upload Clean Version'}
+                  </button>
+                  <button
+                    className="back-button"
+                    onClick={handleSkipCleanVersion}
+                    disabled={cleanLoading}
+                    style={{ marginTop: '8px' }}
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
       default: return null;
     }
   };
@@ -250,10 +484,12 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
       <div className="upload-wizard" onClick={(e) => e.stopPropagation()}>
         <button className="close-button" onClick={onClose}>×</button>
         {renderStep()}
-        <div className="button-group">
-          {step > 1 && <button onClick={handleBack} className="back-button">Back</button>}
-          {step < 3 && <button onClick={handleNext} className="next-button">Next</button>}
-        </div>
+        {step <= 3 && (
+          <div className="button-group">
+            {step > 1 && <button onClick={handleBack} className="back-button">Back</button>}
+            {step < 3 && <button onClick={handleNext} className="next-button">Next</button>}
+          </div>
+        )}
       </div>
     </div>
   );
