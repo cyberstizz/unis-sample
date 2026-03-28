@@ -200,7 +200,7 @@ $header-height: 75px;
 
   // Active page state — accent pill
   &.active {
-    color: lighten($unis-blue-bright, 28%);
+    color: $unis-blue-bright;
     background: rgba($unis-blue-bright, 0.1);
     border: 1px solid rgba($unis-blue-bright, 0.18);
 
@@ -228,7 +228,7 @@ $header-height: 75px;
   height: 36px;
   border-radius: 50%;
   border: 1.5px solid rgba($unis-silver, 0.25);
-  background: linear-gradient(145deg, $unis-blue, darken($unis-blue, 8%));
+  background: $unis-blue;
   display: flex;
   align-items: center;
   justify-content: center;

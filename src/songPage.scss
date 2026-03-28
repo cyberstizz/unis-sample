@@ -124,7 +124,7 @@ $transition-ambient: 1.2s ease;
   margin-bottom: 8px;
   cursor: pointer;
   display: inline-block;
-  &:hover { color: lighten($accent-blue, 10%); }
+  &:hover { color: $accent-blue; }
 }
 
 .sp-title {
