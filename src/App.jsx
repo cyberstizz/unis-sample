@@ -27,6 +27,9 @@ import { AuthProvider } from './context/AuthContext';
 import WinnersNotification from './winnersNotification';
 import useActivityTracker from './hooks/useActivityTracker';
 
+// Theme — must be imported globally so CSS custom properties are available everywhere
+import './theme.scss';
+
 // Admin pages
 import AdminDashboard from './admin/AdminDashboard';
 import ModerationQueue from './admin/ModerationQueue';
@@ -41,7 +44,6 @@ const AppLayout = () => {
   const { pathname } = useLocation();
   const isAuthPage = pathname === '/login' || pathname === '/register' || pathname.startsWith('/reset-password');
 
-  // Track page views for DAU
   useActivityTracker();
 
   return (
@@ -56,7 +58,6 @@ const AppLayout = () => {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/cookie" element={<CookiePolicy />} />
         <Route path="/report" element={<ReportInfringement />} />
-
 
         {/* Authenticated routes */}
         <Route element={<PrivateRoute />}>

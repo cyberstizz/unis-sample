@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axiosInstance from '../components/axiosInstance';  
+import axiosInstance from '../components/axiosInstance';
 
 const AuthContext = createContext();
 
@@ -9,30 +9,59 @@ export const useAuth = () => {
   return context;
 };
 
+const VALID_THEMES = ['blue', 'orange', 'red', 'green', 'purple', 'yellow'];
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); 
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [theme, setThemeState] = useState('blue');
 
   const decodeToken = (token) => {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1])); 
-      return payload.userId;  
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.userId;
     } catch (e) {
       console.error('Token decode failed', e);
       return null;
     }
   };
 
-  // On mount, check token + fetch profile if present
+  // Apply theme to the DOM root
+  const applyTheme = (themeName) => {
+    const validated = VALID_THEMES.includes(themeName) ? themeName : 'blue';
+    document.getElementById('root')?.setAttribute('data-theme', validated);
+    setThemeState(validated);
+  };
+
+  // Save theme to backend + apply locally
+  const setTheme = async (themeName, userId) => {
+    applyTheme(themeName);
+    try {
+      await axiosInstance.put(`/v1/users/profile/${userId}`, {
+        themePreference: themeName
+      });
+      setUser(prev => prev ? { ...prev, themePreference: themeName } : prev);
+    } catch (err) {
+      console.error('Failed to save theme preference:', err);
+      // Theme still applied locally even if save fails
+    }
+  };
+
+  // On mount, check token + fetch profile
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       const userId = decodeToken(token);
       if (userId) {
-        axiosInstance.get(`/v1/users/profile/${userId}`)  
+        axiosInstance.get(`/v1/users/profile/${userId}`)
           .then(async (res) => {
-              console.log('PROFILE RESPONSE:', res.data); // ← add this
             const profileData = res.data;
+
+            // Apply saved theme preference
+            if (profileData.themePreference) {
+              applyTheme(profileData.themePreference);
+            }
+
             try {
               const roleCheck = await axiosInstance.get('/v1/admin/roles');
               const myRole = roleCheck.data?.find(r => r.user?.userId === profileData.userId);
@@ -40,11 +69,12 @@ export const AuthProvider = ({ children }) => {
             } catch (e) {
               profileData.adminRole = null;
             }
+
             setUser(profileData);
           })
           .catch((err) => {
             if (err.response?.status === 401 || err.response?.status === 404) {
-              localStorage.removeItem('token');  
+              localStorage.removeItem('token');
             }
           })
           .finally(() => setLoading(false));
@@ -57,23 +87,25 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-const login = async (credentials) => {
+  const login = async (credentials) => {
     try {
       const response = await axiosInstance.post('/auth/login', credentials);
       localStorage.setItem('token', response.data.token);
-      // Decode for userId + fetch profile
       const userId = decodeToken(response.data.token);
       if (userId) {
         const profileRes = await axiosInstance.get(`/v1/users/profile/${userId}`);
         const profileData = profileRes.data;
 
-        // Check for admin role
+        // Apply saved theme on login
+        if (profileData.themePreference) {
+          applyTheme(profileData.themePreference);
+        }
+
         try {
           const roleCheck = await axiosInstance.get('/v1/admin/roles');
           const myRole = roleCheck.data?.find(r => r.user?.userId === profileData.userId);
           profileData.adminRole = myRole ? myRole.roleLevel : null;
         } catch (e) {
-          // 403 = not an admin, that's fine
           profileData.adminRole = null;
         }
 
@@ -91,10 +123,11 @@ const login = async (credentials) => {
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
-    window.location.href = '/login';  // Or use navigate
+    applyTheme('blue'); // Reset to default on logout
+    window.location.href = '/login';
   };
 
-  const value = { user, login, logout, loading };
+  const value = { user, login, logout, loading, theme, setTheme };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
