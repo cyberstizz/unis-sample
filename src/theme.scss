@@ -1,0 +1,62 @@
+// ═══════════════════════════════════════
+//  UNIS THEME SYSTEM
+//  6 palettes driven by [data-theme] on <div id="root">
+//  All SCSS files should reference $unis-blue: var(--unis-primary)
+//  at the top of each file to pick up the active theme.
+// ═══════════════════════════════════════
+
+// Default — Unis Blue
+:root,
+[data-theme="blue"] {
+  --unis-primary:        #163387;
+  --unis-primary-hover:  #1a3fa3;
+  --unis-primary-glow:   rgba(22, 51, 135, 0.3);
+  --unis-primary-subtle: rgba(22, 51, 135, 0.1);
+  --unis-primary-border: rgba(22, 51, 135, 0.4);
+  --unis-primary-text:   #163387;
+}
+
+[data-theme="orange"] {
+  --unis-primary:        #C44B0A;
+  --unis-primary-hover:  #d9560b;
+  --unis-primary-glow:   rgba(196, 75, 10, 0.3);
+  --unis-primary-subtle: rgba(196, 75, 10, 0.1);
+  --unis-primary-border: rgba(196, 75, 10, 0.4);
+  --unis-primary-text:   #C44B0A;
+}
+
+[data-theme="red"] {
+  --unis-primary:        #B51C24;
+  --unis-primary-hover:  #cc2029;
+  --unis-primary-glow:   rgba(181, 28, 36, 0.3);
+  --unis-primary-subtle: rgba(181, 28, 36, 0.1);
+  --unis-primary-border: rgba(181, 28, 36, 0.4);
+  --unis-primary-text:   #B51C24;
+}
+
+[data-theme="green"] {
+  --unis-primary:        #0F7A3E;
+  --unis-primary-hover:  #118a46;
+  --unis-primary-glow:   rgba(15, 122, 62, 0.3);
+  --unis-primary-subtle: rgba(15, 122, 62, 0.1);
+  --unis-primary-border: rgba(15, 122, 62, 0.4);
+  --unis-primary-text:   #0F7A3E;
+}
+
+[data-theme="purple"] {
+  --unis-primary:        #4A1A8C;
+  --unis-primary-hover:  #551e9e;
+  --unis-primary-glow:   rgba(74, 26, 140, 0.3);
+  --unis-primary-subtle: rgba(74, 26, 140, 0.1);
+  --unis-primary-border: rgba(74, 26, 140, 0.4);
+  --unis-primary-text:   #4A1A8C;
+}
+
+[data-theme="yellow"] {
+  --unis-primary:        #C49A0A;
+  --unis-primary-hover:  #d9aa0b;
+  --unis-primary-glow:   rgba(196, 154, 10, 0.3);
+  --unis-primary-subtle: rgba(196, 154, 10, 0.1);
+  --unis-primary-border: rgba(196, 154, 10, 0.4);
+  --unis-primary-text:   #C49A0A;
+}
