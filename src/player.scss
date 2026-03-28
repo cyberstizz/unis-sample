@@ -20,7 +20,7 @@ $accent: #163387;
 $accent-hover: #6ab8ff;
 
 // Legacy tokens for expanded view / mobile tray
-$unis-blue: #163387;
+$unis-blue: var(--unis-primary);
 $unis-silver: #918f8f;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;

@@ -7,7 +7,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
 
 // ── Design Tokens ────────────────────────────────────────────
-$unis-blue: #163387;
+$unis-blue: var(--unis-primary);
 $unis-blue-light: #1e44a8;
 $unis-blue-glow: rgba(22, 51, 135, 0.35);
 $card-bg: #111111;

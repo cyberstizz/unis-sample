@@ -7,7 +7,7 @@ $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
 $button-hover: #D3D3D3;
 $subtle-black: #1a1a1a;
-$unis-blue: #163387;
+$unis-blue: var(--unis-primary);
 
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(30px); }

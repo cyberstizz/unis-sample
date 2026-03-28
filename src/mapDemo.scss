@@ -3,7 +3,7 @@ $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
 $border-silver: #C0C0C0;
-$unis-blue: #163387;
+$unis-blue: var(--unis-primary);
 
 .find-page-container {
   display: flex;

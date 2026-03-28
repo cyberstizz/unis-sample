@@ -11,7 +11,7 @@ $bg-surface: rgba(255, 255, 255, 0.03);
 $text-primary: #e8e6e1;
 $text-secondary: #9a978f;
 $text-tertiary: #5f5d58;
-$unis-blue: #163387;
+$unis-blue: var(--unis-primary);
 $unis-blue-hover: #1e44a8;
 $unis-blue-dim: rgba(22, 51, 135, 0.15);
 $unis-blue-glow: rgba(22, 51, 135, 0.4);

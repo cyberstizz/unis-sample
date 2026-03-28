@@ -30,7 +30,7 @@ $radius-xl: 20px;
 $shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.05);
 
 $bg-black: #000000;
-$unis-blue: #163387;
+$unis-blue: var(--unis-primary);
 $unis-silver: #918f8f;
 $accent-white: #FFFFFF;
 $text-gray: #A9A9A9;

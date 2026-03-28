@@ -11,7 +11,7 @@ $bg-elevated: rgba(255, 255, 255, 0.05);
 $bg-hover: rgba(255, 255, 255, 0.08);
 $border-dim: rgba(255, 255, 255, 0.06);
 $border-hover: rgba(255, 255, 255, 0.12);
-$unis-blue: #163387;
+$unis-blue: var(--unis-primary);
 $unis-blue-light: #2e5aac;
 $unis-blue-glow: rgba(22, 51, 135, 0.3);
 $accent: #4ea8f5;
