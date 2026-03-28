@@ -9,6 +9,8 @@ import EditProfileWizard from './editProfileWizard';
 import DeleteAccountWizard from './deleteAccountWizard';
 import VoteHistoryModal from './voteHistoryModal';
 import ChangePasswordWizard from './changePasswordWizard';
+import ReferralCodeCard from './ReferralCodeCard';
+import ThemePicker from './ThemePicker';
 import './profile.scss';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -29,17 +31,14 @@ const Profile = () => {
 
     const fetchData = async () => {
       try {
-        // 1. My profile
         const profileRes = await apiCall({ url: `/v1/users/profile/${user.userId}` });
         setUserProfile(profileRes.data);
 
-        // 2. My supported artist (if any)
         if (profileRes.data.supportedArtistId) {
           const artistRes = await apiCall({ url: `/v1/users/profile/${profileRes.data.supportedArtistId}` });
           setSupportedArtist(artistRes.data);
         }
 
-        // 3. My vote history
         const voteRes = await apiCall({ url: '/v1/vote/history?limit=50' });
         setVoteHistory(voteRes.data || []);
       } catch (err) {
@@ -52,20 +51,17 @@ const Profile = () => {
 
   if (!userProfile) return <div style={{ textAlign: 'center', padding: '4rem', color: 'white' }}>Loading your profile...</div>;
 
-
   const buildUrl = (url) => {
     if (!url) return null;
-    return url.startsWith('http://') || url.startsWith('https://') 
-      ? url 
+    return url.startsWith('http://') || url.startsWith('https://')
+      ? url
       : `${API_BASE_URL}${url}`;
   };
 
-  const photoUrl = userProfile.photoUrl 
-    ? buildUrl(userProfile.photoUrl) 
+  const photoUrl = userProfile.photoUrl
+    ? buildUrl(userProfile.photoUrl)
     : backimage;
 
-
-  // Enhanced play function with tracking
   const playDefaultSong = async () => {
     if (!supportedArtist?.defaultSong) {
       console.error('No default song available');
@@ -75,7 +71,6 @@ const Profile = () => {
     const song = supportedArtist.defaultSong;
     const songId = song.songId || song.id;
 
-    // Create media object for player
     const mediaObject = {
       type: 'song',
       id: songId,
@@ -89,17 +84,14 @@ const Profile = () => {
     };
 
     try {
-      // Track the play
-      await apiCall({ 
-        method: 'post', 
-        url: `/v1/media/song/${songId}/play?userId=${user.userId}` 
+      await apiCall({
+        method: 'post',
+        url: `/v1/media/song/${songId}/play?userId=${user.userId}`
       });
-      console.log('Play tracked successfully for song:', songId);
     } catch (err) {
       console.error('Failed to track play:', err);
     }
 
-    // Play the song
     playMedia(mediaObject, [mediaObject]);
   };
 
@@ -124,13 +116,13 @@ const Profile = () => {
           </button>
         </div>
 
-        {/* Supported Artist - ENHANCED */}
+        {/* Supported Artist */}
         {supportedArtist && (
           <div className="supported-artist card">
             <h3><Heart size={20} /> I Support</h3>
             <div className="artist-support-card">
-              <img 
-                src={supportedArtist.photoUrl ? buildUrl(supportedArtist.photoUrl) : backimage} 
+              <img
+                src={supportedArtist.photoUrl ? buildUrl(supportedArtist.photoUrl) : backimage}
                 alt={supportedArtist.username}
                 className="artist-photo"
               />
@@ -157,12 +149,12 @@ const Profile = () => {
           </div>
         )}
 
-        {/* Stats Grid - FULL WIDTH */}
+        {/* Stats Grid */}
         <div className="stats-grid">
-           <div className="stat-card">
+          <div className="stat-card">
             <Music size={28} />
             <p>Score</p>
-            <h3>{userProfile.score || 'Silver'}</h3>
+            <h3>{userProfile.score || 0}</h3>
           </div>
           <div className="stat-card">
             <User size={28} />
@@ -176,7 +168,7 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Vote History - FULL WIDTH */}
+        {/* Vote History */}
         <div className="vote-history card">
           <div className="vote-history-header">
             <h3><History size={20} /> Vote History</h3>
@@ -200,8 +192,14 @@ const Profile = () => {
           </div>
         </div>
 
+        {/* Referral Code — listener */}
+        <ReferralCodeCard userId={user?.userId} isArtist={false} />
+
+        {/* Theme Picker */}
+        <ThemePicker userId={user?.userId} />
+
         {/* Danger Zone */}
-        <div className="card danger-zone">
+        <div className="card danger-zone" style={{ marginTop: '1.5rem' }}>
           <div className="danger-content">
             <h3>Danger Zone</h3>
             <p>This cannot be undone.</p>
@@ -243,7 +241,7 @@ const Profile = () => {
           show={showVoteHistory}
           onClose={() => setShowVoteHistory(false)}
           votes={voteHistory}
-          useDummyData={false}  // SET TO false WHEN DONE TESTING
+          useDummyData={false}
         />
 
         <ChangePasswordWizard
