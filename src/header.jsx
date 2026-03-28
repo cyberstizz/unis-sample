@@ -5,6 +5,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
 import { DollarSign, House, Music } from 'lucide-react';
+import logoblue from './assets/unisLogoThree.svg';
+import logoorange from './assets/logo-orange.png';
+import logored from './assets/logo-red.png';
+import logogreen from './assets/logo-green.png';
+import logopurple from './assets/logo-purple.png';
+import logoyellow from './assets/logo-gold.png';
+import logodianna from './assets/logo-dianna.png';
+
 
 
 
@@ -23,6 +31,8 @@ const Header = () => {
   const handleFind = () => navigate('/findpage');
   const handleLogout = async () => { logout(); };
 
+  
+
   useEffect(() => {
     const handleOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -37,6 +47,20 @@ const Header = () => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   const currentPath = location.pathname;
+
+  const LOGO_MAP = {
+  blue: logoblue,
+  orange: logoorange,
+  red: logored,
+  green: logogreen,
+  purple: logopurple,
+  yellow: logoyellow,
+  dianna: logodianna,
+};
+
+  // Inside your Sidebar component:
+  const { theme } = useAuth();
+  const activeLogo = LOGO_MAP[theme] || logoblue;
 
   const navItems = [
     { label: "Vote", path: "/voteawards", handler: handleClick, icon: "vote" },
@@ -89,7 +113,7 @@ const Header = () => {
       <div className="header-inner">
         {/* Left: Logo */}
         <div className="header-logo" onClick={handleHome}>
-          <img src={unisLogo} alt="UNIS" className="logo-img" />
+          <img src={activeLogo} alt="UNIS" className="logo-img" />
         </div>
 
         {/* Center: Search */}

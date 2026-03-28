@@ -9,7 +9,7 @@ export const useAuth = () => {
   return context;
 };
 
-const VALID_THEMES = ['blue', 'orange', 'red', 'green', 'purple', 'yellow'];
+const VALID_THEMES = ['blue', 'orange', 'red', 'green', 'purple', 'yellow', 'dianna'];
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

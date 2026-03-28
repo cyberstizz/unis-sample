@@ -60,3 +60,38 @@
   --unis-primary-border: rgba(196, 154, 10, 0.4);
   --unis-primary-text:   #C49A0A;
 }
+
+// Dianna — cheetah print tribute theme
+// Primary is warm cheetah gold. The pattern itself is applied
+// via the cheetahSwatchStyle in ThemePicker and any component
+// that opts into the pattern. All var(--unis-primary) references
+// receive the gold base color so the UI remains readable.
+[data-theme="dianna"] {
+  --unis-primary:        #5d4703;
+  --unis-primary-hover:  #c39f33;
+  --unis-primary-glow:   rgba(200, 168, 75, 0.3);
+  --unis-primary-subtle: rgba(200, 168, 75, 0.1);
+  --unis-primary-border: rgba(200, 168, 75, 0.4);
+  --unis-primary-text:   #C8A84B;
+
+  // Cheetah pattern — used on any element that opts in via class .cheetah-pattern
+  --unis-cheetah-pattern: 
+    radial-gradient(ellipse 8px 5px at 12% 18%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 5px 8px at 28% 52%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 9px 5px at 48% 14%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 5px 7px at 65% 48%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 7px 4px at 80% 22%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 4px 7px at 18% 75%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 8px 4px at 55% 72%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 5px 6px at 85% 65%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 6px 5px at 38% 88%, #3D2410 100%, transparent 100%),
+    radial-gradient(ellipse 4px 8px at 72% 85%, #3D2410 100%, transparent 100%),
+    radial-gradient(ellipse 7px 4px at 92% 40%, #3D2410 100%, transparent 100%),
+    radial-gradient(ellipse 5px 5px at 5%  42%, #3D2410 100%, transparent 100%),
+    #C8A84B;
+}
+
+// Utility class — apply cheetah pattern background to any element when dianna theme is active
+[data-theme="dianna"] .cheetah-pattern {
+  background: var(--unis-cheetah-pattern) !important;
+}

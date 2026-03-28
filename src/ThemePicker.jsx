@@ -9,7 +9,25 @@ const THEMES = [
   { id: 'green',  label: 'Green',     hex: '#0F7A3E' },
   { id: 'purple', label: 'Purple',    hex: '#4A1A8C' },
   { id: 'yellow', label: 'Gold',      hex: '#C49A0A' },
+  { id: 'dianna', label: 'Dianna',    hex: null }, // cheetah — uses pattern, not hex
 ];
+
+// Cheetah pattern for the swatch circle
+const cheetahSwatchStyle = {
+  background: `
+    radial-gradient(ellipse 6px 4px at 18% 25%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 4px 6px at 35% 60%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 7px 4px at 55% 20%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 4px 5px at 70% 55%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 5px 3px at 82% 30%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 3px 5px at 25% 80%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 6px 3px at 62% 78%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 4px 4px at 88% 72%, #2C1A0E 100%, transparent 100%),
+    radial-gradient(ellipse 5px 4px at 10% 55%, #3D2410 100%, transparent 100%),
+    radial-gradient(ellipse 3px 6px at 45% 40%, #3D2410 100%, transparent 100%),
+    #C8A84B
+  `,
+};
 
 /**
  * ThemePicker
@@ -45,6 +63,8 @@ const ThemePicker = ({ userId }) => {
       }}>
         {THEMES.map(t => {
           const isActive = theme === t.id;
+          const isCheetah = t.id === 'dianna';
+
           return (
             <button
               key={t.id}
@@ -66,15 +86,16 @@ const ThemePicker = ({ userId }) => {
                 width: '48px',
                 height: '48px',
                 borderRadius: '50%',
-                background: t.hex,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: isActive
-                  ? `0 0 0 3px #fff, 0 0 0 5px ${t.hex}`
+                  ? `0 0 0 3px #fff, 0 0 0 5px ${isCheetah ? '#C8A84B' : t.hex}`
                   : '0 2px 8px rgba(0,0,0,0.4)',
                 transition: 'all 0.2s ease',
                 transform: isActive ? 'scale(1.12)' : 'scale(1)',
+                overflow: 'hidden',
+                ...(isCheetah ? cheetahSwatchStyle : { background: t.hex }),
               }}>
                 {isActive && <Check size={20} color="#fff" strokeWidth={3} />}
               </div>
