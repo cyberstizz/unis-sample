@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import LyricsWizard from './lyricsWizard';
 import { Upload, Play, FileText, Vote, Eye, Heart, Users, X, Download, Music, Trash2, Edit3, History } from 'lucide-react';
 import UploadWizard from './uploadWizard';
@@ -21,104 +21,223 @@ import ChangePasswordWizard from './changePasswordWizard';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
+// ---------------------------------------------------------------------------
+// Small inline loader shown per-section while data is in flight
+// ---------------------------------------------------------------------------
+const SectionLoader = ({ label = 'Loading...' }) => (
+  <div style={{ padding: '20px', textAlign: 'center', color: '#aaa' }}>
+    <div className="spinner" style={{
+      width: 24, height: 24, border: '3px solid rgba(255,255,255,0.1)',
+      borderTop: '3px solid var(--unis-primary, #6c63ff)', borderRadius: '50%',
+      animation: 'spin 0.8s linear infinite', margin: '0 auto 8px'
+    }} />
+    <p style={{ margin: 0, fontSize: '0.85rem' }}>{label}</p>
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Inline error shown per-section when a fetch fails
+// ---------------------------------------------------------------------------
+const SectionError = ({ message = 'Failed to load.', onRetry }) => (
+  <div style={{ padding: '20px', textAlign: 'center', color: '#ff6b6b' }}>
+    <p style={{ margin: '0 0 8px' }}>{message}</p>
+    {onRetry && (
+      <button onClick={onRetry} className="btn btn-secondary btn-small">
+        Retry
+      </button>
+    )}
+  </div>
+);
+
 const ArtistDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { playMedia } = useContext(PlayerContext);
 
+  // ---- Core data (Tier 1 — must load before the page feels "ready") ------
   const [userProfile, setUserProfile] = useState(null);
-  const [showWelcomePopup, setShowWelcomePopup] = useState(true);
-  const [showUploadWizard, setShowUploadWizard] = useState(false);
-  const [showEditProfile, setShowEditProfile] = useState(false);
   const [songs, setSongs] = useState([]);
-  const [showDefaultSongWizard, setShowDefaultSongWizard] = useState(false);
-  const [showDeleteWizard, setShowDeleteWizard] = useState(false);
+  const [defaultSong, setDefaultSong] = useState(null);
+  const [coreLoading, setCoreLoading] = useState(true);
+  const [coreError, setCoreError] = useState(null);
+
+  // ---- Secondary data (Tier 2 — can trickle in with spinners) ------------
   const [supporters, setSupporters] = useState(0);
   const [followers, setFollowers] = useState(0);
   const [totalPlays, setTotalPlays] = useState(0);
-  const [defaultSong, setDefaultSong] = useState(null);
+  const [totalVotes, setTotalVotes] = useState(0);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState(null);
+
+  const [supportedArtist, setSupportedArtist] = useState(null);
+
+  const [voteHistory, setVoteHistory] = useState([]);
+  const [votesLoading, setVotesLoading] = useState(true);
+  const [votesError, setVotesError] = useState(null);
+
+  const [awards, setAwards] = useState([]);
+  const [awardsPage, setAwardsPage] = useState(0);
+  const [hasMoreAwards, setHasMoreAwards] = useState(true);
+  const [awardsLoading, setAwardsLoading] = useState(true);
+  const [awardsError, setAwardsError] = useState(null);
+
+  // ---- UI state ----------------------------------------------------------
+  const [showWelcomePopup, setShowWelcomePopup] = useState(true);
+  const [showUploadWizard, setShowUploadWizard] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showDefaultSongWizard, setShowDefaultSongWizard] = useState(false);
+  const [showDeleteWizard, setShowDeleteWizard] = useState(false);
   const [deletingSongId, setDeletingSongId] = useState(null);
   const [editingSong, setEditingSong] = useState(null);
   const [songToDelete, setSongToDelete] = useState(null);
   const [showLyricsWizard, setShowLyricsWizard] = useState(false);
   const [lyricsSong, setLyricsSong] = useState(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
-
-  const [supportedArtist, setSupportedArtist] = useState(null);
-  const [voteHistory, setVoteHistory] = useState([]);
   const [showVoteHistory, setShowVoteHistory] = useState(false);
-  const [totalVotes, setTotalVotes] = useState(0);
-
   const [editingLyricsSong, setEditingLyricsSong] = useState(null);
   const [currentLyrics, setCurrentLyrics] = useState('');
+  const [loadingMoreAwards, setLoadingMoreAwards] = useState(false);
 
-  const [awards, setAwards] = useState([]);
-  const [awardsPage, setAwardsPage] = useState(0);
-  const [hasMoreAwards, setHasMoreAwards] = useState(true);
-  const [loadingAwards, setLoadingAwards] = useState(false);
+  // -----------------------------------------------------------------------
+  // Fetch helpers (wrapped in useCallback so they can be used as retry fns)
+  // -----------------------------------------------------------------------
+  const fetchCore = useCallback(async (userId) => {
+    setCoreLoading(true);
+    setCoreError(null);
+    try {
+      const [profileRes, songsRes, defaultSongRes] = await Promise.all([
+        apiCall({ url: `/v1/users/profile/${userId}`, method: 'get', useCache: false }),
+        apiCall({ url: `/v1/media/songs/artist/${userId}`, method: 'get', useCache: false }),
+        apiCall({ url: `/v1/users/${userId}/default-song`, method: 'get', useCache: false }).catch(() => ({ data: null })),
+      ]);
 
-  useEffect(() => {
-    if (!authLoading && user?.userId) {
-      apiCall({ url: `/v1/users/profile/${user.userId}`, method: 'get', useCache: false })
-        .then(res => {
-          setUserProfile(res.data);
-          setTotalPlays(res.data.totalPlays || 0);
-          setTotalVotes(res.data.totalVotes || 0);
+      const profile = profileRes.data;
+      setUserProfile(profile);
+      setTotalPlays(profile.totalPlays || 0);
+      setTotalVotes(profile.totalVotes || 0);
+      setSongs(songsRes.data || []);
+      setDefaultSong(defaultSongRes.data);
 
-          if (res.data.supportedArtistId) {
-            apiCall({ url: `/v1/users/profile/${res.data.supportedArtistId}`, useCache: false })
-              .then(artistRes => setSupportedArtist(artistRes.data))
-              .catch(err => console.error('Failed to fetch supported artist:', err));
-          }
-        })
-        .catch(err => console.error('Failed to fetch profile:', err));
-
-      apiCall({ url: `/v1/media/songs/artist/${user.userId}`, method: 'get', useCache: false })
-        .then(res => setSongs(res.data || []))
-        .catch(err => console.error('Failed to fetch songs:', err));
-
-      apiCall({ url: `/v1/users/${user.userId}/supporters/count`, method: 'get', useCache: false })
-        .then(res => setSupporters(res.data.count || 0))
-        .catch(err => console.error('Failed to fetch supporters:', err));
-
-      apiCall({ url: `/v1/users/${user.userId}/followers/count`, method: 'get', useCache: false })
-        .then(res => setFollowers(res.data.count || 0))
-        .catch(() => setFollowers(0));
-
-      apiCall({ url: '/v1/vote/history?limit=50', useCache: false })
-        .then(res => setVoteHistory(res.data || []))
-        .catch(err => console.error('Failed to fetch vote history:', err));
-
-      apiCall({ url: `/v1/users/${user.userId}/default-song`, method: 'get', useCache: false })
-        .then(res => setDefaultSong(res.data))
-        .catch(() => setDefaultSong(null));
-
-      apiCall({
-        url: `/v1/awards/artist/${user.userId}?limit=10&offset=0`,
-        method: 'get',
-        useCache: false
-      })
-        .then(res => {
-          const awardsData = res.data || [];
-          setAwards(awardsData);
-          setHasMoreAwards(awardsData.length === 10);
-        })
-        .catch(err => {
-          console.error('Failed to fetch awards:', err);
-          setAwards([]);
-        });
+      // Supported artist depends on profile — fire after profile resolves but
+      // don't block the page on it.
+      if (profile.supportedArtistId) {
+        apiCall({ url: `/v1/users/profile/${profile.supportedArtistId}`, useCache: false })
+          .then(artistRes => setSupportedArtist(artistRes.data))
+          .catch(err => console.error('Failed to fetch supported artist:', err));
+      }
+    } catch (err) {
+      console.error('Core data fetch failed:', err);
+      setCoreError('Failed to load your dashboard. Please try again.');
+    } finally {
+      setCoreLoading(false);
     }
-  }, [user, authLoading]);
+  }, []);
 
+  const fetchStats = useCallback(async (userId) => {
+    setStatsLoading(true);
+    setStatsError(null);
+    try {
+      const [supportersRes, followersRes] = await Promise.all([
+        apiCall({ url: `/v1/users/${userId}/supporters/count`, method: 'get', useCache: false }),
+        apiCall({ url: `/v1/users/${userId}/followers/count`, method: 'get', useCache: false }).catch(() => ({ data: { count: 0 } })),
+      ]);
+      setSupporters(supportersRes.data.count || 0);
+      setFollowers(followersRes.data.count || 0);
+    } catch (err) {
+      console.error('Stats fetch failed:', err);
+      setStatsError('Could not load stats.');
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
+  const fetchVotes = useCallback(async () => {
+    setVotesLoading(true);
+    setVotesError(null);
+    try {
+      const res = await apiCall({ url: '/v1/vote/history?limit=50', useCache: false });
+      setVoteHistory(res.data || []);
+    } catch (err) {
+      console.error('Vote history fetch failed:', err);
+      setVotesError('Could not load vote history.');
+    } finally {
+      setVotesLoading(false);
+    }
+  }, []);
+
+  const fetchAwards = useCallback(async (userId) => {
+    setAwardsLoading(true);
+    setAwardsError(null);
+    try {
+      const res = await apiCall({
+        url: `/v1/awards/artist/${userId}?limit=10&offset=0`,
+        method: 'get', useCache: false
+      });
+      const data = res.data || [];
+      setAwards(data);
+      setAwardsPage(0);
+      setHasMoreAwards(data.length === 10);
+    } catch (err) {
+      console.error('Awards fetch failed:', err);
+      setAwardsError('Could not load awards.');
+      setAwards([]);
+    } finally {
+      setAwardsLoading(false);
+    }
+  }, []);
+
+  // -----------------------------------------------------------------------
+  // Main effect: kick off all fetches. Tier 1 and Tier 2 run in parallel
+  // but resolve independently — Tier 2 sections show spinners until ready.
+  // -----------------------------------------------------------------------
+  useEffect(() => {
+    if (authLoading || !user?.userId) return;
+
+    const userId = user.userId;
+
+    // All tiers start at the same time — no waterfalls between tiers.
+    fetchCore(userId);
+    fetchStats(userId);
+    fetchVotes();
+    fetchAwards(userId);
+  }, [user, authLoading, fetchCore, fetchStats, fetchVotes, fetchAwards]);
+
+  // -----------------------------------------------------------------------
+  // Early returns
+  // -----------------------------------------------------------------------
   if (authLoading) return <div>Loading...</div>;
   if (!user) return <div>Please log in to view dashboard.</div>;
-  if (!userProfile) return <div>Loading your profile...</div>;
 
+  if (coreLoading) {
+    return (
+      <Layout backgroundImage={backimage}>
+        <div className="artist-dashboard" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+          <SectionLoader label="Loading your dashboard..." />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (coreError) {
+    return (
+      <Layout backgroundImage={backimage}>
+        <div className="artist-dashboard" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+          <SectionError message={coreError} onRetry={() => fetchCore(user.userId)} />
+        </div>
+      </Layout>
+    );
+  }
+
+  // Core data loaded — safe to derive display values
   const displayName = userProfile.username || 'Artist';
   const displayPhoto = userProfile.photoUrl
     ? (userProfile.photoUrl.startsWith('http') ? userProfile.photoUrl : `${API_BASE_URL}${userProfile.photoUrl}`)
     : backimage;
   const displayBio = userProfile.bio || 'No bio yet. Click Edit to add one.';
 
+  // -----------------------------------------------------------------------
+  // Handlers (unchanged logic, just reorganised)
+  // -----------------------------------------------------------------------
   const refetchDefaultSong = () => {
     apiCall({ url: `/v1/users/${user.userId}/default-song`, method: 'get', useCache: false })
       .then(res => setDefaultSong(res.data))
@@ -239,7 +358,7 @@ const ArtistDashboard = () => {
   };
 
   const loadMoreAwards = async () => {
-    setLoadingAwards(true);
+    setLoadingMoreAwards(true);
     try {
       const nextPage = awardsPage + 1;
       const res = await apiCall({
@@ -253,7 +372,7 @@ const ArtistDashboard = () => {
     } catch (err) {
       console.error('Failed to load more awards:', err);
     } finally {
-      setLoadingAwards(false);
+      setLoadingMoreAwards(false);
     }
   };
 
@@ -279,6 +398,9 @@ const ArtistDashboard = () => {
     return `${isrc.slice(0, 2)}-${isrc.slice(2, 5)}-${isrc.slice(5, 7)}-${isrc.slice(7)}`;
   };
 
+  // -----------------------------------------------------------------------
+  // Render
+  // -----------------------------------------------------------------------
   return (
     <Layout backgroundImage={backimage}>
       <div className="artist-dashboard">
@@ -323,44 +445,50 @@ const ArtistDashboard = () => {
           </div>
 
           {/* Stats */}
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-content">
-                <div className="stat-info"><p className="stat-label">Score</p><p className="stat-value">{(userProfile.score || 0).toLocaleString()}</p></div>
-                <div className="stat-icon stat-icon-blue"><Eye size={28} /></div>
+          {statsLoading ? (
+            <SectionLoader label="Loading stats..." />
+          ) : statsError ? (
+            <SectionError message={statsError} onRetry={() => fetchStats(user.userId)} />
+          ) : (
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-content">
+                  <div className="stat-info"><p className="stat-label">Score</p><p className="stat-value">{(userProfile.score || 0).toLocaleString()}</p></div>
+                  <div className="stat-icon stat-icon-blue"><Eye size={28} /></div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-content">
+                  <div className="stat-info"><p className="stat-label">Supporters</p><p className="stat-value">{supporters.toLocaleString()}</p></div>
+                  <div className="stat-icon stat-icon-purple"><Users size={28} /></div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-content">
+                  <div className="stat-info"><p className="stat-label">Followers</p><p className="stat-value">{followers.toLocaleString()}</p></div>
+                  <div className="stat-icon stat-icon-green"><Heart size={28} /></div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-content">
+                  <div className="stat-info"><p className="stat-label">Plays</p><p className="stat-value">{totalPlays.toLocaleString()}</p></div>
+                  <div className="stat-icon stat-icon-red"><Play size={28} /></div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-content">
+                  <div className="stat-info"><p className="stat-label">Songs</p><p className="stat-value">{songs.length}</p></div>
+                  <div className="stat-icon stat-icon-orange"><Music size={28} /></div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-content">
+                  <div className="stat-info"><p className="stat-label">Votes</p><p className="stat-value">{totalVotes.toLocaleString()}</p></div>
+                  <div className="stat-icon stat-icon-black"><Vote size={28} /></div>
+                </div>
               </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-content">
-                <div className="stat-info"><p className="stat-label">Supporters</p><p className="stat-value">{supporters.toLocaleString()}</p></div>
-                <div className="stat-icon stat-icon-purple"><Users size={28} /></div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-content">
-                <div className="stat-info"><p className="stat-label">Followers</p><p className="stat-value">{followers.toLocaleString()}</p></div>
-                <div className="stat-icon stat-icon-green"><Heart size={28} /></div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-content">
-                <div className="stat-info"><p className="stat-label">Plays</p><p className="stat-value">{totalPlays.toLocaleString()}</p></div>
-                <div className="stat-icon stat-icon-red"><Play size={28} /></div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-content">
-                <div className="stat-info"><p className="stat-label">Songs</p><p className="stat-value">{songs.length}</p></div>
-                <div className="stat-icon stat-icon-orange"><Music size={28} /></div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-content">
-                <div className="stat-info"><p className="stat-label">Votes</p><p className="stat-value">{totalVotes.toLocaleString()}</p></div>
-                <div className="stat-icon stat-icon-black"><Vote size={28} /></div>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* Featured Song */}
           <div className="main-song-section card">
@@ -466,71 +594,85 @@ const ArtistDashboard = () => {
           <div className="vote-history-section card" style={{ marginTop: '1.5rem' }}>
             <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3><History size={20} /> Vote History</h3>
-              <button className="btn btn-secondary btn-small" onClick={() => setShowVoteHistory(true)}>View Full History</button>
+              {!votesLoading && !votesError && (
+                <button className="btn btn-secondary btn-small" onClick={() => setShowVoteHistory(true)}>View Full History</button>
+              )}
             </div>
-            <div style={{ padding: '15px', textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--unis-primary)' }}>{voteHistory.length}</div>
-              <p style={{ color: '#aaa', margin: '5px 0' }}>Total Votes Cast</p>
-              <p style={{ fontSize: '0.9rem', color: '#777', marginTop: '10px' }}>
-                {voteHistory.length > 0 ? 'Keep voting to support the best talent!' : 'No votes yet. Go explore and support your favorites!'}
-              </p>
-            </div>
+            {votesLoading ? (
+              <SectionLoader label="Loading vote history..." />
+            ) : votesError ? (
+              <SectionError message={votesError} onRetry={fetchVotes} />
+            ) : (
+              <div style={{ padding: '15px', textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--unis-primary)' }}>{voteHistory.length}</div>
+                <p style={{ color: '#aaa', margin: '5px 0' }}>Total Votes Cast</p>
+                <p style={{ fontSize: '0.9rem', color: '#777', marginTop: '10px' }}>
+                  {voteHistory.length > 0 ? 'Keep voting to support the best talent!' : 'No votes yet. Go explore and support your favorites!'}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Awards */}
           <div className="awards-section card" style={{ marginTop: '1.5rem' }}>
             <div className="section-header"><h3>🏆 Awards Won</h3></div>
-            <div className="content-list">
-              {awards.length > 0 ? (
-                <>
-                  {awards.map((award, index) => (
-                    <div key={index} className="content-item" style={{
-                      background: 'linear-gradient(135deg, var(--unis-primary-subtle), rgba(0,0,0,0))',
-                      borderLeft: '4px solid var(--unis-primary)'
-                    }}>
-                      <div className="item-header">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '1.5rem' }}>{getAwardEmoji(award.determinationMethod)}</span>
-                          <div>
-                            <h4 style={{ margin: 0, color: '#e0e0e0' }}>{award.interval?.name || 'Award'} Winner</h4>
-                            <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#aaa' }}>
-                              {award.jurisdiction?.name || 'Location'}{award.genre?.name && ` • ${award.genre.name}`}
-                            </p>
+            {awardsLoading ? (
+              <SectionLoader label="Loading awards..." />
+            ) : awardsError ? (
+              <SectionError message={awardsError} onRetry={() => fetchAwards(user.userId)} />
+            ) : (
+              <div className="content-list">
+                {awards.length > 0 ? (
+                  <>
+                    {awards.map((award, index) => (
+                      <div key={index} className="content-item" style={{
+                        background: 'linear-gradient(135deg, var(--unis-primary-subtle), rgba(0,0,0,0))',
+                        borderLeft: '4px solid var(--unis-primary)'
+                      }}>
+                        <div className="item-header">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '1.5rem' }}>{getAwardEmoji(award.determinationMethod)}</span>
+                            <div>
+                              <h4 style={{ margin: 0, color: '#e0e0e0' }}>{award.interval?.name || 'Award'} Winner</h4>
+                              <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#aaa' }}>
+                                {award.jurisdiction?.name || 'Location'}{award.genre?.name && ` • ${award.genre.name}`}
+                              </p>
+                            </div>
                           </div>
+                          <span style={{ fontSize: '0.85rem', color: '#888' }}>{formatAwardDate(award.awardDate)}</span>
                         </div>
-                        <span style={{ fontSize: '0.85rem', color: '#888' }}>{formatAwardDate(award.awardDate)}</span>
+                        <div className="item-stats" style={{ marginTop: '8px' }}>
+                          <span style={{ color: 'var(--unis-primary)', fontWeight: '600' }}>{award.votesCount || 0} votes</span>
+                          <span style={{ color: '#666' }}>•</span>
+                          <span style={{ color: '#888' }}>{award.engagementScore || 0} score</span>
+                          {award.determinationMethod && (
+                            <>
+                              <span style={{ color: '#666' }}>•</span>
+                              <span style={{ color: '#6c757d', fontSize: '0.8rem', fontWeight: '500' }}>
+                                Won by {award.determinationMethod.toLowerCase()}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="item-stats" style={{ marginTop: '8px' }}>
-                        <span style={{ color: 'var(--unis-primary)', fontWeight: '600' }}>{award.votesCount || 0} votes</span>
-                        <span style={{ color: '#666' }}>•</span>
-                        <span style={{ color: '#888' }}>{award.engagementScore || 0} score</span>
-                        {award.determinationMethod && (
-                          <>
-                            <span style={{ color: '#666' }}>•</span>
-                            <span style={{ color: '#6c757d', fontSize: '0.8rem', fontWeight: '500' }}>
-                              Won by {award.determinationMethod.toLowerCase()}
-                            </span>
-                          </>
-                        )}
+                    ))}
+                    {hasMoreAwards && (
+                      <div style={{ textAlign: 'center', padding: '15px' }}>
+                        <button className="btn btn-secondary btn-small" onClick={loadMoreAwards} disabled={loadingMoreAwards} style={{ minWidth: '120px' }}>
+                          {loadingMoreAwards ? 'Loading...' : 'Load More'}
+                        </button>
                       </div>
-                    </div>
-                  ))}
-                  {hasMoreAwards && (
-                    <div style={{ textAlign: 'center', padding: '15px' }}>
-                      <button className="btn btn-secondary btn-small" onClick={loadMoreAwards} disabled={loadingAwards} style={{ minWidth: '120px' }}>
-                        {loadingAwards ? 'Loading...' : 'Load More'}
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ padding: '30px', textAlign: 'center', color: '#777' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🏆</div>
-                  <p style={{ fontSize: '1.1rem', marginBottom: '5px' }}>No awards yet</p>
-                  <p style={{ fontSize: '0.9rem', color: '#888', marginTop: '10px' }}>Keep creating and engaging with your audience to earn awards!</p>
-                </div>
-              )}
-            </div>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ padding: '30px', textAlign: 'center', color: '#777' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🏆</div>
+                    <p style={{ fontSize: '1.1rem', marginBottom: '5px' }}>No awards yet</p>
+                    <p style={{ fontSize: '0.9rem', color: '#888', marginTop: '10px' }}>Keep creating and engaging with your audience to earn awards!</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Referral Code — artist */}
