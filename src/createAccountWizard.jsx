@@ -972,7 +972,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         bio: formData.bio || null,
         genreId: formData.role === 'artist' ? formData.genreId : null,
         photoUrl: photoUrl,
-        dateOfBirth: formData.dateOfBirth || null,   
+        dateOfBirth: formData.dateOfBirth || null,
+        themePreference: 'blue',     
       };
       
       let newUser;
