@@ -13,6 +13,7 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
   const [expandedReplies, setExpandedReplies] = useState({});
   const [commentCount, setCommentCount] = useState({ totalCount: 0, topLevelCount: 0 });
   const [activeMenu, setActiveMenu] = useState(null);
+  const [commentLimit, setCommentLimit] = useState({ count: 0, limit: 3, remaining: 3, limitReached: false });
   
   const textareaRef = useRef(null);
   const replyInputRef = useRef(null);
@@ -23,8 +24,9 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
     if (songId) {
       fetchComments();
       fetchCommentCount();
+      if (userId) fetchUserCommentCount();  // <-- ADD THIS LINE
     }
-  }, [songId]);
+  }, [songId, userId]);
 
   useEffect(() => {
     if (replyingTo && replyInputRef.current) {
@@ -38,6 +40,20 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
+
+
+   const fetchUserCommentCount = async () => {
+    try {
+      const response = await apiCall({
+        method: 'get',
+        url: `/v1/comments/song/${songId}/user-count`
+      });
+      setCommentLimit(response.data);
+    } catch (error) {
+      // Silent failure — don't block commenting if this check fails
+      console.warn('Failed to fetch comment limit:', error);
+    }
+  };
 
   const fetchComments = async () => {
     try {
@@ -89,6 +105,15 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
         totalCount: prev.totalCount + 1,
         topLevelCount: prev.topLevelCount + 1
       }));
+
+      //this refreshes the comment limit
+       setCommentLimit(prev => ({
+        ...prev,
+        count: prev.count + 1,
+        remaining: Math.max(0, prev.remaining - 1),
+        limitReached: prev.count + 1 >= prev.limit
+      }));
+
     } catch (error) {
       console.error('Failed to post comment:', error);
       alert('Failed to post comment. Please try again.');
@@ -134,6 +159,15 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
         ...prev,
         totalCount: prev.totalCount + 1
       }));
+
+      // Refresh comment limit
+      setCommentLimit(prev => ({
+        ...prev,
+        count: prev.count + 1,
+        remaining: Math.max(0, prev.remaining - 1),
+        limitReached: prev.count + 1 >= prev.limit
+      }));
+
     } catch (error) {
       console.error('Failed to post reply:', error);
       alert('Failed to post reply. Please try again.');
@@ -267,13 +301,16 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
 
             {/* Reply Button (only for top-level comments) */}
             {!isReply && userId && (
-              <button 
-                className="reply-trigger"
-                onClick={() => setReplyingTo(replyingTo === comment.commentId ? null : comment.commentId)}
-              >
-                <Reply size={14} />
-                Reply
-              </button>
+              // Show reply button if: under limit, OR this is the user's own comment (exception)
+              (!commentLimit.limitReached || comment.userId === userId) && (
+                <button 
+                  className="reply-trigger"
+                  onClick={() => setReplyingTo(replyingTo === comment.commentId ? null : comment.commentId)}
+                >
+                  <Reply size={14} />
+                  Reply
+                </button>
+              )
             )}
 
             {/* Reply Input */}
@@ -341,35 +378,47 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
       </div>
 
       {/* New Comment Form */}
-      {userId ? (
-        <form onSubmit={handleSubmitComment} className="new-comment-form">
-          <div className="input-wrapper">
-            <textarea
-              ref={textareaRef}
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Share your thoughts on this track..."
-              rows={1}
-              className="comment-textarea"
-              onInput={(e) => {
-                e.target.style.height = 'auto';
-                e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-              }}
-            />
-            <button 
-              type="submit" 
-              disabled={!newComment.trim() || submitting}
-              className="submit-button"
-            >
-              <Send size={18} />
-            </button>
+        {userId ? (
+          commentLimit.limitReached ? (
+          // Limit reached — show friendly message instead of input
+          <div className="comment-limit-reached">
+            <p>You've used all {commentLimit.limit} comments on this track. You can still reply when someone responds to your comments.</p>
           </div>
-        </form>
-      ) : (
-        <div className="login-prompt">
-          <p>Log in to join the conversation</p>
-        </div>
-      )}
+          ) : (
+          <form onSubmit={handleSubmitComment} className="new-comment-form">
+            <div className="input-wrapper">
+              <textarea
+                ref={textareaRef}
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Share your thoughts on this track..."
+                rows={1}
+                className="comment-textarea"
+                onInput={(e) => {
+                  e.target.style.height = 'auto';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                }}
+              />
+              <button 
+                type="submit" 
+                disabled={!newComment.trim() || submitting}
+                className="submit-button"
+              >
+                <Send size={18} />
+              </button>
+            </div>
+            {commentLimit.remaining <= 2 && commentLimit.remaining > 0 && (
+              <div className="comment-limit-hint">
+                {commentLimit.remaining} {commentLimit.remaining === 1 ? 'comment' : 'comments'} remaining on this track
+              </div>
+            )}
+          </form>
+          )
+          ) : (
+          <div className="login-prompt">
+            <p>Log in to join the conversation</p>
+          </div>
+          )}
 
       {/* Comments List */}
       <div className="comments-list-premium">
