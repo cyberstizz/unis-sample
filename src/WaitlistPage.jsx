@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { apiCall } from '../components/axiosInstance';
-import Layout from '../layout';
-import US_STATES_AND_METROS from '../data/usStatesAndMetros';
+import { apiCall } from './components/axiosInstance';
+import Layout from './layout';
+import US_STATES_AND_METROS from './data/Usstatesandmetros';
 
 const WaitlistPage = () => {
   const [step, setStep] = useState(1); // 1 = form, 2 = success

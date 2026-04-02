@@ -26,7 +26,7 @@ import AdminRoute from './AdminRoute';
 import { AuthProvider } from './context/AuthContext';
 import WinnersNotification from './winnersNotification';
 import useActivityTracker from './hooks/useActivityTracker';
-import WaitlistPage from './pages/WaitlistPage';
+import WaitlistPage from './WaitlistPage';
 
 
 // Theme — must be imported globally so CSS custom properties are available everywhere

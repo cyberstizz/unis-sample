@@ -1223,6 +1223,28 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
                 </div>
               </div>
             </div>
+            <div 
+              style={{
+                marginTop: '16px',
+                padding: '14px 18px',
+                background: 'rgba(22,51,135,0.1)',
+                border: '1px solid rgba(22,51,135,0.25)',
+                borderRadius: '12px',
+                textAlign: 'center',
+                cursor: 'pointer',
+              }}
+              onClick={() => { onClose(); navigate('/waitlist'); }}
+            >
+              <span style={{ color: '#A9A9A9', fontSize: '14px' }}>
+                Not from Harlem?{' '}
+              </span>
+              <span style={{ color: '#6B8AFF', fontSize: '14px', fontWeight: '600' }}>
+                Join the national waitlist
+              </span>
+              <span style={{ color: '#A9A9A9', fontSize: '14px' }}>
+                {' '}and help unlock Unis in your area.
+              </span>
+            </div>
           </>
         );
       
