@@ -116,7 +116,10 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       localStorage.removeItem('token');
-      return { success: false, error: error.response?.data || 'Login failed' };
+      return {
+         success: false,
+         error: typeof error.response?.data === 'string' ? error.response.data : error.response?.data?.message || 'Login failed',
+        data: error.response?.data, };
     }
   };
 
