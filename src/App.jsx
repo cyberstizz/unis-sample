@@ -26,6 +26,8 @@ import AdminRoute from './AdminRoute';
 import { AuthProvider } from './context/AuthContext';
 import WinnersNotification from './winnersNotification';
 import useActivityTracker from './hooks/useActivityTracker';
+import WaitlistPage from './pages/WaitlistPage';
+
 
 // Theme — must be imported globally so CSS custom properties are available everywhere
 import './theme.scss';
@@ -58,6 +60,8 @@ const AppLayout = () => {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/cookie" element={<CookiePolicy />} />
         <Route path="/report" element={<ReportInfringement />} />
+        <Route path="/waitlist" element={<WaitlistPage />} />
+
 
         {/* Authenticated routes */}
         <Route element={<PrivateRoute />}>
