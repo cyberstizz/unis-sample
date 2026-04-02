@@ -410,6 +410,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
     address: '',
     detectingLocation: false,
     detectedCoords: null,
+    showWaitlistPrompt: false,
   });
   
   const [validation, setValidation] = useState({
@@ -1455,8 +1456,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
                       
                       if (lat < HARLEM_BOUNDS.south || lat > HARLEM_BOUNDS.north ||
                           lon < HARLEM_BOUNDS.west || lon > HARLEM_BOUNDS.east) {
-                        setError('Your address is not in Harlem. Unis is currently only available in Harlem, NY.');
                         updateForm('detectingLocation', false);
+                        updateForm('showWaitlistPrompt', true);
                         return;
                       }
                       
@@ -1484,6 +1485,71 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
                 <><MapPin size={20} /> Find My Jurisdiction</>
               )}
             </button>
+
+            {formData.showWaitlistPrompt && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(22,51,135,0.15), rgba(22,51,135,0.05))',
+                borderRadius: '14px',
+                padding: '24px',
+                border: '1px solid rgba(22,51,135,0.3)',
+                marginBottom: '20px',
+                textAlign: 'center',
+              }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                    <circle cx="24" cy="24" r="22" stroke="#163387" strokeWidth="2" fill="rgba(22,51,135,0.15)" />
+                    <path d="M24 14v10l6 3" stroke="#163387" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <h3 style={{ color: '#fff', fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>
+                  Unis isn't in your area yet
+                </h3>
+                <p style={{ color: '#A9A9A9', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
+                  But it can be. Join the national waitlist, get your referral code, 
+                  and help unlock Unis in your region. When enough people sign up 
+                  from your area, it activates.
+                </p>
+                <button
+                  type="button"
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    background: '#163387',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                    marginBottom: '12px',
+                  }}
+                  onClick={() => { onClose(); navigate('/waitlist'); }}
+                >
+                  Join the Waitlist
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    background: 'transparent',
+                    color: '#A9A9A9',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                  onClick={() => {
+                    updateForm('showWaitlistPrompt', false);
+                    setError('');
+                  }}
+                >
+                  I do live in Harlem — let me try again
+                </button>
+              </div>
+            )}
             
             {formData.jurisdictionId && (
               <div className="wizard-alert alert-success">
