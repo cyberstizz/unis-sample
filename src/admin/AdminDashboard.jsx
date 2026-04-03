@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../layout';
+import CronStatusPanel from './CronStatusPanel';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './admin.scss';
 
@@ -220,6 +221,11 @@ const AdminDashboard = () => {
             </LineChart>
           </ResponsiveContainer>
         </div>
+
+         <div style={{ marginTop: '24px' }}>
+          <CronStatusPanel />
+        </div>
+        
       </div>
     </Layout>
   );

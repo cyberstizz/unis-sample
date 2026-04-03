@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiCall } from '../../components/axiosInstance';
+import { apiCall } from '../components/axiosInstance';
 
 const CronStatusPanel = () => {
   const [cronData, setCronData] = useState(null);
