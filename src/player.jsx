@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
-import { Heart, Headphones, Vote, ChevronUp, ChevronDown } from 'lucide-react';
+import { Heart, Headphones, Vote, ChevronUp, ChevronDown, ListMusic } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
 import VotingWizard from './votingWizard'; 
