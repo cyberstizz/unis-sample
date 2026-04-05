@@ -12,24 +12,22 @@
   z-index: 100;
 }
 
-// ── Input — matches .header-search pill from header.scss ────────
+// ── Input — pill shape matching header design language ───────────
 
 .usb-input-wrap {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 12px;
   width: 100%;
   height: 42px;
-  padding-top: 12px;
+  padding: 0 20px;
   border-radius: 100px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.07);
-
   transition:
     background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
     border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
     background: rgba(255, 255, 255, 0.06);
@@ -49,8 +47,6 @@
   flex-shrink: 0;
   color: #4a4a56;
   transition: color 0.2s ease;
-  margin-left: 1%;
-  margin-bottom: 1%;
 
   .usb-container--focused & {
     color: #7a7a88;
@@ -71,7 +67,6 @@
   height: 100%;
   padding: 0;
   margin: 0;
-
 
   &::placeholder {
     color: #4a4a56;

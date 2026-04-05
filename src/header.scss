@@ -83,74 +83,13 @@ $header-height: 75px;
 }
 
 // ─── SEARCH BAR ─────────────────────────────────────────────────
-// True-centered between logo and nav via flex wrapper
+// SearchBar component handles all styling via usb- prefixed classes.
+// This wrapper just centers it in the available space.
 .header-center {
   flex: 1;
   display: flex;
   justify-content: center;
   min-width: 0;
-}
-
-.header-search {
-  width: 100%;
-  max-width: 480px;
-  min-width: 220px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 42px;
-  padding: 0 20px;
-  border-radius: 100px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  transition:
-    background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  &.focused {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba($unis-blue-bright, 0.45);
-    box-shadow:
-      0 0 0 3px rgba($unis-blue-bright, 0.08),
-      0 2px 16px rgba(0, 0, 0, 0.25);
-    max-width: 520px;
-
-    .search-icon { color: $text-muted; }
-  }
-
-  .search-icon {
-    flex-shrink: 0;
-    color: $text-dim;
-    transition: color 0.2s ease;
-  }
-
-  .search-input {
-    flex: 1;
-    min-width: 0;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: $text-primary;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 13.5px;
-    font-weight: 400;
-    letter-spacing: 0.15px;
-    height: 100%;
-    padding: 0;
-    margin: 0;
-
-    &::placeholder {
-      color: $text-dim;
-      font-weight: 400;
-    }
-  }
 }
 
 // ─── RIGHT SECTION ──────────────────────────────────────────────
@@ -341,12 +280,8 @@ $header-height: 75px;
     height: 68px;
   }
 
-  .header-search {
-    height: 36px;
+  .header-center {
     display: none;
-    padding: 0 14px;
-    gap: 8px;
-    .search-input { font-size: 12px; }
   }
 
   .header-nav { gap: 0; }
