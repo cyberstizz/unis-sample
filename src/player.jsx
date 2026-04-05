@@ -6,6 +6,7 @@ import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
 import VotingWizard from './votingWizard'; 
 import { apiCall } from './components/axiosInstance';
+import QueuePanel from './QueuePanel';
 import './player.scss';
 
 // ─── Inline SVG icons with guaranteed visibility ───
@@ -101,6 +102,8 @@ const Player = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [specificVoteData, setSpecificVoteData] = useState(null);
   const [volume, setVolume] = useState(0.7);
+  const [showQueue, setShowQueue] = useState(false);
+
   
   // Wizards State
   const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
@@ -495,6 +498,7 @@ const Player = () => {
                 <button className="player-btn" onClick={() => setShowPlaylistWizard(true)} title="Add to playlist">
                   <PlusIcon />
                 </button>
+                <button onClick={() => setShowQueue(true)}><ListMusic size={20} /></button>
               </div>
               <div className="player-progress">
                 <span className="player-time">{formatTime(currentTime)}</span>
@@ -529,7 +533,7 @@ const Player = () => {
       {/* --- WIZARDS --- */}
       <PlaylistWizard open={showPlaylistWizard} onClose={() => setShowPlaylistWizard(false)} selectedTrack={currentMedia} />
       <PlaylistManager open={showPlaylistManager} onClose={closePlaylistManager} />
-      
+      <QueuePanel open={showQueue} onClose={() => setShowQueue(false)} />
       <VotingWizard 
         show={showVoteWizard} 
         onClose={() => {
