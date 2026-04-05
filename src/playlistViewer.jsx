@@ -63,7 +63,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
 
   const loadActivity = async () => {
     try {
-      const axiosInstance = (await import('./axiosInstance')).default;
+      const axiosInstance = (await import('./components/axiosInstance')).default;
       const res = await axiosInstance.get(`/v1/playlists/${playlistId}/activity?page=0&size=30`);
       setActivities(res.data || []);
     } catch (err) {
