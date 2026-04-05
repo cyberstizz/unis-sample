@@ -1,60 +1,76 @@
 // ============================================================================
-// SearchBar.scss — All classes prefixed with usb- (unis search bar)
-// No global names. No lighten(). No collisions.
+// SearchBar.scss — Matched to header.scss design system
+// All classes prefixed usb- to prevent collisions
 // ============================================================================
 
 .usb-container {
   position: relative;
   width: 100%;
   max-width: 480px;
-  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  min-width: 220px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   z-index: 100;
 }
 
-// ── Input ───────────────────────────────────────────────────────────
+// ── Input — matches .header-search pill from header.scss ────────
 
 .usb-input-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #161616;
-  border: 1px solid #2a2a2a;
-  border-radius: 10px;
-  padding: 0 14px;
-  height: 38px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  gap: 12px;
+  width: 100%;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition:
+    background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
 
   .usb-container--focused & {
-    border-color: #163387;
-    box-shadow: 0 0 0 3px rgba(22, 51, 135, 0.25);
-    background: #1c1c1c;
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(29, 66, 168, 0.45);
+    box-shadow:
+      0 0 0 3px rgba(29, 66, 168, 0.08),
+      0 2px 16px rgba(0, 0, 0, 0.25);
   }
 }
 
 .usb-magnifier {
-  color: #666;
   flex-shrink: 0;
+  color: #4a4a56;
   transition: color 0.2s ease;
 
   .usb-container--focused & {
-    color: #1e44a8;
+    color: #7a7a88;
   }
 }
 
 .usb-field {
   flex: 1;
-  background: none;
+  min-width: 0;
+  background: transparent;
   border: none;
   outline: none;
-  color: #f0f0f0;
-  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #e8e8ec;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13.5px;
   font-weight: 400;
-  letter-spacing: 0.01em;
-  min-width: 0;
+  letter-spacing: 0.15px;
+  height: 100%;
+  padding: 0;
+  margin: 0;
 
   &::placeholder {
-    color: #666;
+    color: #4a4a56;
     font-weight: 400;
   }
 }
@@ -63,28 +79,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #222;
+  background: rgba(255, 255, 255, 0.08);
   border: none;
   border-radius: 50%;
   width: 22px;
   height: 22px;
   cursor: pointer;
-  color: #999;
+  color: #7a7a88;
   padding: 0;
   flex-shrink: 0;
   transition: background 0.15s ease, color 0.15s ease;
 
   &:hover {
-    background: #2a2a2a;
-    color: #f0f0f0;
+    background: rgba(255, 255, 255, 0.14);
+    color: #e8e8ec;
   }
 }
 
 .usb-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid #2a2a2a;
-  border-top-color: #1e44a8;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-top-color: #1d42a8;
   border-radius: 50%;
   animation: usb-spin 0.6s linear infinite;
   flex-shrink: 0;
@@ -94,40 +110,40 @@
   to { transform: rotate(360deg); }
 }
 
-// ── Dropdown ────────────────────────────────────────────────────────
+// ── Dropdown ────────────────────────────────────────────────────
 
 .usb-dropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   left: 0;
   right: 0;
-  background: #161616;
-  border: 1px solid #2a2a2a;
+  background: #111118;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   max-height: 420px;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 6px 0;
-  animation: usb-dropdown-in 0.15s ease;
+  animation: usb-dropdown-in 0.15s ease-out;
 
   &::-webkit-scrollbar { width: 6px; }
   &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 3px; }
 }
 
 @keyframes usb-dropdown-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-// ── Sections ────────────────────────────────────────────────────────
+// ── Sections ────────────────────────────────────────────────────
 
 .usb-section {
   padding: 4px 0;
 
   & + .usb-section {
-    border-top: 1px solid #2a2a2a;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -141,7 +157,7 @@
 .usb-section__title {
   font-size: 11px;
   font-weight: 600;
-  color: #666;
+  color: #4a4a56;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -149,17 +165,17 @@
 .usb-section__action {
   font-size: 11px;
   font-weight: 500;
-  color: #1e44a8;
+  color: #1d42a8;
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
-  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
   &:hover { color: #3a6fd8; }
 }
 
-// ── Result rows ─────────────────────────────────────────────────────
+// ── Result rows ─────────────────────────────────────────────────
 
 .usb-row {
   display: flex;
@@ -171,12 +187,12 @@
   border: none;
   cursor: pointer;
   text-align: left;
-  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-  transition: background 0.1s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background 0.15s ease;
 
   &:hover,
   &.usb-row--active {
-    background: #222;
+    background: rgba(255, 255, 255, 0.05);
   }
 
   &.usb-row--top {
@@ -184,7 +200,7 @@
   }
 }
 
-// ── Artwork ─────────────────────────────────────────────────────────
+// ── Artwork ─────────────────────────────────────────────────────
 
 .usb-artwork {
   width: 40px;
@@ -192,7 +208,7 @@
   flex-shrink: 0;
   border-radius: 6px;
   overflow: hidden;
-  background: #1c1c1c;
+  background: rgba(255, 255, 255, 0.04);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -211,13 +227,13 @@
 }
 
 .usb-artwork__placeholder {
-  color: #666;
+  color: #4a4a56;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-// ── Row info ────────────────────────────────────────────────────────
+// ── Row info ────────────────────────────────────────────────────
 
 .usb-row__info {
   flex: 1;
@@ -230,7 +246,7 @@
 .usb-row__name {
   font-size: 13.5px;
   font-weight: 500;
-  color: #f0f0f0;
+  color: #e8e8ec;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -239,7 +255,7 @@
 .usb-row__subtitle {
   font-size: 12px;
   font-weight: 400;
-  color: #999;
+  color: #7a7a88;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -250,7 +266,7 @@
   font-weight: 700;
 }
 
-// ── Type badges ─────────────────────────────────────────────────────
+// ── Type badges ─────────────────────────────────────────────────
 
 .usb-badge {
   font-size: 10px;
@@ -263,7 +279,7 @@
 
   &.usb-badge--artist {
     color: #7cb3ff;
-    background: rgba(22, 51, 135, 0.2);
+    background: rgba(29, 66, 168, 0.2);
   }
   &.usb-badge--song {
     color: #a0d995;
@@ -275,14 +291,14 @@
   }
 }
 
-// ── Trending arrow ──────────────────────────────────────────────────
+// ── Trending arrow ──────────────────────────────────────────────
 
 .usb-trending-arrow {
   color: #50c878;
   flex-shrink: 0;
 }
 
-// ── Recent remove button ────────────────────────────────────────────
+// ── Recent remove ───────────────────────────────────────────────
 
 .usb-recent-x {
   display: flex;
@@ -290,7 +306,7 @@
   justify-content: center;
   background: none;
   border: none;
-  color: #666;
+  color: #4a4a56;
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -301,12 +317,12 @@
   .usb-row:hover & { opacity: 1; }
 
   &:hover {
-    color: #f0f0f0;
-    background: #2a2a2a;
+    color: #e8e8ec;
+    background: rgba(255, 255, 255, 0.08);
   }
 }
 
-// ── See all ─────────────────────────────────────────────────────────
+// ── See all ─────────────────────────────────────────────────────
 
 .usb-see-all {
   display: flex;
@@ -317,33 +333,46 @@
   padding: 12px 16px;
   background: none;
   border: none;
-  border-top: 1px solid #2a2a2a;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
   font-weight: 500;
-  color: #1e44a8;
+  color: #1d42a8;
   transition: background 0.15s ease, color 0.15s ease;
 
   &:hover {
-    background: #222;
+    background: rgba(255, 255, 255, 0.05);
     color: #3a6fd8;
   }
 }
 
-// ── Empty state ─────────────────────────────────────────────────────
+// ── Empty state ─────────────────────────────────────────────────
 
 .usb-empty {
   padding: 24px 16px;
   text-align: center;
   font-size: 13px;
-  color: #666;
+  color: #4a4a56;
 }
 
-// ── Responsive ──────────────────────────────────────────────────────
+// ── Responsive — matches header.scss breakpoints ────────────────
 
 @media (max-width: 768px) {
-  .usb-container { max-width: 100%; }
-  .usb-dropdown { max-height: 60vh; border-radius: 0 0 12px 12px; }
+  .usb-container {
+    max-width: 100%;
+    min-width: 0;
+    display: none;
+  }
+  .usb-dropdown {
+    max-height: 60vh;
+    border-radius: 0 0 12px 12px;
+  }
   .usb-badge { display: none; }
+  .usb-input-wrap {
+    height: 36px;
+    padding: 0 14px;
+    gap: 8px;
+  }
+  .usb-field { font-size: 12px; }
 }
