@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { buildUrl } from "../../utils/buildUrl";
+import { buildUrl } from "../utils/buildUrl";
 import "./SearchBar.scss";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
