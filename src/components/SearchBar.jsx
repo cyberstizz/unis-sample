@@ -38,7 +38,7 @@ const SearchBar = () => {
 
   useEffect(() => {
     if (focused && trending.length === 0) {
-      fetch(`${API_BASE_URL}/api/v1/search/trending?limit=5`)
+      fetch(`${API_BASE_URL}/v1/search/trending?limit=5`)
         .then((r) => r.json())
         .then(setTrending)
         .catch(() => {});
@@ -52,7 +52,7 @@ const SearchBar = () => {
       return;
     }
     setLoading(true);
-    fetch(`${API_BASE_URL}/api/v1/search/suggestions?q=${encodeURIComponent(debouncedQuery)}&limit=10`)
+    fetch(`${API_BASE_URL}/v1/search/suggestions?q=${encodeURIComponent(debouncedQuery)}&limit=10`)
       .then((r) => r.json())
       .then((data) => { setSuggestions(data); setActiveIndex(-1); })
       .catch(() => setSuggestions(null))
