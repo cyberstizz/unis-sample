@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import "./header.scss";
 import unisLogo from './assets/unisLogoThree.svg';
 import { useNavigate, useLocation } from 'react-router-dom';
+import SearchBar from './components/SearchBar/SearchBar';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
 import { DollarSign, House, Music } from 'lucide-react';
@@ -20,7 +21,6 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const [searchFocused, setSearchFocused] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -118,19 +118,7 @@ const Header = () => {
 
         {/* Center: Search */}
         <div className="header-center">
-          <div className={`header-search ${searchFocused ? "focused" : ""}`}>
-            <svg className="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3" />
-              <line x1="11.2" y1="11.2" x2="14.5" y2="14.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search artists, songs..."
-              className="search-input"
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setSearchFocused(false)}
-            />
-          </div>
+        <SearchBar />
         </div>
 
         {/* Right: Nav items with icons + User */}
