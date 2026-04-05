@@ -1,0 +1,402 @@
+// ============================================================================
+// SearchBar.scss — Unis Search Component Styles
+// Design system: DM Sans, Unis blue #163387, dark surface palette
+// ============================================================================
+
+$unis-blue: #163387;
+$unis-blue-light: #1e44a8;
+$unis-blue-glow: rgba(22, 51, 135, 0.25);
+
+$surface-dark: #0d0d0d;
+$surface-card: #161616;
+$surface-elevated: #1c1c1c;
+$surface-hover: #222222;
+$surface-border: #2a2a2a;
+
+$text-primary: #f0f0f0;
+$text-secondary: #999999;
+$text-tertiary: #666666;
+$text-highlight: #ffffff;
+
+$font-main: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+
+// ── Container ───────────────────────────────────────────────────────
+
+.unis-search {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  font-family: $font-main;
+  z-index: 100;
+}
+
+// ── Input wrapper ───────────────────────────────────────────────────
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: $surface-card;
+  border: 1px solid $surface-border;
+  border-radius: 10px;
+  padding: 0 14px;
+  height: 38px;
+  transition: all 0.2s ease;
+
+  .is-focused & {
+    border-color: $unis-blue;
+    box-shadow: 0 0 0 3px $unis-blue-glow;
+    background: $surface-elevated;
+  }
+}
+
+.search-icon {
+  color: $text-tertiary;
+  flex-shrink: 0;
+  transition: color 0.2s ease;
+
+  .is-focused & {
+    color: $unis-blue-light;
+  }
+}
+
+.search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: $text-primary;
+  font-family: $font-main;
+  font-size: 13.5px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  min-width: 0;
+
+  &::placeholder {
+    color: $text-tertiary;
+    font-weight: 400;
+  }
+}
+
+.search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $surface-hover;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  color: $text-secondary;
+  padding: 0;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: $surface-border;
+    color: $text-primary;
+  }
+}
+
+.search-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid $surface-border;
+  border-top-color: $unis-blue-light;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ── Dropdown ────────────────────────────────────────────────────────
+
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: $surface-card;
+  border: 1px solid $surface-border;
+  border-radius: 12px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 0;
+  animation: dropdownIn 0.15s ease;
+
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $surface-border;
+    border-radius: 3px;
+  }
+}
+
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ── Sections ────────────────────────────────────────────────────────
+
+.dropdown-section {
+  padding: 4px 0;
+
+  & + .dropdown-section {
+    border-top: 1px solid $surface-border;
+  }
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px 4px;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: $text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.section-action {
+  font-size: 11px;
+  font-weight: 500;
+  color: $unis-blue-light;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: $font-main;
+
+  &:hover {
+    color: lighten($unis-blue-light, 15%);
+  }
+}
+
+// ── Result rows ─────────────────────────────────────────────────────
+
+.search-result-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: $font-main;
+  transition: background 0.1s ease;
+
+  &:hover,
+  &.active {
+    background: $surface-hover;
+  }
+
+  &.top-result {
+    padding: 12px 16px;
+  }
+}
+
+// ── Artwork ─────────────────────────────────────────────────────────
+
+.result-artwork {
+  flex-shrink: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: $surface-elevated;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &.artwork-sm {
+    width: 40px;
+    height: 40px;
+  }
+
+  &.artwork-lg {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+  }
+}
+
+.artwork-placeholder {
+  color: $text-tertiary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// ── Result info ─────────────────────────────────────────────────────
+
+.result-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.result-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: $text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-subtitle {
+  font-size: 12px;
+  font-weight: 400;
+  color: $text-secondary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-highlight {
+  color: $text-highlight;
+  font-weight: 700;
+}
+
+// ── Type badges ─────────────────────────────────────────────────────
+
+.result-type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+
+  &.badge-artist {
+    color: #7cb3ff;
+    background: rgba(22, 51, 135, 0.2);
+  }
+
+  &.badge-song {
+    color: #a0d995;
+    background: rgba(80, 160, 70, 0.15);
+  }
+
+  &.badge-jurisdiction {
+    color: #e8c170;
+    background: rgba(200, 160, 60, 0.15);
+  }
+}
+
+// ── Trending indicator ──────────────────────────────────────────────
+
+.trending-indicator {
+  color: #50c878;
+  flex-shrink: 0;
+}
+
+// ── Recent search remove button ─────────────────────────────────────
+
+.recent-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: $text-tertiary;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: all 0.15s ease;
+
+  .recent-row:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: $text-primary;
+    background: $surface-border;
+  }
+}
+
+// ── See all results ─────────────────────────────────────────────────
+
+.search-see-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-top: 1px solid $surface-border;
+  cursor: pointer;
+  font-family: $font-main;
+  font-size: 13px;
+  font-weight: 500;
+  color: $unis-blue-light;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: $surface-hover;
+    color: lighten($unis-blue-light, 10%);
+  }
+}
+
+// ── Empty state ─────────────────────────────────────────────────────
+
+.dropdown-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: $text-tertiary;
+}
+
+// ── Responsive ──────────────────────────────────────────────────────
+
+@media (max-width: 768px) {
+  .unis-search {
+    max-width: 100%;
+  }
+
+  .search-dropdown {
+    max-height: 60vh;
+    border-radius: 0 0 12px 12px;
+  }
+
+  .result-type-badge {
+    display: none; // save space on mobile
+  }
+}
