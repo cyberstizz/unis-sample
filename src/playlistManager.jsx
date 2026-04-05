@@ -2,7 +2,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { PlayerContext } from './context/playercontext';
 import { X, Music, Users, Award, Globe, Search } from 'lucide-react';
-import axiosInstance from './axiosInstance';
+import axiosInstance from './components/axiosInstance';
 import PlaylistViewer from './playlistViewer';
 import './playlistManager.scss';
 
