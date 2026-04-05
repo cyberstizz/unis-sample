@@ -27,7 +27,7 @@ import { AuthProvider } from './context/AuthContext';
 import WinnersNotification from './winnersNotification';
 import useActivityTracker from './hooks/useActivityTracker';
 import WaitlistPage from './WaitlistPage';
-import SearchResultsPage from './SearchResultsPage';
+// import SearchResultsPage from './SearchResultsPage';
 
 
 
@@ -79,7 +79,7 @@ const AppLayout = () => {
           <Route path="/findpage" element={<FindPage />} />
           <Route path="/artistDashboard" element={<ArtistDashboard />} />
           <Route path="/jurisdiction/:jurisdiction" element={<JurisdictionPage />} />
-          <Route path="/search" element={<SearchResultsPage />} />
+          {/* <Route path="/search" element={<SearchResultsPage />} /> */}
         </Route>
 
         {/* Admin routes — all tiers */}
