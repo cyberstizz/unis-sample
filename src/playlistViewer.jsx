@@ -1,6 +1,6 @@
 // src/components/PlaylistViewer.jsx
 import React, { useState, useEffect, useContext } from "react";
-import { X, Trash2, GripVertical, Edit2, Check, ThumbsUp, ThumbsDown, Users, Clock, Heart } from "lucide-react";
+import { X, Trash2, GripVertical, Edit2, Check, ThumbsUp, ThumbsDown, Users, Clock, Heart, ListMusic } from "lucide-react";
 import { PlayerContext } from "./context/playercontext";
 import "./playlistViewer.scss";
 
