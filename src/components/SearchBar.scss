@@ -192,7 +192,7 @@ $font-main: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   font-family: $font-main;
 
   &:hover {
-    color: lighten($unis-blue-light, 15%);
+    color: $unis-blue-light;
   }
 }
 
@@ -371,7 +371,7 @@ $font-main: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
 
   &:hover {
     background: $surface-hover;
-    color: lighten($unis-blue-light, 10%);
+    color: $unis-blue-light;
   }
 }
 
