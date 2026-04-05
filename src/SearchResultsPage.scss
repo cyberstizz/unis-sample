@@ -1,0 +1,272 @@
+// ============================================================================
+// SearchResultsPage.scss — Full search results page styles
+// ============================================================================
+
+$unis-blue: #163387;
+$unis-blue-light: #1e44a8;
+
+$surface-dark: #0d0d0d;
+$surface-card: #161616;
+$surface-elevated: #1c1c1c;
+$surface-hover: #222222;
+$surface-border: #2a2a2a;
+
+$text-primary: #f0f0f0;
+$text-secondary: #999999;
+$text-tertiary: #666666;
+
+$font-main: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+$font-display: "Playfair Display", Georgia, serif;
+
+.search-results-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+  font-family: $font-main;
+}
+
+// ── Header ──────────────────────────────────────────────────────────
+
+.search-results-header {
+  margin-bottom: 28px;
+}
+
+.search-results-title {
+  font-family: $font-main;
+  font-size: 22px;
+  font-weight: 500;
+  color: $text-secondary;
+  margin: 0 0 20px;
+}
+
+.search-query-text {
+  font-family: $font-display;
+  font-style: italic;
+  color: $text-primary;
+  font-weight: 600;
+}
+
+// ── Tabs ────────────────────────────────────────────────────────────
+
+.search-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid $surface-border;
+  padding-bottom: 0;
+}
+
+.search-tab {
+  font-family: $font-main;
+  font-size: 13px;
+  font-weight: 500;
+  color: $text-secondary;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: -1px;
+
+  &:hover {
+    color: $text-primary;
+  }
+
+  &.active {
+    color: $text-primary;
+    border-bottom-color: $unis-blue-light;
+  }
+}
+
+// ── Results grid ────────────────────────────────────────────────────
+
+.search-results-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.search-result-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: $font-main;
+  transition: background 0.12s ease;
+
+  &:hover {
+    background: $surface-hover;
+  }
+}
+
+// ── Card artwork ────────────────────────────────────────────────────
+
+.card-artwork {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: $surface-elevated;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.card-artwork-placeholder {
+  color: $text-tertiary;
+}
+
+// ── Card info ───────────────────────────────────────────────────────
+
+.card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.card-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: $text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-subtitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: $text-secondary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.card-type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 3px;
+
+  &.badge-artist {
+    color: #7cb3ff;
+    background: rgba(22, 51, 135, 0.2);
+  }
+  &.badge-song {
+    color: #a0d995;
+    background: rgba(80, 160, 70, 0.15);
+  }
+  &.badge-jurisdiction {
+    color: #e8c170;
+    background: rgba(200, 160, 60, 0.15);
+  }
+}
+
+.card-score {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: $text-tertiary;
+
+  svg {
+    color: #e8c170;
+  }
+}
+
+// ── Loading / Load more ─────────────────────────────────────────────
+
+.search-results-loading {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2.5px solid $surface-border;
+  border-top-color: $unis-blue-light;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.search-load-more {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-top: 8px;
+  background: $surface-card;
+  border: 1px solid $surface-border;
+  border-radius: 10px;
+  color: $unis-blue-light;
+  font-family: $font-main;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: $surface-hover;
+    border-color: $unis-blue;
+  }
+}
+
+.search-results-empty {
+  padding: 64px 20px;
+  text-align: center;
+  font-size: 14px;
+  color: $text-tertiary;
+}
+
+// ── Responsive ──────────────────────────────────────────────────────
+
+@media (max-width: 768px) {
+  .search-results-page {
+    padding: 16px 12px 80px;
+  }
+
+  .search-results-title {
+    font-size: 18px;
+  }
+
+  .card-artwork {
+    width: 48px;
+    height: 48px;
+  }
+
+  .search-result-card {
+    padding: 10px 12px;
+    gap: 12px;
+  }
+}
