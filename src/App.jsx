@@ -27,6 +27,8 @@ import { AuthProvider } from './context/AuthContext';
 import WinnersNotification from './winnersNotification';
 import useActivityTracker from './hooks/useActivityTracker';
 import WaitlistPage from './WaitlistPage';
+import SearchResultsPage from './pages/SearchResultsPage';
+
 
 
 // Theme — must be imported globally so CSS custom properties are available everywhere
@@ -63,6 +65,7 @@ const AppLayout = () => {
         <Route path="/waitlist" element={<WaitlistPage />} />
 
 
+
         {/* Authenticated routes */}
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<Feed />} />
@@ -76,6 +79,7 @@ const AppLayout = () => {
           <Route path="/findpage" element={<FindPage />} />
           <Route path="/artistDashboard" element={<ArtistDashboard />} />
           <Route path="/jurisdiction/:jurisdiction" element={<JurisdictionPage />} />
+          <Route path="/search" element={<SearchResultsPage />} />
         </Route>
 
         {/* Admin routes — all tiers */}
