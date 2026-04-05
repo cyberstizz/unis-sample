@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./header.scss";
-import unisLogo from './assets/unisLogoThree.svg';
 import { useNavigate, useLocation } from 'react-router-dom';
-import SearchBar from './components/SearchBar/SearchBar';
+import SearchBar from './components/SearchBar';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
 import { DollarSign, House, Music } from 'lucide-react';
