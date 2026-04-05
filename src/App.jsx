@@ -27,7 +27,7 @@ import { AuthProvider } from './context/AuthContext';
 import WinnersNotification from './winnersNotification';
 import useActivityTracker from './hooks/useActivityTracker';
 import WaitlistPage from './WaitlistPage';
-import SearchResultsPage from './pages/SearchResultsPage';
+import SearchResultsPage from './SearchResultsPage';
 
 
 
