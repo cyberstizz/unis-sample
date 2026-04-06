@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import SearchBar from './components/SearchBar';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, House, Music } from 'lucide-react';
 import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
 import logored from './assets/logo-red.png';
@@ -14,10 +14,12 @@ import logoyellow from './assets/logo-gold.png';
 import logodianna from './assets/logo-dianna.png';
 
 
+
+
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, theme } = useAuth();
+  const { user, logout } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -27,6 +29,8 @@ const Header = () => {
   const handleMilestones = () => navigate('/milestones');
   const handleFind = () => navigate('/findpage');
   const handleLogout = async () => { logout(); };
+
+  
 
   useEffect(() => {
     const handleOutside = (e) => {
@@ -38,18 +42,23 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleOutside);
   }, []);
 
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
   const currentPath = location.pathname;
 
   const LOGO_MAP = {
-    blue: logoblue,
-    orange: logoorange,
-    red: logored,
-    green: logogreen,
-    purple: logopurple,
-    yellow: logoyellow,
-    dianna: logodianna,
-  };
+  blue: logoblue,
+  orange: logoorange,
+  red: logored,
+  green: logogreen,
+  purple: logopurple,
+  yellow: logoyellow,
+  dianna: logodianna,
+};
 
+  // Inside your Sidebar component:
+  const { theme } = useAuth();
   const activeLogo = LOGO_MAP[theme] || logoblue;
 
   const navItems = [
@@ -89,6 +98,9 @@ const Header = () => {
       case "earnings":
         return (
           <DollarSign height={15} />
+          // <svg className="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+          //   <path d="M7 1V13M4 3.5H8.5C9.9 3.5 11 4.4 11 5.5C11 6.6 9.9 7.5 8.5 7.5H4M4 7.5H9C10.4 7.5 11.5 8.4 11.5 9.5C11.5 10.6 10.4 11.5 9 11.5H4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          // </svg>
         );
       default:
         return null;
@@ -98,17 +110,17 @@ const Header = () => {
   return (
     <header className="app-header">
       <div className="header-inner">
-        {/* Logo */}
+        {/* Left: Logo */}
         <div className="header-logo" onClick={handleHome}>
           <img src={activeLogo} alt="UNIS" className="logo-img" />
         </div>
 
-        {/* Search — SearchBar component handles everything */}
+        {/* Center: Search */}
         <div className="header-center">
-          <SearchBar />
+        <SearchBar />
         </div>
 
-        {/* Nav + User */}
+        {/* Right: Nav items with icons + User */}
         <div className="header-right">
           <nav className="header-nav">
             {navItems.map((item) => (
@@ -125,22 +137,23 @@ const Header = () => {
 
           <div className="header-divider" />
 
+          {/* User Avatar / Menu */}
           <div className="header-user" ref={menuRef}>
-            <button
-              className="user-avatar"
-              onClick={() => setUserMenuOpen(!userMenuOpen)}
-              aria-label="User menu"
-            >
-              {buildUrl(user?.photoUrl) ? (
-                <img
-                  src={buildUrl(user.photoUrl)}
-                  alt="User avatar"
-                  className="avatar-image"
-                />
-              ) : (
-                <span className="avatar-initial">{getInitial()}</span>
-              )}
-            </button>
+          <button
+            className="user-avatar"
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            aria-label="User menu"
+          >
+            {buildUrl(user?.photoUrl) ? (
+              <img
+                src={buildUrl(user.photoUrl)}
+                alt="User avatar"
+                className="avatar-image"
+              />
+            ) : (
+              <span className="avatar-initial">{getInitial()}</span>
+            )}
+          </button>
             {userMenuOpen && (
               <div className="user-dropdown">
                 {user && (
