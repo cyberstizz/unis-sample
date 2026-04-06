@@ -1,6 +1,6 @@
 // ============================================================================
-// SearchBar.scss — Matched to header.scss design system
-// All classes prefixed usb- to prevent collisions
+// SearchBar.scss — All classes prefixed usb-
+// Defensive resets on input to prevent global style bleed
 // ============================================================================
 
 .usb-container {
@@ -12,7 +12,7 @@
   z-index: 100;
 }
 
-// ── Input — pill shape matching header design language ───────────
+// ── Pill-shaped input wrapper ───────────────────────────────────
 
 .usb-input-wrap {
   display: flex;
@@ -24,6 +24,7 @@
   border-radius: 100px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.07);
+  box-sizing: border-box;
   transition:
     background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
     border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
@@ -53,24 +54,42 @@
   }
 }
 
-.usb-field {
+// ── Input field — DEFENSIVE RESETS ──────────────────────────────
+// These !important declarations prevent any global input styles
+// from adding borders, backgrounds, shadows, or sizing that would
+// make the input look like a separate element floating over the pill.
+
+input.usb-field {
   flex: 1;
   min-width: 0;
-  background: transparent;
-  border: none;
-  outline: none;
+  width: auto !important;
+  max-width: none !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
   color: #e8e8ec;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13.5px;
   font-weight: 400;
   letter-spacing: 0.15px;
   height: 100%;
-  padding: 0;
-  margin: 0;
+  padding: 0 !important;
+  margin: 0 !important;
+  -webkit-appearance: none;
+  appearance: none;
 
   &::placeholder {
     color: #4a4a56;
     font-weight: 400;
+  }
+
+  &:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 }
 
@@ -355,23 +374,11 @@
   color: #4a4a56;
 }
 
-// ── Responsive — matches header.scss breakpoints ────────────────
+// ── Responsive ──────────────────────────────────────────────────
+// Only hide the search component, NOT .header-center (it's a flex spacer)
 
 @media (max-width: 768px) {
   .usb-container {
-    max-width: 100%;
-    min-width: 0;
     display: none;
   }
-  .usb-dropdown {
-    max-height: 60vh;
-    border-radius: 0 0 12px 12px;
-  }
-  .usb-badge { display: none; }
-  .usb-input-wrap {
-    height: 36px;
-    padding: 0 14px;
-    gap: 8px;
-  }
-  .usb-field { font-size: 12px; }
 }

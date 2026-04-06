@@ -13,7 +13,6 @@ $border-subtle:    rgba(255, 255, 255, 0.06);
 $border-hover:     rgba(255, 255, 255, 0.12);
 $border-silver:    rgba(192, 192, 192, 0.15);
 
-// Header height — exported as CSS custom property so sidebar can reference it
 $header-height: 75px;
 
 // ─── HEADER SHELL ────────────────────────────────────────────────
@@ -27,7 +26,6 @@ $header-height: 75px;
   background: linear-gradient(to bottom, #101016, $bg-surface);
   border-bottom: 0.5px solid $border-silver;
 
-  // Subtle brand accent across the top edge
   &::before {
     content: '';
     position: absolute;
@@ -58,7 +56,7 @@ $header-height: 75px;
   gap: 24px;
 }
 
-// ─── LOGO (3x size) ─────────────────────────────────────────────
+// ─── LOGO ────────────────────────────────────────────────────────
 .header-logo {
   flex-shrink: 0;
   display: flex;
@@ -82,13 +80,15 @@ $header-height: 75px;
   border-radius: 50%;
 }
 
-// ─── SEARCH BAR ─────────────────────────────────────────────────
-// SearchBar component handles all styling via usb- prefixed classes.
-// This wrapper just centers it in the available space.
+// ─── SEARCH AREA ─────────────────────────────────────────────────
+// Flex wrapper that centers the SearchBar component.
+// All search visuals are in SearchBar.scss (usb- prefixed).
+// This div also acts as a flex spacer on mobile (keeps nav right-aligned).
 .header-center {
   flex: 1;
   display: flex;
   justify-content: center;
+  align-items: center;
   min-width: 0;
 }
 
@@ -100,7 +100,7 @@ $header-height: 75px;
   flex-shrink: 0;
 }
 
-// ─── NAVIGATION (single row with icons) ─────────────────────────
+// ─── NAVIGATION ─────────────────────────────────────────────────
 .header-nav {
   display: flex;
   align-items: center;
@@ -133,16 +133,13 @@ $header-height: 75px;
   &:hover {
     color: $text-primary;
     background: rgba(255, 255, 255, 0.05);
-
     .nav-icon { opacity: 1; }
   }
 
-  // Active page state — accent pill
   &.active {
     color: $unis-blue-bright;
     background: rgba($unis-blue-bright, 0.1);
     border: 1px solid rgba($unis-blue-bright, 0.18);
-
     .nav-icon { opacity: 1; }
   }
 }
@@ -258,7 +255,6 @@ $header-height: 75px;
 // ─── RESPONSIVE ─────────────────────────────────────────────────
 
 @media (max-width: 1100px) {
-  // Hide nav text labels, keep icons only
   .nav-item span { display: none; }
   .nav-item {
     padding: 8px 10px;
@@ -280,9 +276,9 @@ $header-height: 75px;
     height: 68px;
   }
 
-  .header-center {
-    display: none;
-  }
+  // NOTE: .header-center is NOT hidden here.
+  // It stays as flex:1 spacer so nav items stay right-aligned.
+  // The SearchBar component hides itself via .usb-container { display: none }
 
   .header-nav { gap: 0; }
 
