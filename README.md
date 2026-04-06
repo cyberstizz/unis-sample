@@ -1,7 +1,7 @@
 # Unis
 Welcome to the future of the music industry.
 
-https://unisprototypetwo.netlify.app/
+https://unismusic.com
 
 Unis is a music application that allows users to determine the best music through votes and location. given users choices you are treated to the very best music by region.
 
