@@ -28,8 +28,8 @@ const SearchResultsPage = () => {
     setLoading(true);
     setResults([]);
 
-    const primaryUrl = `${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}&type=${activeTab}&limit=30&offset=0`;
-    const fallbackUrl = `${API_BASE_URL}/api/v1/search/suggestions?q=${encodeURIComponent(query)}&limit=30`;
+    const primaryUrl = `${API_BASE_URL}/v1/search?q=${encodeURIComponent(query)}&type=${activeTab}&limit=30&offset=0`;
+    const fallbackUrl = `${API_BASE_URL}/v1/search/suggestions?q=${encodeURIComponent(query)}&limit=30`;
 
     // Try the full search endpoint first
     fetch(primaryUrl)
