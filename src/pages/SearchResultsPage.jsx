@@ -20,43 +20,61 @@ const SearchResultsPage = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
-  const limit = 20;
 
-  // Reset and fetch on query or tab change
+  // Fetch results — uses /suggestions endpoint (proven working from dropdown)
+  // then tries /search endpoint as primary, falls back to suggestions if it fails
   useEffect(() => {
     if (!query) return;
     setLoading(true);
-    setOffset(0);
-    setHasMore(true);
+    setResults([]);
 
-    fetch(`${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}&type=${activeTab}&limit=${limit}&offset=0`)
-      .then((r) => r.json())
-      .then((data) => {
-        const items = data.results || [];
-        setResults(items);
-        setHasMore(items.length >= limit);
+    const primaryUrl = `${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}&type=${activeTab}&limit=30&offset=0`;
+    const fallbackUrl = `${API_BASE_URL}/api/v1/search/suggestions?q=${encodeURIComponent(query)}&limit=30`;
+
+    // Try the full search endpoint first
+    fetch(primaryUrl)
+      .then((r) => {
+        console.log("[SearchResults] primary response status:", r.status);
+        if (!r.ok) throw new Error(`Status ${r.status}`);
+        return r.json();
       })
-      .catch(() => setResults([]))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        console.log("[SearchResults] primary data:", data);
+        const items = data.results || [];
+        if (items.length > 0) {
+          setResults(filterByTab(items, activeTab));
+          setLoading(false);
+          return;
+        }
+        // If primary returned empty, try fallback
+        throw new Error("No results from primary");
+      })
+      .catch((err) => {
+        console.warn("[SearchResults] primary failed, trying suggestions:", err.message);
+        // Fallback: use suggestions endpoint (same one the dropdown uses)
+        fetch(fallbackUrl)
+          .then((r) => r.json())
+          .then((data) => {
+            console.log("[SearchResults] fallback data:", data);
+            // Flatten grouped suggestions into a single array
+            const flat = [];
+            (data.artists || []).forEach((item) => flat.push(item));
+            (data.songs || []).forEach((item) => flat.push(item));
+            (data.jurisdictions || []).forEach((item) => flat.push(item));
+            setResults(filterByTab(flat, activeTab));
+          })
+          .catch((fallbackErr) => {
+            console.error("[SearchResults] fallback also failed:", fallbackErr);
+            setResults([]);
+          })
+          .finally(() => setLoading(false));
+      });
   }, [query, activeTab]);
 
-  // Load more
-  const loadMore = () => {
-    const newOffset = offset + limit;
-    setLoading(true);
-
-    fetch(`${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}&type=${activeTab}&limit=${limit}&offset=${newOffset}`)
-      .then((r) => r.json())
-      .then((data) => {
-        const items = data.results || [];
-        setResults((prev) => [...prev, ...items]);
-        setOffset(newOffset);
-        setHasMore(items.length >= limit);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  // Filter by active tab
+  const filterByTab = (items, tab) => {
+    if (tab === "all") return items;
+    return items.filter((item) => item.type === tab);
   };
 
   // Navigate to result
@@ -66,6 +84,15 @@ const SearchResultsPage = () => {
       case "song": navigate(`/song/${item.id}`); break;
       case "jurisdiction": navigate(`/jurisdiction/${item.id}`); break;
       default: break;
+    }
+  };
+
+  // Go back
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
     }
   };
 
@@ -108,9 +135,9 @@ const SearchResultsPage = () => {
     }
   };
 
-  // Highlight matching text in results
+  // Highlight matching text
   const highlightMatch = (text, q) => {
-    if (!q || q.length < 2) return text;
+    if (!text || !q || q.length < 2) return text || "";
     const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
     const parts = text.split(regex);
     return parts.map((part, i) =>
@@ -120,7 +147,7 @@ const SearchResultsPage = () => {
     );
   };
 
-  // ── Empty state ───────────────────────────────────────────────
+  // Empty query state
   if (!query) {
     return (
       <div className="srp-page">
@@ -139,13 +166,20 @@ const SearchResultsPage = () => {
 
   return (
     <div className="srp-page">
-      {/* Header area */}
+      {/* Back button + Title */}
       <div className="srp-header">
+        <button className="srp-back" onClick={handleBack}>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M11 4L6 9L11 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Back
+        </button>
+
         <h1 className="srp-title">
           Results for <span className="srp-title__query">"{query}"</span>
         </h1>
 
-        {/* Tab bar */}
+        {/* Tabs */}
         <div className="srp-tabs">
           {TABS.map((tab) => (
             <button
@@ -159,18 +193,17 @@ const SearchResultsPage = () => {
         </div>
       </div>
 
-      {/* Results list */}
+      {/* Results */}
       <div className="srp-results">
-        {results.map((item) => {
+        {results.map((item, index) => {
           const artworkSrc = buildUrl(item.artworkUrl);
 
           return (
             <button
-              key={`${item.type}-${item.id}`}
+              key={`${item.type}-${item.id}-${index}`}
               className="srp-card"
               onClick={() => handleSelect(item)}
             >
-              {/* Artwork */}
               <div className={`srp-card__artwork ${item.type === "artist" ? "srp-card__artwork--round" : ""}`}>
                 {artworkSrc ? (
                   <img src={artworkSrc} alt="" loading="lazy" />
@@ -181,13 +214,11 @@ const SearchResultsPage = () => {
                 )}
               </div>
 
-              {/* Info */}
               <div className="srp-card__info">
                 <span className="srp-card__name">{highlightMatch(item.name, query)}</span>
-                <span className="srp-card__subtitle">{item.subtitle}</span>
+                {item.subtitle && <span className="srp-card__subtitle">{item.subtitle}</span>}
               </div>
 
-              {/* Right side: badge + score */}
               <div className="srp-card__meta">
                 <span className={`srp-badge ${badgeClass(item.type)}`}>{item.type}</span>
                 {item.score > 0 && (
@@ -200,7 +231,6 @@ const SearchResultsPage = () => {
                 )}
               </div>
 
-              {/* Hover arrow */}
               <svg className="srp-card__arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M6 3L11 8L6 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -209,18 +239,11 @@ const SearchResultsPage = () => {
         })}
       </div>
 
-      {/* Loading spinner */}
+      {/* Loading */}
       {loading && (
         <div className="srp-loading">
           <div className="srp-loading__spinner" />
         </div>
-      )}
-
-      {/* Load more */}
-      {!loading && hasMore && results.length > 0 && (
-        <button className="srp-load-more" onClick={loadMore}>
-          Load more results
-        </button>
       )}
 
       {/* No results */}
