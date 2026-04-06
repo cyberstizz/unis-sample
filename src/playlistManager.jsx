@@ -1,8 +1,8 @@
 // src/components/PlaylistManager.jsx
 import React, { useContext, useState, useEffect } from 'react';
 import { PlayerContext } from './context/playercontext';
-import { X, Music, Users, Award, Globe, Search } from 'lucide-react';
-import axiosInstance from './components/axiosInstance';
+import { X, Music, Users, Award, Globe, Search, Plus, Info } from 'lucide-react';
+import axiosInstance from './axiosInstance';
 import PlaylistViewer from './playlistViewer';
 import './playlistManager.scss';
 
@@ -13,8 +13,18 @@ const TABS = [
   { key: 'official', label: 'Official', icon: Award },
 ];
 
+const TAB_HINTS = {
+  mine: 'Your personal song collections. Create playlists for any mood or occasion — only you can see them unless you make them public.',
+  following: "Playlists you've followed from other users. Browse Community or Official playlists and hit Follow to save them here.",
+  community: "Playlists created by and for your neighborhood. Anyone can suggest songs — the community votes on what stays.",
+  official: "Curated by Unis from award winners and staff picks. Follow them to stay in the loop with the best of your area.",
+};
+
 const PlaylistManager = ({ open, onClose }) => {
-  const { playlists, followedPlaylists, loading, refreshPlaylists, loadFollowedPlaylists } = useContext(PlayerContext);
+  const {
+    playlists, followedPlaylists, loading,
+    refreshPlaylists, loadFollowedPlaylists, createPlaylist
+  } = useContext(PlayerContext);
 
   const [activeTab, setActiveTab] = useState('mine');
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
@@ -23,33 +33,52 @@ const PlaylistManager = ({ open, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [dismissedHints, setDismissedHints] = useState({});
+  const [showCreateCommunity, setShowCreateCommunity] = useState(false);
+  const [communityName, setCommunityName] = useState('');
+  const [communityDesc, setCommunityDesc] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [userJurisdictionId, setUserJurisdictionId] = useState(null);
+  const [userJurisdictionName, setUserJurisdictionName] = useState(null);
 
-  // Load community/official playlists when those tabs are selected
+  // Load user's jurisdiction once
+  useEffect(() => {
+    if (!open) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      axiosInstance.get(`/v1/users/profile/${payload.userId}`)
+        .then(res => {
+          const j = res.data?.jurisdiction;
+          if (j) {
+            setUserJurisdictionId(j.jurisdictionId);
+            setUserJurisdictionName(j.name);
+          }
+        })
+        .catch(() => {});
+    } catch (e) {}
+  }, [open]);
+
+  // Load data when tabs change
   useEffect(() => {
     if (!open) return;
 
-    if (activeTab === 'community') {
+    if (activeTab === 'community' && userJurisdictionId) {
       loadCommunityPlaylists();
     } else if (activeTab === 'official') {
       loadOfficialPlaylists();
     } else if (activeTab === 'following') {
       loadFollowedPlaylists();
     }
-  }, [activeTab, open]);
+  }, [activeTab, open, userJurisdictionId]);
 
   const loadCommunityPlaylists = async () => {
+    if (!userJurisdictionId) return;
     try {
-      // Get user's jurisdiction from their profile
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const profileRes = await axiosInstance.get(`/v1/users/profile/${payload.userId}`);
-      const jurisdictionId = profileRes.data?.jurisdiction?.jurisdictionId;
-
-      if (jurisdictionId) {
-        const res = await axiosInstance.get(`/v1/playlists/community/${jurisdictionId}`);
-        setCommunityPlaylists(res.data || []);
-      }
+      const res = await axiosInstance.get(`/v1/playlists/community/${userJurisdictionId}`);
+      setCommunityPlaylists(res.data || []);
     } catch (error) {
       console.error('Failed to load community playlists:', error);
       setCommunityPlaylists([]);
@@ -83,11 +112,36 @@ const PlaylistManager = ({ open, onClose }) => {
     }
   };
 
+  const handleCreateCommunity = async () => {
+    if (!communityName.trim() || !userJurisdictionId) return;
+    setCreating(true);
+    try {
+      await createPlaylist(communityName.trim(), 'community', {
+        visibility: 'public',
+        description: communityDesc.trim() || null,
+        jurisdictionId: userJurisdictionId,
+      });
+      setCommunityName('');
+      setCommunityDesc('');
+      setShowCreateCommunity(false);
+      await loadCommunityPlaylists();
+      await refreshPlaylists();
+    } catch (error) {
+      console.error('Failed to create community playlist:', error);
+      alert('Failed to create community playlist');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const dismissHint = (tab) => {
+    setDismissedHints(prev => ({ ...prev, [tab]: true }));
+  };
+
   if (!open) return null;
 
   const getActiveList = () => {
     if (isSearching && searchQuery.trim()) return searchResults;
-
     switch (activeTab) {
       case 'mine': return playlists;
       case 'following': return followedPlaylists;
@@ -103,19 +157,17 @@ const PlaylistManager = ({ open, onClose }) => {
     if (isSearching) return 'No playlists found';
     switch (activeTab) {
       case 'mine': return 'No playlists yet. Click the + button on the player to create one!';
-      case 'following': return "You're not following any playlists yet.";
+      case 'following': return "You're not following any playlists yet. Browse Community or Official playlists and hit Follow!";
       case 'community': return 'No community playlists in your area yet. Be the first to create one!';
       case 'official': return 'Official playlists coming soon.';
       default: return 'No playlists found';
     }
   };
 
-  // Build cover image: use coverImageUrl, then mosaic from first 4 artworks, then fallback
   const getCoverDisplay = (pl) => {
     if (pl.coverImageUrl) {
       return <img src={pl.coverImageUrl} alt="" />;
     }
-
     const artworks = pl.firstFourArtworks || [];
     if (artworks.length >= 4) {
       return (
@@ -126,16 +178,12 @@ const PlaylistManager = ({ open, onClose }) => {
         </div>
       );
     }
-
     if (artworks.length > 0) {
       return <img src={artworks[0]} alt="" />;
     }
-
-    // Check legacy tracks array
     if (pl.tracks && pl.tracks.length > 0 && pl.tracks[0].artworkUrl) {
       return <img src={pl.tracks[0].artworkUrl} alt="" />;
     }
-
     return (
       <div className="pm-card-empty">
         <Music size={32} />
@@ -180,8 +228,19 @@ const PlaylistManager = ({ open, onClose }) => {
             })}
           </div>
 
-          {/* Search (visible on community and official tabs) */}
-          {(activeTab === 'community' || activeTab === 'official') && (
+          {/* Contextual hint banner */}
+          {!dismissedHints[activeTab] && TAB_HINTS[activeTab] && (
+            <div className="pm-hint-banner">
+              <Info size={14} />
+              <span>{TAB_HINTS[activeTab]}</span>
+              <button onClick={() => dismissHint(activeTab)} className="pm-hint-dismiss">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Search */}
+          {(activeTab === 'community' || activeTab === 'official' || activeTab === 'following') && (
             <div className="pm-search">
               <Search size={16} />
               <input
@@ -198,6 +257,49 @@ const PlaylistManager = ({ open, onClose }) => {
                   <X size={14} />
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Create Community Playlist button */}
+          {activeTab === 'community' && !showCreateCommunity && (
+            <div className="pm-create-community-bar">
+              <button className="pm-create-community-btn" onClick={() => setShowCreateCommunity(true)}>
+                <Plus size={16} />
+                Create Community Playlist{userJurisdictionName ? ` for ${userJurisdictionName}` : ''}
+              </button>
+            </div>
+          )}
+
+          {/* Create Community form */}
+          {activeTab === 'community' && showCreateCommunity && (
+            <div className="pm-create-community-form">
+              <input
+                type="text"
+                placeholder="Playlist name (e.g. Harlem After Dark)"
+                value={communityName}
+                onChange={(e) => setCommunityName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleCreateCommunity()}
+                autoFocus
+                maxLength={100}
+              />
+              <input
+                type="text"
+                placeholder="Description (optional)"
+                value={communityDesc}
+                onChange={(e) => setCommunityDesc(e.target.value)}
+                maxLength={500}
+              />
+              <div className="pm-create-community-actions">
+                <button onClick={() => { setShowCreateCommunity(false); setCommunityName(''); setCommunityDesc(''); }}>
+                  Cancel
+                </button>
+                <button onClick={handleCreateCommunity} disabled={!communityName.trim() || creating}>
+                  {creating ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+              <p className="pm-create-community-note">
+                This playlist will be public. Anyone in {userJurisdictionName || 'your area'} can suggest songs and vote.
+              </p>
             </div>
           )}
 
