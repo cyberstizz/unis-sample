@@ -10,25 +10,16 @@ import QueuePanel from './QueuePanel';
 import './player.scss';
 
 // ─── Inline SVG icons with guaranteed visibility ───
-// These use inline style to prevent ANY external CSS from overriding fill/dimensions.
 const PlayIcon = ({ size = 24 }) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    style={{ width: size, height: size, display: 'block', fill: '#FFFFFF', flexShrink: 0 }}
-  >
+  <svg viewBox="0 0 24 24" width={size} height={size}
+    style={{ width: size, height: size, display: 'block', fill: '#FFFFFF', flexShrink: 0 }}>
     <path d="M8 5v14l11-7z" />
   </svg>
 );
 
 const PauseIcon = ({ size = 24 }) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    style={{ width: size, height: size, display: 'block', fill: '#FFFFFF', flexShrink: 0 }}
-  >
+  <svg viewBox="0 0 24 24" width={size} height={size}
+    style={{ width: size, height: size, display: 'block', fill: '#FFFFFF', flexShrink: 0 }}>
     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
   </svg>
 );
@@ -91,7 +82,8 @@ const Player = () => {
     playlists, 
     openPlaylistManager,
     showPlaylistManager,
-    closePlaylistManager
+    closePlaylistManager,
+    queue,
   } = useContext(PlayerContext);
 
   // --- LOCAL STATE ---
@@ -104,7 +96,6 @@ const Player = () => {
   const [volume, setVolume] = useState(0.7);
   const [showQueue, setShowQueue] = useState(false);
 
-  
   // Wizards State
   const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
   const [showVoteWizard, setShowVoteWizard] = useState(false);
@@ -283,8 +274,8 @@ const Player = () => {
     const safeArtist = currentMedia.artist || currentMedia.artistName || "Unknown Artist";
 
     if (!safeId) {
-      console.error("Player Error: Current song has no ID. Cannot fetch voting details.");
-      return alert("Cannot vote on this track (Missing ID). Try playing it from a Playlist.");
+      console.error("Player Error: Current song has no ID.");
+      return alert("Cannot vote on this track (Missing ID).");
     }
 
     setSpecificVoteData(null);
@@ -297,7 +288,6 @@ const Player = () => {
       });
       
       const songData = res.data;
-
       let jurisdictionName = 'Harlem'; 
       
       if (songData.jurisdiction) {
@@ -307,8 +297,6 @@ const Player = () => {
           jurisdictionName = songData.jurisdiction.name;
         }
       }
-
-      console.log("Voting Jurisdiction Resolved:", jurisdictionName);
 
       setSpecificVoteData({
         nominee: {
@@ -328,7 +316,6 @@ const Player = () => {
       });
       
       setShowVoteWizard(true);
-
     } catch (err) {
       console.error("Vote fetch error:", err);
       setShowVoteWizard(true);
@@ -453,6 +440,9 @@ const Player = () => {
                 <Heart fill={isLiked ? "white" : "none"} /><span className="label">{isLiked ? 'Liked' : 'Like'}</span>
               </button>
               <button onClick={handleDownload} className="tray-action"><span>⬇</span><span className="label">Download</span></button>
+              <button onClick={() => { setShowMobileActions(false); setShowQueue(true); }} className="tray-action">
+                <ListMusic size={20} /><span className="label">Queue</span>
+              </button>
             </div>
           </div>
 
@@ -483,7 +473,6 @@ const Player = () => {
                   <PrevIcon />
                 </button>
 
-                {/* ─── THE PLAY/PAUSE BUTTON ─── */}
                 <button 
                   className="player-btn-play" 
                   onClick={handlePlayPause} 
@@ -495,10 +484,9 @@ const Player = () => {
                 <button className="player-btn" onClick={handleNext} title="Next">
                   <NextIcon />
                 </button>
-                <button className="player-btn" onClick={() => setShowPlaylistWizard(true)} title="Add to playlist">
+                <button className="player-btn" onClick={() => setShowPlaylistWizard(true)} title="Add to playlist or queue">
                   <PlusIcon />
                 </button>
-                <button onClick={() => setShowQueue(true)}><ListMusic size={20} /></button>
               </div>
               <div className="player-progress">
                 <span className="player-time">{formatTime(currentTime)}</span>
@@ -509,8 +497,18 @@ const Player = () => {
               </div>
             </div>
 
-            {/* RIGHT — Volume + actions */}
+            {/* RIGHT — Queue + Download + Volume */}
             <div className="player-right">
+              <button
+                className={`player-btn player-queue-btn ${showQueue ? 'active' : ''}`}
+                onClick={() => setShowQueue(!showQueue)}
+                title={`Queue${queue.length > 0 ? ` (${queue.length})` : ''}`}
+              >
+                <ListMusic size={16} />
+                {queue.length > 0 && (
+                  <span className="player-queue-badge">{queue.length}</span>
+                )}
+              </button>
               <button className="player-btn" onClick={handleDownload} title="Download">
                 <DownloadIcon />
               </button>
@@ -530,7 +528,7 @@ const Player = () => {
         </>
       )}
 
-      {/* --- WIZARDS --- */}
+      {/* --- WIZARDS & PANELS --- */}
       <PlaylistWizard open={showPlaylistWizard} onClose={() => setShowPlaylistWizard(false)} selectedTrack={currentMedia} />
       <PlaylistManager open={showPlaylistManager} onClose={closePlaylistManager} />
       <QueuePanel open={showQueue} onClose={() => setShowQueue(false)} />
