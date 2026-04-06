@@ -1,0 +1,332 @@
+// ============================================================================
+// SearchResultsPage.scss — All classes prefixed srp-
+// Matches Unis design system: Inter font, dark surfaces, blue accent
+// ============================================================================
+
+.srp-page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 28px 24px 100px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+// ── Header ──────────────────────────────────────────────────────
+
+.srp-header {
+  margin-bottom: 24px;
+}
+
+.srp-title {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #7a7a88;
+  margin: 0 0 20px;
+  letter-spacing: -0.01em;
+}
+
+.srp-title__query {
+  color: #e8e8ec;
+  font-weight: 600;
+}
+
+// ── Tabs ────────────────────────────────────────────────────────
+
+.srp-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.srp-tab {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #7a7a88;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  margin-bottom: -1px;
+  letter-spacing: 0.01em;
+
+  &:hover {
+    color: #e8e8ec;
+  }
+
+  &.srp-tab--active {
+    color: #e8e8ec;
+    border-bottom-color: #1d42a8;
+  }
+}
+
+// ── Results list ────────────────────────────────────────────────
+
+.srp-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+// ── Result card ─────────────────────────────────────────────────
+
+.srp-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background 0.15s ease;
+  position: relative;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .srp-card__arrow {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+}
+
+// ── Artwork ─────────────────────────────────────────────────────
+
+.srp-card__artwork {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &.srp-card__artwork--round {
+    border-radius: 50%;
+  }
+}
+
+.srp-card__placeholder {
+  color: #4a4a56;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// ── Info ────────────────────────────────────────────────────────
+
+.srp-card__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.srp-card__name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #e8e8ec;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.srp-card__subtitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: #7a7a88;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.srp-highlight {
+  color: #fff;
+  font-weight: 700;
+}
+
+// ── Meta (badge + score) ────────────────────────────────────────
+
+.srp-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.srp-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 100px;
+  flex-shrink: 0;
+
+  &.srp-badge--artist {
+    color: #7cb3ff;
+    background: rgba(29, 66, 168, 0.15);
+  }
+  &.srp-badge--song {
+    color: #a0d995;
+    background: rgba(80, 160, 70, 0.12);
+  }
+  &.srp-badge--jurisdiction {
+    color: #e8c170;
+    background: rgba(200, 160, 60, 0.12);
+  }
+}
+
+.srp-card__score {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4a4a56;
+
+  svg {
+    color: #e8c170;
+  }
+}
+
+// ── Hover arrow ─────────────────────────────────────────────────
+
+.srp-card__arrow {
+  flex-shrink: 0;
+  color: #4a4a56;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+// ── Loading ─────────────────────────────────────────────────────
+
+.srp-loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+.srp-loading__spinner {
+  width: 24px;
+  height: 24px;
+  border: 2.5px solid rgba(255, 255, 255, 0.06);
+  border-top-color: #1d42a8;
+  border-radius: 50%;
+  animation: srp-spin 0.6s linear infinite;
+}
+
+@keyframes srp-spin {
+  to { transform: rotate(360deg); }
+}
+
+// ── Load more ───────────────────────────────────────────────────
+
+.srp-load-more {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  color: #1d42a8;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(29, 66, 168, 0.3);
+  }
+}
+
+// ── Empty state ─────────────────────────────────────────────────
+
+.srp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.srp-empty__icon {
+  color: #2a2a36;
+  margin-bottom: 20px;
+}
+
+.srp-empty__text {
+  font-size: 15px;
+  font-weight: 500;
+  color: #7a7a88;
+  margin: 0 0 6px;
+}
+
+.srp-empty__hint {
+  font-size: 13px;
+  font-weight: 400;
+  color: #4a4a56;
+  margin: 0;
+}
+
+// ── Responsive ──────────────────────────────────────────────────
+
+@media (max-width: 768px) {
+  .srp-page {
+    padding: 16px 14px 100px;
+  }
+
+  .srp-title {
+    font-size: 17px;
+  }
+
+  .srp-tab {
+    padding: 9px 14px;
+    font-size: 12.5px;
+  }
+
+  .srp-card {
+    padding: 10px 12px;
+    gap: 12px;
+  }
+
+  .srp-card__artwork {
+    width: 44px;
+    height: 44px;
+  }
+
+  .srp-card__name {
+    font-size: 14px;
+  }
+
+  .srp-card__arrow {
+    display: none;
+  }
+
+  .srp-badge {
+    font-size: 9px;
+    padding: 2px 7px;
+  }
+}
