@@ -279,3 +279,191 @@ $unis-blue: var(--unis-primary);
     background: #b91c1c;
   }
 }
+
+/* ============================================================
+   APPEND TO: playlistViewer.scss
+   New styles for community tabs, voting, activity, follow
+   ============================================================ */
+
+/* Description below title */
+.pv-description {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Follow button */
+.pv-follow-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  &.pv-following {
+    background: rgba(22, 51, 135, 0.3);
+    border-color: rgba(22, 51, 135, 0.6);
+    color: #6b8cff;
+  }
+}
+
+/* Section tabs (Tracks | Pending | Activity) */
+.pv-section-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 16px;
+}
+
+.pv-section-tab {
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  &.active {
+    color: #fff;
+    border-bottom-color: #6b8cff;
+  }
+}
+
+/* Loading state */
+.pv-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+}
+
+/* Pending items styling */
+.pv-pending-item {
+  border-left: 2px solid rgba(234, 179, 8, 0.4);
+
+  .pv-suggested-by {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Vote controls */
+.pv-vote-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pv-vote-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  span {
+    font-weight: 600;
+  }
+}
+
+.pv-vote-up:hover {
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #10b981;
+}
+
+.pv-vote-down:hover {
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+}
+
+/* Activity feed */
+.pv-activity-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.pv-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.pv-activity-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+}
+
+.pv-activity-content {
+  flex: 1;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.4;
+}
+
+.pv-activity-user {
+  color: #fff;
+  font-weight: 500;
+}
+
+.pv-activity-action {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.pv-activity-song {
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.pv-activity-details {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+}
+
+.pv-activity-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+  white-space: nowrap;
+}

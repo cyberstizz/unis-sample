@@ -349,3 +349,103 @@ $unis-silver: #918f8f;
     transform: rotate(360deg);
   }
 }
+/* Section dividers */
+.pw-section {
+  padding: 0 16px;
+  margin-bottom: 8px;
+}
+ 
+.pw-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 12px 0 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+ 
+.pw-section:first-of-type .pw-section-label {
+  border-top: none;
+}
+ 
+/* Queue action buttons (Play Next / Play Later) */
+.pw-queue-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+ 
+.pw-queue-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+ 
+  &:hover {
+    background: rgba(22, 51, 135, 0.2);
+    border-color: rgba(22, 51, 135, 0.4);
+  }
+ 
+  svg {
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.6);
+  }
+ 
+  div {
+    display: flex;
+    flex-direction: column;
+  }
+}
+ 
+.pw-queue-btn-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+ 
+.pw-queue-btn-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 1px;
+}
+ 
+/* Queued success message variant */
+.pw-queued {
+  background: rgba(22, 51, 135, 0.3) !important;
+}
+ 
+/* Playlist type icons in list items */
+.pw-pl-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+ 
+.pw-type-icon {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+ 
+.pw-type-community { color: #6b8cff; opacity: 1; }
+.pw-type-public { color: #10b981; opacity: 0.7; }
+.pw-type-private { color: rgba(255, 255, 255, 0.3); }
+ 
+/* Action label on right side of playlist items */
+.pw-pl-action {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+ 
+.pw-community-item {
+  border-left: 2px solid rgba(107, 140, 255, 0.4);
+}
+ 
