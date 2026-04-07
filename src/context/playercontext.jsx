@@ -22,10 +22,10 @@ export const PlayerProvider = ({ children }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // --- Queue state (session-based, ephemeral) ---
-  const [queue, setQueue] = useState([]);           // the active play queue
-  const [queueSource, setQueueSource] = useState(null); // name of playlist/context that seeded the queue
+  const [queue, setQueue] = useState([]);
+  const [queueSource, setQueueSource] = useState(null);
   const [isShuffled, setIsShuffled] = useState(false);
-  const [originalQueue, setOriginalQueue] = useState([]); // pre-shuffle order for un-shuffle
+  const [originalQueue, setOriginalQueue] = useState([]);
   const [autoplay, setAutoplay] = useState(false);
 
   // --- Playlist library state ---
@@ -37,22 +37,10 @@ export const PlayerProvider = ({ children }) => {
   const audioRef = useRef(null);
 
   // ========================================================================
-  // INIT — Load playlists if authenticated
-  // ========================================================================
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      loadUserPlaylists();
-      loadFollowedPlaylists();
-    }
-  }, []);
-
-  // ========================================================================
   // PLAYLIST LOADING
   // ========================================================================
 
-  const loadUserPlaylists = async () => {
+  const loadUserPlaylists = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
@@ -72,7 +60,6 @@ export const PlayerProvider = ({ children }) => {
         coverImageUrl: pl.coverImageUrl,
         firstFourArtworks: pl.firstFourArtworks || [],
         updatedAt: pl.updatedAt,
-        // tracks are loaded on-demand when viewing a playlist, not in summary
         tracks: []
       }));
 
@@ -83,9 +70,9 @@ export const PlayerProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadFollowedPlaylists = async () => {
+  const loadFollowedPlaylists = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
@@ -110,7 +97,60 @@ export const PlayerProvider = ({ children }) => {
       console.error('Failed to load followed playlists:', error);
       setFollowedPlaylists([]);
     }
-  };
+  }, []);
+
+  // ========================================================================
+  // INIT & EVENT LISTENERS — fixes the playlist fetching race condition
+  // ========================================================================
+  //
+  // The bug: PlayerProvider mounts when the app first loads — sometimes BEFORE
+  // the user has logged in. The useEffect below runs once on mount. If there's
+  // no token at that moment, the fetch never fires. Then the user logs in,
+  // gets a token, but PlayerContext has no idea anything changed and still
+  // shows an empty playlists array.
+  //
+  // The fix uses two strategies layered together:
+  //
+  //   1. On mount, check for an existing token (handles refresh-while-logged-in)
+  //   2. Listen for the 'unis:login' custom event from AuthContext
+  //      (handles fresh logins without needing a page refresh)
+  //
+  // A third defense exists in openPlaylistManager() below — even if both of
+  // these miss, opening the manager will trigger a fetch if needed.
+
+  useEffect(() => {
+    // Strategy 1: try once at mount in case user is already logged in
+    const token = localStorage.getItem('token');
+    if (token) {
+      loadUserPlaylists();
+      loadFollowedPlaylists();
+    }
+
+    // Strategy 2: listen for login/logout events
+    const handleLogin = () => {
+      loadUserPlaylists();
+      loadFollowedPlaylists();
+    };
+
+    const handleLogout = () => {
+      // Clear playlist state so the next user doesn't see stale data
+      setPlaylists([]);
+      setFollowedPlaylists([]);
+      setQueue([]);
+      setOriginalQueue([]);
+      setCurrentMedia(null);
+      setCurrentIndex(0);
+      setQueueSource(null);
+    };
+
+    window.addEventListener('unis:login', handleLogin);
+    window.addEventListener('unis:logout', handleLogout);
+
+    return () => {
+      window.removeEventListener('unis:login', handleLogin);
+      window.removeEventListener('unis:logout', handleLogout);
+    };
+  }, [loadUserPlaylists, loadFollowedPlaylists]);
 
   /** Load full playlist with tracks (on-demand when user opens a playlist) */
   const loadPlaylistDetails = async (playlistId) => {
@@ -155,9 +195,7 @@ export const PlayerProvider = ({ children }) => {
     const nextIndex = currentIndex + 1;
 
     if (nextIndex >= queue.length) {
-      // End of queue
       if (autoplay) {
-        // TODO: fetch recommended songs and continue
         setIsPlaying(false);
       } else {
         setIsPlaying(false);
@@ -192,7 +230,6 @@ export const PlayerProvider = ({ children }) => {
   // QUEUE MANAGEMENT — Play Next / Play Later / Clear / Save
   // ========================================================================
 
-  /** Insert a song immediately after the currently playing track */
   const playNext = (song) => {
     const insertIndex = currentIndex + 1;
     const newQueue = [...queue];
@@ -201,36 +238,30 @@ export const PlayerProvider = ({ children }) => {
     setOriginalQueue([...originalQueue, song]);
   };
 
-  /** Append a song to the end of the queue */
   const playLater = (song) => {
     setQueue(prev => [...prev, song]);
     setOriginalQueue(prev => [...prev, song]);
   };
 
-  /** Remove a specific song from the queue by index */
   const removeFromQueue = (index) => {
-    if (index === currentIndex) return; // can't remove currently playing
+    if (index === currentIndex) return;
     const newQueue = [...queue];
     newQueue.splice(index, 1);
     setQueue(newQueue);
-    // Adjust currentIndex if removed item was before current
     if (index < currentIndex) {
       setCurrentIndex(prev => prev - 1);
     }
   };
 
-  /** Reorder the queue via drag-and-drop */
   const reorderQueue = (newQueue) => {
     const currentSong = queue[currentIndex];
     setQueue(newQueue);
-    // Find where the current song ended up
     const newIndex = newQueue.findIndex(t =>
       (t.id || t.songId) === (currentSong?.id || currentSong?.songId)
     );
     setCurrentIndex(newIndex >= 0 ? newIndex : 0);
   };
 
-  /** Clear the entire queue */
   const clearQueue = () => {
     setQueue([]);
     setOriginalQueue([]);
@@ -245,16 +276,13 @@ export const PlayerProvider = ({ children }) => {
     setIsPlaying(false);
   };
 
-  /** Save the current queue as a new playlist */
   const saveQueueAsPlaylist = async (name) => {
     if (queue.length === 0) throw new Error('Queue is empty');
 
     try {
-      // Create the playlist
       const createRes = await axiosInstance.post('/v1/playlists', { name });
       const newPlaylistId = createRes.data.playlistId;
 
-      // Add each track
       for (const track of queue) {
         const songId = track.songId || track.id;
         if (songId) {
@@ -280,7 +308,6 @@ export const PlayerProvider = ({ children }) => {
 
   const toggleShuffle = () => {
     if (isShuffled) {
-      // Un-shuffle: restore original order
       const currentSong = queue[currentIndex];
       setQueue(originalQueue);
       setIsShuffled(false);
@@ -289,7 +316,6 @@ export const PlayerProvider = ({ children }) => {
       );
       setCurrentIndex(newIndex >= 0 ? newIndex : 0);
     } else {
-      // Shuffle: randomize but keep current song at position 0
       const currentSong = queue[currentIndex];
       const rest = queue.filter((_, i) => i !== currentIndex);
       const shuffledRest = fisherYatesShuffle(rest);
@@ -365,7 +391,6 @@ export const PlayerProvider = ({ children }) => {
 
   const updatePlaylist = async (playlistId, updates) => {
     try {
-      // updates can be { name, visibility, description, coverImageUrl }
       const payload = typeof updates === 'string' ? { name: updates } : updates;
       await axiosInstance.put(`/v1/playlists/${playlistId}`, payload);
       await loadUserPlaylists();
@@ -453,7 +478,6 @@ export const PlayerProvider = ({ children }) => {
   // ========================================================================
 
   const loadPlaylist = async (pl) => {
-    // If we have tracks already (from PlaylistViewer), use them
     if (pl.tracks && pl.tracks.length > 0) {
       setQueue(pl.tracks);
       setOriginalQueue(pl.tracks);
@@ -464,7 +488,6 @@ export const PlayerProvider = ({ children }) => {
       return;
     }
 
-    // Otherwise load from API
     const fullPlaylist = await loadPlaylistDetails(pl.playlistId || pl.id);
     if (fullPlaylist && fullPlaylist.tracks.length > 0) {
       setQueue(fullPlaylist.tracks);
@@ -502,7 +525,6 @@ export const PlayerProvider = ({ children }) => {
     };
   }, [next]);
 
-  // Global spacebar
   useEffect(() => {
     const handleKeyDown = (e) => {
       const tag = document.activeElement.tagName;
@@ -545,6 +567,25 @@ export const PlayerProvider = ({ children }) => {
   };
 
   const toggleExpand = () => setIsExpanded(!isExpanded);
+
+  // ========================================================================
+  // PLAYLIST MANAGER OPEN — with self-healing lazy fetch
+  // ========================================================================
+  //
+  // Third line of defense: even if the mount-time fetch and the login event
+  // both somehow missed, the moment the user opens the playlist manager we
+  // check: do I have a token but no playlists? If so, fetch them right now.
+  // This makes the system bulletproof.
+
+  const openPlaylistManager = useCallback(() => {
+    setShowPlaylistManager(true);
+
+    const token = localStorage.getItem('token');
+    if (token && playlists.length === 0 && !loading) {
+      loadUserPlaylists();
+      loadFollowedPlaylists();
+    }
+  }, [playlists.length, loading, loadUserPlaylists, loadFollowedPlaylists]);
 
   // ========================================================================
   // CONTEXT VALUE
@@ -614,10 +655,10 @@ export const PlayerProvider = ({ children }) => {
 
       // Playlist manager modal
       showPlaylistManager,
-      openPlaylistManager: () => setShowPlaylistManager(true),
+      openPlaylistManager,
       closePlaylistManager: () => setShowPlaylistManager(false),
 
-      // Legacy compat — "playlist" was the old queue
+      // Legacy compat
       playlist: queue,
     }}>
       {children}

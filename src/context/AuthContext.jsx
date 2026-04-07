@@ -43,7 +43,6 @@ export const AuthProvider = ({ children }) => {
       setUser(prev => prev ? { ...prev, themePreference: themeName } : prev);
     } catch (err) {
       console.error('Failed to save theme preference:', err);
-      // Theme still applied locally even if save fails
     }
   };
 
@@ -57,7 +56,6 @@ export const AuthProvider = ({ children }) => {
           .then(async (res) => {
             const profileData = res.data;
 
-            // Apply saved theme preference
             if (profileData.themePreference) {
               applyTheme(profileData.themePreference);
             }
@@ -91,12 +89,12 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axiosInstance.post('/auth/login', credentials);
       localStorage.setItem('token', response.data.token);
+
       const userId = decodeToken(response.data.token);
       if (userId) {
         const profileRes = await axiosInstance.get(`/v1/users/profile/${userId}`);
         const profileData = profileRes.data;
 
-        // Apply saved theme on login
         if (profileData.themePreference) {
           applyTheme(profileData.themePreference);
         }
@@ -110,6 +108,15 @@ export const AuthProvider = ({ children }) => {
         }
 
         setUser(profileData);
+
+        // ── Notify other contexts (PlayerContext, etc.) that the user just logged in ──
+        // This is what fixes the playlist fetching race condition: PlayerContext
+        // mounted before login happened, so its initial useEffect bailed out when
+        // there was no token. This event lets it know it should fetch now.
+        window.dispatchEvent(new CustomEvent('unis:login', {
+          detail: { userId: profileData.userId }
+        }));
+
         return { success: true };
       } else {
         throw new Error('Invalid token');
@@ -119,14 +126,21 @@ export const AuthProvider = ({ children }) => {
       return {
          success: false,
          error: typeof error.response?.data === 'string' ? error.response.data : error.response?.data?.message || 'Login failed',
-        data: error.response?.data, };
+        data: error.response?.data,
+      };
     }
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
-    applyTheme('blue'); // Reset to default on logout
+    applyTheme('blue');
+
+    // ── Notify other contexts to clear their state on logout ──
+    // Without this, the next user to log in on the same tab would briefly see
+    // the previous user's playlists until a refetch happens.
+    window.dispatchEvent(new CustomEvent('unis:logout'));
+
     window.location.href = '/login';
   };
 

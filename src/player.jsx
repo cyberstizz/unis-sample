@@ -4,12 +4,12 @@ import { PlayerContext } from './context/playercontext';
 import { Heart, Headphones, Vote, ChevronUp, ChevronDown, ListMusic } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
-import VotingWizard from './votingWizard'; 
+import VotingWizard from './votingWizard';
 import { apiCall } from './components/axiosInstance';
 import QueuePanel from './QueuePanel';
 import './player.scss';
 
-// ─── Inline SVG icons with guaranteed visibility ───
+// ─── Inline SVG icons ───
 const PlayIcon = ({ size = 24 }) => (
   <svg viewBox="0 0 24 24" width={size} height={size}
     style={{ width: size, height: size, display: 'block', fill: '#FFFFFF', flexShrink: 0 }}>
@@ -72,14 +72,14 @@ const VolumeIcon = ({ level }) => {
 
 
 const Player = () => {
-  const { 
-    isExpanded, 
-    toggleExpand, 
-    currentMedia, 
-    next, 
-    prev, 
-    audioRef, 
-    playlists, 
+  const {
+    isExpanded,
+    toggleExpand,
+    currentMedia,
+    next,
+    prev,
+    audioRef,
+    playlists,
     openPlaylistManager,
     showPlaylistManager,
     closePlaylistManager,
@@ -88,8 +88,8 @@ const Player = () => {
 
   // --- LOCAL STATE ---
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0); 
-  const [duration, setDuration] = useState(0); 
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [specificVoteData, setSpecificVoteData] = useState(null);
@@ -99,7 +99,7 @@ const Player = () => {
   // Wizards State
   const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
   const [showVoteWizard, setShowVoteWizard] = useState(false);
-  
+
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [userId, setUserId] = useState(null);
 
@@ -113,7 +113,7 @@ const Player = () => {
       id: currentMedia.id || currentMedia.songId,
       name: currentMedia.title,
       type: 'song',
-      jurisdiction: currentMedia.jurisdiction, 
+      jurisdiction: currentMedia.jurisdiction,
       genreKey: currentMedia.genreKey || 'rap-hiphop',
       artist: currentMedia.artist
     };
@@ -137,28 +137,20 @@ const Player = () => {
     let isMounted = true;
     if (currentMedia?.id && userId) {
       const songId = currentMedia.id || currentMedia.songId;
-      
-      apiCall({ 
+
+      apiCall({
         url: `/v1/media/song/${songId}/is-liked?userId=${userId}`,
         method: 'get'
       })
-      .then(res => {
-        if (isMounted) setIsLiked(res.data.isLiked || false);
-      })
-      .catch(() => {
-        if (isMounted) setIsLiked(false);
-      });
-      
-      apiCall({ 
+      .then(res => { if (isMounted) setIsLiked(res.data.isLiked || false); })
+      .catch(() => { if (isMounted) setIsLiked(false); });
+
+      apiCall({
         url: `/v1/media/song/${songId}/likes/count`,
         method: 'get'
       })
-      .then(res => {
-        if (isMounted) setLikeCount(res.data.count || 0);
-      })
-      .catch(() => {
-        if (isMounted) setLikeCount(0);
-      });
+      .then(res => { if (isMounted) setLikeCount(res.data.count || 0); })
+      .catch(() => { if (isMounted) setLikeCount(0); });
     }
 
     return () => { isMounted = false; };
@@ -223,22 +215,20 @@ const Player = () => {
     };
   }, [next, audioRef]);
 
-  // Set initial volume
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
   }, [volume, audioRef]);
 
-  if (!currentMedia) return null;
-
-  const isVideo = currentMedia.type === 'video';
+  const isVideo = currentMedia?.type === 'video';
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   // 5. Functional Handlers
   const handlePlayPause = (e) => {
     e.stopPropagation();
     const media = audioRef.current;
+    if (!media) return;
     if (media.paused) media.play().catch(console.error);
     else media.pause();
   };
@@ -249,7 +239,7 @@ const Player = () => {
   const handleLike = async (e) => {
     e.stopPropagation();
     if (!userId) return alert('Please log in to like songs');
-    
+
     const songId = currentMedia.id || currentMedia.songId;
     try {
       const res = await apiCall({
@@ -281,15 +271,15 @@ const Player = () => {
     setSpecificVoteData(null);
 
     try {
-      const res = await apiCall({ 
-        method: 'get', 
+      const res = await apiCall({
+        method: 'get',
         url: `/v1/media/song/${safeId}`,
-        useCache: false 
+        useCache: false
       });
-      
+
       const songData = res.data;
-      let jurisdictionName = 'Harlem'; 
-      
+      let jurisdictionName = 'Harlem';
+
       if (songData.jurisdiction) {
         if (typeof songData.jurisdiction === 'string') {
           jurisdictionName = songData.jurisdiction;
@@ -314,7 +304,7 @@ const Player = () => {
           selectedJurisdiction: jurisdictionName.toLowerCase().replace(/\s+/g, '-')
         }
       });
-      
+
       setShowVoteWizard(true);
     } catch (err) {
       console.error("Vote fetch error:", err);
@@ -382,6 +372,45 @@ const Player = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // ════════════════════════════════════════════════════════════════════════
+  // CRITICAL FIX: Modals/panels are rendered OUTSIDE the currentMedia guard
+  //
+  // Previously the entire component returned null when no song was playing,
+  // which meant <PlaylistManager>, <PlaylistWizard>, <QueuePanel>, and
+  // <VotingWizard> never mounted at all. Clicking "Playlists" in the sidebar
+  // toggled state on a component that didn't exist in the DOM.
+  //
+  // Now: when there's no current media, we still render the modals so they
+  // can respond to global state changes (openPlaylistManager from sidebar,
+  // etc.) — we just skip rendering the player bar itself.
+  // ════════════════════════════════════════════════════════════════════════
+
+  // Shared modal block — rendered in BOTH branches below
+  const modalsAndPanels = (
+    <>
+      <PlaylistWizard open={showPlaylistWizard} onClose={() => setShowPlaylistWizard(false)} selectedTrack={currentMedia} />
+      <PlaylistManager open={showPlaylistManager} onClose={closePlaylistManager} />
+      <QueuePanel open={showQueue} onClose={() => setShowQueue(false)} />
+      <VotingWizard
+        show={showVoteWizard}
+        onClose={() => {
+          setShowVoteWizard(false);
+          setSpecificVoteData(null);
+        }}
+        onVoteSuccess={(id) => setShowVoteWizard(false)}
+        nominee={specificVoteData?.nominee || voteNominee}
+        userId={userId}
+        filters={specificVoteData?.filters || { selectedType: 'song' }}
+      />
+    </>
+  );
+
+  // No song playing yet → render ONLY the modals (so sidebar/etc. can open them)
+  if (!currentMedia) {
+    return modalsAndPanels;
+  }
+
+  // Song is playing → render the full player + modals
   return (
     <div className={`player ${isExpanded ? 'expanded' : ''}`} style={isExpanded ? { backgroundImage: `url(${currentMedia.artwork || '/assets/placeholder.jpg'})` } : {}}>
       {isVideo ? (
@@ -473,9 +502,9 @@ const Player = () => {
                   <PrevIcon />
                 </button>
 
-                <button 
-                  className="player-btn-play" 
-                  onClick={handlePlayPause} 
+                <button
+                  className="player-btn-play"
+                  onClick={handlePlayPause}
                   title={isPlaying ? 'Pause' : 'Play'}
                 >
                   {isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
@@ -529,20 +558,7 @@ const Player = () => {
       )}
 
       {/* --- WIZARDS & PANELS --- */}
-      <PlaylistWizard open={showPlaylistWizard} onClose={() => setShowPlaylistWizard(false)} selectedTrack={currentMedia} />
-      <PlaylistManager open={showPlaylistManager} onClose={closePlaylistManager} />
-      <QueuePanel open={showQueue} onClose={() => setShowQueue(false)} />
-      <VotingWizard 
-        show={showVoteWizard} 
-        onClose={() => {
-          setShowVoteWizard(false);
-          setSpecificVoteData(null);
-        }} 
-        onVoteSuccess={(id) => setShowVoteWizard(false)}
-        nominee={specificVoteData?.nominee || voteNominee}
-        userId={userId}
-        filters={specificVoteData?.filters || { selectedType: 'song' }} 
-      />
+      {modalsAndPanels}
     </div>
   );
 };
