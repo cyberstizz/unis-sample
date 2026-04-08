@@ -1,461 +1,585 @@
-$unis-blue: var(--unis-primary);
+// src/components/playlistViewer.scss
+// Complete rewrite — modern design system, replace existing file entirely
 
+// ─── Design tokens ───
+$pv-bg: #0f0f12;
+$pv-surface: #18181c;
+$pv-surface-elevated: #1f1f24;
+$pv-border: rgba(255, 255, 255, 0.08);
+$pv-border-strong: rgba(255, 255, 255, 0.14);
+$pv-text: #ffffff;
+$pv-text-muted: rgba(255, 255, 255, 0.55);
+$pv-text-dim: rgba(255, 255, 255, 0.35);
+$pv-accent: #4a7dff;
+$pv-accent-hover: #3a6def;
+$pv-danger: #ef4444;
+$pv-success: #10b981;
+
+// ─── Overlay ───
 .pv-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.65);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
+  animation: pv-fade-in 0.2s ease-out;
 }
 
+@keyframes pv-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+// ─── Container ───
 .pv-container {
-  width: 92%;
-  max-width: 980px;
-  max-height: 78vh;
-  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  width: 100%;
+  max-width: 880px;
+  max-height: 88vh;
+  background: $pv-bg;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.06);
-  padding: 18px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  border: 1px solid $pv-border;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  animation: pv-slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
 }
 
-.pv-header {
+@keyframes pv-slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+// ─── Hero header ───
+.pv-hero {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+  gap: 24px;
+  padding: 32px;
+  background: linear-gradient(180deg, rgba(74, 125, 255, 0.08), transparent);
+  border-bottom: 1px solid $pv-border;
+  position: relative;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 24px 20px;
+  }
 }
 
-.pv-title {
-  color: #fff;
-  font-size: 20px;
-  margin: 0;
-  font-weight: 700;
-}
-.pv-sub {
-  color: #cfcfcf;
-  font-size: 13px;
-  margin-top: 4px;
+.pv-cover-wrap {
+  position: relative;
+  flex-shrink: 0;
 }
 
-.pv-close-btn {
-  background: transparent;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-}
-
-.pv-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.pv-list {
-  overflow-y: auto;
-  padding-right: 8px;
-}
-
-/* each track */
-.pv-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  transition: transform 140ms ease, background 140ms ease, box-shadow 140ms ease;
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border: 1px solid rgba(255,255,255,0.03);
-}
-
-.pv-item:hover {
-  transform: translateY(-3px);
-  background: rgba(255,255,255,0.04);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
-}
-
-.pv-left {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  min-width: 200px;
-}
-
-.pv-grip {
-  color: rgba(255,255,255,0.45);
-}
-
-.pv-art {
-  width: 52px;
-  height: 52px;
-  border-radius: 8px;
+.pv-cover {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
   object-fit: cover;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+
+  @media (max-width: 600px) {
+    width: 140px;
+    height: 140px;
+  }
 }
 
-/* meta */
-.pv-meta {
-  flex: 1;
-  min-width: 0;
-}
-.pv-title-line {
-  color: #fff;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.pv-artist-line {
-  color: #cfcfcf;
-  font-size: 13px;
-  margin-top: 4px;
-}
-
-/* right side */
-.pv-right {
+.pv-cover-placeholder {
+  background: linear-gradient(135deg, $pv-surface-elevated, $pv-surface);
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-width: 92px;
-  justify-content: flex-end;
+  justify-content: center;
+  color: $pv-text-dim;
 }
 
-.pv-duration {
-  color: #eaeaea;
-  font-size: 13px;
-}
-
-.pv-remove {
-  background: transparent;
-  border: none;
-  color: #ff8a8a;
+.pv-cover-edit {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: $pv-text;
+  font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
-}
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
 
-/* dragging state */
-.pv-dragging {
-  opacity: 0.95;
-  transform: scale(1.02);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.6);
-}
-
-/* pressed wiggle */
-@keyframes pv-wiggle {
-  0%,100% { transform: rotate(-2deg); }
-  50% { transform: rotate(2deg); }
-}
-.pv-pressed {
-  animation: pv-wiggle 0.16s ease-in-out;
-}
-
-
-// Add these styles to your existing playlistViewer.scss
-
-.pv-header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-}
-
-.pv-edit-btn {
-  background: none;
-  border: none;
-  color: #aaa;
-  cursor: pointer;
-  padding: 6px;
-  display: flex;
-  align-items: center;
-  border-radius: 4px;
-  transition: all 0.2s;
+  .pv-cover-wrap:hover & {
+    opacity: 1;
+  }
 
   &:hover {
-    background: #333;
-    color: white;
-  }
-}
-
-.pv-edit-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-
-  input {
-    flex: 1;
-    padding: 8px 12px;
-    background: #252525;
-    border: 1px solid #444;
-    border-radius: 6px;
-    color: white;
-    font-size: 16px;
-    font-weight: 600;
-
-    &:focus {
-      outline: none;
-      border-color: #666;
-    }
-  }
-
-  button {
-    background: none;
-    border: none;
-    color: #aaa;
-    cursor: pointer;
-    padding: 6px;
-    display: flex;
-    align-items: center;
-    border-radius: 4px;
-    transition: all 0.2s;
-
-    &:hover {
-      background: #333;
-      color: white;
-    }
-
-    &.pv-edit-save:hover {
-      color: #22c55e;
-    }
-
-    &.pv-edit-cancel:hover {
-      color: #ef4444;
-    }
-  }
-}
-
-.pv-actions {
-  display: flex;
-  gap: 12px;
-  padding: 16px 20px;
-  border-bottom: 1px solid #333;
-}
-
-.pv-play-all {
-  flex: 1;
-  padding: 10px 16px;
-  background: #3b82f6;
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    background: #2563eb;
+    background: rgba(0, 0, 0, 0.9);
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 1;
+    cursor: wait;
+  }
+}
+
+.pv-hero-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.pv-type-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: $pv-text-muted;
+  margin-bottom: 8px;
+}
+
+.pv-title {
+  font-size: 36px;
+  font-weight: 800;
+  color: $pv-text;
+  margin: 0 0 8px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+
+  @media (max-width: 600px) {
+    font-size: 26px;
+  }
+}
+
+.pv-description {
+  font-size: 14px;
+  color: $pv-text-muted;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.pv-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: $pv-text-muted;
+}
+
+.pv-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  strong {
+    color: $pv-text;
+    font-weight: 600;
+  }
+}
+
+.pv-meta-dot {
+  color: $pv-text-dim;
+}
+
+.pv-vis-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  text-transform: capitalize;
+  font-size: 11px;
+}
+
+.pv-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid $pv-border;
+  border-radius: 8px;
+  color: $pv-text-muted;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: $pv-text;
+  }
+}
+
+// ─── Action bar ───
+.pv-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  border-bottom: 1px solid $pv-border;
+  background: $pv-surface;
+  flex-wrap: wrap;
+}
+
+.pv-actions-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.pv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.4;
     cursor: not-allowed;
   }
 }
 
-.pv-delete-playlist {
-  padding: 10px 16px;
-  background: #dc2626;
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.pv-btn-primary {
+  background: $pv-accent;
+  color: $pv-text;
+  border-color: $pv-accent;
 
-  &:hover {
-    background: #b91c1c;
+  &:hover:not(:disabled) {
+    background: $pv-accent-hover;
+    border-color: $pv-accent-hover;
   }
 }
 
-/* ============================================================
-   APPEND TO: playlistViewer.scss
-   New styles for community tabs, voting, activity, follow
-   ============================================================ */
+.pv-btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: $pv-text;
+  border-color: $pv-border-strong;
 
-/* Description below title */
-.pv-description {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.35);
-  margin-top: 4px;
-  line-height: 1.4;
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.22);
+  }
 }
 
-/* Follow button */
-.pv-follow-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 16px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.pv-btn-ghost {
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.15s;
+  color: $pv-text-muted;
+  border-color: $pv-border-strong;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.06);
+    color: $pv-text;
   }
 
   &.pv-following {
-    background: rgba(22, 51, 135, 0.3);
-    border-color: rgba(22, 51, 135, 0.6);
-    color: #6b8cff;
+    background: rgba(74, 125, 255, 0.15);
+    color: $pv-accent;
+    border-color: rgba(74, 125, 255, 0.4);
   }
 }
 
-/* Section tabs (Tracks | Pending | Activity) */
+// ─── Section tabs ───
 .pv-section-tabs {
   display: flex;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0 16px;
+  gap: 4px;
+  padding: 0 24px;
+  border-bottom: 1px solid $pv-border;
+  background: $pv-surface;
 }
 
 .pv-section-tab {
-  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: rgba(255, 255, 255, 0.4);
+  color: $pv-text-muted;
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
+  margin-bottom: -1px;
 
-  &:hover {
-    color: rgba(255, 255, 255, 0.7);
-  }
+  &:hover { color: $pv-text; }
 
   &.active {
-    color: #fff;
-    border-bottom-color: #6b8cff;
+    color: $pv-text;
+    border-bottom-color: $pv-accent;
   }
 }
 
-/* Loading state */
+.pv-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+// ─── Body ───
+.pv-body {
+  flex: 1;
+  overflow-y: auto;
+  background: $pv-bg;
+
+  &::-webkit-scrollbar { width: 10px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 5px;
+    border: 2px solid $pv-bg;
+
+    &:hover { background: rgba(255, 255, 255, 0.16); }
+  }
+}
+
+.pv-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+  color: $pv-text-dim;
+
+  svg { margin-bottom: 12px; opacity: 0.5; }
+  p { margin: 0 0 4px; font-size: 15px; color: $pv-text-muted; }
+  span { font-size: 13px; color: $pv-text-dim; }
+}
+
 .pv-loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
-  color: rgba(255, 255, 255, 0.4);
+  padding: 80px 20px;
+  color: $pv-text-muted;
   font-size: 14px;
 }
 
-/* Pending items styling */
-.pv-pending-item {
-  border-left: 2px solid rgba(234, 179, 8, 0.4);
+// ─── Track list ───
+.pv-list {
+  padding: 8px 0;
+}
 
-  .pv-suggested-by {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.3);
+.pv-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  cursor: pointer;
+  transition: background 0.12s;
+  user-select: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .pv-remove { opacity: 1; }
+    .pv-item-index { opacity: 0; }
+  }
+
+  &.pv-dragging {
+    opacity: 0.5;
+    background: rgba(74, 125, 255, 0.1);
   }
 }
 
-/* Vote controls */
+.pv-item-index {
+  width: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: $pv-text-dim;
+  font-variant-numeric: tabular-nums;
+  transition: opacity 0.12s;
+}
+
+.pv-grip {
+  color: $pv-text-dim;
+  cursor: grab;
+  flex-shrink: 0;
+
+  &:active { cursor: grabbing; }
+}
+
+.pv-art {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: $pv-surface;
+}
+
+.pv-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.pv-title-line {
+  font-size: 14px;
+  font-weight: 500;
+  color: $pv-text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.pv-artist-line {
+  font-size: 12px;
+  color: $pv-text-muted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pv-suggested-by {
+  color: $pv-text-dim;
+  font-size: 11px;
+}
+
+.pv-duration {
+  font-size: 12px;
+  color: $pv-text-muted;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: right;
+}
+
+.pv-remove {
+  background: none;
+  border: none;
+  color: $pv-text-dim;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: all 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    color: $pv-danger;
+    background: rgba(239, 68, 68, 0.1);
+  }
+}
+
+// ─── Pending tracks (community) ───
+.pv-pending-item {
+  border-left: 2px solid rgba(234, 179, 8, 0.5);
+}
+
 .pv-vote-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .pv-vote-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 14px;
+  border: 1px solid $pv-border-strong;
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: $pv-text-muted;
   font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.06);
-  }
-
-  span {
-    font-weight: 600;
-  }
+  &:hover { background: rgba(255, 255, 255, 0.06); }
 }
 
 .pv-vote-up:hover {
   border-color: rgba(16, 185, 129, 0.5);
-  color: #10b981;
+  color: $pv-success;
 }
 
 .pv-vote-down:hover {
   border-color: rgba(239, 68, 68, 0.5);
-  color: #ef4444;
+  color: $pv-danger;
 }
 
-/* Activity feed */
+// ─── Activity feed ───
 .pv-activity-list {
-  display: flex;
-  flex-direction: column;
+  padding: 8px 0;
 }
 
 .pv-activity-item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  gap: 12px;
+  padding: 12px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .pv-activity-icon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 12px;
+  color: $pv-text-muted;
 }
 
 .pv-activity-content {
   flex: 1;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
-  line-height: 1.4;
+  color: $pv-text-muted;
+  line-height: 1.5;
 }
 
 .pv-activity-user {
-  color: #fff;
-  font-weight: 500;
+  color: $pv-text;
+  font-weight: 600;
 }
 
 .pv-activity-action {
-  color: rgba(255, 255, 255, 0.45);
+  color: $pv-text-muted;
 }
 
 .pv-activity-song {
-  color: rgba(255, 255, 255, 0.7);
-  font-style: italic;
-}
-
-.pv-activity-details {
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 12px;
+  color: $pv-text;
 }
 
 .pv-activity-time {
@@ -463,7 +587,179 @@ $unis-blue: var(--unis-primary);
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.25);
+  color: $pv-text-dim;
   flex-shrink: 0;
-  white-space: nowrap;
+}
+
+// ─── Settings modal ───
+.pv-settings-modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  animation: pv-fade-in 0.15s ease-out;
+}
+
+.pv-settings-panel {
+  width: 90%;
+  max-width: 480px;
+  max-height: 80%;
+  background: $pv-surface-elevated;
+  border-radius: 12px;
+  border: 1px solid $pv-border-strong;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+.pv-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid $pv-border;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: $pv-text;
+  }
+
+  button {
+    background: none;
+    border: none;
+    color: $pv-text-muted;
+    cursor: pointer;
+    padding: 4px;
+    &:hover { color: $pv-text; }
+  }
+}
+
+.pv-settings-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.pv-field {
+  margin-bottom: 18px;
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: $pv-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  input, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: $pv-bg;
+    border: 1px solid $pv-border-strong;
+    border-radius: 8px;
+    color: $pv-text;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+
+    &:focus { border-color: $pv-accent; }
+    &::placeholder { color: $pv-text-dim; }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 70px;
+  }
+}
+
+.pv-vis-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pv-vis-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: $pv-bg;
+  border: 1px solid $pv-border-strong;
+  border-radius: 8px;
+  color: $pv-text;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+
+  svg { color: $pv-text-muted; flex-shrink: 0; }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &.active {
+    background: rgba(74, 125, 255, 0.1);
+    border-color: $pv-accent;
+
+    svg { color: $pv-accent; }
+  }
+}
+
+.pv-vis-name {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.pv-vis-desc {
+  font-size: 11px;
+  color: $pv-text-muted;
+}
+
+.pv-settings-divider {
+  height: 1px;
+  background: $pv-border;
+  margin: 18px 0;
+}
+
+.pv-danger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: $pv-danger;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+}
+
+.pv-settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid $pv-border;
+  background: $pv-surface;
 }
