@@ -1,7 +1,6 @@
-// src/components/PlaylistManager.jsx
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { PlayerContext } from './context/playercontext';
-import { X, Music, Users, Award, Globe, Search, Plus, Info } from 'lucide-react';
+import { X, Music, Users, Award, Globe, Search, Plus, Info, Image as ImageIcon } from 'lucide-react';
 import axiosInstance from './components/axiosInstance';
 import PlaylistViewer from './playlistViewer';
 import './playlistManager.scss';
@@ -34,14 +33,18 @@ const PlaylistManager = ({ open, onClose }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [dismissedHints, setDismissedHints] = useState({});
+
+  // Create community state
   const [showCreateCommunity, setShowCreateCommunity] = useState(false);
   const [communityName, setCommunityName] = useState('');
   const [communityDesc, setCommunityDesc] = useState('');
+  const [communityCoverFile, setCommunityCoverFile] = useState(null);
+  const [communityCoverPreview, setCommunityCoverPreview] = useState(null);
   const [creating, setCreating] = useState(false);
   const [userJurisdictionId, setUserJurisdictionId] = useState(null);
   const [userJurisdictionName, setUserJurisdictionName] = useState(null);
+  const communityCoverInputRef = useRef(null);
 
-  // Load user's jurisdiction once
   useEffect(() => {
     if (!open) return;
     const token = localStorage.getItem('token');
@@ -61,10 +64,8 @@ const PlaylistManager = ({ open, onClose }) => {
     } catch (e) {}
   }, [open]);
 
-  // Load data when tabs change
   useEffect(() => {
     if (!open) return;
-
     if (activeTab === 'community' && userJurisdictionId) {
       loadCommunityPlaylists();
     } else if (activeTab === 'official') {
@@ -112,17 +113,45 @@ const PlaylistManager = ({ open, onClose }) => {
     }
   };
 
+  const handleCommunityCoverSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Cover image must be under 5MB');
+      return;
+    }
+    setCommunityCoverFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setCommunityCoverPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
   const handleCreateCommunity = async () => {
     if (!communityName.trim() || !userJurisdictionId) return;
     setCreating(true);
     try {
+      // Upload cover first if selected
+      let coverUrl = null;
+      if (communityCoverFile) {
+        const formData = new FormData();
+        formData.append('cover', communityCoverFile);
+        const res = await axiosInstance.post('/v1/playlists/cover', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        coverUrl = res.data.coverImageUrl;
+      }
+
       await createPlaylist(communityName.trim(), 'community', {
         visibility: 'public',
         description: communityDesc.trim() || null,
         jurisdictionId: userJurisdictionId,
+        coverImageUrl: coverUrl,
       });
+
       setCommunityName('');
       setCommunityDesc('');
+      setCommunityCoverFile(null);
+      setCommunityCoverPreview(null);
       setShowCreateCommunity(false);
       await loadCommunityPlaylists();
       await refreshPlaylists();
@@ -164,9 +193,15 @@ const PlaylistManager = ({ open, onClose }) => {
     }
   };
 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  const buildUrl = (url) => {
+    if (!url) return null;
+    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  };
+
   const getCoverDisplay = (pl) => {
     if (pl.coverImageUrl) {
-      return <img src={pl.coverImageUrl} alt="" />;
+      return <img src={buildUrl(pl.coverImageUrl)} alt="" />;
     }
     const artworks = pl.firstFourArtworks || [];
     if (artworks.length >= 4) {
@@ -178,9 +213,7 @@ const PlaylistManager = ({ open, onClose }) => {
         </div>
       );
     }
-    if (artworks.length > 0) {
-      return <img src={artworks[0]} alt="" />;
-    }
+    if (artworks.length > 0) return <img src={artworks[0]} alt="" />;
     if (pl.tracks && pl.tracks.length > 0 && pl.tracks[0].artworkUrl) {
       return <img src={pl.tracks[0].artworkUrl} alt="" />;
     }
@@ -203,7 +236,6 @@ const PlaylistManager = ({ open, onClose }) => {
       <div className="pm-overlay" onClick={onClose}>
         <div className="pm-container" onClick={(e) => e.stopPropagation()}>
 
-          {/* Header */}
           <div className="pm-header">
             <h3>Playlists</h3>
             <button className="pm-close" onClick={onClose}>
@@ -211,7 +243,6 @@ const PlaylistManager = ({ open, onClose }) => {
             </button>
           </div>
 
-          {/* Tabs */}
           <div className="pm-tabs">
             {TABS.map(tab => {
               const Icon = tab.icon;
@@ -228,7 +259,6 @@ const PlaylistManager = ({ open, onClose }) => {
             })}
           </div>
 
-          {/* Contextual hint banner */}
           {!dismissedHints[activeTab] && TAB_HINTS[activeTab] && (
             <div className="pm-hint-banner">
               <Info size={14} />
@@ -239,7 +269,6 @@ const PlaylistManager = ({ open, onClose }) => {
             </div>
           )}
 
-          {/* Search */}
           {(activeTab === 'community' || activeTab === 'official' || activeTab === 'following') && (
             <div className="pm-search">
               <Search size={16} />
@@ -260,7 +289,6 @@ const PlaylistManager = ({ open, onClose }) => {
             </div>
           )}
 
-          {/* Create Community Playlist button */}
           {activeTab === 'community' && !showCreateCommunity && (
             <div className="pm-create-community-bar">
               <button className="pm-create-community-btn" onClick={() => setShowCreateCommunity(true)}>
@@ -270,7 +298,6 @@ const PlaylistManager = ({ open, onClose }) => {
             </div>
           )}
 
-          {/* Create Community form */}
           {activeTab === 'community' && showCreateCommunity && (
             <div className="pm-create-community-form">
               <input
@@ -278,7 +305,7 @@ const PlaylistManager = ({ open, onClose }) => {
                 placeholder="Playlist name (e.g. Harlem After Dark)"
                 value={communityName}
                 onChange={(e) => setCommunityName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleCreateCommunity()}
+                onKeyPress={(e) => e.key === 'Enter' && !creating && handleCreateCommunity()}
                 autoFocus
                 maxLength={100}
               />
@@ -289,8 +316,49 @@ const PlaylistManager = ({ open, onClose }) => {
                 onChange={(e) => setCommunityDesc(e.target.value)}
                 maxLength={500}
               />
+
+              {/* Cover upload */}
+              <div className="pm-cover-upload-row">
+                <input
+                  ref={communityCoverInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCommunityCoverSelect}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  className="pm-cover-btn"
+                  onClick={() => communityCoverInputRef.current?.click()}
+                >
+                  {communityCoverPreview ? (
+                    <img src={communityCoverPreview} alt="" className="pm-cover-preview" />
+                  ) : (
+                    <>
+                      <ImageIcon size={18} />
+                      <span>Add cover image</span>
+                    </>
+                  )}
+                </button>
+                {communityCoverFile && (
+                  <button
+                    type="button"
+                    className="pm-cover-clear"
+                    onClick={() => { setCommunityCoverFile(null); setCommunityCoverPreview(null); }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
               <div className="pm-create-community-actions">
-                <button onClick={() => { setShowCreateCommunity(false); setCommunityName(''); setCommunityDesc(''); }}>
+                <button onClick={() => {
+                  setShowCreateCommunity(false);
+                  setCommunityName('');
+                  setCommunityDesc('');
+                  setCommunityCoverFile(null);
+                  setCommunityCoverPreview(null);
+                }}>
                   Cancel
                 </button>
                 <button onClick={handleCreateCommunity} disabled={!communityName.trim() || creating}>
@@ -303,7 +371,6 @@ const PlaylistManager = ({ open, onClose }) => {
             </div>
           )}
 
-          {/* Body */}
           <div className="pm-body">
             {loading ? (
               <div className="pm-loading">Loading playlists...</div>
