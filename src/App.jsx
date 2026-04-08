@@ -28,7 +28,7 @@ import WinnersNotification from './winnersNotification';
 import useActivityTracker from './hooks/useActivityTracker';
 import WaitlistPage from './WaitlistPage';
 import SearchResultsPage from './pages/SearchResultsPage';
-import AdminPlaylistPage from './pages/AdminPlaylistPage';
+import AdminPlaylistPage from './admin/AdminPlaylistPage';
 
 
 
