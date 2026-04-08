@@ -84,6 +84,10 @@ const AdminDashboard = () => {
             style={{ padding: '10px 20px', background: '#163387', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
             Moderation Queue
           </button>
+          <button onClick={() => navigate('/admin/playlists')}
+            style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer' }}>
+            Official Playlists
+          </button>
           <button onClick={() => navigate('/admin/analytics')}
             style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer' }}>
             Full Analytics
