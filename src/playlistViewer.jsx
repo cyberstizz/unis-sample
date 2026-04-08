@@ -1,69 +1,74 @@
 // src/components/PlaylistViewer.jsx
-import React, { useState, useEffect, useContext } from "react";
-import { X, Trash2, GripVertical, Edit2, Check, ThumbsUp, ThumbsDown, Users, Clock, Heart } from "lucide-react";
+import React, { useState, useEffect, useContext, useRef } from "react";
+import {
+  X, Trash2, GripVertical, Edit2, Check, ThumbsUp, ThumbsDown,
+  Users, Clock, Heart, Play, SkipForward, ListPlus, Settings,
+  Lock, Globe, EyeOff, Image as ImageIcon, Music
+} from "lucide-react";
 import { PlayerContext } from "./context/playercontext";
+import axiosInstance from "./components/axiosInstance";
 import "./playlistViewer.scss";
 
 const PlaylistViewer = ({ playlistId, onClose }) => {
   const {
-    playlists, followedPlaylists,
-    removeFromPlaylist, reorderPlaylist, updatePlaylistName, deletePlaylist,
-    playMedia, loadPlaylistDetails,
-    followPlaylist, unfollowPlaylist,
-    suggestSong, voteOnSuggestion,
+    removeFromPlaylist, reorderPlaylist, updatePlaylist, deletePlaylist,
+    playMedia, playNext, playLater, loadPlaylistDetails,
+    followPlaylist, unfollowPlaylist, voteOnSuggestion,
   } = useContext(PlayerContext);
 
   const [playlistData, setPlaylistData] = useState(null);
   const [localTracks, setLocalTracks] = useState([]);
   const [pendingTracks, setPendingTracks] = useState([]);
   const [draggingId, setDraggingId] = useState(null);
-  const [pressedId, setPressedId] = useState(null);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState('');
-  const [activeSection, setActiveSection] = useState('tracks'); // 'tracks' | 'pending' | 'activity'
+  const [activeSection, setActiveSection] = useState('tracks');
   const [activities, setActivities] = useState([]);
   const [loadingDetails, setLoadingDetails] = useState(true);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  // Settings panel state
+  const [showSettings, setShowSettings] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [editedDescription, setEditedDescription] = useState('');
+  const [editedVisibility, setEditedVisibility] = useState('private');
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverInputRef = useRef(null);
 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
   const buildUrl = (url) => {
     if (!url) return null;
     return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
   };
 
-  // Load full playlist details from API
+  // Load full playlist
   useEffect(() => {
     if (!playlistId) return;
-
     const load = async () => {
       setLoadingDetails(true);
       const data = await loadPlaylistDetails(playlistId);
       if (data) {
         setPlaylistData(data);
         setEditedName(data.name);
+        setEditedDescription(data.description || '');
+        setEditedVisibility(data.visibility || 'private');
 
         const active = (data.tracks || []).filter(t => t.status === 'active' || !t.status);
         const pending = (data.tracks || []).filter(t => t.status === 'pending');
-
-        setLocalTracks(active.map(t => normalizeTrack(t)));
-        setPendingTracks(pending.map(t => normalizeTrack(t)));
+        setLocalTracks(active.map(normalizeTrack));
+        setPendingTracks(pending.map(normalizeTrack));
       }
       setLoadingDetails(false);
     };
-
     load();
   }, [playlistId]);
 
-  // Load activity feed when that tab is selected
   useEffect(() => {
-    if (activeSection === 'activity' && playlistData?.isCommunity) {
+    if (activeSection === 'activity' && playlistData?.type === 'community') {
       loadActivity();
     }
   }, [activeSection]);
 
   const loadActivity = async () => {
     try {
-      const axiosInstance = (await import('./components/axiosInstance')).default;
       const res = await axiosInstance.get(`/v1/playlists/${playlistId}/activity?page=0&size=30`);
       setActivities(res.data || []);
     } catch (err) {
@@ -105,8 +110,9 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
   const isCommunity = playlistData.type === 'community';
   const isOwner = playlistData.isOwner;
   const isFollowing = playlistData.isFollowing;
+  const playlistIdSafe = playlistData.id || playlistData.playlistId;
 
-  // --- Drag and drop ---
+  // ─── Drag-and-drop ───
   const onDragStart = (e, id) => {
     if (!isOwner) return;
     setDraggingId(id);
@@ -130,45 +136,58 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
     const originalTracks = [...localTracks];
     setDraggingId(null);
     try {
-      await reorderPlaylist(playlistData.id || playlistData.playlistId, localTracks);
+      await reorderPlaylist(playlistIdSafe, localTracks);
     } catch (error) {
       setLocalTracks(originalTracks);
     }
   };
 
-  // --- Actions ---
+  // ─── Track actions ───
   const handleRemove = async (e, track) => {
     e.stopPropagation();
     if (!track.playlistItemId || !isOwner) return;
-    if (confirm(`Remove "${track.title}" from this playlist?`)) {
-      try {
-        await removeFromPlaylist(playlistData.id || playlistData.playlistId, track.playlistItemId);
-        setLocalTracks(prev => prev.filter(t => t.playlistItemId !== track.playlistItemId));
-      } catch (error) {
-        console.error('Failed to remove track:', error);
-      }
+    if (!confirm(`Remove "${track.title}" from this playlist?`)) return;
+
+    try {
+      await removeFromPlaylist(playlistIdSafe, track.playlistItemId);
+      setLocalTracks(prev => prev.filter(t => t.playlistItemId !== track.playlistItemId));
+    } catch (error) {
+      console.error('Failed to remove track:', error);
+      alert('Failed to remove track');
     }
   };
 
   const handleSelect = (track) => {
-    setPressedId(track.id);
-    setTimeout(() => setPressedId(null), 180);
     playMedia(track, localTracks, playlistData.name);
   };
 
+  // ─── Queue actions (the new ones) ───
   const handlePlayAll = () => {
-    if (localTracks.length > 0) {
-      playMedia(localTracks[0], localTracks, playlistData.name);
-    }
+    if (localTracks.length === 0) return;
+    playMedia(localTracks[0], localTracks, playlistData.name);
   };
 
+  const handlePlayNext = () => {
+    if (localTracks.length === 0) return;
+    // Insert all tracks from this playlist after the current track, in order
+    // We loop in reverse so each playNext call inserts at currentIndex+1,
+    // pushing previous insertions down — final order matches playlist order.
+    [...localTracks].reverse().forEach(track => playNext(track));
+  };
+
+  const handleAddToQueue = () => {
+    if (localTracks.length === 0) return;
+    localTracks.forEach(track => playLater(track));
+  };
+
+  // ─── Follow ───
   const handleFollow = async () => {
     try {
       if (isFollowing) {
-        await unfollowPlaylist(playlistData.playlistId);
+        await unfollowPlaylist(playlistIdSafe);
         setPlaylistData(prev => ({ ...prev, isFollowing: false, followerCount: prev.followerCount - 1 }));
       } else {
-        await followPlaylist(playlistData.playlistId);
+        await followPlaylist(playlistIdSafe);
         setPlaylistData(prev => ({ ...prev, isFollowing: true, followerCount: prev.followerCount + 1 }));
       }
     } catch (error) {
@@ -176,20 +195,18 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
     }
   };
 
+  // ─── Voting (community) ───
   const handleVote = async (e, track, voteType) => {
     e.stopPropagation();
     try {
-      const result = await voteOnSuggestion(playlistData.playlistId, track.playlistItemId, voteType);
-      // Update the track in pending list with new vote counts
+      const result = await voteOnSuggestion(playlistIdSafe, track.playlistItemId, voteType);
       setPendingTracks(prev => prev.map(t => {
         if (t.playlistItemId === track.playlistItemId) {
           const updated = { ...t, upvotes: result.upvotes, downvotes: result.downvotes, status: result.status };
-          // If approved, move to active tracks
           if (result.status === 'active') {
             setLocalTracks(active => [...active, normalizeTrack(updated)]);
-            return null; // will be filtered out
+            return null;
           }
-          // If rejected, remove from pending
           if (result.status === 'removed') return null;
           return updated;
         }
@@ -200,31 +217,72 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
     }
   };
 
-  const handleUpdateName = async () => {
-    if (!editedName.trim() || editedName === playlistData.name) {
-      setIsEditingName(false);
+  // ─── Settings panel ───
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const updates = {};
+      if (editedName.trim() && editedName !== playlistData.name) updates.name = editedName.trim();
+      if (editedDescription !== (playlistData.description || '')) updates.description = editedDescription;
+      if (editedVisibility !== playlistData.visibility && !isCommunity) {
+        updates.visibility = editedVisibility;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updatePlaylist(playlistIdSafe, updates);
+        setPlaylistData(prev => ({ ...prev, ...updates }));
+      }
+      setShowSettings(false);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      alert('Failed to save settings');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Cover image must be under 5MB');
       return;
     }
+
+    setUploadingCover(true);
     try {
-      await updatePlaylistName(playlistData.id || playlistData.playlistId, editedName.trim());
-      setPlaylistData(prev => ({ ...prev, name: editedName.trim() }));
-      setIsEditingName(false);
+      const formData = new FormData();
+      formData.append('cover', file);
+
+      const res = await axiosInstance.post(
+        `/v1/playlists/${playlistIdSafe}/cover`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      setPlaylistData(prev => ({ ...prev, coverImageUrl: res.data.coverImageUrl }));
     } catch (error) {
-      setEditedName(playlistData.name);
+      console.error('Failed to upload cover:', error);
+      alert('Failed to upload cover image');
+    } finally {
+      setUploadingCover(false);
+      if (coverInputRef.current) coverInputRef.current.value = '';
     }
   };
 
   const handleDeletePlaylist = async () => {
-    if (confirm(`Delete playlist "${playlistData.name}"? This cannot be undone.`)) {
-      try {
-        await deletePlaylist(playlistData.id || playlistData.playlistId);
-        onClose();
-      } catch (error) {
-        console.error('Failed to delete playlist:', error);
-      }
+    if (!confirm(`Delete playlist "${playlistData.name}"? This cannot be undone.`)) return;
+    try {
+      await deletePlaylist(playlistIdSafe);
+      onClose();
+    } catch (error) {
+      console.error('Failed to delete playlist:', error);
+      alert('Failed to delete playlist');
     }
   };
 
+  // ─── Helpers ───
   const formatDuration = (d) => {
     if (!d && d !== 0) return "";
     const sec = Number(d);
@@ -245,84 +303,158 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
     return `${days}d ago`;
   };
 
-  return (
-    <div className="pv-overlay" role="dialog" aria-modal="true">
-      <div className="pv-container">
+  const getVisibilityIcon = (vis) => {
+    if (vis === 'public') return <Globe size={14} />;
+    if (vis === 'unlisted') return <EyeOff size={14} />;
+    return <Lock size={14} />;
+  };
 
-        {/* Header */}
-        <div className="pv-header">
-          <div className="pv-header-left">
-            {isEditingName && isOwner ? (
-              <div className="pv-edit-name">
-                <input
-                  type="text"
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleUpdateName()}
-                  autoFocus
-                />
-                <button onClick={handleUpdateName} className="pv-edit-save"><Check size={16} /></button>
-                <button onClick={() => { setIsEditingName(false); setEditedName(playlistData.name); }} className="pv-edit-cancel"><X size={16} /></button>
-              </div>
+  // ─── Render ───
+  return (
+    <div className="pv-overlay" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="pv-container" onClick={(e) => e.stopPropagation()}>
+
+        {/* HERO HEADER */}
+        <div className="pv-hero">
+          <div className="pv-cover-wrap">
+            {playlistData.coverImageUrl ? (
+              <img src={buildUrl(playlistData.coverImageUrl)} alt="" className="pv-cover" />
+            ) : localTracks.length > 0 && localTracks[0].artworkUrl ? (
+              <img src={localTracks[0].artworkUrl} alt="" className="pv-cover" />
             ) : (
-              <>
-                <div>
-                  <h3 className="pv-title">{playlistData.name}</h3>
-                  <p className="pv-sub">
-                    {localTracks.length} track{localTracks.length !== 1 ? 's' : ''}
-                    {playlistData.followerCount > 0 && ` · ${playlistData.followerCount} follower${playlistData.followerCount !== 1 ? 's' : ''}`}
-                    {playlistData.creatorName && !isOwner && ` · by ${playlistData.creatorName}`}
-                  </p>
-                  {playlistData.description && (
-                    <p className="pv-description">{playlistData.description}</p>
-                  )}
-                </div>
-                {isOwner && (
-                  <button className="pv-edit-btn" onClick={() => setIsEditingName(true)} title="Edit playlist name">
-                    <Edit2 size={16} />
-                  </button>
-                )}
-              </>
+              <div className="pv-cover pv-cover-placeholder">
+                <Music size={48} />
+              </div>
             )}
+            {isOwner && (
+              <button
+                className="pv-cover-edit"
+                onClick={() => coverInputRef.current?.click()}
+                disabled={uploadingCover}
+                title="Change cover image"
+              >
+                <ImageIcon size={16} />
+                {uploadingCover ? 'Uploading...' : 'Change'}
+              </button>
+            )}
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleCoverUpload}
+              style={{ display: 'none' }}
+            />
           </div>
-          <button className="pv-close-btn" onClick={onClose}><X size={20} /></button>
+
+          <div className="pv-hero-info">
+            <div className="pv-type-label">
+              {isCommunity ? 'Community Playlist' : playlistData.type === 'official' ? 'Official Playlist' : 'Playlist'}
+            </div>
+            <h1 className="pv-title">{playlistData.name}</h1>
+            {playlistData.description && (
+              <p className="pv-description">{playlistData.description}</p>
+            )}
+            <div className="pv-meta-line">
+              {playlistData.creatorName && (
+                <span className="pv-meta-item">
+                  <strong>{playlistData.creatorName}</strong>
+                </span>
+              )}
+              <span className="pv-meta-dot">•</span>
+              <span className="pv-meta-item">{localTracks.length} song{localTracks.length !== 1 ? 's' : ''}</span>
+              {playlistData.followerCount > 0 && (
+                <>
+                  <span className="pv-meta-dot">•</span>
+                  <span className="pv-meta-item">{playlistData.followerCount} follower{playlistData.followerCount !== 1 ? 's' : ''}</span>
+                </>
+              )}
+              {!isCommunity && (
+                <>
+                  <span className="pv-meta-dot">•</span>
+                  <span className="pv-meta-item pv-vis-pill">
+                    {getVisibilityIcon(playlistData.visibility)}
+                    {playlistData.visibility}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <button className="pv-close-btn" onClick={onClose} title="Close">
+            <X size={20} />
+          </button>
         </div>
 
-        {/* Actions bar */}
+        {/* ACTION BAR */}
         <div className="pv-actions">
-          <button className="pv-play-all" onClick={handlePlayAll} disabled={localTracks.length === 0}>
-            ▶ Play All
+          <button
+            className="pv-btn pv-btn-primary"
+            onClick={handlePlayAll}
+            disabled={localTracks.length === 0}
+            title="Play All — replaces current queue"
+          >
+            <Play size={16} fill="currentColor" />
+            Play All
           </button>
 
-          {/* Follow/Unfollow (for non-owners of public playlists) */}
+          <button
+            className="pv-btn pv-btn-secondary"
+            onClick={handlePlayNext}
+            disabled={localTracks.length === 0}
+            title="Play Next — adds after current song"
+          >
+            <SkipForward size={16} />
+            Play Next
+          </button>
+
+          <button
+            className="pv-btn pv-btn-secondary"
+            onClick={handleAddToQueue}
+            disabled={localTracks.length === 0}
+            title="Add to Queue — appends to end"
+          >
+            <ListPlus size={16} />
+            Add to Queue
+          </button>
+
+          <div className="pv-actions-spacer" />
+
           {!isOwner && playlistData.visibility !== 'private' && (
-            <button className={`pv-follow-btn ${isFollowing ? 'pv-following' : ''}`} onClick={handleFollow}>
+            <button
+              className={`pv-btn pv-btn-ghost ${isFollowing ? 'pv-following' : ''}`}
+              onClick={handleFollow}
+            >
               <Heart size={16} fill={isFollowing ? 'currentColor' : 'none'} />
               {isFollowing ? 'Following' : 'Follow'}
             </button>
           )}
 
           {isOwner && (
-            <button className="pv-delete-playlist" onClick={handleDeletePlaylist}>
-              <Trash2 size={16} /> Delete
+            <button
+              className="pv-btn pv-btn-ghost"
+              onClick={() => setShowSettings(true)}
+              title="Playlist settings"
+            >
+              <Settings size={16} />
+              Settings
             </button>
           )}
         </div>
 
-        {/* Section tabs (for community playlists) */}
+        {/* SECTION TABS (community only) */}
         {isCommunity && (
           <div className="pv-section-tabs">
             <button
               className={`pv-section-tab ${activeSection === 'tracks' ? 'active' : ''}`}
               onClick={() => setActiveSection('tracks')}
             >
-              Tracks ({localTracks.length})
+              Tracks <span className="pv-tab-count">{localTracks.length}</span>
             </button>
             <button
               className={`pv-section-tab ${activeSection === 'pending' ? 'active' : ''}`}
               onClick={() => setActiveSection('pending')}
             >
-              Pending ({pendingTracks.length})
+              Pending <span className="pv-tab-count">{pendingTracks.length}</span>
             </button>
             <button
               className={`pv-section-tab ${activeSection === 'activity' ? 'active' : ''}`}
@@ -333,128 +465,226 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
           </div>
         )}
 
-        {/* Body */}
+        {/* BODY */}
         <div className="pv-body">
 
-          {/* === TRACKS TAB === */}
+          {/* TRACKS */}
           {activeSection === 'tracks' && (
             <>
-              {localTracks.length === 0 && (
-                <div className="pv-empty">No tracks in this playlist yet.</div>
-              )}
-              <div className="pv-list">
-                {localTracks.map((track, idx) => (
-                  <div
-                    key={track.playlistItemId || track.id || idx}
-                    className={`pv-item ${pressedId === track.id ? "pv-pressed" : ""} ${draggingId === track.id ? "pv-dragging" : ""}`}
-                    draggable={isOwner}
-                    onDragStart={(e) => onDragStart(e, track.id)}
-                    onDragOver={(e) => onDragOver(e, track.id)}
-                    onDragEnd={onDragEnd}
-                    onClick={() => handleSelect(track)}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div className="pv-left">
-                      {isOwner && <GripVertical className="pv-grip" />}
-                      <img src={track.artworkUrl || "/assets/placeholder.jpg"} alt="" className="pv-art" />
-                    </div>
-                    <div className="pv-meta">
-                      <div className="pv-title-line">{track.title}</div>
-                      <div className="pv-artist-line">{track.artist}</div>
-                    </div>
-                    <div className="pv-right">
+              {localTracks.length === 0 ? (
+                <div className="pv-empty">
+                  <Music size={32} />
+                  <p>No tracks yet</p>
+                  <span>Add songs from the player or anywhere in Unis</span>
+                </div>
+              ) : (
+                <div className="pv-list">
+                  {localTracks.map((track, idx) => (
+                    <div
+                      key={track.playlistItemId || track.id || idx}
+                      className={`pv-item ${draggingId === track.id ? "pv-dragging" : ""}`}
+                      draggable={isOwner}
+                      onDragStart={(e) => onDragStart(e, track.id)}
+                      onDragOver={(e) => onDragOver(e, track.id)}
+                      onDragEnd={onDragEnd}
+                      onClick={() => handleSelect(track)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className="pv-item-index">{idx + 1}</div>
+                      {isOwner && <GripVertical className="pv-grip" size={16} />}
+                      <img
+                        src={track.artworkUrl || "/assets/placeholder.jpg"}
+                        alt=""
+                        className="pv-art"
+                      />
+                      <div className="pv-meta">
+                        <div className="pv-title-line">{track.title}</div>
+                        <div className="pv-artist-line">{track.artist}</div>
+                      </div>
                       <div className="pv-duration">{formatDuration(track.duration)}</div>
                       {isOwner && (
-                        <button className="pv-remove" onClick={(e) => handleRemove(e, track)} title="Remove track">
+                        <button
+                          className="pv-remove"
+                          onClick={(e) => handleRemove(e, track)}
+                          title="Remove from playlist"
+                        >
                           <Trash2 size={16} />
                         </button>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
-          {/* === PENDING TAB (Community only) === */}
+          {/* PENDING */}
           {activeSection === 'pending' && isCommunity && (
             <>
-              {pendingTracks.length === 0 && (
-                <div className="pv-empty">No pending suggestions.</div>
-              )}
-              <div className="pv-list">
-                {pendingTracks.map((track, idx) => (
-                  <div key={track.playlistItemId || idx} className="pv-item pv-pending-item">
-                    <div className="pv-left">
+              {pendingTracks.length === 0 ? (
+                <div className="pv-empty">
+                  <p>No pending suggestions</p>
+                  <span>Suggest songs from the player to add them here for community vote</span>
+                </div>
+              ) : (
+                <div className="pv-list">
+                  {pendingTracks.map((track) => (
+                    <div key={track.playlistItemId} className="pv-item pv-pending-item">
                       <img src={track.artworkUrl || "/assets/placeholder.jpg"} alt="" className="pv-art" />
-                    </div>
-                    <div className="pv-meta">
-                      <div className="pv-title-line">{track.title}</div>
-                      <div className="pv-artist-line">
-                        {track.artist}
-                        {track.addedByUsername && (
-                          <span className="pv-suggested-by"> · suggested by {track.addedByUsername}</span>
-                        )}
+                      <div className="pv-meta">
+                        <div className="pv-title-line">{track.title}</div>
+                        <div className="pv-artist-line">
+                          {track.artist}
+                          {track.addedByUsername && (
+                            <span className="pv-suggested-by"> · suggested by {track.addedByUsername}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="pv-vote-controls">
+                        <button className="pv-vote-btn pv-vote-up" onClick={(e) => handleVote(e, track, 'up')}>
+                          <ThumbsUp size={14} />
+                          <span>{track.upvotes}</span>
+                        </button>
+                        <button className="pv-vote-btn pv-vote-down" onClick={(e) => handleVote(e, track, 'down')}>
+                          <ThumbsDown size={14} />
+                          <span>{track.downvotes}</span>
+                        </button>
                       </div>
                     </div>
-                    <div className="pv-right pv-vote-controls">
-                      <button className="pv-vote-btn pv-vote-up" onClick={(e) => handleVote(e, track, 'up')} title="Vote up">
-                        <ThumbsUp size={16} />
-                        <span>{track.upvotes}</span>
-                      </button>
-                      <button className="pv-vote-btn pv-vote-down" onClick={(e) => handleVote(e, track, 'down')} title="Vote down">
-                        <ThumbsDown size={16} />
-                        <span>{track.downvotes}</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
-          {/* === ACTIVITY TAB (Community only) === */}
+          {/* ACTIVITY */}
           {activeSection === 'activity' && isCommunity && (
             <>
-              {activities.length === 0 && (
-                <div className="pv-empty">No activity yet.</div>
+              {activities.length === 0 ? (
+                <div className="pv-empty"><p>No activity yet</p></div>
+              ) : (
+                <div className="pv-activity-list">
+                  {activities.map((act) => (
+                    <div key={act.activityId} className="pv-activity-item">
+                      <div className="pv-activity-icon">
+                        {act.actionType.includes('voted_up') && <ThumbsUp size={12} />}
+                        {act.actionType.includes('voted_down') && <ThumbsDown size={12} />}
+                        {act.actionType.includes('added') && <span>+</span>}
+                        {act.actionType.includes('removed') && <Trash2 size={12} />}
+                        {act.actionType.includes('approved') && <Check size={12} />}
+                        {act.actionType.includes('created') && <Users size={12} />}
+                        {act.actionType.includes('renamed') && <Edit2 size={12} />}
+                      </div>
+                      <div className="pv-activity-content">
+                        <span className="pv-activity-user">{act.username}</span>{' '}
+                        <span className="pv-activity-action">{act.actionType.replace(/_/g, ' ')}</span>
+                        {act.songTitle && <span className="pv-activity-song"> — "{act.songTitle}"</span>}
+                      </div>
+                      <div className="pv-activity-time">
+                        <Clock size={11} />
+                        {formatTimeAgo(act.createdAt)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
-              <div className="pv-activity-list">
-                {activities.map((act) => (
-                  <div key={act.activityId} className="pv-activity-item">
-                    <div className="pv-activity-icon">
-                      {act.actionType.includes('voted_up') && <ThumbsUp size={14} />}
-                      {act.actionType.includes('voted_down') && <ThumbsDown size={14} />}
-                      {act.actionType.includes('added') && <span>+</span>}
-                      {act.actionType.includes('removed') && <Trash2 size={14} />}
-                      {act.actionType.includes('approved') && <Check size={14} />}
-                      {act.actionType.includes('created') && <Users size={14} />}
-                      {act.actionType.includes('renamed') && <Edit2 size={14} />}
-                    </div>
-                    <div className="pv-activity-content">
-                      <span className="pv-activity-user">{act.username}</span>
-                      {' '}
-                      <span className="pv-activity-action">
-                        {act.actionType.replace(/_/g, ' ')}
-                      </span>
-                      {act.songTitle && (
-                        <span className="pv-activity-song"> — "{act.songTitle}"</span>
-                      )}
-                      {act.details && (
-                        <span className="pv-activity-details"> ({act.details})</span>
-                      )}
-                    </div>
-                    <div className="pv-activity-time">
-                      <Clock size={12} />
-                      {formatTimeAgo(act.createdAt)}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </>
           )}
         </div>
+
+        {/* SETTINGS MODAL (owner only) */}
+        {showSettings && isOwner && (
+          <div className="pv-settings-modal" onClick={() => setShowSettings(false)}>
+            <div className="pv-settings-panel" onClick={(e) => e.stopPropagation()}>
+              <div className="pv-settings-header">
+                <h3>Playlist Settings</h3>
+                <button onClick={() => setShowSettings(false)}><X size={18} /></button>
+              </div>
+
+              <div className="pv-settings-body">
+                <div className="pv-field">
+                  <label>Name</label>
+                  <input
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    maxLength={100}
+                  />
+                </div>
+
+                <div className="pv-field">
+                  <label>Description</label>
+                  <textarea
+                    value={editedDescription}
+                    onChange={(e) => setEditedDescription(e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                    placeholder="What's this playlist about?"
+                  />
+                </div>
+
+                {!isCommunity && (
+                  <div className="pv-field">
+                    <label>Visibility</label>
+                    <div className="pv-vis-options">
+                      <button
+                        className={`pv-vis-option ${editedVisibility === 'private' ? 'active' : ''}`}
+                        onClick={() => setEditedVisibility('private')}
+                      >
+                        <Lock size={16} />
+                        <div>
+                          <div className="pv-vis-name">Private</div>
+                          <div className="pv-vis-desc">Only you can see it</div>
+                        </div>
+                      </button>
+                      <button
+                        className={`pv-vis-option ${editedVisibility === 'unlisted' ? 'active' : ''}`}
+                        onClick={() => setEditedVisibility('unlisted')}
+                      >
+                        <EyeOff size={16} />
+                        <div>
+                          <div className="pv-vis-name">Unlisted</div>
+                          <div className="pv-vis-desc">Anyone with the link</div>
+                        </div>
+                      </button>
+                      <button
+                        className={`pv-vis-option ${editedVisibility === 'public' ? 'active' : ''}`}
+                        onClick={() => setEditedVisibility('public')}
+                      >
+                        <Globe size={16} />
+                        <div>
+                          <div className="pv-vis-name">Public</div>
+                          <div className="pv-vis-desc">Discoverable by everyone</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pv-settings-divider" />
+
+                <button className="pv-danger-btn" onClick={handleDeletePlaylist}>
+                  <Trash2 size={16} />
+                  Delete this playlist
+                </button>
+              </div>
+
+              <div className="pv-settings-footer">
+                <button className="pv-btn pv-btn-ghost" onClick={() => setShowSettings(false)}>
+                  Cancel
+                </button>
+                <button
+                  className="pv-btn pv-btn-primary"
+                  onClick={handleSaveSettings}
+                  disabled={savingSettings}
+                >
+                  {savingSettings ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
