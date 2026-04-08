@@ -1,6 +1,10 @@
+// src/components/PlaylistManager.jsx
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { PlayerContext } from './context/playercontext';
-import { X, Music, Users, Award, Globe, Search, Plus, Info, Image as ImageIcon } from 'lucide-react';
+import {
+  X, Music, Users, Award, Globe, Search, Plus, Info,
+  Image as ImageIcon, Lock, EyeOff
+} from 'lucide-react';
 import axiosInstance from './components/axiosInstance';
 import PlaylistViewer from './playlistViewer';
 import './playlistManager.scss';
@@ -34,13 +38,22 @@ const PlaylistManager = ({ open, onClose }) => {
   const [isSearching, setIsSearching] = useState(false);
   const [dismissedHints, setDismissedHints] = useState({});
 
-  // Create community state
+  // ═══ Personal playlist create state ═══
+  const [showCreatePersonal, setShowCreatePersonal] = useState(false);
+  const [personalName, setPersonalName] = useState('');
+  const [personalVisibility, setPersonalVisibility] = useState('private');
+  const [personalCoverFile, setPersonalCoverFile] = useState(null);
+  const [personalCoverPreview, setPersonalCoverPreview] = useState(null);
+  const [creatingPersonal, setCreatingPersonal] = useState(false);
+  const personalCoverInputRef = useRef(null);
+
+  // ═══ Community playlist create state ═══
   const [showCreateCommunity, setShowCreateCommunity] = useState(false);
   const [communityName, setCommunityName] = useState('');
   const [communityDesc, setCommunityDesc] = useState('');
   const [communityCoverFile, setCommunityCoverFile] = useState(null);
   const [communityCoverPreview, setCommunityCoverPreview] = useState(null);
-  const [creating, setCreating] = useState(false);
+  const [creatingCommunity, setCreatingCommunity] = useState(false);
   const [userJurisdictionId, setUserJurisdictionId] = useState(null);
   const [userJurisdictionName, setUserJurisdictionName] = useState(null);
   const communityCoverInputRef = useRef(null);
@@ -113,6 +126,53 @@ const PlaylistManager = ({ open, onClose }) => {
     }
   };
 
+  // ─── Personal playlist create ───
+  const handlePersonalCoverSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Cover image must be under 5MB');
+      return;
+    }
+    setPersonalCoverFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setPersonalCoverPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleCreatePersonal = async () => {
+    if (!personalName.trim()) return;
+    setCreatingPersonal(true);
+    try {
+      let coverUrl = null;
+      if (personalCoverFile) {
+        const formData = new FormData();
+        formData.append('cover', personalCoverFile);
+        // No manual Content-Type — axios sets it with the multipart boundary
+        const res = await axiosInstance.post('/v1/playlists/cover', formData);
+        coverUrl = res.data.coverImageUrl;
+      }
+
+      await createPlaylist(personalName.trim(), 'personal', {
+        visibility: personalVisibility,
+        coverImageUrl: coverUrl,
+      });
+
+      // Reset form
+      setPersonalName('');
+      setPersonalVisibility('private');
+      setPersonalCoverFile(null);
+      setPersonalCoverPreview(null);
+      setShowCreatePersonal(false);
+    } catch (error) {
+      console.error('Failed to create playlist:', error);
+      alert('Failed to create playlist');
+    } finally {
+      setCreatingPersonal(false);
+    }
+  };
+
+  // ─── Community playlist create ───
   const handleCommunityCoverSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -128,16 +188,13 @@ const PlaylistManager = ({ open, onClose }) => {
 
   const handleCreateCommunity = async () => {
     if (!communityName.trim() || !userJurisdictionId) return;
-    setCreating(true);
+    setCreatingCommunity(true);
     try {
-      // Upload cover first if selected
       let coverUrl = null;
       if (communityCoverFile) {
         const formData = new FormData();
         formData.append('cover', communityCoverFile);
-        const res = await axiosInstance.post('/v1/playlists/cover', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const res = await axiosInstance.post('/v1/playlists/cover', formData);
         coverUrl = res.data.coverImageUrl;
       }
 
@@ -159,7 +216,7 @@ const PlaylistManager = ({ open, onClose }) => {
       console.error('Failed to create community playlist:', error);
       alert('Failed to create community playlist');
     } finally {
-      setCreating(false);
+      setCreatingCommunity(false);
     }
   };
 
@@ -185,7 +242,7 @@ const PlaylistManager = ({ open, onClose }) => {
   const getEmptyMessage = () => {
     if (isSearching) return 'No playlists found';
     switch (activeTab) {
-      case 'mine': return 'No playlists yet. Click the + button on the player to create one!';
+      case 'mine': return 'No playlists yet. Use the button above to create your first one!';
       case 'following': return "You're not following any playlists yet. Browse Community or Official playlists and hit Follow!";
       case 'community': return 'No community playlists in your area yet. Be the first to create one!';
       case 'official': return 'Official playlists coming soon.';
@@ -201,7 +258,19 @@ const PlaylistManager = ({ open, onClose }) => {
 
   const getCoverDisplay = (pl) => {
     if (pl.coverImageUrl) {
-      return <img src={buildUrl(pl.coverImageUrl)} alt="" />;
+      return (
+        <img
+          src={buildUrl(pl.coverImageUrl)}
+          alt=""
+          onError={(e) => {
+            // Hide the broken image, show the music placeholder parent
+            e.target.style.display = 'none';
+            if (e.target.parentElement) {
+              e.target.parentElement.classList.add('pm-card-fallback');
+            }
+          }}
+        />
+      );
     }
     const artworks = pl.firstFourArtworks || [];
     if (artworks.length >= 4) {
@@ -239,7 +308,7 @@ const PlaylistManager = ({ open, onClose }) => {
           <div className="pm-header">
             <h3>Playlists</h3>
             <button className="pm-close" onClick={onClose}>
-              <X size={20} />
+              <X size={20} strokeWidth={2.5} />
             </button>
           </div>
 
@@ -289,6 +358,109 @@ const PlaylistManager = ({ open, onClose }) => {
             </div>
           )}
 
+          {/* ════════════════════════════════════════════════════ */}
+          {/*   MY PLAYLISTS — Create Personal Playlist               */}
+          {/* ════════════════════════════════════════════════════ */}
+          {activeTab === 'mine' && !showCreatePersonal && (
+            <div className="pm-create-community-bar">
+              <button className="pm-create-community-btn" onClick={() => setShowCreatePersonal(true)}>
+                <Plus size={16} />
+                Create New Playlist
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'mine' && showCreatePersonal && (
+            <div className="pm-create-community-form">
+              <input
+                type="text"
+                placeholder="Playlist name (e.g. Late Night Vibes)"
+                value={personalName}
+                onChange={(e) => setPersonalName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && !creatingPersonal && handleCreatePersonal()}
+                autoFocus
+                maxLength={100}
+              />
+
+              {/* Cover upload */}
+              <div className="pm-cover-upload-row">
+                <input
+                  ref={personalCoverInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePersonalCoverSelect}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  className="pm-cover-btn"
+                  onClick={() => personalCoverInputRef.current?.click()}
+                >
+                  {personalCoverPreview ? (
+                    <img src={personalCoverPreview} alt="" className="pm-cover-preview" />
+                  ) : (
+                    <>
+                      <ImageIcon size={18} />
+                      <span>Add cover image</span>
+                    </>
+                  )}
+                </button>
+                {personalCoverFile && (
+                  <button
+                    type="button"
+                    className="pm-cover-clear"
+                    onClick={() => { setPersonalCoverFile(null); setPersonalCoverPreview(null); }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Visibility toggle */}
+              <div className="pm-vis-toggle">
+                <button
+                  type="button"
+                  className={`pm-vis-pill ${personalVisibility === 'private' ? 'active' : ''}`}
+                  onClick={() => setPersonalVisibility('private')}
+                >
+                  <Lock size={12} /> Private
+                </button>
+                <button
+                  type="button"
+                  className={`pm-vis-pill ${personalVisibility === 'unlisted' ? 'active' : ''}`}
+                  onClick={() => setPersonalVisibility('unlisted')}
+                >
+                  <EyeOff size={12} /> Unlisted
+                </button>
+                <button
+                  type="button"
+                  className={`pm-vis-pill ${personalVisibility === 'public' ? 'active' : ''}`}
+                  onClick={() => setPersonalVisibility('public')}
+                >
+                  <Globe size={12} /> Public
+                </button>
+              </div>
+
+              <div className="pm-create-community-actions">
+                <button onClick={() => {
+                  setShowCreatePersonal(false);
+                  setPersonalName('');
+                  setPersonalVisibility('private');
+                  setPersonalCoverFile(null);
+                  setPersonalCoverPreview(null);
+                }}>
+                  Cancel
+                </button>
+                <button onClick={handleCreatePersonal} disabled={!personalName.trim() || creatingPersonal}>
+                  {creatingPersonal ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════ */}
+          {/*   COMMUNITY — Create Community Playlist                 */}
+          {/* ════════════════════════════════════════════════════ */}
           {activeTab === 'community' && !showCreateCommunity && (
             <div className="pm-create-community-bar">
               <button className="pm-create-community-btn" onClick={() => setShowCreateCommunity(true)}>
@@ -305,7 +477,7 @@ const PlaylistManager = ({ open, onClose }) => {
                 placeholder="Playlist name (e.g. Harlem After Dark)"
                 value={communityName}
                 onChange={(e) => setCommunityName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !creating && handleCreateCommunity()}
+                onKeyPress={(e) => e.key === 'Enter' && !creatingCommunity && handleCreateCommunity()}
                 autoFocus
                 maxLength={100}
               />
@@ -317,7 +489,6 @@ const PlaylistManager = ({ open, onClose }) => {
                 maxLength={500}
               />
 
-              {/* Cover upload */}
               <div className="pm-cover-upload-row">
                 <input
                   ref={communityCoverInputRef}
@@ -361,8 +532,8 @@ const PlaylistManager = ({ open, onClose }) => {
                 }}>
                   Cancel
                 </button>
-                <button onClick={handleCreateCommunity} disabled={!communityName.trim() || creating}>
-                  {creating ? 'Creating...' : 'Create'}
+                <button onClick={handleCreateCommunity} disabled={!communityName.trim() || creatingCommunity}>
+                  {creatingCommunity ? 'Creating...' : 'Create'}
                 </button>
               </div>
               <p className="pm-create-community-note">
