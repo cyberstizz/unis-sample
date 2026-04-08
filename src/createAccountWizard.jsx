@@ -1220,7 +1220,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
               <div className="alert-content">
                 <div className="alert-title">Don't have a code?</div>
                 <div className="alert-message">
-                  <strong>Find a Unis User and ask them for a their referral code</strong>
+                  <strong>Find a Unis User and ask them for their referral code</strong>
                 </div>
               </div>
             </div>
