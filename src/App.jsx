@@ -28,6 +28,8 @@ import WinnersNotification from './winnersNotification';
 import useActivityTracker from './hooks/useActivityTracker';
 import WaitlistPage from './WaitlistPage';
 import SearchResultsPage from './pages/SearchResultsPage';
+import AdminPlaylistPage from './pages/AdminPlaylistPage';
+
 
 
 
@@ -87,6 +89,7 @@ const AppLayout = () => {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/moderation" element={<ModerationQueue />} />
           <Route path="/admin/analytics" element={<AnalyticsPage />} />
+          <Route path="/admin/playlists" element={<AdminPlaylistPage />} />
         </Route>
 
         {/* Admin routes — admin + super admin */}

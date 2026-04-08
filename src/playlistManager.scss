@@ -402,3 +402,57 @@ $unis-blue: var(--unis-primary);
   justify-content: center;
   line-height: 1;
 }
+
+.pm-cover-upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+ 
+.pm-cover-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  background: #0a0a0c;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  overflow: hidden;
+  position: relative;
+  min-height: 56px;
+ 
+  &:hover {
+    border-color: rgba(74, 125, 255, 0.5);
+    color: rgba(255, 255, 255, 0.8);
+  }
+}
+ 
+.pm-cover-preview {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+}
+ 
+.pm-cover-clear {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #ef4444;
+  cursor: pointer;
+  flex-shrink: 0;
+ 
+  &:hover { background: rgba(239, 68, 68, 0.2); }
+}
