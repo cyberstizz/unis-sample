@@ -53,18 +53,15 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
     setCreating(true);
 
     try {
-      // If a cover was selected, upload it first to get the URL
       let coverUrl = null;
       if (coverFile) {
         const formData = new FormData();
         formData.append('cover', coverFile);
-        const res = await axiosInstance.post('/v1/playlists/cover', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        // No manual Content-Type — axios handles the multipart boundary
+        const res = await axiosInstance.post('/v1/playlists/cover', formData);
         coverUrl = res.data.coverImageUrl;
       }
 
-      // Create the playlist with the cover URL (if any)
       await createPlaylist(newPlaylistName.trim(), 'personal', {
         visibility: newVisibility,
         coverImageUrl: coverUrl,
@@ -144,7 +141,9 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
 
         <div className="pw-header">
           <h3>Add to...</h3>
-          <button className="pw-close" onClick={onClose}><X size={20} /></button>
+          <button className="pw-close" onClick={onClose}>
+            <X size={20} strokeWidth={2.5} />
+          </button>
         </div>
 
         {successMessage && (
@@ -201,7 +200,6 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
               <div className="pw-loading">Loading playlists...</div>
             ) : (
               <>
-                {/* Create new playlist form */}
                 {showCreateForm && (
                   <div className="pw-create-form">
                     <input
@@ -214,7 +212,6 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
                       maxLength={100}
                     />
 
-                    {/* Cover image upload */}
                     <div className="pw-cover-upload">
                       <input
                         ref={coverInputRef}
@@ -248,7 +245,6 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
                       )}
                     </div>
 
-                    {/* Visibility toggle */}
                     <div className="pw-vis-toggle">
                       <button
                         type="button"
