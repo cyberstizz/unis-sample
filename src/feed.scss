@@ -135,7 +135,7 @@ $text-gray: #A9A9A9;
     border-color: rgba(255, 255, 255, 0.1);
 
     .ghost-select-arrow {
-      opacity: 0.6;
+      opacity: 0.8;
     }
   }
 }
@@ -180,6 +180,7 @@ $text-gray: #A9A9A9;
 // ═══════════════════════════════════════
 .hero-banner {
   position: relative;
+  padding: 1px;
   border-radius: $radius-lg;
   overflow: hidden;
   margin-bottom: 40px;
