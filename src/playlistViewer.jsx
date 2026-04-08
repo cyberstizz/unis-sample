@@ -23,6 +23,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
   const [activeSection, setActiveSection] = useState('tracks');
   const [activities, setActivities] = useState([]);
   const [loadingDetails, setLoadingDetails] = useState(true);
+  const [coverError, setCoverError] = useState(false);
 
   // Settings panel state
   const [showSettings, setShowSettings] = useState(false);
@@ -39,9 +40,9 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
     return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
   };
 
-  // Load full playlist
   useEffect(() => {
     if (!playlistId) return;
+    setCoverError(false);
     const load = async () => {
       setLoadingDetails(true);
       const data = await loadPlaylistDetails(playlistId);
@@ -108,8 +109,17 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
   if (!playlistData) return null;
 
   const isCommunity = playlistData.type === 'community';
-  const isOwner = playlistData.isOwner;
-  const isFollowing = playlistData.isFollowing;
+
+  // ══════════════════════════════════════════════════════════════════════
+  // JACKSON COMPATIBILITY FIX
+  // Jackson's default naming strategy strips the "is" prefix from boolean
+  // getters, so the backend sends `{"owner": true, "following": false}`
+  // not `{"isOwner": true, "isFollowing": false}`. We read both forms with
+  // a fallback so this works regardless of how the backend serializes.
+  // ══════════════════════════════════════════════════════════════════════
+  const isOwner = playlistData.isOwner ?? playlistData.owner ?? false;
+  const isFollowing = playlistData.isFollowing ?? playlistData.following ?? false;
+
   const playlistIdSafe = playlistData.id || playlistData.playlistId;
 
   // ─── Drag-and-drop ───
@@ -161,7 +171,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
     playMedia(track, localTracks, playlistData.name);
   };
 
-  // ─── Queue actions (the new ones) ───
+  // ─── Queue actions ───
   const handlePlayAll = () => {
     if (localTracks.length === 0) return;
     playMedia(localTracks[0], localTracks, playlistData.name);
@@ -169,9 +179,6 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
 
   const handlePlayNext = () => {
     if (localTracks.length === 0) return;
-    // Insert all tracks from this playlist after the current track, in order
-    // We loop in reverse so each playNext call inserts at currentIndex+1,
-    // pushing previous insertions down — final order matches playlist order.
     [...localTracks].reverse().forEach(track => playNext(track));
   };
 
@@ -185,10 +192,20 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
     try {
       if (isFollowing) {
         await unfollowPlaylist(playlistIdSafe);
-        setPlaylistData(prev => ({ ...prev, isFollowing: false, followerCount: prev.followerCount - 1 }));
+        setPlaylistData(prev => ({
+          ...prev,
+          isFollowing: false,
+          following: false,
+          followerCount: prev.followerCount - 1
+        }));
       } else {
         await followPlaylist(playlistIdSafe);
-        setPlaylistData(prev => ({ ...prev, isFollowing: true, followerCount: prev.followerCount + 1 }));
+        setPlaylistData(prev => ({
+          ...prev,
+          isFollowing: true,
+          following: true,
+          followerCount: prev.followerCount + 1
+        }));
       }
     } catch (error) {
       console.error('Follow/unfollow failed:', error);
@@ -244,7 +261,6 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
   const handleCoverUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > 5 * 1024 * 1024) {
       alert('Cover image must be under 5MB');
       return;
@@ -255,12 +271,15 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
       const formData = new FormData();
       formData.append('cover', file);
 
+      // IMPORTANT: Do NOT manually set Content-Type here. Axios will set it
+      // with the correct multipart boundary automatically. Setting it
+      // manually strips the boundary and Spring can't parse the request.
       const res = await axiosInstance.post(
         `/v1/playlists/${playlistIdSafe}/cover`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        formData
       );
 
+      setCoverError(false);
       setPlaylistData(prev => ({ ...prev, coverImageUrl: res.data.coverImageUrl }));
     } catch (error) {
       console.error('Failed to upload cover:', error);
@@ -283,10 +302,18 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
   };
 
   // ─── Helpers ───
+  // ══════════════════════════════════════════════════════════════════════
+  // DURATION FORMATTING FIX
+  // The backend's Song entity stores duration in milliseconds, not seconds.
+  // A typical song shows up as something like 191410 (ms). The old formatter
+  // treated it as seconds, giving "3190:10". We auto-detect: any value over
+  // 1 hour (3600 seconds) is assumed to actually be milliseconds.
+  // ══════════════════════════════════════════════════════════════════════
   const formatDuration = (d) => {
     if (!d && d !== 0) return "";
-    const sec = Number(d);
+    let sec = Number(d);
     if (isNaN(sec)) return "";
+    if (sec > 3600) sec = sec / 1000;
     const m = Math.floor(sec / 60);
     const s = Math.floor(sec % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
@@ -309,7 +336,31 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
     return <Lock size={14} />;
   };
 
-  // ─── Render ───
+  // Determine what cover to show
+  const renderCover = () => {
+    if (playlistData.coverImageUrl && !coverError) {
+      return (
+        <img
+          src={buildUrl(playlistData.coverImageUrl)}
+          alt=""
+          className="pv-cover"
+          onError={() => {
+            console.warn('[PlaylistViewer] Cover failed to load:', playlistData.coverImageUrl);
+            setCoverError(true);
+          }}
+        />
+      );
+    }
+    if (localTracks.length > 0 && localTracks[0].artworkUrl) {
+      return <img src={localTracks[0].artworkUrl} alt="" className="pv-cover" />;
+    }
+    return (
+      <div className="pv-cover pv-cover-placeholder">
+        <Music size={48} />
+      </div>
+    );
+  };
+
   return (
     <div className="pv-overlay" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="pv-container" onClick={(e) => e.stopPropagation()}>
@@ -317,15 +368,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
         {/* HERO HEADER */}
         <div className="pv-hero">
           <div className="pv-cover-wrap">
-            {playlistData.coverImageUrl ? (
-              <img src={buildUrl(playlistData.coverImageUrl)} alt="" className="pv-cover" />
-            ) : localTracks.length > 0 && localTracks[0].artworkUrl ? (
-              <img src={localTracks[0].artworkUrl} alt="" className="pv-cover" />
-            ) : (
-              <div className="pv-cover pv-cover-placeholder">
-                <Music size={48} />
-              </div>
-            )}
+            {renderCover()}
             {isOwner && (
               <button
                 className="pv-cover-edit"
@@ -333,7 +376,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
                 disabled={uploadingCover}
                 title="Change cover image"
               >
-                <ImageIcon size={16} />
+                <ImageIcon size={16} strokeWidth={2.5} />
                 {uploadingCover ? 'Uploading...' : 'Change'}
               </button>
             )}
@@ -381,7 +424,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
           </div>
 
           <button className="pv-close-btn" onClick={onClose} title="Close">
-            <X size={20} />
+            <X size={20} strokeWidth={2.5} />
           </button>
         </div>
 
@@ -468,7 +511,6 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
         {/* BODY */}
         <div className="pv-body">
 
-          {/* TRACKS */}
           {activeSection === 'tracks' && (
             <>
               {localTracks.length === 0 ? (
@@ -497,6 +539,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
                         src={track.artworkUrl || "/assets/placeholder.jpg"}
                         alt=""
                         className="pv-art"
+                        onError={(e) => { e.target.src = "/assets/placeholder.jpg"; }}
                       />
                       <div className="pv-meta">
                         <div className="pv-title-line">{track.title}</div>
@@ -509,7 +552,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
                           onClick={(e) => handleRemove(e, track)}
                           title="Remove from playlist"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={16} strokeWidth={2.5} />
                         </button>
                       )}
                     </div>
@@ -519,7 +562,6 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
             </>
           )}
 
-          {/* PENDING */}
           {activeSection === 'pending' && isCommunity && (
             <>
               {pendingTracks.length === 0 ? (
@@ -558,7 +600,6 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
             </>
           )}
 
-          {/* ACTIVITY */}
           {activeSection === 'activity' && isCommunity && (
             <>
               {activities.length === 0 ? (
@@ -593,13 +634,15 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
           )}
         </div>
 
-        {/* SETTINGS MODAL (owner only) */}
+        {/* SETTINGS MODAL */}
         {showSettings && isOwner && (
           <div className="pv-settings-modal" onClick={() => setShowSettings(false)}>
             <div className="pv-settings-panel" onClick={(e) => e.stopPropagation()}>
               <div className="pv-settings-header">
                 <h3>Playlist Settings</h3>
-                <button onClick={() => setShowSettings(false)}><X size={18} /></button>
+                <button onClick={() => setShowSettings(false)}>
+                  <X size={18} strokeWidth={2.5} />
+                </button>
               </div>
 
               <div className="pv-settings-body">
@@ -665,7 +708,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
                 <div className="pv-settings-divider" />
 
                 <button className="pv-danger-btn" onClick={handleDeletePlaylist}>
-                  <Trash2 size={16} />
+                  <Trash2 size={16} strokeWidth={2.5} />
                   Delete this playlist
                 </button>
               </div>
