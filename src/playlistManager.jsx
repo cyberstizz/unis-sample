@@ -272,14 +272,14 @@ const PlaylistManager = ({ open, onClose }) => {
       return (
         <div className="pm-card-mosaic">
           {artworks.slice(0, 4).map((url, i) => (
-            <img key={i} src={url} alt="" />
+            <img key={i} src={buildUrl(url)} alt="" />
           ))}
         </div>
       );
     }
-    if (artworks.length > 0) return <img src={artworks[0]} alt="" />;
+    if (artworks.length > 0) return <img src={buildUrl(artworks[0])} alt="" />;
     if (pl.tracks && pl.tracks.length > 0 && pl.tracks[0].artworkUrl) {
-      return <img src={pl.tracks[0].artworkUrl} alt="" />;
+      return <img src={buildUrl(pl.tracks[0].artworkUrl)} alt="" />;
     }
     return (
       <div className="pm-card-empty">
