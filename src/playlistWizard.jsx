@@ -5,6 +5,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import axiosInstance from './components/axiosInstance';
+import { buildUrl } from './utils/buildUrl';
 import './playlistWizard.scss';
 
 const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
@@ -159,7 +160,7 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
 
         <div className="pw-track-info">
           <img
-            src={selectedTrack?.artworkUrl || selectedTrack?.artwork || '/assets/placeholder.jpg'}
+            src={buildUrl(selectedTrack?.artworkUrl) || buildUrl(selectedTrack?.artwork) || '/assets/placeholder.jpg'}
             alt=""
             className="pw-artwork"
           />

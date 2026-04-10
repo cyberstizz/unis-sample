@@ -8,6 +8,7 @@ import {
 import { PlayerContext } from "./context/playercontext";
 import axiosInstance from "./components/axiosInstance";
 import "./playlistViewer.scss";
+import { buildUrl, API_BASE_URL } from './utils/buildUrl';
 
 const PlaylistViewer = ({ playlistId, onClose }) => {
   const {
@@ -34,12 +35,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-  const buildUrl = (url) => {
-    if (!url) return null;
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-  };
-
+ 
   useEffect(() => {
     if (!playlistId) return;
     setCoverError(false);

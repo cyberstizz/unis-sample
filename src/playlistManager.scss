@@ -456,3 +456,51 @@ $unis-blue: var(--unis-primary);
  
   &:hover { background: rgba(239, 68, 68, 0.2); }
 }
+
+.pm-vis-toggle {
+  display: flex;
+  gap: 6px;
+}
+ 
+.pm-vis-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 6px;
+  background: #0a0a0c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+ 
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+ 
+  &.active {
+    background: rgba(74, 125, 255, 0.15);
+    border-color: #4a7dff;
+    color: #4a7dff;
+  }
+}
+ 
+/* Fallback state when cover image fails to load */
+.pm-card-artwork.pm-card-fallback {
+  background: linear-gradient(135deg, #1f1f24, #18181c);
+ 
+  &::after {
+    content: '♪';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 48px;
+  }
+}
