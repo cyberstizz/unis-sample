@@ -7,6 +7,7 @@ import {
   Music, Plus, Search, X, Trash2, Image as ImageIcon,
   TrendingUp, ArrowLeft, Check
 } from 'lucide-react';
+import buildUrl from '../utils/buildUrl';
 import './admin.scss';
 
 const AdminPlaylistPage = () => {
@@ -37,12 +38,6 @@ const AdminPlaylistPage = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [pickerLoading, setPickerLoading] = useState(false);
-
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-  const buildUrl = (url) => {
-    if (!url) return null;
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-  };
 
   // ─── Load official playlists on mount ───
   useEffect(() => {
