@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import axiosInstance from './components/axiosInstance';
 import PlaylistViewer from './playlistViewer';
+import { buildUrl } from './utils/buildUrl';
 import './playlistManager.scss';
 
 const TABS = [
@@ -248,12 +249,6 @@ const PlaylistManager = ({ open, onClose }) => {
       case 'official': return 'Official playlists coming soon.';
       default: return 'No playlists found';
     }
-  };
-
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-  const buildUrl = (url) => {
-    if (!url) return null;
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
   };
 
   const getCoverDisplay = (pl) => {
