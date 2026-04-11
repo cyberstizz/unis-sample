@@ -13,6 +13,7 @@ import './playlistManager.scss';
 const TABS = [
   { key: 'mine', label: 'My Playlists', icon: Music },
   { key: 'following', label: 'Following', icon: Users },
+  { key: 'discover', label: 'Discover', icon: Search },
   { key: 'community', label: 'Community', icon: Globe },
   { key: 'official', label: 'Official', icon: Award },
 ];
@@ -22,6 +23,7 @@ const TAB_HINTS = {
   following: "Playlists you've followed from other users. Browse Community or Official playlists and hit Follow to save them here.",
   community: "Playlists created by and for your neighborhood. Anyone can suggest songs — the community votes on what stays.",
   official: "Curated by Unis from award winners and staff picks. Follow them to stay in the loop with the best of your area.",
+  discover: "Public playlists from users across the platform. Find new music and follow playlists you love.",
 };
 
 const PlaylistManager = ({ open, onClose }) => {
@@ -46,6 +48,7 @@ const PlaylistManager = ({ open, onClose }) => {
   const [personalCoverFile, setPersonalCoverFile] = useState(null);
   const [personalCoverPreview, setPersonalCoverPreview] = useState(null);
   const [creatingPersonal, setCreatingPersonal] = useState(false);
+  const [discoverPlaylists, setDiscoverPlaylists] = useState([]);
   const personalCoverInputRef = useRef(null);
 
   // ═══ Community playlist create state ═══
@@ -86,6 +89,8 @@ const PlaylistManager = ({ open, onClose }) => {
       loadOfficialPlaylists();
     } else if (activeTab === 'following') {
       loadFollowedPlaylists();
+    } else if (activeTab === 'discover') {
+      loadDiscoverPlaylists();
     }
   }, [activeTab, open, userJurisdictionId]);
 
@@ -109,6 +114,16 @@ const PlaylistManager = ({ open, onClose }) => {
       setOfficialPlaylists([]);
     }
   };
+
+  const loadDiscoverPlaylists = async () => {
+  try {
+    const res = await axiosInstance.get('/v1/playlists/discover');
+    setDiscoverPlaylists(res.data || []);
+  } catch (error) {
+    console.error('Failed to load discover playlists:', error);
+    setDiscoverPlaylists([]);
+  }
+};
 
   const handleSearch = async (query) => {
     setSearchQuery(query);
@@ -234,6 +249,7 @@ const PlaylistManager = ({ open, onClose }) => {
       case 'following': return followedPlaylists;
       case 'community': return communityPlaylists;
       case 'official': return officialPlaylists;
+      case 'discover': return discoverPlaylists;
       default: return [];
     }
   };
@@ -247,6 +263,7 @@ const PlaylistManager = ({ open, onClose }) => {
       case 'following': return "You're not following any playlists yet. Browse Community or Official playlists and hit Follow!";
       case 'community': return 'No community playlists in your area yet. Be the first to create one!';
       case 'official': return 'Official playlists coming soon.';
+      case 'discover': return 'No public playlists found yet.';
       default: return 'No playlists found';
     }
   };
@@ -333,7 +350,7 @@ const PlaylistManager = ({ open, onClose }) => {
             </div>
           )}
 
-          {(activeTab === 'community' || activeTab === 'official' || activeTab === 'following') && (
+          {(activeTab === 'discover' || activeTab === 'community' || activeTab === 'official' || activeTab === 'following') && (
             <div className="pm-search">
               <Search size={16} />
               <input
