@@ -2,7 +2,16 @@
 
 $text-secondary: #AAAAAA;
 $text-primary: #F1F1F1;
-$bg-dark: #212121;
+$unis-silver:#918f8f;
+$unis-blue-bright: #1d42a8;
+$bg-dark: linear-gradient(
+      90deg,
+      transparent 5%,
+      rgba($unis-silver, 0.15) 25%,
+      rgba($unis-blue-bright, 0.2) 50%,
+      rgba($unis-silver, 0.15) 75%,
+      transparent 95%
+    );
 $hover-bg: rgba(255, 255, 255, 0.1);
 $unis-blue: var(--unis-primary);
 
