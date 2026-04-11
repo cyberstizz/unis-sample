@@ -365,7 +365,7 @@ const LastWonNotification = () => {
               filter: `brightness(1.6)`
             } : undefined}
           >
-            <span className="lwn-tag-icon">{cat.icon}</span>
+            {/* <span className="lwn-tag-icon">{cat.icon}</span> */}
             <LetterReveal text={cat.badge} baseDelay={0.5} />
           </div>
 
