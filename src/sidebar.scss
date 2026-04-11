@@ -1,31 +1,34 @@
-@import url('https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double:wght@100..900&family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Delicious+Handrawn&display=swap');
+// sidebar.scss — YouTube-style modern sidebar
 
-$text-silver: #C0C0C0;
-$accent-white: #FFFFFF;
-$bg-dark: #1A1A1A;
+$text-secondary: #AAAAAA;
+$text-primary: #F1F1F1;
+$bg-dark: #0F0F0F;
+$hover-bg: rgba(255, 255, 255, 0.1);
 $unis-blue: var(--unis-primary);
-$unis-silver: #918f8f;
 
-// ─── MATCH HEADER HEIGHT ─────────────────────────────────────────
-// Header is now 88px fixed. Sidebar starts right below it.
 $header-height: 75px;
 
 .sidebar-icon {
-  display: inline-block;
-  width: 25px;
-  height: 35px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
-  margin-right: 7px;
+  margin-right: 24px;
 }
 
 .sidebar-text {
-  font-size: 23px;
-  padding-top: 2px;
-  margin-left: 3px;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-sidebar {
-  color: $unis-blue;
+  color: $text-primary;
 }
 
 .sidebar-trigger {
@@ -34,20 +37,20 @@ $header-height: 75px;
   top: 50%;
   left: 0;
   transform: translateY(-50%);
-  width: 45px;
-  height: 60px;
-  background: rgba($text-silver, 0.1);
+  width: 40px;
+  height: 52px;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 0 10px 10px 0;
   cursor: pointer;
   align-items: center;
   justify-content: center;
   z-index: 200;
-  color: $unis-blue;
+  color: $text-primary;
   transition: transform 0.3s, opacity 0.3s;
 
   .arrow-icon {
-    color: $accent-white;
-    font-size: 24px;
+    color: $text-primary;
+    font-size: 18px;
   }
 
   &.hidden {
@@ -59,41 +62,61 @@ $header-height: 75px;
 
 .sidebar {
   position: fixed;
-  font-size: 28px;
-  font-family: "Bitcount Grid Double", system-ui;
-  font-optical-sizing: auto;
-  font-weight: normal;
-  font-style: normal;
-  font-variation-settings: "slnt" 0, "CRSV" 0.5, "ELSH" 0, "ELXP" 0;
-  top: $header-height;                          // ← changed from 11vh
-  height: calc(100vh - #{$header-height});      // ← changed from calc(100vh - 11vh)
+  top: $header-height;
+  height: calc(100vh - #{$header-height});
   left: 0;
-  width: 250px;
-  background: black;
-  padding-right: 1px;
+  width: 224px;
+  background: $bg-dark;
+  padding: 12px 12px 0;
   z-index: 100;
   transition: transform 0.3s ease-in-out;
-  border-right: 0.5px solid silver;
+  border-right: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: "Roboto", "Arial", sans-serif;
+
+  // Hide scrollbar but keep scrolling
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  &:hover {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
 
   transform: translateX(0);
 
   ul {
     list-style: none;
     padding: 0;
-    margin-top: 2px;
+    margin: 0;
 
     li {
       display: flex;
       align-items: center;
-      padding: 15px 1px 8px 15px;
+      padding: 0 12px;
+      height: 40px;
       cursor: pointer;
-      border-bottom: 0.2px solid silver;
-      color: $text-silver;
-      transition: color 0.3s, background 0.3s;
+      border-bottom: none;
+      border-radius: 10px;
+      color: $text-primary;
+      font-size: 14px;
+      transition: background 0.15s;
 
       &:hover {
-        color: $unis-blue;
-        background: rgba($unis-silver, 0.1);
+        background: $hover-bg;
+      }
+
+      .sidebar-icon {
+        color: $text-primary;
+      }
+
+      &:first-child {
+        background: rgba(255, 255, 255, 0.15);
+        font-weight: 500;
+
+        .sidebar-icon,
+        .sidebar-text {
+          color: $text-primary;
+        }
       }
     }
   }
@@ -107,17 +130,18 @@ $header-height: 75px;
   height: 100vh;
   background: rgba(0, 0, 0, 0.5);
   z-index: 90;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(4px);
 }
 
 .sidebar-divider {
   height: 1px;
   background: rgba(255, 255, 255, 0.1);
-  margin: 10px 15px;
+  margin: 10px 0;
   list-style: none;
   cursor: default;
+  border-radius: 0;
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.1) !important;
   }
 }
 
@@ -145,16 +169,15 @@ $header-height: 75px;
   }
 }
 
-// Mobile: transparent shell
+// Mobile
 @media (max-width: 768px) {
   .sidebar {
-    top: 72px;                          // matches mobile header height
+    top: 72px;
     height: calc(100vh - 72px);
-    border-right-color: transparent;
-    background: transparent;
+    background: $bg-dark;
 
     ul li {
-      border-bottom-color: transparent;
+      border-bottom: none;
     }
   }
 }
