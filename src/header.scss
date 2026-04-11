@@ -80,6 +80,10 @@ $header-height: 75px;
   border-radius: 50%;
 }
 
+ .mobile-search-trigger {
+    display: none;
+  }
+
 // ─── SEARCH AREA ─────────────────────────────────────────────────
 // Flex wrapper that centers the SearchBar component.
 // All search visuals are in SearchBar.scss (usb- prefixed).
