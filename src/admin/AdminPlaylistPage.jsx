@@ -87,6 +87,14 @@ const AdminPlaylistPage = () => {
     }
   };
 
+  const normalizeSong = (song) => ({
+      ...song,
+      songId: song.songId || song.id,
+      title: song.title || song.name || 'Untitled',
+      artistName: song.artistName || song.subtitle || song.artist?.username || 'Unknown',
+      artworkUrl: song.artworkUrl || null,
+    });
+
   const handleSearch = async (q) => {
     setSearchQuery(q);
     if (!q.trim()) {
@@ -99,7 +107,7 @@ const AdminPlaylistPage = () => {
         url: `/v1/search?q=${encodeURIComponent(q.trim())}&type=song`,
         method: 'get'
       });
-      setSearchResults(res.data?.songs || res.data || []);
+      setSearchResults(res.data?.results || []);
     } catch (err) {
       console.error('Search failed:', err);
       setSearchResults([]);
@@ -659,8 +667,9 @@ const AdminPlaylistPage = () => {
                   ) : leaderboardSongs.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>No songs found</div>
                   ) : (
-                    leaderboardSongs.map(song => {
-                      const songId = song.songId || song.id;
+                    leaderboardSongs.map(raw => {
+                      const song = normalizeSong(raw);
+                      const songId = song.songId
                       const alreadyAdded = editingTracks.some(t => t.songId === songId);
                       return (
                         <div key={songId} style={{
@@ -715,7 +724,8 @@ const AdminPlaylistPage = () => {
                       {searchQuery ? 'No results' : 'Type to search'}
                     </div>
                   ) : (
-                    searchResults.map(song => {
+                    searchResults.map(raw => {
+                      const song = normalizeSong(raw);
                       const songId = song.songId || song.id;
                       const alreadyAdded = editingTracks.some(t => t.songId === songId);
                       return (
