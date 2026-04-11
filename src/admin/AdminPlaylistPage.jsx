@@ -55,6 +55,7 @@ const AdminPlaylistPage = () => {
       setLoading(false);
     }
   };
+  
 
   // ─── Load leaderboard songs when picker is shown ───
   useEffect(() => {
@@ -152,6 +153,8 @@ const AdminPlaylistPage = () => {
           coverImageUrl: coverUrl,
         }
       });
+
+      
 
       // Move into edit mode so admin can add songs immediately
       setEditingPlaylist(createRes.data);

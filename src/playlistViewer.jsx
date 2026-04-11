@@ -33,6 +33,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
   const [editedVisibility, setEditedVisibility] = useState('private');
   const [savingSettings, setSavingSettings] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [toast, setToast] = useState('');
   const coverInputRef = useRef(null);
 
  
@@ -71,6 +72,11 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
     } catch (err) {
       console.error('Failed to load activity:', err);
     }
+  };
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2000);
   };
 
   const normalizeTrack = (track) => ({
@@ -157,6 +163,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
     try {
       await removeFromPlaylist(playlistIdSafe, track.playlistItemId);
       setLocalTracks(prev => prev.filter(t => t.playlistItemId !== track.playlistItemId));
+      showToast(`Removed "${track.title}"`);
     } catch (error) {
       console.error('Failed to remove track:', error);
       alert('Failed to remove track');
@@ -171,16 +178,19 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
   const handlePlayAll = () => {
     if (localTracks.length === 0) return;
     playMedia(localTracks[0], localTracks, playlistData.name);
+    showToast('Playing all tracks');
   };
 
   const handlePlayNext = () => {
     if (localTracks.length === 0) return;
     [...localTracks].reverse().forEach(track => playNext(track));
+    showToast('Added to play next');
   };
 
   const handleAddToQueue = () => {
     if (localTracks.length === 0) return;
     localTracks.forEach(track => playLater(track));
+    showToast('Added to queue');
   };
 
   // ─── Follow ───
@@ -194,6 +204,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
           following: false,
           followerCount: prev.followerCount - 1
         }));
+        showToast(isFollowing ? 'Unfollowed' : 'Following!');
       } else {
         await followPlaylist(playlistIdSafe);
         setPlaylistData(prev => ({
@@ -245,6 +256,7 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
         await updatePlaylist(playlistIdSafe, updates);
         setPlaylistData(prev => ({ ...prev, ...updates }));
       }
+      showToast('Settings saved');
       setShowSettings(false);
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -360,6 +372,12 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
   return (
     <div className="pv-overlay" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="pv-container" onClick={(e) => e.stopPropagation()}>
+
+        {toast && (
+          <div className="pv-toast">
+            <Check size={14} /> {toast}
+          </div>
+        )}
 
         {/* HERO HEADER */}
         <div className="pv-hero">
