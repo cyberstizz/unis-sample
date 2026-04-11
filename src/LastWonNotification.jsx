@@ -94,6 +94,21 @@ const PlayIcon = () => (
   </svg>
 );
 
+  const LetterReveal = ({ text, baseDelay = 0.5 }) => (
+    <span className="lwn-tag-text">
+      {text.split('').map((ch, i) => (
+        <span
+          key={i}
+          className="lwn-tag-letter"
+          style={{ animationDelay: `${baseDelay + i * 0.045}s` }}
+        >
+          {ch === ' ' ? '\u00A0' : ch}
+        </span>
+      ))}
+    </span>
+  );
+
+
 const LastWonNotification = () => {
   const [visible, setVisible] = useState(false);
   const [notification, setNotification] = useState(null);
@@ -351,7 +366,7 @@ const LastWonNotification = () => {
             } : undefined}
           >
             <span className="lwn-tag-icon">{cat.icon}</span>
-            {cat.badge}
+            <LetterReveal text={cat.badge} baseDelay={0.5} />
           </div>
 
           {/* Date — fades in after badge */}
