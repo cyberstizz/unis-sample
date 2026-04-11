@@ -67,21 +67,14 @@ const AdminPlaylistPage = () => {
   const loadLeaderboard = async () => {
     setPickerLoading(true);
     try {
-      // Use trending or top songs endpoint — adjust to whatever your codebase uses
       const res = await apiCall({
-        url: '/v1/media/song/trending?limit=50',
+        url: '/v1/search/trending?limit=50',
         method: 'get'
       });
       setLeaderboardSongs(res.data || []);
     } catch (err) {
-      console.error('Failed to load leaderboard:', err);
-      // Fall back to a simpler endpoint if trending isn't available
-      try {
-        const fallback = await apiCall({ url: '/v1/search?q=&type=song&limit=50', method: 'get' });
-        setLeaderboardSongs(fallback.data?.songs || fallback.data || []);
-      } catch (e) {
-        setLeaderboardSongs([]);
-      }
+      console.error('Failed to load trending:', err);
+      setLeaderboardSongs([]);
     } finally {
       setPickerLoading(false);
     }
@@ -96,25 +89,26 @@ const AdminPlaylistPage = () => {
     });
 
   const handleSearch = async (q) => {
-    setSearchQuery(q);
-    if (!q.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    setSearchLoading(true);
-    try {
-      const res = await apiCall({
-        url: `/v1/search?q=${encodeURIComponent(q.trim())}&type=song`,
-        method: 'get'
-      });
-      setSearchResults(res.data?.results || []);
-    } catch (err) {
-      console.error('Search failed:', err);
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
-    }
-  };
+  setSearchQuery(q);
+  if (!q.trim()) {
+    setSearchResults([]);
+    return;
+  }
+  setSearchLoading(true);
+  try {
+    const res = await apiCall({
+      url: `/v1/search/suggestions?q=${encodeURIComponent(q.trim())}&limit=50`,
+      method: 'get'
+    });
+    // Suggestions endpoint returns { songs: [...], artists: [...], ... }
+    setSearchResults(res.data?.songs || []);
+  } catch (err) {
+    console.error('Search failed:', err);
+    setSearchResults([]);
+  } finally {
+    setSearchLoading(false);
+  }
+};
 
   // ─── Create playlist ───
   const handleCoverSelect = (e) => {
