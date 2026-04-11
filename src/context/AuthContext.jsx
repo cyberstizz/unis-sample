@@ -30,6 +30,7 @@ export const AuthProvider = ({ children }) => {
   const applyTheme = (themeName) => {
     const validated = VALID_THEMES.includes(themeName) ? themeName : 'blue';
     document.getElementById('root')?.setAttribute('data-theme', validated);
+    localStorage.setItem('unis-theme', validated); 
     setThemeState(validated);
   };
 
@@ -45,6 +46,16 @@ export const AuthProvider = ({ children }) => {
       console.error('Failed to save theme preference:', err);
     }
   };
+
+  // On mount, apply cached theme immediately (before profile loads)
+  // This prevents the blue flash on page reload/login
+  useEffect(() => {
+    const cached = localStorage.getItem('unis-theme');
+    if (cached && VALID_THEMES.includes(cached)) {
+      document.getElementById('root')?.setAttribute('data-theme', cached);
+      setThemeState(cached);
+    }
+  }, []);
 
   // On mount, check token + fetch profile
   useEffect(() => {
@@ -134,7 +145,6 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
-    applyTheme('blue');
 
     // ── Notify other contexts to clear their state on logout ──
     // Without this, the next user to log in on the same tab would briefly see
