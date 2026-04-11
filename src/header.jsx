@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import SearchBar from './components/SearchBar';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
-import { DollarSign, House, Music, Map } from 'lucide-react';
+import { DollarSign, House, Music, MapPin } from 'lucide-react';
 import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
 import logored from './assets/logo-red.png';
@@ -90,7 +90,7 @@ const Header = () => {
         );
       case "find":
         return (
-          <Map height={15} />
+          <MapPin height={15} />
           // <svg className="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
           //   <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.2" />
           //   <line x1="10" y1="10" x2="13" y2="13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
