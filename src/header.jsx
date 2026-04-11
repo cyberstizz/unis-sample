@@ -4,8 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import SearchBar from './components/SearchBar';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
-import { DollarSign, House, Music, MapPin } from 'lucide-react';
-import logoblue from './assets/unisLogoThree.svg';
+import { DollarSign, House, Music, MapPin, Search } from 'lucide-react';import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
 import logored from './assets/logo-red.png';
 import logogreen from './assets/logo-green.png';
@@ -21,6 +20,7 @@ const Header = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const menuRef = useRef(null);
 
   const handleClick = () => navigate('/voteawards');
@@ -123,6 +123,33 @@ const Header = () => {
 
         {/* Right: Nav items with icons + User */}
         <div className="header-right">
+          {/* Mobile-only search trigger */}
+          <button
+            className="mobile-search-trigger"
+            onClick={() => setMobileSearchOpen(true)}
+            aria-label="Search"
+          >
+            <Search size={18} />
+          </button>
+
+          {/* Fullscreen mobile search overlay */}
+          {mobileSearchOpen && (
+            <div className="mobile-search-overlay" onClick={(e) => {
+              if (e.target === e.currentTarget) setMobileSearchOpen(false);
+            }}>
+              <div className="mobile-search-container">
+                <SearchBar onMobileSelect={() => setMobileSearchOpen(false)} />
+                <button
+                  className="mobile-search-close"
+                  onClick={() => setMobileSearchOpen(false)}
+                  aria-label="Close search"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           <nav className="header-nav">
             {navItems.map((item) => (
               <button

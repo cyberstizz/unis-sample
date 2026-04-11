@@ -14,7 +14,7 @@ function useDebounce(value, delay) {
   return debounced;
 }
 
-const SearchBar = () => {
+const SearchBar = ({ onMobileSelect }) => {
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -94,6 +94,7 @@ const SearchBar = () => {
     setSuggestions(null);
     setFocused(false);
     inputRef.current?.blur();
+    if (onMobileSelect) onMobileSelect();
     switch (item.type) {
       case "artist": navigate(`/artist/${item.id}`); break;
       case "song": navigate(`/song/${item.id}`); break;
