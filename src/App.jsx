@@ -119,12 +119,8 @@ const AppLayout = () => {
       </Routes>
 
       {/* Only show notifications for logged-in users */}
-      {!isAuthPage && user && (
-        <>
-          <WinnersNotification />
-          <SongNotification />
-        </>
-      )}
+     {!isAuthPage && user && <WinnersNotification />}
+     {!isAuthPage && <SongNotification />}
 
       {!isAuthPage && <Player />}
     </div>
