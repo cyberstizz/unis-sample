@@ -2085,8 +2085,31 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   return (
     <div className="wizard-overlay">
       <div className="wizard-container">
-        <button className="wizard-close" onClick={onClose}><X size={24} /></button>
-        
+      <button 
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          top: '16px',
+          right: '16px',
+          width: '44px',
+          height: '44px',
+          borderRadius: '50%',
+          background: 'rgba(255, 255, 255, 0.2)',
+          border: '2px solid white',
+          color: 'white',
+          fontSize: '24px',
+          fontWeight: 'bold',
+          lineHeight: '1',
+          padding: '0',
+          cursor: 'pointer',
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        ✕
+      </button>        
         <div className="wizard-illustration" data-step={currentStep}>
           <IllustrationComponent />
         </div>

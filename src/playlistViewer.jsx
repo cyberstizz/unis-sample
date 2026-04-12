@@ -437,8 +437,31 @@ const PlaylistViewer = ({ playlistId, onClose }) => {
             </div>
           </div>
 
-          <button className="pv-close-btn" onClick={onClose} title="Close">
-            <X size={20} strokeWidth={2.5} />
+          <button 
+            onClick={onClose}
+            title="Close"
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: '2px solid white',
+              color: 'white',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              lineHeight: '1',
+              padding: '0',
+              cursor: 'pointer',
+              zIndex: 99999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ✕
           </button>
         </div>
 
