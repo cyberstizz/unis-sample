@@ -135,6 +135,26 @@
   }
 }
 
+// In Login.scss:
+.guest-browse-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 12px 0;
+  margin-top: 8px;
+  transition: color 0.2s;
+  text-align: center;
+  width: 100%;
+
+  &:hover {
+    color: rgba(255, 255, 255, 0.85);
+  }
+}
+
 /* Mobile — hide video to save bandwidth, black bg shows through */
 @media (max-width: 768px) {
   .login-bg-video {

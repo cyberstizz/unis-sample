@@ -117,6 +117,13 @@ const Login = () => {
             >
               Don't have an account? Create one
             </button>
+            <button 
+              className="guest-browse-btn"
+              onClick={() => navigate('/')}
+              type="button"
+            >
+              Browse without an account
+            </button>
           </>
         )}
 
