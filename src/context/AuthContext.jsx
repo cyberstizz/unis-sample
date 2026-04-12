@@ -14,6 +14,7 @@ const VALID_THEMES = ['blue', 'orange', 'red', 'green', 'purple', 'yellow', 'dia
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authLoaded, setAuthLoaded] = useState(false);
   const [theme, setThemeState] = useState('blue');
 
   const decodeToken = (token) => {
@@ -30,7 +31,7 @@ export const AuthProvider = ({ children }) => {
   const applyTheme = (themeName) => {
     const validated = VALID_THEMES.includes(themeName) ? themeName : 'blue';
     document.getElementById('root')?.setAttribute('data-theme', validated);
-    localStorage.setItem('unis-theme', validated); 
+    localStorage.setItem('unis-theme', validated);
     setThemeState(validated);
   };
 
@@ -57,7 +58,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // On mount, check token + fetch profile
+  // On mount, check token + fetch profile OR enter guest mode
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -86,13 +87,20 @@ export const AuthProvider = ({ children }) => {
               localStorage.removeItem('token');
             }
           })
-          .finally(() => setLoading(false));
+          .finally(() => {
+            setLoading(false);
+            setAuthLoaded(true);
+          });
       } else {
+        // Token exists but is malformed — clear it, enter guest mode
         localStorage.removeItem('token');
         setLoading(false);
+        setAuthLoaded(true);
       }
     } else {
+      // No token at all — guest mode, NOT a redirect
       setLoading(false);
+      setAuthLoaded(true);
     }
   }, []);
 
@@ -119,11 +127,9 @@ export const AuthProvider = ({ children }) => {
         }
 
         setUser(profileData);
+        setAuthLoaded(true);
 
-        // ── Notify other contexts (PlayerContext, etc.) that the user just logged in ──
-        // This is what fixes the playlist fetching race condition: PlayerContext
-        // mounted before login happened, so its initial useEffect bailed out when
-        // there was no token. This event lets it know it should fetch now.
+        // Notify other contexts (PlayerContext, etc.) that the user just logged in
         window.dispatchEvent(new CustomEvent('unis:login', {
           detail: { userId: profileData.userId }
         }));
@@ -135,8 +141,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       localStorage.removeItem('token');
       return {
-         success: false,
-         error: typeof error.response?.data === 'string' ? error.response.data : error.response?.data?.message || 'Login failed',
+        success: false,
+        error: typeof error.response?.data === 'string' ? error.response.data : error.response?.data?.message || 'Login failed',
         data: error.response?.data,
       };
     }
@@ -146,15 +152,25 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setUser(null);
 
-    // ── Notify other contexts to clear their state on logout ──
-    // Without this, the next user to log in on the same tab would briefly see
-    // the previous user's playlists until a refetch happens.
+    // Notify other contexts to clear their state on logout
     window.dispatchEvent(new CustomEvent('unis:logout'));
 
     window.location.href = '/login';
   };
 
-  const value = { user, login, logout, loading, theme, setTheme };
+  // Derived state — true when auth check is done AND there is no user
+  const isGuest = authLoaded && !user;
+
+  const value = {
+    user,
+    login,
+    logout,
+    loading,
+    authLoaded,
+    isGuest,
+    theme,
+    setTheme,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
