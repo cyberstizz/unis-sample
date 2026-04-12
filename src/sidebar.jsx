@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Vote, Search, Trophy, Settings, DollarSign, House, Music, Shield } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { PlayerContext } from './context/playercontext';
-import AuthGateSheet from './authGateSheet';
+import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);

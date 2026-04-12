@@ -6,7 +6,7 @@ import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
 import Layout from './layout';
 import ArtistCard from './artistCard';
-import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './authGateSheet';
+import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
 import randomRapper from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import song2 from './assets/sdboomin_waitedallnight.mp3';
