@@ -8,7 +8,6 @@ import AuthGateSheet from './AuthGateSheet';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { user } = useAuth();
   const { user, isGuest } = useAuth();
   const { triggerGate, gateProps } = useAuthGate();
   const { openPlaylistManager } = useContext(PlayerContext);
