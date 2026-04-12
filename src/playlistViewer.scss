@@ -229,6 +229,15 @@ $pv-success: #10b981;
     background: rgba(255, 255, 255, 0.12);
     color: $pv-text;
   }
+
+  svg {
+    stroke: currentColor !important;
+    fill: none !important;
+    stroke-width: 2.5;
+    width: 20px;
+    height: 20px;
+    display: block;
+  }
 }
 
 // ─── Action bar ───
@@ -638,6 +647,13 @@ $pv-success: #10b981;
     cursor: pointer;
     padding: 4px;
     &:hover { color: $pv-text; }
+
+    svg {
+      stroke: currentColor !important;
+      fill: none !important;
+      stroke-width: 2.5;
+      display: block;
+    }
   }
 }
 

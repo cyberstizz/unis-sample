@@ -248,6 +248,10 @@ $step-gradients: (
   svg {
     width: 24px;
     height: 24px;
+    stroke: currentColor !important;
+    fill: none !important;
+    stroke-width: 2;
+    display: block;
   }
 }
 
