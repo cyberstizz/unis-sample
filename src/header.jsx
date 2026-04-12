@@ -3,8 +3,10 @@ import "./header.scss";
 import { useNavigate, useLocation } from 'react-router-dom';
 import SearchBar from './components/SearchBar';
 import { useAuth } from './context/AuthContext';
+import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
-import { DollarSign, House, Music, MapPin, Search } from 'lucide-react';import logoblue from './assets/unisLogoThree.svg';
+import { DollarSign, House, Music, MapPin, Search } from 'lucide-react';
+import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
 import logored from './assets/logo-red.png';
 import logogreen from './assets/logo-green.png';
@@ -13,24 +15,31 @@ import logoyellow from './assets/logo-gold.png';
 import logodianna from './assets/logo-dianna.png';
 
 
-
-
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isGuest, theme } = useAuth();
+  const { triggerGate, gateProps } = useAuthGate();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const menuRef = useRef(null);
 
-  const handleClick = () => navigate('/voteawards');
-  const handleEarnings = () => navigate('/earnings');
   const handleHome = () => navigate('/');
   const handleMilestones = () => navigate('/milestones');
   const handleFind = () => navigate('/findpage');
-  const handleLogout = async () => { logout(); };
 
-  
+  // Gated nav handlers — these require auth
+  const handleClick = () => {
+    if (isGuest) { triggerGate('vote'); return; }
+    navigate('/voteawards');
+  };
+
+  const handleEarnings = () => {
+    if (isGuest) { triggerGate('earnings'); return; }
+    navigate('/earnings');
+  };
+
+  const handleLogout = async () => { logout(); };
 
   useEffect(() => {
     const handleOutside = (e) => {
@@ -42,23 +51,18 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleOutside);
   }, []);
 
-
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
   const currentPath = location.pathname;
 
   const LOGO_MAP = {
-  blue: logoblue,
-  orange: logoorange,
-  red: logored,
-  green: logogreen,
-  purple: logopurple,
-  yellow: logoyellow,
-  dianna: logodianna,
-};
+    blue: logoblue,
+    orange: logoorange,
+    red: logored,
+    green: logogreen,
+    purple: logopurple,
+    yellow: logoyellow,
+    dianna: logodianna,
+  };
 
-  // Inside your Sidebar component:
-  const { theme } = useAuth();
   const activeLogo = LOGO_MAP[theme] || logoblue;
 
   const navItems = [
@@ -89,20 +93,9 @@ const Header = () => {
           </svg>
         );
       case "find":
-        return (
-          <MapPin height={15} />
-          // <svg className="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
-          //   <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.2" />
-          //   <line x1="10" y1="10" x2="13" y2="13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-          // </svg>
-        );
+        return <MapPin height={15} />;
       case "earnings":
-        return (
-          <DollarSign height={15} />
-          // <svg className="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
-          //   <path d="M7 1V13M4 3.5H8.5C9.9 3.5 11 4.4 11 5.5C11 6.6 9.9 7.5 8.5 7.5H4M4 7.5H9C10.4 7.5 11.5 8.4 11.5 9.5C11.5 10.6 10.4 11.5 9 11.5H4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-          // </svg>
-        );
+        return <DollarSign height={15} />;
       default:
         return null;
     }
@@ -118,10 +111,10 @@ const Header = () => {
 
         {/* Center: Search */}
         <div className="header-center">
-        <SearchBar />
+          <SearchBar />
         </div>
 
-        {/* Right: Nav items with icons + User */}
+        {/* Right: Nav items + User/Guest buttons */}
         <div className="header-right">
           {/* Mobile-only search trigger */}
           <button
@@ -165,42 +158,63 @@ const Header = () => {
 
           <div className="header-divider" />
 
-          {/* User Avatar / Menu */}
-          <div className="header-user" ref={menuRef}>
-          <button
-            className="user-avatar"
-            onClick={() => setUserMenuOpen(!userMenuOpen)}
-            aria-label="User menu"
-          >
-            {buildUrl(user?.photoUrl) ? (
-              <img
-                src={buildUrl(user.photoUrl)}
-                alt="User avatar"
-                className="avatar-image"
-              />
-            ) : (
-              <span className="avatar-initial">{getInitial()}</span>
-            )}
-          </button>
-            {userMenuOpen && (
-              <div className="user-dropdown">
-                {user && (
+          {/* Authenticated: User avatar + dropdown */}
+          {user && (
+            <div className="header-user" ref={menuRef}>
+              <button
+                className="user-avatar"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                aria-label="User menu"
+              >
+                {buildUrl(user?.photoUrl) ? (
+                  <img
+                    src={buildUrl(user.photoUrl)}
+                    alt="User avatar"
+                    className="avatar-image"
+                  />
+                ) : (
+                  <span className="avatar-initial">{getInitial()}</span>
+                )}
+              </button>
+              {userMenuOpen && (
+                <div className="user-dropdown">
                   <div className="dropdown-user-info">
                     <span className="dropdown-username">{user.username}</span>
                   </div>
-                )}
-                <button className="dropdown-item" onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}>
-                  Profile
-                </button>
-                <div className="dropdown-divider" />
-                <button className="dropdown-item logout" onClick={handleLogout}>
-                  Log out
-                </button>
-              </div>
-            )}
-          </div>
+                  <button className="dropdown-item" onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}>
+                    Profile
+                  </button>
+                  <div className="dropdown-divider" />
+                  <button className="dropdown-item logout" onClick={handleLogout}>
+                    Log out
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Guest: Sign In / Sign Up buttons */}
+          {isGuest && (
+            <div className="header-guest-actions">
+              <button
+                className="header-signin-btn"
+                onClick={() => navigate('/login')}
+              >
+                Sign In
+              </button>
+              <button
+                className="header-signup-btn"
+                onClick={() => navigate('/login')}
+              >
+                Sign Up
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Auth gate bottom sheet */}
+      <AuthGateSheet {...gateProps} />
     </header>
   );
 };
