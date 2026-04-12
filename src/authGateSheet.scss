@@ -1,0 +1,373 @@
+// authGateSheet.scss — Bottom sheet auth gate with Nocturne aesthetic
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+
+// ═══════════════════════════════════════
+//  TOKENS
+// ═══════════════════════════════════════
+$text-primary: #f0f0f2;
+$text-secondary: rgba(255, 255, 255, 0.6);
+$text-tertiary: rgba(255, 255, 255, 0.35);
+$unis-blue: var(--unis-primary, #163387);
+$surface: #0e0e12;
+$surface-raised: #16161c;
+
+// ═══════════════════════════════════════
+//  BACKDROP
+// ═══════════════════════════════════════
+.ags-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  z-index: 9998;
+  transition: background 0.4s ease, backdrop-filter 0.4s ease, -webkit-backdrop-filter 0.4s ease;
+  pointer-events: none;
+
+  &.ags-backdrop-visible {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    pointer-events: auto;
+  }
+}
+
+// ═══════════════════════════════════════
+//  SHEET
+// ═══════════════════════════════════════
+.ags-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  max-height: 85vh;
+  border-radius: 24px 24px 0 0;
+  background: $surface;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  // Slide up from bottom
+  transform: translateY(100%);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.ags-sheet-visible {
+    transform: translateY(0);
+  }
+}
+
+// ── Drag handle ──
+.ags-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 12px auto 0;
+  flex-shrink: 0;
+}
+
+// ── Inner content ──
+.ags-body {
+  padding: 28px 28px 36px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+// ═══════════════════════════════════════
+//  CONTEXT ICON — the action they tried
+// ═══════════════════════════════════════
+.ags-context-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  font-size: 26px;
+  background: rgba(78, 168, 245, 0.1);
+  border: 1px solid rgba(78, 168, 245, 0.15);
+
+  // Stagger animation
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ags-sheet-visible .ags-context-icon {
+  opacity: 1;
+  transform: scale(1);
+  transition-delay: 0.15s;
+}
+
+// ═══════════════════════════════════════
+//  HEADLINE — handwritten accent + bold title
+// ═══════════════════════════════════════
+.ags-headline-accent {
+  font-family: 'Caveat', cursive;
+  font-weight: 700;
+  font-size: 20px;
+  color: #4ea8f5;
+  margin: 0 0 4px;
+  letter-spacing: 0.02em;
+
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.5s ease;
+}
+
+.ags-sheet-visible .ags-headline-accent {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.25s;
+}
+
+.ags-headline {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: $text-primary;
+  margin: 0 0 10px;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.4s ease, transform 0.5s ease;
+}
+
+.ags-sheet-visible .ags-headline {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.3s;
+}
+
+.ags-subtext {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: $text-secondary;
+  margin: 0 0 28px;
+  line-height: 1.55;
+
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s ease, transform 0.5s ease;
+}
+
+.ags-sheet-visible .ags-subtext {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.35s;
+}
+
+// ═══════════════════════════════════════
+//  VALUE PROPS — what you get
+// ═══════════════════════════════════════
+.ags-perks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.5s ease;
+}
+
+.ags-sheet-visible .ags-perks {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.4s;
+}
+
+.ags-perk {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: $surface-raised;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ags-perk-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  background: rgba(78, 168, 245, 0.08);
+}
+
+.ags-perk-text {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: $text-primary;
+  line-height: 1.35;
+
+  span {
+    display: block;
+    font-weight: 400;
+    font-size: 12px;
+    color: $text-tertiary;
+    margin-top: 2px;
+  }
+}
+
+// ═══════════════════════════════════════
+//  LISTENING STAT — "you've heard X songs"
+// ═══════════════════════════════════════
+.ags-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(78, 168, 245, 0.06);
+  border: 1px solid rgba(78, 168, 245, 0.1);
+  margin-bottom: 24px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4ea8f5;
+
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.ags-sheet-visible .ags-stat {
+  opacity: 1;
+  transition-delay: 0.45s;
+}
+
+.ags-stat-number {
+  font-size: 22px;
+  font-weight: 800;
+  color: $text-primary;
+  line-height: 1;
+}
+
+// ═══════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════
+.ags-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.5s ease;
+}
+
+.ags-sheet-visible .ags-actions {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.5s;
+}
+
+.ags-btn-primary {
+  padding: 16px 28px;
+  border-radius: 14px;
+  border: none;
+  background: $unis-blue;
+  color: white;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  letter-spacing: 0.02em;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(22, 51, 135, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.ags-btn-text {
+  padding: 14px;
+  border: none;
+  background: transparent;
+  color: $text-secondary;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s;
+  text-align: center;
+
+  &:hover {
+    color: $text-primary;
+  }
+}
+
+.ags-btn-signin {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.75);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+}
+
+// ═══════════════════════════════════════
+//  MOBILE
+// ═══════════════════════════════════════
+@media (max-width: 480px) {
+  .ags-body {
+    padding: 24px 22px 32px;
+  }
+
+  .ags-headline {
+    font-size: 22px;
+  }
+}
+
+// ═══════════════════════════════════════
+//  DESKTOP — center as a card instead
+// ═══════════════════════════════════════
+@media (min-width: 640px) {
+  .ags-sheet {
+    left: 50%;
+    right: auto;
+    bottom: 50%;
+    transform: translate(-50%, 50%) scale(0.95);
+    opacity: 0;
+    max-width: 420px;
+    width: 100%;
+    border-radius: 24px;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+
+    &.ags-sheet-visible {
+      transform: translate(-50%, 50%) scale(1);
+      opacity: 1;
+    }
+  }
+}
