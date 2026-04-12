@@ -3,7 +3,7 @@ import "./header.scss";
 import { useNavigate, useLocation } from 'react-router-dom';
 import SearchBar from './components/SearchBar';
 import { useAuth } from './context/AuthContext';
-import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
+import AuthGateSheet, { useAuthGate } from './authGateSheet';
 import { buildUrl } from './utils/buildUrl';
 import { DollarSign, House, Music, MapPin, Search } from 'lucide-react';
 import logoblue from './assets/unisLogoThree.svg';
