@@ -8,6 +8,8 @@ import { PlayerContext } from './context/playercontext';
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
+  const { user, isGuest } = useAuth();
+  const { triggerGate, gateProps } = useAuthGate();
   const { openPlaylistManager } = useContext(PlayerContext);
   const navigate = useNavigate();
 
@@ -86,11 +88,17 @@ const Sidebar = () => {
             <span className="sidebar-icon"><Trophy size={24} /></span>
             <span className="sidebar-text">Leaderboards</span>
           </li>
-          <li onClick={handleProfile}>
+          <li onClick={ () => {
+              if (isGuest) { triggerGate('profile'); return; }
+              handleProfile()
+          }}>
             <span className="sidebar-icon"><Settings size={24} /></span>
             <span className="sidebar-text">Settings</span>
           </li>
-          <li onClick={() => handleNav('/earnings')}>
+          <li onClick={() => {
+              if (isGuest) { triggerGate('earnings'); return; }
+               handleNav('/earnings')
+          }}>
             <span className="sidebar-icon"><DollarSign size={24} /></span>
             <span className="sidebar-text">Earnings</span>
           </li>
@@ -114,6 +122,7 @@ const Sidebar = () => {
       {isOpen && (
         <div className="sidebar-overlay" onClick={toggleOpen} />
       )}
+      <AuthGateSheet {...gateProps} />
     </>
   );
 };
