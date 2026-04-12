@@ -122,7 +122,7 @@ const Login = () => {
               onClick={() => navigate('/')}
               type="button"
             >
-              Browse without an account
+              Browse As A Guest
             </button>
           </>
         )}
