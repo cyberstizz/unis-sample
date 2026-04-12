@@ -6,6 +6,7 @@ import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
 import Layout from './layout';
 import ArtistCard from './artistCard';
+import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
 import randomRapper from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import song2 from './assets/sdboomin_waitedallnight.mp3';
@@ -42,10 +43,14 @@ const ACTIVE_JURISDICTIONS = [
   { id: '4b09eaa2-03bc-4778-b7c2-db8b42c9e732', name: 'Downtown Harlem' },
 ];
 
+// Default jurisdiction for guests (Harlem — launch market)
+const DEFAULT_JURISDICTION_ID = '1cf6ceb1-aae6-4113-98c0-d9fe8ad8b5e3';
+
 const Feed = () => {
   const { playMedia } = useContext(PlayerContext);
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const navigate = useNavigate();
+  const { triggerGate, gateProps } = useAuthGate();
 
   const [animate, setAnimate] = useState(false);
   const [trendingToday, setTrendingToday] = useState([]);
@@ -57,14 +62,14 @@ const Feed = () => {
   const [error, setError] = useState('');
 
   const userId = user?.userId;
-  const userJurisdictionId = user?.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000002';
+  const userJurisdictionId = user?.jurisdiction?.jurisdictionId || DEFAULT_JURISDICTION_ID;
 
   // ─── Jurisdiction selector state ───
   const [selectedJurisdictionId, setSelectedJurisdictionId] = useState(userJurisdictionId);
 
-
-  //simulated ad impression
+  // Simulated ad impression — only for logged-in users (guest ad revenue goes to Unis)
   useEffect(() => {
+    if (!userId) return;
     const trackAdView = async () => {
       try {
         await apiCall({ url: '/v1/earnings/track-view', method: 'post' });
@@ -73,9 +78,7 @@ const Feed = () => {
       }
     };
     trackAdView();
-  }, []); 
-
-
+  }, [userId]);
 
   // Update selected jurisdiction when user data loads
   useEffect(() => {
@@ -138,9 +141,10 @@ const Feed = () => {
   })), []);
 
   // Fetch feed data — fires on mount AND when jurisdiction changes
+  // No longer requires userId — guests get feed with default jurisdiction
   useEffect(() => {
     setAnimate(true);
-    if (!userId || !selectedJurisdictionId) return;
+    if (!selectedJurisdictionId) return;
 
     const fetchMediaData = async () => {
       setLoading(true);
@@ -191,7 +195,7 @@ const Feed = () => {
     };
 
     fetchMediaData();
-  }, [userId, selectedJurisdictionId, normalizeMedia]);
+  }, [selectedJurisdictionId, normalizeMedia]);
 
   const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
   const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
@@ -199,6 +203,11 @@ const Feed = () => {
   const handlePlayMedia = async (e, media) => {
     e.stopPropagation();
     
+    // Track guest listening for the AuthGateSheet nudge
+    if (isGuest) {
+      incrementGateSongCount();
+    }
+
     let playMediaObj = media;
     if (media.type === 'artist') {
       try {
@@ -224,10 +233,12 @@ const Feed = () => {
       }
     }
 
+    // Track play — backend play endpoint is public, handles missing userId gracefully
     try {
-      const endpoint = playMediaObj.type === 'song' 
-        ? `/v1/media/song/${playMediaObj.id}/play?userId=${userId}`
-        : `/v1/media/video/${playMediaObj.id}/play?userId=${userId}`;
+      const baseEndpoint = playMediaObj.type === 'song' 
+        ? `/v1/media/song/${playMediaObj.id}/play`
+        : `/v1/media/video/${playMediaObj.id}/play`;
+      const endpoint = userId ? `${baseEndpoint}?userId=${userId}` : baseEndpoint;
       await apiCall({ method: 'post', url: endpoint });
     } catch (err) {
       console.error('Failed to track play:', err);
@@ -239,6 +250,16 @@ const Feed = () => {
 
   const handleJurisdictionChange = (e) => {
     setSelectedJurisdictionId(e.target.value);
+  };
+
+  // Vote CTA — gates for guests
+  const handleVoteClick = (e) => {
+    e.stopPropagation();
+    if (isGuest) {
+      triggerGate('vote');
+      return;
+    }
+    navigate('/voteawards');
   };
 
   // ─── Ghost jurisdiction dropdown component ───
@@ -320,7 +341,7 @@ const Feed = () => {
         <main className="feed">
 
           {/* ═══════ HERO BANNER ═══════ */}
-          <div className="hero-banner" onClick={() => navigate('/voteawards')}>
+          <div className="hero-banner" onClick={handleVoteClick}>
             <div className="hero-gradient" />
             <div className="hero-particles">
               <div className="hero-particle hero-particle--1" />
@@ -333,7 +354,7 @@ const Feed = () => {
               <p className="hero-subtitle">
                 Your vote decides who tops the neighborhood leaderboard. Listen, discover, and support local artists.
               </p>
-              <button className="hero-cta" onClick={(e) => { e.stopPropagation(); navigate('/voteawards'); }}>
+              <button className="hero-cta" onClick={handleVoteClick}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
@@ -493,7 +514,11 @@ const Feed = () => {
         </main>
       </div>
 
-      <LastWonNotification />
+      {/* Only show LastWonNotification for logged-in users */}
+      {!isGuest && <LastWonNotification />}
+
+      {/* Auth gate bottom sheet — triggered when guest taps Vote */}
+      <AuthGateSheet {...gateProps} />
     </Layout>
   );
 };
