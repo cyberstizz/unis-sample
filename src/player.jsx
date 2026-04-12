@@ -1,6 +1,8 @@
 import React, { useContext, useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
+import { useAuth } from './context/AuthContext';
+import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
 import { Heart, Headphones, Vote, ChevronUp, ChevronDown, ListMusic } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
@@ -86,6 +88,9 @@ const Player = () => {
     queue,
   } = useContext(PlayerContext);
 
+  const { isGuest } = useAuth();
+  const { triggerGate, gateProps } = useAuthGate();
+
   // --- LOCAL STATE ---
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -132,7 +137,14 @@ const Player = () => {
     }
   }, []);
 
-  // 2. Fetch Like Status
+  // Track guest song count for AuthGateSheet nudge
+  useEffect(() => {
+    if (isGuest && currentMedia) {
+      incrementGateSongCount();
+    }
+  }, [currentMedia?.id, isGuest]);
+
+  // 2. Fetch Like Status — skip for guests
   useEffect(() => {
     let isMounted = true;
     if (currentMedia?.id && userId) {
@@ -238,7 +250,7 @@ const Player = () => {
 
   const handleLike = async (e) => {
     e.stopPropagation();
-    if (!userId) return alert('Please log in to like songs');
+    if (isGuest) { triggerGate('generic'); return; }
 
     const songId = currentMedia.id || currentMedia.songId;
     try {
@@ -257,7 +269,7 @@ const Player = () => {
 
   const handleVoteClick = async (e) => {
     e.stopPropagation();
-    if (!userId) return alert('Please log in to vote');
+    if (isGuest) { triggerGate('vote'); return; }
 
     const safeId = currentMedia.id || currentMedia.songId;
     const safeTitle = currentMedia.title || currentMedia.name || "Unknown Song";
@@ -312,8 +324,16 @@ const Player = () => {
     }
   };
 
+  const handleAddToPlaylist = (e) => {
+    if (e) e.stopPropagation();
+    if (isGuest) { triggerGate('generic'); return; }
+    setShowPlaylistWizard(true);
+  };
+
   const handleDownload = async (e) => {
     e.stopPropagation();
+    if (isGuest) { triggerGate('generic'); return; }
+
     const fileUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
     if (!fileUrl) return alert('Download not available');
     const artist = currentMedia.artist || 'Unknown Artist';
@@ -372,19 +392,6 @@ const Player = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // ════════════════════════════════════════════════════════════════════════
-  // CRITICAL FIX: Modals/panels are rendered OUTSIDE the currentMedia guard
-  //
-  // Previously the entire component returned null when no song was playing,
-  // which meant <PlaylistManager>, <PlaylistWizard>, <QueuePanel>, and
-  // <VotingWizard> never mounted at all. Clicking "Playlists" in the sidebar
-  // toggled state on a component that didn't exist in the DOM.
-  //
-  // Now: when there's no current media, we still render the modals so they
-  // can respond to global state changes (openPlaylistManager from sidebar,
-  // etc.) — we just skip rendering the player bar itself.
-  // ════════════════════════════════════════════════════════════════════════
-
   // Shared modal block — rendered in BOTH branches below
   const modalsAndPanels = (
     <>
@@ -402,6 +409,7 @@ const Player = () => {
         userId={userId}
         filters={specificVoteData?.filters || { selectedType: 'song' }}
       />
+      <AuthGateSheet {...gateProps} />
     </>
   );
 
@@ -464,7 +472,7 @@ const Player = () => {
                 <Vote size={20} />
                 <span className="label">Vote</span>
               </button>
-              <button onClick={() => setShowPlaylistWizard(true)} className="tray-action"><span>➕</span><span className="label">Add</span></button>
+              <button onClick={handleAddToPlaylist} className="tray-action"><span>➕</span><span className="label">Add</span></button>
               <button onClick={handleLike} className={`tray-action ${isLiked ? 'liked' : ''}`}>
                 <Heart fill={isLiked ? "white" : "none"} /><span className="label">{isLiked ? 'Liked' : 'Like'}</span>
               </button>
@@ -513,7 +521,7 @@ const Player = () => {
                 <button className="player-btn" onClick={handleNext} title="Next">
                   <NextIcon />
                 </button>
-                <button className="player-btn" onClick={() => setShowPlaylistWizard(true)} title="Add to playlist or queue">
+                <button className="player-btn" onClick={handleAddToPlaylist} title="Add to playlist or queue">
                   <PlusIcon />
                 </button>
               </div>
