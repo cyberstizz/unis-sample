@@ -20,6 +20,8 @@ export const PlayerProvider = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentMedia, setCurrentMedia] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [playChoiceModal, setPlayChoiceModal] = useState({ open: false, pendingSong: null });
+
 
   // --- Queue state (session-based, ephemeral) ---
   const [queue, setQueue] = useState([]);
