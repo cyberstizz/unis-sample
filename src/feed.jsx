@@ -47,7 +47,7 @@ const ACTIVE_JURISDICTIONS = [
 const DEFAULT_JURISDICTION_ID = '1cf6ceb1-aae6-4113-98c0-d9fe8ad8b5e3';
 
 const Feed = () => {
-  const { playMedia } = useContext(PlayerContext);
+  const { requestPlay } = useContext(PlayerContext);
   const { user, isGuest } = useAuth();
   const navigate = useNavigate();
   const { triggerGate, gateProps } = useAuthGate();
@@ -244,8 +244,8 @@ const Feed = () => {
       console.error('Failed to track play:', err);
     }
     
-    const playlist = [playMediaObj, ...newMedia.slice(0, 2).filter(m => m.id !== playMediaObj.id)];
-    playMedia(playMediaObj, playlist);
+    requestPlay(playMediaObj);
+
   };
 
   const handleJurisdictionChange = (e) => {
