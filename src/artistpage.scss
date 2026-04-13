@@ -1,474 +1,1037 @@
-// ArtistPage.scss
+// artistpage.scss — v2 "Stitch Mockup" implementation
+// ALL classes prefixed ap2- to avoid collisions with feed, song, or any other page.
+// Fonts: Playfair Display italic (hero name), Bitcount Grid Double (jurisdiction),
+//        DM Sans (body). Colors: #111114 base, Unis blue #163387.
 
-$bg-black: #000000;
-$text-silver: #C0C0C0;
-$text-gray: #A9A9A9;
-$accent-white: #FFFFFF;
-$border-silver: #C0C0C0;
-$button-hover: #D3D3D3;
-$subtle-black: #1a1a1a;
-$unis-blue: var(--unis-primary);
+// ─── Tokens (scoped, no globals) ───────────────────────────────
+$ap2-base: #111114;
+$ap2-surface: rgba(20, 20, 24, 0.75);
+$ap2-surface-solid: #18181c;
+$ap2-text-1: #f2f2f4;
+$ap2-text-2: #a8a8b3;
+$ap2-text-3: #6a6a78;
+$ap2-blue: var(--unis-primary, #163387);
+$ap2-blue-raw: #163387;
+$ap2-border: rgba(255, 255, 255, 0.08);
+$ap2-border-hover: rgba(255, 255, 255, 0.14);
+$ap2-glow: rgba(22, 51, 135, 0.4);
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(30px); }
+// ─── Keyframes (prefixed) ──────────────────────────────────────
+@keyframes ap2-fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes ap2-fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ap2-slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
 
-.feed-section.animate .carousel-items .item,
-.feed-section.animate ol li,
-.feed-section.animate .posts .post {
+// ─── Utility states ────────────────────────────────────────────
+.ap2-loading,
+.ap2-error {
+  text-align: center;
+  padding: 80px 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+}
+.ap2-loading { color: $ap2-text-2; }
+.ap2-error { color: #e04040; }
+.ap2-empty {
+  text-align: center;
+  color: $ap2-text-3;
+  padding: 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  margin: 0;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STICKY HEADER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-sticky {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  transform: translateY(-100%);
   opacity: 0;
-  animation: fadeInUp 0.5s ease-out forwards;
-}
-.feed-section.animate .carousel-items .item:nth-child(1),
-.feed-section.animate ol li:nth-child(1),
-.feed-section.animate .posts .post:nth-child(1) { animation-delay: 0.2s; }
-.feed-section.animate .carousel-items .item:nth-child(2),
-.feed-section.animate ol li:nth-child(2),
-.feed-section.animate .posts .post:nth-child(2) { animation-delay: 0.35s; }
-.feed-section.animate .carousel-items .item:nth-child(3),
-.feed-section.animate ol li:nth-child(3),
-.feed-section.animate .posts .post:nth-child(3) { animation-delay: 0.5s; }
-.feed-section.animate .carousel-items .item:nth-child(4),
-.feed-section.animate ol li:nth-child(4),
-.feed-section.animate .posts .post:nth-child(4) { animation-delay: 0.65s; }
+  pointer-events: none;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
 
-.artist-page-container {
-  background: transparent;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 100vh;
-  width: 100%;
-  color: $text-gray;
-  overflow-x: hidden;
-  // padding-top clears the Layout header (~60px) plus breathing room.
-  // index.css handles the horizontal sidebar offset — no margin-left here.
-  padding-top: 80px;
-  padding-bottom: 5%;
-  margin-right: 100px;
-  box-sizing: border-box;
-
-  @media (max-width: 800px) {
-    padding-top: 180px;
-    padding-bottom: 10%;
-  }
-}
-
-.artist-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  max-width: 900px;
-  padding: 0 1rem 2rem;
-  background: transparent;
-  z-index: 1;
-
-  @media (max-width: 800px) {
-    padding: 0 1rem 1.5rem;
+  &--visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
   }
 
-  .artist-info {
-    text-align: center;
-    width: 100%;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba($ap2-base, 0.85);
+    backdrop-filter: blur(28px) saturate(1.5);
+    -webkit-backdrop-filter: blur(28px) saturate(1.5);
+    border-bottom: 1px solid $ap2-border;
   }
 
-  .artist-top {
+  &__inner {
+    position: relative;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    justify-content: space-between;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 10px 24px;
 
-    @media (max-width: 800px) {
-      gap: 0.8rem;
-      margin-bottom: 0.8rem;
-    }
+    @media (max-width: 600px) { padding: 8px 16px; }
   }
 
-  .artist-profile-image {
-    width: 180px;
-    height: 180px;
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  &__avatar {
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     object-fit: cover;
-    border: 4px solid $unis-blue;
-    box-shadow: 0 4px 20px rgba(22, 51, 135, 0.4);
-
-    @media (max-width: 800px) {
-      width: 120px;
-      height: 120px;
-      border: 3px solid $unis-blue;
-    }
+    border: 2px solid rgba($ap2-blue-raw, 0.6);
+    flex-shrink: 0;
   }
 
-  .artist-name {
-    color: $text-silver;
-    font-size: 35px;
-    font-weight: bold;
-    margin: 0;
-
-    @media (max-width: 800px) {
-      font-size: 24px;
-    }
-  }
-
-  .artist-jurisdiction {
-    color: #918f8f;
-    font-size: 22px;
-    font-family: "Bitcount Grid Double", system-ui;
-    font-weight: 400;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    border-top: dotted 1px silver;
-    -webkit-text-stroke: 1px $unis-blue;
-    line-height: 1.4;
-    margin: 0;
-    padding-top: 0.5rem;
-
-    @media (max-width: 800px) {
-      font-size: 16px;
-      letter-spacing: 1px;
-      -webkit-text-stroke: 0.5px $unis-blue;
-    }
-  }
-
-  .artist-genre {
-    font-size: 16px;
-    color: $text-gray;
-    margin: 0.5rem 0 1rem;
-
-    @media (max-width: 800px) {
-      font-size: 14px;
-      margin: 0.3rem 0 0.8rem;
-    }
-  }
-
-  // Stats row — replaces inline styles from JSX
-  .artist-stats {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-bottom: 15px;
-    color: #ccc;
+  &__name {
+    font-family: 'DM Sans', sans-serif;
     font-size: 14px;
-
-    span {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    @media (max-width: 800px) {
-      gap: 12px;
-      font-size: 13px;
-    }
+    font-weight: 700;
+    color: $ap2-text-1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-}
 
-// Action buttons — horizontal row, centred
-.follow-actions {
-  display: flex;
-  flex-direction: row;
-  gap: 12px;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  width: 100%;
-  margin-top: 8px;
-
-  @media (max-width: 800px) {
+  &__actions {
+    display: flex;
     gap: 8px;
+    flex-shrink: 0;
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: transparent;
+    color: $ap2-text-1;
+    transition: all 0.2s;
+
+    &:hover { background: rgba(255, 255, 255, 0.08); }
+
+    &--following {
+      background: $ap2-blue;
+      border-color: $ap2-blue;
+    }
+
+    &--play {
+      background: $ap2-blue;
+      border-color: $ap2-blue;
+      color: white;
+
+      &:hover { filter: brightness(1.15); }
+      &:disabled { opacity: 0.35; cursor: not-allowed; }
+      svg { flex-shrink: 0; }
+    }
   }
 }
 
-.vote-button,
-.play-button,
-.follow-button,
-.save-button,
-.upload-button,
-.add-button {
-  padding: 12px 30px;
-  background: transparent;
-  border: 1px solid $border-silver;
-  color: $text-silver;
-  border-radius: 50px;
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PAGE WRAPPER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  color: $ap2-text-2;
+  overflow-x: hidden;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HERO — Full-bleed artist portrait (entire viewport fold)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-hero {
+  position: relative;
+  width: 100%;
+  // Take up the full viewport minus a little to hint at content below
+  min-height: 85vh;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 48px 56px;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  @media (max-width: 900px) {
+    padding: 0 28px 44px;
+    min-height: 75vh;
+  }
+
+  @media (max-width: 600px) {
+    padding: 0 20px 36px;
+    min-height: 70vh;
+  }
+}
+
+.ap2-hero__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+
+  .ap2-hero__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 15%;
+    // No blur — the mockup shows the actual photo sharp/visible
+    filter: brightness(0.55) saturate(1.15);
+  }
+
+  // Heavy bottom gradient so text is legible & cards emerge from darkness
+  .ap2-hero__scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      $ap2-base 0%,
+      rgba($ap2-base, 0.92) 12%,
+      rgba($ap2-base, 0.55) 40%,
+      rgba($ap2-base, 0.15) 65%,
+      transparent 85%
+    );
+  }
+
+  // Side vignette for cinematic feel
+  .ap2-hero__vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse at 50% 40%,
+      transparent 0%,
+      rgba($ap2-base, 0.3) 65%,
+      rgba($ap2-base, 0.65) 100%
+    );
+  }
+}
+
+.ap2-hero__content {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  width: 100%;
+  // Left-aligned like the Stitch mockup (not centered)
+  animation: ap2-fadeUp 0.8s ease-out both;
+}
+
+.ap2-hero__jurisdiction {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 4px;
+  background: rgba($ap2-blue-raw, 0.25);
+  border: 1px solid rgba($ap2-blue-raw, 0.45);
+  font-family: "Bitcount Grid Double", system-ui;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: lighten($ap2-blue-raw, 35%);
+  margin-bottom: 14px;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  font-weight: bold;
-  font-size: 14px;
+  transition: background 0.2s;
 
   &:hover {
-    background: $accent-white;
-    color: $bg-black;
+    background: rgba($ap2-blue-raw, 0.4);
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  @media (max-width: 600px) {
+    font-size: 10px;
+    padding: 4px 11px;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+  }
+}
+
+.ap2-hero__name {
+  font-family: 'Playfair Display', serif;
+  font-weight: 800;
+  font-size: clamp(42px, 8vw, 80px);
+  color: $ap2-text-1;
+  margin: 0 0 16px;
+  line-height: 1.0;
+  letter-spacing: -1px;
+  text-shadow: 0 4px 40px rgba(0, 0, 0, 0.6);
+  // Slight italic like your Unis display headings
+  font-style: italic;
+
+  @media (max-width: 600px) {
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+}
+
+.ap2-hero__meta {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 24px;
+  animation: ap2-fadeUp 0.7s ease-out both;
+  animation-delay: 0.15s;
+
+  @media (max-width: 600px) {
+    gap: 24px;
+    margin-bottom: 20px;
+  }
+}
+
+.ap2-hero__stat {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+
+  &-value {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: $ap2-text-1;
+
+    @media (max-width: 600px) { font-size: 17px; }
   }
 
-  @media (max-width: 800px) {
-    padding: 10px 20px;
+  &-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: $ap2-text-3;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+
+    @media (max-width: 600px) { font-size: 10px; }
+  }
+}
+
+.ap2-hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  animation: ap2-fadeUp 0.6s ease-out both;
+  animation-delay: 0.3s;
+
+  @media (max-width: 600px) { gap: 10px; }
+}
+
+.ap2-hero__btn-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  border-radius: 50px;
+  background: $ap2-blue;
+  border: none;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: transform 0.2s, filter 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 24px $ap2-glow;
+
+  svg { flex-shrink: 0; margin-left: -2px; }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    filter: brightness(1.2);
+    box-shadow: 0 6px 32px $ap2-glow;
+  }
+  &:active:not(:disabled) { transform: translateY(0); }
+  &:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  @media (max-width: 600px) {
+    padding: 12px 24px;
     font-size: 13px;
   }
 }
 
-.follow-button {
-  &.following {
-    background: $unis-blue;
-    border-color: $unis-blue;
-    color: $accent-white;
-
-    &:hover { background: $unis-blue; }
-  }
-}
-
-.content-wrapper {
-  width: 100%;
-  max-width: 900px;
-  padding: 0 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin: 0 auto;
-
-  @media (max-width: 800px) {
-    padding: 0 0.5rem;
-    gap: 15px;
-  }
-}
-
-.card {
-  background: rgba($subtle-black, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-
-  @media (max-width: 800px) {
-    padding: 20px;
-    border-radius: 10px;
-  }
-
-  .section-header {
-    text-align: left;
-    margin-bottom: 20px;
-
-    h2 {
-      color: $text-silver;
-      font-size: 24px;
-      font-family: "Bitcount Grid Double", system-ui;
-      font-weight: 400;
-      margin: 0;
-      padding-bottom: 10px;
-      border-bottom: 2px solid rgba($text-silver, 0.2);
-
-      @media (max-width: 800px) {
-        font-size: 20px;
-      }
-    }
-  }
-}
-
-.bio-edit {
-  width: 100%;
-  height: 120px;
-  background: $bg-black;
-  border: 1px solid rgba($border-silver, 0.5);
-  color: $accent-white;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  font-size: 16px;
-  resize: vertical;
-  box-sizing: border-box;
-}
-
-.bio-section .bio-text {
-  text-align: center;
-  color: $text-silver;
-  line-height: 1.6;
-  margin: 0;
-
-  @media (max-width: 800px) { font-size: 14px; }
-}
-
-.fans-pick-section {
-  .fans-pick-item {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    transition: background 0.2s;
-
-    &:hover { background: rgba(255, 255, 255, 0.08); }
-
-    .song-artwork {
-      width: 50px;
-      height: 50px;
-      border-radius: 6px;
-      object-fit: cover;
-      flex-shrink: 0;
-    }
-
-    .item-info {
-      flex: 1;
-      min-width: 0;
-
-      h4 {
-        font-size: 16px;
-        color: $accent-white;
-        margin: 0;
-        font-weight: 600;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-    }
-  }
-}
-
-.music-section {
-  .songs-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .song-item {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    transition: background 0.2s;
-
-    &:hover { background: rgba(255, 255, 255, 0.08); }
-
-    @media (max-width: 800px) {
-      padding: 12px;
-      gap: 0.75rem;
-    }
-
-    .song-artwork {
-      width: 50px;
-      height: 50px;
-      border-radius: 6px;
-      object-fit: cover;
-      flex-shrink: 0;
-    }
-
-    .item-info {
-      flex: 1;
-      min-width: 0;
-
-      h4 {
-        font-size: 16px;
-        color: $accent-white;
-        margin: 0;
-        font-weight: 600;
-        cursor: pointer;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        transition: color 0.2s;
-
-        &:hover { color: $unis-blue; }
-      }
-    }
-  }
-
-  .empty-message {
-    text-align: center;
-    color: $text-gray;
-    padding: 1rem;
-    font-size: 14px;
-  }
-}
-
-.social-section {
-  .social-links {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-
-    .social-link {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: $text-silver;
-      text-decoration: none;
-      padding: 12px;
-      border-radius: 8px;
-      transition: background 0.2s;
-      font-weight: 500;
-      font-size: 16px;
-
-      &:hover { background: rgba($text-silver, 0.1); }
-    }
-  }
-}
-
-.btn {
-  font-weight: 600;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  border: none;
+.ap2-hero__btn-follow {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-
-  &.btn-primary {
-    background-color: $unis-blue;
-    color: white;
-    &:hover { background-color: $unis-blue; }
-  }
-
-  &.btn-secondary {
-    background: rgba(255, 255, 255, 0.1);
-    color: $text-silver;
-    border: 1px solid $border-silver;
-    &:hover { background: rgba(255, 255, 255, 0.15); }
-  }
-
-  &.btn-small {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    flex-shrink: 0;
-  }
-}
-
-.empty-message {
-  text-align: center;
-  color: $text-gray;
-  padding: 1rem;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: $ap2-text-1;
+  font-family: 'DM Sans', sans-serif;
   font-size: 14px;
-}
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
 
-@media (max-width: 800px) {
-  .artist-page-container {
-    padding-top: 180px;
+  svg { flex-shrink: 0; }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
   }
 
-  .content-wrapper {
-    padding: 0 0.5rem;
+  &--active {
+    background: $ap2-blue;
+    border-color: $ap2-blue;
+
+    &:hover {
+      filter: brightness(1.15);
+      background: $ap2-blue;
+      border-color: $ap2-blue;
+    }
+  }
+
+  @media (max-width: 600px) {
+    padding: 12px 22px;
+    font-size: 13px;
   }
 }
 
-@media (max-width: 600px) {
-  .artist-page-container{
-  margin-right: 0;
-  padding-top: 50px;
+.ap2-hero__btn-vote {
+  display: inline-flex;
+  align-items: center;
+  padding: 14px 28px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: $ap2-text-1;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 600px) {
+    padding: 12px 22px;
+    font-size: 13px;
+  }
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// BODY — Card area with ambient artwork background
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-body {
+  position: relative;
+  width: 100%;
+  // Overlap into the hero slightly so cards feel like they're rising from it
+  margin-top: -20px;
+  padding-bottom: 120px;
+
+  @media (max-width: 600px) {
+    margin-top: -12px;
+    padding-bottom: 100px;
+  }
+}
+
+.ap2-body__ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+
+  &-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(80px) brightness(0.18) saturate(1.6);
+    transform: scale(1.5);
+    opacity: 0.7;
+  }
+
+  &-overlay {
+    position: absolute;
+    inset: 0;
+    // Subtle noise + dark overlay to unify
+    background:
+      linear-gradient(180deg, $ap2-base 0%, transparent 8%, transparent 92%, $ap2-base 100%),
+      linear-gradient(180deg, rgba($ap2-base, 0.5) 0%, rgba($ap2-base, 0.35) 100%);
+  }
+}
+
+.ap2-body__content {
+  position: relative;
+  z-index: 1;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  @media (max-width: 600px) {
+    padding: 20px 14px 0;
+    gap: 16px;
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GRID LAYOUTS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-grid {
+  display: grid;
+  gap: 20px;
+
+  @media (max-width: 600px) { gap: 16px; }
+}
+
+.ap2-grid--featured {
+  grid-template-columns: 1.6fr 1fr;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ap2-grid--lower {
+  grid-template-columns: 1.2fr 1fr;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CARD BASE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-card {
+  background: $ap2-surface;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid $ap2-border;
+  border-radius: 16px;
+  padding: 24px;
+  transition: border-color 0.25s, transform 0.25s;
+  animation: ap2-fadeUp 0.5s ease-out both;
+
+  &:nth-child(1) { animation-delay: 0.05s; }
+  &:nth-child(2) { animation-delay: 0.15s; }
+
+  &:hover {
+    border-color: $ap2-border-hover;
+  }
+
+  @media (max-width: 600px) {
+    padding: 18px;
+    border-radius: 14px;
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// FEATURED / FANS PICK CARD
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-featured__layout {
+  display: flex;
+  gap: 20px;
+
+  @media (max-width: 500px) {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}
+
+.ap2-featured__artwork-wrap {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+
+  .ap2-featured__artwork {
+    width: 180px;
+    height: 180px;
+    object-fit: cover;
+    display: block;
+    border-radius: 12px;
+    transition: transform 0.3s;
+
+    @media (max-width: 600px) {
+      width: 150px;
+      height: 150px;
+    }
+    @media (max-width: 500px) {
+      width: 200px;
+      height: 200px;
+    }
+  }
+
+  &:hover .ap2-featured__artwork {
+    transform: scale(1.04);
+  }
+
+  .ap2-featured__play-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.25s;
+    border: none;
+    cursor: pointer;
+    color: white;
+    border-radius: 12px;
+  }
+
+  &:hover .ap2-featured__play-overlay {
+    opacity: 1;
+  }
+}
+
+.ap2-featured__info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.ap2-featured__badge {
+  display: inline-block;
+  width: fit-content;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: rgba($ap2-blue-raw, 0.2);
+  border: 1px solid rgba($ap2-blue-raw, 0.35);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: lighten($ap2-blue-raw, 30%);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+
+  @media (max-width: 500px) {
+    margin: 0 auto 10px;
+  }
+}
+
+.ap2-featured__title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 26px;
+  color: $ap2-text-1;
+  margin: 0 0 8px;
+  cursor: pointer;
+  transition: color 0.2s;
+  line-height: 1.2;
+
+  &:hover { color: lighten($ap2-blue-raw, 25%); }
+
+  @media (max-width: 600px) { font-size: 22px; }
+}
+
+.ap2-featured__desc {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: $ap2-text-2;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.ap2-featured__genre {
+  display: inline-block;
+  width: fit-content;
+  padding: 4px 12px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid $ap2-border;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: $ap2-text-3;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CONNECT CARD
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-connect__title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: $ap2-text-3;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin: 0 0 18px;
+}
+
+.ap2-connect__links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ap2-connect__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $ap2-border;
+  color: $ap2-text-2;
+  text-decoration: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: $ap2-border-hover;
+    color: $ap2-text-1;
+    transform: translateX(4px);
+  }
+}
+
+.ap2-connect__icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.ap2-connect__label {
+  flex: 1;
+}
+
+.ap2-connect__arrow {
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+
+  .ap2-connect__link:hover & { opacity: 0.8; }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POPULAR CARD — Track list
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-popular__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+
+  h3 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: $ap2-text-1;
+    margin: 0;
+  }
+}
+
+.ap2-popular__seeall {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: $ap2-text-3;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: color 0.2s;
+
+  &:hover { color: $ap2-text-1; }
+}
+
+.ap2-popular__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ap2-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .ap2-track__play { opacity: 1; }
+    .ap2-track__num { opacity: 0; }
+  }
+
+  // Subtle separator between tracks
+  & + & {
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  @media (max-width: 600px) {
+    gap: 10px;
+    padding: 8px 4px;
+  }
+}
+
+.ap2-track__num {
+  width: 22px;
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: $ap2-text-3;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.ap2-track__art {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+
+  @media (max-width: 600px) {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.ap2-track__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ap2-track__title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: $ap2-text-1;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.2s;
+
+  &:hover { color: lighten($ap2-blue-raw, 25%); }
+}
+
+.ap2-track__plays {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: $ap2-text-3;
+}
+
+.ap2-track__play {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: $ap2-text-1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+
+  svg { margin-left: 1px; }
+
+  &:hover { background: $ap2-blue; }
+
+  @media (hover: none) { opacity: 1; }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ABOUT CARD — Photo backdrop with bio overlay + stat badges
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-about__heading {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: $ap2-text-1;
+  margin: 0 0 16px;
+}
+
+.ap2-about__photo-wrap {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+
+  .ap2-about__photo {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    object-position: center 20%;
+    display: block;
+
+    @media (max-width: 600px) {
+      height: 180px;
+    }
+  }
+
+  .ap2-about__photo-fade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba($ap2-base, 0.95) 0%,
+      rgba($ap2-base, 0.6) 40%,
+      transparent 75%
+    );
+  }
+
+  .ap2-about__bio-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 18px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+    color: $ap2-text-2;
+    margin: 0;
+    // Clamp to ~4 lines
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+.ap2-about__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.ap2-about__textarea {
+  width: 100%;
+  height: 110px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid $ap2-border;
+  color: $ap2-text-1;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: $ap2-blue;
+  }
+
+  &::placeholder { color: $ap2-text-3; }
+}
+
+.ap2-about__save {
+  align-self: flex-start;
+  padding: 10px 24px;
+  border-radius: 50px;
+  background: $ap2-blue;
+  border: none;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.2s;
+
+  &:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+  }
+}
+
+.ap2-about__badges {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ap2-about__badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $ap2-border;
+  transition: border-color 0.2s;
+
+  &:hover { border-color: $ap2-border-hover; }
+
+  &-value {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: $ap2-text-1;
+    line-height: 1.2;
+
+    @media (max-width: 600px) { font-size: 20px; }
+  }
+
+  &-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: $ap2-text-3;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-top: 4px;
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// KILL ANY LEGACY OVERRIDES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// If Layout or index.css applies anything to .artist-page-container, neutralize it.
+.artist-page-container {
+  background: transparent !important;
+  padding-top: 0 !important;
+  margin-right: 0 !important;
+  min-height: auto !important;
 }
