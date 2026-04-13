@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
@@ -30,24 +30,6 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [defaultSong, setDefaultSong] = useState(null);
 
-  // --- Sticky header scroll detection ---
-  const heroRef = useRef(null);
-  const [showStickyHeader, setShowStickyHeader] = useState(false);
-
-  const handleScroll = useCallback(() => {
-    if (!heroRef.current) return;
-    const heroBottom = heroRef.current.getBoundingClientRect().bottom;
-    // Show sticky header once the hero's bottom edge scrolls above ~60px from viewport top
-    setShowStickyHeader(heroBottom < 60);
-  }, []);
-
-  useEffect(() => {
-    // Find the scrollable container — Layout may wrap content in a scrollable div.
-    // We attach to the nearest scrollable ancestor or window.
-    const scrollTarget = heroRef.current?.closest('.layout-content') || window;
-    scrollTarget.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollTarget.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
 
   // Single effect — fires all requests in parallel on mount.
   // Follow status check is included only when we have both IDs and it's not our own profile.
@@ -193,175 +175,100 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
   return (
     <Layout backgroundImage={artistPhoto}>
-      {/* ======= STICKY HEADER — appears after scrolling past hero ======= */}
-      <div className={`artist-sticky-header ${showStickyHeader ? 'visible' : ''}`}>
-        <div className="sticky-inner">
-          <div className="sticky-left">
-            <img src={artistPhoto} alt={artist.username} className="sticky-avatar" />
-            <span className="sticky-name">{artist.username}</span>
-          </div>
-          {showActionButtons && (
-            <div className="sticky-actions">
-              <button
-                onClick={handleFollow}
-                className={`sticky-btn follow ${isFollowing ? 'following' : ''}`}
+      <div className="artist-page-container">
+        <header className="artist-header">
+          <div className="artist-info">
+            <div className="artist-top">
+              <img src={artistPhoto} alt={artist.username} className="artist-profile-image" />
+              <p className="artist-name">{artist.username}</p>
+              <p
+                className="artist-jurisdiction"
+                onClick={() => navigate(`/jurisdiction/${artist.jurisdiction.name}`)}
+                style={{ cursor: 'pointer' }}
               >
-                {isFollowing ? 'Following' : 'Follow'}
-              </button>
-              <button onClick={handlePlayDefault} className="sticky-btn play" disabled={!defaultSong}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
-                Play
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="artist-page-v2">
-        {/* ======= HERO SECTION ======= */}
-        <section className="artist-hero" ref={heroRef}>
-          {/* Background layers */}
-          <div className="hero-backdrop">
-            <img src={artistPhoto} alt="" className="hero-bg-img" />
-            <div className="hero-gradient-bottom" />
-            <div className="hero-gradient-side" />
-            <div className="hero-noise" />
-          </div>
-
-          {/* Hero content */}
-          <div className="hero-content">
-            <div className="hero-profile-frame">
-              <img src={artistPhoto} alt={artist.username} className="hero-profile-img" />
+                {artist.jurisdiction?.name || 'Unknown'}
+              </p>
             </div>
 
-            <h1 className="hero-artist-name">{artist.username}</h1>
+            <p className="artist-genre">{artist.genre?.name || 'Unknown Genre'}</p>
 
-            <p
-              className="hero-jurisdiction"
-              onClick={() => navigate(`/jurisdiction/${artist.jurisdiction.name}`)}
-            >
-              {artist.jurisdiction?.name || 'Unknown'}
-            </p>
-
-            <span className="hero-genre-tag">{artist.genre?.name || 'Unknown Genre'}</span>
-
-            <div className="hero-stats">
-              <div className="stat-item">
-                <span className="stat-value">{followerCount}</span>
-                <span className="stat-label">Followers</span>
-              </div>
-              <div className="stat-divider" />
-              <div className="stat-item">
-                <span className="stat-value">{artist.totalPlays || 0}</span>
-                <span className="stat-label">Plays</span>
-              </div>
-              <div className="stat-divider" />
-              <div className="stat-item">
-                <span className="stat-value">{artist.score || 0}</span>
-                <span className="stat-label">Score</span>
-              </div>
+            <div className="artist-stats">
+              <span><Users size={16} /> {followerCount} Followers</span>
+              <span><PlayCircle size={16} /> {artist.totalPlays || 0} Plays</span>
+              <span><Heart size={16} /> {artist.score || 0} Score</span>
             </div>
 
             {showActionButtons && (
-              <div className="hero-actions">
-                <button
-                  onClick={handlePlayDefault}
-                  className="action-play"
-                  disabled={!defaultSong}
-                  aria-label="Play default song"
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
-                </button>
+              <div className="follow-actions">
                 <button
                   onClick={handleFollow}
-                  className={`action-follow ${isFollowing ? 'following' : ''}`}
+                  className={`follow-button ${isFollowing ? 'following' : ''}`}
                 >
                   {isFollowing ? 'Following' : 'Follow'}
                 </button>
-                <button onClick={handleVote} className="action-vote">Vote</button>
+                <button onClick={handleVote} className="vote-button">Vote</button>
+                <button
+                  onClick={handlePlayDefault}
+                  className="play-button"
+                  disabled={!defaultSong}
+                >
+                  Play
+                </button>
               </div>
             )}
           </div>
-        </section>
+        </header>
 
-        {/* ======= CONTENT SECTIONS ======= */}
-        <div className="artist-content">
-
-          {/* --- Fans Pick --- */}
+        <div className="content-wrapper">
           {topSong && (
-            <section className="ap-card fans-pick-card animate-in">
-              <div className="ap-card-header">
-                <h2>Fans Pick</h2>
-                <span className="card-badge">Top Track</span>
-              </div>
-              <div
-                className="fans-pick-feature"
-                onClick={() => handleSongClick(topSong.songId)}
-              >
-                <div className="fp-artwork-wrap">
-                  <img
-                    src={buildUrl(topSong.artworkUrl) || artistPhoto}
-                    alt={topSong.title}
-                    className="fp-artwork"
-                  />
-                  <button
-                    className="fp-play-overlay"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const song = songs.find(s => s.songId === topSong.songId);
-                      if (song) playMedia(
-                        { type: 'song', url: buildUrl(song.fileUrl), title: song.title, artist: artist.username, artwork: buildUrl(song.artworkUrl) || artistPhoto },
-                        []
-                      );
-                    }}
-                    aria-label="Play fans pick"
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
-                  </button>
-                </div>
-                <div className="fp-info">
-                  <h3 className="fp-title">{topSong.title}</h3>
-                  <p className="fp-meta">{topSong.plays || 0} plays · {topSong.score || 0} score</p>
-                </div>
+            <section className="fans-pick-section card">
+              <div className="section-header"><h2>Fans Pick</h2></div>
+              <div className="fans-pick-item">
+                <img
+                  src={buildUrl(topSong.artworkUrl) || artistPhoto}
+                  alt={topSong.title}
+                  className="song-artwork"
+                />
+                <div className="item-info"><h4>{topSong.title}</h4></div>
+                <button
+                  className="btn btn-primary btn-small"
+                  onClick={() => {
+                    const song = songs.find(s => s.songId === topSong.songId);
+                    if (song) playMedia(
+                      { type: 'song', url: buildUrl(song.fileUrl), title: song.title, artist: artist.username, artwork: buildUrl(song.artworkUrl) || artistPhoto },
+                      []
+                    );
+                  }}
+                >
+                  Play
+                </button>
               </div>
             </section>
           )}
 
-          {/* --- Music / Discography --- */}
-          <section className="ap-card music-card animate-in">
-            <div className="ap-card-header">
-              <h2>Music</h2>
-              {songs.length > 5 && (
-                <span className="card-show-all">Show all</span>
-              )}
-            </div>
-            <div className="track-list">
-              {songs.slice(0, 5).map((song, index) => (
-                <div key={song.songId} className="track-row">
-                  <span className="track-index">{index + 1}</span>
+          <section className="music-section card">
+            <div className="section-header"><h2>Music</h2></div>
+            <div className="songs-list">
+              {songs.slice(0, 5).map((song) => (
+                <div key={song.songId} className="song-item">
                   <img
                     src={buildUrl(song.artworkUrl) || artistPhoto}
                     alt={song.title}
-                    className="track-artwork"
+                    className="song-artwork"
                   />
-                  <div className="track-info">
-                    <h4
-                      className="track-title"
-                      onClick={() => handleSongClick(song.songId)}
-                    >
+                  <div className="item-info">
+                    <h4 onClick={() => handleSongClick(song.songId)} style={{ cursor: 'pointer' }}>
                       {song.title}
                     </h4>
-                    <p className="track-plays">{song.plays || 0} plays</p>
                   </div>
                   <button
-                    className="track-play-btn"
+                    className="btn btn-primary btn-small"
                     onClick={() => playMedia(
                       { type: 'song', url: buildUrl(song.fileUrl), title: song.title, artist: artist.username, artwork: buildUrl(song.artworkUrl) || artistPhoto },
                       []
                     )}
-                    aria-label={`Play ${song.title}`}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
+                    Play
                   </button>
                 </div>
               ))}
@@ -369,48 +276,24 @@ const ArtistPage = ({ isOwnProfile = false }) => {
             </div>
           </section>
 
-          {/* --- Bio --- */}
-          <section className="ap-card bio-card animate-in">
-            <div className="ap-card-header">
-              <h2>About</h2>
-            </div>
+          <section className="bio-section card">
+            <div className="section-header"><h2>Bio</h2></div>
             {isOwnProfile ? (
-              <div className="bio-edit-wrap">
-                <textarea value={bio} onChange={handleBioChange} className="bio-edit" placeholder="Tell fans about yourself..." />
+              <>
+                <textarea value={bio} onChange={handleBioChange} className="bio-edit" />
                 <button onClick={handleSaveBio} className="save-button">Save Bio</button>
-              </div>
+              </>
             ) : (
               <p className="bio-text">{bio}</p>
             )}
           </section>
 
-          {/* --- Social --- */}
-          <section className="ap-card social-card animate-in">
-            <div className="ap-card-header">
-              <h2>Connect</h2>
-            </div>
+          <section className="social-section card">
+            <div className="section-header"><h2>Social Media</h2></div>
             <div className="social-links">
-              {artist.instagramUrl && (
-                <a href={artist.instagramUrl} target="_blank" rel="noreferrer" className="social-link">
-                  <span className="social-icon">📷</span>
-                  <span>Instagram</span>
-                </a>
-              )}
-              {artist.twitterUrl && (
-                <a href={artist.twitterUrl} target="_blank" rel="noreferrer" className="social-link">
-                  <span className="social-icon">𝕏</span>
-                  <span>Twitter</span>
-                </a>
-              )}
-              {artist.tiktokUrl && (
-                <a href={artist.tiktokUrl} target="_blank" rel="noreferrer" className="social-link">
-                  <span className="social-icon">🎵</span>
-                  <span>TikTok</span>
-                </a>
-              )}
-              {!artist.instagramUrl && !artist.twitterUrl && !artist.tiktokUrl && (
-                <p className="empty-message">No social links available</p>
-              )}
+              <a href={artist.instagramUrl || '#'} target="_blank" rel="noreferrer" className="social-link">📷 Instagram</a>
+              <a href={artist.twitterUrl || '#'} target="_blank" rel="noreferrer" className="social-link">𝕏 Twitter</a>
+              <a href={artist.tiktokUrl || '#'} target="_blank" rel="noreferrer" className="social-link">🎵 TikTok</a>
             </div>
           </section>
         </div>
