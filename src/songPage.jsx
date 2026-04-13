@@ -14,7 +14,7 @@ import { buildUrl } from './utils/buildUrl';
 
 const SongPage = () => {
   const { songId } = useParams();
-  const { requestPlay } = useContext(PlayerContext);
+  const { requestPlay, currentMedia } = useContext(PlayerContext);
   const { user } = useAuth();
   const navigate = useNavigate();
   const userId = user?.userId;
@@ -131,6 +131,32 @@ const SongPage = () => {
     fetchAll();
   }, [songId, userId]);
 
+  useEffect(() => {
+    if (!song?.id || !userId) return;
+    if (!currentMedia) return;
+    const playingId = currentMedia.id || currentMedia.songId;
+    if (playingId !== song.id) return;
+
+    // Optimistic bump
+    setSong(prev => prev ? {
+      ...prev,
+      playCount: prev.playCount + 1,
+      playsToday: prev.playsToday + 1,
+    } : prev);
+
+    // Backend POST
+    apiCall({ method: 'post', url: `/v1/media/song/${song.id}/play?userId=${userId}` })
+      .catch(err => {
+        console.error('Failed to track song play:', err);
+        setSong(prev => prev ? {
+          ...prev,
+          playCount: Math.max(0, prev.playCount - 1),
+          playsToday: Math.max(0, prev.playsToday - 1),
+        } : prev);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMedia?.id, currentMedia?.songId, song?.id, userId]);
+
   const fetchSongData = async () => {
     try {
       const response = await apiCall({ method: 'get', url: `/v1/media/song/${songId}`, useCache: false });
@@ -150,15 +176,6 @@ const SongPage = () => {
   const handlePlay = async () => {
     const track = { id: song.id, songId: song.id, type: 'song', url: song.url, title: song.title, artist: song.artist, artwork: song.artwork, jurisdiction: song.jurisdiction };
     requestPlay(track);
-    if (song.id && userId) {
-      setSong(prev => ({ ...prev, playCount: prev.playCount + 1, playsToday: prev.playsToday + 1 }));
-      try {
-        await apiCall({ method: 'post', url: `/v1/media/song/${song.id}/play?userId=${userId}` });
-      } catch (err) {
-        console.error('Failed to track song play:', err);
-        setSong(prev => ({ ...prev, playCount: prev.playCount - 1, playsToday: prev.playsToday - 1 }));
-      }
-    }
   };
 
   const handleLike = async () => {
