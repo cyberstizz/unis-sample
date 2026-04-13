@@ -29,6 +29,7 @@ import useActivityTracker from './hooks/useActivityTracker';
 import WaitlistPage from './WaitlistPage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import AdminPlaylistPage from './admin/AdminPlaylistPage';
+import PlayChoiceModal from './PlayChoiceModal';
 
 // Theme
 import './theme.scss';
@@ -123,6 +124,7 @@ const AppLayout = () => {
      {!isAuthPage && <SongNotification />}
 
       {!isAuthPage && <Player />}
+      {!isAuthPage && <PlayChoiceModal />}
     </div>
   );
 };
