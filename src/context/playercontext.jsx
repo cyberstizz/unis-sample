@@ -228,6 +228,65 @@ export const PlayerProvider = ({ children }) => {
     }
   }, [currentMedia]);
 
+  const requestPlay = useCallback((song) => {
+  if (!song) return;
+ 
+  if (queue.length === 0) {
+    // Empty queue: this song becomes the queue. No prompt.
+    setQueue([song]);
+    setOriginalQueue([song]);
+    setCurrentIndex(0);
+    setCurrentMedia(song);
+    setQueueSource(null);
+    if (audioRef.current) {
+      audioRef.current.src = song.url || song.fileUrl;
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch(err => console.error('Play failed:', err));
+    }
+    return;
+  }
+ 
+  // Queue non-empty → ask the user
+  setPlayChoiceModal({ open: true, pendingSong: song });
+}, [queue.length]);
+ 
+  const confirmPlayNow = useCallback(() => {
+    const song = playChoiceModal.pendingSong;
+    if (!song) return;
+  
+    // Insert immediately after the current track, then jump to it and play.
+    const insertIndex = currentIndex + 1;
+    const newQueue = [...queue];
+    newQueue.splice(insertIndex, 0, song);
+  
+    setQueue(newQueue);
+    setOriginalQueue(prev => [...prev, song]);
+    setCurrentIndex(insertIndex);
+    setCurrentMedia(song);
+  
+    if (audioRef.current) {
+      audioRef.current.src = song.url || song.fileUrl;
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch(err => console.error('Play failed:', err));
+    }
+  
+    setPlayChoiceModal({ open: false, pendingSong: null });
+  }, [playChoiceModal.pendingSong, queue, currentIndex]);
+  
+  const confirmAddToQueue = useCallback(() => {
+    const song = playChoiceModal.pendingSong;
+    if (!song) return;
+    setQueue(prev => [...prev, song]);
+    setOriginalQueue(prev => [...prev, song]);
+    setPlayChoiceModal({ open: false, pendingSong: null });
+  }, [playChoiceModal.pendingSong]);
+  
+  const cancelPlayChoice = useCallback(() => {
+    setPlayChoiceModal({ open: false, pendingSong: null });
+  }, []);
+
   // ========================================================================
   // QUEUE MANAGEMENT — Play Next / Play Later / Clear / Save
   // ========================================================================
@@ -601,6 +660,11 @@ export const PlayerProvider = ({ children }) => {
       currentMedia,
       isPlaying,
       togglePlayPause,
+      requestPlay,
+      playChoiceModal,
+      confirmPlayNow,
+      confirmAddToQueue,
+      cancelPlayChoice,
       audioRef,
 
       // Playback
