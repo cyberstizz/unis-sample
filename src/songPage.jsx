@@ -75,6 +75,9 @@ const SongPage = () => {
     return num.toLocaleString();
   };
 
+  const hasTrackedInitialRef = useRef(false);
+  const previousPlayingIdRef = useRef(null);
+
   // ── Data fetching ──
   useEffect(() => {
     if (!songId) return;
@@ -132,10 +135,28 @@ const SongPage = () => {
   }, [songId, userId]);
 
   useEffect(() => {
-    if (!song?.id || !userId) return;
-    if (!currentMedia) return;
+    hasTrackedInitialRef.current = false;
+    previousPlayingIdRef.current = null;
+  }, [songId]);
+
+  useEffect(() => {
+    if (!song?.id || !userId || !currentMedia) return;
+
     const playingId = currentMedia.id || currentMedia.songId;
+    const prevId = previousPlayingIdRef.current;
+    previousPlayingIdRef.current = playingId;
+
+    // Not this page's song — nothing to do
     if (playingId !== song.id) return;
+
+    // First observation on arrival: song was ALREADY playing. Skip.
+    if (!hasTrackedInitialRef.current) {
+      hasTrackedInitialRef.current = true;
+      return;
+    }
+
+    // Only count when the playing track actually CHANGED to this song
+    if (prevId === playingId) return;
 
     // Optimistic bump
     setSong(prev => prev ? {
@@ -144,7 +165,6 @@ const SongPage = () => {
       playsToday: prev.playsToday + 1,
     } : prev);
 
-    // Backend POST
     apiCall({ method: 'post', url: `/v1/media/song/${song.id}/play?userId=${userId}` })
       .catch(err => {
         console.error('Failed to track song play:', err);
