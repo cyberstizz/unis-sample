@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
@@ -6,7 +6,6 @@ import Layout from './layout';
 import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
 import VotingWizard from './votingWizard';
-import { Users, Heart, PlayCircle } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
 
@@ -16,7 +15,6 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Derive userId directly from AuthContext — no token decode needed
   const userId = user?.userId;
 
   const [artist, setArtist] = useState(null);
@@ -30,9 +28,22 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const [selectedNominee, setSelectedNominee] = useState(null);
   const [defaultSong, setDefaultSong] = useState(null);
 
+  // Sticky header scroll detection
+  const heroRef = useRef(null);
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
 
-  // Single effect — fires all requests in parallel on mount.
-  // Follow status check is included only when we have both IDs and it's not our own profile.
+  const handleScroll = useCallback(() => {
+    if (!heroRef.current) return;
+    const heroBottom = heroRef.current.getBoundingClientRect().bottom;
+    setShowStickyHeader(heroBottom < 60);
+  }, []);
+
+  useEffect(() => {
+    const scrollTarget = heroRef.current?.closest('.layout-content') || window;
+    scrollTarget.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollTarget.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
   useEffect(() => {
     if (!artistId) return;
 
@@ -81,10 +92,8 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const handleFollow = async () => {
     const previousState = isFollowing;
     const previousCount = followerCount;
-
     setIsFollowing(!previousState);
     setFollowerCount(prev => (!previousState ? prev + 1 : prev - 1));
-
     try {
       if (!previousState) {
         await apiCall({ method: 'post', url: `/v1/users/${artistId}/follow` });
@@ -103,15 +112,9 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
   const handleSaveBio = async () => {
     try {
-      await apiCall({
-        method: 'put',
-        url: `/v1/users/profile/${artistId}/bio`,
-        data: { bio },
-      });
+      await apiCall({ method: 'put', url: `/v1/users/profile/${artistId}/bio`, data: { bio } });
       alert('Bio updated successfully');
-    } catch (err) {
-      alert('Failed to update bio');
-    }
+    } catch (err) { alert('Failed to update bio'); }
   };
 
   const handleVoteSuccess = () => setShowVotingWizard(false);
@@ -130,21 +133,13 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     if (defaultSong?.fileUrl) {
       const fullUrl = buildUrl(defaultSong.fileUrl);
       playMedia(
-        {
-          type: 'song',
-          url: fullUrl,
-          title: defaultSong.title,
-          artist: artist.username,
-          artwork: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl),
-        },
+        { type: 'song', url: fullUrl, title: defaultSong.title, artist: artist.username, artwork: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl) },
         []
       );
       if (defaultSong.songId && userId) {
         try {
           await apiCall({ method: 'post', url: `/v1/media/song/${defaultSong.songId}/play?userId=${userId}` });
-        } catch (err) {
-          console.error('Failed to track default song play:', err);
-        }
+        } catch (err) { console.error('Failed to track default song play:', err); }
       }
     } else {
       alert('No default song available for this artist');
@@ -155,13 +150,13 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
   if (loading) return (
     <Layout backgroundImage={theQuiet}>
-      <div style={{ textAlign: 'center', padding: '50px', color: 'white' }}>Loading...</div>
+      <div className="ap2-loading">Loading...</div>
     </Layout>
   );
 
   if (error || !artist) return (
     <Layout backgroundImage={theQuiet}>
-      <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>Artist not found</div>
+      <div className="ap2-error">Artist not found</div>
     </Layout>
   );
 
@@ -169,133 +164,224 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const topSong = songs.length > 0
     ? songs.reduce((prev, current) => (current.score || 0) > (prev.score || 0) ? current : prev, songs[0])
     : null;
+  const topSongArtwork = topSong ? (buildUrl(topSong.artworkUrl) || artistPhoto) : artistPhoto;
 
   const isCurrentUser = userId === artistId;
   const showActionButtons = !isOwnProfile && !isCurrentUser;
 
+  const fmt = (n) => (n || 0).toLocaleString();
+
   return (
     <Layout backgroundImage={artistPhoto}>
-      <div className="artist-page-container">
-        <header className="artist-header">
-          <div className="artist-info">
-            <div className="artist-top">
-              <img src={artistPhoto} alt={artist.username} className="artist-profile-image" />
-              <p className="artist-name">{artist.username}</p>
-              <p
-                className="artist-jurisdiction"
-                onClick={() => navigate(`/jurisdiction/${artist.jurisdiction.name}`)}
-                style={{ cursor: 'pointer' }}
+      {/* ===== STICKY HEADER ===== */}
+      <div className={`ap2-sticky ${showStickyHeader ? 'ap2-sticky--visible' : ''}`}>
+        <div className="ap2-sticky__inner">
+          <div className="ap2-sticky__left">
+            <img src={artistPhoto} alt={artist.username} className="ap2-sticky__avatar" />
+            <span className="ap2-sticky__name">{artist.username}</span>
+          </div>
+          {showActionButtons && (
+            <div className="ap2-sticky__actions">
+              <button
+                onClick={handleFollow}
+                className={`ap2-sticky__btn ${isFollowing ? 'ap2-sticky__btn--following' : ''}`}
               >
-                {artist.jurisdiction?.name || 'Unknown'}
-              </p>
+                {isFollowing ? 'Following' : 'Follow'}
+              </button>
+              <button onClick={handlePlayDefault} className="ap2-sticky__btn ap2-sticky__btn--play" disabled={!defaultSong}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
+                Play
+              </button>
             </div>
+          )}
+        </div>
+      </div>
 
-            <p className="artist-genre">{artist.genre?.name || 'Unknown Genre'}</p>
+      <div className="ap2-page">
+        {/* ===== HERO — Full-bleed artist portrait ===== */}
+        <section className="ap2-hero" ref={heroRef}>
+          <div className="ap2-hero__backdrop">
+            <img src={artistPhoto} alt="" className="ap2-hero__img" />
+            <div className="ap2-hero__scrim" />
+            <div className="ap2-hero__vignette" />
+          </div>
 
-            <div className="artist-stats">
-              <span><Users size={16} /> {followerCount} Followers</span>
-              <span><PlayCircle size={16} /> {artist.totalPlays || 0} Plays</span>
-              <span><Heart size={16} /> {artist.score || 0} Score</span>
+          <div className="ap2-hero__content">
+            <span
+              className="ap2-hero__jurisdiction"
+              onClick={() => navigate(`/jurisdiction/${artist.jurisdiction?.name}`)}
+            >
+              {artist.jurisdiction?.name || 'Unknown'}
+            </span>
+
+            <h1 className="ap2-hero__name">{artist.username}</h1>
+
+            <div className="ap2-hero__meta">
+              <div className="ap2-hero__stat">
+                <span className="ap2-hero__stat-value">{fmt(artist.totalPlays)}</span>
+                <span className="ap2-hero__stat-label">Plays</span>
+              </div>
+              <div className="ap2-hero__stat">
+                <span className="ap2-hero__stat-value">{fmt(followerCount)}</span>
+                <span className="ap2-hero__stat-label">Followers</span>
+              </div>
             </div>
 
             {showActionButtons && (
-              <div className="follow-actions">
-                <button
-                  onClick={handleFollow}
-                  className={`follow-button ${isFollowing ? 'following' : ''}`}
-                >
+              <div className="ap2-hero__actions">
+                <button onClick={handlePlayDefault} className="ap2-hero__btn-play" disabled={!defaultSong}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
+                  Play Discography
+                </button>
+                <button onClick={handleFollow} className={`ap2-hero__btn-follow ${isFollowing ? 'ap2-hero__btn-follow--active' : ''}`}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+                  </svg>
                   {isFollowing ? 'Following' : 'Follow'}
                 </button>
-                <button onClick={handleVote} className="vote-button">Vote</button>
-                <button
-                  onClick={handlePlayDefault}
-                  className="play-button"
-                  disabled={!defaultSong}
-                >
-                  Play
-                </button>
+                <button onClick={handleVote} className="ap2-hero__btn-vote">Vote</button>
               </div>
             )}
           </div>
-        </header>
+        </section>
 
-        <div className="content-wrapper">
-          {topSong && (
-            <section className="fans-pick-section card">
-              <div className="section-header"><h2>Fans Pick</h2></div>
-              <div className="fans-pick-item">
-                <img
-                  src={buildUrl(topSong.artworkUrl) || artistPhoto}
-                  alt={topSong.title}
-                  className="song-artwork"
-                />
-                <div className="item-info"><h4>{topSong.title}</h4></div>
-                <button
-                  className="btn btn-primary btn-small"
-                  onClick={() => {
-                    const song = songs.find(s => s.songId === topSong.songId);
-                    if (song) playMedia(
-                      { type: 'song', url: buildUrl(song.fileUrl), title: song.title, artist: artist.username, artwork: buildUrl(song.artworkUrl) || artistPhoto },
-                      []
-                    );
-                  }}
-                >
-                  Play
-                </button>
-              </div>
-            </section>
-          )}
+        {/* ===== CARD BODY — Ambient background from artwork ===== */}
+        <div className="ap2-body">
+          <div className="ap2-body__ambient">
+            <img src={topSongArtwork} alt="" className="ap2-body__ambient-img" />
+            <div className="ap2-body__ambient-overlay" />
+          </div>
 
-          <section className="music-section card">
-            <div className="section-header"><h2>Music</h2></div>
-            <div className="songs-list">
-              {songs.slice(0, 5).map((song) => (
-                <div key={song.songId} className="song-item">
-                  <img
-                    src={buildUrl(song.artworkUrl) || artistPhoto}
-                    alt={song.title}
-                    className="song-artwork"
-                  />
-                  <div className="item-info">
-                    <h4 onClick={() => handleSongClick(song.songId)} style={{ cursor: 'pointer' }}>
-                      {song.title}
-                    </h4>
+          <div className="ap2-body__content">
+            {/* Row 1: Featured Song + Connect */}
+            <div className="ap2-grid ap2-grid--featured">
+              {topSong && (
+                <div className="ap2-card ap2-featured">
+                  <div className="ap2-featured__layout">
+                    <div className="ap2-featured__artwork-wrap" onClick={() => handleSongClick(topSong.songId)}>
+                      <img src={topSongArtwork} alt={topSong.title} className="ap2-featured__artwork" />
+                      <button
+                        className="ap2-featured__play-overlay"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const song = songs.find(s => s.songId === topSong.songId);
+                          if (song) playMedia(
+                            { type: 'song', url: buildUrl(song.fileUrl), title: song.title, artist: artist.username, artwork: buildUrl(song.artworkUrl) || artistPhoto },
+                            []
+                          );
+                        }}
+                        aria-label="Play fans pick"
+                      >
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
+                      </button>
+                    </div>
+                    <div className="ap2-featured__info">
+                      <span className="ap2-featured__badge">Fans Pick</span>
+                      <h3 className="ap2-featured__title" onClick={() => handleSongClick(topSong.songId)}>
+                        {topSong.title}
+                      </h3>
+                      <p className="ap2-featured__desc">
+                        {fmt(topSong.plays)} plays · {fmt(topSong.score)} score
+                      </p>
+                      <div className="ap2-featured__genre">{artist.genre?.name || 'Unknown Genre'}</div>
+                    </div>
                   </div>
-                  <button
-                    className="btn btn-primary btn-small"
-                    onClick={() => playMedia(
-                      { type: 'song', url: buildUrl(song.fileUrl), title: song.title, artist: artist.username, artwork: buildUrl(song.artworkUrl) || artistPhoto },
-                      []
-                    )}
-                  >
-                    Play
-                  </button>
                 </div>
-              ))}
-              {songs.length === 0 && <p className="empty-message">No songs yet</p>}
-            </div>
-          </section>
+              )}
 
-          <section className="bio-section card">
-            <div className="section-header"><h2>Bio</h2></div>
-            {isOwnProfile ? (
-              <>
-                <textarea value={bio} onChange={handleBioChange} className="bio-edit" />
-                <button onClick={handleSaveBio} className="save-button">Save Bio</button>
-              </>
-            ) : (
-              <p className="bio-text">{bio}</p>
-            )}
-          </section>
-
-          <section className="social-section card">
-            <div className="section-header"><h2>Social Media</h2></div>
-            <div className="social-links">
-              <a href={artist.instagramUrl || '#'} target="_blank" rel="noreferrer" className="social-link">📷 Instagram</a>
-              <a href={artist.twitterUrl || '#'} target="_blank" rel="noreferrer" className="social-link">𝕏 Twitter</a>
-              <a href={artist.tiktokUrl || '#'} target="_blank" rel="noreferrer" className="social-link">🎵 TikTok</a>
+              <div className="ap2-card ap2-connect">
+                <h3 className="ap2-connect__title">Connect</h3>
+                <div className="ap2-connect__links">
+                  {artist.instagramUrl && (
+                    <a href={artist.instagramUrl} target="_blank" rel="noreferrer" className="ap2-connect__link">
+                      <span className="ap2-connect__icon">📷</span>
+                      <span className="ap2-connect__label">Instagram</span>
+                      <svg className="ap2-connect__arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
+                    </a>
+                  )}
+                  {artist.twitterUrl && (
+                    <a href={artist.twitterUrl} target="_blank" rel="noreferrer" className="ap2-connect__link">
+                      <span className="ap2-connect__icon">𝕏</span>
+                      <span className="ap2-connect__label">Twitter</span>
+                      <svg className="ap2-connect__arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
+                    </a>
+                  )}
+                  {artist.tiktokUrl && (
+                    <a href={artist.tiktokUrl} target="_blank" rel="noreferrer" className="ap2-connect__link">
+                      <span className="ap2-connect__icon">🎵</span>
+                      <span className="ap2-connect__label">TikTok</span>
+                      <svg className="ap2-connect__arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
+                    </a>
+                  )}
+                  {!artist.instagramUrl && !artist.twitterUrl && !artist.tiktokUrl && (
+                    <p className="ap2-empty">No social links yet</p>
+                  )}
+                </div>
+              </div>
             </div>
-          </section>
+
+            {/* Row 2: Popular Songs + About */}
+            <div className="ap2-grid ap2-grid--lower">
+              <div className="ap2-card ap2-popular">
+                <div className="ap2-popular__header">
+                  <h3>Popular</h3>
+                  {songs.length > 5 && <span className="ap2-popular__seeall">See all</span>}
+                </div>
+                <div className="ap2-popular__list">
+                  {songs.slice(0, 5).map((song, idx) => (
+                    <div key={song.songId} className="ap2-track">
+                      <span className="ap2-track__num">{idx + 1}</span>
+                      <img src={buildUrl(song.artworkUrl) || artistPhoto} alt={song.title} className="ap2-track__art" />
+                      <div className="ap2-track__info">
+                        <span className="ap2-track__title" onClick={() => handleSongClick(song.songId)}>
+                          {song.title}
+                        </span>
+                        <span className="ap2-track__plays">{fmt(song.plays)} plays</span>
+                      </div>
+                      <button
+                        className="ap2-track__play"
+                        onClick={() => playMedia(
+                          { type: 'song', url: buildUrl(song.fileUrl), title: song.title, artist: artist.username, artwork: buildUrl(song.artworkUrl) || artistPhoto },
+                          []
+                        )}
+                        aria-label={`Play ${song.title}`}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                  {songs.length === 0 && <p className="ap2-empty">No songs yet</p>}
+                </div>
+              </div>
+
+              <div className="ap2-card ap2-about">
+                <h3 className="ap2-about__heading">About</h3>
+                <div className="ap2-about__photo-wrap">
+                  <img src={artistPhoto} alt="" className="ap2-about__photo" />
+                  <div className="ap2-about__photo-fade" />
+                  {!isOwnProfile && (
+                    <p className="ap2-about__bio-overlay">{bio}</p>
+                  )}
+                </div>
+                {isOwnProfile && (
+                  <div className="ap2-about__edit">
+                    <textarea value={bio} onChange={handleBioChange} className="ap2-about__textarea" placeholder="Tell fans about yourself..." />
+                    <button onClick={handleSaveBio} className="ap2-about__save">Save Bio</button>
+                  </div>
+                )}
+                <div className="ap2-about__badges">
+                  <div className="ap2-about__badge">
+                    <span className="ap2-about__badge-value">{fmt(artist.score)}</span>
+                    <span className="ap2-about__badge-label">Score</span>
+                  </div>
+                  <div className="ap2-about__badge">
+                    <span className="ap2-about__badge-value">{fmt(followerCount)}</span>
+                    <span className="ap2-about__badge-label">Followers</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
