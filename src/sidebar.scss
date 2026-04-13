@@ -5,7 +5,7 @@ $text-primary: rgb(241, 241, 241);
 $unis-silver:#918f8f;
 $unis-blue-bright: #1d42a8;
 $bg-dark: linear-gradient(to bottom, #101016, #0a0a0f);
-$hover-bg: rgba(255, 255, 255, 0.1);
+$hover-bg: var(--unis-primary);
 $unis-blue: var(--unis-primary);
 
 $header-height: 75px;
