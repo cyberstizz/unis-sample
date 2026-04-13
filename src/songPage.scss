@@ -222,19 +222,45 @@ $transition-ambient: 1.2s ease;
   flex-wrap: wrap;
 }
 
-.sp-btn-play {
-  padding: 10px 28px;
-  background: $unis-blue;
-  color: white;
-  border: none;
-  border-radius: $radius-sm;
-  font-family: $font-body;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background $transition-fast, box-shadow $transition-fast;
-  &:hover { background: $unis-blue-hover; box-shadow: 0 4px 16px $unis-blue-glow; }
-}
+.sp-btn-play-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: $unis-blue;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+      transform: scale(1.05);
+      background-color: #1c41ad;
+      box-shadow: 0 6px 20px $unis-blue-glow;
+    }
+
+    &:active { transform: scale(0.95); }
+
+    // Nuclear specificity — same approach as the player to survive any global SVG rules
+    svg {
+      width: 22px !important;
+      height: 22px !important;
+      display: block !important;
+      fill: #FFFFFF !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: none;
+
+      path {
+        fill: #FFFFFF !important;
+        opacity: 1 !important;
+      }
+    }
+  }
 
 .sp-btn-vote {
   padding: 10px 28px;
@@ -600,7 +626,8 @@ $transition-ambient: 1.2s ease;
   .sp-album-art { width: 160px; height: 160px; }
   .sp-title { font-size: 24px; letter-spacing: -0.5px; }
   .sp-primary-actions { padding: 16px; gap: 8px; }
-  .sp-btn-play, .sp-btn-vote, .sp-btn-like { padding: 8px 16px; font-size: 13px; }
+  .sp-btn-vote, .sp-btn-like { padding: 8px 16px; font-size: 13px; }
+  .sp-btn-play-circle { width: 48px; height: 48px; }
   .sp-stats-row { padding: 0 16px 10px; font-size: 13px; }
   .sp-secondary-actions { padding: 0 16px 16px; gap: 6px; }
   .sp-action-btn { padding: 6px 12px; font-size: 12px; }

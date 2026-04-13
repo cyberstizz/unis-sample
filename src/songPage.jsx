@@ -157,6 +157,14 @@ const SongPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMedia?.id, currentMedia?.songId, song?.id, userId]);
 
+
+  const HeroPlayIcon = () => (
+    <svg viewBox="0 0 24 24" width="22" height="22"
+      style={{ width: 22, height: 22, display: 'block', fill: '#FFFFFF', marginLeft: 2 }}>
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  );
+
   const fetchSongData = async () => {
     try {
       const response = await apiCall({ method: 'get', url: `/v1/media/song/${songId}`, useCache: false });
@@ -280,7 +288,9 @@ const SongPage = () => {
 
             {/* ── PRIMARY ACTIONS — text buttons like original ── */}
             <div className="sp-primary-actions">
-              <button onClick={handlePlay} className="sp-btn-play">Play</button>
+              <button onClick={handlePlay} className="sp-btn-play-circle" aria-label="Play">
+                <HeroPlayIcon />
+              </button>
               <button onClick={handleVote} className="sp-btn-vote">Vote</button>
               <button
                 onClick={handleLike}
