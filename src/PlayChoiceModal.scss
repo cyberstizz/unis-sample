@@ -1,0 +1,114 @@
+// PlayChoiceModal.scss — modern dark-glass aesthetic
+.pcm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: pcm-fade 180ms ease-out;
+}
+
+.pcm-modal {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(20, 20, 22, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  color: #fff;
+  animation: pcm-rise 220ms cubic-bezier(.2,.8,.2,1);
+}
+
+.pcm-header {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.pcm-artwork {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+
+.pcm-info { min-width: 0; flex: 1; }
+
+.pcm-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 4px;
+}
+
+.pcm-title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pcm-artist {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pcm-actions { display: flex; flex-direction: column; gap: 8px; }
+
+.pcm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+  &:active { transform: scale(0.98); }
+}
+
+.pcm-btn-primary {
+  background: #fff;
+  color: #000;
+  &:hover { background: #f0f0f0; }
+}
+
+.pcm-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.12);
+  &:hover { background: rgba(255, 255, 255, 0.14); }
+}
+
+.pcm-btn-ghost {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  &:hover { color: #fff; }
+}
+
+@keyframes pcm-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pcm-rise {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
