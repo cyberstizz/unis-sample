@@ -14,7 +14,7 @@ import { buildUrl } from './utils/buildUrl';
 
 const SongPage = () => {
   const { songId } = useParams();
-  const { playMedia } = useContext(PlayerContext);
+  const { requestPlay } = useContext(PlayerContext);
   const { user } = useAuth();
   const navigate = useNavigate();
   const userId = user?.userId;
@@ -149,7 +149,7 @@ const SongPage = () => {
 
   const handlePlay = async () => {
     const track = { id: song.id, songId: song.id, type: 'song', url: song.url, title: song.title, artist: song.artist, artwork: song.artwork, jurisdiction: song.jurisdiction };
-    playMedia(track, [track]);
+    requestPlay(track);
     if (song.id && userId) {
       setSong(prev => ({ ...prev, playCount: prev.playCount + 1, playsToday: prev.playsToday + 1 }));
       try {
