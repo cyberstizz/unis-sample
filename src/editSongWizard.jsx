@@ -14,7 +14,12 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
   ? (song.artworkUrl.startsWith('http') ? song.artworkUrl : `${API_BASE_URL}${song.artworkUrl}`)
   : null
   );
+
   const [loading, setLoading] = useState(false);
+  const [downloadPolicy, setDownloadPolicy] = useState(song?.downloadPolicy || 'free');
+  const [downloadPrice, setDownloadPrice] = useState(
+    song?.downloadPrice ? (song.downloadPrice / 100).toFixed(2) : ''
+  );
 
   if (!show || !song) return null;
 
@@ -37,6 +42,14 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
     if (artworkFile) formData.append('artwork', artworkFile);
     if (description !== song?.description) formData.append('description', description);
     if (isrc !== (song?.isrc || '')) formData.append('isrc', isrc || '');
+    if (downloadPolicy !== (song?.downloadPolicy || 'free')) {
+      formData.append('downloadPolicy', downloadPolicy);
+    }
+    if (downloadPolicy === 'paid' && downloadPrice) {
+      formData.append('downloadPrice', Math.round(parseFloat(downloadPrice) * 100));
+    } else if (downloadPolicy !== 'paid') {
+      formData.append('downloadPrice', '');
+    }
 
 
     try {
@@ -56,7 +69,11 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
     }
   };
 
-  const hasChanges = artworkFile || description !== song?.description || isrc !== (song?.isrc || '');
+  const hasChanges = artworkFile
+    || description !== song?.description
+    || isrc !== (song?.isrc || '')
+    || downloadPolicy !== (song?.downloadPolicy || 'free')
+    || (downloadPolicy === 'paid' && downloadPrice !== ((song?.downloadPrice || 0) / 100).toFixed(2));
 
   return (
     <div className="upload-wizard-overlay">
@@ -149,6 +166,71 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
             <small>12-character International Standard Recording Code</small>
           </div>
 
+        </div>
+
+        {/* Download Policy */}
+        <div className="form-group">
+          <label className="upload-section-header">Download Availability</label>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            {[
+              { value: 'free', label: 'Free Download' },
+              { value: 'paid', label: 'Paid Download' },
+              { value: 'unavailable', label: 'No Download' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setDownloadPolicy(opt.value);
+                  if (opt.value !== 'paid') setDownloadPrice('');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '10px 8px',
+                  borderRadius: '8px',
+                  border: downloadPolicy === opt.value
+                    ? '2px solid var(--unis-primary, #163387)'
+                    : '1px solid rgba(255,255,255,0.15)',
+                  background: downloadPolicy === opt.value
+                    ? 'rgba(22,51,135,0.15)'
+                    : 'rgba(255,255,255,0.05)',
+                  color: downloadPolicy === opt.value
+                    ? 'var(--unis-primary, #6b8cff)'
+                    : 'rgba(255,255,255,0.5)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {downloadPolicy === 'paid' && (
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', padding: '0 12px' }}>
+              <span style={{ fontSize: '16px', fontWeight: 600, color: 'rgba(255,255,255,0.3)' }}>$</span>
+              <input
+                type="number"
+                min="1.99"
+                step="0.01"
+                placeholder="1.99"
+                value={downloadPrice}
+                onChange={(e) => setDownloadPrice(e.target.value)}
+                style={{
+                  flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                  color: '#fff', fontSize: '16px', fontWeight: 600, padding: '10px 8px',
+                }}
+              />
+            </div>
+          )}
+
+          <small style={{ color: '#A9A9A9', display: 'block', marginTop: '6px' }}>
+            {downloadPolicy === 'free' && 'Listeners can download this track for free.'}
+            {downloadPolicy === 'paid' && 'Set your price (minimum $1.99). You receive 90% directly to your Stripe account.'}
+            {downloadPolicy === 'unavailable' && 'Listeners can stream but not download this track.'}
+          </small>
         </div>
 
         {/* Buttons */}
