@@ -10,6 +10,7 @@ import DeleteSongModal from './deleteSongModal';
 import VoteHistoryModal from './voteHistoryModal';
 import ReferralCodeCard from './ReferralCodeCard';
 import ThemePicker from './ThemePicker';
+import CashoutPanel from './CashoutPanel';
 import './artistDashboard.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
@@ -68,9 +69,10 @@ const ArtistDashboard = () => {
   const [totalVotes, setTotalVotes] = useState(0);
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState(null);
-
   const [supportedArtist, setSupportedArtist] = useState(null);
-
+  const [earningsSummary, setEarningsSummary] = useState(null);
+  const [stripeStatus, setStripeStatus] = useState(null);
+  const [payoutHistory, setPayoutHistory] = useState([]);
   const [voteHistory, setVoteHistory] = useState([]);
   const [votesLoading, setVotesLoading] = useState(true);
   const [votesError, setVotesError] = useState(null);
@@ -137,12 +139,18 @@ const ArtistDashboard = () => {
     setStatsLoading(true);
     setStatsError(null);
     try {
-      const [supportersRes, followersRes] = await Promise.all([
-        apiCall({ url: `/v1/users/${userId}/supporters/count`, method: 'get', useCache: false }),
-        apiCall({ url: `/v1/users/${userId}/followers/count`, method: 'get', useCache: false }).catch(() => ({ data: { count: 0 } })),
-      ]);
-      setSupporters(supportersRes.data.count || 0);
-      setFollowers(followersRes.data.count || 0);
+     const [supportersRes, followersRes, earningsRes, stripeRes, payoutsRes] = await Promise.all([
+      apiCall({ url: `/v1/users/${userId}/supporters/count`, method: 'get', useCache: false }),
+      apiCall({ url: `/v1/users/${userId}/followers/count`, method: 'get', useCache: false }).catch(() => ({ data: { count: 0 } })),
+      apiCall({ url: '/v1/earnings/my-summary', useCache: false }).catch(() => ({ data: null })),
+      apiCall({ url: '/v1/stripe/status', useCache: false }).catch(() => ({ data: null })),
+      apiCall({ url: '/v1/stripe/payouts', useCache: false }).catch(() => ({ data: [] })),
+    ]);
+    setSupporters(supportersRes.data.count || 0);
+    setFollowers(followersRes.data.count || 0);
+    if (earningsRes.data) setEarningsSummary(earningsRes.data);
+    if (stripeRes.data) setStripeStatus(stripeRes.data);
+    if (payoutsRes.data) setPayoutHistory(payoutsRes.data);
     } catch (err) {
       console.error('Stats fetch failed:', err);
       setStatsError('Could not load stats.');
@@ -674,6 +682,39 @@ const ArtistDashboard = () => {
               </div>
             )}
           </div>
+
+          {/* Cashout */}
+          {userProfile?.role === 'artist' && (
+            <div className="card" style={{ marginTop: '1.5rem', padding: '0', overflow: 'hidden' }}>
+              <div className="section-header" style={{ padding: '1.5rem 1.5rem 0' }}>
+                <h3>💰 Earnings & Cashout</h3>
+              </div>
+              <div style={{ padding: '0 1.5rem 1.5rem' }}>
+                <CashoutPanel
+                  balance={Math.round(parseFloat(earningsSummary?.currentBalance || 0) * 100)}
+                  pendingBalance={0}
+                  minimumPayout={5000}
+                  stripeConnected={stripeStatus?.onboardingComplete && stripeStatus?.payoutsEnabled}
+                  onRequestPayout={async (amount) => {
+                    const res = await apiCall({ url: '/v1/stripe/payout', method: 'post' });
+                    if (res.data?.success) {
+                      fetchStats(user.userId);
+                    }
+                  }}
+                  onConnectStripe={async () => {
+                    const res = await apiCall({ url: '/v1/stripe/onboard', method: 'post' });
+                    if (res.data?.url) window.location.href = res.data.url;
+                  }}
+                  payoutHistory={payoutHistory.map(p => ({
+                    id: p.payoutId,
+                    amount: Math.round(parseFloat(p.amount || 0) * 100),
+                    status: p.status || 'pending',
+                    date: p.createdAt,
+                  }))}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Referral Code — artist */}
           <ReferralCodeCard userId={user?.userId} isArtist={true} />
