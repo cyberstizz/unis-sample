@@ -17,6 +17,8 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
   const [preview, setPreview] = useState(null);
   const [isrc, setIsrc] = useState('');
   const [explicit, setExplicit] = useState(false);
+  const [downloadPolicy, setDownloadPolicy] = useState('free');
+  const [downloadPrice, setDownloadPrice] = useState('');
 
   // Clean version state
   const [uploadedSong, setUploadedSong] = useState(null); // stores the response from the explicit upload
@@ -53,6 +55,8 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
     setCleanFile(null);
     setCleanPreview(null);
     setCleanLoading(false);
+    setDownloadPolicy('free');
+    setDownloadPrice('');
   };
 
   const handleNext = () => {
@@ -130,6 +134,11 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
       setLoading(false);
       return;
     }
+    if (downloadPolicy === 'paid' && (!downloadPrice || parseFloat(downloadPrice) < 1.99)) {
+      setError('Minimum download price is $1.99');
+      setLoading(false);
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -140,7 +149,9 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
         artistId,
         jurisdictionId,
         explicit,
-        isrc: isrc || null
+        isrc: isrc || null,
+        downloadPolicy,
+        downloadPrice: downloadPolicy === 'paid' ? parseInt(downloadPrice) : null
       };
       formData.append(mediaType, JSON.stringify(metadata));
       formData.append('file', file);
@@ -279,6 +290,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
                   required
                 />
               </div>
+
               <div className="upload-form-group">
                 <label htmlFor="description">Description</label>
                 <textarea
@@ -329,6 +341,73 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
                 </div>
               )}
 
+              {/* Download policy — only for songs */}
+{mediaType === 'song' && (
+  <div className="upload-form-group">
+    <label>Download Availability</label>
+    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+      {[
+        { value: 'free', label: 'Free Download' },
+        { value: 'paid', label: 'Paid Download' },
+        { value: 'unavailable', label: 'No Download' },
+      ].map(opt => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => {
+            setDownloadPolicy(opt.value);
+            if (opt.value !== 'paid') setDownloadPrice('');
+          }}
+          style={{
+            flex: 1,
+            padding: '10px 8px',
+            borderRadius: '8px',
+            border: downloadPolicy === opt.value
+              ? '2px solid var(--unis-primary, #163387)'
+              : '1px solid rgba(255,255,255,0.15)',
+            background: downloadPolicy === opt.value
+              ? 'rgba(22,51,135,0.15)'
+              : 'rgba(255,255,255,0.05)',
+            color: downloadPolicy === opt.value
+              ? 'var(--unis-primary, #6b8cff)'
+              : 'rgba(255,255,255,0.5)',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+
+    {downloadPolicy === 'paid' && (
+      <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', padding: '0 12px' }}>
+        <span style={{ fontSize: '16px', fontWeight: 600, color: 'rgba(255,255,255,0.3)' }}>$</span>
+        <input
+          type="number"
+          min="1.99"
+          step="0.01"
+          placeholder="1.99"
+          value={downloadPrice}
+          onChange={(e) => setDownloadPrice(e.target.value)}
+          style={{
+            flex: 1, background: 'transparent', border: 'none', outline: 'none',
+            color: '#fff', fontSize: '16px', fontWeight: 600, padding: '10px 8px',
+          }}
+        />
+      </div>
+    )}
+
+    <small style={{ color: '#A9A9A9', display: 'block', marginTop: '6px' }}>
+      {downloadPolicy === 'free' && 'Listeners can download this track for free.'}
+      {downloadPolicy === 'paid' && 'Set your price (minimum $1.99). You receive 90% — funds go directly to your Stripe account.'}
+      {downloadPolicy === 'unavailable' && 'Listeners can stream but not download this track.'}
+    </small>
+  </div>
+)}
+
               <div className="form-group">
                 <label htmlFor="file">{mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} File</label>
                 <input
@@ -368,6 +447,9 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
               <strong>ISRC:</strong> {isrc || 'Not provided'}<br />
               {mediaType === 'song' && (
                 <><strong>Explicit:</strong> {explicit ? 'Yes' : 'No'}<br /></>
+              )}
+              {mediaType === 'song' && (
+                <><strong>Download:</strong> {downloadPolicy === 'free' ? 'Free' : downloadPolicy === 'paid' ? `$${(parseInt(downloadPrice) / 100).toFixed(2) !== 'NaN' ? parseFloat(downloadPrice).toFixed(2) : downloadPrice}` : 'Not available'}<br /></>
               )}
               {preview && (
                 <div className="preview-media">
