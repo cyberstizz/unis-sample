@@ -172,6 +172,16 @@ export default function DownloadModal({
             <p style={styles.description}>
               Purchase this track to download a high-quality copy you can keep forever.
             </p>
+            <p style={{
+              margin: 0,
+              fontSize: '11px',
+              lineHeight: 1.4,
+              color: 'rgba(255,255,255,0.3)',
+              textAlign: 'center',
+              padding: '0 12px',
+            }}>
+              All song purchases are final. You've previewed this track for free — by purchasing, you agree that digital downloads are non-refundable.
+            </p>
             <button
               style={{
                 ...styles.btnPrimary,
