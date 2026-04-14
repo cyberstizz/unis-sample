@@ -453,6 +453,30 @@ const TermsOfService = () => {
               pending investigation and you are subsequently cleared, withheld amounts will be released in the 
               next payment cycle.
             </p>
+
+            <h3>11.7 Digital Track Purchases</h3>
+            <p>
+              Artists may offer individual tracks for sale as digital downloads at a price they set,
+              subject to a minimum price of $1.99 USD. Track purchases are processed via Stripe
+              and are subject to a platform fee of 10% of the sale price. The remaining 90%, less
+              Stripe processing fees, is deposited directly into the artist&rsquo;s connected Stripe
+              account, typically within 2 business days. Track sale revenue is separate from ad-based
+              earnings and is not subject to the $50.00 minimum payout threshold described in
+              Section 11.2.
+            </p>
+            <p>
+              Artists may configure each track as &ldquo;Free Download,&rdquo; &ldquo;Paid Download&rdquo;
+              (at their chosen price), or &ldquo;Not Available for Download&rdquo; at any time through
+              their artist dashboard or upload settings.
+            </p>
+            <p className="note">
+              <strong>No Refunds on Digital Downloads.</strong> All digital track purchases are final
+              and non-refundable. Buyers have the ability to stream any track in full before purchasing.
+              Because digital files cannot be &ldquo;returned&rdquo; once downloaded, Unis does not offer
+              refunds, credits, or exchanges for completed digital purchases. By completing a purchase,
+              the buyer acknowledges and agrees to this policy. This no-refund policy does not affect any
+              statutory rights that cannot be waived under applicable law.
+            </p>
           </section>
 
           {/* ═══════════════════════════════════════════ */}
