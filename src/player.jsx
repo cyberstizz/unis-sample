@@ -9,6 +9,7 @@ import PlaylistManager from './playlistManager';
 import VotingWizard from './votingWizard';
 import { apiCall } from './components/axiosInstance';
 import QueuePanel from './QueuePanel';
+import DownloadModal from './DownloadModal';
 import './player.scss';
 
 // ─── Inline SVG icons ───
@@ -100,6 +101,7 @@ const Player = () => {
   const [specificVoteData, setSpecificVoteData] = useState(null);
   const [volume, setVolume] = useState(0.7);
   const [showQueue, setShowQueue] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
 
   // Wizards State
   const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
@@ -330,30 +332,12 @@ const Player = () => {
     setShowPlaylistWizard(true);
   };
 
-  const handleDownload = async (e) => {
+  const handleDownload = (e) => {
     e.stopPropagation();
     if (isGuest) { triggerGate('generic'); return; }
-
-    const fileUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
-    if (!fileUrl) return alert('Download not available');
-    const artist = currentMedia.artist || 'Unknown Artist';
-    const title = currentMedia.title || 'Untitled';
-    const filename = `${artist} - ${title}.mp3`;
-    try {
-      const response = await fetch(fileUrl);
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      window.open(fileUrl, '_blank');
-    }
+    setShowDownloadModal(true);
   };
+
 
   const handleSeek = (e) => {
     const newTime = (e.target.value / 100) * duration;
@@ -408,6 +392,20 @@ const Player = () => {
         nominee={specificVoteData?.nominee || voteNominee}
         userId={userId}
         filters={specificVoteData?.filters || { selectedType: 'song' }}
+      />
+      <DownloadModal
+        isOpen={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        song={currentMedia ? {
+          id: currentMedia.id || currentMedia.songId,
+          title: currentMedia.title || 'Untitled',
+          artist: currentMedia.artist || 'Unknown Artist',
+          artworkUrl: currentMedia.artwork,
+          downloadUrl: currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl,
+          downloadPolicy: currentMedia.downloadPolicy || 'free',
+          downloadPrice: currentMedia.downloadPrice || null,
+          fileName: `${currentMedia.artist || 'Artist'} - ${currentMedia.title || 'Track'}.mp3`,
+        } : {}}
       />
       <AuthGateSheet {...gateProps} />
     </>
