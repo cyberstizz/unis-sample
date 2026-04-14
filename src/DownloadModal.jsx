@@ -1,36 +1,5 @@
 import { useState, useEffect } from "react";
 
-/*
- * DownloadModal — Unis Track Download Experience
- * 
- * Usage:
- *   <DownloadModal
- *     isOpen={showDownloadModal}
- *     onClose={() => setShowDownloadModal(false)}
- *     song={{
- *       title: "bomb diggity",
- *       artist: "rapking",
- *       artworkUrl: "https://...",
- *       downloadUrl: "https://...",       // the actual file URL
- *       downloadPolicy: "free",           // "free" | "paid" | "unavailable"
- *       downloadPrice: null,              // number in cents, e.g. 199 = $1.99
- *       fileName: "bomb_diggity.mp3",     // optional, for the downloaded file name
- *     }}
- *     onPurchase={(songId) => { /* hit your API to process payment */ }}
- *   />
- *
- * Backend considerations:
- *   - Add columns to your songs table:
- *       download_policy VARCHAR DEFAULT 'free'  -- 'free', 'paid', 'unavailable'
- *       download_price  INTEGER DEFAULT NULL     -- price in cents (null if free)
- *   - Add an endpoint: POST /api/songs/{id}/purchase
- *       -> verifies payment via Stripe, returns a signed/temp download URL
- *   - For free downloads, you can either serve the file directly or
- *     generate a short-lived signed URL from Cloudflare R2
- *   - Artist Dashboard: add a "Download Settings" section where artists
- *     can toggle between free/paid/unavailable and set price
- */
-
 // ── Inline SVG Icons ────────────────────────────────────────────────
 const IconDownload = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
