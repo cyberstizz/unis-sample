@@ -7,15 +7,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#163387" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="mobile-web-app-capable" content="yes" />
-
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Unis" />
     <meta name="description" content="Discover, vote, and support music from your neighborhood." />
 
     <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <link rel="apple-touch-icon" href="./src/assets/unisLogoThree.svg" />
+    <link rel="apple-touch-icon" href="/vite.svg" />
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
@@ -34,7 +32,12 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js').then(
-            (reg) => console.log('Unis SW registered:', reg.scope),
+            (reg) => {
+              console.log('Unis SW registered:', reg.scope);
+              // Check for updates every 60 seconds — ensures new deploys
+              // take effect without users needing to hard-refresh
+              setInterval(() => reg.update(), 60 * 1000);
+            },
             (err) => console.warn('Unis SW registration failed:', err)
           );
         });
