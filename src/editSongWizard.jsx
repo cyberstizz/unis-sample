@@ -32,33 +32,57 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
   };
 
   const handleSubmit = async () => {
-    if (!artworkFile && description === song?.description) {
+    if (!hasChanges) {
       onClose();
       return;
     }
 
-    setLoading(true);
-    const formData = new FormData();
-    if (artworkFile) formData.append('artwork', artworkFile);
-    if (description !== song?.description) formData.append('description', description);
-    if (isrc !== (song?.isrc || '')) formData.append('isrc', isrc || '');
-    if (downloadPolicy !== (song?.downloadPolicy || 'free')) {
-      formData.append('downloadPolicy', downloadPolicy);
-    }
-    if (downloadPolicy === 'paid' && downloadPrice) {
-      formData.append('downloadPrice', Math.round(parseFloat(downloadPrice) * 100));
-    } else if (downloadPolicy !== 'paid') {
-      formData.append('downloadPrice', '');
+    // Validate price if paid
+    if (downloadPolicy === 'paid' && (!downloadPrice || parseFloat(downloadPrice) < 1.99)) {
+      alert('Minimum download price is $1.99');
+      return;
     }
 
+    setLoading(true);
 
     try {
-      await apiCall({
-        method: 'patch',
-        url: `/v1/media/song/${song.songId}`,
-        data: formData,
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      // 1. Save description, artwork, isrc via existing PATCH endpoint
+      const hasMediaChanges = artworkFile
+        || description !== song?.description
+        || isrc !== (song?.isrc || '');
+
+      if (hasMediaChanges) {
+        const formData = new FormData();
+        if (artworkFile) formData.append('artwork', artworkFile);
+        if (description !== song?.description) formData.append('description', description);
+        if (isrc !== (song?.isrc || '')) formData.append('isrc', isrc || '');
+
+        await apiCall({
+          method: 'patch',
+          url: `/v1/media/song/${song.songId}`,
+          data: formData,
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+
+      // 2. Save download settings via the dedicated endpoint
+      const downloadPolicyChanged = downloadPolicy !== (song?.downloadPolicy || 'free');
+      const downloadPriceChanged = downloadPolicy === 'paid'
+        && downloadPrice !== ((song?.downloadPrice || 0) / 100).toFixed(2);
+
+      if (downloadPolicyChanged || downloadPriceChanged) {
+        await apiCall({
+          method: 'put',
+          url: `/v1/songs/${song.songId}/download-settings`,
+          data: {
+            downloadPolicy,
+            downloadPrice: downloadPolicy === 'paid'
+              ? Math.round(parseFloat(downloadPrice) * 100)
+              : null,
+          },
+        });
+      }
+
       onSuccess?.();
       onClose();
     } catch (err) {
