@@ -43,6 +43,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
+  // Only handle GET requests — POST/PUT/DELETE must always hit the network,
+  // and the Cache API throws if you try to cache non-GET responses.
+  if (request.method !== 'GET') return;
+
   // NEVER intercept these — they must always hit the network:
   //   • API calls (play counts, votes, auth, playlist ops, earnings)
   //   • Audio/media files from R2 or backend
@@ -54,7 +58,8 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/api/') ||
     url.hostname.includes('supabase') ||
     url.hostname.includes('r2.dev') ||
-    url.hostname.includes('cloudflare');
+    url.hostname.includes('cloudflare') ||
+    url.hostname.includes('railway.app');
 
   const isMedia =
     request.destination === 'audio' ||
