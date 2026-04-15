@@ -14,6 +14,15 @@ function fisherYatesShuffle(array) {
   return shuffled;
 }
 
+// ============================================================================
+// URL BUILDER — extracted so Media Session metadata can use it too
+// ============================================================================
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const buildUrl = (url) => {
+  if (!url) return null;
+  return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+};
+
 export const PlayerProvider = ({ children }) => {
   // --- Player state ---
   const [isExpanded, setIsExpanded] = useState(false);
@@ -600,17 +609,138 @@ export const PlayerProvider = ({ children }) => {
   }, [togglePlayPause]);
 
   // ========================================================================
+  // MEDIA SESSION API — Background playback & system media controls
+  // ========================================================================
+  //
+  // This gives Unis native-feeling media controls on Android (notification
+  // panel, lock screen) and desktop (keyboard media keys). It works in any
+  // modern browser — no PWA or service worker required.
+  //
+  // Three useEffects, each with a single responsibility:
+  //   1. Metadata — updates track info whenever currentMedia changes
+  //   2. Action handlers — wires play/pause/next/prev to system controls
+  //   3. Position state — keeps the notification seek bar accurate
+
+  // --- 1. Metadata: track info shown in notification panel / lock screen ---
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !currentMedia) return;
+
+    // Resolve artwork URL — must be absolute for the OS to fetch it
+    const artworkUrl =
+      buildUrl(currentMedia.artworkUrl || currentMedia.artwork || currentMedia.coverImageUrl)
+      || `${window.location.origin}/default-artwork.png`;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title:  currentMedia.title  || currentMedia.name || 'Unknown Track',
+      artist: currentMedia.artist || currentMedia.artistName || 'Unknown Artist',
+      // Jurisdiction as "album" — lock screen shows the neighborhood. On brand.
+      album:  currentMedia.jurisdictionName || currentMedia.jurisdiction || 'Unis',
+      artwork: [
+        { src: artworkUrl, sizes: '96x96',   type: 'image/png' },
+        { src: artworkUrl, sizes: '128x128', type: 'image/png' },
+        { src: artworkUrl, sizes: '192x192', type: 'image/png' },
+        { src: artworkUrl, sizes: '256x256', type: 'image/png' },
+        { src: artworkUrl, sizes: '384x384', type: 'image/png' },
+        { src: artworkUrl, sizes: '512x512', type: 'image/png' },
+      ],
+    });
+  }, [currentMedia]);
+
+  // --- 2. Action handlers: system-level play/pause/next/prev buttons ---
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    const audio = audioRef.current;
+
+    const actionHandlers = {
+      play: async () => {
+        try { await audio?.play(); }
+        catch (e) { console.warn('Media session play failed:', e); }
+      },
+      pause: () => {
+        audio?.pause();
+      },
+      previoustrack: () => {
+        // If more than 3 seconds in, restart the current track instead of going back
+        if (audio && audio.currentTime > 3) {
+          audio.currentTime = 0;
+        } else {
+          prev();
+        }
+      },
+      nexttrack: () => {
+        next();
+      },
+      seekto: (details) => {
+        if (audio && details.seekTime != null) {
+          audio.currentTime = details.seekTime;
+        }
+      },
+    };
+
+    // Register each handler safely — not all browsers support all actions
+    for (const [action, handler] of Object.entries(actionHandlers)) {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch (e) {
+        console.warn(`Media session: "${action}" not supported in this browser`);
+      }
+    }
+
+    return () => {
+      for (const action of Object.keys(actionHandlers)) {
+        try { navigator.mediaSession.setActionHandler(action, null); }
+        catch (_) { /* ignore */ }
+      }
+    };
+  }, [next, prev]);
+
+  // --- 3. Position state: keeps the notification seek bar accurate ---
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const syncPosition = () => {
+      if (!audio.duration || !isFinite(audio.duration)) return;
+      try {
+        navigator.mediaSession.setPositionState({
+          duration:     audio.duration,
+          playbackRate: audio.playbackRate,
+          position:     Math.min(audio.currentTime, audio.duration),
+        });
+      } catch (_) {
+        // Some browsers throw during track transitions when position > duration briefly
+      }
+    };
+
+    // Throttle: update every ~1s instead of every 250ms timeupdate tick
+    let lastSync = 0;
+    const handleTimeUpdate = () => {
+      const now = Date.now();
+      if (now - lastSync >= 1000) {
+        lastSync = now;
+        syncPosition();
+      }
+    };
+
+    // Also sync immediately when a new track starts playing
+    const handleLoadedMetadata = () => syncPosition();
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+    };
+  }, []);
+
+  // ========================================================================
   // HELPERS
   // ========================================================================
 
   const normalizePlaylistResponse = (data) => {
     if (!data) return null;
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-    const buildUrl = (url) => {
-      if (!url) return null;
-      return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-    };
-
     return {
       ...data,
       id: data.playlistId,
