@@ -60,6 +60,7 @@ afterEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   vi.clearAllTimers();
+  vi.useRealTimers(); // Always restore real timers in case a test forgot
 });
 afterAll(() => server.close());
 

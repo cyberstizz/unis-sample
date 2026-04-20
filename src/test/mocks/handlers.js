@@ -57,9 +57,12 @@ export function makeToken(userId) {
 // ─── Call-count tracking — many tests assert "was this endpoint hit?" ───
 export const callTracker = {
   counts: {},
-  reset() { this.counts = {}; },
+  payloads: {},
+  reset() { this.counts = {}; this.payloads = {}; },
   track(key) { this.counts[key] = (this.counts[key] || 0) + 1; },
   get(key) { return this.counts[key] || 0; },
+  store(key, value) { this.payloads[key] = value; },
+  retrieve(key) { return this.payloads[key]; },
 };
 
 export const handlers = [
@@ -92,12 +95,46 @@ export const handlers = [
   http.get(`${API}/v1/media/new`, () => HttpResponse.json(fixtures.songs)),
   http.get(`${API}/v1/media/song/:songId`, ({ params }) => {
     const song = fixtures.songs.find((s) => s.id === params.songId);
-    return song ? HttpResponse.json(song) : new HttpResponse(null, { status: 404 });
+    if (!song) return new HttpResponse(null, { status: 404 });
+    // Return the "full" shape (what SongPage expects)
+    return HttpResponse.json({
+      songId: song.id,
+      title: song.title,
+      artist: { userId: song.artistId, username: song.artist, photoUrl: null },
+      jurisdiction: { jurisdictionId: fixtures.users.listener.jurisdiction.jurisdictionId, name: 'Harlem' },
+      genre: { genreId: '00000000-0000-0000-0000-000000000101', name: 'Rap' },
+      artworkUrl: song.artworkUrl,
+      fileUrl: song.mediaUrl,
+      score: song.score,
+      playCount: song.playsToday * 10,
+      playsToday: song.playsToday,
+      explicit: false,
+      description: 'Test description',
+      duration: 180000, // ms
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      lyrics: '',
+    });
   }),
   http.post(`${API}/v1/media/song/:songId/play`, ({ params }) => {
     callTracker.track(`play:${params.songId}`);
     return HttpResponse.json({ tracked: true });
   }),
+  // Like system — shapes match Player.jsx expectations
+  http.get(`${API}/v1/media/song/:songId/is-liked`, () =>
+    HttpResponse.json({ isLiked: false })
+  ),
+  http.get(`${API}/v1/media/song/:songId/likes/count`, () =>
+    HttpResponse.json({ count: 0 })
+  ),
+  http.post(`${API}/v1/media/song/:songId/like`, ({ params }) => {
+    callTracker.track(`like:${params.songId}`);
+    return HttpResponse.json({ success: true });
+  }),
+  http.delete(`${API}/v1/media/song/:songId/like`, ({ params }) => {
+    callTracker.track(`unlike:${params.songId}`);
+    return HttpResponse.json({ success: true });
+  }),
+  http.post(`${API}/v1/media/video/:videoId/play`, () => HttpResponse.json({ tracked: true })),
 
   // ─── Ad tracking ───
   http.post(`${API}/v1/earnings/track-view`, () => {
@@ -124,8 +161,83 @@ export const handlers = [
   http.get(`${API}/v1/vote/leaderboards`, () => HttpResponse.json([])),
   http.get(`${API}/v1/vote/nominees`, () => HttpResponse.json([])),
   http.get(`${API}/v1/vote/history`, () => HttpResponse.json([])),
+  http.post(`${API}/v1/vote/submit`, () => {
+    callTracker.track('vote-submit');
+    return HttpResponse.json({ success: true });
+  }),
   http.get(`${API}/v1/awards/past`, () => HttpResponse.json([])),
   http.get(`${API}/v1/awards/leaderboards`, () => HttpResponse.json([])),
+
+  // ─── Comments ───
+  http.get(`${API}/v1/comments/song/:songId`, () => HttpResponse.json([])),
+  http.get(`${API}/v1/comments/song/:songId/count`, () =>
+    HttpResponse.json({ totalCount: 0, topLevelCount: 0 })
+  ),
+  http.get(`${API}/v1/comments/song/:songId/user-count`, () =>
+    HttpResponse.json({ count: 0, limit: 3, remaining: 3, limitReached: false })
+  ),
+
+  // ─── Artist-specific ───
+  http.get(`${API}/v1/users/:id/followers/count`, () => HttpResponse.json({ count: 0 })),
+  http.post(`${API}/v1/users/:id/follow`, () => {
+    callTracker.track('follow');
+    return HttpResponse.json({ success: true });
+  }),
+  http.delete(`${API}/v1/users/:id/follow`, () => {
+    callTracker.track('unfollow');
+    return HttpResponse.json({ success: true });
+  }),
+
+  // ─── CreateAccountWizard endpoints ───
+  http.get(`${API}/v1/users/validate-referral/:code`, ({ params }) => {
+    callTracker.track(`validate-referral:${params.code}`);
+    // Default: valid for any code (individual tests override)
+    return HttpResponse.json({ valid: true, referrerUsername: 'TestReferrer' });
+  }),
+  http.get(`${API}/v1/users/check-username`, ({ request }) => {
+    const url = new URL(request.url);
+    const username = url.searchParams.get('username');
+    callTracker.track(`check-username:${username}`);
+    return HttpResponse.json({ available: true });
+  }),
+  http.get(`${API}/v1/users/check-email`, ({ request }) => {
+    const url = new URL(request.url);
+    const email = url.searchParams.get('email');
+    callTracker.track(`check-email:${email}`);
+    return HttpResponse.json({ available: true });
+  }),
+  http.get(`${API}/v1/users/artists/active`, () => HttpResponse.json([
+    { userId: 'artist-1', username: 'Tony Fadd', photoUrl: null, jurisdiction: { jurisdictionId: '52740de0-e4e9-4c9e-b68e-1e170f6788c4', name: 'Uptown Harlem' }, defaultSongId: 'song-001', defaultSong: { title: 'First Track' } },
+    { userId: 'artist-2', username: 'SD Boomin', photoUrl: null, jurisdiction: { jurisdictionId: '4b09eaa2-03bc-4778-b7c2-db8b42c9e732', name: 'Downtown Harlem' }, defaultSongId: 'song-002', defaultSong: { title: 'Late Night' } },
+  ])),
+  http.get(`${API}/v1/users/:id/default-song`, () => HttpResponse.json({
+    songId: 'song-001', title: 'First Track', fileUrl: '/uploads/test.mp3',
+  })),
+  http.patch(`${API}/v1/users/profile/photo`, () => {
+    callTracker.track('upload-photo');
+    return HttpResponse.json({ photoUrl: '/uploads/avatars/test-user.jpg' });
+  }),
+  http.post(`${API}/v1/users/register`, async ({ request }) => {
+    const body = await request.json();
+    callTracker.track('register');
+    callTracker.store('register-payload', body);
+    return HttpResponse.json({
+      userId: 'new-user-id',
+      username: body.username,
+      email: body.email,
+      role: body.role,
+    });
+  }),
+  http.post(`${API}/auth/login`, async ({ request }) => {
+    const body = await request.json();
+    callTracker.track('login');
+    callTracker.store('login-payload', body);
+    return HttpResponse.json({ token: 'new-session-token', userId: 'new-user-id' });
+  }),
+  http.post(`${API}/v1/media/song`, () => {
+    callTracker.track('upload-song');
+    return HttpResponse.json({ songId: 'new-song-id', title: 'Uploaded Track' });
+  }),
 
   // ─── Jurisdictions ───
   http.get(`${API}/v1/jurisdictions/byName/:name`, () =>
