@@ -231,10 +231,10 @@ const LeaderboardsPage = () => {
               <select value={location} onChange={(e) => setLocation(e.target.value)} className="filter-select">
                 <option value="downtown-harlem">Downtown Harlem</option>
                 <option value="uptown-harlem">Uptown Harlem</option>
-                <option value="harlem-wide">Harlem-wide</option>
+                <option value="harlem">Harlem-wide</option>
               </select>
               <select value={genre} onChange={(e) => setGenre(e.target.value)} className="filter-select">
-                <option value="rap-">Rap</option>
+                <option value="rap">Rap</option>
                 <option value="rock">Rock</option>
                 <option value="pop">Pop</option>
               </select>
@@ -277,9 +277,12 @@ const LeaderboardsPage = () => {
                     />
                     <div className="item-info">
                       <div className="item-title">{item.title}</div>
-                      <div className="item-artist">{item.jurisdictionId}</div>
+                      {item.type === 'song' && (
+                        <div className="item-artist">{item.artist}</div>
+                      )}
                     </div>
                     <div className="item-votes">
+                      {item.votes} {item.votes === 1 ? 'vote' : 'votes'}
                     </div>
                     
                     <div className="result-actions">
