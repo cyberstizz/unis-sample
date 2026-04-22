@@ -8,7 +8,7 @@ import {
 import { PlayerContext } from "./context/playercontext";
 import axiosInstance from "./components/axiosInstance";
 import "./playlistViewer.scss";
-import { buildUrl, API_BASE_URL } from './utils/buildUrl';
+import { buildUrl } from './utils/buildUrl';
 
 const PlaylistViewer = ({ playlistId, onClose }) => {
   const {

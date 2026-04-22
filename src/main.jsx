@@ -5,7 +5,6 @@ import './index.css';
 import App from './App.jsx';
 import Feed from './feed.jsx';
 import Onboarding from './onboarding.jsx';
-import ExploreFind from './explorefind.jsx';
 import ArtistPage from './artistpage.jsx';
 import SongPage from './songPage.jsx';
 
