@@ -1,724 +1,1246 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { apiCall } from './components/axiosInstance';
-import Layout from './layout';
-import US_STATES_AND_METROS from './data/Usstatesandmetros';
+// src/WaitlistPage.test.jsx
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { server } from './test/mocks/server';
+import { renderWithProviders } from './test/utils';
+import * as axiosModule from './components/axiosInstance';
 
-const WaitlistPage = () => {
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [referralValid, setReferralValid] = useState(null);
-  const [referralChecking, setReferralChecking] = useState(false);
-  const [copied, setCopied] = useState(false);
+// ---------------------------------------------------------------------------
+// MOCKS
+// ---------------------------------------------------------------------------
 
-  // FIX #10: Live region signup count (fetched when state+metro both selected)
-  const [regionStats, setRegionStats] = useState(null);
-  const [regionStatsLoading, setRegionStatsLoading] = useState(false);
+vi.mock('./layout', () => ({
+  default: ({ children }) => <div data-testid="layout">{children}</div>,
+}));
 
-  const [form, setForm] = useState({
-    email: '',
-    username: '',
-    password: '',
-    confirmPassword: '',
-    displayName: '',
-    userType: 'LISTENER',
-    stateCode: '',
-    metroRegion: '',
-    cityFreetext: '',
-    referredByCode: '',
+import WaitlistPage from './WaitlistPage';
+
+const API = 'http://localhost:8080/api';
+
+// ---------------------------------------------------------------------------
+// Selectors — the page has TWO state inputs now (datalist input + select).
+// Tests should drive the <select> (more deterministic). The state <select>
+// is always the first <select> on the page; the metro <select> appears
+// after a state is selected and is the second <select>.
+// ---------------------------------------------------------------------------
+function getStateSelect() {
+  const selects = document.querySelectorAll('select');
+  return selects[0];
+}
+function getMetroSelect() {
+  const selects = document.querySelectorAll('select');
+  return selects[1];
+}
+
+// ---------------------------------------------------------------------------
+// apiCall logger
+// ---------------------------------------------------------------------------
+let apiCallLog = [];
+
+function setupApiCallLog() {
+  apiCallLog = [];
+  const originalApiCall = axiosModule.apiCall;
+  vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
+    apiCallLog.push({ ...config });
+    return originalApiCall(config);
+  });
+}
+
+function callsMatching(urlMatcher, method) {
+  return apiCallLog.filter(c => {
+    const methodMatch = method ? (c.method || 'get').toLowerCase() === method.toLowerCase() : true;
+    const urlMatch = typeof urlMatcher === 'string' ? c.url === urlMatcher : urlMatcher.test(c.url);
+    return methodMatch && urlMatch;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// LIFECYCLE
+// ---------------------------------------------------------------------------
+beforeEach(() => {
+  server.use(
+    http.post(`${API}/v1/waitlist/register`, async ({ request }) => {
+      const body = await request.json();
+      return HttpResponse.json({
+        referralCode: 'UNIS-TEST01',
+        metroRegion: body.metroRegion,
+        stateName: body.stateName,
+        regionSignupCount: 5,
+        regionThreshold: 100,
+        regionProgressPercent: 5,
+      });
+    }),
+    http.get(`${API}/v1/waitlist/check-referral/:code`, ({ params }) => {
+      if (params.code === 'UNIS-VALID1') return HttpResponse.json({ valid: true });
+      return HttpResponse.json({ valid: false });
+    }),
+    // FIX #10: Live region stats endpoint
+    http.get(`${API}/v1/waitlist/region-stats`, ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json({
+        signupCount: 42,
+        threshold: 100,
+        progressPercent: 42,
+        stateCode: url.searchParams.get('stateCode'),
+        metroRegion: url.searchParams.get('metroRegion'),
+      });
+    })
+  );
+  setupApiCallLog();
+
+  // Default stubs for clipboard + share APIs used by fixes #2 and #3
+  if (!navigator.clipboard) {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn(() => Promise.resolve()) },
+      configurable: true,
+    });
+  } else {
+    navigator.clipboard.writeText = vi.fn(() => Promise.resolve());
+  }
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+// ---------------------------------------------------------------------------
+// Helper to fill valid form fields quickly
+// ---------------------------------------------------------------------------
+async function fillValidForm(user) {
+  await user.type(screen.getByPlaceholderText(/your@email\.com/i), 'test@example.com');
+  await user.type(screen.getByPlaceholderText(/Choose a username/i), 'testuser');
+  await user.type(screen.getByPlaceholderText(/Min 8 characters/i), 'password123');
+  await user.type(screen.getByPlaceholderText(/Re-enter password/i), 'password123');
+
+  await user.selectOptions(getStateSelect(), 'CA');
+
+  await waitFor(() => {
+    expect(document.querySelectorAll('select').length).toBe(2);
   });
 
-  const [result, setResult] = useState(null);
+  await user.selectOptions(getMetroSelect(), 'Los Angeles');
+}
 
-  // FIX #1: Ref to scroll the top-of-form error banner into view on submit failure
-  const formTopRef = useRef(null);
+// ===========================================================================
+// TESTS
+// ===========================================================================
 
-  const selectedState = US_STATES_AND_METROS[form.stateCode];
-  const metros = selectedState ? [...selectedState.metros, 'Other'] : [];
+describe('WaitlistPage — initial render', () => {
+  it('renders the page title and subtitle', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(screen.getByRole('heading', { name: /Join the Unis Waitlist/i })).toBeInTheDocument();
+    expect(screen.getByText(/Unis isn't in your area yet/i)).toBeInTheDocument();
+  });
 
-  const handleChange = (field, value) => {
-    setForm(prev => {
-      const updated = { ...prev, [field]: value };
-      if (field === 'stateCode') {
-        updated.metroRegion = '';
-        updated.cityFreetext = '';
-      }
-      if (field === 'metroRegion' && value !== 'Other') {
-        updated.cityFreetext = '';
-      }
-      return updated;
+  it('renders the user type toggle with LISTENER selected by default', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    const listenerBtn = screen.getByRole('button', { name: /^Listener$/i });
+    const artistBtn = screen.getByRole('button', { name: /^Artist$/i });
+    expect(listenerBtn).toHaveStyle({ fontWeight: '600' });
+    expect(artistBtn).toHaveStyle({ fontWeight: '400' });
+  });
+
+  it('renders all required form fields', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(screen.getByPlaceholderText(/your@email\.com/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Choose a username/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Min 8 characters/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Re-enter password/i)).toBeInTheDocument();
+  });
+
+  it('renders optional display name field', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(screen.getByPlaceholderText(/Your display name/i)).toBeInTheDocument();
+  });
+
+  it('renders state dropdown as the first <select> on the page', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(getStateSelect()).toBeInTheDocument();
+    expect(document.querySelectorAll('select').length).toBe(1);
+  });
+
+  it('does NOT render metro dropdown until a state is selected', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(screen.queryByText(/Metro \/ Region/i)).not.toBeInTheDocument();
+  });
+
+  it('renders referral code field as optional', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(screen.getByPlaceholderText(/UNIS-XXXXXX/i)).toBeInTheDocument();
+  });
+
+  it('renders the submit button labeled "Join the Waitlist"', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(screen.getByRole('button', { name: /Join the Waitlist/i })).toBeInTheDocument();
+  });
+
+  it('renders the Terms of Service and Privacy Policy disclaimer', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(screen.getByText(/By joining, you agree to Unis/i)).toBeInTheDocument();
+  });
+});
+
+describe('WaitlistPage — user type toggle', () => {
+  it('switches from LISTENER to ARTIST when Artist button clicked', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.click(screen.getByRole('button', { name: /^Artist$/i }));
+
+    expect(screen.getByRole('button', { name: /^Artist$/i })).toHaveStyle({ fontWeight: '600' });
+    expect(screen.getByRole('button', { name: /^Listener$/i })).toHaveStyle({ fontWeight: '400' });
+  });
+
+  it('changes display name placeholder to "Your artist name" when ARTIST selected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.click(screen.getByRole('button', { name: /^Artist$/i }));
+
+    expect(screen.getByPlaceholderText(/Your artist name/i)).toBeInTheDocument();
+  });
+
+  it('switches back to LISTENER correctly', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.click(screen.getByRole('button', { name: /^Artist$/i }));
+    await user.click(screen.getByRole('button', { name: /^Listener$/i }));
+
+    expect(screen.getByPlaceholderText(/Your display name/i)).toBeInTheDocument();
+  });
+});
+
+describe('WaitlistPage — state / metro cascading dropdowns', () => {
+  it('shows metro dropdown once a state is selected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.selectOptions(getStateSelect(), 'CA');
+
+    await waitFor(() => {
+      expect(document.querySelectorAll('select').length).toBe(2);
     });
-    setError('');
-  };
+    expect(screen.getByText(/Metro \/ Region/i)).toBeInTheDocument();
+  });
 
-  const checkReferral = useCallback(async (code) => {
-    if (!code || code.trim().length < 5) {
-      setReferralValid(null);
-      return;
-    }
-    setReferralChecking(true);
-    try {
-      const res = await apiCall({ url: `/v1/waitlist/check-referral/${code.trim()}`, method: 'get' });
-      setReferralValid(res.data.valid);
-    } catch {
-      setReferralValid(null);
-    } finally {
-      setReferralChecking(false);
-    }
-  }, []);
+  it("shows California's metros (LA, SF Bay Area, etc.)", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-  // FIX #10: Live region stats fetch
-  useEffect(() => {
-    if (!form.stateCode || !form.metroRegion) {
-      setRegionStats(null);
-      return;
-    }
-    let cancelled = false;
-    const fetchStats = async () => {
-      setRegionStatsLoading(true);
-      try {
-        const res = await apiCall({
-          url: `/v1/waitlist/region-stats?stateCode=${form.stateCode}&metroRegion=${encodeURIComponent(form.metroRegion)}`,
-          method: 'get',
-        });
-        if (!cancelled) setRegionStats(res.data);
-      } catch {
-        if (!cancelled) setRegionStats(null);
-      } finally {
-        if (!cancelled) setRegionStatsLoading(false);
-      }
-    };
-    fetchStats();
-    return () => { cancelled = true; };
-  }, [form.stateCode, form.metroRegion]);
+    await user.selectOptions(getStateSelect(), 'CA');
 
-  // FIX #1: Scroll to the top-of-form error banner after any validation/submit failure
-  const scrollToError = () => {
-    setTimeout(() => {
-      if (formTopRef.current && typeof formTopRef.current.scrollIntoView === 'function') {
-        formTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 50);
-  };
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Los Angeles' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'San Francisco Bay Area' })).toBeInTheDocument();
+    });
+  });
 
-  const handleSubmit = async () => {
-    if (!form.email || !form.username || !form.password) {
-      setError('Email, username, and password are required.');
-      scrollToError();
-      return;
-    }
-    if (form.password.length < 8) {
-      setError('Password must be at least 8 characters.');
-      scrollToError();
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match.');
-      scrollToError();
-      return;
-    }
-    if (!form.stateCode) {
-      setError('Please select your state.');
-      scrollToError();
-      return;
-    }
-    if (!form.metroRegion) {
-      setError('Please select your metro area.');
-      scrollToError();
-      return;
-    }
-    if (form.metroRegion === 'Other' && !form.cityFreetext.trim()) {
-      setError('Please enter your city or area name.');
-      scrollToError();
-      return;
-    }
+  it('includes "Other" as the last metro option', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-    setLoading(true);
-    setError('');
+    await user.selectOptions(getStateSelect(), 'CA');
 
-    try {
-      const payload = {
-        email: form.email,
-        username: form.username,
-        password: form.password,
-        displayName: form.displayName || form.username,
-        userType: form.userType,
-        stateCode: form.stateCode,
-        stateName: selectedState.name,
-        metroRegion: form.metroRegion,
-        cityFreetext: form.cityFreetext || null,
-        referredByCode: form.referredByCode || null,
-      };
-      const res = await apiCall({ url: '/v1/waitlist/register', method: 'post', data: payload });
-      setResult(res.data);
-      setStep(2);
-    } catch (err) {
-      const msg = err.response?.data?.error || 'Registration failed. Please try again.';
-      setError(msg);
-      scrollToError();
-    } finally {
-      setLoading(false);
-    }
-  };
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Other' })).toBeInTheDocument();
+    });
+  });
 
-  // FIX #2: Copy referral code
-  const handleCopyCode = async () => {
-    if (!result?.referralCode) return;
-    try {
-      await navigator.clipboard.writeText(result.referralCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  };
+  it('resets metro when state changes', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-  // FIX #3: Native share with fallback to copy
-  const handleShare = async () => {
-    if (!result) return;
-    const shareText = `I just joined the Unis waitlist for ${result.metroRegion}! Use my code ${result.referralCode} to help unlock Unis here faster.`;
-    const shareUrl = `${window.location.origin}/waitlist?ref=${result.referralCode}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'Join me on Unis', text: shareText, url: shareUrl });
-      } catch {
-        // user cancelled
-      }
-    } else {
-      handleCopyCode();
-    }
-  };
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Los Angeles');
+    expect(getMetroSelect()).toHaveValue('Los Angeles');
 
-  const inputStyle = {
-    width: '100%',
-    padding: '14px 16px',
-    background: '#111114',
-    border: '1px solid rgba(255,255,255,0.12)',
-    borderRadius: '10px',
-    color: '#fff',
-    fontSize: '15px',
-    fontFamily: "'DM Sans', sans-serif",
-    outline: 'none',
-    transition: 'border-color 0.2s',
-    boxSizing: 'border-box',
-  };
+    await user.selectOptions(getStateSelect(), 'NY');
+    await waitFor(() => {
+      expect(getMetroSelect()).toHaveValue('');
+    });
+  });
 
-  const labelStyle = {
-    display: 'block',
-    color: '#A9A9A9',
-    fontSize: '13px',
-    fontFamily: "'DM Sans', sans-serif",
-    marginBottom: '6px',
-    letterSpacing: '0.3px',
-  };
+  it('shows freetext city input when metro is "Other"', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-  const fieldGroup = { marginBottom: '18px' };
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Other');
 
-  // ─── Success screen ───
-  if (step === 2 && result) {
-    const remaining = Math.max(0, result.regionThreshold - result.regionSignupCount);
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Shreveport, Bakersfield/i)).toBeInTheDocument();
+    });
+  });
 
-    return (
-      <Layout>
-        <div style={{
-          maxWidth: '560px', margin: '60px auto', padding: '0 20px',
-          fontFamily: "'DM Sans', sans-serif",
-        }}>
-          <div style={{
-            background: '#111114', borderRadius: '16px', padding: '40px',
-            border: '1px solid rgba(255,255,255,0.08)',
-            textAlign: 'center',
-          }}>
-            <div style={{ marginBottom: '24px' }}>
-              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                <circle cx="32" cy="32" r="30" stroke="#163387" strokeWidth="3" fill="rgba(22,51,135,0.15)" />
-                <path d="M20 33 L28 41 L44 24" stroke="#163387" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              </svg>
-            </div>
+  it('hides freetext city input when metro is NOT "Other"', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-            <h1 style={{ color: '#fff', fontSize: '26px', fontWeight: '700', marginBottom: '12px' }}>
-              You're on the waitlist!
-            </h1>
-            <p style={{ color: '#A9A9A9', fontSize: '15px', lineHeight: '1.6', marginBottom: '28px' }}>
-              Unis is coming to <strong style={{ color: '#fff' }}>{result.metroRegion}</strong>,{' '}
-              <strong style={{ color: '#fff' }}>{result.stateName}</strong>.
-              Share your referral code to unlock your region faster.
-            </p>
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Los Angeles');
 
-            {/* FIX #2 + #3: Code card with Copy + Share buttons */}
-            <div style={{
-              background: '#0a0a0c', borderRadius: '12px', padding: '24px',
-              border: '1px solid rgba(22,51,135,0.4)', marginBottom: '16px',
-            }}>
-              <div style={{ color: '#A9A9A9', fontSize: '12px', letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase' }}>
-                Your Referral Code
-              </div>
-              <div style={{
-                color: '#fff', fontSize: '32px', fontWeight: '700',
-                letterSpacing: '3px', marginBottom: '16px',
-              }}>
-                {result.referralCode}
-              </div>
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                <button
-                  onClick={handleCopyCode}
-                  aria-label="Copy referral code"
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    background: copied ? 'rgba(34,197,94,0.15)' : 'rgba(22,51,135,0.2)',
-                    border: `1px solid ${copied ? '#22c55e' : 'rgba(22,51,135,0.5)'}`,
-                    borderRadius: '10px',
-                    color: copied ? '#22c55e' : '#fff',
-                    fontSize: '14px',
-                    fontFamily: "'DM Sans', sans-serif",
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {copied ? '✓ Copied!' : 'Copy Code'}
-                </button>
-                <button
-                  onClick={handleShare}
-                  aria-label="Share referral code"
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    background: '#163387',
-                    border: 'none',
-                    borderRadius: '10px',
-                    color: '#fff',
-                    fontSize: '14px',
-                    fontFamily: "'DM Sans', sans-serif",
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  Share
-                </button>
-              </div>
-            </div>
+    expect(screen.queryByPlaceholderText(/Shreveport, Bakersfield/i)).not.toBeInTheDocument();
+  });
 
-            {/* FIX #4: Motivating copy — "N more to unlock!" */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ color: '#A9A9A9', fontSize: '13px' }}>
-                  {remaining > 0 ? `${remaining} more to unlock!` : "Region activated — you're in!"}
-                </span>
-                <span style={{ color: '#163387', fontSize: '13px', fontWeight: '600' }}>
-                  {result.regionProgressPercent}%
-                </span>
-              </div>
-              <div style={{
-                width: '100%', height: '8px', background: 'rgba(255,255,255,0.08)',
-                borderRadius: '4px', overflow: 'hidden',
-              }}>
-                <div style={{
-                  width: `${result.regionProgressPercent}%`,
-                  height: '100%',
-                  background: 'linear-gradient(90deg, #163387, #2952cc)',
-                  borderRadius: '4px',
-                  transition: 'width 0.6s ease',
-                }} />
-              </div>
-              <div style={{ color: '#888', fontSize: '12px', marginTop: '6px', textAlign: 'left' }}>
-                {result.regionSignupCount} of {result.regionThreshold} signups
-              </div>
-            </div>
+  it('clears freetext city when switching FROM Other to a regular metro', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-            <p style={{ color: '#666', fontSize: '13px', lineHeight: '1.5', marginBottom: '12px' }}>
-              When your region reaches {result.regionThreshold} signups, it will be activated and
-              you'll get full access to Unis — voting, earning, and discovering music in your area.
-            </p>
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Other');
 
-            {/* FIX #7: Explain what happens next */}
-            <p style={{ color: '#666', fontSize: '12px', lineHeight: '1.5' }}>
-              We'll email you the moment your region activates. No spam, no forwarding — just the
-              one message you've been waiting for.
-            </p>
-          </div>
-        </div>
-      </Layout>
+    const cityInput = await screen.findByPlaceholderText(/Shreveport, Bakersfield/i);
+    await user.type(cityInput, 'Fresno-adjacent');
+
+    await user.selectOptions(getMetroSelect(), 'Los Angeles');
+
+    expect(screen.queryByPlaceholderText(/Shreveport, Bakersfield/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('WaitlistPage — client-side validation', () => {
+  it('shows error when submitting with empty required fields', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    expect(screen.getByText(/Email, username, and password are required/i)).toBeInTheDocument();
+  });
+
+  it('shows error when password is shorter than 8 characters', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.type(screen.getByPlaceholderText(/your@email\.com/i), 'test@example.com');
+    await user.type(screen.getByPlaceholderText(/Choose a username/i), 'testuser');
+    await user.type(screen.getByPlaceholderText(/Min 8 characters/i), 'short');
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    expect(screen.getByText(/Password must be at least 8 characters/i)).toBeInTheDocument();
+  });
+
+  it('shows error when passwords do not match', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.type(screen.getByPlaceholderText(/your@email\.com/i), 'test@example.com');
+    await user.type(screen.getByPlaceholderText(/Choose a username/i), 'testuser');
+    await user.type(screen.getByPlaceholderText(/Min 8 characters/i), 'password123');
+    await user.type(screen.getByPlaceholderText(/Re-enter password/i), 'different123');
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
+  });
+
+  it('shows error when state is not selected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.type(screen.getByPlaceholderText(/your@email\.com/i), 'test@example.com');
+    await user.type(screen.getByPlaceholderText(/Choose a username/i), 'testuser');
+    await user.type(screen.getByPlaceholderText(/Min 8 characters/i), 'password123');
+    await user.type(screen.getByPlaceholderText(/Re-enter password/i), 'password123');
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    expect(screen.getByText(/Please select your state/i)).toBeInTheDocument();
+  });
+
+  it('shows error when metro is not selected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.type(screen.getByPlaceholderText(/your@email\.com/i), 'test@example.com');
+    await user.type(screen.getByPlaceholderText(/Choose a username/i), 'testuser');
+    await user.type(screen.getByPlaceholderText(/Min 8 characters/i), 'password123');
+    await user.type(screen.getByPlaceholderText(/Re-enter password/i), 'password123');
+
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    expect(screen.getByText(/Please select your metro area/i)).toBeInTheDocument();
+  });
+
+  it('shows error when metro is "Other" but no city name entered', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.type(screen.getByPlaceholderText(/your@email\.com/i), 'test@example.com');
+    await user.type(screen.getByPlaceholderText(/Choose a username/i), 'testuser');
+    await user.type(screen.getByPlaceholderText(/Min 8 characters/i), 'password123');
+    await user.type(screen.getByPlaceholderText(/Re-enter password/i), 'password123');
+
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Other');
+
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    expect(screen.getByText(/Please enter your city or area name/i)).toBeInTheDocument();
+  });
+
+  it('clears error when user starts editing a field', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+    expect(screen.getByText(/Email, username, and password are required/i)).toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText(/your@email\.com/i), 'a');
+
+    expect(screen.queryByText(/Email, username, and password are required/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('WaitlistPage — referral code validation', () => {
+  it('auto-uppercases the referral code as user types', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    await user.type(refInput, 'unis-abc123');
+
+    expect(refInput).toHaveValue('UNIS-ABC123');
+  });
+
+  it('checks referral validity on blur (code length >= 5)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    await user.type(refInput, 'UNIS-VALID1');
+    fireEvent.blur(refInput);
+
+    await waitFor(() => {
+      const checks = callsMatching(/\/waitlist\/check-referral\//);
+      expect(checks.length).toBe(1);
+      expect(checks[0].url).toContain('UNIS-VALID1');
+    });
+  });
+
+  it('does NOT fire check when code is shorter than 5 chars', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    await user.type(refInput, 'UNIS');
+    fireEvent.blur(refInput);
+
+    await new Promise(r => setTimeout(r, 100));
+    const checks = callsMatching(/\/waitlist\/check-referral\//);
+    expect(checks.length).toBe(0);
+  });
+
+  it('shows valid checkmark when referral is valid', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    await user.type(refInput, 'UNIS-VALID1');
+    fireEvent.blur(refInput);
+
+    await waitFor(() => {
+      const svgs = container.querySelectorAll('svg circle[stroke="#22c55e"]');
+      expect(svgs.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('shows red X when referral is invalid', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    await user.type(refInput, 'UNIS-WRONG1');
+    fireEvent.blur(refInput);
+
+    await waitFor(() => {
+      const svgs = container.querySelectorAll('svg circle[stroke="#ef4444"]');
+      expect(svgs.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('silently ignores referral check errors (no crash)', async () => {
+    server.use(
+      http.get(`${API}/v1/waitlist/check-referral/:code`, () =>
+        new HttpResponse(null, { status: 500 })
+      )
     );
-  }
 
-  // ─── Form ───
-  return (
-    <Layout>
-      <div
-        ref={formTopRef}
-        style={{
-          maxWidth: '560px', margin: '40px auto', padding: '0 20px',
-          fontFamily: "'DM Sans', sans-serif",
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-          <h1 style={{ color: '#fff', fontSize: '30px', fontWeight: '700', marginBottom: '10px' }}>
-            Join the Unis Waitlist
-          </h1>
-          <p style={{ color: '#A9A9A9', fontSize: '15px', lineHeight: '1.6', maxWidth: '420px', margin: '0 auto' }}>
-            Unis isn't in your area yet — but it can be. Sign up now, get your referral code,
-            and help unlock Unis in your region.
-          </p>
-        </div>
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-        {/* FIX #1: Top-of-form error banner (scrolled into view on submit) */}
-        {error && (
-          <div
-            role="alert"
-            style={{
-              background: 'rgba(239,68,68,0.1)',
-              border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: '10px',
-              padding: '12px 16px',
-              marginBottom: '18px',
-              color: '#ef4444',
-              fontSize: '14px',
-            }}
-          >
-            {error}
-          </div>
-        )}
+    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    await user.type(refInput, 'UNIS-BROKEN');
+    fireEvent.blur(refInput);
 
-        <div style={{
-          background: '#111114', borderRadius: '16px', padding: '32px',
-          border: '1px solid rgba(255,255,255,0.08)',
-        }}>
-          <div style={fieldGroup}>
-            <label style={labelStyle}>I am a...</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              {['LISTENER', 'ARTIST'].map(type => (
-                <button
-                  key={type}
-                  onClick={() => handleChange('userType', type)}
-                  style={{
-                    flex: 1, padding: '12px',
-                    background: form.userType === type ? 'rgba(22,51,135,0.25)' : '#0a0a0c',
-                    border: `1px solid ${form.userType === type ? '#163387' : 'rgba(255,255,255,0.12)'}`,
-                    borderRadius: '10px', color: '#fff', fontSize: '14px',
-                    fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
-                    fontWeight: form.userType === type ? '600' : '400',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {type === 'LISTENER' ? 'Listener' : 'Artist'}
-                </button>
-              ))}
-            </div>
-          </div>
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Join the Waitlist/i })).toBeInTheDocument();
+    });
+  });
+});
 
-          <div style={fieldGroup}>
-            <label style={labelStyle}>Email</label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={e => handleChange('email', e.target.value)}
-              placeholder="your@email.com"
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-            />
-          </div>
+describe('WaitlistPage — submit flow', () => {
+  it('posts full payload to /v1/waitlist/register on successful submit', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-          <div style={fieldGroup}>
-            <label style={labelStyle}>Username</label>
-            <input
-              type="text"
-              value={form.username}
-              onChange={e => handleChange('username', e.target.value)}
-              placeholder="Choose a username"
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-            />
-          </div>
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
 
-          {/* FIX #8: Context for where Display Name shows up */}
-          <div style={fieldGroup}>
-            <label style={labelStyle}>
-              Display Name <span style={{ color: '#555' }}>(optional)</span>
-            </label>
-            <input
-              type="text"
-              value={form.displayName}
-              onChange={e => handleChange('displayName', e.target.value)}
-              placeholder={form.userType === 'ARTIST' ? 'Your artist name' : 'Your display name'}
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-            />
-            <div style={{ color: '#666', fontSize: '12px', marginTop: '6px' }}>
-              Shown on votes, comments, and your public profile. Defaults to your username.
-            </div>
-          </div>
+    await waitFor(() => {
+      expect(callsMatching('/v1/waitlist/register', 'post').length).toBe(1);
+    });
 
-          <div style={fieldGroup}>
-            <label style={labelStyle}>Password</label>
-            <input
-              type="password"
-              value={form.password}
-              onChange={e => handleChange('password', e.target.value)}
-              placeholder="Min 8 characters"
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-            />
-          </div>
+    const payload = callsMatching('/v1/waitlist/register', 'post')[0].data;
+    expect(payload).toMatchObject({
+      email: 'test@example.com',
+      username: 'testuser',
+      password: 'password123',
+      userType: 'LISTENER',
+      stateCode: 'CA',
+      stateName: 'California',
+      metroRegion: 'Los Angeles',
+    });
+  });
 
-          <div style={fieldGroup}>
-            <label style={labelStyle}>Confirm Password</label>
-            <input
-              type="password"
-              value={form.confirmPassword}
-              onChange={e => handleChange('confirmPassword', e.target.value)}
-              placeholder="Re-enter password"
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-            />
-          </div>
+  it('uses username as displayName when no displayName is provided', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-          <div style={{
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            marginTop: '24px', paddingTop: '24px', marginBottom: '18px',
-          }}>
-            <div style={{ color: '#fff', fontSize: '15px', fontWeight: '600', marginBottom: '4px' }}>
-              Where are you?
-            </div>
-            <div style={{ color: '#666', fontSize: '13px', marginBottom: '18px' }}>
-              This determines which Unis jurisdiction you'll join when it activates.
-            </div>
-          </div>
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
 
-          {/* FIX #9: State field with type-ahead via datalist */}
-          <div style={fieldGroup}>
-            <label style={labelStyle}>
-              State
-              <span style={{ color: '#555', fontWeight: 400, marginLeft: '8px' }}>
-                (type to search, or pick below)
-              </span>
-            </label>
-            <input
-              list="state-list"
-              value={selectedState ? selectedState.name : ''}
-              onChange={e => {
-                const typed = e.target.value;
-                const match = Object.entries(US_STATES_AND_METROS).find(
-                  ([, data]) => data.name.toLowerCase() === typed.toLowerCase()
-                );
-                if (match) {
-                  handleChange('stateCode', match[0]);
-                } else if (!typed) {
-                  handleChange('stateCode', '');
-                }
-              }}
-              placeholder="Start typing a state..."
-              style={{ ...inputStyle, marginBottom: '8px' }}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-              aria-label="Type to search state"
-            />
-            <datalist id="state-list">
-              {Object.entries(US_STATES_AND_METROS)
-                .sort((a, b) => a[1].name.localeCompare(b[1].name))
-                .map(([code, data]) => (
-                  <option key={code} value={data.name} />
-                ))}
-            </datalist>
-            <select
-              value={form.stateCode}
-              onChange={e => handleChange('stateCode', e.target.value)}
-              style={{
-                ...inputStyle,
-                cursor: 'pointer',
-                appearance: 'none',
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23A9A9A9' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 16px center',
-              }}
-            >
-              <option value="" style={{ background: '#111114' }}>Select your state</option>
-              {Object.entries(US_STATES_AND_METROS)
-                .sort((a, b) => a[1].name.localeCompare(b[1].name))
-                .map(([code, data]) => (
-                  <option key={code} value={code} style={{ background: '#111114' }}>
-                    {data.name}
-                  </option>
-                ))}
-            </select>
-          </div>
+    await waitFor(() => {
+      const payload = callsMatching('/v1/waitlist/register', 'post')[0].data;
+      expect(payload.displayName).toBe('testuser');
+    });
+  });
 
-          {form.stateCode && (
-            <div style={fieldGroup}>
-              <label style={labelStyle}>Metro / Region</label>
-              <select
-                value={form.metroRegion}
-                onChange={e => handleChange('metroRegion', e.target.value)}
-                style={{
-                  ...inputStyle,
-                  cursor: 'pointer',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23A9A9A9' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 16px center',
-                }}
-              >
-                <option value="" style={{ background: '#111114' }}>Select your area</option>
-                {metros.map(m => (
-                  <option key={m} value={m} style={{ background: '#111114' }}>{m}</option>
-                ))}
-              </select>
-            </div>
-          )}
+  it('uses provided displayName over username when given', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-          {form.metroRegion === 'Other' && (
-            <div style={fieldGroup}>
-              <label style={labelStyle}>Your City or Area</label>
-              <input
-                type="text"
-                value={form.cityFreetext}
-                onChange={e => handleChange('cityFreetext', e.target.value)}
-                placeholder="e.g. Shreveport, Bakersfield"
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = '#163387'}
-                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-              />
-            </div>
-          )}
+    await fillValidForm(user);
+    await user.type(screen.getByPlaceholderText(/Your display name/i), 'Charles L.');
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
 
-          {/* FIX #10: Live region stats shown BEFORE submit */}
-          {form.stateCode && form.metroRegion && (
-            <div style={{
-              background: 'rgba(22,51,135,0.08)',
-              border: '1px solid rgba(22,51,135,0.25)',
-              borderRadius: '10px',
-              padding: '14px 16px',
-              marginBottom: '18px',
-            }}>
-              {regionStatsLoading ? (
-                <div style={{ color: '#A9A9A9', fontSize: '13px' }}>
-                  Checking region progress...
-                </div>
-              ) : regionStats ? (
-                <>
-                  <div style={{ color: '#fff', fontSize: '13px', marginBottom: '8px' }}>
-                    {regionStats.signupCount > 0
-                      ? `${regionStats.signupCount} people already waiting in ${form.metroRegion}.`
-                      : `You'll be the first from ${form.metroRegion}!`}
-                    {' '}
-                    {regionStats.threshold - regionStats.signupCount > 0 && (
-                      <strong style={{ color: '#6b8cff' }}>
-                        {regionStats.threshold - regionStats.signupCount} more to unlock.
-                      </strong>
-                    )}
-                  </div>
-                  <div style={{
-                    width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)',
-                    borderRadius: '3px', overflow: 'hidden',
-                  }}>
-                    <div style={{
-                      width: `${regionStats.progressPercent}%`,
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #163387, #2952cc)',
-                      borderRadius: '3px',
-                      transition: 'width 0.6s ease',
-                    }} />
-                  </div>
-                </>
-              ) : (
-                <div style={{ color: '#A9A9A9', fontSize: '13px' }}>
-                  Sign up to start the waitlist for {form.metroRegion}!
-                </div>
-              )}
-            </div>
-          )}
+    await waitFor(() => {
+      const payload = callsMatching('/v1/waitlist/register', 'post')[0].data;
+      expect(payload.displayName).toBe('Charles L.');
+    });
+  });
 
-          {/* FIX #5: Referral code with benefit explanation */}
-          <div style={fieldGroup}>
-            <label style={labelStyle}>
-              Referral Code <span style={{ color: '#555' }}>(optional)</span>
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                value={form.referredByCode}
-                onChange={e => handleChange('referredByCode', e.target.value.toUpperCase())}
-                onBlur={e => checkReferral(e.target.value)}
-                placeholder="UNIS-XXXXXX"
-                style={{
-                  ...inputStyle,
-                  paddingRight: '44px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                }}
-                onFocus={e => e.target.style.borderColor = '#163387'}
-              />
-              {referralChecking && (
-                <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#A9A9A9', fontSize: '12px' }}>
-                  ...
-                </div>
-              )}
-              {referralValid === true && (
-                <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)' }}>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="9" fill="rgba(34,197,94,0.2)" stroke="#22c55e" strokeWidth="1.5" />
-                    <path d="M6 10.5L9 13.5L14 7.5" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                  </svg>
-                </div>
-              )}
-              {referralValid === false && form.referredByCode.length >= 5 && (
-                <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)' }}>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="9" fill="rgba(239,68,68,0.2)" stroke="#ef4444" strokeWidth="1.5" />
-                    <path d="M7 7L13 13M13 7L7 13" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                </div>
-              )}
-            </div>
-            {referralValid === true ? (
-              <div style={{ color: '#22c55e', fontSize: '12px', marginTop: '6px' }}>
-                ✓ Nice — you'll help boost their region too when Unis activates.
-              </div>
-            ) : (
-              <div style={{ color: '#666', fontSize: '12px', marginTop: '6px' }}>
-                Got a code from a friend? Enter it — you both benefit when your regions activate.
-              </div>
-            )}
-          </div>
+  it('sends userType=ARTIST when Artist is selected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            style={{
-              width: '100%', padding: '16px',
-              background: loading ? 'rgba(22,51,135,0.5)' : '#163387',
-              color: '#fff', border: 'none', borderRadius: '10px',
-              fontSize: '16px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer',
-              fontFamily: "'DM Sans', sans-serif",
-              transition: 'background 0.2s',
-            }}
-          >
-            {loading ? 'Joining...' : 'Join the Waitlist'}
-          </button>
+    await user.click(screen.getByRole('button', { name: /^Artist$/i }));
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
 
-          {/* FIX #6: Clickable Terms + Privacy links */}
-          <p style={{ color: '#555', fontSize: '12px', textAlign: 'center', marginTop: '16px', lineHeight: '1.5' }}>
-            By joining, you agree to Unis{' '}
-            <a href="/terms" style={{ color: '#6b8cff', textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">
-              Terms of Service
-            </a>
-            {' '}and{' '}
-            <a href="/privacy" style={{ color: '#6b8cff', textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">
-              Privacy Policy
-            </a>
-            . Your account will activate when your region reaches its signup threshold. No uploads or media storage until activation.
-          </p>
-        </div>
-      </div>
-    </Layout>
-  );
-};
+    await waitFor(() => {
+      const payload = callsMatching('/v1/waitlist/register', 'post')[0].data;
+      expect(payload.userType).toBe('ARTIST');
+    });
+  });
 
-export default WaitlistPage;
+  it('sends cityFreetext when metro is "Other"', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.type(screen.getByPlaceholderText(/your@email\.com/i), 'test@example.com');
+    await user.type(screen.getByPlaceholderText(/Choose a username/i), 'testuser');
+    await user.type(screen.getByPlaceholderText(/Min 8 characters/i), 'password123');
+    await user.type(screen.getByPlaceholderText(/Re-enter password/i), 'password123');
+
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Other');
+
+    await user.type(screen.getByPlaceholderText(/Shreveport, Bakersfield/i), 'Bakersfield');
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      const payload = callsMatching('/v1/waitlist/register', 'post')[0].data;
+      expect(payload.cityFreetext).toBe('Bakersfield');
+      expect(payload.metroRegion).toBe('Other');
+    });
+  });
+
+  it('sends null for cityFreetext when not "Other" metro', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      const payload = callsMatching('/v1/waitlist/register', 'post')[0].data;
+      expect(payload.cityFreetext).toBeNull();
+    });
+  });
+
+  it('sends referredByCode when provided', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.type(screen.getByPlaceholderText(/UNIS-XXXXXX/i), 'UNIS-VALID1');
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      const payload = callsMatching('/v1/waitlist/register', 'post')[0].data;
+      expect(payload.referredByCode).toBe('UNIS-VALID1');
+    });
+  });
+
+  it('sends null referredByCode when omitted', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      const payload = callsMatching('/v1/waitlist/register', 'post')[0].data;
+      expect(payload.referredByCode).toBeNull();
+    });
+  });
+
+  it('shows "Joining..." loading text during submission', async () => {
+    server.use(
+      http.post(`${API}/v1/waitlist/register`, async () => {
+        await new Promise(r => setTimeout(r, 200));
+        return HttpResponse.json({
+          referralCode: 'UNIS-TEST01', metroRegion: 'Los Angeles', stateName: 'California',
+          regionSignupCount: 5, regionThreshold: 100, regionProgressPercent: 5,
+        });
+      })
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Joining\.\.\./i })).toBeInTheDocument();
+    });
+  });
+
+  it('disables submit button during submission', async () => {
+    server.use(
+      http.post(`${API}/v1/waitlist/register`, async () => {
+        await new Promise(r => setTimeout(r, 200));
+        return HttpResponse.json({
+          referralCode: 'UNIS-TEST01', metroRegion: 'LA', stateName: 'CA',
+          regionSignupCount: 1, regionThreshold: 100, regionProgressPercent: 1,
+        });
+      })
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Joining\.\.\./i })).toBeDisabled();
+    });
+  });
+
+  it('surfaces server error message from error.response.data.error', async () => {
+    server.use(
+      http.post(`${API}/v1/waitlist/register`, () =>
+        HttpResponse.json({ error: 'Email already registered' }, { status: 409 })
+      )
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Email already registered/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows generic error when server returns no specific message', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    server.use(
+      http.post(`${API}/v1/waitlist/register`, () =>
+        new HttpResponse(null, { status: 500 })
+      )
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Registration failed\. Please try again/i)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('WaitlistPage — success screen', () => {
+  it('transitions to success screen after successful registration', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/You're on the waitlist!/i)).toBeInTheDocument();
+    });
+  });
+
+  it('displays the user\'s referral code prominently', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('UNIS-TEST01')).toBeInTheDocument();
+    });
+    expect(screen.getAllByText(/Your Referral Code/i).length).toBeGreaterThan(0);
+  });
+
+  it('displays the region metro and state names', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Unis is coming to/i)).toBeInTheDocument();
+    });
+    expect(screen.getAllByText('Los Angeles').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('California').length).toBeGreaterThan(0);
+  });
+
+  it('displays the progress bar with signup count and percentage', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/5 of 100 signups/i)).toBeInTheDocument();
+      expect(screen.getByText('5%')).toBeInTheDocument();
+    });
+  });
+
+  it('displays activation threshold explanation', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/it will be activated/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/voting, earning, and discovering music/i)).toBeInTheDocument();
+  });
+
+  it('does NOT render the form fields on the success screen', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/You're on the waitlist!/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByPlaceholderText(/your@email\.com/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Choose a username/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('WaitlistPage — state list ordering', () => {
+  it('sorts states alphabetically in the dropdown', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    const stateSelect = getStateSelect();
+    const options = Array.from(stateSelect.options)
+      .slice(1) // skip the placeholder
+      .map(o => o.text);
+
+    const sorted = [...options].sort();
+    expect(options).toEqual(sorted);
+  });
+
+  it('includes major states (CA, NY, FL)', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(screen.getAllByRole('option', { name: 'California' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('option', { name: 'New York' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('option', { name: 'Florida' }).length).toBeGreaterThan(0);
+  });
+});
+
+// ===========================================================================
+// NEW TESTS — UX FIXES #1 through #10
+// ===========================================================================
+
+describe('WaitlistPage — UX Fix #1: scroll-to-error on submit failure', () => {
+  it('error banner has role="alert" for accessibility + screen readers', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toBeInTheDocument();
+    expect(alert).toHaveTextContent(/Email, username, and password are required/i);
+  });
+
+  it('error banner appears ABOVE the form card (top-of-form), not below submit', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    const alert = container.querySelector('[role="alert"]');
+    const formCard = container.querySelector('[style*="background: rgb(17, 17, 20)"]');
+    expect(alert).toBeInTheDocument();
+    // Alert comes before the form card in document order
+    if (alert && formCard) {
+      const relation = alert.compareDocumentPosition(formCard);
+      expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+});
+
+describe('WaitlistPage — UX Fix #2: copy referral code button', () => {
+  it('renders a Copy Code button on the success screen', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Copy referral code/i })).toBeInTheDocument();
+    });
+  });
+
+  it('copies the referral code to clipboard when clicked', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => expect(screen.getByText('UNIS-TEST01')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /Copy referral code/i }));
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('UNIS-TEST01');
+  });
+
+  it('shows "Copied!" feedback for 2 seconds after copy', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => expect(screen.getByText('UNIS-TEST01')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /Copy referral code/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Copied!/i)).toBeInTheDocument();
+    });
+
+    vi.useRealTimers();
+  });
+
+  it('handles clipboard API failure gracefully (no crash)', async () => {
+    navigator.clipboard.writeText = vi.fn(() => Promise.reject(new Error('denied')));
+
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => expect(screen.getByText('UNIS-TEST01')).toBeInTheDocument());
+
+    // Should not throw
+    await user.click(screen.getByRole('button', { name: /Copy referral code/i }));
+
+    // The button is still visible and the page didn't crash
+    expect(screen.getByRole('button', { name: /Copy referral code/i })).toBeInTheDocument();
+  });
+});
+
+describe('WaitlistPage — UX Fix #3: share button', () => {
+  it('renders a Share button on the success screen', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Share referral code/i })).toBeInTheDocument();
+    });
+  });
+
+  it('calls navigator.share with the referral URL when available', async () => {
+    const shareMock = vi.fn(() => Promise.resolve());
+    navigator.share = shareMock;
+
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => expect(screen.getByText('UNIS-TEST01')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /Share referral code/i }));
+
+    expect(shareMock).toHaveBeenCalled();
+    const shareArg = shareMock.mock.calls[0][0];
+    expect(shareArg.text).toContain('UNIS-TEST01');
+    expect(shareArg.url).toContain('ref=UNIS-TEST01');
+
+    delete navigator.share;
+  });
+
+  it('falls back to copy when navigator.share is not available', async () => {
+    // Ensure navigator.share is undefined
+    delete navigator.share;
+
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => expect(screen.getByText('UNIS-TEST01')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /Share referral code/i }));
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('UNIS-TEST01');
+  });
+
+  it('silently handles user cancelling the native share', async () => {
+    navigator.share = vi.fn(() => Promise.reject(new Error('AbortError')));
+
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => expect(screen.getByText('UNIS-TEST01')).toBeInTheDocument());
+
+    // Should not throw
+    await user.click(screen.getByRole('button', { name: /Share referral code/i }));
+
+    expect(screen.getByRole('button', { name: /Share referral code/i })).toBeInTheDocument();
+
+    delete navigator.share;
+  });
+});
+
+describe('WaitlistPage — UX Fix #4: motivating "N more to unlock" copy', () => {
+  it('shows "N more to unlock!" on the success screen instead of neutral count', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    // server returns 5 of 100 → remaining = 95
+    await waitFor(() => {
+      expect(screen.getByText(/95 more to unlock/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows "Region activated — you\'re in!" when threshold is met', async () => {
+    server.use(
+      http.post(`${API}/v1/waitlist/register`, () =>
+        HttpResponse.json({
+          referralCode: 'UNIS-FULL01',
+          metroRegion: 'Los Angeles',
+          stateName: 'California',
+          regionSignupCount: 100,
+          regionThreshold: 100,
+          regionProgressPercent: 100,
+        })
+      )
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Region activated/i)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('WaitlistPage — UX Fix #5: referral code benefit explanation', () => {
+  it('shows helper text explaining referral benefit when field is empty', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(screen.getByText(/Got a code from a friend/i)).toBeInTheDocument();
+    expect(screen.getByText(/you both benefit when your regions activate/i)).toBeInTheDocument();
+  });
+
+  it('shows success message after valid referral is entered', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    await user.type(refInput, 'UNIS-VALID1');
+    fireEvent.blur(refInput);
+
+    await waitFor(() => {
+      expect(screen.getByText(/you'll help boost their region too/i)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('WaitlistPage — UX Fix #6: clickable TOS + Privacy links', () => {
+  it('renders Terms of Service as a clickable link to /terms', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    const tosLink = screen.getByRole('link', { name: /Terms of Service/i });
+    expect(tosLink).toHaveAttribute('href', '/terms');
+  });
+
+  it('renders Privacy Policy as a clickable link to /privacy', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    const privacyLink = screen.getByRole('link', { name: /Privacy Policy/i });
+    expect(privacyLink).toHaveAttribute('href', '/privacy');
+  });
+
+  it('opens both links in a new tab with rel="noopener noreferrer"', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    const tosLink = screen.getByRole('link', { name: /Terms of Service/i });
+    const privacyLink = screen.getByRole('link', { name: /Privacy Policy/i });
+
+    expect(tosLink).toHaveAttribute('target', '_blank');
+    expect(tosLink).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(privacyLink).toHaveAttribute('target', '_blank');
+    expect(privacyLink).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+});
+
+describe('WaitlistPage — UX Fix #7: "what happens next" email confirmation copy', () => {
+  it('shows "we\'ll email you the moment your region activates" on success', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/email you the moment your region activates/i)).toBeInTheDocument();
+    });
+  });
+
+  it('reassures about no spam / no forwarding', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/No spam, no forwarding/i)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('WaitlistPage — UX Fix #8: display name context helper', () => {
+  it('shows helper text explaining where display name appears', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(
+      screen.getByText(/Shown on votes, comments, and your public profile/i)
+    ).toBeInTheDocument();
+  });
+
+  it('mentions defaulting to username', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(screen.getByText(/Defaults to your username/i)).toBeInTheDocument();
+  });
+});
+
+describe('WaitlistPage — UX Fix #9: state dropdown with typeahead', () => {
+  it('renders a typeahead input with datalist linked to state list', () => {
+    const { container } = renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    const input = container.querySelector('input[list="state-list"]');
+    expect(input).toBeInTheDocument();
+  });
+
+  it('renders a datalist with one option per state', () => {
+    const { container } = renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    const datalist = container.querySelector('datalist#state-list');
+    expect(datalist).toBeInTheDocument();
+    // 50+ states in the list
+    expect(datalist.querySelectorAll('option').length).toBeGreaterThan(40);
+  });
+
+  it('sets stateCode when user types a matching state name', async () => {
+    const { container } = renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    const typeahead = container.querySelector('input[list="state-list"]');
+    // Use fireEvent.change to set the final value atomically (jsdom doesn't
+    // replay the full per-character typeahead matching that real browsers do).
+    fireEvent.change(typeahead, { target: { value: 'California' } });
+
+    await waitFor(() => {
+      expect(getStateSelect()).toHaveValue('CA');
+    });
+  });
+
+  it('also exposes the traditional <select> as a fallback', () => {
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+    expect(getStateSelect()).toBeInTheDocument();
+    expect(getStateSelect().tagName).toBe('SELECT');
+  });
+});
+
+describe('WaitlistPage — UX Fix #10: live region stats before submit', () => {
+  it('fetches /v1/waitlist/region-stats when state + metro are both selected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Los Angeles');
+
+    await waitFor(() => {
+      const statsCalls = callsMatching(/\/waitlist\/region-stats/);
+      expect(statsCalls.length).toBeGreaterThanOrEqual(1);
+      expect(statsCalls[0].url).toContain('stateCode=CA');
+      expect(statsCalls[0].url).toContain('metroRegion=');
+    });
+  });
+
+  it('does NOT fetch stats when only state is selected (no metro yet)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.selectOptions(getStateSelect(), 'CA');
+
+    await new Promise(r => setTimeout(r, 150));
+    expect(callsMatching(/\/waitlist\/region-stats/).length).toBe(0);
+  });
+
+  it('displays "N people already waiting" copy when stats return', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Los Angeles');
+
+    await waitFor(() => {
+      expect(screen.getByText(/42 people already waiting/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows "58 more to unlock" as a strong motivator', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Los Angeles');
+
+    await waitFor(() => {
+      expect(screen.getByText(/58 more to unlock/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows "You\'ll be the first from <metro>!" when count is 0', async () => {
+    server.use(
+      http.get(`${API}/v1/waitlist/region-stats`, () =>
+        HttpResponse.json({ signupCount: 0, threshold: 100, progressPercent: 0 })
+      )
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Los Angeles');
+
+    await waitFor(() => {
+      expect(screen.getByText(/You'll be the first from Los Angeles/i)).toBeInTheDocument();
+    });
+  });
+
+  it('silently handles region stats endpoint errors', async () => {
+    server.use(
+      http.get(`${API}/v1/waitlist/region-stats`, () =>
+        new HttpResponse(null, { status: 500 })
+      )
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Los Angeles');
+
+    // Should not crash — page still renders submit button
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Join the Waitlist/i })).toBeInTheDocument();
+    });
+  });
+
+  it('refetches stats when metro changes', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await user.selectOptions(getStateSelect(), 'CA');
+    await waitFor(() => expect(document.querySelectorAll('select').length).toBe(2));
+    await user.selectOptions(getMetroSelect(), 'Los Angeles');
+
+    await waitFor(() => {
+      expect(callsMatching(/\/waitlist\/region-stats/).length).toBeGreaterThanOrEqual(1);
+    });
+    const firstCount = callsMatching(/\/waitlist\/region-stats/).length;
+
+    await user.selectOptions(getMetroSelect(), 'San Diego');
+
+    await waitFor(() => {
+      expect(callsMatching(/\/waitlist\/region-stats/).length).toBeGreaterThan(firstCount);
+    });
+  });
+});
