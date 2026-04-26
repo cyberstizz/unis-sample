@@ -12,6 +12,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from './test/mocks/server';
 import { callTracker, fixtures, makeToken } from './test/mocks/handlers';
 import { renderWithProviders } from './test/utils';
+import cacheService from './services/cacheService';
 import SongPage from './songPage';
 
 const API = 'http://localhost:8080/api';
@@ -28,6 +29,10 @@ vi.mock('react-router-dom', async () => {
 describe('SongPage', () => {
   beforeEach(() => {
     callTracker.reset();
+    // Cache pollution between tests: prior tests cache the GET /is-liked
+    // response, so server.use() overrides in later tests get bypassed by
+    // a cache hit. Clear the apiCall cache before every test.
+    cacheService.clearAll();
   });
 
   // ========================================================================
@@ -92,20 +97,17 @@ describe('SongPage', () => {
     });
 
     it('calls DELETE when unliking', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-      let unlikeCalled = false;
+      // Override is-liked to return true so the button starts as "Liked".
+      // Use the default DELETE handler in handlers.js (it tracks
+      // unlike:${songId} via callTracker — same pattern as the rest of the
+      // suite).
       server.use(
         http.get(`${API}/v1/media/song/:songId/is-liked`, () =>
           HttpResponse.json({ isLiked: true })
         ),
         http.get(`${API}/v1/media/song/:songId/likes/count`, () =>
           HttpResponse.json({ count: 42 })
-        ),
-        http.delete(`${API}/v1/media/song/:songId/like`, () => {
-          unlikeCalled = true;
-          console.log('[DEBUG] unlike endpoint hit');
-          return HttpResponse.json({ success: true });
-        })
+        )
       );
 
       renderWithProviders(<SongPage />, { as: 'listener' });
@@ -113,17 +115,13 @@ describe('SongPage', () => {
       await screen.findByRole('heading', { name: /Track One/i });
       const likedBtn = await screen.findByRole('button', { name: /^liked$/i });
 
-      // Wait for auth state to settle
-      await new Promise((r) => setTimeout(r, 400));
-
       const user = userEvent.setup();
-      console.log('[DEBUG] Clicking liked button');
       await user.click(likedBtn);
-      console.log('[DEBUG] After click — unlikeCalled:', unlikeCalled);
 
-      await waitFor(() => expect(unlikeCalled).toBe(true), { timeout: 3000 });
-
-      alertSpy.mockRestore();
+      await waitFor(
+        () => expect(callTracker.get('unlike:song-001')).toBeGreaterThan(0),
+        { timeout: 3000 }
+      );
     });
 
     it('shows alert when guest tries to like', async () => {
@@ -177,18 +175,17 @@ describe('SongPage', () => {
   // Copy link
   // ========================================================================
   it('copies URL to clipboard and shows "Copied!" feedback', async () => {
-    // Overwrite clipboard API fresh each run (other tests may have touched it)
-    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', {
-      value: { writeText: writeTextSpy },
-      configurable: true,
-      writable: true,
-    });
-
     renderWithProviders(<SongPage />, { as: 'listener' });
 
     await screen.findByRole('heading', { name: /Track One/i });
+
+    // userEvent.setup() installs its own clipboard stub on navigator.clipboard
+    // (see @testing-library/user-event/dist/esm/utils/dataTransfer/Clipboard.js).
+    // Any spy installed before setup() gets overwritten by that stub. So we
+    // spy on user-event's installed stub AFTER setup runs.
     const user = userEvent.setup();
+    const writeTextSpy = vi.spyOn(navigator.clipboard, 'writeText');
+
     await user.click(screen.getByRole('button', { name: /copy link/i }));
 
     await waitFor(() =>
