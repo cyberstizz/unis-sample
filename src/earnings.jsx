@@ -50,7 +50,6 @@ const Earnings = () => {
 
   const fetchAllData = async () => {
     setLoading(true);
-    setError('');
     try {
       const [summaryRes, referralsRes, historyRes, stripeRes, payoutsRes] = await Promise.allSettled([
         apiCall({ url: '/v1/earnings/my-summary', useCache: false }),
@@ -65,6 +64,10 @@ const Earnings = () => {
       if (historyRes.status === 'fulfilled') setHistory(historyRes.value.data || []);
       if (stripeRes.status === 'fulfilled') setStripeStatus(stripeRes.value.data);
       if (payoutsRes.status === 'fulfilled') setPayouts(payoutsRes.value.data || []);
+      // Only clear a pre-existing error after a successful load. Clearing it
+      // preemptively at the top would clobber the ?stripe=refresh error set
+      // by the mount effect.
+      setError((prev) => (prev === 'Failed to load earnings data.' ? '' : prev));
     } catch (err) {
       console.error('Failed to load earnings:', err);
       setError('Failed to load earnings data.');
