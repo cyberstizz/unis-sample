@@ -128,8 +128,11 @@ function getCacheKeyFromUrl(url) {
     return { type: 'artist', id: artistMatch[1], params: {} };
   }
 
-  // Song: /v1/media/song/{songId}
-  const songMatch = url.match(/\/v1\/media\/song\/([^?\/]+)/);
+  // Song: /v1/media/song/{songId} — bare endpoint only.
+  // The trailing (?:\?|$) ensures we don't match subpaths like
+  // /is-liked or /likes/count, which would collide on the same
+  // cache key and cause is-liked/count responses to clobber each other.
+  const songMatch = url.match(/\/v1\/media\/song\/([^?\/]+)(?:\?|$)/);
   if (songMatch) {
     return { type: 'song', id: songMatch[1], params: {} };
   }
