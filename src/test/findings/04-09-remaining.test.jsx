@@ -164,6 +164,13 @@ describe('Finding 6 — WinnersNotification data source', () => {
     // The component currently falls back to a stale UUID `...0003` when
     // jurisdiction is missing. Target: skip the call entirely.
 
+    // Clear caches and storage so prior tests don't leak state into this one.
+    // Specifically: AuthContext caches the user profile via apiCall, and
+    // WinnersNotification gates on a localStorage key.
+    const { default: cacheService } = await import('../../services/cacheService');
+    cacheService.clearAll();
+    localStorage.removeItem('winnersNotificationShown');
+
     server.use(
       http.get(`${API}/v1/users/profile/:userId`, () =>
         HttpResponse.json({
