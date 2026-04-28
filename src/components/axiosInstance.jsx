@@ -1,3 +1,5 @@
+// src/components/axiosInstance.jsx
+
 import axios from 'axios';
 import cacheService from '../services/cacheService';
 
@@ -161,8 +163,8 @@ function invalidateCachesForMutation(url, method) {
       cacheService.invalidate('song', songId);
       cacheService.invalidateType('trending');
       cacheService.invalidateType('feed');
-      cacheService.invalidateType('user');   // Invalidate user cache since total_plays changed
-      cacheService.invalidateType('artist'); // Artist pages also show this data
+      cacheService.invalidateType('user');
+      cacheService.invalidateType('artist');
     }
     return;
   }
@@ -181,8 +183,8 @@ function invalidateCachesForMutation(url, method) {
       cacheService.invalidate('song', songIdMatch[1]);
       cacheService.invalidateType('trending');
     }
-    cacheService.invalidateType('user');   // Invalidate user cache since total_votes changed
-    cacheService.invalidateType('artist'); // Artist pages also show this data
+    cacheService.invalidateType('user');
+    cacheService.invalidateType('artist');
     console.log('[Cache] Invalidated after vote');
     return;
   }
@@ -221,17 +223,16 @@ function invalidateCachesForMutation(url, method) {
   }
 
   if (url.includes('/like')) {
-  const songIdMatch = url.match(/\/song\/([^\/\?]+)/);
-  if (songIdMatch) {
-    const songId = songIdMatch[1];
-    console.log(`[Cache] Invalidating song ${songId} after like/unlike`);
-    cacheService.invalidate('song', songId);
-    cacheService.invalidateType('trending');
-    cacheService.invalidateType('artist'); 
+    const songIdMatch = url.match(/\/song\/([^\/\?]+)/);
+    if (songIdMatch) {
+      const songId = songIdMatch[1];
+      console.log(`[Cache] Invalidating song ${songId} after like/unlike`);
+      cacheService.invalidate('song', songId);
+      cacheService.invalidateType('trending');
+      cacheService.invalidateType('artist'); 
+    }
+    return;
   }
-  return;
-}
-
 }
 
 // Export cache-aware API call wrapper
@@ -240,21 +241,20 @@ export const apiCall = async (config) => {
     console.log('Using mock data (backend offline/Netlify)');
     return getMockResponse(config.url, config.method);
   }
-  
+
   try {
     return await axiosInstance(config);
   } catch (error) {
-    // CRITICAL FIX:
-    // If this is a POST, PUT, DELETE, or PATCH, we MUST know if it failed.
-    // We re-throw the error so the UI (VotingWizard) handles it.
-    const method = config.method?.toLowerCase();
-    if (['post', 'put', 'patch', 'delete'].includes(method)) {
-        throw error; 
-    }
-
-    // Optional: Keep fallback ONLY for GET requests (reading data)
-    console.warn('API GET failed, falling back to mock:', error);
-    return getMockResponse(config.url, config.method);
+    // ALL methods now propagate errors to the caller. Components have
+    // try/catch blocks around apiCall and rely on those catches to set
+    // error UI state. Silently returning { data: [] } from failed GETs
+    // (the previous behavior) made every error path in the UI unreachable
+    // in real-API mode — users saw empty pages instead of "Failed to load."
+    //
+    // The previous GET fallback to getMockResponse only made sense in
+    // !USE_REAL_API mode (which is already handled at the top of this
+    // function). In USE_REAL_API mode, errors are real and must surface.
+    throw error;
   }
 };
 
