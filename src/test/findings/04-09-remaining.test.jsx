@@ -38,11 +38,16 @@ describe('Finding 4 — Cron timezone and LastWonNotification', () => {
         HttpResponse.json([
           {
             awardId: 'award-future',
-            targetType: 'song',
-            targetId: 'song-001',
             awardDate: '2026-04-16', // "tomorrow" in EST, but "today" in UTC
             intervalId: '00000000-0000-0000-0000-000000000201',
-            name: 'Future Track',
+            jurisdiction: { name: 'Harlem' },
+            song: {
+              songId: 'song-001',
+              title: 'Future Track',
+              artworkUrl: '/u.jpg',
+              fileUrl: '/u.mp3',
+              artist: { username: 'Anon', userId: 'art-1' },
+            },
           },
         ])
       )
@@ -51,8 +56,12 @@ describe('Finding 4 — Cron timezone and LastWonNotification', () => {
     const { default: LastWonNotification } = await import('../../LastWonNotification');
     renderWithProviders(<LastWonNotification />, { as: 'listener' });
 
-    // Wait for component to settle, then verify the future award was NOT shown
-    await new Promise((r) => setTimeout(r, 500));
+    // Use fake-timer-aware advancement instead of real setTimeout in a Promise
+    // (which would hang forever under fake timers).
+    for (let i = 0; i < 10; i++) {
+      await vi.advanceTimersByTimeAsync(500);
+      await Promise.resolve();
+    }
     expect(screen.queryByText(/future track/i)).not.toBeInTheDocument();
   });
 
