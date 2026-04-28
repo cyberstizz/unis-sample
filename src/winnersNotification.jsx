@@ -108,6 +108,10 @@ const WinnersNotification = () => {
   useEffect(() => {
     if (!user) return;
 
+    // Need a real jurisdiction to scope the leaderboard. No stale-UUID fallback —
+    // showing the wrong jurisdiction's winners is worse than showing nothing.
+    if (!user.jurisdiction?.jurisdictionId) return;
+
     // "Once per day" check — keyed to EST date so it aligns with vote resets
     const getEstDateString = () => {
       return new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York' });
@@ -120,21 +124,41 @@ const WinnersNotification = () => {
     if (lastShown === todayEst) return;
 
     const fetchAndShow = async () => {
-      const jurisdictionId = user.jurisdiction?.jurisdictionId || '00000000-0000-0000-0000-000000000003';
-      const jurisdictionName = user.jurisdiction?.name || 'your area';
+      const jurisdictionId = user.jurisdiction.jurisdictionId;
+      const jurisdictionName = user.jurisdiction.name || 'your area';
       const genreId = user.genre?.genreId || '00000000-0000-0000-0000-000000000101';
+
+      // Date window: yesterday → today (covers awards minted at EST midnight)
+      const toApiDate = (d) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dd}`;
+      };
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const startDate = toApiDate(yesterday);
+      const endDate = toApiDate(today);
 
       try {
         const response = await apiCall({
           method: 'get',
-          url: `/v1/vote/leaderboards?jurisdictionId=${jurisdictionId}&genreId=${genreId}&targetType=artist&intervalId=00000000-0000-0000-0000-000000000201&limit=5`,
+          url: `/v1/awards/past?type=artist&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurisdictionId}&genreId=${genreId}&intervalId=00000000-0000-0000-0000-000000000201&limit=5`,
         });
 
-        const leaderboardData = (response.data || []).map((entry) => ({
-          name: entry.name || entry.username || 'Unknown',
-          votes: entry.votes || entry.voteCount || 0,
-          artwork: buildUrl(entry.artwork || entry.photoUrl || entry.artworkUrl) || null,
-        }));
+        // /v1/awards/past returns Award objects nested with user/song; normalize
+        // them into the same {name, votes, artwork} shape that selectNotification expects.
+        const leaderboardData = (response.data || []).map((entry) => {
+          // Artist awards: entry.user has the username + photoUrl
+          const artistRecord = entry.user || {};
+          return {
+            name: artistRecord.username || entry.name || 'Unknown',
+            votes: entry.votesCount || entry.votes || 0,
+            artwork:
+              buildUrl(artistRecord.photoUrl || entry.artwork || entry.artworkUrl) || null,
+          };
+        });
 
         const picked = selectNotification(leaderboardData, jurisdictionName);
         setNotification(picked);
