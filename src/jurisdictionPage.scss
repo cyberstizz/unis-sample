@@ -1,610 +1,924 @@
-// jurisdictionPage.scss — Redesigned to match Nocturne/Unis mockup
-// Typography: DM Sans (body) + Playfair Display (display headings)
-// Aesthetic: Dark, editorial, premium music platform
+// jurisdictionPage.scss
+// Final dashboard-style jurisdiction page for Unis
+// Aesthetic: premium dark music dashboard, local scoreboard, blue accent
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&family=Playfair+Display:ital,wght@0,400;0,700;0,800;1,400;1,700;1,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap');
 
 // ── Tokens ──────────────────────────────────────
-$bg-base: #0a0a0c;
-$bg-surface: rgba(255, 255, 255, 0.03);
-$bg-elevated: rgba(255, 255, 255, 0.05);
+$bg-base: #07080b;
+$bg-panel: rgba(16, 19, 29, 0.78);
+$bg-panel-strong: rgba(14, 16, 24, 0.95);
+$bg-soft: rgba(255, 255, 255, 0.045);
 $bg-hover: rgba(255, 255, 255, 0.08);
-$border-dim: rgba(255, 255, 255, 0.06);
-$border-hover: rgba(255, 255, 255, 0.12);
-$unis-blue: var(--unis-primary);
-$unis-blue-light: #2e5aac;
-$unis-blue-glow: rgba(22, 51, 135, 0.3);
-$accent: #4ea8f5;
-$text-primary: #f0f0f2;
-$text-secondary: rgba(255, 255, 255, 0.55);
-$text-tertiary: rgba(255, 255, 255, 0.3);
-$text-muted: rgba(255, 255, 255, 0.18);
-$radius-sm: 6px;
-$radius-md: 10px;
-$radius-lg: 14px;
+
+$border-soft: rgba(255, 255, 255, 0.075);
+$border-medium: rgba(255, 255, 255, 0.12);
+$border-blue: rgba(45, 111, 255, 0.45);
+
+$unis-blue: var(--unis-primary, #1b63d8);
+$blue-solid: #1b63d8;
+$blue-bright: #3f8cff;
+$blue-glow: rgba(27, 99, 216, 0.32);
+
+$text-primary: #f5f7fb;
+$text-secondary: rgba(245, 247, 251, 0.68);
+$text-muted: rgba(245, 247, 251, 0.45);
+$text-faint: rgba(245, 247, 251, 0.28);
+
+$radius-sm: 8px;
+$radius-md: 12px;
+$radius-lg: 18px;
+$radius-xl: 24px;
+
+$shadow-card: 0 22px 70px rgba(0, 0, 0, 0.35);
+$shadow-blue: 0 16px 38px rgba(27, 99, 216, 0.22);
 
 // ── Animations ──────────────────────────────────
 @keyframes jp-fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes jp-fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
-// ── Page Container ──────────────────────────────
+// ── Base Page Container ─────────────────────────
 .jp {
   width: 100%;
-  max-width: 960px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 0 32px 80px;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 36px 34px 92px;
   color: $text-primary;
-  animation: jp-fadeIn 0.4s ease;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  animation: jp-fadeIn 0.35s ease;
+}
+
+.jp-v4 {
+  position: relative;
+}
+
+.jp,
+.jp * {
+  box-sizing: border-box;
+}
+
+.jp button {
+  font-family: inherit;
 }
 
 // ── Loading & Error ─────────────────────────────
-.jp-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  color: $text-secondary;
-  font-size: 15px;
-  font-family: 'DM Sans', sans-serif;
-}
-
+.jp-loading,
 .jp-error {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  color: #e74c3c;
+  padding: 32px;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 15px;
 }
 
-// ═════════════════════════════════════════════════
-// HERO — Big jurisdiction name, description, stats
-// ═════════════════════════════════════════════════
-
-.jp-hero {
-  padding: 48px 0 40px;
-  animation: jp-fadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.jp-hero-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
-  color: $unis-blue-light;
-  margin-bottom: 12px;
-}
-
-.jp-hero-name {
-  margin: 0 0 20px;
-  line-height: 0.95;
-}
-
-.jp-name-first {
-  display: block;
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 64px;
-  font-weight: 800;
-  font-style: italic;
-  color: $text-primary;
-  letter-spacing: -1px;
-}
-
-.jp-name-accent {
-  display: block;
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 64px;
-  font-weight: 800;
-  font-style: italic;
-  color: $unis-blue;
-  letter-spacing: -1px;
-}
-
-.jp-hero-desc {
-  font-size: 15px;
-  line-height: 1.6;
-  color: $text-secondary;
-  max-width: 480px;
-  margin: 0 0 28px;
-}
-
-.jp-hero-stats {
-  display: flex;
-  gap: 12px;
-}
-
-.jp-stat-card {
-  background: $bg-elevated;
-  border: 1px solid $border-dim;
-  border-radius: $radius-md;
-  padding: 14px 20px;
-  min-width: 130px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.jp-stat-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: $text-tertiary;
-}
-
-.jp-stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: $text-primary;
-}
-
-// ═════════════════════════════════════════════════
-// MAIN GRID — Artists (left) + Anthems (right)
-// ═════════════════════════════════════════════════
-
-.jp-main-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  margin-bottom: 60px;
-  animation: jp-fadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
-}
-
-// ── Section Headers ─────────────────────────────
-.jp-section-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.jp-section-title {
-  margin: 0;
-  font-size: 24px;
-  line-height: 1;
-}
-
-.jp-title-italic {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-style: italic;
-  font-weight: 700;
-}
-
-.jp-title-caps {
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 14px;
-  color: $text-secondary;
-  margin-left: 6px;
-}
-
-.jp-view-all {
-  font-size: 13px;
-  font-weight: 600;
-  color: $text-secondary;
-  cursor: pointer;
-  transition: color 0.2s;
-
-  &:hover { color: $text-primary; }
-}
-
-// ═════════════════════════════════════════════════
-// TOP ARTISTS LIST
-// ═════════════════════════════════════════════════
-
-.jp-artist-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.jp-artist-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 14px;
-  border-radius: $radius-md;
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &:hover {
-    background: $bg-hover;
-
-    .jp-artist-play { opacity: 1; }
-    .jp-artist-arrow { opacity: 0.5; }
-  }
-}
-
-.jp-artist-rank {
-  font-size: 16px;
-  font-weight: 300;
-  color: $text-muted;
-  min-width: 28px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.jp-artist-photo {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  border: 1px solid $border-dim;
-}
-
-.jp-artist-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.jp-artist-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: $text-primary;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.jp-artist-genre {
-  font-size: 11px;
-  color: $text-tertiary;
-}
-
-.jp-artist-play {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: $unis-blue;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s, transform 0.15s;
-  flex-shrink: 0;
-
-  &:hover { transform: scale(1.1); }
-}
-
-.jp-artist-arrow {
-  color: $text-muted;
-  opacity: 0;
-  transition: opacity 0.2s;
-  flex-shrink: 0;
-}
-
-.jp-empty {
-  color: $text-tertiary;
-  font-size: 14px;
-  padding: 20px 0;
-}
-
-// ═════════════════════════════════════════════════
-// LOCAL ANTHEMS (Songs)
-// ═════════════════════════════════════════════════
-
-.jp-anthem-nav {
-  display: flex;
-  gap: 6px;
-
-  button {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: $bg-elevated;
-    border: 1px solid $border-dim;
-    color: $text-secondary;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-
-    &:hover:not(:disabled) {
-      background: $bg-hover;
-      color: $text-primary;
-    }
-
-    &:disabled {
-      opacity: 0.3;
-      cursor: default;
-    }
-  }
-}
-
-// Featured #1 song card
-.jp-anthem-hero {
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  border-radius: $radius-lg;
-  overflow: hidden;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-  cursor: pointer;
-  margin-bottom: 14px;
-  transition: transform 0.3s;
-
-  &:hover { transform: scale(1.01); }
-}
-
-.jp-anthem-hero-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.1) 100%);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 20px;
-}
-
-.jp-anthem-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: $unis-blue-light;
-  margin-bottom: 8px;
-  background: rgba($unis-blue, 0.15);
-  padding: 3px 10px;
-  border-radius: 100px;
-  width: fit-content;
-}
-
-.jp-anthem-hero-title {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 26px;
-  font-weight: 700;
-  font-style: italic;
-  color: $text-primary;
-  margin: 0 0 4px;
-  line-height: 1.15;
-}
-
-.jp-anthem-hero-artist {
-  font-size: 13px;
-  color: $text-secondary;
-  margin: 0 0 14px;
-}
-
-.jp-anthem-hero-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.jp-listen-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 20px;
-  background: $unis-blue;
-  color: white;
-  border: none;
-  border-radius: 100px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: $unis-blue-light;
-    box-shadow: 0 0 14px $unis-blue-glow;
-  }
-}
-
-// Remaining song rows
-.jp-anthem-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.jp-anthem-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: $radius-md;
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &:hover {
-    background: $bg-hover;
-
-    .jp-anthem-play { opacity: 1; }
-  }
-}
-
-.jp-anthem-thumb {
-  width: 48px;
-  height: 48px;
-  border-radius: $radius-sm;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.jp-anthem-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.jp-anthem-rank {
-  font-size: 10px;
-  font-weight: 600;
-  color: $text-muted;
-  letter-spacing: 0.5px;
-}
-
-.jp-anthem-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: $text-primary;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.jp-anthem-artist {
-  font-size: 12px;
+.jp-loading {
   color: $text-secondary;
 }
 
-.jp-anthem-stat {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: $text-tertiary;
-
-  svg { flex-shrink: 0; }
+.jp-error {
+  color: #ff7272;
 }
 
-.jp-anthem-play {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: $unis-blue;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s, transform 0.15s;
-  flex-shrink: 0;
-
-  &:hover { transform: scale(1.1); }
-}
-
-// ── Ambient glow for artist + song rows ──────────
-.jp-artist-row,
-.jp-anthem-row {
-  position: relative;
-  overflow: hidden;
-}
-
-.jp-ambient-bg {
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background-size: cover;
-  background-position: center;
-  filter: blur(40px) saturate(180%);
-  opacity: 0;
-  z-index: 0;
-  pointer-events: none;
-  transition: opacity 0.5s ease;
-
-  .jp-artist-row:hover &,
-  .jp-anthem-row:hover & {
-    opacity: 0.25;
-  }
-}
-
-// Ensure all row content sits above the ambient layer
-.jp-artist-rank,
-.jp-artist-photo,
-.jp-artist-info,
-.jp-artist-arrow,
-.jp-anthem-thumb,
-.jp-anthem-info,
-.jp-anthem-play {
-  position: relative;
-  z-index: 1;
-}
-
-// ═════════════════════════════════════════════════
-// EDITORIAL — "Discover the Rhythm of Your Streets"
-// ═════════════════════════════════════════════════
-
-.jp-editorial {
-  padding: 60px 0;
-  border-top: 1px solid $border-dim;
-  animation: jp-fadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
-}
-
-.jp-editorial-title {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 42px;
-  font-weight: 700;
-  font-style: italic;
-  line-height: 1.15;
-  color: $text-primary;
-  margin: 0 0 20px;
-}
-
-.jp-editorial-accent {
-  color: $unis-blue;
-}
-
-.jp-editorial-body {
-  font-size: 15px;
-  line-height: 1.7;
-  color: $text-secondary;
-  max-width: 480px;
-  margin: 0 0 32px;
-}
-
-.jp-editorial-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.jp-editorial-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.jp-editorial-stat-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: $text-tertiary;
-}
-
-.jp-editorial-stat-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: $text-primary;
-}
-
-// Error banner
 .jp-error-banner {
   margin-top: 24px;
   padding: 12px 16px;
   background: rgba(255, 100, 100, 0.08);
-  border: 1px solid rgba(255, 100, 100, 0.2);
+  border: 1px solid rgba(255, 100, 100, 0.22);
   border-radius: $radius-md;
-  color: #f5a623;
+  color: #ffc166;
   text-align: center;
   font-size: 14px;
+}
+
+// ═════════════════════════════════════════════════
+// SHARED SECTION STYLES
+// ═════════════════════════════════════════════════
+
+.jp-section {
+  margin-top: 46px;
+  animation: jp-fadeUp 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.jp-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 18px;
+
+  &.compact {
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    margin: 4px 0 0;
+    color: $text-primary;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+  }
+}
+
+.jp-section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: $blue-bright;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.jp-section-eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: $blue-bright;
+  box-shadow: 0 0 16px rgba(63, 140, 255, 0.65);
+}
+
+.jp-text-action {
+  border: 0;
+  background: transparent;
+  color: $text-muted;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 0;
+  transition: color 0.18s ease, transform 0.18s ease;
+
+  &:hover {
+    color: $text-primary;
+    transform: translateX(2px);
+  }
+}
+
+.jp-empty {
+  color: $text-muted;
+  font-size: 14px;
+  padding: 18px 0;
+}
+
+// ═════════════════════════════════════════════════
+// ACTION BUTTONS
+// ═════════════════════════════════════════════════
+
+.jp-primary-action,
+.jp-secondary-action,
+.jp-featured-listen {
+  min-height: 44px;
+  border-radius: 12px;
+  padding: 0 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.jp-primary-action {
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.18), transparent 34%),
+    linear-gradient(135deg, $blue-bright 0%, $blue-solid 45%, #123b96 100%);
+  box-shadow: $shadow-blue;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 48px rgba(27, 99, 216, 0.34);
+  }
+}
+
+.jp-secondary-action {
+  color: $text-primary;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid $border-medium;
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
+
+// ═════════════════════════════════════════════════
+// HERO DASHBOARD
+// ═════════════════════════════════════════════════
+
+.jp-dashboard-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 360px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 36px;
+  align-items: center;
+  padding: 42px;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    radial-gradient(circle at 78% 18%, rgba(43, 103, 220, 0.18), transparent 33%),
+    radial-gradient(circle at 8% 8%, rgba(255, 255, 255, 0.08), transparent 32%),
+    linear-gradient(145deg, rgba(22, 27, 42, 0.96) 0%, rgba(9, 11, 18, 0.97) 58%, rgba(6, 7, 11, 0.98) 100%);
+  box-shadow: $shadow-card;
+  animation: jp-fadeUp 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background:
+      linear-gradient(90deg, rgba(63, 140, 255, 0.22), transparent 28%, transparent 72%, rgba(255, 255, 255, 0.08)),
+      radial-gradient(circle at 62% 48%, rgba(63, 140, 255, 0.12), transparent 28%);
+    pointer-events: none;
+  }
+
+  &::after {
+    content: 'UNIS';
+    position: absolute;
+    right: 18%;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.025);
+    font-size: 132px;
+    font-weight: 900;
+    letter-spacing: -0.08em;
+    pointer-events: none;
+    user-select: none;
+  }
+}
+
+.jp-hero-content {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.jp-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 22px;
+
+  span {
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 14px;
+    border-radius: 999px;
+    color: $text-secondary;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .is-active {
+    color: #8ebcff;
+    background: rgba(27, 99, 216, 0.22);
+    border-color: rgba(63, 140, 255, 0.48);
+  }
+}
+
+.jp-dashboard-title {
+  margin: 0;
+  color: $text-primary;
+  font-size: clamp(42px, 5vw, 68px);
+  line-height: 0.96;
+  font-weight: 900;
+  letter-spacing: -0.065em;
+  max-width: 700px;
+}
+
+.jp-dashboard-subtitle {
+  max-width: 680px;
+  margin: 20px 0 26px;
+  color: $text-secondary;
+  font-size: 18px;
+  line-height: 1.58;
+}
+
+.jp-dashboard-stats {
+  width: min(100%, 640px);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  margin-bottom: 28px;
+  border: 1px solid $border-soft;
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.025)),
+    rgba(0, 0, 0, 0.24);
+}
+
+.jp-dashboard-stat {
+  min-width: 0;
+  padding: 18px 18px 19px;
+  border-right: 1px solid $border-soft;
+
+  &:last-child {
+    border-right: 0;
+  }
+
+  span {
+    display: block;
+    margin-bottom: 8px;
+    color: $text-muted;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  strong {
+    display: block;
+    color: $text-primary;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.035em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .jp-live-text {
+    color: $blue-bright;
+  }
+}
+
+.jp-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+// ── Featured Release Card ───────────────────────
+.jp-featured-release {
+  position: relative;
+  z-index: 1;
+  min-height: 280px;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 22px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #050608;
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.42);
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: rgba(63, 140, 255, 0.35);
+    box-shadow: 0 26px 68px rgba(0, 0, 0, 0.55);
+
+    .jp-featured-art {
+      transform: scale(1.04);
+      filter: saturate(1.08) brightness(0.78);
+    }
+  }
+}
+
+.jp-featured-art {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  display: block;
+  object-fit: cover;
+  filter: saturate(1.02) brightness(0.7);
+  transform: scale(1.01);
+  transition: transform 0.35s ease, filter 0.35s ease;
+}
+
+.jp-featured-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 26px;
+  background:
+    radial-gradient(circle at 60% 18%, rgba(0, 0, 0, 0.08), transparent 24%),
+    linear-gradient(to top, rgba(0, 0, 0, 0.96) 0%, rgba(0, 0, 0, 0.58) 48%, rgba(0, 0, 0, 0.12) 100%);
+
+  h2 {
+    margin: 12px 0 4px;
+    color: #fff;
+    font-size: 27px;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    line-height: 1.08;
+  }
+
+  p {
+    margin: 0 0 18px;
+    color: $text-secondary;
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+
+.jp-featured-kicker {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 11px;
+  color: $text-primary;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(10px);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.jp-featured-listen {
+  width: 100%;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.095);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  &:hover {
+    background: rgba(27, 99, 216, 0.72);
+    border-color: rgba(63, 140, 255, 0.7);
+    transform: translateY(-1px);
+  }
+}
+
+// ═════════════════════════════════════════════════
+// TRENDING TRACK STRIP
+// ═════════════════════════════════════════════════
+
+.jp-trending-strip {
+  animation-delay: 0.08s;
+}
+
+.jp-track-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(128px, 1fr));
+  gap: 18px;
+}
+
+.jp-track-card {
+  min-width: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+
+    .jp-track-art-wrap {
+      border-color: rgba(63, 140, 255, 0.4);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
+    }
+
+    .jp-floating-play {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    img {
+      transform: scale(1.045);
+      filter: brightness(0.72) saturate(1.08);
+    }
+  }
+
+  h3 {
+    margin: 11px 0 4px;
+    color: $text-primary;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  p {
+    margin: 0;
+    color: $text-muted;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.jp-track-art-wrap {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    transition: transform 0.35s ease, filter 0.35s ease;
+  }
+}
+
+.jp-rank-badge {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 2;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.jp-floating-play {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $unis-blue;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+
+  &:hover {
+    background: $blue-bright;
+  }
+}
+
+// ═════════════════════════════════════════════════
+// LEADERBOARD GRID
+// ═════════════════════════════════════════════════
+
+.jp-leaderboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  animation-delay: 0.12s;
+}
+
+.jp-board-card {
+  min-width: 0;
+  padding: 24px;
+  border-radius: 22px;
+  border: 1px solid $border-soft;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(63, 140, 255, 0.08), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.022));
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.22);
+}
+
+.jp-ranked-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jp-ranked-row {
+  min-width: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px 48px minmax(0, 1fr) auto 34px;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.032);
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+
+  &:hover {
+    transform: translateX(2px);
+    background: rgba(255, 255, 255, 0.065);
+    border-color: rgba(63, 140, 255, 0.22);
+
+    .jp-row-play {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  > img {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+  }
+}
+
+.jp-ranked-number {
+  color: $text-faint;
+  font-size: 15px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.jp-ranked-main {
+  min-width: 0;
+
+  strong {
+    display: block;
+    color: $text-primary;
+    font-size: 14px;
+    font-weight: 850;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  span {
+    display: block;
+    margin-top: 4px;
+    color: $text-muted;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.jp-ranked-score {
+  text-align: right;
+  min-width: 56px;
+
+  strong {
+    display: block;
+    color: $text-primary;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  span {
+    display: block;
+    margin-top: 3px;
+    color: $text-faint;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+}
+
+.jp-row-play {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $unis-blue;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
+
+  &:hover {
+    background: $blue-bright;
+  }
+}
+
+// ═════════════════════════════════════════════════
+// LOCAL ANTHEM FEATURE
+// ═════════════════════════════════════════════════
+
+.jp-anthem-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  align-items: center;
+  gap: 34px;
+  overflow: hidden;
+  padding: 34px;
+  border-radius: 24px;
+  border: 1px solid $border-soft;
+  background:
+    radial-gradient(circle at 72% 40%, rgba(63, 140, 255, 0.16), transparent 32%),
+    linear-gradient(135deg, rgba(18, 22, 35, 0.92), rgba(8, 9, 13, 0.98));
+  box-shadow: $shadow-card;
+  animation-delay: 0.16s;
+}
+
+.jp-anthem-copy {
+  min-width: 0;
+
+  h2 {
+    max-width: 640px;
+    margin: 10px 0 14px;
+    color: $text-primary;
+    font-size: clamp(30px, 4vw, 50px);
+    font-weight: 900;
+    letter-spacing: -0.06em;
+    line-height: 0.98;
+  }
+
+  p {
+    max-width: 560px;
+    margin: 0 0 24px;
+    color: $text-secondary;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+}
+
+.jp-anthem-art {
+  position: relative;
+  min-height: 280px;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: #050607;
+  cursor: pointer;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38);
+
+  &:hover {
+    img {
+      transform: scale(1.045);
+      filter: brightness(0.76) saturate(1.08);
+    }
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    min-height: 280px;
+    object-fit: cover;
+    display: block;
+    filter: brightness(0.66) saturate(1.02);
+    transition: transform 0.35s ease, filter 0.35s ease;
+  }
+
+  div {
+    position: absolute;
+    inset: auto 0 0;
+    padding: 24px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.95), transparent);
+
+    span {
+      display: block;
+      margin-bottom: 8px;
+      color: $blue-bright;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    strong {
+      display: block;
+      color: #fff;
+      font-size: 25px;
+      font-weight: 900;
+      letter-spacing: -0.045em;
+      line-height: 1.05;
+    }
+
+    p {
+      margin: 7px 0 0;
+      color: $text-secondary;
+      font-size: 14px;
+      font-weight: 700;
+    }
+  }
+}
+
+// ═════════════════════════════════════════════════
+// ABOUT CARD
+// ═════════════════════════════════════════════════
+
+.jp-about-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: center;
+  padding: 28px;
+  border-radius: 22px;
+  border: 1px solid $border-soft;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02)),
+    rgba(0, 0, 0, 0.2);
+  animation-delay: 0.2s;
+
+  h2 {
+    margin: 8px 0 10px;
+    color: $text-primary;
+    font-size: 25px;
+    font-weight: 900;
+    letter-spacing: -0.045em;
+  }
+
+  p {
+    max-width: 700px;
+    margin: 0;
+    color: $text-secondary;
+    font-size: 15px;
+    line-height: 1.65;
+  }
+}
+
+.jp-about-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+// ═════════════════════════════════════════════════
+// RESPONSIVE — Medium Desktop
+// ═════════════════════════════════════════════════
+
+@media (max-width: 1120px) {
+  .jp-dashboard-hero {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    padding: 34px;
+  }
+
+  .jp-dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .jp-dashboard-stat {
+    border-bottom: 1px solid $border-soft;
+
+    &:nth-child(2) {
+      border-right: 0;
+    }
+
+    &:nth-child(3),
+    &:nth-child(4) {
+      border-bottom: 0;
+    }
+  }
+
+  .jp-track-row {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
 }
 
 // ═════════════════════════════════════════════════
@@ -613,20 +927,35 @@ $radius-lg: 14px;
 
 @media (max-width: 900px) {
   .jp {
-    padding: 0 20px 60px;
+    padding: 28px 22px 76px;
   }
 
-  .jp-main-grid {
-    gap: 28px;
+  .jp-dashboard-hero {
+    grid-template-columns: 1fr;
   }
 
-  .jp-name-first,
-  .jp-name-accent {
-    font-size: 48px;
+  .jp-featured-release {
+    min-height: 320px;
   }
 
-  .jp-editorial-title {
-    font-size: 34px;
+  .jp-featured-art {
+    min-height: 320px;
+  }
+
+  .jp-leaderboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jp-anthem-feature {
+    grid-template-columns: 1fr;
+  }
+
+  .jp-anthem-art {
+    max-width: 520px;
+  }
+
+  .jp-about-card {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -634,59 +963,145 @@ $radius-lg: 14px;
 // RESPONSIVE — Mobile
 // ═════════════════════════════════════════════════
 
-@media (max-width: 600px) {
+@media (max-width: 620px) {
   .jp {
-    padding: 0 14px 60px;
+    padding: 20px 14px 64px;
   }
 
-  .jp-hero {
-    padding: 28px 0 28px;
+  .jp-section {
+    margin-top: 34px;
   }
 
-  .jp-name-first,
-  .jp-name-accent {
-    font-size: 36px;
+  .jp-dashboard-hero {
+    min-height: 0;
+    padding: 24px;
+    border-radius: 22px;
+
+    &::after {
+      display: none;
+    }
   }
 
-  .jp-hero-stats {
+  .jp-dashboard-title {
+    font-size: 40px;
+    letter-spacing: -0.055em;
+  }
+
+  .jp-dashboard-subtitle {
+    font-size: 15px;
+    margin: 16px 0 22px;
+  }
+
+  .jp-pills {
+    gap: 7px;
+
+    span {
+      min-height: 26px;
+      padding: 0 10px;
+      font-size: 11px;
+    }
+  }
+
+  .jp-dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .jp-dashboard-stat {
+    border-right: 0;
+    border-bottom: 1px solid $border-soft;
+
+    &:nth-child(2),
+    &:nth-child(3) {
+      border-bottom: 1px solid $border-soft;
+    }
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+
+  .jp-hero-actions,
+  .jp-about-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .jp-primary-action,
+  .jp-secondary-action {
+    width: 100%;
+  }
+
+  .jp-section-heading {
+    align-items: flex-start;
     flex-direction: column;
     gap: 8px;
+
+    h2 {
+      font-size: 23px;
+    }
   }
 
-  .jp-stat-card {
-    min-width: 0;
+  .jp-track-row {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scroll-snap-type: x mandatory;
+
+    &::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.13);
+      border-radius: 999px;
+    }
   }
 
-  .jp-main-grid {
-    grid-template-columns: 1fr;
-    gap: 40px;
+  .jp-track-card {
+    min-width: 152px;
+    scroll-snap-align: start;
   }
 
-  .jp-artist-play {
-    opacity: 1; // always visible on mobile
-  }
-
-  .jp-anthem-play {
+  .jp-floating-play,
+  .jp-row-play {
     opacity: 1;
+    transform: none;
   }
 
-  .jp-anthem-hero-title {
-    font-size: 20px;
+  .jp-board-card,
+  .jp-anthem-feature,
+  .jp-about-card {
+    padding: 20px;
+    border-radius: 20px;
   }
 
-  .jp-editorial-title {
-    font-size: 28px;
+  .jp-ranked-row {
+    grid-template-columns: 30px 44px minmax(0, 1fr) 34px;
+    gap: 10px;
   }
 
-  .jp-editorial-body {
+  .jp-ranked-row > img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .jp-ranked-score {
+    display: none;
+  }
+
+  .jp-anthem-copy h2 {
+    font-size: 32px;
+  }
+
+  .jp-anthem-copy p {
     font-size: 14px;
   }
 
-  .jp-section-title {
-    font-size: 20px;
-  }
-
-  .jp-title-caps {
-    font-size: 12px;
+  .jp-featured-release,
+  .jp-featured-art,
+  .jp-anthem-art,
+  .jp-anthem-art img {
+    min-height: 260px;
   }
 }
