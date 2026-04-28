@@ -54,6 +54,17 @@ const toApiDate = (date) => {
   return `${y}-${m}-${d}`;
 };
 
+// "Today" in America/New_York (the platform's canonical timezone), as YYYY-MM-DD.
+// Used to defensively filter out awards dated in the future, which can leak
+// through when the backend cron runs at UTC midnight (= EST 7pm previous day)
+// and writes tomorrow-in-EST as the awardDate.
+const todayInEst = () => {
+  // 'en-CA' locale yields YYYY-MM-DD format
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+  }).format(new Date());
+};
+
 const toDisplayDate = (dateStr) => {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
@@ -151,7 +162,14 @@ const LastWonNotification = () => {
                 method: 'get',
                 url: `/v1/awards/past?type=${cat.type}&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurisdictionId}&intervalId=${cat.intervalId}`,
               });
-              const awards = res.data || [];
+              // Defensive filter: reject awards dated in the future. Without
+              // this, an award created prematurely by the backend cron
+              // (UTC midnight = EST 7pm prior day) would appear here as a
+              // tomorrow-in-EST notification before the day has actually started.
+              const cutoff = todayInEst();
+              const awards = (res.data || []).filter(
+                (a) => !a?.awardDate || a.awardDate <= cutoff
+              );
               if (awards.length === 0) return null;
               const award = awards[0];
               let displayData = null;
