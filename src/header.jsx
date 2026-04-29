@@ -22,7 +22,21 @@ const Header = () => {
   const { triggerGate, gateProps } = useAuthGate();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [shouldBreathe, setShouldBreathe] = useState(false);
   const menuRef = useRef(null);
+
+  // Breath animation: only on first page load of session
+  useEffect(() => {
+    try {
+      const hasPlayed = sessionStorage.getItem('unis-logo-breathed');
+      if (!hasPlayed) {
+        setShouldBreathe(true);
+        sessionStorage.setItem('unis-logo-breathed', 'true');
+      }
+    } catch (e) {
+      // sessionStorage may be unavailable (private mode, etc.) — skip silently
+    }
+  }, []);
 
   const handleHome = () => navigate('/');
   const handleMilestones = () => navigate('/milestones');
@@ -106,7 +120,11 @@ const Header = () => {
       <div className="header-inner">
         {/* Left: Logo */}
         <div className="header-logo" onClick={handleHome}>
-          <img src={activeLogo} alt="UNIS" className="logo-img" />
+          <img
+            src={activeLogo}
+            alt="UNIS"
+            className={`logo-img ${shouldBreathe ? 'logo-breathe' : ''}`}
+          />
         </div>
 
         {/* Center: Search */}
