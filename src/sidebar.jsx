@@ -66,8 +66,9 @@ const Sidebar = () => {
       <div
         className={`sidebar-trigger ${isOpen ? 'hidden' : ''}`}
         onClick={toggleOpen}
+        aria-label="Open navigation"
       >
-        <span className="arrow-icon">&#9654;</span>
+        <span className="pill-handle" />
       </div>
 
       <nav className={`sidebar ${isOpen ? 'open' : ''}`} ref={sidebarRef}>
