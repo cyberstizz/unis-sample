@@ -63,13 +63,17 @@ const Sidebar = () => {
 
   return (
     <>
-      <div
+      <button
         className={`sidebar-trigger ${isOpen ? 'hidden' : ''}`}
         onClick={toggleOpen}
-        aria-label="Open navigation"
+        aria-label={isOpen ? 'Close navigation' : 'Open navigation'}
       >
-        <span className="pill-handle" />
-      </div>
+        <span className="trigger-icon">
+          <span className="line line-top" />
+          <span className="line line-mid" />
+          <span className="line line-bot" />
+        </span>
+      </button>
 
       <nav className={`sidebar ${isOpen ? 'open' : ''}`} ref={sidebarRef}>
         <ul>
