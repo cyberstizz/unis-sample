@@ -4,10 +4,12 @@ import './lyricsWizard.scss';
 import { apiCall } from './components/axiosInstance';
 
 const LyricsWizard = ({ show, onClose, song, onSuccess }) => {
-  if (!show || !song) return null;
 
   const [lyrics, setLyrics] = useState(song.lyrics || '');
   const [saving, setSaving] = useState(false);
+
+  if (!show || !song) return null;
+
 
   const handleSave = async () => {
     if (saving) return;  // Prevent double-click
