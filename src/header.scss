@@ -67,45 +67,34 @@ $header-height: 75px;
   &:hover { opacity: 0.85; }
 
   .logo-img {
-    height: 92px;
-    width: auto;
-    display: block;
-    transform-origin: center center;
-    will-change: transform, filter;
+  height: 92px;
+  width: auto;
+  display: block;
+  transform-origin: center center;
+  will-change: transform, filter;
 
-    &.logo-breathe {
-      animation: logoBreathe 2.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s 1 both;
-    }
+  &.logo-breathe {
+    animation: logoStretch 1.5s linear 0.4s 1 both;
   }
 }
 
-// ─── LOGO BREATH ANIMATION ──────────────────────────────────────
-// Two-breath pattern: full breath → settle → softer breath → settle
-// Plays once per session on first page load. Ties to brand blue via glow.
-@keyframes logoBreathe {
-  0% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 0 rgba(29, 66, 168, 0));
-  }
-  20% {
-    transform: scale(1.07);
-    filter: drop-shadow(0 0 14px rgba(29, 66, 168, 0.35));
-  }
-  40% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 0 rgba(29, 66, 168, 0));
-  }
-  60% {
-    transform: scale(1.035);
-    filter: drop-shadow(0 0 8px rgba(29, 66, 168, 0.2));
-  }
-  100% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 0 rgba(29, 66, 168, 0));
-  }
 }
 
-// Respect users who prefer reduced motion
+// ─── LOGO STRETCH ANIMATION ─────────────────────────────────────
+// Classic squash-and-stretch with spring oscillation — Google-style playful.
+// ScaleX pulls the letters wide, scaleY compensates (squash principle),
+// then it overshoots back and oscillates to rest.
+@keyframes logoStretch {
+  0%   { transform: scaleX(1)    scaleY(1);    filter: drop-shadow(0 0 0 rgba(29, 66, 168, 0)); }
+  18%  { transform: scaleX(1.15) scaleY(0.91); filter: drop-shadow(0 0 12px rgba(29, 66, 168, 0.35)); }
+  36%  { transform: scaleX(0.92) scaleY(1.06); filter: drop-shadow(0 0 4px rgba(29, 66, 168, 0.1)); }
+  52%  { transform: scaleX(1.08) scaleY(0.96); }
+  65%  { transform: scaleX(0.97) scaleY(1.02); }
+  76%  { transform: scaleX(1.03) scaleY(0.99); }
+  86%  { transform: scaleX(0.99) scaleY(1.01); }
+  100% { transform: scaleX(1)    scaleY(1);    filter: drop-shadow(0 0 0 rgba(29, 66, 168, 0)); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .header-logo .logo-img.logo-breathe {
     animation: none;

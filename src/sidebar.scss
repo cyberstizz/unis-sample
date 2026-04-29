@@ -11,13 +11,15 @@ $unis-blue: var(--unis-primary);
 $header-height: 75px;
 
 @keyframes pill-pulse {
-  0%, 100% {
+  0%, 40%, 100% {
     background: var(--unis-primary);
     box-shadow: 0 0 6px rgba(29, 66, 168, 0.3);
   }
-  50% {
-    background: rgba(29, 66, 168, 0.9);
-    box-shadow: 0 0 18px rgba(29, 66, 168, 0.75), 0 0 32px rgba(29, 66, 168, 0.3);
+  70% {
+    background: rgba(15, 35, 140, 1);
+    box-shadow:
+      0 0 22px rgba(29, 66, 168, 0.9),
+      0 0 44px rgba(29, 66, 168, 0.4);
   }
 }
 
