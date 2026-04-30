@@ -1,4 +1,5 @@
-// Comment Section Premium Styles - AMBIENT AWARE VERSION
+// Comment Section Premium Styles - Unis Blue Glass Version
+
 // Unis Design System Variables
 $text-silver: #C0C0C0;
 $accent-white: #FFFFFF;
@@ -8,12 +9,14 @@ $unis-blue: var(--unis-primary);
 $unis-silver: #918f8f;
 
 // Extended palette for comments
-$glow-orange: #FF6B35;
-$glow-orange-light: rgba(255, 107, 53, 0.4);
-$glow-orange-subtle: rgba(255, 107, 53, 0.15);
-$comment-bg: rgba(26, 26, 26, 0.6);
-$comment-bg-hover: rgba(26, 26, 26, 0.8);
-$reply-bg: rgba(22, 51, 135, 0.1);
+$glow-blue: #1f5eff;
+$glow-blue-light: rgba(31, 94, 255, 0.38);
+$glow-blue-subtle: rgba(31, 94, 255, 0.12);
+
+$comment-bg: rgba(9, 11, 18, 0.72);
+$comment-bg-hover: rgba(13, 17, 28, 0.88);
+$reply-bg: rgba(31, 94, 255, 0.08);
+
 $text-muted: #6B7280;
 $success-green: #10B981;
 $danger-red: #EF4444;
@@ -23,36 +26,64 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
 
 .comments-section-premium {
   margin-top: 2.5rem;
-  padding: 1.5rem;
-  border-radius: 16px;
-  backdrop-filter: blur(10px);
-  
-  // AMBIENT AWARE: Inherit the glow from parent card
-  // Falls back to a subtle default if --ambient-glow isn't set
-  --ambient-color: var(--ambient-glow, rgba(255, 107, 53, 0.4));
-  
-  // Ambient-aware background gradient
-  background: linear-gradient(
-    135deg, 
-    rgba(22, 51, 135, 0.08) 0%, 
-    rgba(26, 26, 26, 0.95) 50%,
-    color-mix(in srgb, var(--ambient-color) 5%, transparent) 100%
-  );
-  
-  // Ambient-aware border
-  border: 1px solid color-mix(in srgb, var(--ambient-color) 20%, rgba(255, 255, 255, 0.05));
-  
-  // Subtle ambient glow on the section itself
-  box-shadow: 
-    inset 0 0 60px -40px var(--ambient-color),
-    0 0 40px -20px color-mix(in srgb, var(--ambient-color) 30%, transparent);
-  
-  transition: all 0.8s ease;
+  padding: 1.25rem;
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  // Unis-safe ambient fallback.
+  // This prevents the orange/brown wash when --ambient-glow is not provided.
+  --ambient-color: var(--ambient-glow, rgba(31, 94, 255, 0.32));
+
+  background:
+    radial-gradient(
+      circle at 18% 0%,
+      color-mix(in srgb, var(--ambient-color) 18%, transparent) 0%,
+      transparent 34%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(16, 19, 31, 0.92) 0%,
+      rgba(9, 11, 18, 0.96) 52%,
+      rgba(5, 6, 10, 0.98) 100%
+    );
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 34px color-mix(in srgb, var(--ambient-color) 8%, transparent);
+
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.035),
+        transparent
+      );
+    opacity: 0.45;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 
   // Header
   .comments-header {
-    margin-bottom: 1.5rem;
-    
+    margin-bottom: 1.35rem;
+
     h2 {
       display: flex;
       align-items: center;
@@ -60,14 +91,15 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       color: $accent-white;
       font-family: $font-comment;
       font-size: 1.25rem;
-      font-weight: 600;
+      font-weight: 650;
       letter-spacing: -0.02em;
       margin: 0;
+      padding-bottom: 0.85rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 
       svg {
-        // Ambient-aware icon color with orange fallback
-        color: color-mix(in srgb, var(--ambient-color) 80%, $glow-orange);
-        filter: drop-shadow(0 0 8px var(--ambient-color));
+        color: color-mix(in srgb, var(--ambient-color) 85%, $glow-blue);
+        filter: drop-shadow(0 0 8px color-mix(in srgb, var(--ambient-color) 55%, transparent));
         transition: all 0.5s ease;
       }
 
@@ -78,17 +110,16 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
         min-width: 28px;
         height: 28px;
         padding: 0 8px;
-        // Ambient-aware badge
         background: linear-gradient(
-          135deg, 
-          color-mix(in srgb, var(--ambient-color) 70%, $glow-orange) 0%, 
-          color-mix(in srgb, var(--ambient-color) 50%, $unis-blue) 100%
+          135deg,
+          color-mix(in srgb, var(--ambient-color) 75%, $glow-blue) 0%,
+          color-mix(in srgb, var(--ambient-color) 45%, $unis-blue) 100%
         );
         border-radius: 14px;
         font-size: 0.75rem;
         font-weight: 700;
         color: white;
-        box-shadow: 0 2px 12px var(--ambient-color);
+        box-shadow: 0 2px 12px color-mix(in srgb, var(--ambient-color) 45%, transparent);
         transition: all 0.5s ease;
       }
     }
@@ -100,21 +131,43 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
 
     .input-wrapper {
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       gap: 0.75rem;
-      padding: 1rem;
-      background: $comment-bg;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 0.72rem 0.72rem 0.72rem 1rem;
+
+      background:
+        linear-gradient(
+          180deg,
+          rgba(18, 22, 35, 0.78),
+          rgba(10, 12, 20, 0.82)
+        );
+
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.085);
+
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 10px 28px rgba(0, 0, 0, 0.22);
+
+      transition:
+        border-color 0.25s ease,
+        box-shadow 0.25s ease,
+        background 0.25s ease;
 
       &:focus-within {
-        // AMBIENT AWARE: Dynamic border glow on focus
-        border-color: var(--ambient-color);
-        box-shadow: 
-          0 0 0 3px color-mix(in srgb, var(--ambient-color) 25%, transparent),
-          0 0 30px color-mix(in srgb, var(--ambient-color) 40%, transparent),
-          inset 0 0 20px color-mix(in srgb, var(--ambient-color) 10%, transparent);
+        border-color: color-mix(in srgb, var(--ambient-color) 55%, rgba(255, 255, 255, 0.12));
+
+        background:
+          linear-gradient(
+            180deg,
+            rgba(20, 25, 42, 0.86),
+            rgba(11, 14, 24, 0.9)
+          );
+
+        box-shadow:
+          0 0 0 3px color-mix(in srgb, var(--ambient-color) 18%, transparent),
+          0 14px 34px rgba(0, 0, 0, 0.32),
+          inset 0 1px 0 rgba(255, 255, 255, 0.065);
       }
     }
 
@@ -132,90 +185,97 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       outline: none;
 
       &::placeholder {
-        color: $text-muted;
+        color: rgba(156, 163, 175, 0.78);
       }
     }
 
-  .submit-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    min-width: 88px;
-    height: 42px;
-    padding: 0 1rem;
-    background: $unis-blue;
+    .submit-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      min-width: 88px;
+      height: 42px;
+      padding: 0 1rem;
 
-    border: 1px solid color-mix(in srgb, var(--ambient-color) 45%, rgba(255, 255, 255, 0.18));
-    border-radius: 999px;
+      background: linear-gradient(
+        135deg,
+        color-mix(in srgb, $unis-blue 86%, #ffffff 8%) 0%,
+        color-mix(in srgb, $unis-blue 78%, #000000 12%) 100%
+      );
 
-    color: white;
-    font-family: $font-comment;
-    font-size: 0.86rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
+      border: 1px solid color-mix(in srgb, var(--ambient-color) 35%, rgba(255, 255, 255, 0.22));
+      border-radius: 999px;
 
-    cursor: pointer;
-    flex-shrink: 0;
+      color: white;
+      font-family: $font-comment;
+      font-size: 0.86rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
 
-    box-shadow:
-      0 8px 22px color-mix(in srgb, var(--ambient-color) 28%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      cursor: pointer;
+      flex-shrink: 0;
 
-    transition:
-      transform 0.22s ease,
-      box-shadow 0.22s ease,
-      opacity 0.22s ease,
-      filter 0.22s ease;
-
-    svg {
-      transition: transform 0.22s ease;
-    }
-
-    &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      filter: brightness(1.08);
       box-shadow:
-        0 12px 30px color-mix(in srgb, var(--ambient-color) 45%, transparent),
-        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+        0 10px 24px color-mix(in srgb, var(--ambient-color) 24%, transparent),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+
+      transition:
+        transform 0.22s ease,
+        box-shadow 0.22s ease,
+        opacity 0.22s ease,
+        filter 0.22s ease;
 
       svg {
-        transform: translateX(1px);
+        transition: transform 0.22s ease;
+      }
+
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        filter: brightness(1.08);
+
+        box-shadow:
+          0 14px 32px color-mix(in srgb, var(--ambient-color) 34%, transparent),
+          inset 0 1px 0 rgba(255, 255, 255, 0.24);
+
+        svg {
+          transform: translateX(1px);
+        }
+      }
+
+      &:active:not(:disabled) {
+        transform: translateY(0);
+
+        box-shadow:
+          0 5px 16px color-mix(in srgb, var(--ambient-color) 24%, transparent),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+      }
+
+      &:focus-visible {
+        outline: none;
+
+        box-shadow:
+          0 0 0 3px color-mix(in srgb, var(--ambient-color) 30%, transparent),
+          0 12px 30px color-mix(in srgb, var(--ambient-color) 34%, transparent);
+      }
+
+      &:disabled {
+        opacity: 0.42;
+        cursor: not-allowed;
+        transform: none;
+        filter: grayscale(0.25);
+        box-shadow: none;
       }
     }
-
-    &:active:not(:disabled) {
-      transform: translateY(0);
-      box-shadow:
-        0 5px 16px color-mix(in srgb, var(--ambient-color) 32%, transparent),
-        inset 0 1px 0 rgba(255, 255, 255, 0.18);
-    }
-
-    &:focus-visible {
-      outline: none;
-      box-shadow:
-        0 0 0 3px color-mix(in srgb, var(--ambient-color) 35%, transparent),
-        0 12px 30px color-mix(in srgb, var(--ambient-color) 42%, transparent);
-    }
-
-    &:disabled {
-      opacity: 0.42;
-      cursor: not-allowed;
-      transform: none;
-      filter: grayscale(0.25);
-      box-shadow: none;
-    }
   }
 
-  }
-
-    .comment-limit-reached {
+  .comment-limit-reached {
     padding: 16px 20px;
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.035);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     margin-bottom: 24px;
-    
+
     p {
       margin: 0;
       color: #9ca3af;
@@ -224,12 +284,12 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       line-height: 1.5;
     }
   }
-  
+
   .comment-limit-hint {
     margin-top: 6px;
     padding: 0 4px;
     font-size: 0.8rem;
-    color: #f59e0b;
+    color: color-mix(in srgb, var(--ambient-color) 65%, #aebcff);
   }
 
   // Login Prompt
@@ -238,7 +298,7 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
     text-align: center;
     background: $comment-bg;
     border-radius: 12px;
-    border: 1px dashed color-mix(in srgb, var(--ambient-color) 30%, rgba(255, 255, 255, 0.15));
+    border: 1px dashed color-mix(in srgb, var(--ambient-color) 24%, rgba(255, 255, 255, 0.16));
     margin-bottom: 2rem;
 
     p {
@@ -259,17 +319,18 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
   .comment-item {
     position: relative;
     padding: 1.25rem 0;
-    
-    // AMBIENT AWARE: Dynamic gradient border-bottom
+
     border-bottom: 1px solid transparent;
+
     background-image: linear-gradient(
-      90deg, 
-      transparent 0%, 
-      color-mix(in srgb, var(--ambient-color) 40%, transparent) 25%,
-      var(--ambient-color) 50%, 
-      color-mix(in srgb, var(--ambient-color) 40%, transparent) 75%,
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--ambient-color) 24%, transparent) 25%,
+      color-mix(in srgb, var(--ambient-color) 36%, transparent) 50%,
+      color-mix(in srgb, var(--ambient-color) 24%, transparent) 75%,
       transparent 100%
     );
+
     background-size: 100% 1px;
     background-repeat: no-repeat;
     background-position: bottom;
@@ -280,21 +341,22 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
     }
 
     &:hover {
-      background-color: color-mix(in srgb, var(--ambient-color) 5%, transparent);
+      background-color: color-mix(in srgb, var(--ambient-color) 4%, transparent);
     }
 
-    // Reply styling - ambient aware
     &.reply {
       padding: 1rem 0 1rem 1rem;
       margin-left: 3.5rem;
-      // Ambient-aware reply border
-      border-left: 2px solid color-mix(in srgb, var(--ambient-color) 50%, rgba(255, 107, 53, 0.3));
+
+      border-left: 2px solid color-mix(in srgb, var(--ambient-color) 45%, rgba(31, 94, 255, 0.24));
+
       background: linear-gradient(
         90deg,
         color-mix(in srgb, var(--ambient-color) 8%, transparent) 0%,
         transparent 100%
       );
-      background-image: none; // Remove bottom border for replies
+
+      background-image: none;
       border-radius: 0 8px 8px 0;
 
       .user-avatar {
@@ -313,7 +375,6 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       gap: 1rem;
     }
 
-    // Avatar - AMBIENT AWARE
     .avatar-container {
       flex-shrink: 0;
     }
@@ -323,21 +384,22 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       height: 44px;
       border-radius: 50%;
       object-fit: cover;
-      // Ambient-aware avatar ring
-      border: 2px solid color-mix(in srgb, var(--ambient-color) 50%, rgba(255, 107, 53, 0.3));
-      box-shadow: 0 0 15px color-mix(in srgb, var(--ambient-color) 40%, transparent);
+
+      border: 2px solid color-mix(in srgb, var(--ambient-color) 38%, rgba(255, 255, 255, 0.18));
+      box-shadow: 0 0 15px color-mix(in srgb, var(--ambient-color) 24%, transparent);
       transition: all 0.4s ease;
 
       &.placeholder {
         display: flex;
         align-items: center;
         justify-content: center;
-        // Ambient-aware placeholder gradient
+
         background: linear-gradient(
-          135deg, 
-          $unis-blue 0%, 
+          135deg,
+          $unis-blue 0%,
           color-mix(in srgb, var(--ambient-color) 30%, $unis-blue) 100%
         );
+
         color: white;
         font-family: $font-comment;
         font-weight: 600;
@@ -345,13 +407,12 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       }
 
       &:hover {
-        border-color: var(--ambient-color);
-        box-shadow: 0 0 25px var(--ambient-color);
+        border-color: color-mix(in srgb, var(--ambient-color) 70%, rgba(255, 255, 255, 0.2));
+        box-shadow: 0 0 25px color-mix(in srgb, var(--ambient-color) 36%, transparent);
         transform: scale(1.05);
       }
     }
 
-    // Comment Body
     .comment-body {
       flex: 1;
       min-width: 0;
@@ -378,23 +439,23 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
           transition: color 0.3s ease;
 
           &:hover {
-            color: color-mix(in srgb, var(--ambient-color) 70%, $accent-white);
+            color: color-mix(in srgb, var(--ambient-color) 55%, $accent-white);
             cursor: pointer;
-            text-shadow: 0 0 10px var(--ambient-color);
+            text-shadow: 0 0 10px color-mix(in srgb, var(--ambient-color) 42%, transparent);
           }
         }
 
         .user-jurisdiction {
-          color: $unis-blue;
+          color: color-mix(in srgb, var(--ambient-color) 62%, #9fb4ff);
           font-family: $font-comment;
           font-size: 0.7rem;
           font-weight: 500;
           letter-spacing: 0.01em;
           transition: all 0.3s ease;
-          
+
           &:hover {
             cursor: pointer;
-            text-shadow: 0 0 8px rgba($unis-blue, 0.5);
+            text-shadow: 0 0 8px color-mix(in srgb, var(--ambient-color) 45%, transparent);
           }
         }
       }
@@ -405,7 +466,6 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
         font-size: 0.75rem;
       }
 
-      // Menu
       .comment-menu {
         margin-left: auto;
         position: relative;
@@ -425,7 +485,7 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
           opacity: 0;
 
           &:hover {
-            background: color-mix(in srgb, var(--ambient-color) 15%, transparent);
+            background: color-mix(in srgb, var(--ambient-color) 12%, transparent);
             color: $accent-white;
           }
         }
@@ -435,14 +495,16 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
           top: 100%;
           right: 0;
           margin-top: 4px;
-          background: $bg-dark;
-          border: 1px solid color-mix(in srgb, var(--ambient-color) 20%, rgba(255, 255, 255, 0.1));
+          background: rgba(12, 14, 22, 0.98);
+          border: 1px solid color-mix(in srgb, var(--ambient-color) 18%, rgba(255, 255, 255, 0.1));
           border-radius: 8px;
           padding: 4px;
           min-width: 120px;
-          box-shadow: 
+
+          box-shadow:
             0 10px 40px rgba(0, 0, 0, 0.5),
-            0 0 20px color-mix(in srgb, var(--ambient-color) 20%, transparent);
+            0 0 20px color-mix(in srgb, var(--ambient-color) 15%, transparent);
+
           z-index: 100;
           animation: menuSlide 0.15s ease;
 
@@ -462,7 +524,7 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
             transition: all 0.15s ease;
 
             &:hover {
-              background: color-mix(in srgb, var(--ambient-color) 15%, transparent);
+              background: color-mix(in srgb, var(--ambient-color) 12%, transparent);
             }
 
             &.delete {
@@ -481,7 +543,6 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       opacity: 1;
     }
 
-    // Comment Text
     .comment-text {
       color: $text-silver;
       font-family: $font-comment;
@@ -492,7 +553,6 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       white-space: pre-wrap;
     }
 
-    // Reply Trigger - AMBIENT AWARE
     .reply-trigger {
       display: inline-flex;
       align-items: center;
@@ -508,29 +568,29 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       transition: all 0.3s ease;
 
       &:hover {
-        border-color: var(--ambient-color);
-        color: color-mix(in srgb, var(--ambient-color) 80%, $accent-white);
-        background: color-mix(in srgb, var(--ambient-color) 15%, transparent);
-        box-shadow: 0 0 15px color-mix(in srgb, var(--ambient-color) 30%, transparent);
+        border-color: color-mix(in srgb, var(--ambient-color) 50%, rgba(255, 255, 255, 0.16));
+        color: color-mix(in srgb, var(--ambient-color) 60%, $accent-white);
+        background: color-mix(in srgb, var(--ambient-color) 12%, transparent);
+        box-shadow: 0 0 15px color-mix(in srgb, var(--ambient-color) 22%, transparent);
       }
     }
 
-    // Reply Input - AMBIENT AWARE
     .reply-input-container {
       display: flex;
       align-items: center;
       gap: 0.5rem;
       margin-top: 0.75rem;
       padding: 0.5rem;
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255, 255, 255, 0.035);
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.08);
       transition: all 0.4s ease;
 
       &:focus-within {
-        border-color: var(--ambient-color);
-        box-shadow: 
-          0 0 20px color-mix(in srgb, var(--ambient-color) 30%, transparent),
+        border-color: color-mix(in srgb, var(--ambient-color) 50%, rgba(255, 255, 255, 0.12));
+
+        box-shadow:
+          0 0 20px color-mix(in srgb, var(--ambient-color) 24%, transparent),
           inset 0 0 10px color-mix(in srgb, var(--ambient-color) 5%, transparent);
       }
 
@@ -555,12 +615,13 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
         justify-content: center;
         width: 32px;
         height: 32px;
-        // Ambient-aware reply button
+
         background: linear-gradient(
           135deg,
-          color-mix(in srgb, var(--ambient-color) 70%, $glow-orange) 0%,
+          color-mix(in srgb, var(--ambient-color) 70%, $glow-blue) 0%,
           color-mix(in srgb, var(--ambient-color) 50%, $unis-blue) 100%
         );
+
         border: none;
         border-radius: 6px;
         color: white;
@@ -568,7 +629,7 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
         transition: all 0.3s ease;
 
         &:hover:not(:disabled) {
-          box-shadow: 0 0 15px var(--ambient-color);
+          box-shadow: 0 0 15px color-mix(in srgb, var(--ambient-color) 42%, transparent);
           transform: scale(1.05);
         }
 
@@ -580,7 +641,6 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
     }
   }
 
-  // Replies Section - AMBIENT AWARE
   .replies-section {
     margin-top: 0.75rem;
     margin-left: 3.5rem;
@@ -592,8 +652,9 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       padding: 6px 0;
       background: none;
       border: none;
-      // Ambient-aware toggle color
-      color: color-mix(in srgb, var(--ambient-color) 70%, $glow-orange);
+
+      color: color-mix(in srgb, var(--ambient-color) 70%, $glow-blue);
+
       font-family: $font-comment;
       font-size: 0.8rem;
       font-weight: 500;
@@ -601,8 +662,8 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       transition: all 0.3s ease;
 
       &:hover {
-        color: var(--ambient-color);
-        text-shadow: 0 0 10px var(--ambient-color);
+        color: color-mix(in srgb, var(--ambient-color) 85%, #ffffff);
+        text-shadow: 0 0 10px color-mix(in srgb, var(--ambient-color) 45%, transparent);
       }
 
       svg {
@@ -616,7 +677,6 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
     }
   }
 
-  // States
   .loading-state,
   .empty-state {
     display: flex;
@@ -640,22 +700,20 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
     }
 
     svg {
-      // Ambient-aware empty state icon
       color: color-mix(in srgb, var(--ambient-color) 50%, $text-muted);
       opacity: 0.6;
-      filter: drop-shadow(0 0 10px var(--ambient-color));
+      filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ambient-color) 32%, transparent));
     }
   }
 
-  // AMBIENT AWARE: Loading spinner
   .loading-spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid color-mix(in srgb, var(--ambient-color) 30%, transparent);
-    border-top-color: var(--ambient-color);
+    border: 3px solid color-mix(in srgb, var(--ambient-color) 26%, transparent);
+    border-top-color: color-mix(in srgb, var(--ambient-color) 80%, $glow-blue);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
-    box-shadow: 0 0 20px color-mix(in srgb, var(--ambient-color) 40%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--ambient-color) 32%, transparent);
   }
 }
 
@@ -671,6 +729,7 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -682,21 +741,22 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
     opacity: 0;
     transform: translateY(-8px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
 
-// Pulse animation for ambient glow (optional enhancement)
 @keyframes ambientPulse {
   0%, 100% {
-    box-shadow: 
+    box-shadow:
       inset 0 0 60px -40px var(--ambient-color),
       0 0 40px -20px color-mix(in srgb, var(--ambient-color) 30%, transparent);
   }
+
   50% {
-    box-shadow: 
+    box-shadow:
       inset 0 0 80px -40px var(--ambient-color),
       0 0 60px -20px color-mix(in srgb, var(--ambient-color) 40%, transparent);
   }
@@ -707,6 +767,23 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
   .comments-section-premium {
     padding: 1rem;
     margin-top: 1.5rem;
+
+    .new-comment-form {
+      .input-wrapper {
+        gap: 0.6rem;
+        padding: 0.68rem;
+      }
+
+      .submit-button {
+        min-width: 42px;
+        width: 42px;
+        padding: 0;
+
+        span {
+          display: none;
+        }
+      }
+    }
 
     .comment-item {
       &.reply {
