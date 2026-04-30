@@ -407,7 +407,6 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
                 title="Post comment"
               >
                 <Send size={17} />
-                <span>Post</span>
               </button>
             </div>
             {commentLimit.remaining <= 2 && commentLimit.remaining > 0 && (
