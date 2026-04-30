@@ -38,7 +38,11 @@ const Header = () => {
     }
   }, []);
 
-  const handleHome = () => navigate('/');
+  const handleHome = () => {
+    if (location.pathname !== '/') {
+      navigate('/');
+    }
+  };
   const handleMilestones = () => navigate('/milestones');
   const handleFind = () => navigate('/findpage');
 
@@ -119,13 +123,19 @@ const Header = () => {
     <header className="app-header">
       <div className="header-inner">
         {/* Left: Logo */}
-        <div className="header-logo" onClick={handleHome}>
+        <button
+          type="button"
+          className="header-logo"
+          onClick={handleHome}
+          aria-label="Go to Unis home"
+        >
           <img
             src={activeLogo}
             alt="UNIS"
             className={`logo-img ${shouldBreathe ? 'logo-breathe' : ''}`}
+            draggable="false"
           />
-        </div>
+        </button>
 
         {/* Center: Search */}
         <div className="header-center">

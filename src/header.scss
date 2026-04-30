@@ -59,27 +59,56 @@ $header-height: 75px;
 // ─── LOGO ────────────────────────────────────────────────────────
 .header-logo {
   flex-shrink: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: opacity 0.2s ease;
 
-  &:hover { opacity: 0.85; }
+  // Prevent the full rectangular logo hitbox from visually flashing.
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  box-shadow: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+
+  // Do not fade the whole logo container on hover/click.
+  transition: none;
+
+  &:hover,
+  &:active,
+  &:focus {
+    background: transparent;
+    opacity: 1;
+    outline: none;
+    box-shadow: none;
+    transform: none;
+  }
+
+  // Keep keyboard accessibility without showing a mouse-click flash.
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.28);
+    outline-offset: 4px;
+    border-radius: 8px;
+  }
 
   .logo-img {
-  height: 92px;
-  width: auto;
-  display: block;
-  transform-origin: center center;
-  will-change: transform, filter;
+    height: 92px;
+    width: auto;
+    display: block;
+    pointer-events: none;
+    user-select: none;
+    transform-origin: center center;
+    will-change: transform, filter;
 
-  &.logo-breathe {
-    animation: logoStretch 1.5s linear 0.4s 1 both;
+    &.logo-breathe {
+      animation: logoStretch 1.5s linear 0.4s 1 both;
+    }
   }
 }
-
-}
-
 // ─── LOGO STRETCH ANIMATION ─────────────────────────────────────
 // Classic squash-and-stretch with spring oscillation — Google-style playful.
 // ScaleX pulls the letters wide, scaleY compensates (squash principle),
