@@ -315,7 +315,7 @@ const PrivacyPolicy = () => {
           </section>
 
           <footer className="policy-footer">
-            <p>&copy; 2026 EasyCode LLC. All rights reserved.</p>
+            <p>&copy; 2026 Unis Music All rights reserved.</p>
           </footer>
 
         </div>

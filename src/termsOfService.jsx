@@ -694,7 +694,7 @@ const TermsOfService = () => {
             <p className="acknowledgment">
               By using Unis, you agree to these Terms. Thanks for building local music magic! 🎵
             </p>
-            <p className="copyright">&copy; 2026 EasyCode LLC. All rights reserved.</p>
+            <p className="copyright">&copy; 2026 Unis Music All rights reserved.</p>
           </footer>
 
         </div>
