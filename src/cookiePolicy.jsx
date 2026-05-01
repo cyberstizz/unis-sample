@@ -216,7 +216,7 @@ const CookiePolicy = () => {
           </section>
 
           <footer className="policy-footer">
-            <p>© 2025 Unis Inc. All rights reserved.</p>
+            <p>2025 Unis Music. All rights reserved.</p>
           </footer>
 
         </div>
