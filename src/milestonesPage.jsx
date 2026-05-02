@@ -175,7 +175,7 @@ const MilestonesPage = () => {
 
       const response = await apiCall({
         method: 'get',
-        url: `/v1/awards/past?type=${type}&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurId}&genreId=${genreId}&intervalId=${intervalId}`,
+        url: `/v1/awards/period-leaderboard?type=${type}&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurId}&genreId=${genreId}&intervalId=${intervalId}&limit=5`,
       });
 
       // Support BOTH response shapes:
@@ -279,7 +279,9 @@ const MilestonesPage = () => {
   };
 
   const formatNumber = (n) => (n || 0).toLocaleString('en-US');
-  const showLeaderboard = results.length > 1;
+  // Always render the chart when we have a winner. With one row it shows just rank 1
+  // (highlighted); with more rows it fills out the top 5. No empty/hidden states.
+  const showLeaderboard = results.length > 0;
 
   return (
     <Layout backgroundImage={backimage}>
