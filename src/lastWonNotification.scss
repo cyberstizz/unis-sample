@@ -1,4 +1,4 @@
-// lastWonNotification.scss — v4: Stitch design with staggered reveal animations
+// lastWonNotification.scss — v5: Refined premium proportions
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
 // ═══════════════════════════════════════
@@ -40,13 +40,13 @@ $accent-blue: #4ea8f5;
 }
 
 // ═══════════════════════════════════════
-//  CARD — vertical full-height layout
+//  CARD — wider, more premium proportions
 // ═══════════════════════════════════════
 .lwn-card {
-  width: 420px;
+  width: 480px;
   max-width: 92vw;
   max-height: 90vh;
-  border-radius: 20px;
+  border-radius: 24px;
   overflow: hidden;
   position: relative;
   transform: translateY(50px) scale(0.92);
@@ -95,7 +95,7 @@ $accent-blue: #4ea8f5;
   right: 0;
   height: 100%;
   width: 100%;
-  border-radius: 20px;
+  border-radius: 24px;
   filter: none;
   animation-delay: -1s;
 }
@@ -106,7 +106,7 @@ $accent-blue: #4ea8f5;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  border-radius: 20px;
+  border-radius: 24px;
   opacity: 0;
   animation: ambientFadeIn 2s ease forwards;
 }
@@ -122,12 +122,12 @@ $accent-blue: #4ea8f5;
 }
 
 // ═══════════════════════════════════════
-//  HERO — artwork at top
+//  HERO — artwork at top, more proportional
 // ═══════════════════════════════════════
 .lwn-hero {
   position: relative;
   width: 100%;
-  height: 280px;
+  height: 240px;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -193,7 +193,7 @@ $accent-blue: #4ea8f5;
 //  CONTENT
 // ═══════════════════════════════════════
 .lwn-content {
-  padding: 0 32px 32px;
+  padding: 0 28px 24px;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -203,18 +203,16 @@ $accent-blue: #4ea8f5;
 }
 
 // ── Unis logo ──
+// ── Unis logo ──
 .lwn-logo {
-  height: 48px;
+  height: 40px;
   width: auto;
   display: block;
-  margin-bottom: 24px;
+  margin: 0 0 20px 0;
+  align-self: flex-start;
   transition: filter 0.5s ease;
-  margin-left: 0;
 }
 
-// ═══════════════════════════════════════
-//  BADGE — slides in from left
-// ═══════════════════════════════════════
 // ═══════════════════════════════════════
 //  BADGE — handwritten brush-script reveal
 // ═══════════════════════════════════════
@@ -222,9 +220,9 @@ $accent-blue: #4ea8f5;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 18px;
+  padding: 6px 16px;
   border-radius: 40px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   width: fit-content;
 
   // Fallback colors — inline styles override
@@ -250,7 +248,7 @@ $accent-blue: #4ea8f5;
 .lwn-tag-text {
   font-family: 'Caveat', cursive;
   font-weight: 700;
-  font-size: 22px;
+  font-size: 20px;
   letter-spacing: 0.02em;
   display: inline-flex;
 }
@@ -273,15 +271,16 @@ $accent-blue: #4ea8f5;
     filter: blur(0);
   }
 }
+
 // ═══════════════════════════════════════
 //  DATE — fades in 1.5s after badge
 // ═══════════════════════════════════════
 .lwn-date {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: $text-tertiary;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 
   opacity: 0;
   transform: translateY(8px);
@@ -294,10 +293,10 @@ $accent-blue: #4ea8f5;
 }
 
 // ═══════════════════════════════════════
-//  TITLE + ARTIST — large bold reveal
+//  TITLE + ARTIST — refined, less shouty
 // ═══════════════════════════════════════
 .lwn-title-block {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 
   opacity: 0;
   transform: translateY(20px);
@@ -311,12 +310,12 @@ $accent-blue: #4ea8f5;
 
 .lwn-title {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 42px;
+  font-size: 34px;
   font-weight: 900;
   color: $text-primary;
-  letter-spacing: -1px;
-  line-height: 1.05;
-  margin: 0 0 6px;
+  letter-spacing: -0.6px;
+  line-height: 1.1;
+  margin: 0 0 4px;
   // Allow wrapping for long titles
   overflow-wrap: break-word;
   word-break: break-word;
@@ -324,7 +323,7 @@ $accent-blue: #4ea8f5;
 
 .lwn-artist {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: $accent-blue;
   margin: 0;
@@ -337,7 +336,7 @@ $accent-blue: #4ea8f5;
 .lwn-jurisdiction {
   display: inline-flex;
   align-items: center;
-  padding: 6px 16px;
+  padding: 6px 14px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -346,7 +345,7 @@ $accent-blue: #4ea8f5;
   font-weight: 700;
   letter-spacing: 0.12em;
   color: $text-secondary;
-  margin-bottom: 28px;
+  margin-bottom: 22px;
   width: fit-content;
 
   opacity: 0;
@@ -360,11 +359,11 @@ $accent-blue: #4ea8f5;
 }
 
 // ═══════════════════════════════════════
-//  ACTIONS
+//  ACTIONS — side-by-side pills (Kimi-style)
 // ═══════════════════════════════════════
 .lwn-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row-reverse; // Primary action on right
   gap: 10px;
   margin-top: auto;
 
@@ -379,21 +378,23 @@ $accent-blue: #4ea8f5;
 }
 
 .lwn-btn-primary {
-  padding: 16px 28px;
-  border-radius: 14px;
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 12px;
   border: none;
   background: $unis-blue;
   color: white;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 
   &:hover {
     background: $unis-blue-hover;
@@ -407,20 +408,22 @@ $accent-blue: #4ea8f5;
 }
 
 .lwn-btn-secondary {
-  padding: 16px 28px;
-  border-radius: 14px;
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
   color: rgba(255, 255, 255, 0.75);
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
+  white-space: nowrap;
 
   &:hover {
     background: rgba(255, 255, 255, 0.08);
@@ -468,19 +471,20 @@ $accent-blue: #4ea8f5;
   }
 
   .lwn-content {
-    padding: 0 24px 28px;
+    padding: 0 22px 22px;
   }
 
   .lwn-title {
-    font-size: 34px;
+    font-size: 30px;
   }
 
   .lwn-artist {
-    font-size: 18px;
+    font-size: 17px;
   }
 
-  .lwn-brand {
-    margin-bottom: 22px;
+  // On narrow phones, stack the buttons (side-by-side gets cramped)
+  .lwn-actions {
+    flex-direction: column;
   }
 }
 
@@ -490,10 +494,10 @@ $accent-blue: #4ea8f5;
   }
 
   .lwn-title {
-    font-size: 28px;
+    font-size: 26px;
   }
 
   .lwn-content {
-    padding: 0 20px 24px;
+    padding: 0 18px 20px;
   }
 }
