@@ -1,211 +1,284 @@
-// MilestonesPage.scss
+// ============================================================================
+// MilestonesPage.scss — modernized to match the Unis marketing aesthetic
+// ============================================================================
 
-// Unis theme variables
-$bg-black: #000000;
-$text-silver: #C0C0C0;
-$text-gray: #A9A9A9;
-$accent-white: #FFFFFF;
-$border-silver: #C0C0C0;
-$button-hover: #D3D3D3;
-$unis-blue: var(--unis-primary);
-$unis-silver: #918f8f;
+// ─── Theme tokens ──────────────────────────────────────────────────────────
+$bg-deep: #07080d;
+$surface-1: rgba(15, 18, 30, 0.6);
+$surface-2: rgba(20, 24, 40, 0.5);
+$surface-row: rgba(255, 255, 255, 0.025);
+$surface-row-hover: rgba(255, 255, 255, 0.045);
 
-// --- Keyframes for Prestige Animation ---
+$border-faint: rgba(255, 255, 255, 0.06);
+$border-soft: rgba(255, 255, 255, 0.10);
+$border-medium: rgba(255, 255, 255, 0.18);
+
+$text-primary: #ffffff;
+$text-secondary: rgba(255, 255, 255, 0.72);
+$text-tertiary: rgba(255, 255, 255, 0.48);
+$text-quaternary: rgba(255, 255, 255, 0.32);
+
+$accent-blue: #4facfe;
+$accent-blue-strong: #2c8eef;
+$accent-blue-glow: rgba(79, 172, 254, 0.4);
+
+// ─── Animations ────────────────────────────────────────────────────────────
 @keyframes prestigeFadeIn {
-  0% { opacity: 0; transform: translateY(30px) scale(0.95); }
+  0%   { opacity: 0; transform: translateY(20px) scale(0.98); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes artworkPop {
-  0% { opacity: 0; transform: scale(0.8) rotate(-2deg); filter: blur(10px); }
-  60% { transform: scale(1.05) rotate(1deg); }
-  100% { opacity: 1; transform: scale(1) rotate(0); filter: blur(0); }
+  0%   { opacity: 0; transform: scale(0.92); filter: blur(8px); }
+  100% { opacity: 1; transform: scale(1); filter: blur(0); }
 }
 
 @keyframes textSlideUp {
-  0% { opacity: 0; transform: translateY(20px); }
+  0%   { opacity: 0; transform: translateY(12px); }
   100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes shineEffect {
-  0% { left: -100%; }
+  0%   { left: -100%; }
   100% { left: 200%; }
 }
 
-@keyframes listCascade {
-  0% { opacity: 0; transform: translateX(-20px); }
+@keyframes rowSlideIn {
+  0%   { opacity: 0; transform: translateX(-12px); }
   100% { opacity: 1; transform: translateX(0); }
 }
 
+// ─── Page container ────────────────────────────────────────────────────────
 .milestones-page-container {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 100vh;
-  background: $bg-black;
-  color: $text-gray;
-  padding: 5px 0;
-  padding-top: 1%;
-  overflow-y: auto;
-  font-family: sans-serif;
+  padding: 24px 0 80px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  color: $text-secondary;
   background: transparent;
   margin-left: 80px;
-  margin-top: .2%;
 }
 
 .content-wrapper {
   width: 100%;
-  max-width: 900px;
-  padding: 0 20px;
+  max-width: 1180px;
+  padding: 0 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 28px;
 }
 
-.filter-card {
-  background: rgba($unis-blue, 0.8);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  border: 1px solid $border-silver;
-  z-index: 10;
-}
-
-.filter-controls {
+// ─── Filter bar (frosted glass pill row) ───────────────────────────────────
+.filter-bar {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 15px;
-}
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 16px;
+  background: $surface-1;
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid $border-soft;
+  border-radius: 999px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 20px 40px -20px rgba(0, 0, 0, 0.6);
 
-.filter-select {
-  background: $bg-black;
-  border: 1px solid $border-silver;
-  color: $accent-white;
-  padding: 10px 15px;
-  border-radius: 50px;
-  font-size: 14px;
-  cursor: pointer;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="%23C0C0C0" d="M6 9l-4-4h8z"/></svg>');
-  background-repeat: no-repeat;
-  background-position: right 10px center;
+  .filter-pills {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    flex-wrap: wrap;
+  }
 
-  &:hover {
-    border-color: $text-silver;
+  .filter-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: rgba(255, 255, 255, 0.035);
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6"><path fill="%23A0A0A0" d="M5 6 0 0h10z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    border: 1px solid $border-soft;
+    color: $text-primary;
+    padding: 10px 32px 10px 16px;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.06);
+      border-color: $border-medium;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: rgba(79, 172, 254, 0.55);
+      box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.12);
+    }
+
+    option {
+      background: $bg-deep;
+      color: $text-primary;
+    }
+  }
+
+  .view-button {
+    flex-shrink: 0;
+    padding: 11px 26px;
+    background: linear-gradient(135deg, $accent-blue 0%, $accent-blue-strong 100%);
+    border: none;
+    color: #fff;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    box-shadow: 0 6px 20px -4px $accent-blue-glow;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 26px -4px $accent-blue-glow;
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
   }
 }
 
-.view-button {
-  padding: 12px 30px;
-  background: transparent;
-  border: 1px solid $text-silver;
-  color: $text-silver;
-  border-radius: 50px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s ease;
+// ─── Caption ───────────────────────────────────────────────────────────────
+.milestone-caption {
+  text-align: center;
+  padding: 12px 0 4px;
 
-  &:hover:not(:disabled) {
-    background: $accent-white;
-    color: $bg-black;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+  .caption-container {
+    animation: textSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .caption-top {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: $text-tertiary;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    margin-bottom: 12px;
+  }
+
+  .caption-headline {
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    background: linear-gradient(180deg, #ffffff 0%, #c0c8d4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  .caption-date {
+    display: inline-block;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: $accent-blue;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-top: 14px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(79, 172, 254, 0.25);
+    text-shadow: 0 0 16px rgba(79, 172, 254, 0.3);
   }
 }
 
-.winner-highlight {
+// ─── Showcase grid ─────────────────────────────────────────────────────────
+.showcase {
+  display: grid;
+  gap: 20px;
+  align-items: stretch;
+  animation: prestigeFadeIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  &.has-leaderboard {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+
+    @media (max-width: 960px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &.winner-only {
+    grid-template-columns: minmax(0, 720px);
+    justify-content: center;
+  }
+}
+
+// ─── Winner card ───────────────────────────────────────────────────────────
+.winner-card {
   position: relative;
-  margin: 40px auto 30px;
-  margin-top: 1%;
-  width: 100%;
-  max-width: 95%;
   border-radius: 20px;
-  overflow: hidden; // Keeps the blur inside
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-  
-  // Animation Trigger
-  animation: prestigeFadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  overflow: hidden;
+  border: 1px solid $border-soft;
+  background: $surface-1;
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
 
-  // The Ambient Glow Layer
   .ambient-glow {
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
+    inset: -40%;
     background-size: cover;
     background-position: center;
-    filter: blur(80px) saturate(180%); // Heavy blur for color extraction
-    opacity: 0.5;
+    filter: blur(80px) saturate(180%);
+    opacity: 0.45;
     z-index: 0;
-    transition: background-image 0.5s ease;
+    pointer-events: none;
   }
 
-  // The Glassmorphism Content Layer
-  .winner-content-glass {
+  .winner-content {
     position: relative;
     z-index: 1;
-    background: rgba(10, 10, 10, 0.65); // Dark glass overlay
-    backdrop-filter: blur(20px); // Frosted glass effect
-    padding: 30px;
+    background: rgba(8, 10, 18, 0.62);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    padding: 28px 28px 26px;
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-  }
-
-  .winner-header-animate {
-    animation: textSlideUp 0.8s 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-
-  .winner-title {
-    font-size: 2.5rem;
-    color: #ffffff;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    margin-bottom: 5px;
-  }
-
-  .winner-artist {
-    font-size: 1.5rem;
-    color: $text-silver;
-    margin-bottom: 5px;
-  }
-
-  .winner-jurisdiction {
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.6);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 20px;
+    gap: 22px;
   }
 
   .winner-artwork-wrapper {
     position: relative;
-    margin: 10px 0 25px;
-    border-radius: 12px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
-    animation: artworkPop 1s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both; // "Elastic" pop effect
+    width: 100%;
+    max-width: 320px;
+    aspect-ratio: 1 / 1;
+    border-radius: 14px;
     overflow: hidden;
-    
-    // --- UPDATED IMAGE STYLING ---
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.08) inset,
+      0 24px 48px -16px rgba(0, 0, 0, 0.7);
+    animation: artworkPop 0.9s 0.1s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+
     .winner-artwork {
       width: 100%;
-      max-width: 350px;    // Universal standard size (slightly reduced from 400 for balance)
-      aspect-ratio: 1 / 1; // Forces a perfect square regardless of the upload
-      object-fit: cover;   // "Smart Crops" the image to fill the square without stretching
+      height: 100%;
+      object-fit: cover;
       display: block;
-      border-radius: 12px;
     }
 
-    // Shine sweeping across artwork
     .artwork-shine {
       position: absolute;
       top: 0;
@@ -215,216 +288,342 @@ $unis-silver: #918f8f;
       background: linear-gradient(
         to right,
         rgba(255,255,255,0) 0%,
-        rgba(255,255,255,0.3) 50%,
+        rgba(255,255,255,0.28) 50%,
         rgba(255,255,255,0) 100%
       );
       transform: skewX(-25deg);
-      animation: shineEffect 1.5s 1.2s ease-in-out;
+      animation: shineEffect 1.6s 1.0s ease-in-out;
+      pointer-events: none;
     }
   }
 
-  .winner-stats-animate {
-    animation: textSlideUp 0.8s 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-    width: 100%;
+  .winner-meta {
+    animation: textSlideUp 0.6s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    gap: 6px;
+
+    .winner-eyebrow {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      color: $accent-blue;
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      margin-bottom: 4px;
+    }
+
+    .winner-title {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.015em;
+      color: $text-primary;
+      margin: 0;
+      text-transform: uppercase;
+    }
+
+    .winner-artist {
+      font-size: 1rem;
+      color: $text-secondary;
+      margin: 0;
+      font-weight: 500;
+    }
   }
 
   .winner-stats {
+    animation: textSlideUp 0.6s 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    width: 100%;
     display: flex;
-    justify-content: center;
-    gap: 2rem;
-    margin-bottom: 1.5rem;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 15px 30px;
-    border-radius: 50px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 0;
+    padding: 14px 6px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid $border-faint;
+    border-radius: 14px;
+
     .stat {
+      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      
+      gap: 4px;
+      min-width: 0;
+
       .stat-value {
-        font-size: 1.4rem;
-        font-weight: bold;
-        color: #fff;
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: $text-primary;
+        letter-spacing: -0.01em;
+        line-height: 1;
       }
-      
+
       .stat-label {
-        font-size: 0.7rem;
+        font-size: 0.625rem;
+        font-weight: 600;
+        color: $text-tertiary;
         text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.6);
-        letter-spacing: 1px;
+        letter-spacing: 0.14em;
       }
+    }
+
+    .stat-divider {
+      width: 1px;
+      background: $border-faint;
+      margin: 4px 0;
     }
   }
 
   .winner-caption {
-    font-size: 1.2rem;
+    font-size: 0.875rem;
     font-style: italic;
-    color: rgba(255, 255, 255, 0.8);
-    margin-top: 15px;
-    font-family: serif;
+    color: $text-secondary;
+    margin-top: 4px;
   }
 }
 
-.milestone-caption {
-  margin: 1.5rem 0;
-  padding: 0 .1rem !important;
-  background: transparent;
-  text-align: center;
+// ─── Leaderboard card ──────────────────────────────────────────────────────
+.leaderboard-card {
   position: relative;
-  z-index: 2; // Ensure it sits above any ambient glow
+  background: $surface-1;
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid $border-soft;
+  border-radius: 20px;
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 
-  // Wrapper from the JSX
-  h2 {
-    font-weight: 300;
-    margin: 0;
-    width: 100%;
+  .leaderboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 26px 28px 22px;
+    border-bottom: 1px solid $border-faint;
   }
 
-  // The Location/Genre text
-  .caption-top {
-    font-size: 1rem;
-    color: #a9a9a9; // text-gray
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    margin-bottom: 5px;
-  }
+  .leaderboard-label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 
-  // "ARTIST OF THE DAY"
-  .dramaticEffect {
-    display: block;
-    font-size: 2rem;
-    font-weight: 800;
-    // Gradient text for premium feel
-    background: linear-gradient(to right, #ffffff, #c0c0c0); 
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 5px 0;
-    text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    .label-eyebrow {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      color: $accent-blue;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+    }
 
-    @media (max-width: 600px) {
-      font-size: 1.5rem;
+    .label-meta {
+      font-size: 1rem;
+      font-weight: 600;
+      color: $text-primary;
+      line-height: 1.3;
+      max-width: 280px;
     }
   }
 
-  // The Grandfather Proof - Electric Blue Date
-  .milestone-date {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #4facfe; // Bright electric blue
+  .leaderboard-region {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: $text-tertiary;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin-top: 8px;
-    padding: 5px 15px;
-    display: inline-block;
-    
-    // Optional: Add a subtle border/glow to make it look like a stamp
-    border-bottom: 1px solid rgba(79, 172, 254, 0.3);
-    text-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+    letter-spacing: 0.18em;
+    white-space: nowrap;
+    padding-top: 4px;
+  }
+
+  .leaderboard-list {
+    list-style: none;
+    margin: 0;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .leaderboard-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: transparent;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
+    animation: rowSlideIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+    &:not(.is-winner):hover {
+      background: $surface-row-hover;
+    }
+
+    &.is-winner {
+      background: linear-gradient(
+        90deg,
+        rgba(79, 172, 254, 0.16) 0%,
+        rgba(79, 172, 254, 0.04) 100%
+      );
+      border-color: rgba(79, 172, 254, 0.32);
+      box-shadow: inset 0 0 24px rgba(79, 172, 254, 0.08);
+
+      .row-rank,
+      .metric-value {
+        color: $accent-blue;
+      }
+    }
+  }
+
+  .row-rank {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: $text-quaternary;
+    min-width: 24px;
+    letter-spacing: -0.01em;
+  }
+
+  .row-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    .row-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: $text-primary;
+      letter-spacing: -0.005em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .row-subtitle {
+      font-size: 0.8125rem;
+      color: $text-tertiary;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .row-metric {
+    text-align: right;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+
+    .metric-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: $text-primary;
+      letter-spacing: -0.015em;
+      line-height: 1.1;
+    }
+
+    .metric-label {
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: $text-quaternary;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      margin-top: 3px;
+    }
   }
 }
 
-.results-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.result-item {
-  background: rgba(20, 20, 20, 0.8);
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: transform 0.2s, background 0.2s;
-  
-  // Cascade Animation
-  animation: listCascade 0.5s ease-out forwards;
-  opacity: 0; // Start invisible
-
-  &:hover {
-    transform: translateX(5px);
-    background: rgba(30, 30, 30, 0.9);
-    border-color: $text-silver;
-  }
-}
-
-// ... Keep existing badge styles ...
+// ─── Determination badges ──────────────────────────────────────────────────
 .badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.75rem;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
   font-weight: 600;
-  margin: 0.25rem;
-  
-  &.votes { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-  &.tiebreaker { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
-  &.tiebreaker.plays { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-  &.tiebreaker.likes { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-  &.tiebreaker.score { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
-  &.tiebreaker.seniority { background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%); color: #333; }
-  &.fallback { background: rgba(255, 255, 255, 0.2); color: rgba(255, 255, 255, 0.8); border: 1px solid rgba(255, 255, 255, 0.3); }
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  &.tiebreaker {
+    background: rgba(255, 255, 255, 0.06);
+    color: $text-secondary;
+    border: 1px solid $border-soft;
+  }
+
+  &.tiebreaker.plays { color: #4facfe; border-color: rgba(79, 172, 254, 0.3); }
+  &.tiebreaker.likes { color: #fa709a; border-color: rgba(250, 112, 154, 0.3); }
+  &.tiebreaker.score { color: #a8edea; border-color: rgba(168, 237, 234, 0.3); }
+  &.tiebreaker.seniority { color: #d299c2; border-color: rgba(210, 153, 194, 0.3); }
+
+  &.fallback {
+    background: rgba(255, 255, 255, 0.06);
+    color: $text-tertiary;
+    border: 1px solid $border-soft;
+  }
 }
 
-.rank {
-  font-size: 28px;
-  font-weight: bold;
-  color: #444; // Subtle rank color
-  min-width: 40px;
+// ─── State messages ────────────────────────────────────────────────────────
+.state-section {
+  min-height: 24px;
 }
 
-.item-artwork {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  object-fit: cover;
+.loading-message,
+.error-message {
+  text-align: center;
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 1px solid $border-soft;
+  background: $surface-1;
 }
 
-.item-info {
-  flex-grow: 1;
-  .item-title { font-size: 18px; font-weight: bold; color: $text-silver; }
-  .item-artist { font-size: 14px; color: $text-gray; }
+.loading-message { color: $text-tertiary; }
+.error-message {
+  color: #ff8c8c;
+  border-color: rgba(255, 140, 140, 0.25);
+  background: rgba(255, 140, 140, 0.05);
 }
 
-.item-stats {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  .points { font-weight: bold; color: #667eea; }
-}
-
-// Mobile
-@media (max-width: 600px) {
+// ─── Mobile ────────────────────────────────────────────────────────────────
+@media (max-width: 720px) {
   .milestones-page-container {
-    padding-top: 10%;
-    width: 90vw;
-    margin-left: 5px;
-  }
-  
-  .filter-controls { flex-direction: column; width: 100%; }
-  .filter-select, .view-button { width: 100%; }
-
-  .winner-highlight {
-    .winner-title { font-size: 1.8rem; }
-    .winner-stats { gap: 1rem; padding: 10px; }
-    .winner-stats .stat-value { font-size: 1.1rem; }
+    margin-left: 0;
+    padding: 16px 0 60px;
   }
 
-  .result-item {
-    padding: 12px;
-    .rank { display: none; }
-    .item-stats { display: none; } 
+  .content-wrapper { padding: 0 16px; gap: 20px; }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    border-radius: 20px;
+    padding: 14px;
+
+    .filter-pills {
+      flex-direction: column;
+      width: 100%;
+
+      .filter-select { width: 100%; }
+    }
+
+    .view-button { width: 100%; }
+  }
+
+  .winner-card .winner-content { padding: 22px 18px; }
+
+  .winner-card .winner-stats {
+    .stat-value { font-size: 1rem; }
+    .stat-label { font-size: 0.5625rem; }
+  }
+
+  .leaderboard-card {
+    .leaderboard-header { padding: 20px 18px 16px; flex-direction: column; gap: 8px; }
+    .leaderboard-list { padding: 8px; }
+    .leaderboard-row { padding: 14px 12px; gap: 12px; }
+    .row-info .row-title { font-size: 0.9375rem; }
+    .row-metric .metric-value { font-size: 1.0625rem; }
   }
 }
