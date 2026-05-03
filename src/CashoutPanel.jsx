@@ -182,6 +182,12 @@ export default function CashoutPanel({
   const isValidAmount = payoutAmount >= minimumPayout && payoutAmount <= maxPayout;
 
   const handlePayout = async () => {
+    // Guard: pointer-events: none is purely visual — assistive tech,
+    // programmatic dispatch, and rapid double-taps can still fire onClick.
+    // Bail out explicitly when we're already processing or the amount is invalid.
+    if (payoutStatus === "processing") return;
+    if (useCustom && !isValidAmount) return;
+
     setPayoutStatus("processing");
     try {
       await onRequestPayout(payoutAmount);

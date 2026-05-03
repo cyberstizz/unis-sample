@@ -2,15 +2,10 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// Adjust this import path if your CashoutPanel lives somewhere else.
 import CashoutPanel from './CashoutPanel';
-
-// ---------------------------------------------------------------------------
-// HELPERS
-// ---------------------------------------------------------------------------
 
 function renderCashoutPanel(overrides = {}) {
   const props = {
@@ -32,10 +27,6 @@ function renderCashoutPanel(overrides = {}) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// LIFECYCLE
-// ---------------------------------------------------------------------------
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -44,10 +35,6 @@ afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
-
-// ===========================================================================
-// BALANCE DISPLAY
-// ===========================================================================
 
 describe('CashoutPanel — balance display', () => {
   it('renders the available balance formatted from cents', () => {
@@ -75,10 +62,6 @@ describe('CashoutPanel — balance display', () => {
     expect(screen.getByText('$0.00')).toBeInTheDocument();
   });
 });
-
-// ===========================================================================
-// STRIPE CONNECT STATE
-// ===========================================================================
 
 describe('CashoutPanel — Stripe connection state', () => {
   it('shows Stripe onboarding CTA when Stripe is not connected', () => {
@@ -115,10 +98,6 @@ describe('CashoutPanel — Stripe connection state', () => {
   });
 });
 
-// ===========================================================================
-// MINIMUM PAYOUT STATE
-// ===========================================================================
-
 describe('CashoutPanel — minimum payout state', () => {
   it('shows minimum payout shortfall when connected but below minimum', () => {
     renderCashoutPanel({
@@ -146,10 +125,6 @@ describe('CashoutPanel — minimum payout state', () => {
     expect(screen.getByRole('button', { name: /cash out/i })).toBeInTheDocument();
   });
 });
-
-// ===========================================================================
-// CONFIRMATION FLOW — FULL BALANCE
-// ===========================================================================
 
 describe('CashoutPanel — payout confirmation flow', () => {
   it('opens the confirmation panel when Cash Out is clicked', async () => {
@@ -204,25 +179,38 @@ describe('CashoutPanel — payout confirmation flow', () => {
   });
 
   it('resets the confirmation panel after a successful payout timeout', async () => {
-    vi.useFakeTimers();
-
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    // userEvent v14 + vi.useFakeTimers() deadlocks (userEvent's internal
+    // setTimeouts never resolve under fake timers, even with `delay: null`),
+    // so:
+    //   1. real timers + userEvent for the first click
+    //   2. enable fake timers BEFORE the click that schedules the 2000ms
+    //      cleanup, so we can control that setTimeout
+    //   3. use fireEvent (synchronous, no setTimeout) for that click
+    const user = userEvent.setup();
 
     renderCashoutPanel({
       onRequestPayout: vi.fn().mockResolvedValue(undefined),
     });
 
     await user.click(screen.getByRole('button', { name: /cash out/i }));
-    await user.click(screen.getByRole('button', { name: /confirm \$75\.23 payout/i }));
 
-    expect(await screen.findByText(/payout requested/i)).toBeInTheDocument();
+    vi.useFakeTimers();
 
-    await vi.advanceTimersByTimeAsync(2000);
+    fireEvent.click(screen.getByRole('button', { name: /confirm \$75\.23 payout/i }));
 
-    await waitFor(() => {
-      expect(screen.queryByText(/payout requested/i)).not.toBeInTheDocument();
+    // Flush the resolved onRequestPayout promise + React re-render so the
+    // success state renders.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
     });
 
+    expect(screen.getByText(/payout requested/i)).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    expect(screen.queryByText(/payout requested/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /cash out/i })).toBeInTheDocument();
   });
 
@@ -258,10 +246,6 @@ describe('CashoutPanel — payout confirmation flow', () => {
     expect(screen.getByRole('button', { name: /cash out/i })).toBeInTheDocument();
   });
 });
-
-// ===========================================================================
-// CUSTOM AMOUNT FLOW
-// ===========================================================================
 
 describe('CashoutPanel — custom amount flow', () => {
   it('shows custom amount input when Custom amount is selected', async () => {
@@ -325,7 +309,11 @@ describe('CashoutPanel — custom amount flow', () => {
 
     expect(confirmButton).toHaveStyle({ pointerEvents: 'none' });
 
-    await user.click(confirmButton);
+    // The button intentionally has pointer-events: none while invalid; we still
+    // want to fire a click attempt to verify nothing happens. userEvent v14
+    // refuses pointer-events: none clicks (browser-accurate), so use fireEvent
+    // which does not perform that check.
+    fireEvent.click(confirmButton);
 
     expect(onRequestPayout).not.toHaveBeenCalled();
   });
@@ -355,7 +343,7 @@ describe('CashoutPanel — custom amount flow', () => {
 
     expect(confirmButton).toHaveStyle({ pointerEvents: 'none' });
 
-    await user.click(confirmButton);
+    fireEvent.click(confirmButton);
 
     expect(onRequestPayout).not.toHaveBeenCalled();
   });
@@ -397,10 +385,6 @@ describe('CashoutPanel — custom amount flow', () => {
   });
 });
 
-// ===========================================================================
-// PROCESSING STATE
-// ===========================================================================
-
 describe('CashoutPanel — processing state', () => {
   it('prevents duplicate payout clicks while processing', async () => {
     const user = userEvent.setup();
@@ -427,11 +411,10 @@ describe('CashoutPanel — processing state', () => {
 
     expect(onRequestPayout).toHaveBeenCalledTimes(1);
 
-    // The button no longer has text while processing because it renders the spinner.
     const processingButton = document.querySelector('button[style*="pointer-events: none"]');
     expect(processingButton).not.toBeNull();
 
-    await user.click(processingButton);
+    fireEvent.click(processingButton);
 
     expect(onRequestPayout).toHaveBeenCalledTimes(1);
 
@@ -442,10 +425,6 @@ describe('CashoutPanel — processing state', () => {
     });
   });
 });
-
-// ===========================================================================
-// PAYOUT HISTORY
-// ===========================================================================
 
 describe('CashoutPanel — payout history', () => {
   it('does not render payout history section when payoutHistory is empty', () => {
