@@ -412,22 +412,23 @@ const MilestonesPage = () => {
 
                   <ul className="leaderboard-list">
                     {results.slice(0, 5).map((item, idx) => (
-                      <li
-                        key={item.id || item.rank}
-                        className={`leaderboard-row ${idx === 0 ? 'is-winner' : ''}`}
-                        style={{ animationDelay: `${idx * 0.08}s` }}
-                      >
-                        <span className="row-rank">{item.rank}</span>
-                        <div className="row-info">
-                          <span className="row-title">{item.title}</span>
-                          <span className="row-subtitle">{item.artist}</span>
-                        </div>
-                        <div className="row-metric">
-                          <span className="metric-value">{formatNumber(item.weightedPoints)}</span>
-                          <span className="metric-label">Points</span>
-                        </div>
-                      </li>
-                    ))}
+                    <li
+                      key={item.id || item.rank}
+                      className={`leaderboard-row ${idx === 0 ? 'is-winner' : ''}`}
+                      style={{ animationDelay: `${idx * 0.08}s` }}
+                    >
+                      <span className="row-rank">{item.rank}</span>
+                      <img
+                        src={item.artwork}
+                        alt={item.title}
+                        className="row-artwork"
+                      />
+                      <div className="row-info">
+                        <span className="row-title">{item.title}</span>
+                        <span className="row-subtitle">{item.artist}</span>
+                      </div>
+                    </li>
+                  ))}
                   </ul>
                 </article>
               )}
