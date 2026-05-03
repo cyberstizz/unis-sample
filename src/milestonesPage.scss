@@ -469,9 +469,16 @@ $accent-blue-glow: rgba(79, 172, 254, 0.4);
       border-color: rgba(79, 172, 254, 0.32);
       box-shadow: inset 0 0 24px rgba(79, 172, 254, 0.08);
 
-      .row-rank,
-      .metric-value {
+      .row-rank {
         color: $accent-blue;
+      }
+
+      .row-rank {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: $text-quaternary;
+        min-width: 24px;
+        letter-spacing: -0.01em;
       }
 
       .row-artwork {
@@ -488,13 +495,6 @@ $accent-blue-glow: rgba(79, 172, 254, 0.4);
     }
   }
 
-  .row-rank {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: $text-quaternary;
-    min-width: 24px;
-    letter-spacing: -0.01em;
-  }
 
   .row-info {
     flex: 1;
