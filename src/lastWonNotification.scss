@@ -17,24 +17,23 @@ $accent-blue: #4ea8f5;
 .lwn-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
   opacity: 0;
-  pointer-events: none;
+  pointer-events: none; // Clicks pass through to page behind
   transition: opacity 0.4s ease;
 
   &.lwn-visible {
     opacity: 1;
-    pointer-events: auto;
+    // Note: pointer-events stays 'none' on overlay itself
 
     .lwn-card {
       transform: translateY(0) scale(1);
       opacity: 1;
+      pointer-events: auto; // But the card itself IS clickable
     }
   }
 }
