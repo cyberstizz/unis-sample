@@ -144,7 +144,10 @@ const formatCents = (cents) => {
 };
 
 const formatDate = (dateStr) => {
-  const d = new Date(dateStr);
+  // Parse YYYY-MM-DD as a local date so timezones west of UTC don't roll
+  // the display back by one day (e.g. "2026-04-01" rendering as "Mar 31, 2026" in NYC).
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const d = new Date(year, month - 1, day);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
