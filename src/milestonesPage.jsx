@@ -11,6 +11,7 @@ import songArtOne from './assets/songartworkONe.jpeg';
 import songArtTwo from './assets/songartworktwo.jpeg';
 import songArtThree from './assets/songartworkthree.jpeg';
 import songArtFour from './assets/songartworkfour.jpeg';
+import { buildUrl } from './utils/buildUrl';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 import IntervalDatePicker from './intervalDatePicker';
 import './intervalDatePicker.scss';
@@ -196,17 +197,13 @@ const MilestonesPage = () => {
         if (award.targetType === 'artist') {
           title = award.user?.username || award.title || 'Unknown Artist';
           artist = award.user?.username || award.artist || 'Unknown Artist';
-          const ph = award.user?.photoUrl || award.artwork;
-          artwork = ph
-            ? (ph.startsWith('http') ? ph : `${API_BASE_URL}${ph}`)
-            : rapperOne;
+          const rawArtwork = award.user?.photoUrl || award.artwork;
+          artwork = buildUrl(rawArtwork) || rapperOne;
         } else {
           title = award.song?.title || award.title || 'Unknown Song';
           artist = award.song?.artist?.username || award.artist || 'Unknown Artist';
-          const aw = award.song?.artworkUrl || award.artwork;
-          artwork = aw
-            ? (aw.startsWith('http') ? aw : `${API_BASE_URL}${aw}`)
-            : songArtFour;
+          const rawArtwork = award.song?.artworkUrl || award.artwork;
+          artwork = buildUrl(rawArtwork) || songArtFour;
         }
 
         return {
