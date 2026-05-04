@@ -102,6 +102,21 @@ function renderWizard({
   };
 }
 
+function getHighlightedRows() {
+  return Array.from(document.querySelectorAll('[style*="cursor: pointer"]'))
+    .filter((row) => {
+      const border = row.style.border || '';
+      const borderColor = row.style.borderColor || '';
+
+      return (
+        border.includes('#004aad') ||
+        border.includes('rgb(0, 74, 173)') ||
+        borderColor === '#004aad' ||
+        borderColor === 'rgb(0, 74, 173)'
+      );
+    });
+}
+
 // ===========================================================================
 // VISIBILITY GATING
 // ===========================================================================
@@ -190,15 +205,20 @@ describe('ChangeDefaultSongWizard — song list rendering', () => {
     expect(screen.getByText(/0 plays/)).toBeInTheDocument();
   });
 
-  it('formats duration in minutes with one decimal', () => {
-    renderWizard();
-    // 213000ms / 60000 = 3.55 → toFixed(1) = "3.6" (JS rounds 3.55 to 3.6)
-    // 187000ms / 60000 = 3.116... → "3.1"
-    // 240000ms / 60000 = 4.0 → "4.0"
-    expect(screen.getByText(/3\.6 min/)).toBeInTheDocument();
-    expect(screen.getByText(/3\.1 min/)).toBeInTheDocument();
-    expect(screen.getByText(/4\.0 min/)).toBeInTheDocument();
-  });
+it('formats duration in minutes with one decimal', () => {
+  renderWizard();
+
+  const hasSongMetaText = (plays, duration) => (_, node) => {
+    if (node?.tagName?.toLowerCase() !== 'p') return false;
+
+    const text = node.textContent.replace(/\s+/g, ' ').trim();
+    return text.includes(`${plays} plays`) && text.includes(`${duration} min`);
+  };
+
+  expect(screen.getByText(hasSongMetaText(412, '3.5'))).toBeInTheDocument();
+  expect(screen.getByText(hasSongMetaText(88, '3.1'))).toBeInTheDocument();
+  expect(screen.getByText(hasSongMetaText(0, '4.0'))).toBeInTheDocument();
+});
 
   it('renders artwork image for songs with an artwork URL', () => {
     renderWizard();
@@ -268,8 +288,9 @@ describe('ChangeDefaultSongWizard — initial selection', () => {
     renderWizard({ currentDefaultSongId: SONG_A.songId });
     // There should be exactly 1 selected row (SONG_A)
     // We verify by ensuring only one row has the blue border colour (inline style)
-    const allRows = document.querySelectorAll('[style*="2px solid #004aad"]');
+    const allRows = getHighlightedRows();
     expect(allRows).toHaveLength(1);
+    expect(allRows[0].textContent).toContain('Midnight Uptown');
   });
 });
 
@@ -296,7 +317,7 @@ describe('ChangeDefaultSongWizard — song selection interaction', () => {
     const user = userEvent.setup();
     await user.click(screen.getByText('Late Night Drive'));
     // Now SONG_B row should be the only highlighted row
-    const highlighted = document.querySelectorAll('[style*="2px solid #004aad"]');
+    const highlighted = getHighlightedRows();
     expect(highlighted).toHaveLength(1);
     expect(highlighted[0].textContent).toContain('Late Night Drive');
   });
@@ -314,7 +335,8 @@ describe('ChangeDefaultSongWizard — song selection interaction', () => {
     renderWizard({ currentDefaultSongId: SONG_A.songId });
     const user = userEvent.setup();
     await user.click(screen.getByText('No Artwork Track'));
-    const highlighted = document.querySelectorAll('[style*="2px solid #004aad"]');
+    const highlighted = getHighlightedRows();
+    expect(highlighted).toHaveLength(1);
     expect(highlighted[0].textContent).toContain('No Artwork Track');
   });
 
