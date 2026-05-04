@@ -18,8 +18,10 @@ vi.mock('lucide-react', () => ({
 }));
 
 describe('ReferralCodeCard', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
+beforeEach(() => {
+    // Note: fake timers are enabled per-test only (see "resets copied state
+    // after 2 seconds"). Enabling them globally deadlocks RTL's findByText
+    // polling, which uses setInterval under the hood.
 
     Object.assign(navigator, {
       clipboard: {
@@ -168,27 +170,40 @@ describe('ReferralCodeCard', () => {
     expect(screen.getByTestId('check-icon')).toBeInTheDocument();
   });
 
-  test('resets copied state after 2 seconds', async () => {
-    apiCall.mockResolvedValue({
-      data: 'UNIS123',
-    });
-
+test('resets copied state after 2 seconds', async () => {
+    apiCall.mockResolvedValue({ data: 'UNIS123' });
     render(<ReferralCodeCard userId="user-1" />);
 
+    // Wait for async render under REAL timers (findByText polls via
+    // setInterval, which deadlocks under fake timers).
     await screen.findByText('UNIS123');
+
+    // Switch to fake timers BEFORE clicking. handleCopy schedules a
+    // setTimeout(2000) inside its clipboard .then() callback, and that
+    // setTimeout has to be intercepted at scheduling time. If we enable
+    // fake timers afterward, the real-timer at 2000ms is already pending
+    // and fake-time advancement does nothing.
+    vi.useFakeTimers();
 
     fireEvent.click(screen.getByRole('button', { name: /copy/i }));
 
-    expect(await screen.findByText('Copied!')).toBeInTheDocument();
+    // The clipboard promise's .then() and setCopied(true) are microtasks,
+    // not timers — flush them with an empty act() so React commits "Copied!".
+    await act(async () => {});
+    expect(screen.getByText('Copied!')).toBeInTheDocument();
 
-    act(() => {
+    // Now advance the 2-second cleanup timer; act flushes the resulting
+    // setCopied(false) commit before we query the DOM.
+    await act(async () => {
       vi.advanceTimersByTime(2000);
     });
 
     expect(screen.getByText('Copy')).toBeInTheDocument();
     expect(screen.getByTestId('copy-icon')).toBeInTheDocument();
-  });
 
+    vi.useRealTimers();
+  });
+  
   test('logs an error and stops loading when referral code fetch fails', async () => {
     const consoleErrorSpy = vi
       .spyOn(console, 'error')
