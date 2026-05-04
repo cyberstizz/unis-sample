@@ -655,7 +655,7 @@ describe('PlaylistViewer — community playlists', () => {
       },
     });
 
-    expect(await screen.findByText(/community playlist/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /community playlist/i })).toBeInTheDocument();
 
     expect(screen.getByRole('button', { name: /tracks 1/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /pending 1/i })).toBeInTheDocument();
@@ -671,14 +671,18 @@ describe('PlaylistViewer — community playlists', () => {
       },
     });
 
-    await screen.findByText(/community playlist/i);
+    await screen.findByRole("heading", { name: /community playlist/i });
 
     await user.click(screen.getByRole('button', { name: /pending 1/i }));
 
     expect(screen.getByText('Pending Song')).toBeInTheDocument();
     expect(screen.getByText(/suggested by testuser/i)).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
+
+    // Scope upvote/downvote counts to the pending item — the "1" downvote
+    // count would otherwise collide with the "Pending 1" tab count.
+    const pendingItem = screen.getByText('Pending Song').closest('.pv-item');
+    expect(within(pendingItem).getByText('2')).toBeInTheDocument();
+    expect(within(pendingItem).getByText('1')).toBeInTheDocument();
   });
 
   it('votes on a pending suggestion', async () => {
@@ -695,7 +699,7 @@ describe('PlaylistViewer — community playlists', () => {
       },
     });
 
-    await screen.findByText(/community playlist/i);
+    await screen.findByRole("heading", { name: /community playlist/i });
 
     await user.click(screen.getByRole('button', { name: /pending 1/i }));
 
@@ -734,7 +738,7 @@ describe('PlaylistViewer — community playlists', () => {
       },
     });
 
-    await screen.findByText(/community playlist/i);
+    await screen.findByRole("heading", { name: /community playlist/i });
 
     await user.click(screen.getByRole('button', { name: /activity/i }));
 
@@ -744,9 +748,15 @@ describe('PlaylistViewer — community playlists', () => {
       );
     });
 
-    expect(await screen.findByText('Charles')).toBeInTheDocument();
-    expect(screen.getByText(/voted up/i)).toBeInTheDocument();
-    expect(screen.getByText(/song one/i)).toBeInTheDocument();
+    // Scope activity assertions to the activity list — "Charles" also appears
+    // in the header (creatorName), so unscoped getByText('Charles') collides.
+    await waitFor(() => {
+      expect(document.querySelector('.pv-activity-list')).not.toBeNull();
+    });
+    const activityScope = within(document.querySelector('.pv-activity-list'));
+    expect(activityScope.getByText('Charles')).toBeInTheDocument();
+    expect(activityScope.getByText(/voted up/i)).toBeInTheDocument();
+    expect(activityScope.getByText(/song one/i)).toBeInTheDocument();
   });
 });
 
