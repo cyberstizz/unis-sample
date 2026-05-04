@@ -10,16 +10,19 @@ import { render, screen } from '@testing-library/react';
 import UnisPauseButton from './unisPauseButton';
 
 describe('UnisPauseButton', () => {
-  it('renders an svg element with correct dimensions and class', () => {
+it('renders an svg element with correct dimensions and class', () => {
     render(<UnisPauseButton />);
-    const svg = screen.getByRole('img', { hidden: true });
+    // SVGs only get the implicit "img" role when they have an accessible
+    // name (e.g. a <title> child or aria-label). This is a decorative icon
+    // — query directly with querySelector instead.
+    const svg = document.querySelector('svg');
     expect(svg).toBeInTheDocument();
     expect(svg).toHaveAttribute('width', '40px');
     expect(svg).toHaveAttribute('height', '40px');
     expect(svg).toHaveAttribute('viewBox', '0 0 100 100');
     expect(svg).toHaveClass('unis-play-button-icon');
   });
-
+  
   it('renders a circle background with unis-blue fill', () => {
     render(<UnisPauseButton />);
     const circle = document.querySelector('circle');
