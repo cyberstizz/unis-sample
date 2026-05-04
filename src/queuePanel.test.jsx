@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PlayerContext } from './context/playercontext';
 import QueuePanel from './QueuePanel';
@@ -341,26 +341,22 @@ describe('QueuePanel', () => {
   // Drag-and-drop reordering
   // =========================================================================
   describe('drag-and-drop reordering', () => {
-    it('calls reorderQueue when a track is dragged over another position', () => {
+it('calls reorderQueue when a track is dragged over another position', () => {
       const queue = [makeTrack(1), makeTrack(2), makeTrack(3)];
       const { ctx } = renderQueuePanel({}, { queue, currentIndex: 0 });
 
       const items = document.querySelectorAll('.qp-item');
 
-      // Simulate dragging item at index 2 over item at index 1
-      const dragEvent = new Event('dragstart', { bubbles: true });
-      Object.defineProperty(dragEvent, 'dataTransfer', {
-        value: { effectAllowed: '' },
-      });
-      items[2].dispatchEvent(dragEvent);
-
-      const dragOverEvent = new Event('dragover', { bubbles: true });
-      dragOverEvent.preventDefault = vi.fn();
-      items[1].dispatchEvent(dragOverEvent);
+      // fireEvent wraps each call in act(), which flushes React's pending
+      // re-render before the next event runs. Without this, dragOver fires
+      // against a stale closure where draggingIndex is still null, and the
+      // handler's null-guard bails out before reorderQueue is called.
+      fireEvent.dragStart(items[2], { dataTransfer: { effectAllowed: '' } });
+      fireEvent.dragOver(items[1]);
 
       expect(ctx.reorderQueue).toHaveBeenCalled();
     });
-
+    
     it('does not allow the current track to be dragged (draggable=false)', () => {
       const queue = [makeTrack(1), makeTrack(2)];
       renderQueuePanel({}, { queue, currentIndex: 0 });
