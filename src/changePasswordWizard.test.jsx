@@ -88,12 +88,17 @@ describe('ChangePasswordWizard — visibility and render', () => {
     renderChangePasswordWizard();
 
     expect(screen.getByRole('heading', { name: /change password/i })).toBeInTheDocument();
-    expect(screen.getByText(/current password/i)).toBeInTheDocument();
-    expect(screen.getByText(/new password/i)).toBeInTheDocument();
-    expect(screen.getByText(/confirm new password/i)).toBeInTheDocument();
+
+    expect(screen.getByText(/^current password$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^new password$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^confirm new password$/i)).toBeInTheDocument();
+
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /change password/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^change password$/i })).toBeInTheDocument();
   });
+
+
+
 });
 
 // ===========================================================================
