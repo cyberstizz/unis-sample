@@ -42,8 +42,14 @@ vi.mock('./AdminRoute', () => ({
   default: () => null, // admin routes not under test here
 }));
  
-// Stub every page/component so they don't pull in their own deps
-const stub = (name) => () => <div data-testid={name} />;
+// Stub every page/component so they don't pull in their own deps.
+// vi.hoisted ensures `stub` exists before the hoisted vi.mock factories run.
+const { stub } = vi.hoisted(() => {
+  const React = require('react');
+  return {
+    stub: (name) => () => React.createElement('div', { 'data-testid': name }),
+  };
+});
  
 vi.mock('./player',              () => ({ default: stub('Player') }));
 vi.mock('./sidebar',             () => ({ default: stub('Sidebar') }));
