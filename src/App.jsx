@@ -87,11 +87,11 @@ const AppLayout = () => {
           <Route path="/leaderboards" element={<Leaderboards />} />
           <Route path="/findpage" element={<FindPage />} />
           <Route path="/search" element={<SearchResultsPage />} />
+          <Route path="/voteawards" element={<VoteAwards />} />   
         </Route>
 
         {/* Protected routes — must be logged in */}
         <Route element={<AuthRequiredRoute />}>
-          <Route path="/voteawards" element={<VoteAwards />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/earnings" element={<Earnings />} />
           <Route path="/artistDashboard" element={<ArtistDashboard />} />

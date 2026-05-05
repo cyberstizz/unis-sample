@@ -100,9 +100,7 @@ const VoteAwards = () => {
 
   // Fetch nominees whenever filters change
   useEffect(() => {
-    if (userId) {
-      fetchNominees();
-    }
+    fetchNominees();
   }, [selectedGenre, selectedType, selectedInterval, selectedJurisdiction, userId]);
 
   const fetchNominees = async () => {
@@ -418,7 +416,16 @@ const VoteAwards = () => {
                             Listen
                           </button>
                         )}
-                        <button onClick={() => handleVoteClick(nominee)} className="va-btn-vote">
+                        <button 
+                        onClick={() => {
+                          if (!userId) {
+                            alert('Sign up or log in to vote.');
+                            return;
+                          }
+                          handleVoteClick(nominee) 
+                          }}
+                          className="va-btn-vote"
+                          >
                           Vote
                         </button>
                       </div>

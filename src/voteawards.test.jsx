@@ -338,17 +338,25 @@ describe('VoteAwards — nominees fetch URL params', () => {
 // CONCERN B — GUEST USERS SEE NOMINEES
 // ===========================================================================
 describe('VoteAwards — Concern B: guest visibility', () => {
-  it('fires the nominees fetch even when user is a guest (no userId)', async () => {
-    await renderAndWait({ as: 'guest' });
-    expect(callsTo('/v1/vote/nominees').length).toBeGreaterThan(0);
-  });
+    it('fires the nominees fetch even when user is a guest (no userId)', async () => {
+      await renderAndWait({ as: 'guest' });
+      expect(callsTo('/v1/vote/nominees').length).toBeGreaterThan(0);
+    });
 
-  it('renders artist nominee cards for guests', async () => {
-    await renderAndWait({ as: 'guest', payload: [artistNomineeFixture()] });
-    expect(screen.getByText('Tony Fadd')).toBeInTheDocument();
-  });
-});
+    it('renders artist nominee cards for guests', async () => {
+      await renderAndWait({ as: 'guest', payload: [artistNomineeFixture()] });
+      expect(screen.getByText('Tony Fadd')).toBeInTheDocument();
+    });
 
+    it('guests clicking Vote get an alert and the wizard does not open', async () => {
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      const user = userEvent.setup();
+      await renderAndWait({ as: 'guest', payload: [artistNomineeFixture()] });
+      await user.click(screen.getByRole('button', { name: /^vote$/i }));
+      expect(alertSpy).toHaveBeenCalledWith(expect.stringMatching(/sign up|log in/i));
+      expect(screen.queryByTestId('voting-wizard')).not.toBeInTheDocument();
+    });
+  });
 // ===========================================================================
 // AD-VIEW TRACKING
 // ===========================================================================
