@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Heart, Edit3, Trash2, User, Music, History } from 'lucide-react';
+import { Play, Heart, Edit3, Trash2, Share2, ArrowRight, History } from 'lucide-react';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import { useAuth } from './context/AuthContext';
@@ -19,14 +19,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
 // Small inline loader shown per-section while data is in flight
 // ---------------------------------------------------------------------------
 const SectionLoader = ({ label = 'Loading...' }) => (
-  <div style={{ padding: '20px', textAlign: 'center', color: '#aaa' }}>
-    <div className="spinner" style={{
-      width: 24, height: 24, border: '3px solid rgba(255,255,255,0.1)',
-      borderTop: '3px solid var(--unis-primary, #6c63ff)', borderRadius: '50%',
-      animation: 'spin 0.8s linear infinite', margin: '0 auto 8px'
-    }} />
-    <p style={{ margin: 0, fontSize: '0.85rem' }}>{label}</p>
-    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  <div className="section-loader">
+    <div className="section-loader-spinner" />
+    <p>{label}</p>
   </div>
 );
 
@@ -34,10 +29,10 @@ const SectionLoader = ({ label = 'Loading...' }) => (
 // Inline error shown per-section when a fetch fails
 // ---------------------------------------------------------------------------
 const SectionError = ({ message = 'Failed to load.', onRetry }) => (
-  <div style={{ padding: '20px', textAlign: 'center', color: '#ff6b6b' }}>
-    <p style={{ margin: '0 0 8px' }}>{message}</p>
+  <div className="section-error">
+    <p>{message}</p>
     {onRetry && (
-      <button onClick={onRetry} className="btn btn-secondary btn-small">
+      <button onClick={onRetry} className="section-error-retry">
         Retry
       </button>
     )}
@@ -118,12 +113,12 @@ const Profile = () => {
   // -----------------------------------------------------------------------
   // Early returns
   // -----------------------------------------------------------------------
-  if (!user) return <div style={{ textAlign: 'center', padding: '4rem', color: 'white' }}>Please log in.</div>;
+  if (!user) return <div className="profile-fullscreen-msg">Please log in.</div>;
 
   if (coreLoading) {
     return (
       <Layout backgroundImage={backimage}>
-        <div className="profile-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <div className="profile-container profile-container--center">
           <SectionLoader label="Loading your profile..." />
         </div>
       </Layout>
@@ -133,7 +128,7 @@ const Profile = () => {
   if (coreError) {
     return (
       <Layout backgroundImage={backimage}>
-        <div className="profile-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <div className="profile-container profile-container--center">
           <SectionError message={coreError} onRetry={() => fetchCore(user.userId)} />
         </div>
       </Layout>
@@ -190,6 +185,30 @@ const Profile = () => {
       .then(res => setUserProfile(res.data));
   };
 
+  const handleShareProfile = () => {
+    const shareUrl = `${window.location.origin}/profile/${userProfile.username}`;
+    if (navigator.share) {
+      navigator.share({
+        title: `${userProfile.username} on UNIS`,
+        url: shareUrl,
+      }).catch(err => console.log('Share cancelled or failed:', err));
+    } else {
+      navigator.clipboard?.writeText(shareUrl);
+    }
+  };
+
+  // -----------------------------------------------------------------------
+  // Derived display values for the featured card
+  // -----------------------------------------------------------------------
+  const featuredArt = supportedArtist
+    ? (buildUrl(supportedArtist.defaultSong?.artworkUrl) ||
+       buildUrl(supportedArtist.photoUrl) ||
+       backimage)
+    : null;
+
+  const featuredTitle = supportedArtist?.defaultSong?.title || supportedArtist?.username;
+  const hasPlayableSong = Boolean(supportedArtist?.defaultSong);
+
   // -----------------------------------------------------------------------
   // Render
   // -----------------------------------------------------------------------
@@ -197,131 +216,207 @@ const Profile = () => {
     <Layout backgroundImage={backimage}>
       <div className="profile-container">
 
-        {/* Header */}
-        <div className="profile-header card">
-          <img src={photoUrl} alt={userProfile.username} className="profile-image-large" />
-          <h1>{userProfile.username}</h1>
-          <p>
-            {userProfile.bio || 'No bio yet — tell Harlem who you are!'}
-          </p>
-          <button className="btn btn-primary" onClick={() => setShowEditWizard(true)}>
-            <Edit3 size={16} /> Edit Profile
-          </button>
-        </div>
+        {/* ============== HERO ============== */}
+        <section className="profile-hero">
+          <div className="profile-hero__left">
+            <div className="profile-hero__eyebrow">
+              Member · {userProfile.level || 'Silver'} Tier
+            </div>
 
-        {/* Supported Artist */}
-        {supportedArtist && (
-          <div className="supported-artist card">
-            <h3><Heart size={20} /> I Support</h3>
-            <div className="artist-support-card">
+            <div className="profile-hero__identity">
               <img
-                src={supportedArtist.photoUrl ? buildUrl(supportedArtist.photoUrl) : backimage}
-                alt={supportedArtist.username}
-                className="artist-photo"
+                src={photoUrl}
+                alt={userProfile.username}
+                className="profile-hero__avatar"
               />
-              <div className="artist-info">
-                <h4>{supportedArtist.username}</h4>
-                {supportedArtist.defaultSong ? (
-                  <div className="default-song-section">
-                    <div className="song-details">
-                      <Music size={16} className="song-icon" />
-                      <div className="song-text">
-                        <p className="song-title">{supportedArtist.defaultSong.title}</p>
-                        <p className="song-label">Featured Track</p>
-                      </div>
-                    </div>
-                    <button className="btn-play" onClick={playDefaultSong}>
-                      <Play size={20} fill="white" />
-                    </button>
-                  </div>
-                ) : (
-                  <p className="no-song">No featured song set</p>
+              <div className="profile-hero__identity-text">
+                <h1 className="profile-hero__display">{userProfile.username}</h1>
+                <p className="profile-hero__tagline">
+                  {userProfile.bio || 'No bio yet — tell Harlem who you are!'}
+                </p>
+              </div>
+            </div>
+
+            <div className="profile-hero__stats">
+              <div className="profile-hero__stat">
+                <div className="profile-hero__stat-label">Score</div>
+                <div className="profile-hero__stat-value">{userProfile.score || 0}</div>
+              </div>
+              <div className="profile-hero__stat">
+                <div className="profile-hero__stat-label">Tier</div>
+                <div className="profile-hero__stat-value profile-hero__stat-value--tier">
+                  {userProfile.level || 'Silver'}
+                </div>
+              </div>
+              <div className="profile-hero__stat">
+                <div className="profile-hero__stat-label">Total Votes</div>
+                <div className="profile-hero__stat-value">
+                  {votesLoading ? '—' : voteHistory.length}
+                </div>
+              </div>
+            </div>
+
+            <div className="profile-hero__cta">
+              <button
+                className="profile-btn profile-btn--primary"
+                onClick={() => setShowEditWizard(true)}
+              >
+                <Edit3 size={14} /> Edit Profile
+              </button>
+              <button
+                className="profile-btn profile-btn--ghost"
+                onClick={handleShareProfile}
+              >
+                <Share2 size={14} /> Share Profile
+              </button>
+            </div>
+          </div>
+
+          {/* HERO RIGHT: featured supported artist (or empty state) */}
+          {supportedArtist ? (
+            <div
+              className="profile-hero__featured"
+              style={{ backgroundImage: `url(${featuredArt})` }}
+            >
+              <div className="profile-hero__featured-overlay" />
+              <div className="profile-hero__featured-content">
+                <span className="profile-hero__featured-tag">
+                  <Heart size={11} fill="currentColor" /> I Support
+                </span>
+                <h2 className="profile-hero__featured-title">{featuredTitle}</h2>
+                <div className="profile-hero__featured-sub">
+                  {hasPlayableSong
+                    ? `by ${supportedArtist.username}`
+                    : 'No featured track yet'}
+                </div>
+                {hasPlayableSong && (
+                  <button
+                    className="profile-hero__featured-cta"
+                    onClick={playDefaultSong}
+                  >
+                    <Play size={12} fill="currentColor" />
+                    Listen to your pick
+                  </button>
                 )}
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="profile-hero__featured profile-hero__featured--empty">
+              <div className="profile-hero__featured-content">
+                <span className="profile-hero__featured-tag">
+                  <Heart size={11} /> I Support
+                </span>
+                <h2 className="profile-hero__featured-title">No artist yet</h2>
+                <div className="profile-hero__featured-sub">
+                  Find an artist whose voice you want to amplify.
+                </div>
+                <a href="/find" className="profile-hero__featured-cta">
+                  Discover artists <ArrowRight size={12} />
+                </a>
+              </div>
+            </div>
+          )}
+        </section>
 
-        {/* Stats Grid */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <Music size={28} />
-            <p>Score</p>
-            <h3>{userProfile.score || 0}</h3>
-          </div>
-          <div className="stat-card">
-            <User size={28} />
-            <p>Level</p>
-            <h3>{userProfile.level || 'Silver'}</h3>
-          </div>
-          <div className="stat-card">
-            <Heart size={28} />
-            <p>Total Votes</p>
-            <h3>{votesLoading ? '...' : voteHistory.length}</h3>
-          </div>
-        </div>
-
-        {/* Vote History */}
-        <div className="vote-history card">
-          <div className="vote-history-header">
-            <h3><History size={20} /> Vote History</h3>
-            {!votesLoading && !votesError && (
+        {/* ============== VOTE HISTORY ============== */}
+        <section className="profile-section">
+          <div className="profile-section__head">
+            <div>
+              <div className="profile-section__eyebrow">Your Activity</div>
+              <h2 className="profile-section__title">
+                Vote <em>history</em>
+              </h2>
+            </div>
+            {!votesLoading && !votesError && voteHistory.length > 0 && (
               <button
-                className="btn btn-secondary btn-view-history"
                 onClick={() => setShowVoteHistory(true)}
+                className="profile-section__link"
               >
-                View All
+                View all <ArrowRight size={12} />
               </button>
             )}
           </div>
-          {votesLoading ? (
-            <SectionLoader label="Loading vote history..." />
-          ) : votesError ? (
-            <SectionError message={votesError} onRetry={fetchVotes} />
-          ) : (
-            <div className="vote-summary">
-              <div className="vote-stat">
-                <span className="vote-count">{voteHistory.length}</span>
-                <span className="vote-label">Total Votes</span>
+
+          <div className="profile-vote-card">
+            {votesLoading ? (
+              <SectionLoader label="Loading vote history..." />
+            ) : votesError ? (
+              <SectionError message={votesError} onRetry={fetchVotes} />
+            ) : (
+              <div className="profile-vote-summary">
+                <div className="profile-vote-summary__number">
+                  {voteHistory.length}
+                </div>
+                <div className="profile-vote-summary__text">
+                  <div className="profile-vote-summary__label">Total Votes Cast</div>
+                  <p className="profile-vote-summary__cta">
+                    {voteHistory.length > 0
+                      ? 'Every vote shapes the leaderboard. See your full influence.'
+                      : 'No votes yet — go support your favorites!'}
+                  </p>
+                </div>
+                {voteHistory.length > 0 && (
+                  <button
+                    onClick={() => setShowVoteHistory(true)}
+                    className="profile-btn profile-btn--ghost"
+                  >
+                    <History size={14} /> View History
+                  </button>
+                )}
               </div>
-              <p className="vote-cta">
-                {voteHistory.length > 0
-                  ? 'See your complete voting history'
-                  : 'No votes yet — go support your favorites!'}
-              </p>
+            )}
+          </div>
+        </section>
+
+        {/* ============== REFERRAL ============== */}
+        <section className="profile-section">
+          <div className="profile-section__head">
+            <div>
+              <div className="profile-section__eyebrow">Grow the network</div>
+              <h2 className="profile-section__title">
+                Refer <em>&amp; earn</em>
+              </h2>
             </div>
-          )}
-        </div>
+          </div>
+          {/* ReferralCodeCard component renders unchanged */}
+          <ReferralCodeCard userId={user?.userId} isArtist={false} />
+        </section>
 
-        {/* Referral Code — listener */}
-        <ReferralCodeCard userId={user?.userId} isArtist={false} />
+        {/* ============== PREFERENCES ============== */}
+        <section className="profile-section">
+          <div className="profile-section__head">
+            <div>
+              <div className="profile-section__eyebrow">Personalization</div>
+              <h2 className="profile-section__title">Preferences</h2>
+            </div>
+          </div>
+          {/* ThemePicker component renders unchanged */}
+          <ThemePicker userId={user?.userId} />
+        </section>
 
-        {/* Theme Picker */}
-        <ThemePicker userId={user?.userId} />
-
-        {/* Danger Zone */}
-        <div className="card danger-zone" style={{ marginTop: '1.5rem' }}>
-          <div className="danger-content">
-            <h3>Danger Zone</h3>
-            <p>This cannot be undone.</p>
-            <button onClick={() => setShowChangePassword(true)}
-              style={{
-                padding: '10px 20px', background: 'rgba(255,255,255,0.1)', color: '#fff',
-                border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer',
-                marginRight: '12px'
-              }}>
+        {/* ============== DANGER ZONE ============== */}
+        <div className="profile-danger">
+          <div className="profile-danger__text">
+            <strong>Danger zone</strong>
+            Change your password or permanently delete your account. Deletion cannot be undone.
+          </div>
+          <div className="profile-danger__actions">
+            <button
+              onClick={() => setShowChangePassword(true)}
+              className="profile-btn profile-btn--ghost"
+            >
               Change Password
             </button>
             <button
-              className="btn btn-primary btn-danger"
               onClick={() => setShowDeleteWizard(true)}
+              className="profile-btn profile-btn--danger"
             >
-              <Trash2 size={16} /> Delete Account
+              <Trash2 size={14} /> Delete Account
             </button>
           </div>
         </div>
 
-        {/* Wizards */}
+        {/* ============== WIZARDS (unchanged) ============== */}
         {showEditWizard && (
           <EditProfileWizard
             show={showEditWizard}
