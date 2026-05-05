@@ -5,7 +5,7 @@ import { apiCall } from './components/axiosInstance';
 
 const LyricsWizard = ({ show, onClose, song, onSuccess }) => {
 
-  const [lyrics, setLyrics] = useState(song.lyrics || '');
+  const [lyrics, setLyrics] = useState(song?.lyrics || '');
   const [saving, setSaving] = useState(false);
 
   if (!show || !song) return null;
