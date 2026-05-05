@@ -8,7 +8,13 @@ const DeleteSongModal = ({ show, songTitle, onConfirm, onCancel, isDeleting }) =
   return (
     <div className="delete-modal-overlay">
       <div className="delete-modal">
-        <button className="close-button" onClick={onCancel} disabled={isDeleting}>
+        <button
+          type="button"
+          className="close-button"
+          onClick={onCancel}
+          disabled={isDeleting}
+          aria-label="Close"
+        >
           <X size={24} />
         </button>
 
