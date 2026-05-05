@@ -1,8 +1,4 @@
 // src/main.test.jsx
-//
-// Unit tests for main.jsx — the application entry point.
-// Covers root creation, StrictMode wrapping, and DOM mounting.
-// Does NOT import main.jsx directly to avoid side-effects during test setup.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
@@ -12,22 +8,25 @@ describe('main.jsx', () => {
   let createRootSpy;
 
   beforeEach(() => {
-    // Setup a fake DOM element for React to mount into
     const rootEl = document.createElement('div');
     rootEl.id = 'root';
     document.body.appendChild(rootEl);
 
-    // Mock createRoot to return a controllable root object
     rootMock = { render: vi.fn() };
     createRootSpy = vi.fn(() => rootMock);
 
     vi.doMock('react-dom/client', () => ({
       createRoot: createRootSpy,
     }));
+
+    vi.doMock('./App.jsx', () => ({
+      default: function App() { return null; },
+    }));
   });
 
   afterEach(() => {
     vi.doUnmock('react-dom/client');
+    vi.doUnmock('./App.jsx');
     document.body.innerHTML = '';
     vi.resetModules();
   });
