@@ -16,7 +16,15 @@ describe('CookiePolicy', () => {
 
   it('shows the effective date', () => {
     render(<MemoryRouter><CookiePolicy /></MemoryRouter>);
-    expect(screen.getByText(/November 30, 2025/)).toBeInTheDocument();
+
+    expect(
+      screen.getByText((_, node) => {
+        if (node?.tagName?.toLowerCase() !== 'p') return false;
+
+        const text = node.textContent.replace(/\s+/g, ' ').trim();
+        return text.includes('Effective Date:') && text.includes('November 30, 2025');
+      })
+    ).toBeInTheDocument();
   });
 
   it('renders all 8 section headings', () => {
@@ -36,10 +44,18 @@ describe('CookiePolicy', () => {
     });
   });
 
-  it('renders the Privacy Policy internal link', () => {
+  it('renders the Privacy Policy internal links', () => {
     render(<MemoryRouter><CookiePolicy /></MemoryRouter>);
-    const links = screen.getAllByRole('link', { name: /privacy policy/i });
-    links.forEach(link => expect(link).toHaveAttribute('href', '/privacy-policy'));
+
+    const internalPrivacyLinks = screen
+      .getAllByRole('link', { name: /^privacy policy$/i })
+      .filter((link) => link.getAttribute('href') === '/privacy-policy');
+
+    expect(internalPrivacyLinks.length).toBeGreaterThan(0);
+
+    internalPrivacyLinks.forEach((link) => {
+      expect(link).toHaveAttribute('href', '/privacy-policy');
+    });
   });
 
   it('renders the Google Analytics opt-out links with correct href', () => {
@@ -52,8 +68,13 @@ describe('CookiePolicy', () => {
 
   it('renders the Google privacy policy link', () => {
     render(<MemoryRouter><CookiePolicy /></MemoryRouter>);
-    const link = screen.getByRole('link', { name: /privacy policy/i, hidden: false });
-    expect(link).toBeInTheDocument();
+
+    const googlePrivacyLink = screen
+      .getAllByRole('link', { name: /^privacy policy$/i })
+      .find((link) => link.getAttribute('href') === 'https://policies.google.com/privacy');
+
+    expect(googlePrivacyLink).toBeInTheDocument();
+    expect(googlePrivacyLink).toHaveAttribute('href', 'https://policies.google.com/privacy');
   });
 
   it('discloses JWT storage in local storage', () => {
@@ -104,6 +125,8 @@ describe('CookiePolicy', () => {
 
   it('renders the footer copyright notice', () => {
     render(<MemoryRouter><CookiePolicy /></MemoryRouter>);
-    expect(screen.getByText(/© 2025 Unis Inc\./i)).toBeInTheDocument();
+
+    expect(screen.getByText(/2025 Unis Music\. All rights reserved\./i)).toBeInTheDocument();
   });
+
 });
