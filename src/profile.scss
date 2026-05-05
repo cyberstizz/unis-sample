@@ -1,53 +1,16 @@
 // =============================================================================
 // UNIS — Profile (Listener) Stylesheet
-// Redesigned to match the editorial design language used across the rest of the
-// app (Downtown Harlem, Vote, Song pages).
 //
-// NOTE: For best typography, also add this to your index.html <head> so fonts
-// are preloaded globally:
-//   <link rel="preconnect" href="https://fonts.googleapis.com">
-//   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-//   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+// Uses the global theme tokens defined in unis-theme.scss. No background
+// styling lives here anymore — that's handled globally on body::before so it
+// stays consistent across every page.
+//
+// PREREQUISITE: unis-theme.scss must be imported once at the app root before
+// this file loads.
 // =============================================================================
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap');
-
 // -----------------------------------------------------------------------------
-// Tokens — scoped under .profile-container so they don't leak globally.
-// We re-use --unis-primary if your global theme defines it, falling back to
-// the editorial blue used across the rest of the app.
-// -----------------------------------------------------------------------------
-.profile-container {
-  --p-text:        #ffffff;
-  --p-text-2:      rgba(255, 255, 255, 0.72);
-  --p-text-3:      rgba(255, 255, 255, 0.5);
-  --p-text-4:      rgba(255, 255, 255, 0.32);
-  --p-panel:       rgba(255, 255, 255, 0.025);
-  --p-panel-2:     rgba(255, 255, 255, 0.045);
-  --p-panel-hi:    rgba(255, 255, 255, 0.07);
-  --p-border:      rgba(255, 255, 255, 0.07);
-  --p-border-hi:   rgba(255, 255, 255, 0.14);
-  --p-accent:      var(--unis-primary, #3b82f6);
-  --p-accent-2:    #60a5fa;
-  --p-accent-soft: rgba(59, 130, 246, 0.14);
-  --p-accent-glow: rgba(59, 130, 246, 0.35);
-  --p-silver:      #c8d1de;
-  --p-gold:        #d4a857;
-  --p-bronze:      #c8754a;
-  --p-danger:      #f87171;
-  --p-danger-bg:   rgba(220, 38, 38, 0.08);
-  --p-danger-bd:   rgba(220, 38, 38, 0.22);
-  --p-radius:      14px;
-  --p-radius-lg:   20px;
-  --p-radius-sm:   10px;
-  --p-font-sans:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --p-font-italic: 'Instrument Serif', Georgia, serif;
-}
-
-// -----------------------------------------------------------------------------
-// Container — keeps the existing layout offset so it plays nicely with your
-// Layout component (sidebar + topbar). Wider than the old 68% to accommodate
-// the two-column hero.
+// Container
 // -----------------------------------------------------------------------------
 .profile-container {
   margin-left: 10%;
@@ -59,8 +22,8 @@
   display: flex;
   flex-direction: column;
   gap: 56px;
-  font-family: var(--p-font-sans);
-  color: var(--p-text);
+  font-family: var(--unis-font-sans);
+  color: var(--unis-text);
 
   &--center {
     justify-content: center;
@@ -85,23 +48,23 @@
 .profile-fullscreen-msg {
   text-align: center;
   padding: 4rem;
-  color: white;
-  font-family: var(--p-font-sans, 'Inter', sans-serif);
+  color: var(--unis-text);
+  font-family: var(--unis-font-sans);
 }
 
 // -----------------------------------------------------------------------------
-// Section loader / error (used inline)
+// Section loader / error (shared)
 // -----------------------------------------------------------------------------
 .section-loader {
   padding: 32px 20px;
   text-align: center;
-  color: var(--p-text-3);
+  color: var(--unis-text-3);
 
   &-spinner {
     width: 26px;
     height: 26px;
     border: 2.5px solid rgba(255, 255, 255, 0.08);
-    border-top-color: var(--p-accent);
+    border-top-color: var(--unis-primary);
     border-radius: 50%;
     animation: profile-spin 0.8s linear infinite;
     margin: 0 auto 10px;
@@ -121,7 +84,7 @@
 .section-error {
   padding: 28px 20px;
   text-align: center;
-  color: var(--p-danger);
+  color: #f87171;
 
   p {
     margin: 0 0 12px;
@@ -131,9 +94,9 @@
   &-retry {
     background: rgba(248, 113, 113, 0.1);
     border: 1px solid rgba(248, 113, 113, 0.3);
-    color: var(--p-danger);
+    color: #f87171;
     padding: 8px 18px;
-    border-radius: var(--p-radius-sm);
+    border-radius: var(--unis-radius-sm);
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.06em;
@@ -141,9 +104,7 @@
     cursor: pointer;
     transition: background 0.15s;
 
-    &:hover {
-      background: rgba(248, 113, 113, 0.18);
-    }
+    &:hover { background: rgba(248, 113, 113, 0.18); }
   }
 }
 
@@ -155,11 +116,11 @@
   grid-template-columns: 1.35fr 1fr;
   gap: 28px;
   padding: 36px;
-  border-radius: var(--p-radius-lg);
+  border-radius: var(--unis-radius-lg);
   background:
-    linear-gradient(135deg, rgba(59, 130, 246, 0.10), rgba(59, 130, 246, 0.02) 50%, transparent),
+    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.01) 50%, transparent),
     linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01));
-  border: 1px solid var(--p-border);
+  border: 1px solid var(--unis-border);
   position: relative;
   overflow: hidden;
   animation: profile-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -168,7 +129,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(600px 400px at 100% 0%, rgba(59, 130, 246, 0.18), transparent 60%);
+    background: radial-gradient(600px 400px at 100% 0%, var(--unis-primary-soft), transparent 60%);
     pointer-events: none;
   }
 
@@ -176,24 +137,20 @@
     grid-template-columns: 1fr;
     padding: 28px;
   }
-
   @media (max-width: 800px) {
     padding: 22px 18px;
     gap: 22px;
   }
 
-  // ----- Left column ------------------------------------------------------
   &__left {
     position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
     gap: 24px;
-    min-width: 0; // prevent overflow
+    min-width: 0;
 
-    @media (max-width: 800px) {
-      gap: 20px;
-    }
+    @media (max-width: 800px) { gap: 20px; }
   }
 
   &__eyebrow {
@@ -205,15 +162,15 @@
     font-weight: 600;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--p-accent-2);
+    color: var(--unis-primary-2);
 
     &::before {
       content: '';
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: var(--p-accent);
-      box-shadow: 0 0 0 3px var(--p-accent-soft);
+      background: var(--unis-primary);
+      box-shadow: 0 0 0 3px var(--unis-primary-soft);
     }
   }
 
@@ -221,10 +178,7 @@
     display: flex;
     align-items: center;
     gap: 22px;
-
-    @media (max-width: 600px) {
-      gap: 16px;
-    }
+    @media (max-width: 600px) { gap: 16px; }
   }
 
   &__avatar {
@@ -233,71 +187,71 @@
     border-radius: 50%;
     object-fit: cover;
     flex: none;
-    border: 2px solid var(--p-accent);
+    border: 2px solid var(--unis-primary);
     box-shadow:
-      0 0 0 4px var(--p-accent-soft),
+      0 0 0 4px var(--unis-primary-soft),
       0 12px 36px rgba(0, 0, 0, 0.4);
 
     @media (max-width: 600px) {
       width: 76px;
       height: 76px;
     }
+
+    &--placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--unis-primary-soft), rgba(0, 0, 0, 0.4));
+      font-family: var(--unis-font-sans);
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--unis-text);
+    }
   }
 
-  &__identity-text {
-    min-width: 0;
-    flex: 1;
-  }
+  &__identity-text { min-width: 0; flex: 1; }
 
   &__display {
     margin: 0;
-    font-family: var(--p-font-sans);
+    font-family: var(--unis-font-sans);
     font-size: clamp(36px, 5vw, 64px);
     font-weight: 800;
     line-height: 0.95;
     letter-spacing: -0.035em;
-    color: var(--p-text);
+    color: var(--unis-text);
     word-break: break-word;
   }
 
   &__tagline {
     margin: 8px 0 0;
-    font-family: var(--p-font-italic);
+    font-family: var(--unis-font-italic);
     font-style: italic;
     font-size: clamp(16px, 1.4vw, 22px);
-    color: var(--p-text-2);
+    color: var(--unis-text-2);
     line-height: 1.4;
     max-width: 520px;
   }
 
-  // ----- Stats row --------------------------------------------------------
   &__stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
-
-    @media (max-width: 600px) {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
+    @media (max-width: 600px) { gap: 8px; }
   }
 
   &__stat {
     padding: 14px 16px;
     background: rgba(0, 0, 0, 0.25);
-    border: 1px solid var(--p-border);
-    border-radius: var(--p-radius-sm);
+    border: 1px solid var(--unis-border);
+    border-radius: var(--unis-radius-sm);
     transition: border-color 0.18s, background 0.18s, transform 0.18s;
 
     &:hover {
-      border-color: var(--p-border-hi);
+      border-color: var(--unis-border-hi);
       background: rgba(0, 0, 0, 0.4);
       transform: translateY(-2px);
     }
-
-    @media (max-width: 600px) {
-      padding: 11px 12px;
-    }
+    @media (max-width: 600px) { padding: 11px 12px; }
   }
 
   &__stat-label {
@@ -305,7 +259,7 @@
     font-weight: 600;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--p-text-3);
+    color: var(--unis-text-3);
   }
 
   &__stat-value {
@@ -313,56 +267,46 @@
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.02em;
-    color: var(--p-text);
+    color: var(--unis-text);
 
     &--tier {
-      color: var(--p-silver);
+      color: var(--unis-tier-color);
       text-transform: capitalize;
     }
-
-    @media (max-width: 600px) {
-      font-size: 18px;
-    }
+    @media (max-width: 600px) { font-size: 18px; }
   }
 
-  // ----- CTA row ----------------------------------------------------------
   &__cta {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
   }
 
-  // ----- Right column: featured supported artist --------------------------
   &__featured {
     position: relative;
     z-index: 1;
-    border-radius: var(--p-radius);
+    border-radius: var(--unis-radius);
     overflow: hidden;
     aspect-ratio: 4 / 5;
-    background-color: #1a1a2e;
+    background-color: rgba(0, 0, 0, 0.4);
     background-size: cover;
     background-position: center;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    border: 1px solid var(--p-border);
+    border: 1px solid var(--unis-border);
     transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 
-    &:hover {
-      transform: translateY(-3px);
-    }
+    &:hover { transform: translateY(-3px); }
 
     @media (max-width: 1100px) {
       aspect-ratio: 16 / 9;
       max-height: 360px;
     }
-
-    @media (max-width: 600px) {
-      aspect-ratio: 4 / 3;
-    }
+    @media (max-width: 600px) { aspect-ratio: 4 / 3; }
 
     &--empty {
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.10), rgba(255, 255, 255, 0.02));
+      background: linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.02));
       justify-content: center;
       text-align: center;
     }
@@ -381,11 +325,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-
-    @media (max-width: 600px) {
-      padding: 18px;
-      gap: 10px;
-    }
+    @media (max-width: 600px) { padding: 18px; gap: 10px; }
   }
 
   &__featured-tag {
@@ -405,14 +345,11 @@
     color: white;
   }
 
-  &--empty &__featured-tag,
-  &__featured--empty &__featured-tag {
-    margin: 0 auto;
-  }
+  &__featured--empty &__featured-tag { margin: 0 auto; }
 
   &__featured-title {
     margin: 0;
-    font-family: var(--p-font-sans);
+    font-family: var(--unis-font-sans);
     font-size: clamp(22px, 2.4vw, 30px);
     font-weight: 700;
     line-height: 1.05;
@@ -433,7 +370,7 @@
     background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.22);
     backdrop-filter: blur(8px);
-    border-radius: var(--p-radius-sm);
+    border-radius: var(--unis-radius-sm);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.12em;
@@ -448,29 +385,18 @@
     transition: background 0.18s, transform 0.12s;
     width: 100%;
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    &:active {
-      transform: translateY(1px);
-    }
+    &:hover { background: rgba(255, 255, 255, 0.2); }
+    &:active { transform: translateY(1px); }
   }
 }
 
 @keyframes profile-rise {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 // =============================================================================
-// SECTIONS (reusable header pattern)
+// SECTIONS
 // =============================================================================
 .profile-section {
   display: flex;
@@ -500,32 +426,32 @@
     font-weight: 600;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--p-accent-2);
+    color: var(--unis-primary-2);
 
     &::before {
       content: '';
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: var(--p-accent);
-      box-shadow: 0 0 0 3px var(--p-accent-soft);
+      background: var(--unis-primary);
+      box-shadow: 0 0 0 3px var(--unis-primary-soft);
     }
   }
 
   &__title {
     margin: 0;
-    font-family: var(--p-font-sans);
+    font-family: var(--unis-font-sans);
     font-size: clamp(24px, 3vw, 36px);
     font-weight: 700;
     letter-spacing: -0.025em;
     line-height: 1.1;
-    color: var(--p-text);
+    color: var(--unis-text);
 
     em {
-      font-family: var(--p-font-italic);
+      font-family: var(--unis-font-italic);
       font-style: italic;
       font-weight: 400;
-      color: var(--p-text-2);
+      color: var(--unis-text-2);
     }
   }
 
@@ -539,14 +465,12 @@
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--p-text-3);
+    color: var(--unis-text-3);
     cursor: pointer;
     padding: 8px 4px;
     transition: color 0.15s;
 
-    &:hover {
-      color: var(--p-text);
-    }
+    &:hover { color: var(--unis-text); }
   }
 }
 
@@ -554,19 +478,15 @@
 // VOTE HISTORY CARD
 // =============================================================================
 .profile-vote-card {
-  background: var(--p-panel);
-  border: 1px solid var(--p-border);
-  border-radius: var(--p-radius);
+  background: var(--unis-panel);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius);
   padding: 28px;
   transition: border-color 0.2s;
 
-  &:hover {
-    border-color: var(--p-border-hi);
-  }
+  &:hover { border-color: var(--unis-border-hi); }
 
-  @media (max-width: 600px) {
-    padding: 20px;
-  }
+  @media (max-width: 600px) { padding: 20px; }
 }
 
 .profile-vote-summary {
@@ -582,7 +502,7 @@
   }
 
   &__number {
-    font-family: var(--p-font-sans);
+    font-family: var(--unis-font-sans);
     font-size: 64px;
     font-weight: 800;
     letter-spacing: -0.04em;
@@ -592,27 +512,23 @@
     background-clip: text;
     color: transparent;
 
-    @media (max-width: 600px) {
-      font-size: 48px;
-    }
+    @media (max-width: 600px) { font-size: 48px; }
   }
 
-  &__text {
-    min-width: 0;
-  }
+  &__text { min-width: 0; }
 
   &__label {
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--p-text-3);
+    color: var(--unis-text-3);
     margin-bottom: 6px;
   }
 
   &__cta {
     margin: 0;
-    color: var(--p-text-2);
+    color: var(--unis-text-2);
     font-size: 14px;
     line-height: 1.5;
     max-width: 460px;
@@ -625,9 +541,9 @@
 .profile-danger {
   margin-top: 8px;
   padding: 22px 28px;
-  background: var(--p-danger-bg);
-  border: 1px solid var(--p-danger-bd);
-  border-radius: var(--p-radius);
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: var(--unis-radius);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -641,7 +557,7 @@
   }
 
   &__text {
-    color: var(--p-text-2);
+    color: var(--unis-text-2);
     font-size: 13px;
     line-height: 1.5;
     max-width: 540px;
@@ -652,7 +568,6 @@
       font-weight: 600;
       font-size: 14px;
       margin-bottom: 4px;
-      letter-spacing: -0.005em;
     }
   }
 
@@ -661,14 +576,12 @@
     gap: 10px;
     flex-shrink: 0;
 
-    @media (max-width: 800px) {
-      flex-direction: column;
-    }
+    @media (max-width: 800px) { flex-direction: column; }
   }
 }
 
 // =============================================================================
-// BUTTONS (scoped to profile to avoid collisions with global .btn)
+// BUTTONS
 // =============================================================================
 .profile-btn {
   display: inline-flex;
@@ -677,8 +590,8 @@
   gap: 9px;
   padding: 12px 22px;
   border: none;
-  border-radius: var(--p-radius-sm);
-  font-family: var(--p-font-sans);
+  border-radius: var(--unis-radius-sm);
+  font-family: var(--unis-font-sans);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -687,30 +600,24 @@
   transition: transform 0.12s, background 0.18s, border-color 0.18s, box-shadow 0.18s;
   white-space: nowrap;
 
-  &:active {
-    transform: translateY(1px);
-  }
+  &:active { transform: translateY(1px); }
 
   &--primary {
-    background: var(--p-accent);
+    background: var(--unis-primary);
     color: white;
     box-shadow:
-      0 0 0 1px rgba(59, 130, 246, 0.4),
-      0 12px 28px -8px rgba(59, 130, 246, 0.5);
+      0 0 0 1px var(--unis-primary-glow),
+      0 12px 28px -8px var(--unis-primary-glow);
 
-    &:hover {
-      background: var(--p-accent-2);
-    }
+    &:hover { background: var(--unis-primary-2); }
   }
 
   &--ghost {
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--p-border-hi);
-    color: var(--p-text);
+    border: 1px solid var(--unis-border-hi);
+    color: var(--unis-text);
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.09);
-    }
+    &:hover { background: rgba(255, 255, 255, 0.09); }
   }
 
   &--danger {
@@ -726,18 +633,16 @@
 }
 
 // =============================================================================
-// LEGACY UTILITY CLASSES — kept for backwards compatibility with any other
-// component that imported profile.scss and relied on these. The redesigned
-// profile no longer uses them, but removing them risks breaking other pages
-// that may have depended on them through this stylesheet.
+// LEGACY UTILITY CLASSES — kept for compatibility with anything else that
+// imported profile.scss. The new design no longer uses these.
 // =============================================================================
 .card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--unis-panel);
   border-radius: 16px;
   padding: 1.8rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--unis-border);
 
   @media (max-width: 800px) {
     padding: 1.2rem;
@@ -758,23 +663,16 @@
   font-size: 0.95rem;
 
   &.btn-primary {
-    background: var(--p-accent, #004aad);
+    background: var(--unis-primary);
     color: white;
-
-    &:hover {
-      background: var(--p-accent-2, #003a8c);
-      transform: translateY(-2px);
-    }
+    &:hover { background: var(--unis-primary-2); transform: translateY(-2px); }
   }
 
   &.btn-secondary {
     background: rgba(255, 255, 255, 0.08);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.15);
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.14);
-    }
+    &:hover { background: rgba(255, 255, 255, 0.14); }
   }
 
   &.btn-small {
@@ -782,8 +680,5 @@
     font-size: 0.85rem;
   }
 
-  svg {
-    width: 16px;
-    height: 16px;
-  }
+  svg { width: 16px; height: 16px; }
 }

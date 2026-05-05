@@ -33,6 +33,7 @@ import PlayChoiceModal from './PlayChoiceModal';
 
 // Theme
 import './theme.scss';
+import './unis-design-tokens.scss';
 
 // Admin pages
 import AdminDashboard from './admin/AdminDashboard';

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Play, Heart, Edit3, Trash2, Share2, ArrowRight, History } from 'lucide-react';
 import Layout from './layout';
-import backimage from './assets/randomrapper.jpeg';
 import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
@@ -11,6 +10,7 @@ import VoteHistoryModal from './voteHistoryModal';
 import ChangePasswordWizard from './changePasswordWizard';
 import ReferralCodeCard from './ReferralCodeCard';
 import ThemePicker from './ThemePicker';
+import AccountSettings from './AccountSettings';
 import './profile.scss';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -112,12 +112,17 @@ const Profile = () => {
 
   // -----------------------------------------------------------------------
   // Early returns
+  //
+  // NOTE: We no longer pass `backgroundImage` to <Layout>. The new global
+  // gradient background (defined in unis-theme.scss) is the background for
+  // every page. If your <Layout> currently REQUIRES backgroundImage, update
+  // it to make that prop optional and skip rendering the image when omitted.
   // -----------------------------------------------------------------------
   if (!user) return <div className="profile-fullscreen-msg">Please log in.</div>;
 
   if (coreLoading) {
     return (
-      <Layout backgroundImage={backimage}>
+      <Layout>
         <div className="profile-container profile-container--center">
           <SectionLoader label="Loading your profile..." />
         </div>
@@ -127,7 +132,7 @@ const Profile = () => {
 
   if (coreError) {
     return (
-      <Layout backgroundImage={backimage}>
+      <Layout>
         <div className="profile-container profile-container--center">
           <SectionError message={coreError} onRetry={() => fetchCore(user.userId)} />
         </div>
@@ -143,9 +148,7 @@ const Profile = () => {
       : `${API_BASE_URL}${url}`;
   };
 
-  const photoUrl = userProfile.photoUrl
-    ? buildUrl(userProfile.photoUrl)
-    : backimage;
+  const photoUrl = userProfile.photoUrl ? buildUrl(userProfile.photoUrl) : null;
 
   const playDefaultSong = async () => {
     if (!supportedArtist?.defaultSong) {
@@ -202,18 +205,18 @@ const Profile = () => {
   // -----------------------------------------------------------------------
   const featuredArt = supportedArtist
     ? (buildUrl(supportedArtist.defaultSong?.artworkUrl) ||
-       buildUrl(supportedArtist.photoUrl) ||
-       backimage)
+       buildUrl(supportedArtist.photoUrl))
     : null;
 
   const featuredTitle = supportedArtist?.defaultSong?.title || supportedArtist?.username;
   const hasPlayableSong = Boolean(supportedArtist?.defaultSong);
+  const userInitial = (userProfile.username || '?').charAt(0).toUpperCase();
 
   // -----------------------------------------------------------------------
   // Render
   // -----------------------------------------------------------------------
   return (
-    <Layout backgroundImage={backimage}>
+    <Layout>
       <div className="profile-container">
 
         {/* ============== HERO ============== */}
@@ -224,11 +227,17 @@ const Profile = () => {
             </div>
 
             <div className="profile-hero__identity">
-              <img
-                src={photoUrl}
-                alt={userProfile.username}
-                className="profile-hero__avatar"
-              />
+              {photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt={userProfile.username}
+                  className="profile-hero__avatar"
+                />
+              ) : (
+                <div className="profile-hero__avatar profile-hero__avatar--placeholder">
+                  {userInitial}
+                </div>
+              )}
               <div className="profile-hero__identity-text">
                 <h1 className="profile-hero__display">{userProfile.username}</h1>
                 <p className="profile-hero__tagline">
@@ -272,8 +281,7 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* HERO RIGHT: featured supported artist (or empty state) */}
-          {supportedArtist ? (
+          {supportedArtist && featuredArt ? (
             <div
               className="profile-hero__featured"
               style={{ backgroundImage: `url(${featuredArt})` }}
@@ -378,20 +386,33 @@ const Profile = () => {
               </h2>
             </div>
           </div>
-          {/* ReferralCodeCard component renders unchanged */}
           <ReferralCodeCard userId={user?.userId} isArtist={false} />
         </section>
 
-        {/* ============== PREFERENCES ============== */}
+        {/* ============== PREFERENCES (theme picker) ============== */}
         <section className="profile-section">
           <div className="profile-section__head">
             <div>
               <div className="profile-section__eyebrow">Personalization</div>
-              <h2 className="profile-section__title">Preferences</h2>
+              <h2 className="profile-section__title">
+                Color <em>theme</em>
+              </h2>
             </div>
           </div>
-          {/* ThemePicker component renders unchanged */}
           <ThemePicker userId={user?.userId} />
+        </section>
+
+        {/* ============== ACCOUNT (toggles) ============== */}
+        <section className="profile-section">
+          <div className="profile-section__head">
+            <div>
+              <div className="profile-section__eyebrow">Account</div>
+              <h2 className="profile-section__title">
+                Notifications <em>&amp; privacy</em>
+              </h2>
+            </div>
+          </div>
+          <AccountSettings userId={user?.userId} userProfile={userProfile} />
         </section>
 
         {/* ============== DANGER ZONE ============== */}

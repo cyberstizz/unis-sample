@@ -1,0 +1,116 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap');
+
+// -----------------------------------------------------------------------------
+// THEME-AGNOSTIC TOKENS (apply to all themes equally)
+// -----------------------------------------------------------------------------
+:root {
+  // Text
+  --unis-text:        #ffffff;
+  --unis-text-2:      rgba(255, 255, 255, 0.72);
+  --unis-text-3:      rgba(255, 255, 255, 0.5);
+  --unis-text-4:      rgba(255, 255, 255, 0.32);
+
+  // Surfaces
+  --unis-panel:       rgba(255, 255, 255, 0.025);
+  --unis-panel-2:     rgba(255, 255, 255, 0.045);
+  --unis-panel-hi:    rgba(255, 255, 255, 0.07);
+  --unis-border:      rgba(255, 255, 255, 0.07);
+  --unis-border-hi:   rgba(255, 255, 255, 0.14);
+
+  // Geometry
+  --unis-radius:      14px;
+  --unis-radius-lg:   20px;
+  --unis-radius-sm:   10px;
+
+  // Typography
+  --unis-font-sans:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --unis-font-italic: 'Instrument Serif', Georgia, serif;
+
+  // Tier color (purely cosmetic for the "Silver" stat label)
+  --unis-tier-color:  #c8d1de;
+
+  // Background base — neutral dark; theme-aware glows handle the tinting
+  --unis-bg:          #07090f;
+
+  // Theme-aware accent variants COMPUTED from --unis-primary.
+  // Whenever your theme.scss changes --unis-primary, these update automatically.
+  --unis-primary-2:    color-mix(in srgb, var(--unis-primary, #163387), white 25%);
+  --unis-primary-soft: color-mix(in srgb, var(--unis-primary, #163387), transparent 86%);
+  --unis-primary-glow: color-mix(in srgb, var(--unis-primary, #163387), transparent 65%);
+  --unis-glow-1:       color-mix(in srgb, var(--unis-primary, #163387), transparent 90%);
+  --unis-glow-2:       color-mix(in srgb, var(--unis-primary, #163387), transparent 94%);
+}
+
+// -----------------------------------------------------------------------------
+// GLOBAL BODY + ATMOSPHERIC BACKGROUND
+//
+// The fixed gradient sits behind everything via body::before. It's pinned to
+// the viewport so it doesn't scroll with content — that's what gives it the
+// premium "ambient atmosphere" feel.
+//
+// The transition makes theme switches feel cinematic instead of jarring.
+// -----------------------------------------------------------------------------
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--unis-bg);
+  color: var(--unis-text);
+  font-family: var(--unis-font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+  transition: background-color 0.6s ease;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(900px 600px at 78% 8%, var(--unis-glow-1), transparent 60%),
+    radial-gradient(700px 500px at 12% 92%, var(--unis-glow-2), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+  transition: background 0.6s ease;
+}
+
+// Make sure all app content stacks above the background.
+// `.app-wrapper` is the class your App.jsx uses; #root is the React mount.
+#root,
+.app-wrapper {
+  position: relative;
+  z-index: 1;
+}
+
+// -----------------------------------------------------------------------------
+// CONTEXTUAL BACKGROUND OVERLAY (optional)
+//
+// For pages that want to layer a contextual image (album art on song page,
+// jurisdiction photo, etc.) ON TOP of the gradient, use this helper. It
+// overlays the image at low opacity with a fade-to-bg gradient so content
+// stays legible.
+//
+// Usage in JSX:
+//   <div className="unis-context-bg" style={{ backgroundImage: `url(${art})` }} />
+// -----------------------------------------------------------------------------
+.unis-context-bg {
+  position: fixed;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.18;
+  filter: blur(40px) saturate(1.2);
+  pointer-events: none;
+  z-index: 0;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, var(--unis-bg) 100%);
+  }
+}

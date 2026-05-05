@@ -1,0 +1,257 @@
+// =============================================================================
+// ReferralCodeCard styles — uses the supplementary tokens from
+// unis-design-tokens.scss. No theme-specific colors hardcoded.
+// =============================================================================
+
+.referral-card {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 0;
+  border-radius: var(--unis-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--unis-border);
+  background: var(--unis-panel);
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+
+  &--loading {
+    min-height: 240px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  &__skeleton {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.04) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: referral-shimmer 1.4s ease-in-out infinite;
+  }
+
+  // ---- LEFT (60%) -------------------------------------------------------
+  &__left {
+    padding: 36px;
+    background:
+      radial-gradient(500px 300px at 0% 100%, var(--unis-primary-soft), transparent 60%),
+      linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.01));
+    position: relative;
+    overflow: hidden;
+
+    @media (max-width: 600px) { padding: 24px; }
+  }
+
+  &__eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--unis-primary-2);
+    margin-bottom: 10px;
+  }
+
+  &__title {
+    margin: 0 0 10px;
+    font-family: var(--unis-font-sans);
+    font-size: clamp(22px, 2.6vw, 30px);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    color: var(--unis-text);
+
+    em {
+      font-family: var(--unis-font-italic);
+      font-style: italic;
+      font-weight: 400;
+      color: var(--unis-primary-2);
+    }
+  }
+
+  &__desc {
+    color: var(--unis-text-2);
+    font-size: 14px;
+    max-width: 440px;
+    line-height: 1.55;
+    margin: 0 0 22px;
+
+    strong {
+      color: var(--unis-text);
+      font-weight: 600;
+    }
+  }
+
+  &__code-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-bottom: 14px;
+
+    @media (max-width: 480px) { flex-direction: column; }
+  }
+
+  &__code {
+    flex: 1;
+    padding: 16px 20px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--unis-border-hi);
+    border-radius: var(--unis-radius-sm);
+    font-family: var(--unis-font-sans);
+    font-size: clamp(16px, 2vw, 22px);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--unis-primary-2);
+    display: flex;
+    align-items: center;
+    user-select: all;
+    word-break: break-all;
+  }
+
+  &__copy {
+    padding: 0 22px;
+    background: var(--unis-primary);
+    border: none;
+    color: white;
+    border-radius: var(--unis-radius-sm);
+    font-family: var(--unis-font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.18s, transform 0.12s;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) { background: var(--unis-primary-2); }
+    &:active:not(:disabled) { transform: translateY(1px); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    &.is-copied {
+      background: rgba(16, 185, 129, 0.9);
+    }
+
+    @media (max-width: 480px) { padding: 14px; }
+  }
+
+  &__share-row {
+    display: flex;
+    gap: 10px;
+
+    @media (max-width: 600px) { flex-wrap: wrap; }
+  }
+
+  &__share-pill {
+    flex: 1;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--unis-border);
+    border-radius: 999px;
+    font-family: var(--unis-font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--unis-text-2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.18s, color 0.18s;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) {
+      background: var(--unis-panel-hi);
+      color: var(--unis-text);
+    }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    @media (max-width: 600px) { flex: 0 1 calc(50% - 5px); }
+  }
+
+  // ---- RIGHT (40%) — informational sidebar -------------------------------
+  &__right {
+    padding: 36px;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--unis-border);
+    background: rgba(0, 0, 0, 0.2);
+
+    @media (max-width: 900px) {
+      border-left: none;
+      border-top: 1px solid var(--unis-border);
+    }
+    @media (max-width: 600px) { padding: 28px 24px; }
+  }
+
+  &__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--unis-radius);
+    background: var(--unis-primary-soft);
+    border: 1px solid var(--unis-border-hi);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--unis-primary-2);
+    margin-bottom: 18px;
+  }
+
+  &__how-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--unis-text-3);
+    margin-bottom: 14px;
+  }
+
+  &__how-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    li {
+      position: relative;
+      padding-left: 22px;
+      color: var(--unis-text-2);
+      font-size: 13.5px;
+      line-height: 1.45;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--unis-primary);
+        box-shadow: 0 0 0 3px var(--unis-primary-soft);
+      }
+
+      strong {
+        color: var(--unis-primary-2);
+        font-weight: 700;
+        font-family: var(--unis-font-sans);
+      }
+    }
+  }
+}
+
+@keyframes referral-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
