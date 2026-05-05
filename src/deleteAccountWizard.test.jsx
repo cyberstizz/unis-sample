@@ -104,6 +104,15 @@ async function fillAllGuards(user) {
   await user.click(screen.getByRole('checkbox'));
 }
 
+function expectBorderColor(input, expectedColor) {
+  const colorMap = {
+    green: ['#28a745', 'rgb(40, 167, 69)'],
+    red: ['#dc3545', 'rgb(220, 53, 69)'],
+  };
+
+  expect(colorMap[expectedColor]).toContain(input.style.borderColor);
+}
+
 // ===========================================================================
 // VISIBILITY GATING
 // ===========================================================================
@@ -336,7 +345,7 @@ describe('DeleteAccountWizard — input border colour feedback', () => {
     await advanceToStep2(user);
     const [usernameInput] = screen.getAllByRole('textbox');
     await user.type(usernameInput, 'wrongname');
-    expect(usernameInput.style.borderColor).toBe('#dc3545');
+    expectBorderColor(usernameInput, 'red');
   });
 
   it('username input has green border when value matches username exactly', async () => {
@@ -345,7 +354,7 @@ describe('DeleteAccountWizard — input border colour feedback', () => {
     await advanceToStep2(user);
     const [usernameInput] = screen.getAllByRole('textbox');
     await user.type(usernameInput, USERNAME);
-    expect(usernameInput.style.borderColor).toBe('#28a745');
+    expectBorderColor(usernameInput, 'green');
   });
 
   it('backwards input has red border when value does not match', async () => {
@@ -354,7 +363,7 @@ describe('DeleteAccountWizard — input border colour feedback', () => {
     await advanceToStep2(user);
     const [, backwardsInput] = screen.getAllByRole('textbox');
     await user.type(backwardsInput, 'wrongbackwards');
-    expect(backwardsInput.style.borderColor).toBe('#dc3545');
+    expectBorderColor(backwardsInput, 'red');
   });
 
   it('backwards input has green border when value matches the reversed username', async () => {
@@ -363,7 +372,7 @@ describe('DeleteAccountWizard — input border colour feedback', () => {
     await advanceToStep2(user);
     const [, backwardsInput] = screen.getAllByRole('textbox');
     await user.type(backwardsInput, USERNAME_BACKWARDS);
-    expect(backwardsInput.style.borderColor).toBe('#28a745');
+    expectBorderColor(backwardsInput, 'green');
   });
 
   it('username input starts with a red border (empty ≠ username)', async () => {
@@ -371,7 +380,7 @@ describe('DeleteAccountWizard — input border colour feedback', () => {
     const user = userEvent.setup();
     await advanceToStep2(user);
     const [usernameInput] = screen.getAllByRole('textbox');
-    expect(usernameInput.style.borderColor).toBe('#dc3545');
+    expectBorderColor(usernameInput, 'red');
   });
 });
 
