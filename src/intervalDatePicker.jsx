@@ -1,9 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import './intervalDatePicker.scss';
 
-const IntervalDatePicker = ({ interval, value, onChange, maxDate, minDate }) => {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const IntervalDatePicker = ({ interval, value, onChange, maxDate, minDate }) => {
+  const parsePickerDate = (dateString) => {
+    if (!dateString) return null;
+
+    const [year, month = 1, day = 1] = dateString.split('-').map(Number);
+
+    if (!year || !month || !day) return null;
+
+    return new Date(year, month - 1, day);
+  };
+
+  const initialPickerDate = parsePickerDate(value) || parsePickerDate(maxDate) || new Date();
+
+  const [selectedYear, setSelectedYear] = useState(() => initialPickerDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(() => initialPickerDate.getMonth());
   const [showCalendar, setShowCalendar] = useState(false);
 
   // 1. Parse BOTH dates safely
@@ -60,6 +72,15 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate, minDate }) => 
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
+
+  useEffect(() => {
+    const parsedValueDate = parsePickerDate(value);
+
+    if (parsedValueDate) {
+      setSelectedYear(parsedValueDate.getFullYear());
+      setSelectedMonth(parsedValueDate.getMonth());
+    }
+  }, [value]);
 
   const getDisplayText = () => {
     if (!value) return 'Select...';

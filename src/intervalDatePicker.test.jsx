@@ -227,13 +227,13 @@ describe('IntervalDatePicker', () => {
       expect(screen.getByText('2023')).toBeInTheDocument();
     });
 
-    it('disables year navigation at boundaries', () => {
+    it('disables year navigation at boundaries', async () => {
       renderWithProviders(
         <IntervalDatePicker {...monthlyProps} maxDate="2024-12-31" minDate="2024-01-01" />
       );
 
       const user = userEvent.setup();
-      user.click(screen.getByRole('button', { name: /June 2024/i }));
+      await user.click(screen.getByRole('button', { name: /June 2024/i }));
 
       const nextYearBtn = screen.getAllByRole('button', { name: /→/i })[0];
       expect(nextYearBtn).toBeDisabled();
@@ -352,11 +352,12 @@ describe('IntervalDatePicker', () => {
     it('opens year grid when toggle is clicked', async () => {
       renderWithProviders(<IntervalDatePicker {...annualProps} />);
       const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /2024/i }));
+      await user.click(screen.getByRole('button', { name: /^2024$/i }));
 
-      // Should show years between min and max
-      expect(screen.getByText('2024')).toBeInTheDocument();
-      expect(screen.getByText('2020')).toBeInTheDocument();
+      const yearGrid = document.querySelector('.year-grid');
+
+      expect(within(yearGrid).getByRole('button', { name: /^2024$/i })).toBeInTheDocument();
+      expect(within(yearGrid).getByRole('button', { name: /^2020$/i })).toBeInTheDocument();
     });
 
     it('selects a year and calls onChange with December 31', async () => {
