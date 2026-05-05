@@ -139,7 +139,7 @@ describe('EditProfileWizard — tab navigation', () => {
 
   it('Photo tab is marked active by default', () => {
     renderWizard();
-    const photoTab = screen.getByRole('button', { name: /photo/i });
+    const photoTab = screen.getByRole('button', { name: /^photo$/i });
     expect(photoTab.classList.contains('active')).toBe(true);
   });
 
