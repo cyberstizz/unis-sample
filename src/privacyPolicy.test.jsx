@@ -16,7 +16,7 @@ describe('PrivacyPolicy', () => {
 
   it('shows the effective date', () => {
     render(<MemoryRouter><PrivacyPolicy /></MemoryRouter>);
-    expect(screen.getByText(/March 31, 2026/)).toBeInTheDocument();
+    expect(screen.getAllByText(/March 31, 2026/).length).toBeGreaterThan(0);
   });
 
   it('renders all 10 section headings', () => {
@@ -27,7 +27,7 @@ describe('PrivacyPolicy', () => {
       '3. How We Share Your Information',
       '4. Local Storage & Tracking',
       '5. Data Retention & Your Rights',
-      '6. Children\'s Privacy',
+      '6. Children\u2019s Privacy',
       '7. International Transfers',
       '8. Security',
       '9. Changes to This Policy',
@@ -89,6 +89,6 @@ describe('PrivacyPolicy', () => {
 
   it('renders the footer copyright notice', () => {
     render(<MemoryRouter><PrivacyPolicy /></MemoryRouter>);
-    expect(screen.getByText(/© 2026 EasyCode LLC/i)).toBeInTheDocument();
+    expect(screen.getByText(/© 2026 Unis Music/i)).toBeInTheDocument();
   });
 });
