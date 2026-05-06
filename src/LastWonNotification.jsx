@@ -365,13 +365,13 @@ const LastWonNotification = () => {
         {/* ── Content ── */}
         <div className="lwn-content">
 
-          {/* Unis logo — with ambient glow */}
-          <img
+          {/* Unis logo — with ambient glow commented out for now and can easily be added back anytime*/}
+          {/* <img
             src={unisLogo}
             alt="UNIS"
             className="lwn-logo"
             style={ambientColor ? { filter: `drop-shadow(0 0 16px rgba(${ambientColor}, 0.5))` } : undefined}
-          />
+          /> */}
 
           {/* Badge — slides in from left */}
           <div
