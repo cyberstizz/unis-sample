@@ -32,7 +32,13 @@ const Onboarding = () => {
           <div className="step-content">
             <h2>Welcome to Unis!</h2>
             <p>Enter your invite code to join the Harlem music revolution.</p>
-            <input name="inviteCode" onChange={handleChange} placeholder="Invite Code" className="input-field" />
+          <input
+            name="inviteCode"
+            value={formData.inviteCode}
+            onChange={handleChange}
+            placeholder="Invite Code"
+            className="input-field"
+          />
           </div>
         );
       case 2:
@@ -41,11 +47,23 @@ const Onboarding = () => {
             <h2>Choose Your Role</h2>
             <div className="role-selection">
               <label className="role-card">
-                <input type="radio" name="role" value="listener" onChange={handleChange} />
+          <input
+            type="radio"
+            name="role"
+            value="listener"
+            checked={formData.role === 'listener'}
+            onChange={handleChange}
+          />
                 Listener
               </label>
               <label className="role-card">
-                <input type="radio" name="role" value="artist" onChange={handleChange} />
+          <input
+            type="radio"
+            name="role"
+            value="artist"
+            checked={formData.role === 'artist'}
+            onChange={handleChange}
+          />
                 Artist
               </label>
             </div>
