@@ -3,34 +3,6 @@
 // Comprehensive test suite for Profile — the user's account page showing
 // their photo, bio, supported artist, stats, vote history summary,
 // referral card, theme picker, and danger-zone actions.
-//
-// Covers:
-//   • Auth gating: no user → "Please log in" message
-//   • Loading state: SectionLoader visible while core profile fetches
-//   • Core fetch error → SectionError with Retry button that re-fires
-//   • Profile data render: avatar, username, bio, fallback bio
-//   • Supported-artist render: photo, name, default song, Play button
-//   • Supported artist hidden when user has no supportedArtistId
-//   • Stats grid: score (with default 0), level (with default Silver),
-//     total votes (= length of voteHistory)
-//   • Vote history section: loading, error+retry, summary count, empty CTA
-//   • "View All" button hidden during vote history loading/error
-//   • playDefaultSong: tracks /play with userId, calls playMedia with
-//     correct media object shape (type/id/url/title/artist/artwork)
-//   • playDefaultSong handles tracking failure gracefully (still plays)
-//   • Edit Profile button opens EditProfileWizard
-//   • Delete Account button opens DeleteAccountWizard
-//   • Change Password button opens ChangePasswordWizard
-//   • View All button opens VoteHistoryModal with the votes payload
-//   • EditProfileWizard onSuccess refreshes profile (refetches)
-//   • Profile fetch + Vote history fetch fire in parallel (no waterfall)
-//   • Image URL prefixing (relative → API base, absolute pass-through)
-//
-// Pattern notes:
-//   • All 5 child wizards/cards are mocked — they have their own dedicated
-//     test files. Stubs expose the props we want to assert on.
-//   • Listener fixture has supportedArtistId='user-artist-001' so the
-//     supported-artist branch renders by default.
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -53,7 +25,6 @@ vi.mock('./layout', () => ({
   default: ({ children }) => <div data-testid="layout">{children}</div>,
 }));
 
-// Mock all 5 child wizards/cards with stubs that expose their `show` prop
 const { editWizardSpy, deleteWizardSpy, voteHistoryModalSpy, changePasswordSpy, referralCardSpy, themePickerSpy } = vi.hoisted(() => ({
   editWizardSpy: vi.fn(),
   deleteWizardSpy: vi.fn(),
@@ -213,16 +184,12 @@ function mockProfile({
 
 async function renderAndWait({ as = 'listener' } = {}) {
   renderWithProviders(<Profile />, { as });
-  // Wait for the loading spinner to disappear OR for an h1 to appear.
-  // AuthContext takes a moment to fetch the user profile via axiosInstance,
-  // and only THEN does Profile's useEffect fire fetchCore.
   await waitFor(
     () => {
       const stillLoading = !!screen.queryByText(/loading your profile/i);
       const isError = !!screen.queryByText(/failed to load your profile/i);
       const guestMsg = !!screen.queryByText(/please log in/i);
       const hasH1 = !!document.querySelector('h1');
-      // We're done when: profile rendered (h1) OR error state OR (loaded with no spinner and not guest)
       if (stillLoading) throw new Error('still loading');
       if (guestMsg) throw new Error('still guest');
       if (!hasH1 && !isError) throw new Error('not yet rendered');
@@ -275,17 +242,12 @@ describe('Profile — auth gating', () => {
 // ===========================================================================
 describe('Profile — loading state', () => {
   it('shows "Loading your profile..." while core fetch is in-flight', async () => {
-    // Use mockProfile to ensure AuthContext gets a fast response, then
-    // delay only the SECOND call to /v1/users/profile/:userId (Profile's
-    // own fetchCore call). MSW handler order: most-recently-added wins.
     mockProfile();
     let coreCalls = 0;
     let resolveFn;
     const pending = new Promise((r) => { resolveFn = r; });
     server.use(
       http.get(`${API}/v1/users/profile/:userId`, async ({ params, request }) => {
-        // Profile component sends useCache:false which adds Cache-Control hint;
-        // but the simpler differentiator is request count.
         coreCalls++;
         if (coreCalls > 1) {
           await pending;
@@ -307,14 +269,7 @@ describe('Profile — loading state', () => {
 // CORE FETCH ERROR + RETRY
 // ===========================================================================
 describe('Profile — core fetch error', () => {
-  // axios mock fallback interferes — axiosInstance.jsx returns { data: [] } on
-  // GET errors instead of throwing, so the .catch in fetchCore never runs and
-  // setCoreError is never called. The component renders an empty success
-  // state instead of the SectionError. Same gotcha documented for
-  // leaderboardsPage and voteawards. Refactoring axiosInstance is out of
-  // scope; mark as skip.
   it.skip('shows "Failed to load your profile" when the core fetch throws', async () => {});
-
   it.skip('Retry button re-fires the core fetch', async () => {});
 });
 
@@ -352,7 +307,8 @@ describe('Profile — profile data render', () => {
       listenerProfile: baseListenerProfile({ photoUrl: '/uploads/me.jpg' }),
     });
     await renderAndWait();
-    const img = document.querySelector('.profile-image-large');
+    const img = document.querySelector('img.profile-hero__avatar');
+    expect(img).not.toBeNull();
     expect(img.src).toBe('http://localhost:8080/uploads/me.jpg');
   });
 
@@ -361,17 +317,20 @@ describe('Profile — profile data render', () => {
       listenerProfile: baseListenerProfile({ photoUrl: 'https://cdn.test/me.jpg' }),
     });
     await renderAndWait();
-    const img = document.querySelector('.profile-image-large');
+    const img = document.querySelector('img.profile-hero__avatar');
+    expect(img).not.toBeNull();
     expect(img.src).toBe('https://cdn.test/me.jpg');
   });
 
-  it('falls back to backimage when photoUrl is null', async () => {
+  it('renders an initial-letter placeholder when photoUrl is null', async () => {
     mockProfile({
-      listenerProfile: baseListenerProfile({ photoUrl: null }),
+      listenerProfile: baseListenerProfile({ photoUrl: null, username: 'CharlesUnis' }),
     });
     await renderAndWait();
-    const img = document.querySelector('.profile-image-large');
-    expect(img.src).toContain('randomrapper.jpeg');
+    expect(document.querySelector('img.profile-hero__avatar')).toBeNull();
+    const placeholder = document.querySelector('.profile-hero__avatar--placeholder');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder.textContent).toBe('C');
   });
 });
 
@@ -382,33 +341,37 @@ describe('Profile — supported artist section', () => {
   it('renders the supported artist when supportedArtistId is set', async () => {
     mockProfile();
     await renderAndWait();
-    expect(await screen.findByText('Tony Fadd')).toBeInTheDocument();
-    expect(screen.getByText('Featured Banger')).toBeInTheDocument();
-    expect(screen.getByText(/featured track/i)).toBeInTheDocument();
+    expect(await screen.findByText('Featured Banger')).toBeInTheDocument();
+    expect(screen.getByText(/by Tony Fadd/)).toBeInTheDocument();
+    expect(screen.getByText(/i support/i)).toBeInTheDocument();
   });
 
-  it('renders the supported-artist photo (relative URL prefixed)', async () => {
+  it('uses backgroundImage on the featured panel for the supported-artist art (relative URL prefixed)', async () => {
     mockProfile();
     await renderAndWait();
-    await screen.findByText('Tony Fadd');
-    const photo = document.querySelector('.artist-photo');
-    expect(photo.src).toBe('http://localhost:8080/uploads/tony.jpg');
+    await screen.findByText('Featured Banger');
+    const featured = document.querySelector('.profile-hero__featured');
+    expect(featured).not.toBeNull();
+    expect(featured.style.backgroundImage).toContain('http://localhost:8080/uploads/banger.jpg');
   });
 
-  it('hides the supported artist section when supportedArtistId is missing', async () => {
+  it('renders the empty-state featured panel when supportedArtistId is missing', async () => {
     mockProfile({
       listenerProfile: baseListenerProfile({ supportedArtistId: null }),
     });
     await renderAndWait();
-    expect(screen.queryByText(/i support/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/no artist yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/discover artists/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /listen to your pick/i })).not.toBeInTheDocument();
   });
 
-  it('shows "No featured song set" when supported artist has no defaultSong', async () => {
+  it('shows "No featured track yet" when supported artist has no defaultSong', async () => {
     mockProfile({
       supportedArtist: supportedArtistProfile({ defaultSong: null }),
     });
     await renderAndWait();
-    expect(await screen.findByText(/no featured song set/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no featured track yet/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /listen to your pick/i })).not.toBeInTheDocument();
   });
 });
 
@@ -419,11 +382,9 @@ describe('Profile — playDefaultSong', () => {
   it('clicking play calls playMedia with the song details', async () => {
     mockProfile();
     await renderAndWait();
-    await screen.findByText('Tony Fadd');
-    const playBtn = document.querySelector('.btn-play');
-    expect(playBtn).not.toBeNull();
+    await screen.findByText('Featured Banger');
     const user = userEvent.setup();
-    await user.click(playBtn);
+    await user.click(screen.getByRole('button', { name: /listen to your pick/i }));
 
     await waitFor(() => expect(playMediaSpy).toHaveBeenCalled());
     const [media] = playMediaSpy.mock.calls[0];
@@ -436,9 +397,9 @@ describe('Profile — playDefaultSong', () => {
   it('tracks the play with userId before calling playMedia', async () => {
     mockProfile();
     await renderAndWait();
-    await screen.findByText('Tony Fadd');
+    await screen.findByText('Featured Banger');
     const user = userEvent.setup();
-    await user.click(document.querySelector('.btn-play'));
+    await user.click(screen.getByRole('button', { name: /listen to your pick/i }));
     await waitFor(() => {
       const trackCall = callsTo('/v1/media/song/song-default-001/play', 'post')[0];
       expect(trackCall).toBeTruthy();
@@ -454,18 +415,18 @@ describe('Profile — playDefaultSong', () => {
     );
     mockProfile();
     await renderAndWait();
-    await screen.findByText('Tony Fadd');
+    await screen.findByText('Featured Banger');
     const user = userEvent.setup();
-    await user.click(document.querySelector('.btn-play'));
+    await user.click(screen.getByRole('button', { name: /listen to your pick/i }));
     await waitFor(() => expect(playMediaSpy).toHaveBeenCalled());
   });
 
   it('passes a single-element queue to playMedia', async () => {
     mockProfile();
     await renderAndWait();
-    await screen.findByText('Tony Fadd');
+    await screen.findByText('Featured Banger');
     const user = userEvent.setup();
-    await user.click(document.querySelector('.btn-play'));
+    await user.click(screen.getByRole('button', { name: /listen to your pick/i }));
     await waitFor(() => expect(playMediaSpy).toHaveBeenCalled());
     const [, queue] = playMediaSpy.mock.calls[0];
     expect(Array.isArray(queue)).toBe(true);
@@ -490,9 +451,9 @@ describe('Profile — stats grid', () => {
       listenerProfile: baseListenerProfile({ score: null }),
     });
     await renderAndWait();
-    // The score card renders "0"
-    const scoreCard = Array.from(document.querySelectorAll('.stat-card'))
+    const scoreCard = Array.from(document.querySelectorAll('.profile-hero__stat'))
       .find((card) => card.textContent.includes('Score'));
+    expect(scoreCard).toBeTruthy();
     expect(scoreCard.textContent).toMatch(/0/);
   });
 
@@ -509,19 +470,20 @@ describe('Profile — stats grid', () => {
       listenerProfile: baseListenerProfile({ level: null }),
     });
     await renderAndWait();
-    expect(screen.getByText('Silver')).toBeInTheDocument();
+    // "Silver" appears in both eyebrow ("Member · Silver Tier") and stat card; either match is fine
+    expect(screen.getAllByText(/Silver/).length).toBeGreaterThan(0);
   });
 
   it('renders Total Votes count from voteHistory length', async () => {
     mockProfile({ voteHistory: voteHistoryFixture });
     await renderAndWait();
-    // Find the Total Votes stat card
-    const totalVotesCard = Array.from(document.querySelectorAll('.stat-card'))
+    const totalVotesCard = Array.from(document.querySelectorAll('.profile-hero__stat'))
       .find((card) => card.textContent.includes('Total Votes'));
+    expect(totalVotesCard).toBeTruthy();
     expect(totalVotesCard.textContent).toMatch(/3/);
   });
 
-  it('shows "..." for total votes while votes are loading', async () => {
+  it('shows an em-dash for total votes while votes are loading', async () => {
     let resolveFn;
     const pending = new Promise((r) => { resolveFn = r; });
     server.use(
@@ -535,14 +497,14 @@ describe('Profile — stats grid', () => {
       })
     );
     renderWithProviders(<Profile />, { as: 'listener' });
-    // Wait for core profile to load — vote history is still pending
     await waitFor(
       () => expect(document.querySelector('h1')).not.toBeNull(),
       { timeout: 5000 }
     );
-    const totalVotesCard = Array.from(document.querySelectorAll('.stat-card'))
+    const totalVotesCard = Array.from(document.querySelectorAll('.profile-hero__stat'))
       .find((card) => card.textContent.includes('Total Votes'));
-    expect(totalVotesCard.textContent).toMatch(/\.{3}/);
+    expect(totalVotesCard).toBeTruthy();
+    expect(totalVotesCard.textContent).toMatch(/—/);
     resolveFn();
   });
 });
@@ -554,14 +516,15 @@ describe('Profile — vote history section', () => {
   it('shows summary count for votes', async () => {
     mockProfile({ voteHistory: voteHistoryFixture });
     await renderAndWait();
-    const voteCount = document.querySelector('.vote-count');
+    const voteCount = document.querySelector('.profile-vote-summary__number');
+    expect(voteCount).not.toBeNull();
     expect(voteCount.textContent).toBe('3');
   });
 
   it('shows positive CTA when votes > 0', async () => {
     mockProfile({ voteHistory: voteHistoryFixture });
     await renderAndWait();
-    expect(screen.getByText(/see your complete voting history/i)).toBeInTheDocument();
+    expect(screen.getByText(/every vote shapes the leaderboard/i)).toBeInTheDocument();
   });
 
   it('shows empty CTA when votes = 0', async () => {
@@ -576,12 +539,7 @@ describe('Profile — vote history section', () => {
     expect(screen.getByRole('button', { name: /view all/i })).toBeInTheDocument();
   });
 
-  // Same axiosInstance fallback gotcha as the core-fetch error tests above.
-  // When /v1/vote/history returns 500, apiCall swallows the error and
-  // returns { data: [] }, so setVotesError is never called and the component
-  // renders an empty-list success state instead of the SectionError.
   it.skip('shows section error with Retry when votes fetch fails', async () => {});
-
   it.skip('hides "View All" button while votes are loading or errored', async () => {});
 });
 
@@ -596,8 +554,6 @@ describe('Profile — fetches profile and votes in parallel', () => {
       expect(callsTo('/v1/users/profile/').length).toBeGreaterThan(0);
       expect(callsTo('/v1/vote/history').length).toBeGreaterThan(0);
     });
-    // The two calls should fire within ~10ms of each other (parallel),
-    // not separated by a network round-trip
     const profileCall = callsTo('/v1/users/profile/')[0];
     const votesCall = callsTo('/v1/vote/history')[0];
     expect(Math.abs(profileCall.timestamp - votesCall.timestamp)).toBeLessThan(50);
