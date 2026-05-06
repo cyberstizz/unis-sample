@@ -100,10 +100,12 @@ describe('PlaylistPanel', () => {
 
     await userEvent.click(openButton);
 
-    expect(screen.getByTestId('playlist-viewer')).toBeInTheDocument();
-    expect(screen.getByText('Late Night Vibes')).toBeInTheDocument();
-    expect(screen.getByText('First Song')).toBeInTheDocument();
-    expect(screen.getByText('Second Song')).toBeInTheDocument();
+    const viewer = screen.getByTestId('playlist-viewer');
+
+    expect(viewer).toBeInTheDocument();
+    expect(within(viewer).getByRole('heading', { name: 'Late Night Vibes' })).toBeInTheDocument();
+    expect(within(viewer).getByText('First Song')).toBeInTheDocument();
+    expect(within(viewer).getByText('Second Song')).toBeInTheDocument();
   });
 
   it('closes PlaylistViewer when onClose is called', async () => {
