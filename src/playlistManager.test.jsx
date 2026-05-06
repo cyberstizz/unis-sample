@@ -125,38 +125,47 @@ describe('PlaylistManager', () => {
     });
   });
 
-  it('searches playlists from public tabs and displays the results', async () => {
-    axiosInstance.get.mockResolvedValueOnce({
-      data: [
-        {
-          playlistId: 22,
-          name: 'Jazz Around Town',
-          songCount: 8,
-          visibility: 'public',
-          type: 'personal',
-          creatorName: 'Charles',
-        },
-      ],
-    });
+it('searches playlists from public tabs and displays the results', async () => {
+  axiosInstance.get.mockImplementation((url) => {
+    if (url === '/v1/playlists/discover') {
+      return Promise.resolve({ data: [] });
+    }
 
-    renderPlaylistManager();
+    if (url === '/v1/playlists/search?q=jazz') {
+      return Promise.resolve({
+        data: [
+          {
+            playlistId: 22,
+            name: 'Jazz Around Town',
+            songCount: 8,
+            visibility: 'public',
+            type: 'personal',
+            creatorName: 'Charles',
+          },
+        ],
+      });
+    }
 
-    await userEvent.click(screen.getByText('Discover'));
-
-    const searchInput = screen.getByPlaceholderText('Search playlists...');
-
-    fireEvent.change(searchInput, {
-      target: { value: 'jazz' },
-    });
-
-    await waitFor(() => {
-      expect(axiosInstance.get).toHaveBeenCalledWith(
-        '/v1/playlists/search?q=jazz'
-      );
-    });
-
-    expect(await screen.findByText('Jazz Around Town')).toBeInTheDocument();
-    expect(screen.getByText(/8 songs/i)).toBeInTheDocument();
-    expect(screen.getByText(/by Charles/i)).toBeInTheDocument();
+    return Promise.resolve({ data: [] });
   });
+
+  renderPlaylistManager();
+
+  await userEvent.click(screen.getByText('Discover'));
+
+  const searchInput = screen.getByPlaceholderText('Search playlists...');
+
+  fireEvent.change(searchInput, {
+    target: { value: 'jazz' },
+  });
+
+  await waitFor(() => {
+    expect(axiosInstance.get).toHaveBeenCalledWith('/v1/playlists/search?q=jazz');
+  });
+
+  expect(await screen.findByText('Jazz Around Town')).toBeInTheDocument();
+  expect(screen.getByText(/8 songs/i)).toBeInTheDocument();
+  expect(screen.getByText(/by Charles/i)).toBeInTheDocument();
+});
+
 });
