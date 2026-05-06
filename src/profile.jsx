@@ -272,12 +272,6 @@ const Profile = () => {
               >
                 <Edit3 size={14} /> Edit Profile
               </button>
-              <button
-                className="profile-btn profile-btn--ghost"
-                onClick={handleShareProfile}
-              >
-                <Share2 size={14} /> Share Profile
-              </button>
             </div>
           </div>
 
