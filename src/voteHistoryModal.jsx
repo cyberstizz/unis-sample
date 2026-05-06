@@ -86,7 +86,7 @@ const VoteHistoryModal = ({ show, onClose, votes = [], useDummyData = true }) =>
   if (!show) return null;
 
   // Use dummy data if flag is true or no real votes
-  const displayVotes = useDummyData || votes.length === 0 ? DUMMY_VOTES : votes;
+const displayVotes = useDummyData ? DUMMY_VOTES : votes;
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
