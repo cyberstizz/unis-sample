@@ -11,14 +11,21 @@ vi.mock('./components/axiosInstance', () => ({
   apiCall: vi.fn(),
 }));
 
+// Mock every lucide-react icon the component imports. Missing ANY of these
+// causes the component to throw on render, which leaves the loading skeleton
+// in the DOM and every assertion fails.
 vi.mock('lucide-react', () => ({
   Copy: ({ size, ...props }) => <span data-testid="copy-icon" {...props}>CopyIcon</span>,
   Check: ({ size, ...props }) => <span data-testid="check-icon" {...props}>CheckIcon</span>,
   Gift: ({ size, ...props }) => <span data-testid="gift-icon" {...props}>GiftIcon</span>,
+  Twitter: ({ size, ...props }) => <span data-testid="twitter-icon" {...props}>TwitterIcon</span>,
+  Instagram: ({ size, ...props }) => <span data-testid="instagram-icon" {...props}>InstagramIcon</span>,
+  Link2: ({ size, ...props }) => <span data-testid="link2-icon" {...props}>Link2Icon</span>,
+  Sparkles: ({ size, ...props }) => <span data-testid="sparkles-icon" {...props}>SparklesIcon</span>,
 }));
 
 describe('ReferralCodeCard', () => {
-beforeEach(() => {
+  beforeEach(() => {
     // Note: fake timers are enabled per-test only (see "resets copied state
     // after 2 seconds"). Enabling them globally deadlocks RTL's findByText
     // polling, which uses setInterval under the hood.
@@ -39,55 +46,51 @@ beforeEach(() => {
   });
 
   test('renders the header and listener referral copy', async () => {
-    apiCall.mockResolvedValue({
-      data: 'UNIS123',
-    });
+    apiCall.mockResolvedValue({ data: 'UNIS123' });
 
     render(<ReferralCodeCard userId="user-1" />);
 
-    expect(screen.getByText('Your Referral Code')).toBeInTheDocument();
-    expect(screen.getByTestId('gift-icon')).toBeInTheDocument();
+    // Component shows "Your Code" eyebrow + "Bring friends in." headline
+    expect(await screen.findByText('Your Code')).toBeInTheDocument();
+    expect(screen.getByText(/Bring friends in/i)).toBeInTheDocument();
 
+    // Listener copy: "Every listener who joins UNIS with your code adds +5 points..."
     expect(
-      screen.getByText(
-        /share this code with friends\. you earn \+5 points for every listener/i
-      )
+      screen.getByText(/every listener who joins/i)
     ).toBeInTheDocument();
 
     expect(await screen.findByText('UNIS123')).toBeInTheDocument();
   });
 
   test('renders artist-specific referral copy when isArtist is true', async () => {
-    apiCall.mockResolvedValue({
-      data: 'ARTIST123',
-    });
+    apiCall.mockResolvedValue({ data: 'ARTIST123' });
 
     render(<ReferralCodeCard userId="artist-1" isArtist />);
 
     expect(
-      screen.getByText(/share this code with listeners and other artists/i)
+      await screen.findByText(/share this code with listeners and other artists/i)
     ).toBeInTheDocument();
 
+    // Artist "How it works" sidebar mentions +2 points per artist signup
     expect(
-      screen.getByText(/\+2 points for every artist/i)
+      screen.getByText(/points per artist signup/i)
     ).toBeInTheDocument();
 
     expect(await screen.findByText('ARTIST123')).toBeInTheDocument();
   });
 
-  test('shows Loading while referral code is being fetched', () => {
+  test('shows the loading skeleton while referral code is being fetched', () => {
     apiCall.mockReturnValue(new Promise(() => {}));
 
-    render(<ReferralCodeCard userId="user-1" />);
+    const { container } = render(<ReferralCodeCard userId="user-1" />);
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /copy/i })).toBeDisabled();
+    // Loading state renders a skeleton div, not literal "Loading..." text
+    expect(container.querySelector('.referral-card--loading')).toBeInTheDocument();
+    expect(container.querySelector('.referral-card__skeleton')).toBeInTheDocument();
   });
 
   test('calls apiCall with the correct referral-code endpoint', async () => {
-    apiCall.mockResolvedValue({
-      data: 'UNIS123',
-    });
+    apiCall.mockResolvedValue({ data: 'UNIS123' });
 
     render(<ReferralCodeCard userId="user-1" />);
 
@@ -101,9 +104,7 @@ beforeEach(() => {
   });
 
   test('supports backend response as plain string', async () => {
-    apiCall.mockResolvedValue({
-      data: 'PLAINCODE',
-    });
+    apiCall.mockResolvedValue({ data: 'PLAINCODE' });
 
     render(<ReferralCodeCard userId="user-1" />);
 
@@ -111,11 +112,7 @@ beforeEach(() => {
   });
 
   test('supports backend response with referralCode property', async () => {
-    apiCall.mockResolvedValue({
-      data: {
-        referralCode: 'OBJECTCODE',
-      },
-    });
+    apiCall.mockResolvedValue({ data: { referralCode: 'OBJECTCODE' } });
 
     render(<ReferralCodeCard userId="user-1" />);
 
@@ -123,11 +120,7 @@ beforeEach(() => {
   });
 
   test('supports backend response with code property', async () => {
-    apiCall.mockResolvedValue({
-      data: {
-        code: 'CODEPROP',
-      },
-    });
+    apiCall.mockResolvedValue({ data: { code: 'CODEPROP' } });
 
     render(<ReferralCodeCard userId="user-1" />);
 
@@ -135,9 +128,7 @@ beforeEach(() => {
   });
 
   test('shows dash when no referral code is returned', async () => {
-    apiCall.mockResolvedValue({
-      data: {},
-    });
+    apiCall.mockResolvedValue({ data: {} });
 
     render(<ReferralCodeCard userId="user-1" />);
 
@@ -152,9 +143,7 @@ beforeEach(() => {
   });
 
   test('copies referral code to clipboard when Copy button is clicked', async () => {
-    apiCall.mockResolvedValue({
-      data: 'UNIS123',
-    });
+    apiCall.mockResolvedValue({ data: 'UNIS123' });
 
     render(<ReferralCodeCard userId="user-1" />);
 
@@ -166,11 +155,12 @@ beforeEach(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith('UNIS123');
     });
 
-    expect(await screen.findByText('Copied!')).toBeInTheDocument();
+    // Component renders "Copied" (no exclamation point) and the check icon
+    expect(await screen.findByText('Copied')).toBeInTheDocument();
     expect(screen.getByTestId('check-icon')).toBeInTheDocument();
   });
 
-test('resets copied state after 2 seconds', async () => {
+  test('resets copied state after 2 seconds', async () => {
     apiCall.mockResolvedValue({ data: 'UNIS123' });
     render(<ReferralCodeCard userId="user-1" />);
 
@@ -180,17 +170,15 @@ test('resets copied state after 2 seconds', async () => {
 
     // Switch to fake timers BEFORE clicking. handleCopy schedules a
     // setTimeout(2000) inside its clipboard .then() callback, and that
-    // setTimeout has to be intercepted at scheduling time. If we enable
-    // fake timers afterward, the real-timer at 2000ms is already pending
-    // and fake-time advancement does nothing.
+    // setTimeout has to be intercepted at scheduling time.
     vi.useFakeTimers();
 
     fireEvent.click(screen.getByRole('button', { name: /copy/i }));
 
     // The clipboard promise's .then() and setCopied(true) are microtasks,
-    // not timers — flush them with an empty act() so React commits "Copied!".
+    // not timers — flush them with an empty act() so React commits "Copied".
     await act(async () => {});
-    expect(screen.getByText('Copied!')).toBeInTheDocument();
+    expect(screen.getByText('Copied')).toBeInTheDocument();
 
     // Now advance the 2-second cleanup timer; act flushes the resulting
     // setCopied(false) commit before we query the DOM.
@@ -203,7 +191,7 @@ test('resets copied state after 2 seconds', async () => {
 
     vi.useRealTimers();
   });
-  
+
   test('logs an error and stops loading when referral code fetch fails', async () => {
     const consoleErrorSpy = vi
       .spyOn(console, 'error')
