@@ -460,6 +460,29 @@
   }
 }
 
+// Force all profile sections and their card-like children to match hero width
+.profile-section {
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+// The section header and the actual component/card beneath it should both
+// stretch to the full available profile-container width.
+.profile-section__head,
+.profile-section > :not(.profile-section__head) {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+// Safety override for nested cards/components that may define their own max-width.
+.profile-section > :not(.profile-section__head) > * {
+  max-width: none;
+  box-sizing: border-box;
+}
+
 // =============================================================================
 // VOTE HISTORY CARD
 // =============================================================================
