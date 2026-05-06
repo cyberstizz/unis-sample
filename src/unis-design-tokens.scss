@@ -1,8 +1,35 @@
+// =============================================================================
+// UNIS — Design Tokens (Supplementary Layer)
+//
+// HOW THIS FITS WITH YOUR EXISTING theme.scss:
+//   Your theme.scss defines `--unis-primary` per theme on `[data-theme="..."]`,
+//   which is applied to `<div id="root">`. This file does NOT modify any of
+//   that. It layers on top with:
+//
+//     1. Theme-AGNOSTIC tokens (text/panel/border/radii/fonts) — on :root
+//     2. Theme-AWARE glow tokens computed from `--unis-primary` via
+//        color-mix() — duplicated under each [data-theme="..."] selector
+//        so they cascade correctly inside #root
+//     3. The atmospheric gradient — painted on #root::before (NOT body::before)
+//        because your themes apply to #root and the gradient must read
+//        theme variables from inside that scope
+//     4. Inter + Instrument Serif fonts (used by the new typography)
+//
+// IMPORT ORDER:
+//   In App.jsx, add this import IMMEDIATELY AFTER `import './theme.scss';`
+//
+//     import './theme.scss';
+//     import './unis-design-tokens.scss';
+//
+// BROWSER SUPPORT:
+//   color-mix() works in Chrome 111+, Safari 16.2+, Firefox 113+ (mid-2023).
+//   All modern browsers. Let me know if you need older-browser fallbacks.
+// =============================================================================
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap');
 
 // -----------------------------------------------------------------------------
-// THEME-AGNOSTIC TOKENS (apply to all themes equally)
+// THEME-AGNOSTIC TOKENS — applied to :root, available everywhere
 // -----------------------------------------------------------------------------
 :root {
   // Text
@@ -30,26 +57,50 @@
   // Tier color (purely cosmetic for the "Silver" stat label)
   --unis-tier-color:  #c8d1de;
 
-  // Background base — neutral dark; theme-aware glows handle the tinting
+  // Background base — neutral dark; the theme-aware glows do the tinting
   --unis-bg:          #07090f;
-
-  // Theme-aware accent variants COMPUTED from --unis-primary.
-  // Whenever your theme.scss changes --unis-primary, these update automatically.
-  --unis-primary-2:    color-mix(in srgb, var(--unis-primary, #163387), white 25%);
-  --unis-primary-soft: color-mix(in srgb, var(--unis-primary, #163387), transparent 86%);
-  --unis-primary-glow: color-mix(in srgb, var(--unis-primary, #163387), transparent 65%);
-  --unis-glow-1:       color-mix(in srgb, var(--unis-primary, #163387), transparent 90%);
-  --unis-glow-2:       color-mix(in srgb, var(--unis-primary, #163387), transparent 94%);
 }
 
 // -----------------------------------------------------------------------------
-// GLOBAL BODY + ATMOSPHERIC BACKGROUND
+// THEME-AWARE GLOW TOKENS
 //
-// The fixed gradient sits behind everything via body::before. It's pinned to
-// the viewport so it doesn't scroll with content — that's what gives it the
-// premium "ambient atmosphere" feel.
+// These MUST live inside the same selectors your theme.scss uses, otherwise
+// they can't read the right --unis-primary. We attach them to every theme
+// selector you define (including :root and [data-theme="blue"] for the default).
 //
-// The transition makes theme switches feel cinematic instead of jarring.
+// `--unis-primary-2` is a lighter accent (used for accent text/highlights),
+// `--unis-primary-soft` and the two glows feed the gradient and other UI.
+//
+// Why we duplicate the rule instead of using just `:root` — your theme.scss
+// applies overrides to `[data-theme="..."]` on #root. If we put these on
+// :root only, the theme override on #root wouldn't recompute them because
+// they were already evaluated at :root-level with the wrong --unis-primary.
+// Re-declaring them inside each theme selector forces re-evaluation.
+// -----------------------------------------------------------------------------
+:root,
+[data-theme="blue"],
+[data-theme="orange"],
+[data-theme="red"],
+[data-theme="green"],
+[data-theme="purple"],
+[data-theme="yellow"],
+[data-theme="dianna"] {
+  --unis-primary-2:    color-mix(in srgb, var(--unis-primary), white 25%);
+  --unis-primary-soft: color-mix(in srgb, var(--unis-primary), transparent 86%);
+  --unis-primary-glow: color-mix(in srgb, var(--unis-primary), transparent 65%);
+  --unis-glow-1:       color-mix(in srgb, var(--unis-primary), transparent 88%);
+  --unis-glow-2:       color-mix(in srgb, var(--unis-primary), transparent 93%);
+}
+
+// -----------------------------------------------------------------------------
+// GLOBAL BODY + ATMOSPHERIC GRADIENT
+//
+// Critical: the gradient is painted on #root::before, NOT body::before.
+// Your themes are applied via [data-theme="..."] on <div id="root">, so
+// any selector that needs to read --unis-primary must live inside #root.
+//
+// We use #root because that's the React mount point in your App.jsx. If
+// your project mounts to a different ID, change the selector below.
 // -----------------------------------------------------------------------------
 html, body {
   margin: 0;
@@ -63,10 +114,20 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   min-height: 100vh;
+}
+
+// #root is the element your theme.scss applies [data-theme] to, AND it's
+// the React mount point. We make it the positioning context for the
+// gradient and ensure it covers the viewport.
+#root {
+  position: relative;
+  min-height: 100vh;
+  z-index: 0;
+  // Smooth color transitions when switching themes.
   transition: background-color 0.6s ease;
 }
 
-body::before {
+#root::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -75,24 +136,22 @@ body::before {
     radial-gradient(700px 500px at 12% 92%, var(--unis-glow-2), transparent 60%);
   pointer-events: none;
   z-index: 0;
+  // Theme-switch transition — this is what makes color changes feel cinematic
+  // instead of jarring.
   transition: background 0.6s ease;
 }
 
-// Make sure all app content stacks above the background.
-// `.app-wrapper` is the class your App.jsx uses; #root is the React mount.
-#root,
-.app-wrapper {
+// Make sure all app content stacks above the gradient.
+#root > * {
   position: relative;
   z-index: 1;
 }
 
 // -----------------------------------------------------------------------------
-// CONTEXTUAL BACKGROUND OVERLAY (optional)
+// CONTEXTUAL BACKGROUND OVERLAY (optional helper)
 //
-// For pages that want to layer a contextual image (album art on song page,
-// jurisdiction photo, etc.) ON TOP of the gradient, use this helper. It
-// overlays the image at low opacity with a fade-to-bg gradient so content
-// stays legible.
+// For pages that want to layer a contextual image on top of the gradient
+// (album art on song page, neighborhood photo on jurisdiction page, etc.).
 //
 // Usage in JSX:
 //   <div className="unis-context-bg" style={{ backgroundImage: `url(${art})` }} />
