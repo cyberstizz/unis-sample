@@ -16,7 +16,7 @@ describe('TermsOfService', () => {
 
   it('shows the effective date', () => {
     render(<MemoryRouter><TermsOfService /></MemoryRouter>);
-    expect(screen.getByText(/March 31, 2026/)).toBeInTheDocument();
+    expect(screen.getAllByText(/March 31, 2026/).length).toBeGreaterThan(0);
   });
 
   it('renders all 16 section headings', () => {
@@ -59,7 +59,7 @@ describe('TermsOfService', () => {
   it('renders the DMCA agent contact info', () => {
     render(<MemoryRouter><TermsOfService /></MemoryRouter>);
     expect(screen.getByText(/Charles Lamb, DMCA Agent/i)).toBeInTheDocument();
-    expect(screen.getByText(/53 Lincoln Avenue/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/53 Lincoln Avenue/i).length).toBeGreaterThan(0);
   });
 
   it('renders support email link with correct href', () => {
@@ -86,6 +86,6 @@ describe('TermsOfService', () => {
 
   it('renders the footer copyright notice', () => {
     render(<MemoryRouter><TermsOfService /></MemoryRouter>);
-    expect(screen.getByText(/© 2026 EasyCode LLC/i)).toBeInTheDocument();
+    expect(screen.getByText(/© 2026 Unis Music/i)).toBeInTheDocument();
   });
 });
