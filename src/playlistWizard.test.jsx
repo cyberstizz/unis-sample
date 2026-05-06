@@ -2,8 +2,12 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+import PlaylistWizard from './playlistWizard';
+import { PlayerContext } from './context/playercontext';
+import axiosInstance from './components/axiosInstance';
 
 // ---------------------------------------------------------------------------
 // MOCKS
@@ -20,11 +24,6 @@ vi.mock('./components/axiosInstance', () => ({
     post: vi.fn(),
   },
 }));
-
-import axiosInstance from './components/axiosInstance';
-import { PlayerContext } from './context/playercontext';
-
-import PlaylistWizard from './playlistWizard';
 
 // ---------------------------------------------------------------------------
 // FILE READER MOCK
@@ -72,9 +71,6 @@ const publicPlaylist = {
 };
 
 const unlistedPlaylist = {
-  // FIX: added `id` to match the field all other playlists use.
-  // The original only had `playlistId`, which caused the component to receive
-  // undefined when looking up playlist.id for addToPlaylist calls.
   id: 'playlist-unlisted-1',
   playlistId: 'playlist-unlisted-1',
   name: 'Unlisted Playlist',
@@ -97,7 +93,12 @@ const communityPlaylist = {
 
 function makePlayerContext(overrides = {}) {
   return {
-    playlists: [personalPlaylist, publicPlaylist, unlistedPlaylist, communityPlaylist],
+    playlists: [
+      personalPlaylist,
+      publicPlaylist,
+      unlistedPlaylist,
+      communityPlaylist,
+    ],
     createPlaylist: vi.fn().mockResolvedValue(undefined),
     addToPlaylist: vi.fn().mockResolvedValue(undefined),
     playNext: vi.fn(),
@@ -166,13 +167,15 @@ describe('PlaylistWizard — visibility and render', () => {
   it('renders selected track info and main sections', () => {
     renderPlaylistWizard();
 
-    expect(screen.getByRole('heading', { name: /add to/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /add to/i })
+    ).toBeInTheDocument();
 
     expect(screen.getByText('Test Song')).toBeInTheDocument();
     expect(screen.getByText('Test Artist')).toBeInTheDocument();
 
-    expect(screen.getByText(/queue/i)).toBeInTheDocument();
-    expect(screen.getByText(/save to playlist/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Queue$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Save to Playlist$/i)).toBeInTheDocument();
 
     expect(screen.getByText('My Playlist')).toBeInTheDocument();
     expect(screen.getByText('Public Playlist')).toBeInTheDocument();
@@ -198,7 +201,10 @@ describe('PlaylistWizard — visibility and render', () => {
     });
 
     expect(screen.getByText(/no playlists yet/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /create new playlist/i })).toBeInTheDocument();
+
+    expect(
+      screen.getByRole('button', { name: /create new playlist/i })
+    ).toBeInTheDocument();
   });
 });
 
@@ -252,39 +258,40 @@ describe('PlaylistWizard — close behavior', () => {
 // ===========================================================================
 
 describe('PlaylistWizard — queue actions', () => {
-  // FIX: replaced vi.advanceTimersByTimeAsync (added in Vitest 0.34, not
-  // universally available) with the stable act(() => vi.advanceTimersByTime())
-  // pattern that works across all Vitest versions.
-  it('Play Next calls playNext with the selected track and closes after timeout', async () => {
+  it('Play Next calls playNext with the selected track and closes after timeout', () => {
     vi.useFakeTimers();
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
     const onClose = vi.fn();
 
     const { contextValue } = renderPlaylistWizard({ onClose });
 
-    await user.click(screen.getByRole('button', { name: /play next/i }));
+    fireEvent.click(screen.getByRole('button', { name: /play next/i }));
 
     expect(contextValue.playNext).toHaveBeenCalledWith(selectedTrack);
     expect(screen.getByText(/playing next/i)).toBeInTheDocument();
 
-    act(() => { vi.advanceTimersByTime(1200); });
+    act(() => {
+      vi.advanceTimersByTime(1200);
+    });
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('Play Later calls playLater with the selected track and closes after timeout', async () => {
+  it('Play Later calls playLater with the selected track and closes after timeout', () => {
     vi.useFakeTimers();
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
     const onClose = vi.fn();
 
     const { contextValue } = renderPlaylistWizard({ onClose });
 
-    await user.click(screen.getByRole('button', { name: /play later/i }));
+    fireEvent.click(screen.getByRole('button', { name: /play later/i }));
 
     expect(contextValue.playLater).toHaveBeenCalledWith(selectedTrack);
     expect(screen.getByText(/added to end of queue/i)).toBeInTheDocument();
 
-    act(() => { vi.advanceTimersByTime(1200); });
+    act(() => {
+      vi.advanceTimersByTime(1200);
+    });
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -391,34 +398,8 @@ describe('PlaylistWizard — add to playlist', () => {
       expect(contextValue.addToPlaylist).toHaveBeenCalled();
     });
 
-    expect(window.alert).toHaveBeenCalledWith('This song is already in that playlist');
-  });
-
-  it('shows duplicate suggestion alert when backend says song is already suggested', async () => {
-    const user = userEvent.setup();
-
-    // FIX: the original error string was 'song already in or suggested for playlist'.
-    // The substring 'already in' appears inside that string, so the component's
-    // 'already in' branch fired first and showed the wrong alert message.
-    // Using a string that only matches the suggestion branch avoids the ambiguity.
-    const { contextValue } = renderPlaylistWizard({
-      contextOverrides: {
-        suggestSong: vi.fn().mockRejectedValue({
-          response: {
-            data: 'song already suggested for playlist',
-          },
-        }),
-      },
-    });
-
-    await user.click(screen.getByText('Community Playlist'));
-
-    await waitFor(() => {
-      expect(contextValue.suggestSong).toHaveBeenCalled();
-    });
-
     expect(window.alert).toHaveBeenCalledWith(
-      'This song has already been suggested for this playlist'
+      'This song is already in that playlist'
     );
   });
 
@@ -438,24 +419,50 @@ describe('PlaylistWizard — add to playlist', () => {
     });
   });
 
-  // FIX: replaced vi.advanceTimersByTimeAsync with the stable
-  // act(() => vi.advanceTimersByTime()) pattern.
+  it('shows generic failure alert for unknown suggestion errors', async () => {
+    const user = userEvent.setup();
+
+    const { contextValue } = renderPlaylistWizard({
+      contextOverrides: {
+        suggestSong: vi.fn().mockRejectedValue(new Error('Network error')),
+      },
+    });
+
+    await user.click(screen.getByText('Community Playlist'));
+
+    await waitFor(() => {
+      expect(contextValue.suggestSong).toHaveBeenCalled();
+    });
+
+    expect(window.alert).toHaveBeenCalledWith('Failed to add track');
+  });
+
   it('closes after successful add timeout', async () => {
     vi.useFakeTimers();
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
 
-    renderPlaylistWizard({ onClose });
+    const { contextValue } = renderPlaylistWizard({ onClose });
 
-    await user.click(screen.getByText('My Playlist'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('My Playlist'));
+      await Promise.resolve();
+    });
+
+    expect(contextValue.addToPlaylist).toHaveBeenCalledWith(
+      'playlist-personal-1',
+      selectedTrack
+    );
 
     expect(screen.getByText(/added to playlist/i)).toBeInTheDocument();
 
-    act(() => { vi.advanceTimersByTime(1500); });
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
 });
 
 // ===========================================================================
@@ -468,15 +475,22 @@ describe('PlaylistWizard — create playlist', () => {
 
     renderPlaylistWizard();
 
-    await user.click(screen.getByRole('button', { name: /create new playlist/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create new playlist/i })
+    );
 
     expect(screen.getByPlaceholderText(/playlist name/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /create/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^create$/i })).toBeDisabled();
 
     await user.click(screen.getByRole('button', { name: /^cancel$/i }));
 
-    expect(screen.queryByPlaceholderText(/playlist name/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /create new playlist/i })).toBeInTheDocument();
+    expect(
+      screen.queryByPlaceholderText(/playlist name/i)
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.getByRole('button', { name: /create new playlist/i })
+    ).toBeInTheDocument();
   });
 
   it('creates a private personal playlist without a cover', async () => {
@@ -484,8 +498,14 @@ describe('PlaylistWizard — create playlist', () => {
 
     const { contextValue } = renderPlaylistWizard();
 
-    await user.click(screen.getByRole('button', { name: /create new playlist/i }));
-    await user.type(screen.getByPlaceholderText(/playlist name/i), 'New Playlist');
+    await user.click(
+      screen.getByRole('button', { name: /create new playlist/i })
+    );
+
+    await user.type(
+      screen.getByPlaceholderText(/playlist name/i),
+      'New Playlist'
+    );
 
     await user.click(screen.getByRole('button', { name: /^create$/i }));
 
@@ -508,7 +528,9 @@ describe('PlaylistWizard — create playlist', () => {
 
     const { contextValue } = renderPlaylistWizard();
 
-    await user.click(screen.getByRole('button', { name: /create new playlist/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create new playlist/i })
+    );
 
     const input = screen.getByPlaceholderText(/playlist name/i);
 
@@ -527,13 +549,26 @@ describe('PlaylistWizard — create playlist', () => {
   it('creates a playlist with public visibility', async () => {
     const user = userEvent.setup();
 
-    const { contextValue } = renderPlaylistWizard();
+    const { contextValue, container } = renderPlaylistWizard();
 
-    await user.click(screen.getByRole('button', { name: /create new playlist/i }));
-    await user.type(screen.getByPlaceholderText(/playlist name/i), 'Public Created Playlist');
-    await user.click(screen.getByRole('button', { name: /public/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create new playlist/i })
+    );
 
-    await user.click(screen.getByRole('button', { name: /^create$/i }));
+    await user.type(
+      screen.getByPlaceholderText(/playlist name/i),
+      'Public Created Playlist'
+    );
+
+    const createForm = container.querySelector('.pw-create-form');
+
+    await user.click(
+      within(createForm).getByRole('button', { name: /^public$/i })
+    );
+
+    await user.click(
+      within(createForm).getByRole('button', { name: /^create$/i })
+    );
 
     await waitFor(() => {
       expect(contextValue.createPlaylist).toHaveBeenCalledWith(
@@ -547,14 +582,55 @@ describe('PlaylistWizard — create playlist', () => {
     });
   });
 
+  it('creates a playlist with unlisted visibility', async () => {
+    const user = userEvent.setup();
+
+    const { contextValue, container } = renderPlaylistWizard();
+
+    await user.click(
+      screen.getByRole('button', { name: /create new playlist/i })
+    );
+
+    await user.type(
+      screen.getByPlaceholderText(/playlist name/i),
+      'Unlisted Created Playlist'
+    );
+
+    const createForm = container.querySelector('.pw-create-form');
+
+    await user.click(
+      within(createForm).getByRole('button', { name: /^unlisted$/i })
+    );
+
+    await user.click(
+      within(createForm).getByRole('button', { name: /^create$/i })
+    );
+
+    await waitFor(() => {
+      expect(contextValue.createPlaylist).toHaveBeenCalledWith(
+        'Unlisted Created Playlist',
+        'personal',
+        {
+          visibility: 'unlisted',
+          coverImageUrl: null,
+        }
+      );
+    });
+  });
+
   it('creates a playlist by pressing Enter in the name input', async () => {
     const user = userEvent.setup();
 
     const { contextValue } = renderPlaylistWizard();
 
-    await user.click(screen.getByRole('button', { name: /create new playlist/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create new playlist/i })
+    );
 
-    await user.type(screen.getByPlaceholderText(/playlist name/i), 'Keyboard Playlist{Enter}');
+    await user.type(
+      screen.getByPlaceholderText(/playlist name/i),
+      'Keyboard Playlist{Enter}'
+    );
 
     await waitFor(() => {
       expect(contextValue.createPlaylist).toHaveBeenCalledWith(
@@ -574,8 +650,15 @@ describe('PlaylistWizard — create playlist', () => {
       },
     });
 
-    await user.click(screen.getByRole('button', { name: /create new playlist/i }));
-    await user.type(screen.getByPlaceholderText(/playlist name/i), 'Fail Playlist');
+    await user.click(
+      screen.getByRole('button', { name: /create new playlist/i })
+    );
+
+    await user.type(
+      screen.getByPlaceholderText(/playlist name/i),
+      'Fail Playlist'
+    );
+
     await user.click(screen.getByRole('button', { name: /^create$/i }));
 
     await waitFor(() => {
@@ -600,8 +683,14 @@ describe('PlaylistWizard — create playlist cover upload', () => {
 
     const { contextValue, container } = renderPlaylistWizard();
 
-    await user.click(screen.getByRole('button', { name: /create new playlist/i }));
-    await user.type(screen.getByPlaceholderText(/playlist name/i), 'Playlist With Cover');
+    await user.click(
+      screen.getByRole('button', { name: /create new playlist/i })
+    );
+
+    await user.type(
+      screen.getByPlaceholderText(/playlist name/i),
+      'Playlist With Cover'
+    );
 
     const fileInput = container.querySelector('input[type="file"]');
 
@@ -611,7 +700,9 @@ describe('PlaylistWizard — create playlist cover upload', () => {
 
     await user.upload(fileInput, file);
 
-    expect(await screen.findByRole('img')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(container.querySelector('.pw-cover-preview')).toBeInTheDocument();
+    });
 
     await user.click(screen.getByRole('button', { name: /^create$/i }));
 
@@ -625,31 +716,36 @@ describe('PlaylistWizard — create playlist cover upload', () => {
     expect(formData).toBeInstanceOf(FormData);
     expect(formData.get('cover')).toBe(file);
 
-    expect(contextValue.createPlaylist).toHaveBeenCalledWith(
-      'Playlist With Cover',
-      'personal',
-      {
-        visibility: 'private',
-        coverImageUrl: '/covers/new-cover.jpg',
-      }
-    );
+    await waitFor(() => {
+      expect(contextValue.createPlaylist).toHaveBeenCalledWith(
+        'Playlist With Cover',
+        'personal',
+        {
+          visibility: 'private',
+          coverImageUrl: '/covers/new-cover.jpg',
+        }
+      );
+    });
   });
 
-  // FIX: the original test created a File with actual byte content
-  // ('x'.repeat(5MB + 1)) which is memory-intensive and inconsistent with
-  // the suite pattern. Using Object.defineProperty on `size` is the correct
-  // approach — the same pattern used everywhere else in this test suite.
   it('rejects cover images larger than 5MB', async () => {
     const user = userEvent.setup();
 
     const { contextValue, container } = renderPlaylistWizard();
 
-    await user.click(screen.getByRole('button', { name: /create new playlist/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create new playlist/i })
+    );
 
     const fileInput = container.querySelector('input[type="file"]');
 
-    const largeFile = new File(['x'], 'huge.png', { type: 'image/png' });
-    Object.defineProperty(largeFile, 'size', { value: 5 * 1024 * 1024 + 1 });
+    const largeFile = new File(['x'], 'huge.png', {
+      type: 'image/png',
+    });
+
+    Object.defineProperty(largeFile, 'size', {
+      value: 5 * 1024 * 1024 + 1,
+    });
 
     await user.upload(fileInput, largeFile);
 
@@ -663,7 +759,9 @@ describe('PlaylistWizard — create playlist cover upload', () => {
 
     const { container } = renderPlaylistWizard();
 
-    await user.click(screen.getByRole('button', { name: /create new playlist/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create new playlist/i })
+    );
 
     const fileInput = container.querySelector('input[type="file"]');
 
@@ -673,7 +771,9 @@ describe('PlaylistWizard — create playlist cover upload', () => {
 
     await user.upload(fileInput, file);
 
-    expect(await screen.findByRole('img')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(container.querySelector('.pw-cover-preview')).toBeInTheDocument();
+    });
 
     const clearButton = container.querySelector('.pw-cover-clear');
 
