@@ -483,6 +483,19 @@
   box-sizing: border-box;
 }
 
+  .profile-section {
+    .referral-code-card,
+    .referral-card,
+    .theme-picker,
+    .theme-picker-card,
+    .account-settings,
+    .account-settings-card {
+      width: 100%;
+      max-width: none;
+      box-sizing: border-box;
+    }
+  }
+
 // =============================================================================
 // VOTE HISTORY CARD
 // =============================================================================
