@@ -1,19 +1,5 @@
-// =============================================================================
-// UNIS — Profile (Listener) Stylesheet
-//
-// Uses the global theme tokens defined in unis-theme.scss. No background
-// styling lives here anymore — that's handled globally on body::before so it
-// stays consistent across every page.
-//
-// PREREQUISITE: unis-theme.scss must be imported once at the app root before
-// this file loads.
-// =============================================================================
-
-// -----------------------------------------------------------------------------
-// Container
-// -----------------------------------------------------------------------------
 .profile-container {
-  margin-left: 10%;
+  margin-left: 4%;
   width: 80%;
   max-width: 1300px;
   min-height: 100vh;
