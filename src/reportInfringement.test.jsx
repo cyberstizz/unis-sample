@@ -105,7 +105,11 @@ describe('submission — missing statement checkboxes', () => {
     fireEvent.change(screen.getByLabelText(/url of infringing content/i), { target: { value: 'https://unis.com/song/1' } });
     fireEvent.change(screen.getByLabelText(/electronic signature/i), { target: { value: 'John Doe' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /submit dmca notice/i }));
+    // Submit the form directly to bypass HTML5 `required` validation on the
+    // unchecked checkboxes — we want to exercise the JS guard in handleSubmit,
+    // not the browser's native validation.
+    const form = screen.getByRole('button', { name: /submit dmca notice/i }).closest('form');
+    fireEvent.submit(form);
 
     expect(alertMock).toHaveBeenCalledWith('Please check all required statements to submit your DMCA notice.');
     expect(global.fetch).not.toHaveBeenCalled();
