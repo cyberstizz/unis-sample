@@ -171,14 +171,30 @@ describe('UserManagement', () => {
     });
   });
 
-  it('disables Previous button on first page and Next on last page', async () => {
-    apiCall.mockResolvedValue(makeUsersResponse([makeUser()], 1));
+  it('disables Previous button on the first page', async () => {
+    apiCall.mockResolvedValue(makeUsersResponse([makeUser()], 2));
 
     renderWithProviders();
 
     await waitFor(() => {
       expect(screen.getByText('Previous')).toBeDisabled();
+      expect(screen.getByText('Next')).not.toBeDisabled();
+    });
+  });
+
+  it('disables Next button on the last page', async () => {
+    const user = userEvent.setup();
+    apiCall.mockResolvedValue(makeUsersResponse([makeUser()], 2));
+
+    renderWithProviders();
+
+    await waitFor(() => screen.getByText('Next'));
+    await user.click(screen.getByText('Next'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
       expect(screen.getByText('Next')).toBeDisabled();
+      expect(screen.getByText('Previous')).not.toBeDisabled();
     });
   });
 
