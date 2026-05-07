@@ -4,7 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from '../context/AuthContext';   // ← Add this import
+import { AuthProvider } from '../context/AuthContext';
 import ModerationQueue from './ModerationQueue';
 import { apiCall } from '../components/axiosInstance';
 
@@ -30,22 +30,33 @@ const makeComment = (overrides = {}) => ({
   ...overrides,
 });
 
-const makeClaimsResponse = (claims = []) => ({ data: { content: claims } });
-const makeCommentsResponse = (comments = []) => ({ data: { content: comments } });
+const makeClaimsResponse = (claims = []) => ({
+  data: {
+    content: claims,
+  },
+});
+
+const makeCommentsResponse = (comments = []) => ({
+  data: {
+    content: comments,
+  },
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
   window.confirm = vi.fn(() => true);
 });
 
-// Updated render helper with AuthProvider
 const renderWithProviders = () => {
   return render(
     <AuthProvider>
       <MemoryRouter initialEntries={['/admin/moderation']}>
         <Routes>
           <Route path="/admin/moderation" element={<ModerationQueue />} />
-          <Route path="/admin/moderation/dmca/:claimId" element={<div>Claim Detail Page</div>} />
+          <Route
+            path="/admin/moderation/dmca/:claimId"
+            element={<div>Claim Detail Page</div>}
+          />
         </Routes>
       </MemoryRouter>
     </AuthProvider>
@@ -55,23 +66,25 @@ const renderWithProviders = () => {
 // ─── tests ───────────────────────────────────────────────────────────────────
 
 describe('ModerationQueue', () => {
-
   it('renders DMCA Claims tab by default and shows loading', () => {
     apiCall.mockResolvedValue(makeClaimsResponse());
+
     renderWithProviders();
+
     expect(screen.getByText('Moderation Queue')).toBeInTheDocument();
     expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
   it('switches between DMCA and Comments tabs', async () => {
     const user = userEvent.setup();
+
     apiCall
       .mockResolvedValueOnce(makeClaimsResponse())
       .mockResolvedValueOnce(makeCommentsResponse());
 
     renderWithProviders();
 
-    await user.click(screen.getByText('Comments'));
+    await user.click(screen.getByRole('button', { name: /comments/i }));
 
     await waitFor(() => {
       expect(apiCall).toHaveBeenCalledWith({
@@ -82,9 +95,16 @@ describe('ModerationQueue', () => {
   });
 
   it('fetches and displays DMCA claims', async () => {
-    const claims = [makeDmcaClaim(), makeDmcaClaim({ claimantName: 'Jane Smith' })];
+    const claims = [
+      makeDmcaClaim(),
+      makeDmcaClaim({
+        claimId: 'claim-def456',
+        claimantName: 'Jane Smith',
+      }),
+    ];
 
     apiCall.mockResolvedValue(makeClaimsResponse(claims));
+
     renderWithProviders();
 
     await waitFor(() => {
@@ -95,16 +115,20 @@ describe('ModerationQueue', () => {
 
   it('navigates to claim detail on row click', async () => {
     const user = userEvent.setup();
+
     apiCall.mockResolvedValue(makeClaimsResponse([makeDmcaClaim()]));
 
     renderWithProviders();
 
-    await waitFor(() => screen.getByText('John Doe'));
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+
     await user.click(screen.getByText('John Doe'));
 
-    await waitFor(() =>
-      expect(screen.getByText('Claim Detail Page')).toBeInTheDocument()
-    );
+    await waitFor(() => {
+      expect(screen.getByText('Claim Detail Page')).toBeInTheDocument();
+    });
   });
 
   it('deletes a comment successfully', async () => {
@@ -112,29 +136,45 @@ describe('ModerationQueue', () => {
     const comment = makeComment();
 
     apiCall
-      .mockResolvedValueOnce(makeCommentsResponse([comment]))
-      .mockResolvedValueOnce({});
+      .mockResolvedValueOnce(makeClaimsResponse()) // initial DMCA fetch on mount
+      .mockResolvedValueOnce(makeCommentsResponse([comment])) // comments fetch after tab click
+      .mockResolvedValueOnce({}); // delete call
 
     renderWithProviders();
-    await user.click(screen.getByText('Comments'));
 
-    await waitFor(() => screen.getByText('Delete'));
-    await user.click(screen.getByText('Delete'));
+    await user.click(screen.getByRole('button', { name: /comments/i }));
 
-    expect(window.confirm).toHaveBeenCalled();
-    expect(apiCall).toHaveBeenCalledWith({
-      url: `/v1/admin/comments/${comment.commentId}`,
-      method: 'delete',
-      data: { reason: 'Removed by moderator' },
+    await waitFor(() => {
+      expect(screen.getByText('This song is fire 🔥')).toBeInTheDocument();
+    });
+
+    const deleteButton = screen.getByRole('button', { name: /delete/i });
+    await user.click(deleteButton);
+
+    expect(window.confirm).toHaveBeenCalledWith('Delete this comment?');
+
+    await waitFor(() => {
+      expect(apiCall).toHaveBeenCalledWith({
+        url: `/v1/admin/comments/${comment.commentId}`,
+        method: 'delete',
+        data: {
+          reason: 'Removed by moderator',
+        },
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('This song is fire 🔥')).not.toBeInTheDocument();
     });
   });
 
   it('shows empty state messages', async () => {
     apiCall.mockResolvedValue(makeClaimsResponse([]));
+
     renderWithProviders();
 
-    await waitFor(() =>
-      expect(screen.getByText('No claims found.')).toBeInTheDocument()
-    );
+    await waitFor(() => {
+      expect(screen.getByText('No claims found.')).toBeInTheDocument();
+    });
   });
 });
