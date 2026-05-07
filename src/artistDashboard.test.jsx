@@ -1,7 +1,7 @@
 // src/artistDashboard.test.jsx
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { screen, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from './test/mocks/server';
@@ -72,42 +72,112 @@ const artistProfile = {
 
 describe('ArtistDashboard', () => {
   beforeEach(() => {
+    // Protect this file from full-suite pollution.
+    // Some other test files may leave fake timers, localStorage/sessionStorage,
+    // MSW handler overrides, or spies behind. ArtistDashboard has a lot of async
+    // loading, so stale state can leave it stuck on "Loading your dashboard..."
+    // only when the whole suite runs.
+    vi.useRealTimers();
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+
+    localStorage.clear();
+    sessionStorage.clear();
+
     callTracker.reset();
     cacheService.clearAll();
+
+    // Important: remove handler overrides from earlier test files before
+    // installing the handlers this file depends on.
+    server.resetHandlers();
+
     server.use(
-      // Profile uses the fixture userId for matching
+      // Profile uses the fixture userId for matching.
       http.get(`${API}/v1/users/profile/:id`, ({ params }) => {
-        if (params.id === artistProfile.userId) return HttpResponse.json(artistProfile);
-        return HttpResponse.json(artistProfile); // fallback (supported-artist fetch)
+        if (params.id === artistProfile.userId) {
+          return HttpResponse.json(artistProfile);
+        }
+
+        return HttpResponse.json(artistProfile);
       }),
+
       http.get(`${API}/v1/media/songs/artist/:id`, () =>
         HttpResponse.json([
-          { songId: 'song-1', title: 'My Track', playCount: 100, isrc: 'USRC17607839' },
+          {
+            songId: 'song-1',
+            title: 'My Track',
+            playCount: 100,
+            isrc: 'USRC17607839',
+          },
         ])
       ),
+
       http.get(`${API}/v1/users/:id/default-song`, () =>
-        HttpResponse.json({ songId: 'song-1', title: 'My Track', playCount: 100 })
+        HttpResponse.json({
+          songId: 'song-1',
+          title: 'My Track',
+          playCount: 100,
+        })
       ),
-      http.get(`${API}/v1/users/:id/supporters/count`, () => HttpResponse.json({ count: 42 })),
-      http.get(`${API}/v1/users/:id/followers/count`, () => HttpResponse.json({ count: 88 })),
+
+      http.get(`${API}/v1/users/:id/supporters/count`, () =>
+        HttpResponse.json({ count: 42 })
+      ),
+
+      http.get(`${API}/v1/users/:id/followers/count`, () =>
+        HttpResponse.json({ count: 88 })
+      ),
+
       http.get(`${API}/v1/earnings/my-summary`, () =>
-        HttpResponse.json({ currentBalance: '50.00', totalEarned: '100.00' })
+        HttpResponse.json({
+          currentBalance: '50.00',
+          totalEarned: '100.00',
+        })
       ),
+
       http.get(`${API}/v1/stripe/status`, () =>
-        HttpResponse.json({ onboardingComplete: true, payoutsEnabled: true })
+        HttpResponse.json({
+          onboardingComplete: true,
+          payoutsEnabled: true,
+        })
       ),
+
       http.get(`${API}/v1/stripe/payouts`, () => HttpResponse.json([])),
+
       http.get(`${API}/v1/vote/history`, () => HttpResponse.json([])),
+
       http.get(`${API}/v1/awards/artist/:id`, () => HttpResponse.json([]))
     );
   });
 
+  afterEach(() => {
+    cleanup();
+
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+
+    localStorage.clear();
+    sessionStorage.clear();
+
+    cacheService.clearAll();
+  }); 
+
   describe('Tier 1 — core loading', () => {
-    it('shows core content with artist name when loaded', async () => {
-      renderWithProviders(<ArtistDashboard />, { as: 'artist' });
-      await waitFor(() => expect(screen.getByRole('heading', { name: /Dashboard/i })).toBeInTheDocument());
-      expect(screen.getByText('testartist')).toBeInTheDocument();
-    });
+  it('shows core content with artist name when loaded', async () => {
+    renderWithProviders(<ArtistDashboard />, { as: 'artist' });
+
+    const dashboardHeading = await screen.findByRole(
+      'heading',
+      { name: /Dashboard/i },
+      { timeout: 10000 }
+    );
+
+    expect(dashboardHeading).toBeInTheDocument();
+
+    expect(
+      await screen.findByText('testartist', {}, { timeout: 10000 })
+    ).toBeInTheDocument();
+  });
 
     it.skip('shows error state + Retry when core fetch fails (axios mock fallback interferes)', () => {
       // apiCall falls back to mock responses on GET errors, so the error
