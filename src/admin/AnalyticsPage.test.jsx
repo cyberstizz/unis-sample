@@ -1,6 +1,6 @@
 // src/pages/__tests__/AnalyticsPage.test.jsx
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import AnalyticsPage from './AnalyticsPage';
 import { apiCall } from '../components/axiosInstance';
@@ -150,12 +150,15 @@ describe('AnalyticsPage', () => {
     mockApiSuccess();
     render(<AnalyticsPage />);
     await waitFor(() => {
-      expect(screen.getByText('Chicago, IL')).toBeInTheDocument();
-      expect(screen.getByText('Atlanta, GA')).toBeInTheDocument();
-      expect(screen.getByText('Portland, OR')).toBeInTheDocument();
-      expect(screen.getByText('80 / 100')).toBeInTheDocument();
+      const regionsHeading = screen.getByText('Top Regions — Activation Progress');
+      const regionsSection = regionsHeading.parentElement;
+      expect(within(regionsSection).getByText('Chicago, IL')).toBeInTheDocument();
+      expect(within(regionsSection).getByText('Atlanta, GA')).toBeInTheDocument();
+      expect(within(regionsSection).getByText('Portland, OR')).toBeInTheDocument();
+      expect(within(regionsSection).getByText('80 / 100')).toBeInTheDocument();
     });
   });
+
 
   it('shows READY TO ACTIVATE only for regions at 100%', async () => {
     mockApiSuccess();
