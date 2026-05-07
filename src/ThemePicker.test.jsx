@@ -34,10 +34,12 @@ describe('ThemePicker', () => {
   test('renders the heading and description', () => {
     render(<ThemePicker userId="user-1" />);
 
-    expect(screen.getByText('Color Theme')).toBeInTheDocument();
+    expect(screen.getByText('Pick your palette')).toBeInTheDocument();
 
     expect(
-      screen.getByText(/choose your unis color theme/i)
+      screen.getByText(
+        'Saved to your account and applied across every device you use UNIS on. The atmosphere shifts to match.'
+      )
     ).toBeInTheDocument();
   });
 
