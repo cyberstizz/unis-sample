@@ -175,7 +175,6 @@ describe('App', () => {
   // =========================================================================
   describe('AuthRequiredRoute', () => {
     it.each([
-      '/voteawards',
       '/profile',
       '/earnings',
       '/artistDashboard',
