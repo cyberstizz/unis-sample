@@ -9,13 +9,14 @@ import { apiCall } from '../components/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 
 vi.mock('../components/axiosInstance', () => ({ apiCall: vi.fn() }));
+
 vi.mock('../context/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
 
-// Mock router hooks
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal();
+
   return {
     ...actual,
     useParams: vi.fn(),
@@ -70,12 +71,18 @@ const makeFullData = (overrides = {}) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuth.mockReturnValue({ user: { username: 'admin1' } });
-  useParams.mockReturnValue({ claimId: 'claim-12345-abcde' });
+
+  useAuth.mockReturnValue({
+    user: { username: 'admin1' },
+  });
+
+  useParams.mockReturnValue({
+    claimId: 'claim-12345-abcde',
+  });
+
   useNavigate.mockReturnValue(vi.fn());
 });
 
-// Helper to render with router
 const renderWithRouter = () => {
   return render(
     <MemoryRouter initialEntries={['/admin/dmca/claims/claim-12345-abcde']}>
@@ -89,37 +96,51 @@ const renderWithRouter = () => {
 // ─── tests ───────────────────────────────────────────────────────────────────
 
 describe('DmcaClaimDetail', () => {
-
   // ── loading & error states ─────────────────────────────────────────────────
 
   it('shows loading indicator while fetching', () => {
-    apiCall.mockResolvedValue({ data: makeFullData() });
+    apiCall.mockResolvedValue({
+      data: makeFullData(),
+    });
+
     renderWithRouter();
+
     expect(screen.getByText('Loading claim...')).toBeInTheDocument();
   });
 
   it('shows "Claim not found" when data is missing', async () => {
-    apiCall.mockResolvedValue({ data: { claim: null } });
+    apiCall.mockResolvedValue({
+      data: null,
+    });
+
     renderWithRouter();
-    await waitFor(() =>
-      expect(screen.getByText('Claim not found.')).toBeInTheDocument()
-    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Claim not found.')).toBeInTheDocument();
+    });
   });
 
   // ── successful data render ─────────────────────────────────────────────────
 
   it('renders all claimant and claim detail fields correctly', async () => {
-    apiCall.mockResolvedValue({ data: makeFullData() });
+    apiCall.mockResolvedValue({
+      data: makeFullData(),
+    });
+
     renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByText('DMCA Claim Detail')).toBeInTheDocument();
-      expect(screen.getByText('Reference: DMCA-CLAIM-12')).toBeInTheDocument(); // partial ID
+      expect(screen.getByText('Reference: DMCA-CLAIM-12')).toBeInTheDocument();
     });
 
     expect(screen.getByText('John Doe')).toBeInTheDocument();
     expect(screen.getByText('john@example.com')).toBeInTheDocument();
+    expect(screen.getByText('555-0123')).toBeInTheDocument();
+    expect(screen.getByText('Music Inc.')).toBeInTheDocument();
+    expect(screen.getByText('Artist Rights Org')).toBeInTheDocument();
     expect(screen.getByText('Hit song XYZ')).toBeInTheDocument();
+    expect(screen.getByText('https://original.com/song')).toBeInTheDocument();
     expect(screen.getByText('https://unis.com/infringing')).toBeInTheDocument();
     expect(screen.getByText('submitted')).toBeInTheDocument();
   });
@@ -130,34 +151,44 @@ describe('DmcaClaimDetail', () => {
     apiCall.mockResolvedValue({
       data: makeFullData({
         counterNotice: makeCounterNotice(),
-      })
+      }),
     });
+
     renderWithRouter();
 
-    await waitFor(() =>
-      expect(screen.getByText('Counter-Notice Filed')).toBeInTheDocument()
-    );
+    await waitFor(() => {
+      expect(screen.getByText('Counter-Notice Filed')).toBeInTheDocument();
+    });
 
     expect(screen.getByText('Jane Smith')).toBeInTheDocument();
-    expect(screen.getByText('This is fair use and my content should be restored.')).toBeInTheDocument();
+    expect(
+      screen.getByText('This is fair use and my content should be restored.')
+    ).toBeInTheDocument();
   });
 
   // ── action buttons & status updates ────────────────────────────────────────
 
   it('shows Start Review button for submitted claims and calls correct API', async () => {
     const user = userEvent.setup();
-    const mockNavigate = vi.fn();
-    useNavigate.mockReturnValue(mockNavigate);
 
     apiCall
-      .mockResolvedValueOnce({ data: makeFullData({ claim: makeClaim({ status: 'submitted' }) }) })
-      .mockResolvedValueOnce({}); // patch response
+      .mockResolvedValueOnce({
+        data: makeFullData({
+          claim: makeClaim({ status: 'submitted' }),
+        }),
+      })
+      .mockResolvedValueOnce({}) // status patch
+      .mockResolvedValueOnce({
+        data: makeFullData({
+          claim: makeClaim({ status: 'reviewing' }),
+        }),
+      }); // refetch after updateStatus
 
     renderWithRouter();
 
-    await waitFor(() =>
-      expect(screen.getByText('Start Review')).toBeInTheDocument()
-    );
+    await waitFor(() => {
+      expect(screen.getByText('Start Review')).toBeInTheDocument();
+    });
 
     await user.click(screen.getByText('Start Review'));
 
@@ -165,15 +196,21 @@ describe('DmcaClaimDetail', () => {
       expect(apiCall).toHaveBeenCalledWith({
         url: '/v1/admin/dmca/claims/claim-12345-abcde/status',
         method: 'patch',
-        data: { status: 'reviewing', notes: '' },
+        data: {
+          status: 'reviewing',
+          notes: '',
+        },
       });
     });
   });
 
   it('shows Uphold and Reject buttons for reviewing claims', async () => {
     apiCall.mockResolvedValue({
-      data: makeFullData({ claim: makeClaim({ status: 'reviewing' }) })
+      data: makeFullData({
+        claim: makeClaim({ status: 'reviewing' }),
+      }),
     });
+
     renderWithRouter();
 
     await waitFor(() => {
@@ -184,15 +221,26 @@ describe('DmcaClaimDetail', () => {
 
   it('calls takedown endpoint when Uphold is clicked', async () => {
     const user = userEvent.setup();
+
     apiCall
-      .mockResolvedValueOnce({ data: makeFullData({ claim: makeClaim({ status: 'reviewing' }) }) })
+      .mockResolvedValueOnce({
+        data: makeFullData({
+          claim: makeClaim({ status: 'reviewing' }),
+        }),
+      })
       .mockResolvedValueOnce({}) // status patch
       .mockResolvedValueOnce({}) // takedown
-      .mockResolvedValueOnce({ data: makeFullData({ claim: makeClaim({ status: 'upheld' }) }) }); // refetch
+      .mockResolvedValueOnce({
+        data: makeFullData({
+          claim: makeClaim({ status: 'upheld' }),
+        }),
+      }); // refetch
 
     renderWithRouter();
 
-    await waitFor(() => screen.getByText('Uphold (Remove Content)'));
+    await waitFor(() => {
+      expect(screen.getByText('Uphold (Remove Content)')).toBeInTheDocument();
+    });
 
     await user.click(screen.getByText('Uphold (Remove Content)'));
 
@@ -209,14 +257,22 @@ describe('DmcaClaimDetail', () => {
   it('renders action history when actions exist', async () => {
     apiCall.mockResolvedValue({
       data: makeFullData({
-        actionHistory: [makeAction(), makeAction({ actionType: 'CLAIM_REJECTED', reason: 'False claim' })],
-      })
+        actionHistory: [
+          makeAction(),
+          makeAction({
+            actionId: 'act-2',
+            actionType: 'CLAIM_REJECTED',
+            reason: 'False claim',
+          }),
+        ],
+      }),
     });
+
     renderWithRouter();
 
-    await waitFor(() =>
-      expect(screen.getByText('Action History')).toBeInTheDocument()
-    );
+    await waitFor(() => {
+      expect(screen.getByText('Action History')).toBeInTheDocument();
+    });
 
     expect(screen.getByText('STATUS_UPDATED')).toBeInTheDocument();
     expect(screen.getByText('CLAIM_REJECTED')).toBeInTheDocument();
@@ -228,14 +284,20 @@ describe('DmcaClaimDetail', () => {
   it('has a working back button', async () => {
     const user = userEvent.setup();
     const mockNavigate = vi.fn();
+
     useNavigate.mockReturnValue(mockNavigate);
 
-    apiCall.mockResolvedValue({ data: makeFullData() });
+    apiCall.mockResolvedValue({
+      data: makeFullData(),
+    });
+
     renderWithRouter();
 
-    await waitFor(() => screen.getByText('Back to Moderation Queue'));
+    const backButton = await screen.findByRole('button', {
+      name: /back to moderation queue/i,
+    });
 
-    await user.click(screen.getByText('Back to Moderation Queue'));
+    await user.click(backButton);
 
     expect(mockNavigate).toHaveBeenCalledWith('/admin/moderation');
   });
