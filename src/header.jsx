@@ -5,7 +5,7 @@ import SearchBar from './components/SearchBar';
 import { useAuth } from './context/AuthContext';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
-import { DollarSign, House, Music, MapPin, Search } from 'lucide-react';
+import { DollarSign, House, Music, MapPin, Search, Menu } from 'lucide-react';
 import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
 import logored from './assets/logo-red.png';
@@ -122,20 +122,31 @@ const Header = () => {
   return (
     <header className="app-header">
       <div className="header-inner">
-        {/* Left: Logo */}
-        <button
-          type="button"
-          className="header-logo"
-          onClick={handleHome}
-          aria-label="Go to Unis home"
-        >
-          <img
-            src={activeLogo}
-            alt="UNIS"
-            className={`logo-img ${shouldBreathe ? 'logo-breathe' : ''}`}
-            draggable="false"
-          />
-        </button>
+        {/* Left: Hamburger + Logo */}
+        <div className="header-left">
+          <button
+            type="button"
+            className="header-hamburger"
+            onClick={() => window.dispatchEvent(new CustomEvent('unis:toggle-sidebar'))}
+            aria-label="Toggle navigation menu"
+          >
+            <Menu size={18} strokeWidth={1.75} />
+          </button>
+
+          <button
+            type="button"
+            className="header-logo"
+            onClick={handleHome}
+            aria-label="Go to Unis home"
+          >
+            <img
+              src={activeLogo}
+              alt="UNIS"
+              className={`logo-img ${shouldBreathe ? 'logo-breathe' : ''}`}
+              draggable="false"
+            />
+          </button>
+        </div>
 
         {/* Center: Search */}
         <div className="header-center">

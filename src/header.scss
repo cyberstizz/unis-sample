@@ -56,6 +56,39 @@ $header-height: 75px;
   gap: 24px;
 }
 
+// ─── HAMBURGER + LOGO GROUP ─────────────────────────────────────
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.header-hamburger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: $text-muted;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: $text-primary;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.28);
+    outline-offset: 2px;
+  }
+}
+
 // ─── LOGO ────────────────────────────────────────────────────────
 .header-logo {
   flex-shrink: 0;
@@ -109,10 +142,8 @@ $header-height: 75px;
     }
   }
 }
+
 // ─── LOGO STRETCH ANIMATION ─────────────────────────────────────
-// Classic squash-and-stretch with spring oscillation — Google-style playful.
-// ScaleX pulls the letters wide, scaleY compensates (squash principle),
-// then it overshoots back and oscillates to rest.
 @keyframes logoStretch {
   0%   { transform: scaleX(1)    scaleY(1);    filter: drop-shadow(0 0 0 rgba(29, 66, 168, 0)); }
   18%  { transform: scaleX(1.15) scaleY(0.91); filter: drop-shadow(0 0 12px rgba(29, 66, 168, 0.35)); }
@@ -137,14 +168,11 @@ $header-height: 75px;
   border-radius: 50%;
 }
 
- .mobile-search-trigger {
-    display: none;
-  }
+.mobile-search-trigger {
+  display: none;
+}
 
 // ─── SEARCH AREA ─────────────────────────────────────────────────
-// Flex wrapper that centers the SearchBar component.
-// All search visuals are in SearchBar.scss (usb- prefixed).
-// This div also acts as a flex spacer on mobile (keeps nav right-aligned).
 .header-center {
   flex: 1;
   display: flex;
@@ -337,6 +365,15 @@ $header-height: 75px;
     height: 68px;
   }
 
+  .header-hamburger {
+    width: 28px;
+    height: 28px;
+  }
+
+  .header-left {
+    gap: 6px;
+  }
+
   // NOTE: .header-center is NOT hidden here.
   // It stays as flex:1 spacer so nav items stay right-aligned.
   // The SearchBar component hides itself via .usb-container { display: none }
@@ -359,72 +396,58 @@ $header-height: 75px;
     height: 30px;
     .avatar-initial { font-size: 11px; }
   }
-  // ─── MOBILE SEARCH ───────────────────────────────────────────────
-.mobile-search-trigger {
-  display: none; // hidden on desktop
-  background: none;
-  border: none;
-  color: $text-primary;
-  cursor: pointer;
-  padding: 7px 8px;
-  border-radius: 8px;
-  transition: background 0.15s;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.08);
-  }
-}
-
-.mobile-search-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
-  z-index: 9999;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 15vh;
-}
-
-.mobile-search-container {
-  width: 92%;
-  max-width: 480px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-
-  // Override the SearchBar hiding on mobile
-  .usb-container {
-    display: flex !important;
-    width: 100%;
-    max-width: none;
-  }
-}
-
-.mobile-search-close {
-  background: none;
-  border: none;
-  color: #aaa;
-  font-size: 15px;
-  font-family: "Roboto", "Arial", sans-serif;
-  cursor: pointer;
-  padding: 8px 20px;
-  border-radius: 20px;
-  transition: color 0.15s, background 0.15s;
-
-  &:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.08);
-  }
-}
-
-@media (max-width: 768px) {
+  // ─── MOBILE SEARCH ───────────────────────────────────────────
   .mobile-search-trigger {
     display: flex;
     align-items: center;
-  }
-}
+    background: none;
+    border: none;
+    color: $text-primary;
+    cursor: pointer;
+    padding: 7px 8px;
+    border-radius: 8px;
+    transition: background 0.15s;
 
-}
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  .mobile-search-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 15vh;
+  }
+
+  .mobile-search-container {
+    width: 92%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+
+    .usb-container {
+      display: flex !important;
+      width: 100%;
+      max-width: none;
+    }
+  }
+
+  .mobile-search-close {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 15px;
+    font-family: "Roboto", "Arial", sans-serif;
+    cursor: pointer;
+    padding: 8px 20px;
+    border-radius: 20px;
+    transition: color 0.15s, background 0.15s;

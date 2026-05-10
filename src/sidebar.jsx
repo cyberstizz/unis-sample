@@ -36,6 +36,13 @@ const Sidebar = () => {
       };
     }, []);
 
+    // Listen for hamburger toggle from header
+   useEffect(() => {
+      const handleToggle = () => setIsOpen((prev) => !prev);
+      window.addEventListener('unis:toggle-sidebar', handleToggle);
+      return () => window.removeEventListener('unis:toggle-sidebar', handleToggle);
+    }, []);
+
 
   const closeSidebar = () => {
     if (window.innerWidth <= 1024) {
