@@ -411,7 +411,7 @@ $header-height: 75px;
   }
 
   .header-logo .logo-img {
-    height: 68px;
+    height: 46px;
   }
 
   .header-hamburger {
@@ -502,12 +502,41 @@ $header-height: 75px;
     }
   }
 
-  .header-signin-btn {
-    padding: 6px 12px;
+.header-signin-btn {
+    padding: 7px 10px;
     font-size: 11.5px;
-    gap: 5px;
+    gap: 0;
 
-    svg { width: 12px; height: 12px; }
+    svg { width: 14px; height: 14px; }
+
+    // Hide the text label, keep just the icon
+    .header-signin-btn__label {
+      display: none;
+    }
   }
-  
+
+}
+
+// ─── EXTRA SMALL SCREENS ────────────────────────────────────────
+@media (max-width: 420px) {
+  .header-inner {
+    padding: 0 8px;
+    gap: 8px;
+  }
+
+  .header-right {
+    gap: 2px;
+  }
+
+  .nav-item {
+    padding: 6px 6px;
+  }
+
+  .header-divider {
+    margin: 0 3px;
+  }
+
+  .header-signin-btn {
+    padding: 6px 8px;
+  }
 }
