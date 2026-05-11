@@ -5,7 +5,7 @@ import SearchBar from './components/SearchBar';
 import { useAuth } from './context/AuthContext';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
-import { DollarSign, House, Music, MapPin, Search, Menu } from 'lucide-react';
+import { DollarSign, House, Music, MapPin, Search, Menu, LogIn } from 'lucide-react';
 import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
 import logored from './assets/logo-red.png';
@@ -232,22 +232,16 @@ const Header = () => {
             </div>
           )}
 
-          {/* Guest: Sign In / Sign Up buttons */}
+  {/* Guest: Single Sign In button */}
           {isGuest && (
-            <div className="header-guest-actions">
-              <button
-                className="header-signin-btn"
-                onClick={() => navigate('/login')}
-              >
-                Sign In
-              </button>
-              <button
-                className="header-signup-btn"
-                onClick={() => navigate('/login')}
-              >
-                Sign Up
-              </button>
-            </div>
+            <button
+              className="header-signin-btn"
+              onClick={() => navigate('/login')}
+              aria-label="Sign in to Unis"
+            >
+              <LogIn size={14} strokeWidth={2} />
+              <span className="header-signin-btn__label">Sign In</span>
+            </button>
           )}
         </div>
       </div>
