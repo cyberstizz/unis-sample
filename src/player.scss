@@ -16,8 +16,6 @@ $text-primary: #f0f0f2;
 $text-secondary: rgba(255, 255, 255, 0.55);
 $text-tertiary: rgba(255, 255, 255, 0.35);
 
-$accent: #163387;
-$accent-hover: #6ab8ff;
 
 // Legacy tokens for expanded view / mobile tray
 $unis-blue: var(--unis-primary);
@@ -25,7 +23,8 @@ $unis-silver: #918f8f;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
-
+$accent: #163387;
+$accent-hover: $unis-blue;
 $player-height: 80px;
 $radius-sm: 6px;
 
@@ -226,7 +225,7 @@ $radius-sm: 6px;
 
     &.clickable {
       cursor: pointer;
-      &:hover { color: $accent; }
+      &:hover { color: $unis-blue; }
     }
 
     @media (max-width: 600px) {
@@ -275,6 +274,35 @@ $radius-sm: 6px;
     @media (max-width: 600px) {
       display: none;
     }
+  }
+
+  .player-queue-btn {
+    position: relative;
+
+    &.active {
+      color: $unis-blue;
+    }
+  }
+
+  .player-queue-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: $unis-blue;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
   }
 
   // --- CENTER: Controls + progress ---
@@ -428,7 +456,7 @@ $radius-sm: 6px;
         width: 10px;
         height: 10px;
         border-radius: 50%;
-        background: $accent;
+        background: $unis-blue;
       }
     }
   }
@@ -593,7 +621,7 @@ $radius-sm: 6px;
           appearance: none;
           width: 16px;
           height: 16px;
-          background: $accent;
+          background: $unis-blue;
           border: 2px solid white;
           border-radius: 50%;
           cursor: pointer;
@@ -608,7 +636,7 @@ $radius-sm: 6px;
         &::-moz-range-thumb {
           width: 16px;
           height: 16px;
-          background: $accent;
+          background: $unis-blue;
           border: 2px solid white;
           border-radius: 50%;
           cursor: pointer;
@@ -631,13 +659,13 @@ $radius-sm: 6px;
           transition: all 0.2s;
 
           &:hover {
-            color: $accent;
+            color: $unis-blue;
             transform: scale(1.05);
           }
 
           &.play-pause-btn {
             font-size: 60px;
-            color: $accent;
+            color: $unis-blue;
           }
         }
       }
@@ -655,7 +683,7 @@ $radius-sm: 6px;
           transition: all 0.2s ease;
 
           &:hover {
-            color: $accent;
+            color: $unis-blue;
             transform: scale(1.1);
           }
 
