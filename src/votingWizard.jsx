@@ -1,112 +1,155 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion'; 
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { apiCall } from './components/axiosInstance';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
-import confetti from 'canvas-confetti'; 
 import './votingWizard.scss';
 import unisLogo from './assets/unisLogoThree.svg';
 
-// --- ANIMATION VARIANTS ---
-const modalVariants = { 
-  hidden: { opacity: 0, scale: 0.8 },
-  visible: { opacity: 1, scale: 1, transition: { type: 'spring', damping: 25, stiffness: 500 } },
-  exit: { opacity: 0, scale: 0.8, transition: { duration: 0.2 } }
+const TOTAL_STEPS = 3;
+
+// --- ANIMATION VARIANTS ---------------------------------------------------
+
+const overlayVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.18, ease: 'easeOut' } },
+  exit: { opacity: 0, transition: { duration: 0.15, ease: 'easeIn' } },
 };
 
-const iconVariants = {
-  hidden: { pathLength: 0, opacity: 0 },
-  visible: { pathLength: 1, opacity: 1, transition: { duration: 0.8, ease: "easeInOut" } }
+const modalVariants = {
+  hidden: { opacity: 0, y: 12, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+  },
+  exit: {
+    opacity: 0,
+    y: 8,
+    scale: 0.98,
+    transition: { duration: 0.18, ease: 'easeIn' },
+  },
 };
+
+const stepVariantsForward = {
+  enter: { opacity: 0, x: 24 },
+  center: { opacity: 1, x: 0, transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] } },
+  exit: { opacity: 0, x: -24, transition: { duration: 0.18, ease: 'easeIn' } },
+};
+
+const stepVariantsBackward = {
+  enter: { opacity: 0, x: -24 },
+  center: { opacity: 1, x: 0, transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] } },
+  exit: { opacity: 0, x: 24, transition: { duration: 0.18, ease: 'easeIn' } },
+};
+
+const iconDraw = {
+  hidden: { pathLength: 0, opacity: 0 },
+  visible: { pathLength: 1, opacity: 1, transition: { duration: 0.7, ease: 'easeInOut' } },
+};
+
+// --- COMPONENT ------------------------------------------------------------
 
 const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }) => {
   const [step, setStep] = useState(1);
+  const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
   const [currentFilters, setCurrentFilters] = useState({
-    selectedGenre: nominee?.genreKey || filters?.selectedGenre || 'rap-hiphop',
-    selectedType: nominee?.type || filters?.selectedType || 'artist',
-    selectedInterval: filters?.selectedInterval || 'daily',
-    selectedJurisdiction: '' // Will set to nominee's home below
+    selectedGenre: 'rap-hiphop',
+    selectedType: 'artist',
+    selectedInterval: 'daily',
+    selectedJurisdiction: 'harlem',
   });
   const [artistNameForward, setArtistNameForward] = useState('');
   const [artistNameBackward, setArtistNameBackward] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [eligibleJurisdictionIds, setEligibleJurisdictionIds] = useState([]);
   const [isFetchingJurisdictions, setIsFetchingJurisdictions] = useState(false);
-
-  // status: 'idle', 'success', 'duplicate', 'ineligible', 'network', 'error'
   const [voteResult, setVoteResult] = useState({ status: 'idle', message: '', details: '' });
 
+  // Track previous `show` so the reset effect only fires on the false→true edge.
+  // This is the bug fix: previously the reset depended on `filters`, and because
+  // VoteAwards re-creates the filters object literal every second (the countdown
+  // timer triggers a parent re-render), the effect was re-firing every second
+  // and snapping `step` back to 1. Now we read the latest props off a ref and
+  // only depend on `show`.
+  const prevShowRef = useRef(false);
+  const latestRef = useRef({ nominee, filters });
+  latestRef.current = { nominee, filters };
+
   const selectedNominee = nominee;
-  
-  // Memoized reversed name for accuracy in Step 3
-  const reversedNomineeName = useMemo(() => 
-    selectedNominee ? selectedNominee.name.split('').reverse().join('') : '', 
+
+  const reversedNomineeName = useMemo(
+    () => (selectedNominee ? selectedNominee.name.split('').reverse().join('') : ''),
     [selectedNominee]
   );
 
-  // Helper to get key from ID
-  const getKeyFromId = (id) => Object.keys(JURISDICTION_IDS).find(key => JURISDICTION_IDS[key] === id);
+  const getKeyFromId = (id) =>
+    Object.keys(JURISDICTION_IDS).find((k) => JURISDICTION_IDS[k] === id);
 
-  // --- RESET STATE ON OPEN + DEFAULT TO NOMINEE'S HOME JURISDICTION ---
+  // --- RESET STATE ONLY ON OPEN TRANSITION --------------------------------
   useEffect(() => {
-    if (show) {
+    if (show && !prevShowRef.current) {
+      const { nominee: n, filters: f } = latestRef.current;
+      const homeKey = getKeyFromId(n?.jurisdiction?.jurisdictionId);
+
       setStep(1);
+      setDirection(1);
       setVoteResult({ status: 'idle', message: '', details: '' });
       setArtistNameForward('');
       setArtistNameBackward('');
       setSubmitting(false);
       setEligibleJurisdictionIds([]);
-      const homeKey = getKeyFromId(nominee?.jurisdiction?.jurisdictionId);
-      setCurrentFilters(prev => ({ 
-        ...prev, 
-        selectedJurisdiction: homeKey || filters?.selectedJurisdiction || 'harlem' 
-      }));
+      setCurrentFilters({
+        selectedGenre: n?.genreKey || f?.selectedGenre || 'rap-hiphop',
+        selectedType: n?.type || f?.selectedType || 'artist',
+        selectedInterval: f?.selectedInterval || 'daily',
+        selectedJurisdiction: homeKey || f?.selectedJurisdiction || 'harlem',
+      });
     }
-  }, [show, nominee, filters]);
+    prevShowRef.current = show;
+  }, [show]); // ← only `show` — DO NOT add `nominee` or `filters` here
 
-  // --- FETCH ELIGIBLE JURISDICTIONS (BREADCRUMB) ---
+  // --- FETCH ELIGIBLE JURISDICTIONS (BREADCRUMB) --------------------------
+  // Depends only on stable `nominee?.id` so it doesn't refetch every parent render.
   useEffect(() => {
     if (!show || !nominee) return;
 
+    let cancelled = false;
+
     const fetchEligibleJurisdictions = async () => {
       setIsFetchingJurisdictions(true);
-      
-      // Get jurisdiction ID - handle both object and string cases
+
       let nomineeJurisdictionId = null;
-      
+
       if (nominee.jurisdiction) {
         if (typeof nominee.jurisdiction === 'object' && nominee.jurisdiction.jurisdictionId) {
-          // Case 1: Full jurisdiction object (ideal)
           nomineeJurisdictionId = nominee.jurisdiction.jurisdictionId;
         } else if (typeof nominee.jurisdiction === 'string') {
-          // Case 2: Just a jurisdiction name string - look up the ID
-          const jurisdictionName = nominee.jurisdiction.toLowerCase().replace(/\s+/g, '-');
-          nomineeJurisdictionId = JURISDICTION_IDS[jurisdictionName];
+          const slug = nominee.jurisdiction.toLowerCase().replace(/\s+/g, '-');
+          nomineeJurisdictionId = JURISDICTION_IDS[slug];
         }
       }
-      
-      // If we don't have jurisdiction from nominee, fetch it from backend
+
       if (!nomineeJurisdictionId && nominee.id && nominee.type) {
         try {
-          console.log('Jurisdiction missing from nominee, fetching from backend...');
-          const endpoint = nominee.type === 'artist' 
-            ? `/v1/users/${nominee.id}`
-            : `/v1/media/song/${nominee.id}`;
-          
+          const endpoint =
+            nominee.type === 'artist'
+              ? `/v1/users/${nominee.id}`
+              : `/v1/media/song/${nominee.id}`;
           const response = await apiCall({ method: 'get', url: endpoint });
           const fetchedJurisdiction = response.data.jurisdiction;
-          
           if (fetchedJurisdiction?.jurisdictionId) {
             nomineeJurisdictionId = fetchedJurisdiction.jurisdictionId;
-            console.log('Fetched jurisdiction from backend:', fetchedJurisdiction.name);
           }
         } catch (err) {
           console.error('Failed to fetch nominee details for jurisdiction:', err);
         }
       }
-      
-      // If we still don't have an ID, use fallback hardcoded logic
+
+      if (cancelled) return;
+
       if (!nomineeJurisdictionId) {
-        console.warn('Could not determine nominee jurisdiction ID, using hardcoded fallback');
         setEligibleJurisdictionIds(Object.values(JURISDICTION_IDS));
         setIsFetchingJurisdictions(false);
         return;
@@ -115,372 +158,608 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       try {
         const response = await apiCall({
           method: 'get',
-          url: `/v1/jurisdictions/${nomineeJurisdictionId}/breadcrumb`
+          url: `/v1/jurisdictions/${nomineeJurisdictionId}/breadcrumb`,
         });
-        
-        // Extract jurisdiction IDs from breadcrumb response
+        if (cancelled) return;
+
         const eligibleIds = response.data
-          .filter(j => j.votingEnabled !== false)
-          .map(j => j.jurisdictionId);
-        
+          .filter((j) => j.votingEnabled !== false)
+          .map((j) => j.jurisdictionId);
+
         setEligibleJurisdictionIds(eligibleIds);
-        
-        // Auto-correct if current selection is invalid for this nominee
-        const currentId = JURISDICTION_IDS[currentFilters.selectedJurisdiction];
-        if (currentId && !eligibleIds.includes(currentId)) {
-          const homeKey = getKeyFromId(nomineeJurisdictionId);
-          if (homeKey) {
-            setCurrentFilters(prev => ({ ...prev, selectedJurisdiction: homeKey }));
+
+        // Auto-correct an invalid selection without forcing a reset elsewhere.
+        setCurrentFilters((prev) => {
+          const currentId = JURISDICTION_IDS[prev.selectedJurisdiction];
+          if (currentId && !eligibleIds.includes(currentId)) {
+            const homeKey = getKeyFromId(nomineeJurisdictionId);
+            if (homeKey) return { ...prev, selectedJurisdiction: homeKey };
           }
-        }
+          return prev;
+        });
       } catch (err) {
+        if (cancelled) return;
         console.error('Failed to fetch eligible jurisdictions:', err);
-        
-        // Fallback: Use nominee's home jurisdiction + parent (Harlem) for the 3 active jurisdictions
+
         const homeKey = getKeyFromId(nomineeJurisdictionId);
-        let fallbackEligibleIds = [];
-        
+        let fallback = [];
         if (homeKey === 'downtown-harlem' || homeKey === 'uptown-harlem') {
-          fallbackEligibleIds = [
-            JURISDICTION_IDS[homeKey], 
-            JURISDICTION_IDS['harlem']
-          ];
+          fallback = [JURISDICTION_IDS[homeKey], JURISDICTION_IDS['harlem']];
         } else if (homeKey === 'harlem') {
-          fallbackEligibleIds = [JURISDICTION_IDS['harlem']];
+          fallback = [JURISDICTION_IDS['harlem']];
         } else {
-          // Unknown jurisdiction - show all
-          fallbackEligibleIds = Object.values(JURISDICTION_IDS);
+          fallback = Object.values(JURISDICTION_IDS);
         }
-        
-        setEligibleJurisdictionIds(fallbackEligibleIds);
+        setEligibleJurisdictionIds(fallback);
       } finally {
-        setIsFetchingJurisdictions(false);
+        if (!cancelled) setIsFetchingJurisdictions(false);
       }
     };
-    
-    fetchEligibleJurisdictions();
-  }, [show, nominee]);
 
-  // Helper to check if a jurisdiction option should be rendered
+    fetchEligibleJurisdictions();
+    return () => {
+      cancelled = true;
+    };
+  }, [show, nominee?.id]); // ← stable id only, not the whole nominee object
+
   const isJurisdictionEligible = (optionKey) => {
-    // If we haven't fetched yet, don't show anything (prevents flash of wrong options)
     if (isFetchingJurisdictions) return false;
-    
-    // If fetch completed but got no results, fallback to showing all (shouldn't happen but safe)
-    if (!isFetchingJurisdictions && eligibleJurisdictionIds.length === 0) {
-      console.warn('No eligible jurisdictions found, showing all as fallback');
-      return true;
-    }
-    
-    const jurisdictionId = JURISDICTION_IDS[optionKey];
-    const isEligible = eligibleJurisdictionIds.includes(jurisdictionId);
-    
-    return isEligible;
+    if (eligibleJurisdictionIds.length === 0) return true;
+    return eligibleJurisdictionIds.includes(JURISDICTION_IDS[optionKey]);
   };
 
-  // --- FIREWORKS ON SUCCESS ---
+  // --- CONFETTI ON SUCCESS ------------------------------------------------
   useEffect(() => {
-    if (voteResult.status === 'success') {
-      triggerFireworks();
-    }
+    if (voteResult.status === 'success') triggerFireworks();
   }, [voteResult.status]);
 
   const triggerFireworks = () => {
-    const duration = 3 * 1000;
+    const duration = 2200;
     const animationEnd = Date.now() + duration;
-    const unisColors = ['#163387', '#C0C0C0', '#918f8f', '#000000', '#ffffff'];
-
-    const defaults = { 
-      startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999, colors: unisColors 
+    const palette = ['#163387', '#3a5fcf', '#C0C0C0', '#ffffff'];
+    const defaults = {
+      startVelocity: 28,
+      spread: 360,
+      ticks: 70,
+      zIndex: 99999,
+      colors: palette,
     };
+    const rand = (min, max) => Math.random() * (max - min) + min;
 
-    const randomInRange = (min, max) => Math.random() * (max - min) + min;
-
-    const interval = setInterval(function() {
+    const interval = setInterval(() => {
       const timeLeft = animationEnd - Date.now();
       if (timeLeft <= 0) return clearInterval(interval);
-      const particleCount = 50 * (timeLeft / duration);
-      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-    }, 250);
+      const particleCount = 40 * (timeLeft / duration);
+      confetti({ ...defaults, particleCount, origin: { x: rand(0.1, 0.3), y: Math.random() - 0.2 } });
+      confetti({ ...defaults, particleCount, origin: { x: rand(0.7, 0.9), y: Math.random() - 0.2 } });
+    }, 220);
   };
 
+  // --- NAV ----------------------------------------------------------------
   const handleNext = () => {
     setVoteResult({ status: 'idle', message: '' });
-    if (step < 3) setStep(step + 1);
+    if (step < TOTAL_STEPS) {
+      setDirection(1);
+      setStep(step + 1);
+    }
   };
 
-  // Sync filters if nominee changes (genre/type only, jurisdiction handled above)
-  useEffect(() => {
-    if (nominee) {
-      setCurrentFilters(prev => ({
-        ...prev,
-        selectedGenre: nominee.genreKey || filters?.selectedGenre || 'rap-hiphop',
-        selectedType: nominee.type || filters?.selectedType || 'artist',
-        selectedInterval: prev.selectedInterval || filters?.selectedInterval || 'daily',
-      }));
+  const handleBack = () => {
+    if (step > 1) {
+      setDirection(-1);
+      setStep(step - 1);
     }
-  }, [nominee, filters]);
+  };
 
+  // --- SUBMIT -------------------------------------------------------------
   const handleConfirmVote = async (e) => {
     e.preventDefault();
     setVoteResult({ status: 'idle', message: '' });
 
     if (artistNameForward.toLowerCase() !== selectedNominee.name.toLowerCase()) {
-      setVoteResult({ status: 'error', message: 'Name Forward Invalid', details: 'The name entered forward does not match.' });
+      setVoteResult({
+        status: 'error',
+        message: 'Name Forward Invalid',
+        details: 'The name entered forward does not match.',
+      });
       return;
     }
     if (artistNameBackward.toLowerCase() !== reversedNomineeName.toLowerCase()) {
-      setVoteResult({ status: 'error', message: 'Name Backward Invalid', details: 'The name entered backward does not match.' });
+      setVoteResult({
+        status: 'error',
+        message: 'Name Backward Invalid',
+        details: 'The name entered backward does not match.',
+      });
       return;
     }
 
     setSubmitting(true);
 
     try {
-      const genreIdToSend = GENRE_IDS[currentFilters.selectedGenre];
       const voteData = {
-        userId: userId,
+        userId,
         targetType: currentFilters.selectedType,
         targetId: selectedNominee.id,
-        genreId: genreIdToSend,
+        genreId: GENRE_IDS[currentFilters.selectedGenre],
         jurisdictionId: JURISDICTION_IDS[currentFilters.selectedJurisdiction],
         intervalId: INTERVAL_IDS[currentFilters.selectedInterval],
         voteDate: new Date().toISOString().split('T')[0],
       };
 
-
-      console.log('=== VOTE DATA BEING SENT ===');
-      console.log('Nominee jurisdiction ID:', nominee?.jurisdiction?.jurisdictionId);
-      console.log('Selected jurisdiction key:', currentFilters.selectedJurisdiction);
-      console.log('Mapped jurisdiction UUID:', JURISDICTION_IDS[currentFilters.selectedJurisdiction]);
-      console.log('Full voteData:', voteData);
-
       await apiCall({ method: 'post', url: '/v1/vote/submit', data: voteData });
       setVoteResult({ status: 'success', message: 'Vote Recorded' });
-
     } catch (err) {
       console.error('Vote submission failed:', err);
-      let errorMessage = err.response?.data?.message || err.message || 'Unknown error';
       const status = err.response?.status;
-
       if (status === 409) {
-        setVoteResult({ status: 'duplicate', message: 'Already Voted', details: 'You have already cast a vote in this category for this interval.' });
+        setVoteResult({
+          status: 'duplicate',
+          message: 'Already Voted',
+          details: 'You have already cast a vote in this category for this interval.',
+        });
       } else if (status === 403) {
-        setVoteResult({ status: 'ineligible', message: 'Vote Rejected', details: 'You are not eligible to vote in this jurisdiction' });
+        setVoteResult({
+          status: 'ineligible',
+          message: 'Vote Rejected',
+          details: 'You are not eligible to vote in this jurisdiction.',
+        });
       } else {
-        setVoteResult({ status: 'network', message: 'Connection Failed', details: 'We could not reach the server.' });
+        setVoteResult({
+          status: 'network',
+          message: 'Connection Failed',
+          details: 'We could not reach the server. Please try again.',
+        });
       }
     } finally {
       setSubmitting(false);
     }
   };
 
-  // --- REFINED RENDERER FOR RESULTS ---
+  const formatText = (str) =>
+    str ? str.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '';
+
+  // Real-time match indicators for step 3
+  const forwardMatches =
+    artistNameForward.length > 0 &&
+    artistNameForward.toLowerCase() === (selectedNominee?.name || '').toLowerCase();
+  const backwardMatches =
+    artistNameBackward.length > 0 &&
+    artistNameBackward.toLowerCase() === reversedNomineeName.toLowerCase();
+  const canSubmit = forwardMatches && backwardMatches && !submitting;
+
+  // --- RESULT RENDER ------------------------------------------------------
   const renderResult = () => {
     const { status, message, details } = voteResult;
-    
-    let iconColor = "#4CAF50"; 
-    let IconPath = null;
-    
-    switch(status) {
+
+    let iconColor = '#163387';
+    let IconSVG = null;
+
+    switch (status) {
       case 'success':
-        iconColor = "#163387";
-        IconPath = <motion.path d="M20 6L9 17l-5-5" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" variants={iconVariants} initial="hidden" animate="visible" />;
+        iconColor = '#163387';
+        IconSVG = (
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
+            <motion.path
+              d="M20 6L9 17l-5-5"
+              stroke={iconColor}
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              variants={iconDraw}
+              initial="hidden"
+              animate="visible"
+            />
+          </svg>
+        );
         break;
       case 'duplicate':
-        iconColor = "#FFC107"; 
-        IconPath = <motion.path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" variants={iconVariants} initial="hidden" animate="visible" />;
+        iconColor = '#E0A93C';
+        IconSVG = (
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
+            <motion.path
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              stroke={iconColor}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              variants={iconDraw}
+              initial="hidden"
+              animate="visible"
+            />
+          </svg>
+        );
         break;
       case 'ineligible':
-        iconColor = "#FF5722"; 
-        IconPath = (
-            <motion.g variants={iconVariants} initial="hidden" animate="visible">
-                <circle cx="12" cy="12" r="10" stroke={iconColor} strokeWidth="2" />
-                <path d="M4.93 4.93l14.14 14.14" stroke={iconColor} strokeWidth="2" />
+        iconColor = '#D85A3B';
+        IconSVG = (
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
+            <motion.g variants={iconDraw} initial="hidden" animate="visible">
+              <circle cx="12" cy="12" r="9" stroke={iconColor} strokeWidth="2" fill="none" />
+              <path d="M5.6 5.6l12.8 12.8" stroke={iconColor} strokeWidth="2" strokeLinecap="round" />
             </motion.g>
+          </svg>
         );
         break;
       default:
-        iconColor = "#F44336"; 
-        IconPath = <motion.path d="M18 6L6 18M6 6l12 12" stroke={iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" variants={iconVariants} initial="hidden" animate="visible" />;
+        iconColor = '#D85A3B';
+        IconSVG = (
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
+            <motion.path
+              d="M18 6L6 18M6 6l12 12"
+              stroke={iconColor}
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              variants={iconDraw}
+              initial="hidden"
+              animate="visible"
+            />
+          </svg>
+        );
     }
 
-    const formatText = (str) => str ? str.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
-
     return (
-      <div className="step-content result-view">
-        <img src={unisLogo} alt="Unis Logo" className="unis-logo-result"/>
-        
-        <div className="icon-container" style={{borderColor: status === 'success' ? '#163387' : iconColor}}>
-            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {IconPath}
-            </svg>
+      <div className={`vw-result vw-result--${status}`}>
+        <div className="vw-result__icon" style={{ borderColor: iconColor }}>
+          {IconSVG}
         </div>
+        <h2 className="vw-result__heading" style={{ color: iconColor }}>
+          {message}
+        </h2>
 
-        <h2 className="result-header" style={{ color: status === 'success' ? '#163387' : iconColor }}>{message}</h2>
-        
         {status === 'success' ? (
-            <div className="vote-receipt">
-                <p className="receipt-label">CONFIRMED NOMINEE</p>
-                <h3 className="receipt-name">{selectedNominee.name}</h3>
-                
-                <div className="receipt-divider"></div>
-                
-                <div className="receipt-meta-grid">
-                    <div className="meta-item">
-                        <span className="meta-label">Type</span>
-                        <span className="meta-value">{formatText(currentFilters.selectedType)}</span>
-                    </div>
-                    <div className="meta-item">
-                        <span className="meta-label">Interval</span>
-                        <span className="meta-value">{formatText(currentFilters.selectedInterval)}</span>
-                    </div>
-                    <div className="meta-item">
-                        <span className="meta-label">Jurisdiction</span>
-                        <span className="meta-value">{formatText(currentFilters.selectedJurisdiction)}</span>
-                    </div>
-                    <div className="meta-item">
-                        <span className="meta-label">Genre</span>
-                        <span className="meta-value">{formatText(currentFilters.selectedGenre)}</span>
-                    </div>
-                </div>
+          <div className="vw-receipt">
+            <span className="vw-receipt__label">Confirmed Nominee</span>
+            <h3 className="vw-receipt__name">{selectedNominee.name}</h3>
+            <div className="vw-receipt__rule" />
+            <div className="vw-receipt__grid">
+              <div>
+                <span>Type</span>
+                <strong>{formatText(currentFilters.selectedType)}</strong>
+              </div>
+              <div>
+                <span>Interval</span>
+                <strong>{formatText(currentFilters.selectedInterval)}</strong>
+              </div>
+              <div>
+                <span>Genre</span>
+                <strong>{formatText(currentFilters.selectedGenre)}</strong>
+              </div>
+              <div>
+                <span>Jurisdiction</span>
+                <strong>{formatText(currentFilters.selectedJurisdiction)}</strong>
+              </div>
             </div>
+          </div>
         ) : (
-            <p className="error-details">{details}</p>
+          <p className="vw-result__details">{details}</p>
         )}
-        
-        <div className="button-group-result">
-            {status === 'success' ? (
-                <button className="done-button" onClick={() => onVoteSuccess(selectedNominee.id)}>Close</button>
-            ) : (
-                <button className="back-button" onClick={() => setVoteResult({ status: 'idle' })}>Try Again</button>
-            )}
+
+        <div className="vw-actions vw-actions--center">
+          {status === 'success' ? (
+            <button className="vw-btn vw-btn--primary" onClick={() => onVoteSuccess(selectedNominee.id)}>
+              Done
+            </button>
+          ) : (
+            <button
+              className="vw-btn vw-btn--ghost"
+              onClick={() => setVoteResult({ status: 'idle' })}
+            >
+              Try Again
+            </button>
+          )}
         </div>
       </div>
     );
   };
 
-  const renderStep = () => {
-    if (voteResult.status !== 'idle') return renderResult();
+  // --- STEP RENDER --------------------------------------------------------
+  const renderStepContent = () => {
     if (!selectedNominee) return null;
 
     switch (step) {
       case 1:
         return (
-          <div className="step-content">
-            <h2>Confirm Your Vote For:</h2>
-            <h2 className='nominee-name'>{selectedNominee.name}</h2>
-            <p className="wizard-intro">Please review your selections below.</p>
-            <div className="filter-selection-grid">
-              <label>Genre</label>
-              <div className="locked-input">{currentFilters.selectedGenre.replace(/-/g, ' ').toUpperCase()}</div>
-              <label>Category</label>
-              <div className="locked-input">{currentFilters.selectedType.toUpperCase()}</div>
-              <label>Interval</label>
-              <select value={currentFilters.selectedInterval} onChange={(e) => setCurrentFilters({...currentFilters, selectedInterval: e.target.value})} className="input-field">
-                <option value="daily">Day</option>
-                <option value="weekly">Week</option>
-                <option value="monthly">Month</option>
-                <option value="quarterly">Quarter</option>
-                <option value="annual">Year</option>
-              </select>
-              <label>Jurisdiction</label>
-              <select 
-                value={currentFilters.selectedJurisdiction} 
-                onChange={(e) => setCurrentFilters({...currentFilters, selectedJurisdiction: e.target.value})} 
-                className="input-field"
-                disabled={isFetchingJurisdictions}
-              >
-                {isFetchingJurisdictions ? (
-                  <option>Loading jurisdictions...</option>
-                ) : (
-                  // FIXED: Filter first, then map to avoid rendering false values
-                  Object.keys(JURISDICTION_IDS)
-                    .filter(key => isJurisdictionEligible(key))
-                    .map(key => (
-                      <option key={key} value={key}>
-                        {key.replace(/-/g, ' ').toUpperCase()}
-                      </option>
-                    ))
-                )}
-              </select>
+          <div className="vw-step">
+            <span className="vw-eyebrow">Step 1 — Review</span>
+            <h2 className="vw-title">Confirm your vote for</h2>
+            <h1 className="vw-nominee">{selectedNominee.name}</h1>
+
+            <div className="vw-fields">
+              <div className="vw-field">
+                <label>Genre</label>
+                <div className="vw-chip vw-chip--locked">{formatText(currentFilters.selectedGenre)}</div>
+              </div>
+              <div className="vw-field">
+                <label>Category</label>
+                <div className="vw-chip vw-chip--locked">{formatText(currentFilters.selectedType)}</div>
+              </div>
+              <div className="vw-field">
+                <label>Interval</label>
+                <select
+                  className="vw-select"
+                  value={currentFilters.selectedInterval}
+                  onChange={(e) =>
+                    setCurrentFilters({ ...currentFilters, selectedInterval: e.target.value })
+                  }
+                >
+                  <option value="daily">Day</option>
+                  <option value="weekly">Week</option>
+                  <option value="monthly">Month</option>
+                  <option value="quarterly">Quarter</option>
+                  <option value="annual">Year</option>
+                </select>
+              </div>
+              <div className="vw-field">
+                <label>Jurisdiction</label>
+                <select
+                  className="vw-select"
+                  value={currentFilters.selectedJurisdiction}
+                  onChange={(e) =>
+                    setCurrentFilters({ ...currentFilters, selectedJurisdiction: e.target.value })
+                  }
+                  disabled={isFetchingJurisdictions}
+                >
+                  {isFetchingJurisdictions ? (
+                    <option>Loading…</option>
+                  ) : (
+                    Object.keys(JURISDICTION_IDS)
+                      .filter(isJurisdictionEligible)
+                      .map((key) => (
+                        <option key={key} value={key}>
+                          {formatText(key)}
+                        </option>
+                      ))
+                  )}
+                </select>
+              </div>
             </div>
           </div>
         );
+
       case 2:
         return (
-             <div className="step-content">
-             <h2>Final Confirmation</h2>
-             <p className="wizard-intro">You are about to cast your vote for:</p>
-             <div className="confirmation-summary">
-               <strong>{selectedNominee.name}</strong> as <strong>{currentFilters.selectedType}</strong><br/>
-               of the <strong>{currentFilters.selectedInterval}</strong><br/>
-               in <strong>{currentFilters.selectedGenre}</strong>
-             </div>
-             <p className="warning-message">This vote cannot be undone.</p>
-           </div>
+          <div className="vw-step">
+            <span className="vw-eyebrow">Step 2 — Confirm</span>
+            <h2 className="vw-title">Final confirmation</h2>
+
+            <div className="vw-summary">
+              <div className="vw-summary__row">
+                <span>Nominee</span>
+                <strong>{selectedNominee.name}</strong>
+              </div>
+              <div className="vw-summary__row">
+                <span>As</span>
+                <strong>
+                  {formatText(currentFilters.selectedType)} of the {formatText(currentFilters.selectedInterval)}
+                </strong>
+              </div>
+              <div className="vw-summary__row">
+                <span>In</span>
+                <strong>{formatText(currentFilters.selectedJurisdiction)}</strong>
+              </div>
+              <div className="vw-summary__row">
+                <span>Genre</span>
+                <strong>{formatText(currentFilters.selectedGenre)}</strong>
+              </div>
+            </div>
+
+            <p className="vw-warning">
+              <span className="vw-warning__dot" />
+              This vote cannot be undone for the selected interval.
+            </p>
+          </div>
         );
+
       case 3:
         return (
-          <div className="step-content">
-            <h2>Secure Your Vote</h2>
-            <p className="wizard-intro">To prevent errors, please confirm by typing the name forward and backward.</p>
-            <form onSubmit={handleConfirmVote}>
-              <div className="form-group">
-                <label>Name (Forward) — <strong>{selectedNominee.name}</strong></label>
-                <input 
-                  type="text" 
-                  value={artistNameForward} 
-                  onChange={(e) => setArtistNameForward(e.target.value)} 
-                  placeholder="Type the name forward..." 
-                  disabled={submitting} 
-                  autoComplete="off"
-                />
+          <div className="vw-step">
+            <span className="vw-eyebrow">Step 3 — Secure</span>
+            <h2 className="vw-title">
+              Type the name <em>forward</em> and <em>backward</em>
+            </h2>
+            <p className="vw-sub">A small check to prevent mistaken votes.</p>
+
+            <form onSubmit={handleConfirmVote} className="vw-form">
+              <div className={`vw-input-group ${forwardMatches ? 'vw-input-group--match' : ''}`}>
+                <div className="vw-input-meta">
+                  <label>Forward</label>
+                  <span className="vw-ref">{selectedNominee.name}</span>
+                </div>
+                <div className="vw-input-wrap">
+                  <input
+                    type="text"
+                    value={artistNameForward}
+                    onChange={(e) => setArtistNameForward(e.target.value)}
+                    placeholder="Type the name…"
+                    disabled={submitting}
+                    autoComplete="off"
+                    spellCheck="false"
+                  />
+                  {forwardMatches && (
+                    <span className="vw-check" aria-hidden="true">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M20 6L9 17l-5-5"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="form-group">
-                <label>(Backward) — <span style={{color: "blue" }}>{reversedNomineeName}</span></label>
-                <input 
-                  type="text" 
-                  value={artistNameBackward} 
-                  onChange={(e) => setArtistNameBackward(e.target.value)} 
-                  placeholder="Type the name backward..."
-                  disabled={submitting} 
-                  autoComplete="off"
-                />
+
+              <div className={`vw-input-group ${backwardMatches ? 'vw-input-group--match' : ''}`}>
+                <div className="vw-input-meta">
+                  <label>Backward</label>
+                  <span className="vw-ref vw-ref--reverse">{reversedNomineeName}</span>
+                </div>
+                <div className="vw-input-wrap">
+                  <input
+                    type="text"
+                    value={artistNameBackward}
+                    onChange={(e) => setArtistNameBackward(e.target.value)}
+                    placeholder="Type the name reversed…"
+                    disabled={submitting}
+                    autoComplete="off"
+                    spellCheck="false"
+                  />
+                  {backwardMatches && (
+                    <span className="vw-check" aria-hidden="true">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M20 6L9 17l-5-5"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  )}
+                </div>
               </div>
-              <button type="submit" className="submit-vote-button" disabled={submitting}>{submitting ? 'Submitting...' : 'Confirm Vote'}</button>
+
+              <button
+                type="submit"
+                className={`vw-btn vw-btn--primary vw-btn--full ${submitting ? 'vw-btn--loading' : ''}`}
+                disabled={!canSubmit}
+              >
+                {submitting ? 'Submitting…' : 'Cast Vote'}
+              </button>
             </form>
           </div>
         );
-      default: return null;
+
+      default:
+        return null;
     }
   };
 
-  if (!show) return null;
+  const isResult = voteResult.status !== 'idle';
+  const stepVariants = direction >= 0 ? stepVariantsForward : stepVariantsBackward;
 
   return (
-    <div className="voting-wizard-overlay" onClick={onClose}>
-        <AnimatePresence>
-            <motion.div 
-                className={`voting-wizard ${voteResult.status === 'success' ? 'success-glow' : ''}`}
-                onClick={e => e.stopPropagation()}
-                variants={modalVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-            >
-                <button className="close-button" onClick={onClose}>&times;</button>
-                {renderStep()}
-                {voteResult.status === 'idle' && (
-                    <div className="button-group">
-                    {step > 1 && <button onClick={() => setStep(step - 1)} className="back-button" disabled={submitting}>Back</button>}
-                    {step < 3 && <button onClick={handleNext} className="next-button">Next</button>}
-                    </div>
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          className="vw-overlay"
+          key="vw-overlay"
+          variants={overlayVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          onClick={onClose}
+        >
+          <motion.div
+            className={`vw-modal ${voteResult.status === 'success' ? 'vw-modal--success' : ''}`}
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <header className="vw-header">
+              <div className="vw-brand">
+                <img src={unisLogo} alt="" className="vw-brand__logo" />
+                <span className="vw-brand__step">
+                  {isResult ? 'Result' : `${step} of ${TOTAL_STEPS}`}
+                </span>
+              </div>
+              <button className="vw-close" onClick={onClose} aria-label="Close">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+            </header>
+
+            {/* Progress rail */}
+            {!isResult && (
+              <div
+                className="vw-progress"
+                role="progressbar"
+                aria-valuenow={step}
+                aria-valuemin={1}
+                aria-valuemax={TOTAL_STEPS}
+              >
+                {[1, 2, 3].map((n) => (
+                  <div
+                    key={n}
+                    className={`vw-progress__seg ${n <= step ? 'vw-progress__seg--active' : ''}`}
+                  >
+                    <motion.div
+                      className="vw-progress__fill"
+                      initial={false}
+                      animate={{ scaleX: n <= step ? 1 : 0 }}
+                      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ transformOrigin: 'left center' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Body */}
+            <div className="vw-body">
+              <AnimatePresence mode="wait" custom={direction}>
+                {isResult ? (
+                  <motion.div
+                    key="result"
+                    variants={stepVariantsForward}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                  >
+                    {renderResult()}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key={`step-${step}`}
+                    variants={stepVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                  >
+                    {renderStepContent()}
+                  </motion.div>
                 )}
-            </motion.div>
-        </AnimatePresence>
-    </div>
+              </AnimatePresence>
+            </div>
+
+            {/* Footer */}
+            {!isResult && step < 3 && (
+              <footer className="vw-footer">
+                {step > 1 ? (
+                  <button onClick={handleBack} className="vw-btn vw-btn--ghost" disabled={submitting}>
+                    Back
+                  </button>
+                ) : (
+                  <div />
+                )}
+                <button onClick={handleNext} className="vw-btn vw-btn--primary">
+                  Next
+                </button>
+              </footer>
+            )}
+
+            {!isResult && step === 3 && (
+              <footer className="vw-footer">
+                <button onClick={handleBack} className="vw-btn vw-btn--ghost" disabled={submitting}>
+                  Back
+                </button>
+                <span className="vw-footer__hint">
+                  {!forwardMatches || !backwardMatches ? 'Type both names exactly to enable' : 'Ready to cast'}
+                </span>
+              </footer>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

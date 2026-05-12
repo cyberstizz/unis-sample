@@ -1,322 +1,715 @@
-// --- Variables (Matching your system) ---
-$bg-black: #000000;
-$text-silver: #C0C0C0;
-$text-gray: #A9A9A9;
-$accent-white: #FFFFFF;
-$unis-blue: var(--unis-primary);
-$unis-silver: #918f8f; 
-$subtle-black: #1a1a1a;
+// =========================================================================
+// VotingWizard — refined dark surface, no whole-modal pulse
+// All class names live in the .vw- namespace to avoid collision with prior styles.
+// =========================================================================
 
-.voting-wizard-overlay {
+$vw-blue: var(--unis-primary, #163387);
+$vw-blue-light: #3a5fcf;
+$vw-blue-glow: rgba(22, 51, 135, 0.55);
+$vw-blue-soft: rgba(22, 51, 135, 0.15);
+
+$vw-text: #ffffff;
+$vw-text-mute: rgba(255, 255, 255, 0.62);
+$vw-text-dim: rgba(255, 255, 255, 0.38);
+
+$vw-line: rgba(255, 255, 255, 0.08);
+$vw-line-strong: rgba(255, 255, 255, 0.14);
+
+$vw-surface-1: #0a0a0c;
+$vw-surface-2: #131418;
+
+$vw-success: #2fa86b;
+$vw-warn: #e0a93c;
+$vw-error: #d85a3b;
+
+$vw-display: "Bitcount Grid Double", "Bitcount Grid", system-ui, sans-serif;
+$vw-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+
+$vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+// -------------------------------------------------------------------------
+// Overlay
+// -------------------------------------------------------------------------
+.vw-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.85); // Darker backdrop
+  inset: 0;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(5px);
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  padding: 16px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(22, 51, 135, 0.25), transparent 50%);
+    pointer-events: none;
+  }
 }
 
-.voting-wizard {
-  background: linear-gradient(145deg, rgba($subtle-black, 0.95), rgba(0, 0, 0, 1));
-  padding: 40px;
-  border-radius: 16px; // Modern rounded corners
-  width: 90%;
-  max-width: 500px;
+// -------------------------------------------------------------------------
+// Modal shell — present, not blinking
+// -------------------------------------------------------------------------
+.vw-modal {
   position: relative;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba($text-silver, 0.1); // Default subtle border
-  transition: border-color 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
-  border: 2px solid transparent;
-  animation: unisBluePulse 3.5s ease-in-out infinite;
-  // --- THE SUCCESS GLOW ---
-  &.success-glow {
-    border: 2px solid $unis-blue;
-    box-shadow: 0 0 20px rgba($unis-blue, 0.6), inset 0 0 10px rgba($unis-blue, 0.2);
+  width: 100%;
+  max-width: 460px;
+  background: linear-gradient(180deg, $vw-surface-2 0%, $vw-surface-1 100%);
+  border: 1px solid $vw-line;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow:
+    0 30px 60px -20px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 0 40px -10px rgba(22, 51, 135, 0.25);
+  transition: box-shadow 0.4s ease, border-color 0.4s ease;
+
+  // Soft single top accent — replaces the old whole-border pulse
+  &::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, $vw-blue 50%, transparent);
+    opacity: 0.7;
+  }
+
+  &--success {
+    border-color: rgba(22, 51, 135, 0.4);
+    box-shadow:
+      0 30px 60px -20px rgba(0, 0, 0, 0.8),
+      0 0 0 1px rgba(22, 51, 135, 0.2) inset,
+      0 0 80px -10px rgba(22, 51, 135, 0.5);
   }
 }
 
-.close-button {
-  position: absolute;
-  top: 15px;
-  right: 20px;
-  background: none;
-  border: none;
-  font-size: 28px;
-  color: $text-gray;
+// -------------------------------------------------------------------------
+// Header
+// -------------------------------------------------------------------------
+.vw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 12px;
+}
+
+.vw-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  &__logo {
+    width: 28px;
+    height: auto;
+    opacity: 0.95;
+  }
+
+  &__step {
+    font-family: $vw-body;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: $vw-text-mute;
+    padding-left: 12px;
+    border-left: 1px solid $vw-line;
+  }
+}
+
+.vw-close {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid $vw-line;
+  border-radius: 8px;
+  color: $vw-text-mute;
   cursor: pointer;
-  transition: color 0.2s;
-  
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+
   &:hover {
-    color: $accent-white;
+    color: $vw-text;
+    border-color: $vw-line-strong;
+    background: rgba(255, 255, 255, 0.04);
   }
 }
 
-.step-content {
+// -------------------------------------------------------------------------
+// Progress rail
+// -------------------------------------------------------------------------
+.vw-progress {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  padding: 4px 20px 8px;
+
+  &__seg {
+    height: 3px;
+    background: $vw-line;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, $vw-blue, $vw-blue-light);
+    border-radius: 999px;
+  }
+}
+
+// -------------------------------------------------------------------------
+// Body
+// -------------------------------------------------------------------------
+.vw-body {
+  padding: 24px 28px 8px;
+  min-height: 320px;
+  position: relative;
+}
+
+.vw-step {
+  display: flex;
+  flex-direction: column;
+}
+
+.vw-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: $vw-blue-light;
+  margin-bottom: 14px;
+}
+
+.vw-title {
+  font-family: $vw-body;
+  font-size: 18px;
+  font-weight: 500;
+  color: $vw-text;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+
+  em {
+    font-style: italic;
+    color: $vw-blue-light;
+    font-weight: 400;
+  }
+}
+
+.vw-sub {
+  font-size: 13px;
+  color: $vw-text-mute;
+  margin: 0 0 22px;
+  line-height: 1.5;
+}
+
+.vw-nominee {
+  font-family: $vw-display;
+  font-size: 30px;
+  font-weight: 700;
+  margin: 4px 0 22px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  word-break: break-word;
+
+  background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+// -------------------------------------------------------------------------
+// Fields (step 1)
+// -------------------------------------------------------------------------
+.vw-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 12px;
+  margin-bottom: 8px;
+}
+
+.vw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: $vw-text-dim;
+  }
+}
+
+.vw-chip {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid $vw-line;
+  border-radius: 8px;
+  font-size: 13px;
+  color: $vw-text;
+  font-weight: 500;
+
+  &--locked {
+    color: $vw-text-mute;
+    background: rgba(255, 255, 255, 0.02);
+  }
+}
+
+.vw-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 10px 32px 10px 12px;
+  background-color: rgba(255, 255, 255, 0.03);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  border: 1px solid $vw-line;
+  border-radius: 8px;
+  font-size: 13px;
+  color: $vw-text;
+  font-family: $vw-body;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+
+  &:hover {
+    border-color: $vw-line-strong;
+  }
+  &:focus {
+    outline: none;
+    border-color: $vw-blue;
+    background-color: rgba(22, 51, 135, 0.08);
+  }
+
+  option {
+    background: $vw-surface-1;
+    color: $vw-text;
+  }
+}
+
+// -------------------------------------------------------------------------
+// Summary (step 2)
+// -------------------------------------------------------------------------
+.vw-summary {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $vw-line;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 8px 0 18px;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid $vw-line;
+    gap: 14px;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    span {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: $vw-text-dim;
+      flex-shrink: 0;
+    }
+    strong {
+      font-size: 14px;
+      color: $vw-text;
+      font-weight: 500;
+      text-align: right;
+    }
+  }
+}
+
+.vw-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: $vw-text-mute;
+  margin: 0;
+  padding: 12px 14px;
+  background: rgba(216, 90, 59, 0.06);
+  border: 1px solid rgba(216, 90, 59, 0.2);
+  border-radius: 8px;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: $vw-error;
+    box-shadow: 0 0 8px $vw-error;
+    flex-shrink: 0;
+  }
+}
+
+// -------------------------------------------------------------------------
+// Form (step 3) — type forward + backward
+// -------------------------------------------------------------------------
+.vw-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.vw-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &--match {
+    .vw-input-wrap input {
+      border-color: rgba(47, 168, 107, 0.5);
+    }
+  }
+}
+
+.vw-input-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+
+  label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: $vw-text-dim;
+  }
+}
+
+.vw-ref {
+  font-family: $vw-display;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: $vw-blue-light;
+  text-transform: uppercase;
+  max-width: 60%;
+  text-align: right;
+  word-break: break-all;
+
+  &--reverse {
+    color: $vw-text-mute;
+  }
+}
+
+.vw-input-wrap {
+  position: relative;
+
+  input {
+    width: 100%;
+    padding: 12px 38px 12px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid $vw-line;
+    border-radius: 8px;
+    font-size: 14px;
+    color: $vw-text;
+    font-family: $vw-body;
+    transition: border-color 0.15s, background-color 0.15s;
+
+    &::placeholder {
+      color: $vw-text-dim;
+    }
+    &:hover {
+      border-color: $vw-line-strong;
+    }
+    &:focus {
+      outline: none;
+      border-color: $vw-blue;
+      background-color: rgba(22, 51, 135, 0.08);
+    }
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.vw-check {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: $vw-success;
+  color: white;
+  transform: translateY(-50%);
+  animation: vwCheckPop 0.32s $vw-ease;
+}
+
+@keyframes vwCheckPop {
+  0% {
+    transform: translateY(-50%) scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-50%) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+// -------------------------------------------------------------------------
+// Footer + buttons
+// -------------------------------------------------------------------------
+.vw-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 20px;
+  border-top: 1px solid $vw-line;
+  margin-top: 8px;
+
+  &__hint {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: $vw-text-dim;
+    text-align: right;
+  }
+}
+
+.vw-btn {
+  font-family: $vw-body;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 11px 22px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.18s $vw-ease;
+
+  &--primary {
+    background: $vw-blue;
+    color: white;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.15) inset,
+      0 0 0 1px rgba(22, 51, 135, 0.4);
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow:
+        0 6px 18px -4px $vw-blue-glow,
+        0 1px 0 rgba(255, 255, 255, 0.2) inset;
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    &:disabled {
+      background: rgba(255, 255, 255, 0.08);
+      color: $vw-text-dim;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: $vw-text-mute;
+    border-color: $vw-line;
+
+    &:hover:not(:disabled) {
+      color: $vw-text;
+      border-color: $vw-line-strong;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &--full {
+    width: 100%;
+    padding: 13px 22px;
+  }
+
+  &--loading {
+    position: relative;
+    color: transparent !important;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 16px;
+      height: 16px;
+      margin: -8px 0 0 -8px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: vwSpin 0.7s linear infinite;
+    }
+  }
+}
+
+@keyframes vwSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vw-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 20px;
+
+  &--center {
+    justify-content: center;
+  }
+}
+
+// -------------------------------------------------------------------------
+// Result view
+// -------------------------------------------------------------------------
+.vw-result {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+  padding-bottom: 8px;
 
-  h2 {
-    color: $accent-white;
-    margin-bottom: 10px;
+  &__icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 1.5px solid;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    margin-bottom: 18px;
+  }
+
+  &__heading {
+    font-family: $vw-body;
+    font-size: 18px;
     font-weight: 600;
-    letter-spacing: 0.5px;
-  }
-  
-  .nominee-name {
-    color: $unis-blue;
-    font-family: "Bitcount Grid Double", system-ui; // Matching your font
-    font-size: 28px;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    margin: 10px 0;
+    margin: 0 0 16px;
   }
 
-  .wizard-intro {
-    color: $text-gray;
-    font-size: 14px;
-    margin-bottom: 25px;
+  &__details {
+    font-size: 13px;
+    color: $vw-text-mute;
     line-height: 1.5;
+    max-width: 320px;
+    margin: 0 0 12px;
   }
 }
 
-// Unis blue glow pulse — on ~1–1.5s, off ~1s, repeating
-@keyframes unisBluePulse {
-  0% {
-    border-color: transparent;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  }
-  // Ramp up
-  15% {
-    border-color: $unis-blue;
-    box-shadow:
-      0 10px 30px rgba(0, 0, 0, 0.5),
-      0 0 18px rgba($unis-blue, 0.6),
-      inset 0 0 12px rgba($unis-blue, 0.15);
-  }
-  // Hold on — peak glow sustained until ~43%
-  43% {
-    border-color: $unis-blue;
-    box-shadow:
-      0 10px 30px rgba(0, 0, 0, 0.5),
-      0 0 18px rgba($unis-blue, 0.6),
-      inset 0 0 12px rgba($unis-blue, 0.15);
-  }
-  // Ramp down to off
-  57% {
-    border-color: transparent;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  }
-  // Hold off until cycle ends (~1s of off time out of 3.5s total)
-  100% {
-    border-color: transparent;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  }
-}
-
-.ghost-input-container {
-  position: relative;
+.vw-receipt {
   width: 100%;
-  background: #f9f9f9;
-  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(22, 51, 135, 0.06), rgba(22, 51, 135, 0.02));
+  border: 1px solid rgba(22, 51, 135, 0.2);
+  border-radius: 12px;
+  padding: 20px 18px;
+  margin-top: 4px;
 
-  .ghost-text {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #ccc; // Light gray so it looks like a guide
-    pointer-events: none; // User clicks "through" it to the input
-    font-family: inherit;
-    font-size: 1rem;
-    white-space: nowrap;
-    overflow: hidden;
-  }
-
-  .real-input {
-    position: relative;
-    background: transparent !important; // Must be transparent to see ghost text
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-    z-index: 2;
-  }
-}
-
-// --- NEW RECEIPT / DETAILS STYLE ---
-.vote-receipt {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba($unis-blue, 0.3);
-  border-radius: 8px;
-  padding: 20px;
-  width: 100%;
-  margin-top: 10px;
-  margin-bottom: 20px;
-  text-align: center;
-
-  .receipt-label {
+  &__label {
+    display: block;
     font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    color: $text-gray;
-    margin-bottom: 5px;
+    color: $vw-text-dim;
+    margin-bottom: 6px;
   }
 
-  .receipt-name {
-    font-size: 24px;
-    color: $accent-white;
-    margin: 0 0 15px 0;
-    font-weight: 700;
+  &__name {
+    font-family: $vw-display;
+    font-size: 22px;
+    color: $vw-text;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 0 0 16px;
+    word-break: break-word;
   }
 
-  .receipt-divider {
+  &__rule {
     height: 1px;
-    background: linear-gradient(90deg, transparent, $unis-blue, transparent);
-    margin-bottom: 15px;
-    opacity: 0.5;
+    background: linear-gradient(90deg, transparent, rgba(22, 51, 135, 0.5), transparent);
+    margin: 0 0 16px;
   }
 
-  .receipt-meta-grid {
+  &__grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 15px;
+    gap: 14px 12px;
     text-align: left;
-    
-    .meta-item {
+
+    > div {
       display: flex;
       flex-direction: column;
-      
-      .meta-label {
-        font-size: 11px;
-        color: $unis-silver;
+      gap: 3px;
+
+      span {
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.2em;
         text-transform: uppercase;
+        color: $vw-text-dim;
       }
-      
-      .meta-value {
+      strong {
         font-size: 13px;
-        color: $accent-white;
         font-weight: 500;
+        color: $vw-text;
       }
     }
   }
 }
 
-// --- RESULT ICONS ---
-.result-view {
-  .unis-logo-result {
-    width: 100px;
-    margin-bottom: 20px;
-    opacity: 0.8;
+// -------------------------------------------------------------------------
+// Mobile
+// -------------------------------------------------------------------------
+@media (max-width: 480px) {
+  .vw-modal {
+    max-width: 100%;
+    border-radius: 14px;
   }
-
-  .icon-container {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    border: 3px solid; // Color set inline in React
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 15px;
-    background: rgba(0,0,0,0.2);
+  .vw-body {
+    padding: 20px 20px 8px;
   }
-  
-  .result-header {
-    font-size: 22px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+  .vw-fields {
+    grid-template-columns: 1fr;
   }
-}
-
-// --- BUTTONS ---
-.button-group, .button-group-result {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-  width: 100%;
-  margin-top: 10px;
-}
-
-button {
-  padding: 12px 24px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: none;
-}
-
-.next-button, .done-button, .submit-vote-button {
-  background-color: $unis-blue;
-  color: $accent-white;
-  
-  &:hover {
-    background-color: $unis-blue;
-    box-shadow: 0 0 10px rgba($unis-blue, 0.4);
+  .vw-nominee {
+    font-size: 24px;
   }
-  
-  &:disabled {
-    background-color: $text-gray;
-    cursor: not-allowed;
-  }
-}
-
-.back-button {
-  background-color: transparent;
-  border: 1px solid $text-gray;
-  color: $text-silver;
-  
-  &:hover {
-    border-color: $accent-white;
-    color: $accent-white;
-  }
-}
-
-// --- FORM INPUTS ---
-.input-field, input[type="text"] {
-  width: 100%;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba($text-silver, 0.2);
-  border-radius: 6px;
-  color: $accent-white;
-  margin-bottom: 15px;
-  
-  &:focus {
-    outline: none;
-    border-color: $unis-blue;
-  }
-}
-
-.locked-input {
-  width: 100%;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: $text-gray;
-  margin-bottom: 15px;
-  font-style: italic;
-}
-
-.filter-selection-grid, .form-group {
-  width: 100%;
-  text-align: left;
-  label {
-    display: block;
-    color: $text-silver;
-    font-size: 12px;
-    margin-bottom: 5px;
-    margin-left: 2px;
+  .vw-receipt__grid {
+    grid-template-columns: 1fr 1fr;
   }
 }

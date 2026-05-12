@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
@@ -52,9 +52,12 @@ const VoteAwards = () => {
       }
     };
     trackAdView();
-  }, []); 
+  }, []);
 
-  // Countdown timer — resets at midnight EST daily
+  // Countdown timer — resets at midnight EST daily.
+  // This re-renders VoteAwards every second, which is exactly why the
+  // VotingWizard filters prop MUST be memoized below — otherwise the wizard
+  // saw a fresh object every render and reset itself to step 1.
   useEffect(() => {
     const calcTimeLeft = () => {
       const now = new Date();
@@ -78,14 +81,12 @@ const VoteAwards = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Focus search input when opened
   useEffect(() => {
     if (searchOpen && searchInputRef.current) {
       searchInputRef.current.focus();
     }
   }, [searchOpen]);
 
-  // Get userId on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -98,7 +99,6 @@ const VoteAwards = () => {
     }
   }, []);
 
-  // Fetch nominees whenever filters change
   useEffect(() => {
     fetchNominees();
   }, [selectedGenre, selectedType, selectedInterval, selectedJurisdiction, userId]);
@@ -150,8 +150,6 @@ const VoteAwards = () => {
       });
 
       setNominees(normalized);
-      console.log('Raw backend response:', response.data);
-      console.log('Normalized nominees:', normalized);
     } catch (err) {
       console.error('Failed to fetch nominees:', err);
       setError('Failed to load nominees. Please try again.');
@@ -171,7 +169,6 @@ const VoteAwards = () => {
   };
 
   const handleVoteSuccess = async (nomineeId) => {
-    console.log(`Vote confirmed for nominee: ${nomineeId}`);
     setShowVotingWizard(false);
     setSelectedNominee(null);
     await fetchNominees();
@@ -255,6 +252,20 @@ const VoteAwards = () => {
   const typeLabel = selectedType.charAt(0).toUpperCase() + selectedType.slice(1);
 
   const pad = (n) => String(n).padStart(2, '0');
+
+  // ── Memoize the filters object passed to VotingWizard ─────────────────
+  // Without this, the inline object literal `{ selectedGenre, selectedType, ... }`
+  // would be a new reference on EVERY parent render — including the per-second
+  // countdown tick — which would trigger reset effects inside the wizard.
+  const wizardFilters = useMemo(
+    () => ({
+      selectedGenre,
+      selectedType,
+      selectedInterval,
+      selectedJurisdiction,
+    }),
+    [selectedGenre, selectedType, selectedInterval, selectedJurisdiction]
+  );
 
   return (
     <Layout backgroundImage={backimage}>
@@ -416,16 +427,16 @@ const VoteAwards = () => {
                             Listen
                           </button>
                         )}
-                        <button 
-                        onClick={() => {
-                          if (!userId) {
-                            alert('Sign up or log in to vote.');
-                            return;
-                          }
-                          handleVoteClick(nominee) 
+                        <button
+                          onClick={() => {
+                            if (!userId) {
+                              alert('Sign up or log in to vote.');
+                              return;
+                            }
+                            handleVoteClick(nominee);
                           }}
                           className="va-btn-vote"
-                          >
+                        >
                           Vote
                         </button>
                       </div>
@@ -448,12 +459,7 @@ const VoteAwards = () => {
         onVoteSuccess={handleVoteSuccess}
         nominee={selectedNominee}
         userId={userId}
-        filters={{
-          selectedGenre,
-          selectedType,
-          selectedInterval,
-          selectedJurisdiction,
-        }}
+        filters={wizardFilters}
       />
     </Layout>
   );
