@@ -707,27 +707,6 @@
   svg { width: 16px; height: 16px; }
 }
 
-.profile-container {
-  width: 100% !important;
- 
-  // Every direct child of profile-container fills it.
-  > * {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
- 
-  // Every direct child of a profile-section fills the section.
-  // This catches the outer wrapper of ReferralCodeCard, AccountSettings,
-  // ThemePicker, and the vote card.
-  .profile-section > * {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-}
  
 // Explicit width on the known child component roots — covers them even
 // outside .profile-container if they're ever reused elsewhere.
