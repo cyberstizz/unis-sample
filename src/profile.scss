@@ -389,6 +389,7 @@
   flex-direction: column;
   gap: 22px;
   animation: profile-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
+  width: 100%;
 
   &__head {
     display: flex;

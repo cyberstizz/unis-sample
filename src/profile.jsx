@@ -261,14 +261,7 @@ const Profile = () => {
               >
                 <Edit3 size={14} aria-hidden="true" /> Edit Profile
               </button>
-              <button
-                type="button"
-                className="profile-btn profile-btn--ghost"
-                onClick={handleShareProfile}
-                aria-label="Share your profile"
-              >
-                Share
-              </button>
+             
             </div>
           </div>
 
