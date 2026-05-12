@@ -1,59 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Copy, Check, Twitter, Instagram, Link2, Sparkles } from 'lucide-react';
-import { apiCall } from './components/axiosInstance';
 import './ReferralCodeCard.scss';
 
 // =============================================================================
 // ReferralCodeCard
 //
-// Drop-in replacement. Same external props (userId, isArtist).
+// Refactored to receive `referralCode` and `username` as props from Profile,
+// rather than fetching them itself. This eliminates the cache-drift bug where
+// this card would sometimes render without a code, because it now has the
+// exact same data as the rest of the page (one fetch, one source of truth).
 //
-// IMPORTANT — preserves your existing logic:
-//   - Uses your existing endpoint: GET /v1/users/referral-code/${userId}
-//   - Handles all three response shapes your old component handled:
-//       a plain string, { referralCode }, or { code }
-//   - No fake/placeholder stats — when you eventually add a referral-stats
-//     endpoint, drop it into the `useEffect` and uncomment the stats block
-//     in the JSX (search for "STATS BLOCK" below).
+// External prop signature:
+//   - referralCode: string  (required — from ProfileSummaryDto.referralCode)
+//   - username:     string  (optional — used in share message)
+//   - isArtist:     boolean (optional, defaults false)
+//
+// Loading and error states are handled by the parent (Profile.jsx), so this
+// component only ever renders when data is available. No internal fetch.
 // =============================================================================
 
-const ReferralCodeCard = ({ userId, isArtist = false }) => {
-  const [referralCode, setReferralCode] = useState('');
-  const [loading, setLoading] = useState(true);
+const ReferralCodeCard = ({ referralCode = '', username = '', isArtist = false }) => {
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!userId) return;
-    setLoading(true);
-
-    apiCall({
-      url: `/v1/users/referral-code/${userId}`,
-      method: 'get',
-      useCache: false,
-    })
-      .then(res => {
-        // Backend returns either a plain string or { referralCode: '...' } / { code: '...' }
-        const code = typeof res.data === 'string'
-          ? res.data
-          : res.data?.referralCode || res.data?.code || '';
-        setReferralCode(code);
-      })
-      .catch(err => console.error('Failed to fetch referral code:', err))
-      .finally(() => setLoading(false));
-  }, [userId]);
 
   const handleCopy = () => {
     if (!referralCode) return;
     navigator.clipboard.writeText(referralCode).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }).catch(err => {
+      console.error('[ReferralCodeCard] action=copy status=fail err=', err);
     });
   };
 
   const handleShare = (platform) => {
     if (!referralCode) return;
     const shareUrl = `${window.location.origin}/?ref=${referralCode}`;
-    const message = `Join me on UNIS — vote for the artists shaping your neighborhood. Use my code ${referralCode} when you sign up.`;
+    const namePart = username ? ` — ${username} thinks you'd vibe with this` : '';
+    const message = `Join me on UNIS${namePart}. Use code ${referralCode} when you sign up.`;
 
     switch (platform) {
       case 'twitter':
@@ -64,7 +47,7 @@ const ReferralCodeCard = ({ userId, isArtist = false }) => {
         );
         return;
       case 'instagram':
-        // Instagram has no direct web share — copy formatted message to clipboard
+        // Instagram has no direct web share — copy formatted message instead
         navigator.clipboard?.writeText(`${message} ${shareUrl}`);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -76,15 +59,6 @@ const ReferralCodeCard = ({ userId, isArtist = false }) => {
         setTimeout(() => setCopied(false), 2000);
     }
   };
-
-  // ---- Loading state ----
-  if (loading) {
-    return (
-      <div className="referral-card referral-card--loading">
-        <div className="referral-card__skeleton" />
-      </div>
-    );
-  }
 
   return (
     <div className="referral-card">
@@ -100,48 +74,54 @@ const ReferralCodeCard = ({ userId, isArtist = false }) => {
         </p>
 
         <div className="referral-card__code-row">
-          <div className="referral-card__code">
+          <div className="referral-card__code" aria-label={`Your referral code: ${referralCode || 'not assigned'}`}>
             {referralCode || '—'}
           </div>
           <button
+            type="button"
             className={`referral-card__copy ${copied ? 'is-copied' : ''}`}
             onClick={handleCopy}
             disabled={!referralCode}
-            aria-label={copied ? 'Copied' : 'Copy code'}
+            aria-label={copied ? 'Copied' : 'Copy referral code to clipboard'}
           >
-            {copied ? <Check size={14} /> : <Copy size={14} />}
+            {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
             {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
 
         <div className="referral-card__share-row">
           <button
+            type="button"
             className="referral-card__share-pill"
             onClick={() => handleShare('twitter')}
             disabled={!referralCode}
+            aria-label="Share on Twitter / X"
           >
-            <Twitter size={13} /> Twitter / X
+            <Twitter size={13} aria-hidden="true" /> Twitter / X
           </button>
           <button
+            type="button"
             className="referral-card__share-pill"
             onClick={() => handleShare('instagram')}
             disabled={!referralCode}
+            aria-label="Copy share message for Instagram"
           >
-            <Instagram size={13} /> Instagram
+            <Instagram size={13} aria-hidden="true" /> Instagram
           </button>
           <button
+            type="button"
             className="referral-card__share-pill"
             onClick={() => handleShare('link')}
             disabled={!referralCode}
+            aria-label="Copy direct referral link"
           >
-            <Link2 size={13} /> Direct link
+            <Link2 size={13} aria-hidden="true" /> Direct link
           </button>
         </div>
       </div>
 
-      {/* RIGHT — informational sidebar (no fake stats) */}
       <div className="referral-card__right">
-        <div className="referral-card__icon">
+        <div className="referral-card__icon" aria-hidden="true">
           <Sparkles size={32} strokeWidth={1.5} />
         </div>
         <div className="referral-card__how-title">How it works</div>
@@ -164,12 +144,13 @@ const ReferralCodeCard = ({ userId, isArtist = false }) => {
 
         {/*
           ============================================================
-          STATS BLOCK — uncomment once you add a referral-stats endpoint.
-          Suggested shape from /v1/users/${userId}/referral-stats:
-            { referralsJoined: number, pointsEarned: number, pending: number }
-
-          <div className="referral-card__stat-big">{stats.referralsJoined}</div>
-          <div className="referral-card__stat-label">Friends Joined</div>
+          STATS BLOCK — uncomment once you add referral stats to
+          ProfileSummaryDto. Suggested addition to backend:
+            ProfileSummaryDto.ReferralStats {
+              long referralsJoined;
+              int pointsEarned;
+            }
+          Then pass them down as props from Profile.jsx.
           ============================================================
         */}
       </div>

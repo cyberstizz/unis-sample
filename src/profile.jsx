@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Heart, Edit3, Trash2, Share2, ArrowRight, History } from 'lucide-react';
+import { Play, Heart, Edit3, Trash2, ArrowRight, History } from 'lucide-react';
 import Layout from './layout';
 import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
+// IMPORTANT: import path may need adjusting to wherever buildUrl actually lives
+// in your project. Common locations: ./utils/buildUrl, ./lib/buildUrl, ./helpers/buildUrl
+import buildUrl from './utils/buildUrl';
 import EditProfileWizard from './editProfileWizard';
 import DeleteAccountWizard from './deleteAccountWizard';
 import VoteHistoryModal from './voteHistoryModal';
@@ -13,114 +16,93 @@ import ThemePicker from './ThemePicker';
 import AccountSettings from './AccountSettings';
 import './profile.scss';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
 // ---------------------------------------------------------------------------
-// Small inline loader shown per-section while data is in flight
+// Inline section UI helpers
 // ---------------------------------------------------------------------------
 const SectionLoader = ({ label = 'Loading...' }) => (
-  <div className="section-loader">
-    <div className="section-loader-spinner" />
+  <div className="section-loader" role="status" aria-live="polite">
+    <div className="section-loader-spinner" aria-hidden="true" />
     <p>{label}</p>
   </div>
 );
 
-// ---------------------------------------------------------------------------
-// Inline error shown per-section when a fetch fails
-// ---------------------------------------------------------------------------
 const SectionError = ({ message = 'Failed to load.', onRetry }) => (
-  <div className="section-error">
+  <div className="section-error" role="alert">
     <p>{message}</p>
     {onRetry && (
-      <button onClick={onRetry} className="section-error-retry">
+      <button onClick={onRetry} className="section-error-retry" type="button">
         Retry
       </button>
     )}
   </div>
 );
 
+// ---------------------------------------------------------------------------
+// Profile — single fetch, single error boundary, single source of truth.
+//
+// All data for this page comes from GET /v1/users/profile-summary/{userId}.
+// Children (ReferralCodeCard, ThemePicker, AccountSettings) receive their
+// data as props. They own their *write* paths but not their *read* paths,
+// which eliminates the cache drift between components.
+//
+// URL building uses the shared buildUrl utility, which handles:
+//   - Private R2 URLs → rewrites to public CDN
+//   - Already-full URLs → safely encoded pass-through
+//   - Relative paths → prepended with API base
+// ---------------------------------------------------------------------------
 const Profile = () => {
   const { user } = useAuth();
   const { playMedia } = React.useContext(PlayerContext);
 
-  // ---- Core data (profile — must load before page renders) ---------------
-  const [userProfile, setUserProfile] = useState(null);
-  const [supportedArtist, setSupportedArtist] = useState(null);
-  const [coreLoading, setCoreLoading] = useState(true);
-  const [coreError, setCoreError] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // ---- Secondary data (votes — can load independently) -------------------
-  const [voteHistory, setVoteHistory] = useState([]);
-  const [votesLoading, setVotesLoading] = useState(true);
-  const [votesError, setVotesError] = useState(null);
-
-  // ---- UI state ----------------------------------------------------------
+  // ---- UI state ---------------------------------------------------------
   const [showEditWizard, setShowEditWizard] = useState(false);
   const [showDeleteWizard, setShowDeleteWizard] = useState(false);
   const [showVoteHistory, setShowVoteHistory] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
 
   // -----------------------------------------------------------------------
-  // Fetch helpers
+  // Single consolidated fetch
   // -----------------------------------------------------------------------
-  const fetchCore = useCallback(async (userId) => {
-    setCoreLoading(true);
-    setCoreError(null);
+  const fetchSummary = useCallback(async (userId) => {
+    if (!userId) return;
+    const startedAt = performance.now();
+    setLoading(true);
+    setError(null);
     try {
-      const profileRes = await apiCall({ url: `/v1/users/profile/${userId}`, useCache: false });
-      const profile = profileRes.data;
-      setUserProfile(profile);
-
-      // Supported artist depends on profile, but we don't block on it —
-      // fire-and-forget so the page can render immediately.
-      if (profile.supportedArtistId) {
-        apiCall({ url: `/v1/users/profile/${profile.supportedArtistId}`, useCache: false })
-          .then(artistRes => setSupportedArtist(artistRes.data))
-          .catch(err => console.error('Failed to fetch supported artist:', err));
-      }
+      const res = await apiCall({
+        url: `/v1/users/profile-summary/${userId}`,
+      });
+      setSummary(res.data);
+      const ms = Math.round(performance.now() - startedAt);
+      console.log(`[Profile] action=fetch_summary userId=${userId} status=ok durationMs=${ms}`);
     } catch (err) {
-      console.error('Core profile fetch failed:', err);
-      setCoreError('Failed to load your profile. Please try again.');
+      const ms = Math.round(performance.now() - startedAt);
+      console.error(`[Profile] action=fetch_summary userId=${userId} status=fail durationMs=${ms} err=`, err);
+      setError('Failed to load your profile. Please try again.');
     } finally {
-      setCoreLoading(false);
+      setLoading(false);
     }
   }, []);
 
-  const fetchVotes = useCallback(async () => {
-    setVotesLoading(true);
-    setVotesError(null);
-    try {
-      const res = await apiCall({ url: '/v1/vote/history?limit=50', useCache: false });
-      setVoteHistory(res.data || []);
-    } catch (err) {
-      console.error('Vote history fetch failed:', err);
-      setVotesError('Could not load vote history.');
-    } finally {
-      setVotesLoading(false);
-    }
-  }, []);
-
-  // -----------------------------------------------------------------------
-  // Main effect: profile and votes fetch in parallel (no waterfall)
-  // -----------------------------------------------------------------------
   useEffect(() => {
-    if (!user?.userId) return;
+    if (user?.userId) fetchSummary(user.userId);
+  }, [user?.userId, fetchSummary]);
 
-    fetchCore(user.userId);
-    fetchVotes();
-  }, [user, fetchCore, fetchVotes]);
+  // After a profile mutation, children call this to refresh the summary.
+  const reload = useCallback(() => {
+    if (user?.userId) fetchSummary(user.userId);
+  }, [user?.userId, fetchSummary]);
 
   // -----------------------------------------------------------------------
   // Early returns
-  //
-  // NOTE: We no longer pass `backgroundImage` to <Layout>. The new global
-  // gradient background (defined in unis-theme.scss) is the background for
-  // every page. If your <Layout> currently REQUIRES backgroundImage, update
-  // it to make that prop optional and skip rendering the image when omitted.
   // -----------------------------------------------------------------------
   if (!user) return <div className="profile-fullscreen-msg">Please log in.</div>;
 
-  if (coreLoading) {
+  if (loading) {
     return (
       <Layout>
         <div className="profile-container profile-container--center">
@@ -130,39 +112,51 @@ const Profile = () => {
     );
   }
 
-  if (coreError) {
+  if (error || !summary) {
     return (
       <Layout>
         <div className="profile-container profile-container--center">
-          <SectionError message={coreError} onRetry={() => fetchCore(user.userId)} />
+          <SectionError
+            message={error || 'No profile data.'}
+            onRetry={() => fetchSummary(user.userId)}
+          />
         </div>
       </Layout>
     );
   }
 
-  // Core data loaded — safe to derive display values
-  const buildUrl = (url) => {
-    if (!url) return null;
-    return url.startsWith('http://') || url.startsWith('https://')
-      ? url
-      : `${API_BASE_URL}${url}`;
-  };
+  // -----------------------------------------------------------------------
+  // Derived display values — all URL building goes through the shared
+  // buildUrl utility for proper R2/CDN handling
+  // -----------------------------------------------------------------------
+  const { profile, supportedArtist, voteHistory, referralCode, settings } = summary;
 
-  const photoUrl = userProfile.photoUrl ? buildUrl(userProfile.photoUrl) : null;
+  const photoUrl = buildUrl(profile.photoUrl);
+  const userInitial = (profile.username || '?').charAt(0).toUpperCase();
 
+  const featuredArt = supportedArtist
+    ? (buildUrl(supportedArtist.defaultSong?.artworkUrl) ||
+       buildUrl(supportedArtist.photoUrl))
+    : null;
+
+  const featuredTitle = supportedArtist?.defaultSong?.title || supportedArtist?.username;
+  const hasPlayableSong = Boolean(supportedArtist?.defaultSong);
+
+  // -----------------------------------------------------------------------
+  // Actions
+  // -----------------------------------------------------------------------
   const playDefaultSong = async () => {
     if (!supportedArtist?.defaultSong) {
-      console.error('No default song available');
+      console.warn('[Profile] action=play_default status=skip reason=no_song');
       return;
     }
-
     const song = supportedArtist.defaultSong;
-    const songId = song.songId || song.id;
+    const songId = song.songId;
 
     const mediaObject = {
       type: 'song',
       id: songId,
-      songId: songId,
+      songId,
       url: buildUrl(song.fileUrl),
       title: song.title,
       artist: supportedArtist.username,
@@ -177,40 +171,23 @@ const Profile = () => {
         url: `/v1/media/song/${songId}/play?userId=${user.userId}`
       });
     } catch (err) {
-      console.error('Failed to track play:', err);
+      console.error('[Profile] action=track_play status=fail err=', err);
     }
 
     playMedia(mediaObject, [mediaObject]);
   };
 
-  const refreshProfile = () => {
-    apiCall({ url: `/v1/users/profile/${user.userId}`, useCache: false })
-      .then(res => setUserProfile(res.data));
-  };
-
   const handleShareProfile = () => {
-    const shareUrl = `${window.location.origin}/profile/${userProfile.username}`;
+    const shareUrl = `${window.location.origin}/profile/${profile.username}`;
     if (navigator.share) {
       navigator.share({
-        title: `${userProfile.username} on UNIS`,
+        title: `${profile.username} on UNIS`,
         url: shareUrl,
-      }).catch(err => console.log('Share cancelled or failed:', err));
+      }).catch(err => console.log('[Profile] share cancelled or failed:', err));
     } else {
       navigator.clipboard?.writeText(shareUrl);
     }
   };
-
-  // -----------------------------------------------------------------------
-  // Derived display values for the featured card
-  // -----------------------------------------------------------------------
-  const featuredArt = supportedArtist
-    ? (buildUrl(supportedArtist.defaultSong?.artworkUrl) ||
-       buildUrl(supportedArtist.photoUrl))
-    : null;
-
-  const featuredTitle = supportedArtist?.defaultSong?.title || supportedArtist?.username;
-  const hasPlayableSong = Boolean(supportedArtist?.defaultSong);
-  const userInitial = (userProfile.username || '?').charAt(0).toUpperCase();
 
   // -----------------------------------------------------------------------
   // Render
@@ -220,28 +197,39 @@ const Profile = () => {
       <div className="profile-container">
 
         {/* ============== HERO ============== */}
-        <section className="profile-hero">
+        <section className="profile-hero" aria-labelledby="profile-display-name">
           <div className="profile-hero__left">
             <div className="profile-hero__eyebrow">
-              Member · {userProfile.level || 'Silver'} Tier
+              Member · {profile.level || 'Silver'} Tier
             </div>
 
             <div className="profile-hero__identity">
               {photoUrl ? (
                 <img
                   src={photoUrl}
-                  alt={userProfile.username}
+                  alt={`${profile.username}'s profile photo`}
                   className="profile-hero__avatar"
+                  onError={(e) => {
+                    console.warn('[Profile] action=load_photo status=fail src=', photoUrl);
+                    // Hide broken image so the layout doesn't show a broken-image icon
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               ) : (
-                <div className="profile-hero__avatar profile-hero__avatar--placeholder">
+                <div
+                  className="profile-hero__avatar profile-hero__avatar--placeholder"
+                  role="img"
+                  aria-label={`${profile.username}'s profile photo placeholder`}
+                >
                   {userInitial}
                 </div>
               )}
               <div className="profile-hero__identity-text">
-                <h1 className="profile-hero__display">{userProfile.username}</h1>
+                <h1 id="profile-display-name" className="profile-hero__display">
+                  {profile.username}
+                </h1>
                 <p className="profile-hero__tagline">
-                  {userProfile.bio || 'No bio yet — tell Harlem who you are!'}
+                  {profile.bio || 'No bio yet — tell Harlem who you are!'}
                 </p>
               </div>
             </div>
@@ -249,28 +237,37 @@ const Profile = () => {
             <div className="profile-hero__stats">
               <div className="profile-hero__stat">
                 <div className="profile-hero__stat-label">Score</div>
-                <div className="profile-hero__stat-value">{userProfile.score || 0}</div>
+                <div className="profile-hero__stat-value">{profile.score || 0}</div>
               </div>
               <div className="profile-hero__stat">
                 <div className="profile-hero__stat-label">Tier</div>
                 <div className="profile-hero__stat-value profile-hero__stat-value--tier">
-                  {userProfile.level || 'Silver'}
+                  {profile.level || 'Silver'}
                 </div>
               </div>
               <div className="profile-hero__stat">
                 <div className="profile-hero__stat-label">Total Votes</div>
                 <div className="profile-hero__stat-value">
-                  {votesLoading ? '—' : voteHistory.length}
+                  {voteHistory?.totalCount ?? 0}
                 </div>
               </div>
             </div>
 
             <div className="profile-hero__cta">
               <button
+                type="button"
                 className="profile-btn profile-btn--primary"
                 onClick={() => setShowEditWizard(true)}
               >
-                <Edit3 size={14} /> Edit Profile
+                <Edit3 size={14} aria-hidden="true" /> Edit Profile
+              </button>
+              <button
+                type="button"
+                className="profile-btn profile-btn--ghost"
+                onClick={handleShareProfile}
+                aria-label="Share your profile"
+              >
+                Share
               </button>
             </div>
           </div>
@@ -279,11 +276,13 @@ const Profile = () => {
             <div
               className="profile-hero__featured"
               style={{ backgroundImage: `url(${featuredArt})` }}
+              role="img"
+              aria-label={`Featured: ${featuredTitle} by ${supportedArtist.username}`}
             >
-              <div className="profile-hero__featured-overlay" />
+              <div className="profile-hero__featured-overlay" aria-hidden="true" />
               <div className="profile-hero__featured-content">
                 <span className="profile-hero__featured-tag">
-                  <Heart size={11} fill="currentColor" /> I Support
+                  <Heart size={11} fill="currentColor" aria-hidden="true" /> I Support
                 </span>
                 <h2 className="profile-hero__featured-title">{featuredTitle}</h2>
                 <div className="profile-hero__featured-sub">
@@ -293,10 +292,11 @@ const Profile = () => {
                 </div>
                 {hasPlayableSong && (
                   <button
+                    type="button"
                     className="profile-hero__featured-cta"
                     onClick={playDefaultSong}
                   >
-                    <Play size={12} fill="currentColor" />
+                    <Play size={12} fill="currentColor" aria-hidden="true" />
                     Listen to your pick
                   </button>
                 )}
@@ -306,14 +306,14 @@ const Profile = () => {
             <div className="profile-hero__featured profile-hero__featured--empty">
               <div className="profile-hero__featured-content">
                 <span className="profile-hero__featured-tag">
-                  <Heart size={11} /> I Support
+                  <Heart size={11} aria-hidden="true" /> I Support
                 </span>
                 <h2 className="profile-hero__featured-title">No artist yet</h2>
                 <div className="profile-hero__featured-sub">
                   Find an artist whose voice you want to amplify.
                 </div>
                 <a href="/find" className="profile-hero__featured-cta">
-                  Discover artists <ArrowRight size={12} />
+                  Discover artists <ArrowRight size={12} aria-hidden="true" />
                 </a>
               </div>
             </div>
@@ -321,123 +321,135 @@ const Profile = () => {
         </section>
 
         {/* ============== VOTE HISTORY ============== */}
-        <section className="profile-section">
+        <section className="profile-section" aria-labelledby="vote-history-heading">
           <div className="profile-section__head">
             <div>
               <div className="profile-section__eyebrow">Your Activity</div>
-              <h2 className="profile-section__title">
+              <h2 id="vote-history-heading" className="profile-section__title">
                 Vote <em>history</em>
               </h2>
             </div>
-            {!votesLoading && !votesError && voteHistory.length > 0 && (
+            {voteHistory?.totalCount > 0 && (
               <button
+                type="button"
                 onClick={() => setShowVoteHistory(true)}
                 className="profile-section__link"
               >
-                View all <ArrowRight size={12} />
+                View all <ArrowRight size={12} aria-hidden="true" />
               </button>
             )}
           </div>
 
           <div className="profile-vote-card">
-            {votesLoading ? (
-              <SectionLoader label="Loading vote history..." />
-            ) : votesError ? (
-              <SectionError message={votesError} onRetry={fetchVotes} />
-            ) : (
-              <div className="profile-vote-summary">
-                <div className="profile-vote-summary__number">
-                  {voteHistory.length}
-                </div>
-                <div className="profile-vote-summary__text">
-                  <div className="profile-vote-summary__label">Total Votes Cast</div>
-                  <p className="profile-vote-summary__cta">
-                    {voteHistory.length > 0
-                      ? 'Every vote shapes the leaderboard. See your full influence.'
-                      : 'No votes yet — go support your favorites!'}
-                  </p>
-                </div>
-                {voteHistory.length > 0 && (
-                  <button
-                    onClick={() => setShowVoteHistory(true)}
-                    className="profile-btn profile-btn--ghost"
-                  >
-                    <History size={14} /> View History
-                  </button>
-                )}
+            <div className="profile-vote-summary">
+              <div className="profile-vote-summary__number">
+                {voteHistory?.totalCount ?? 0}
               </div>
-            )}
+              <div className="profile-vote-summary__text">
+                <div className="profile-vote-summary__label">Total Votes Cast</div>
+                <p className="profile-vote-summary__cta">
+                  {(voteHistory?.totalCount ?? 0) > 0
+                    ? 'Every vote shapes the leaderboard. See your full influence.'
+                    : 'No votes yet — go support your favorites!'}
+                </p>
+              </div>
+              {(voteHistory?.totalCount ?? 0) > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowVoteHistory(true)}
+                  className="profile-btn profile-btn--ghost"
+                >
+                  <History size={14} aria-hidden="true" /> View History
+                </button>
+              )}
+            </div>
           </div>
         </section>
 
         {/* ============== REFERRAL ============== */}
-        <section className="profile-section">
+        <section className="profile-section" aria-labelledby="referral-heading">
           <div className="profile-section__head">
             <div>
               <div className="profile-section__eyebrow">Grow the network</div>
-              <h2 className="profile-section__title">
+              <h2 id="referral-heading" className="profile-section__title">
                 Refer <em>&amp; earn</em>
               </h2>
             </div>
           </div>
-          <ReferralCodeCard userId={user?.userId} isArtist={false} />
+          <ReferralCodeCard
+            referralCode={referralCode}
+            username={profile.username}
+            isArtist={profile.role === 'artist'}
+          />
         </section>
 
-        {/* ============== PREFERENCES (theme picker) ============== */}
-        <section className="profile-section">
+        {/* ============== PREFERENCES ============== */}
+        <section className="profile-section" aria-labelledby="theme-heading">
           <div className="profile-section__head">
             <div>
               <div className="profile-section__eyebrow">Personalization</div>
-              <h2 className="profile-section__title">
+              <h2 id="theme-heading" className="profile-section__title">
                 Color <em>theme</em>
               </h2>
             </div>
           </div>
-          <ThemePicker userId={user?.userId} />
+          {/*
+            ThemePicker keeps its existing useAuth()-based state.
+            No prop changes needed — theme lives in AuthContext, not in
+            the profile summary, so it was never part of the fetch waterfall.
+          */}
+          <ThemePicker userId={user.userId} />
         </section>
 
         {/* ============== ACCOUNT (toggles) ============== */}
-        <section className="profile-section">
+        <section className="profile-section" aria-labelledby="account-heading">
           <div className="profile-section__head">
             <div>
               <div className="profile-section__eyebrow">Account</div>
-              <h2 className="profile-section__title">
+              <h2 id="account-heading" className="profile-section__title">
                 Notifications <em>&amp; privacy</em>
               </h2>
             </div>
           </div>
-          <AccountSettings userId={user?.userId} userProfile={userProfile} />
+          <AccountSettings
+            userId={user.userId}
+            settings={settings}
+            onUpdated={reload}
+          />
         </section>
 
         {/* ============== DANGER ZONE ============== */}
-        <div className="profile-danger">
+        <div className="profile-danger" role="region" aria-labelledby="danger-heading">
           <div className="profile-danger__text">
-            <strong>Danger zone</strong>
+            <strong id="danger-heading">Danger zone</strong>
             Change your password or permanently delete your account. Deletion cannot be undone.
           </div>
           <div className="profile-danger__actions">
             <button
+              type="button"
               onClick={() => setShowChangePassword(true)}
               className="profile-btn profile-btn--ghost"
             >
               Change Password
             </button>
             <button
+              type="button"
               onClick={() => setShowDeleteWizard(true)}
               className="profile-btn profile-btn--danger"
+              aria-label="Delete account permanently"
             >
-              <Trash2 size={14} /> Delete Account
+              <Trash2 size={14} aria-hidden="true" /> Delete Account
             </button>
           </div>
         </div>
 
-        {/* ============== WIZARDS (unchanged) ============== */}
+        {/* ============== WIZARDS ============== */}
         {showEditWizard && (
           <EditProfileWizard
             show={showEditWizard}
             onClose={() => setShowEditWizard(false)}
-            userProfile={userProfile}
-            onSuccess={refreshProfile}
+            userProfile={profile}
+            onSuccess={reload}
           />
         )}
 
@@ -451,7 +463,7 @@ const Profile = () => {
         <VoteHistoryModal
           show={showVoteHistory}
           onClose={() => setShowVoteHistory(false)}
-          votes={voteHistory}
+          votes={voteHistory?.recent || []}
           useDummyData={false}
         />
 

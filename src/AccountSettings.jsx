@@ -5,24 +5,34 @@ import './AccountSettings.scss';
 // =============================================================================
 // AccountSettings
 //
-// Notifications, privacy, and general account preferences.
+// IMPORTANT — UI-only state, no persistence.
 //
-// CURRENT STATE: All toggles are NON-FUNCTIONAL placeholders (UI-only).
-// Local component state holds the on/off value so the toggle visually responds,
-// but no API calls are made. Wire each one up by replacing the TODO blocks
-// inside `update()` with the appropriate apiCall().
+// The toggles below (email notifications, public profile, show vote history,
+// default jurisdiction, language) do NOT have backing columns on the User
+// entity yet. They flip visually but are NOT saved to the backend.
 //
-// Suggested API patterns (verify against your backend):
-//   PATCH /v1/users/profile/${userId}          { emailNotifications: true }
-//   PATCH /v1/users/${userId}/preferences      { publicProfile: false }
+// To make any of these persist, you need:
+//   1. Add a column to the User entity (e.g., `private Boolean publicProfile`)
+//   2. Add a migration to create the column on existing tables
+//   3. Add a settings field to ProfileSummaryDto with that value
+//   4. Add a PATCH endpoint that updates that column (with @CacheEvict for
+//      "profileSummaries" so the consolidated cache stays consistent)
+//   5. Wire up the apiCall in this component's `update()` function below
+//
+// `defaultJurisdiction` is a special case — the User entity DOES have a
+// jurisdiction relationship (ManyToOne), but changing it isn't a simple
+// toggle; it's a relationship change that should probably live in its own
+// flow with confirmation. Left UI-only here for now.
+//
+// External prop signature:
+//   - userId: UUID (kept for future wiring; currently unused)
 // =============================================================================
 
 const JURISDICTION_OPTIONS = [
   'Downtown Harlem',
   'Uptown Harlem',
   'East Harlem',
-  // TODO: Replace with a live list from /v1/jurisdictions or wherever
-  // your jurisdictions live.
+  // TODO: Replace with a live list from /v1/jurisdictions
 ];
 
 const LANGUAGE_OPTIONS = [
@@ -30,30 +40,36 @@ const LANGUAGE_OPTIONS = [
   // TODO: Wire up to a real i18n list once localization lands.
 ];
 
-const AccountSettings = ({ userId, userProfile = {} }) => {
-  // Initialize from userProfile if those fields exist; otherwise sensible defaults.
-  const [settings, setSettings] = useState({
-    emailNotifications: userProfile.emailNotifications ?? true,
-    publicProfile:      userProfile.publicProfile ?? true,
-    showVoteHistory:    userProfile.showVoteHistory ?? false,
-    defaultJurisdiction: userProfile.defaultJurisdiction || 'Downtown Harlem',
-    language:           userProfile.language || 'English (US)',
-  });
+const DEFAULTS = {
+  emailNotifications: true,
+  publicProfile: true,
+  showVoteHistory: false,
+  defaultJurisdiction: 'Downtown Harlem',
+  language: 'English (US)',
+};
 
-  // Generic updater — currently UI-only. Add the real apiCall when wiring up.
-  const update = async (key, value) => {
+// eslint-disable-next-line no-unused-vars
+const AccountSettings = ({ userId }) => {
+  const [settings, setSettings] = useState(DEFAULTS);
+
+  const update = (key, value) => {
+    // Local-only update. When backing columns exist, replace this with the
+    // optimistic-with-revert pattern shown in the comments below.
     setSettings(prev => ({ ...prev, [key]: value }));
 
-    // TODO: Persist to backend. Example:
+    // When ready to persist (after backend columns are added), use:
+    //
+    // const prevValue = settings[key];
     // try {
     //   await apiCall({
     //     method: 'patch',
-    //     url: `/v1/users/profile/${userId}`,
+    //     url: `/v1/users/${userId}/preferences`,
     //     data: { [key]: value },
     //   });
+    //   if (onUpdated) onUpdated();
     // } catch (err) {
-    //   console.error(`Failed to save ${key}:`, err);
-    //   setSettings(prev => ({ ...prev, [key]: !value })); // revert
+    //   console.error(`[AccountSettings] action=update key=${key} status=fail`, err);
+    //   setSettings(prev => ({ ...prev, [key]: prevValue }));
     // }
   };
 
@@ -63,7 +79,7 @@ const AccountSettings = ({ userId, userProfile = {} }) => {
       {/* ----- Notifications group ----- */}
       <div className="account-settings__group">
         <div className="account-settings__group-label">
-          <Bell size={12} /> Notifications
+          <Bell size={12} aria-hidden="true" /> Notifications
         </div>
 
         <SettingRow
@@ -80,7 +96,7 @@ const AccountSettings = ({ userId, userProfile = {} }) => {
       {/* ----- Privacy group ----- */}
       <div className="account-settings__group">
         <div className="account-settings__group-label">
-          <Eye size={12} /> Privacy
+          <Eye size={12} aria-hidden="true" /> Privacy
         </div>
 
         <SettingRow
@@ -107,7 +123,7 @@ const AccountSettings = ({ userId, userProfile = {} }) => {
       {/* ----- Region group ----- */}
       <div className="account-settings__group">
         <div className="account-settings__group-label">
-          <Globe size={12} /> Region &amp; Language
+          <Globe size={12} aria-hidden="true" /> Region &amp; Language
         </div>
 
         <SettingRow
@@ -118,7 +134,8 @@ const AccountSettings = ({ userId, userProfile = {} }) => {
             value={settings.defaultJurisdiction}
             options={JURISDICTION_OPTIONS}
             onChange={v => update('defaultJurisdiction', v)}
-            icon={<MapPin size={12} />}
+            icon={<MapPin size={12} aria-hidden="true" />}
+            ariaLabel="Default jurisdiction"
           />
         </SettingRow>
 
@@ -130,7 +147,8 @@ const AccountSettings = ({ userId, userProfile = {} }) => {
             value={settings.language}
             options={LANGUAGE_OPTIONS}
             onChange={v => update('language', v)}
-            icon={<Languages size={12} />}
+            icon={<Languages size={12} aria-hidden="true" />}
+            ariaLabel="Display language"
           />
         </SettingRow>
       </div>
@@ -158,27 +176,26 @@ const Switch = ({ on, onToggle }) => (
     type="button"
     className={`account-switch ${on ? 'is-on' : ''}`}
     onClick={onToggle}
-    aria-pressed={on}
+    role="switch"
+    aria-checked={on}
     aria-label={on ? 'Enabled — tap to disable' : 'Disabled — tap to enable'}
   >
-    <span className="account-switch__thumb" />
+    <span className="account-switch__thumb" aria-hidden="true" />
   </button>
 );
 
-// Lightweight native-looking select with custom chrome. Uses a real <select>
-// underneath for accessibility — looks like a pill with a chevron.
-const Select = ({ value, options, onChange, icon }) => (
+const Select = ({ value, options, onChange, icon, ariaLabel }) => (
   <label className="account-select">
     {icon}
     <span className="account-select__value">{value}</span>
-    <svg className="account-select__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg className="account-select__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
       <path d="M6 9l6 6 6-6" />
     </svg>
     <select
       value={value}
       onChange={e => onChange(e.target.value)}
       className="account-select__native"
-      aria-label="Select option"
+      aria-label={ariaLabel || 'Select option'}
     >
       {options.map(opt => (
         <option key={opt} value={opt}>{opt}</option>
