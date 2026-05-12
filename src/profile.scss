@@ -728,3 +728,33 @@
   max-width: 100% !important;
   min-width: 0 !important;
 }
+
+// =============================================================================
+// Profile page width lock
+// =============================================================================
+
+.profile-container > .profile-hero,
+.profile-container > .profile-section,
+.profile-container > .profile-danger {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.profile-section {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.profile-section__head,
+.profile-vote-card,
+.profile-section > .referral-card,
+.profile-section > .theme-picker,
+.profile-section > .account-settings {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
