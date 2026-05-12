@@ -22,7 +22,7 @@ $unis-blue: var(--unis-primary);
       0 2px 8px rgba(0, 0, 0, 0.2);
     min-width: 320px;
     overflow: hidden;
-    animation: flashingBlueBorder 1.5s ease-in-out infinite;
+    animation: flashingThemeBorder 1.5s ease-in-out infinite;
 
     // --- Ambient blurred image background ---
     .ambient-bg {
@@ -107,22 +107,22 @@ $unis-blue: var(--unis-primary);
   font-weight: 600 !important;
 }
 
-@keyframes flashingBlueBorder {
-  0%, 100% {
-    border-color: transparent;
-    box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.4),
-      0 2px 8px rgba(0, 0, 0, 0.2);
+  @keyframes flashingThemeBorder {
+    0%, 100% {
+      border-color: transparent;
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    50% {
+      border-color: var(--unis-primary);
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        0 0 20px var(--unis-primary),
+        inset 0 0 20px var(--unis-primary);
+    }
   }
-  50% {
-    border-color: #007bff;
-    box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.4),
-      0 2px 8px rgba(0, 0, 0, 0.2),
-      0 0 20px rgba(0, 123, 255, 0.6),
-      inset 0 0 20px rgba(0, 123, 255, 0.1);
-  }
-}
 
 @keyframes slideIn {
   from { transform: translateX(-120%); opacity: 0; }

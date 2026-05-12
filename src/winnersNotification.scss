@@ -12,7 +12,7 @@ $unis-blue: var(--unis-primary);
     display: flex;
     align-items: center;
     position: relative;
-    background: linear-gradient(135deg, rgba(139, 0, 139, 0.95), rgba(75, 0, 130, 0.95)); // Purple gradient
+    background: linear-gradient(135deg, rgba(139, 0, 139, 0.95), $unis-blue); 
     backdrop-filter: blur(10px);
     border-radius: 16px;
     padding: 16px;
