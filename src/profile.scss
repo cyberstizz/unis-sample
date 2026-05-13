@@ -755,3 +755,29 @@
   max-width: 100%;
   min-width: 0;
 }
+
+.profile-section,
+.profile-section > *,
+.profile-section > .referral-card,
+.profile-section > .referral-code-card,
+.profile-section > .theme-picker,
+.profile-section > .theme-picker-card,
+.profile-section > .account-settings,
+.profile-section > .account-settings-card,
+.profile-section__head,
+.profile-vote-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* If the 80% is on an inner wrapper div inside those components */
+.profile-section div[class*="card"],
+.profile-section div[class*="picker"],
+.profile-section div[class*="settings"] {
+  width: 100% !important;
+  max-width: 100% !important;
+}
