@@ -1,4 +1,3 @@
-// src/components/QueuePanel.jsx
 import React, { useContext, useState } from 'react';
 import { PlayerContext } from './context/playercontext';
 import { X, GripVertical, Trash2, Save, ListX, Shuffle } from 'lucide-react';
@@ -75,8 +74,9 @@ const QueuePanel = ({ open, onClose }) => {
 
   const formatDuration = (d) => {
     if (!d && d !== 0) return '';
-    const sec = Number(d);
-    if (isNaN(sec)) return '';
+    const ms = Number(d);
+    if (isNaN(ms)) return '';
+      const sec = ms / 1000;
     return `${Math.floor(sec / 60)}:${Math.floor(sec % 60).toString().padStart(2, '0')}`;
   };
 
