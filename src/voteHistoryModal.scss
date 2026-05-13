@@ -1,6 +1,5 @@
 // VoteHistoryModal.scss
 
-$primary-blue: #3b82f6;
 $bg-gray-900: #111827;
 $bg-gray-800: #1f2937;
 $bg-gray-700: #374151;
@@ -64,17 +63,17 @@ $unis-blue: var(--unis-primary);
     border-bottom: 1px solid $bg-gray-700;
     background: linear-gradient(180deg, $bg-gray-800 0%, $bg-gray-900 100%);
 
-    .header-icon {
-      width: 56px;
-      height: 56px;
-      background: linear-gradient(135deg, $primary-blue 0%, #2563eb 100%);
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 1rem;
-      color: $text-white;
-    }
+  .header-icon {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, var(--unis-primary) 0%, var(--unis-primary-2) 100%);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    color: $text-white;
+  }
 
     h2 {
       font-size: 1.5rem;
@@ -204,8 +203,8 @@ $unis-blue: var(--unis-primary);
 
   .vote-interval {
     font-size: 0.7rem;
-    color: $primary-blue;
-    background: rgba($primary-blue, 0.15);
+    color: var(--unis-primary-2);
+    background: var(--unis-primary-soft);
     padding: 4px 8px;
     border-radius: 6px;
     font-weight: 600;
