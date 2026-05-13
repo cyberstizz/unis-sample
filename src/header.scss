@@ -12,6 +12,10 @@ $text-dim:         #4a4a56;
 $border-subtle:    rgba(255, 255, 255, 0.06);
 $border-hover:     rgba(255, 255, 255, 0.12);
 $border-silver:    rgba(192, 192, 192, 0.15);
+$header-primary: var(--unis-primary);
+$header-primary-2: var(--unis-primary-2);
+$header-primary-soft: var(--unis-primary-soft);
+$header-primary-glow: var(--unis-primary-glow);
 
 $header-height: 75px;
 
@@ -267,11 +271,15 @@ $header-height: 75px;
   }
 
   &.active {
-    color: $unis-blue-bright;
-    background: rgba($unis-blue-bright, 0.1);
-    border: 1px solid rgba($unis-blue-bright, 0.18);
-    .nav-icon { opacity: 1; }
+    color: $header-primary-2;
+    background: $header-primary-soft;
+    border: 1px solid $header-primary-glow;
+
+    .nav-icon {
+      opacity: 1;
+    }
   }
+
 }
 
 // ─── DIVIDER ────────────────────────────────────────────────────
