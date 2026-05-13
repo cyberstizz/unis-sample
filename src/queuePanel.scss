@@ -88,9 +88,9 @@
     }
 
     &.qp-active {
-      background: rgba(22, 51, 135, 0.4);
-      border-color: rgba(22, 51, 135, 0.8);
-      color: #6b8cff;
+      background: color-mix(in srgb, var(--unis-primary) 40%, transparent);
+      border-color: color-mix(in srgb, var(--unis-primary) 80%, transparent);
+      color: color-mix(in srgb, var(--unis-primary) 50%, white);
     }
 
     &.qp-action-danger:hover:not(:disabled) {
@@ -267,7 +267,7 @@
     outline: none;
     box-sizing: border-box;
 
-    &:focus { border-color: rgba(22, 51, 135, 0.6); }
+    &:focus { border-color: color-mix(in srgb, var(--unis-primary) 60%, transparent); }
     &::placeholder { color: rgba(255, 255, 255, 0.3); }
   }
 
@@ -290,13 +290,13 @@
         &:hover { color: #fff; }
       }
 
-      &:last-child {
-        background: #163387;
+    &:last-child {
+        background: var(--unis-primary);
         color: #fff;
-        &:hover { background: #1e44a8; }
+        &:hover { filter: brightness(1.15); }
         &:disabled { opacity: 0.4; cursor: not-allowed; }
       }
-    }
+        }
   }
 }
 

@@ -381,7 +381,7 @@ $radius-sm: 6px;
 
     &:hover {
       transform: scale(1.05);
-      background-color: #1c41ad;
+      filter: brightness(1.15);
     }
 
     &:active {
