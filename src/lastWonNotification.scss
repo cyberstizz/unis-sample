@@ -8,8 +8,10 @@ $text-primary: #f0f0f2;
 $text-secondary: rgba(255, 255, 255, 0.55);
 $text-tertiary: rgba(255, 255, 255, 0.35);
 $unis-blue: var(--unis-primary);
-$unis-blue-hover: #1c41ad;
-$accent-blue: #4ea8f5;
+$unis-blue-hover: var(--unis-primary-2);
+$accent-blue: var(--unis-primary-2);
+$accent-soft: var(--unis-primary-soft);
+$accent-glow: var(--unis-primary-glow);
 
 // ═══════════════════════════════════════
 //  OVERLAY
@@ -141,7 +143,7 @@ $accent-blue: #4ea8f5;
 .lwn-hero-placeholder {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(22, 51, 135, 0.3), rgba(78, 168, 245, 0.1));
+  background: linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.03));
 }
 
 // Gradient fade from image into card background (ambient override via inline style)
@@ -225,9 +227,9 @@ $accent-blue: #4ea8f5;
   width: fit-content;
 
   // Fallback colors — inline styles override
-  background: rgba(78, 168, 245, 0.12);
-  border: 1px solid rgba(78, 168, 245, 0.25);
-  color: #6ab8ff;
+  background: $accent-soft;
+  border: 1px solid $accent-glow;
+  color: $accent-blue;
 
   opacity: 0;
   transform: translateX(-60px);
@@ -398,7 +400,7 @@ $accent-blue: #4ea8f5;
   &:hover {
     background: $unis-blue-hover;
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(22, 51, 135, 0.4);
+    box-shadow: 0 8px 24px $accent-glow;
   }
 
   &:active {
@@ -450,8 +452,8 @@ $accent-blue: #4ea8f5;
 .lwn-pfill {
   height: 100%;
   transition: width 0.1s linear;
-  // Background set via inline style from React using ambient color
-  background: linear-gradient(90deg, #163387, #4ea8f5); // fallback
+    // Background may be overridden inline by React using ambient color
+  background: linear-gradient(90deg, var(--unis-primary), var(--unis-primary-2));
 }
 
 // ═══════════════════════════════════════
