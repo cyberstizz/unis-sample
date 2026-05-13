@@ -18,16 +18,16 @@
       align-items: center;
     }
 
-    @media (max-width: 1100px) {
-      padding: 2rem 18px;
-      gap: 48px;
-    }
+     @media (max-width: 1100px) {
+    padding: 0.75rem 18px;
+    gap: 48px;
+  }
 
-    @media (max-width: 800px) {
-      padding: 1rem 16px 4rem;
-      margin: 14% auto 0;
-      gap: 36px;
-    }
+  @media (max-width: 800px) {
+    padding: 0.5rem 16px 4rem;   // ← was 1rem 0 4rem
+    margin: 0 auto;               // ← was 14% auto 0
+    gap: 36px;
+  }
   }
 
 .profile-fullscreen-msg {
