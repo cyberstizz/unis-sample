@@ -783,4 +783,18 @@ $text-gray: #A9A9A9;
     flex-wrap: wrap;
     gap: 4px;
   }
+
+    .ghost-select-wrapper {
+    padding: 5px 10px 5px 12px;
+    margin-left: 3px;
+  }
+
+  .ghost-select-label {
+    font-size: 0.92rem;
+  }
+
+  .ghost-select-arrow {
+    margin-left: 5px;
+  }
+  
 }
