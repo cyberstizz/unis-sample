@@ -497,19 +497,49 @@
 // VOTE HISTORY CARD
 // =============================================================================
 .profile-vote-card {
-  background: var(--unis-panel);
+  background:
+    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.015) 48%, transparent),
+    var(--unis-panel);
   border: 1px solid var(--unis-border);
   border-radius: var(--unis-radius);
   padding: 28px;
-  transition: border-color 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.2s;
   width: 100%;
+  position: relative;
+  overflow: hidden;
 
-  &:hover { border-color: var(--unis-border-hi); }
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      520px 220px at 0% 0%,
+      var(--unis-primary-soft),
+      transparent 62%
+    );
+    pointer-events: none;
+    opacity: 0.9;
+  }
 
-  @media (max-width: 600px) { padding: 20px; }
+  &:hover {
+    border-color: var(--unis-border-hi);
+    box-shadow:
+      0 14px 36px -26px var(--unis-primary-glow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 600px) {
+    padding: 20px;
+  }
 }
 
 .profile-vote-summary {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 24px;
@@ -524,25 +554,37 @@
   &__number {
     font-family: var(--unis-font-sans);
     font-size: 64px;
-    font-weight: 800;
-    letter-spacing: -0.04em;
+    font-weight: 900;
+    letter-spacing: -0.055em;
     line-height: 1;
-    background: linear-gradient(180deg, #ffffff, #88a4d8);
+
+    background: linear-gradient(
+      180deg,
+      #ffffff 0%,
+      var(--unis-primary-2) 52%,
+      var(--unis-primary) 100%
+    );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
 
-    @media (max-width: 600px) { font-size: 48px; }
+    filter: drop-shadow(0 0 18px var(--unis-primary-glow));
+
+    @media (max-width: 600px) {
+      font-size: 48px;
+    }
   }
 
-  &__text { min-width: 0; }
+  &__text {
+    min-width: 0;
+  }
 
   &__label {
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--unis-text-3);
+    color: var(--unis-primary-2);
     margin-bottom: 6px;
   }
 
