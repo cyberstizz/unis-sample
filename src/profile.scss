@@ -481,11 +481,7 @@
   box-sizing: border-box;
 }
 
-// Safety override for nested cards/components that may define their own max-width.
-.profile-section > :not(.profile-section__head) > * {
-  max-width: none;
-  box-sizing: border-box;
-}
+
 
   .profile-section {
     .referral-code-card,
@@ -748,7 +744,7 @@
 .profile-section {
   width: 100%;
   max-width: 100%;
-  min-width: 0;
+  min-width: 100%;
   align-self: stretch;
 }
 
