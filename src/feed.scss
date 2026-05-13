@@ -483,6 +483,19 @@ $text-gray: #A9A9A9;
 
   &:hover .card-title {
     color: $unis-blue;
+
+      .card-play-count {
+        background: linear-gradient(
+          135deg,
+          var(--unis-primary),
+          var(--unis-primary-2)
+        );
+        color: #ffffff;
+        border-color: rgba(255, 255, 255, 0.22);
+        box-shadow:
+          0 8px 20px -10px var(--unis-primary-glow),
+          inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      }
   }
 }
 
@@ -596,7 +609,54 @@ $text-gray: #A9A9A9;
   transition: color 0.2s;
 }
 
+.card-subrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.card-play-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border-radius: 999px;
+
+  background: var(--unis-primary-soft);
+  border: 1px solid var(--unis-primary-glow);
+  color: var(--unis-primary-2);
+
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.01em;
+
+  box-shadow:
+    0 6px 16px -12px var(--unis-primary-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  pointer-events: none;
+
+  svg {
+    width: 10px;
+    height: 10px;
+    fill: currentColor;
+    opacity: 0.9;
+    flex-shrink: 0;
+  }
+
+  span {
+    line-height: 1;
+  }
+}
+
 .card-artist {
+  min-width: 0;
+  flex: 1;
   font-size: 12.5px;
   color: $text-secondary;
   white-space: nowrap;
@@ -796,5 +856,5 @@ $text-gray: #A9A9A9;
   .ghost-select-arrow {
     margin-left: 5px;
   }
-  
+
 }

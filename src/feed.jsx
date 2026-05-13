@@ -121,6 +121,20 @@ const Feed = () => {
     return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
   };
 
+  const formatPlayCount = (count) => {
+    const value = Number(count) || 0;
+
+    if (value >= 1_000_000) {
+      return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
+    }
+
+    if (value >= 1_000) {
+      return `${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}K`;
+    }
+
+    return `${value}`;
+  };
+
   const normalizeMedia = useCallback((items) => (items || []).map(item => ({
     id: item.songId || item.videoId,
     title: item.title,
@@ -397,15 +411,32 @@ const Feed = () => {
                   </div>
                   <div className="card-info">
                     <div className="card-title">{item.title}</div>
-                    <div 
-                      className="card-artist"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown');
-                      }}
-                    >
-                      {item.artistData?.username || item.artist || 'Unknown'}
+
+                    <div className="card-subrow">
+                      <div
+                        className="card-artist"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown');
+                        }}
+                      >
+                        {item.artistData?.username || item.artist || 'Unknown'}
+                      </div>
+
+                      <div className="card-play-count" title={`${item.playCount || 0} total plays`}>
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="11"
+                          height="11"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                        <span>{formatPlayCount(item.playCount)}</span>
+                      </div>
                     </div>
+
                     {item.createdAt && (
                       <div className="card-meta">{formatTimeAgo(item.createdAt)}</div>
                     )}
@@ -449,15 +480,32 @@ const Feed = () => {
                   </div>
                   <div className="card-info">
                     <div className="card-title">{item.title}</div>
-                    <div 
-                      className="card-artist"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown');
-                      }}
-                    >
-                      {item.artistData?.username || item.artist || 'Unknown'}
+
+                    <div className="card-subrow">
+                      <div
+                        className="card-artist"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown');
+                        }}
+                      >
+                        {item.artistData?.username || item.artist || 'Unknown'}
+                      </div>
+
+                      <div className="card-play-count" title={`${item.playCount || 0} total plays`}>
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="11"
+                          height="11"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                        <span>{formatPlayCount(item.playCount)}</span>
+                      </div>
                     </div>
+
                     {item.createdAt && (
                       <div className="card-meta">{formatTimeAgo(item.createdAt)}</div>
                     )}
