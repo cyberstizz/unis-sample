@@ -1,34 +1,28 @@
-// VoteHistoryModal.scss
-
-$bg-gray-900: #111827;
-$bg-gray-800: #1f2937;
-$bg-gray-700: #374151;
-$text-white: #ffffff;
-$text-gray-300: #d1d5db;
-$text-gray-400: #9ca3af;
-$text-gray-500: #6b7280;
-$unis-blue: var(--unis-primary);
+// VoteHistoryModal.scss — theme-aware Unis modal
 
 .vote-history-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
+  background:
+    radial-gradient(circle at 50% 20%, var(--unis-primary-soft), transparent 42%),
+    rgba(0, 0, 0, 0.72);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1100;
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--unis-font-sans);
   animation: fadeIn 0.2s ease;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
 }
 
 .vote-history-modal {
-  background: $bg-gray-900;
-  border: 1px solid $bg-gray-700;
-  border-radius: 16px;
+  background:
+    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.01) 42%, transparent),
+    var(--unis-panel);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-lg);
   width: 90%;
   max-width: 520px;
   max-height: 80vh;
@@ -37,79 +31,117 @@ $unis-blue: var(--unis-primary);
   position: relative;
   animation: slideUp 0.3s ease;
   overflow: hidden;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.035),
+    0 0 38px -20px var(--unis-primary-glow);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(500px 260px at 50% 0%, var(--unis-primary-soft), transparent 68%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 34%);
+    pointer-events: none;
+    z-index: 0;
+  }
 
   .close-button {
     position: absolute;
     top: 16px;
     right: 16px;
-    background: $bg-gray-800;
-    border: none;
-    color: $text-gray-400;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid var(--unis-border);
+    color: var(--unis-text-3);
     cursor: pointer;
     padding: 8px;
-    border-radius: 8px;
-    transition: all 0.2s;
+    border-radius: var(--unis-radius-sm);
+    transition:
+      background 0.18s ease,
+      border-color 0.18s ease,
+      color 0.18s ease,
+      transform 0.18s ease;
     z-index: 10;
 
     &:hover {
-      background: $bg-gray-700;
-      color: $text-white;
+      background: var(--unis-primary-soft);
+      border-color: var(--unis-primary-glow);
+      color: var(--unis-text);
+      transform: scale(1.04);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--unis-primary-glow);
+      outline-offset: 3px;
     }
   }
 
   .modal-header {
+    position: relative;
+    z-index: 1;
     padding: 2rem 2rem 1.5rem;
     text-align: center;
-    border-bottom: 1px solid $bg-gray-700;
-    background: linear-gradient(180deg, $bg-gray-800 0%, $bg-gray-900 100%);
+    border-bottom: 1px solid var(--unis-border);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+      linear-gradient(135deg, var(--unis-primary-soft), transparent 58%);
+  }
 
   .header-icon {
     width: 56px;
     height: 56px;
     background: linear-gradient(135deg, var(--unis-primary) 0%, var(--unis-primary-2) 100%);
-    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 1rem;
-    color: $text-white;
+    color: #ffffff;
+    box-shadow:
+      0 12px 28px -12px var(--unis-primary-glow),
+      0 0 0 4px var(--unis-primary-soft),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
   }
 
-    h2 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: $text-white;
-      margin: 0 0 0.25rem;
-    }
+  h2 {
+    font-family: var(--unis-font-sans);
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--unis-text);
+    margin: 0 0 0.25rem;
+  }
 
-    .modal-subtitle {
-      font-size: 0.875rem;
-      color: $text-gray-400;
-      margin: 0;
-    }
+  .modal-subtitle {
+    font-size: 0.875rem;
+    color: var(--unis-text-3);
+    margin: 0;
   }
 
   .votes-container {
+    position: relative;
+    z-index: 1;
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
 
-    // Custom scrollbar
     &::-webkit-scrollbar {
       width: 6px;
     }
 
     &::-webkit-scrollbar-track {
-      background: $bg-gray-800;
-      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.035);
+      border-radius: 999px;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: $bg-gray-700;
-      border-radius: 3px;
+      background: var(--unis-border-hi);
+      border-radius: 999px;
 
       &:hover {
-        background: $text-gray-500;
+        background: var(--unis-primary-glow);
       }
     }
   }
@@ -119,14 +151,25 @@ $unis-blue: var(--unis-primary);
     align-items: center;
     justify-content: space-between;
     padding: 1rem;
-    background: $bg-gray-800;
-    border-radius: 12px;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
+      rgba(0, 0, 0, 0.16);
+    border: 1px solid var(--unis-border);
+    border-radius: var(--unis-radius-sm);
     margin-bottom: 0.75rem;
-    transition: all 0.2s ease;
+    transition:
+      background 0.18s ease,
+      border-color 0.18s ease,
+      transform 0.18s ease,
+      box-shadow 0.18s ease;
 
     &:hover {
-      background: $bg-gray-700;
+      background:
+        linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.035)),
+        rgba(0, 0, 0, 0.22);
+      border-color: var(--unis-border-hi);
       transform: translateX(4px);
+      box-shadow: 0 10px 24px -18px var(--unis-primary-glow);
     }
 
     &:last-child {
@@ -151,18 +194,23 @@ $unis-blue: var(--unis-primary);
     height: 48px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid $bg-gray-700;
+    border: 2px solid var(--unis-primary);
+    box-shadow:
+      0 0 0 4px var(--unis-primary-soft),
+      0 8px 18px rgba(0, 0, 0, 0.32);
   }
 
   .nominee-placeholder {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: $bg-gray-700;
+    background: linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--unis-border);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: $text-gray-500;
+    color: var(--unis-text-3);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.02);
   }
 
   .nominee-info {
@@ -173,18 +221,21 @@ $unis-blue: var(--unis-primary);
 
   .nominee-name {
     font-size: 0.95rem;
-    font-weight: 600;
-    color: $text-white;
+    font-weight: 700;
+    color: var(--unis-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    letter-spacing: -0.01em;
   }
 
   .nominee-type {
-    font-size: 0.75rem;
-    color: $text-gray-500;
+    font-size: 0.72rem;
+    color: var(--unis-text-3);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    margin-top: 2px;
   }
 
   .vote-right {
@@ -196,8 +247,8 @@ $unis-blue: var(--unis-primary);
 
   .vote-date {
     font-size: 0.875rem;
-    color: $text-gray-300;
-    font-weight: 500;
+    color: var(--unis-text-2);
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
 
@@ -205,38 +256,47 @@ $unis-blue: var(--unis-primary);
     font-size: 0.7rem;
     color: var(--unis-primary-2);
     background: var(--unis-primary-soft);
+    border: 1px solid var(--unis-primary-glow);
     padding: 4px 8px;
-    border-radius: 6px;
-    font-weight: 600;
+    border-radius: 999px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.08em;
     min-width: 70px;
     text-align: center;
+    box-shadow:
+      0 8px 18px -14px var(--unis-primary-glow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .empty-state {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 3rem 2rem;
-    color: $text-gray-500;
+    color: var(--unis-text-3);
     text-align: center;
 
     svg {
       margin-bottom: 1rem;
-      opacity: 0.5;
+      opacity: 0.55;
+      color: var(--unis-primary-2);
+      filter: drop-shadow(0 0 16px var(--unis-primary-glow));
     }
 
     p {
       font-size: 1.1rem;
-      font-weight: 600;
-      color: $text-gray-400;
+      font-weight: 700;
+      color: var(--unis-text-2);
       margin: 0 0 0.5rem;
     }
 
     span {
       font-size: 0.875rem;
+      color: var(--unis-text-3);
     }
   }
 }
@@ -251,6 +311,7 @@ $unis-blue: var(--unis-primary);
     opacity: 0;
     transform: translateY(20px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -262,18 +323,20 @@ $unis-blue: var(--unis-primary);
   .vote-history-modal {
     width: 95%;
     max-height: 85vh;
+    border-radius: var(--unis-radius);
 
     .modal-header {
       padding: 1.5rem 1.5rem 1rem;
+    }
 
-      .header-icon {
-        width: 48px;
-        height: 48px;
-      }
+    .header-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+    }
 
-      h2 {
-        font-size: 1.25rem;
-      }
+    h2 {
+      font-size: 1.25rem;
     }
 
     .votes-container {
@@ -293,7 +356,7 @@ $unis-blue: var(--unis-primary);
     .vote-right {
       flex: 1 1 100%;
       justify-content: space-between;
-      padding-left: 60px; // Align with text (48px image + 12px gap)
+      padding-left: 60px;
     }
 
     .nominee-image,
