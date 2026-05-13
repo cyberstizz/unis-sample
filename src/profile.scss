@@ -746,6 +746,11 @@
   align-self: stretch;
 }
 
+.profile-container > .profile-section {
+  align-self: stretch !important;
+  justify-self: stretch !important;
+}
+
 .profile-section__head,
 .profile-vote-card,
 .profile-section > .referral-card,
@@ -753,7 +758,6 @@
 .profile-section > .account-settings {
   width: 100%;
   max-width: 100%;
-  min-width: 0;
 }
 
 .profile-section,
@@ -780,4 +784,26 @@
 .profile-section div[class*="settings"] {
   width: 100% !important;
   max-width: 100% !important;
+}
+
+// ---------------------------------------------------------------------------
+// KILL-SWITCH: higher specificity than the mystery 80% rule
+// ---------------------------------------------------------------------------
+html body .profile-container section.profile-section {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Also force the children that live inside it */
+html body .profile-container section.profile-section > .referral-card,
+html body .profile-container section.profile-section > .referral-code-card,
+html body .profile-container section.profile-section > .theme-picker,
+html body .profile-container section.profile-section > .theme-picker-card,
+html body .profile-container section.profile-section > .account-settings,
+html body .profile-container section.profile-section > .account-settings-card,
+html body .profile-container section.profile-section > .profile-vote-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
 }
