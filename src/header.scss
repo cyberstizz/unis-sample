@@ -41,7 +41,7 @@ $header-height: 75px;
       90deg,
       transparent 5%,
       rgba($unis-silver, 0.15) 25%,
-      rgba($unis-blue-bright, 0.2) 50%,
+      var(--unis-primary-glow) 50%,
       rgba($unis-silver, 0.15) 75%,
       transparent 95%
     );
