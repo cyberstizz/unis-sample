@@ -1,12 +1,14 @@
-// lastWonNotification.scss — v5: Refined premium proportions
+// lastWonNotification.scss — v6: Theme-aware award date callout
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+
 // ═══════════════════════════════════════
 //  DESIGN TOKENS
 // ═══════════════════════════════════════
 $text-primary: #f0f0f2;
 $text-secondary: rgba(255, 255, 255, 0.55);
 $text-tertiary: rgba(255, 255, 255, 0.35);
+
 $unis-blue: var(--unis-primary);
 $unis-blue-hover: var(--unis-primary-2);
 $accent-blue: var(--unis-primary-2);
@@ -30,18 +32,17 @@ $accent-glow: var(--unis-primary-glow);
 
   &.lwn-visible {
     opacity: 1;
-    // Note: pointer-events stays 'none' on overlay itself
 
     .lwn-card {
       transform: translateY(0) scale(1);
       opacity: 1;
-      pointer-events: auto; // But the card itself IS clickable
+      pointer-events: auto;
     }
   }
 }
 
 // ═══════════════════════════════════════
-//  CARD — wider, more premium proportions
+//  CARD
 // ═══════════════════════════════════════
 .lwn-card {
   width: 480px;
@@ -52,17 +53,16 @@ $accent-glow: var(--unis-primary-glow);
   position: relative;
   transform: translateY(50px) scale(0.92);
   opacity: 0;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.5s ease;
+  transition:
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.5s ease;
   display: flex;
   flex-direction: column;
-
-  // Dark fallback when ambient color hasn't loaded yet
   background: #0a0a0c;
 }
 
 // ═══════════════════════════════════════
-//  AMBIENT GLOW — color extracted from artwork, applied via inline styles
+//  AMBIENT GLOW
 // ═══════════════════════════════════════
 .lwn-ambient-glow {
   position: absolute;
@@ -101,7 +101,6 @@ $accent-glow: var(--unis-primary-glow);
   animation-delay: -1s;
 }
 
-// Full card ambient tint overlay
 .lwn-ambient-tint {
   position: absolute;
   inset: 0;
@@ -113,17 +112,29 @@ $accent-glow: var(--unis-primary-glow);
 }
 
 @keyframes ambientPulse {
-  0% { opacity: 0.5; transform: scale(1); }
-  100% { opacity: 0.8; transform: scale(1.05); }
+  0% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 @keyframes ambientFadeIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
 
 // ═══════════════════════════════════════
-//  HERO — artwork at top, more proportional
+//  HERO
 // ═══════════════════════════════════════
 .lwn-hero {
   position: relative;
@@ -143,29 +154,42 @@ $accent-glow: var(--unis-primary-glow);
 .lwn-hero-placeholder {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.03));
+  background: linear-gradient(
+    135deg,
+    var(--unis-primary-soft),
+    rgba(255, 255, 255, 0.03)
+  );
 }
 
-// Gradient fade from image into card background (ambient override via inline style)
 .lwn-hero-fade {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   height: 70%;
-  background: linear-gradient(to top, #0a0a0c 0%, rgba(10, 10, 12, 0.6) 40%, transparent 100%);
+  background: linear-gradient(
+    to top,
+    #0a0a0c 0%,
+    rgba(10, 10, 12, 0.6) 40%,
+    transparent 100%
+  );
   pointer-events: none;
 }
 
-// Subtle vignette around edges
 .lwn-hero-vignette {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
+  background: radial-gradient(
+    ellipse at center,
+    transparent 50%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
   pointer-events: none;
 }
 
-// ── Close button ──
+// ═══════════════════════════════════════
+//  CLOSE BUTTON
+// ═══════════════════════════════════════
 .lwn-close {
   position: absolute;
   top: 16px;
@@ -198,13 +222,11 @@ $accent-glow: var(--unis-primary-glow);
   display: flex;
   flex-direction: column;
   flex: 1;
-  margin-top: -40px; // Overlap into the hero fade
+  margin-top: -40px;
   position: relative;
   z-index: 2;
 }
 
-// ── Unis logo ──
-// ── Unis logo ──
 .lwn-logo {
   height: 40px;
   width: auto;
@@ -215,7 +237,7 @@ $accent-glow: var(--unis-primary-glow);
 }
 
 // ═══════════════════════════════════════
-//  BADGE — handwritten brush-script reveal
+//  BADGE
 // ═══════════════════════════════════════
 .lwn-tag {
   display: inline-flex;
@@ -226,14 +248,15 @@ $accent-glow: var(--unis-primary-glow);
   margin-bottom: 10px;
   width: fit-content;
 
-  // Fallback colors — inline styles override
   background: $accent-soft;
   border: 1px solid $accent-glow;
   color: $accent-blue;
 
   opacity: 0;
   transform: translateX(-60px);
-  transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.5s ease,
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 
   &.lwn-tag-visible {
     opacity: 1;
@@ -274,34 +297,64 @@ $accent-glow: var(--unis-primary-glow);
 }
 
 // ═══════════════════════════════════════
-//  DATE — fades in 1.5s after badge
+//  DATE CALLOUT
 // ═══════════════════════════════════════
-.lwn-date {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  color: $text-tertiary;
-  margin-bottom: 8px;
-
+.lwn-date-callout {
+  margin: 4px 0 16px;
   opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transform: translateY(10px) scale(0.98);
+  transition:
+    opacity 0.55s ease,
+    transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
 
   &.lwn-date-visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
+.lwn-date-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(32px, 7vw, 52px);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+
+  background-image: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    var(--unis-primary-2) 50%,
+    var(--unis-primary) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+
+  filter: drop-shadow(0 0 18px var(--unis-primary-glow));
+}
+
+.lwn-date {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  color: $text-tertiary;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
 // ═══════════════════════════════════════
-//  TITLE + ARTIST — refined, less shouty
+//  TITLE + ARTIST
 // ═══════════════════════════════════════
 .lwn-title-block {
   margin-bottom: 12px;
 
   opacity: 0;
   transform: translateY(20px);
-  transition: opacity 0.6s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.6s ease,
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 
   &.lwn-title-visible {
     opacity: 1;
@@ -317,7 +370,6 @@ $accent-glow: var(--unis-primary-glow);
   letter-spacing: -0.6px;
   line-height: 1.1;
   margin: 0 0 4px;
-  // Allow wrapping for long titles
   overflow-wrap: break-word;
   word-break: break-word;
 }
@@ -351,7 +403,9 @@ $accent-glow: var(--unis-primary-glow);
 
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s;
+  transition:
+    opacity 0.5s ease 0.1s,
+    transform 0.5s ease 0.1s;
 
   &.lwn-jurisdiction-visible {
     opacity: 1;
@@ -360,17 +414,19 @@ $accent-glow: var(--unis-primary-glow);
 }
 
 // ═══════════════════════════════════════
-//  ACTIONS — side-by-side pills (Kimi-style)
+//  ACTIONS
 // ═══════════════════════════════════════
 .lwn-actions {
   display: flex;
-  flex-direction: row-reverse; // Primary action on right
+  flex-direction: row-reverse;
   gap: 10px;
   margin-top: auto;
 
   opacity: 0;
   transform: translateY(16px);
-  transition: opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s;
+  transition:
+    opacity 0.5s ease 0.15s,
+    transform 0.5s ease 0.15s;
 
   &.lwn-actions-visible {
     opacity: 1;
@@ -452,7 +508,6 @@ $accent-glow: var(--unis-primary-glow);
 .lwn-pfill {
   height: 100%;
   transition: width 0.1s linear;
-    // Background may be overridden inline by React using ambient color
   background: linear-gradient(90deg, var(--unis-primary), var(--unis-primary-2));
 }
 
@@ -475,6 +530,10 @@ $accent-glow: var(--unis-primary-glow);
     padding: 0 22px 22px;
   }
 
+  .lwn-date-label {
+    font-size: clamp(32px, 13vw, 48px);
+  }
+
   .lwn-title {
     font-size: 30px;
   }
@@ -483,7 +542,6 @@ $accent-glow: var(--unis-primary-glow);
     font-size: 17px;
   }
 
-  // On narrow phones, stack the buttons (side-by-side gets cramped)
   .lwn-actions {
     flex-direction: column;
   }
@@ -492,6 +550,10 @@ $accent-glow: var(--unis-primary-glow);
 @media (max-width: 360px) {
   .lwn-hero {
     height: 180px;
+  }
+
+  .lwn-date-label {
+    font-size: 38px;
   }
 
   .lwn-title {

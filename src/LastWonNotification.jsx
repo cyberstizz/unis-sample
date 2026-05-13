@@ -67,33 +67,71 @@ const todayInEst = () => {
 
 const toDisplayDate = (dateStr) => {
   if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const d = new Date(`${dateStr}T00:00:00`);
+  return d.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 };
 
 const toWeeklyRange = (dateStr) => {
   if (!dateStr) return '';
-  const end = new Date(dateStr + 'T00:00:00');
+
+  const end = new Date(`${dateStr}T00:00:00`);
   const start = new Date(end);
   start.setDate(start.getDate() - 6);
+
   const sameMonth = start.getMonth() === end.getMonth();
-  const startStr = start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  const startStr = start.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+  });
   const endDay = end.getDate();
   const year = end.getFullYear();
+
   if (sameMonth) return `${startStr} – ${endDay}, ${year}`;
-  const endStr = end.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+
+  const endStr = end.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+  });
+
   return `${startStr} – ${endStr}, ${year}`;
 };
 
+const getAwardDateLabel = (categoryKey) => {
+  if (categoryKey === 'song-weekly') return 'LAST WEEK';
+  return 'YESTERDAY';
+};
+
 const CloseIcon = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 16, height: 16, stroke: 'rgba(255,255,255,0.7)', strokeWidth: 2, fill: 'none' }}>
+  <svg
+    viewBox="0 0 24 24"
+    style={{
+      width: 16,
+      height: 16,
+      stroke: 'rgba(255,255,255,0.7)',
+      strokeWidth: 2,
+      fill: 'none',
+    }}
+  >
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 
 const VoteIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
     <polyline points="22 4 12 14.01 9 11.01" />
   </svg>
@@ -105,29 +143,30 @@ const PlayIcon = () => (
   </svg>
 );
 
-  const LetterReveal = ({ text, baseDelay = 0.5 }) => (
-    <span className="lwn-tag-text">
-      {text.split('').map((ch, i) => (
-        <span
-          key={i}
-          className="lwn-tag-letter"
-          style={{ animationDelay: `${baseDelay + i * 0.045}s` }}
-        >
-          {ch === ' ' ? '\u00A0' : ch}
-        </span>
-      ))}
-    </span>
-  );
-
+const LetterReveal = ({ text, baseDelay = 0.5 }) => (
+  <span className="lwn-tag-text">
+    {text.split('').map((ch, i) => (
+      <span
+        key={i}
+        className="lwn-tag-letter"
+        style={{ animationDelay: `${baseDelay + i * 0.045}s` }}
+      >
+        {ch === ' ' ? '\u00A0' : ch}
+      </span>
+    ))}
+  </span>
+);
 
 const LastWonNotification = () => {
   const [visible, setVisible] = useState(false);
   const [notification, setNotification] = useState(null);
   const [animStage, setAnimStage] = useState(0); // 0=hidden, 1=badge slides in, 2=date appears, 3=title+rest
   const [ambientColor, setAmbientColor] = useState(null); // Extracted from artwork
+
   const navigate = useNavigate();
   const { playMedia } = useContext(PlayerContext);
   const { user } = useAuth();
+
   const timerRef = useRef(null);
   const progressRef = useRef(null);
   const progressIntervalRef = useRef(null);
@@ -138,6 +177,7 @@ const LastWonNotification = () => {
   const dismiss = useCallback(() => {
     setVisible(false);
     setAnimStage(0);
+
     if (timerRef.current) clearTimeout(timerRef.current);
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
   }, []);
@@ -151,6 +191,7 @@ const LastWonNotification = () => {
       const today = new Date();
       const thirtyDaysAgo = new Date(today);
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const endDate = toApiDate(today);
       const startDate = toApiDate(thirtyDaysAgo);
 
@@ -162,6 +203,7 @@ const LastWonNotification = () => {
                 method: 'get',
                 url: `/v1/awards/past?type=${cat.type}&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurisdictionId}&intervalId=${cat.intervalId}`,
               });
+
               // Defensive filter: reject awards dated in the future. Without
               // this, an award created prematurely by the backend cron
               // (UTC midnight = EST 7pm prior day) would appear here as a
@@ -170,18 +212,24 @@ const LastWonNotification = () => {
               const awards = (res.data || []).filter(
                 (a) => !a?.awardDate || a.awardDate <= cutoff
               );
+
               if (awards.length === 0) return null;
+
               const award = awards[0];
               let displayData = null;
 
               if (cat.type === 'song' && award.song) {
                 const isWeekly = cat.key === 'song-weekly';
+
                 displayData = {
                   category: cat,
                   title: award.song.title || 'Unknown Song',
                   artist: award.song.artist?.username || 'Unknown Artist',
                   jurisdiction: award.jurisdiction?.name || 'Unknown',
-                  date: isWeekly ? toWeeklyRange(award.awardDate) : toDisplayDate(award.awardDate),
+                  dateLabel: getAwardDateLabel(cat.key),
+                  date: isWeekly
+                    ? toWeeklyRange(award.awardDate)
+                    : toDisplayDate(award.awardDate),
                   image: buildUrl(award.song.artworkUrl) || buildUrl(award.song.artist?.photoUrl),
                   songData: award.song,
                   navigateTo: `/song/${award.song.songId || award.targetId}`,
@@ -192,11 +240,13 @@ const LastWonNotification = () => {
                   title: award.user.username || 'Unknown Artist',
                   artist: null,
                   jurisdiction: award.jurisdiction?.name || 'Unknown',
+                  dateLabel: getAwardDateLabel(cat.key),
                   date: toDisplayDate(award.awardDate),
                   image: buildUrl(award.user.photoUrl),
                   navigateTo: `/artist/${award.user.userId || award.targetId}`,
                 };
               }
+
               return displayData;
             } catch {
               return null;
@@ -206,20 +256,23 @@ const LastWonNotification = () => {
 
         const valid = results.filter(Boolean);
         if (valid.length === 0) return;
+
         const picked = valid[Math.floor(Math.random() * valid.length)];
         setNotification(picked);
 
         // Staggered reveal sequence
         setTimeout(() => {
           setVisible(true);
-          // Stage 1: badge slides in (on card appear)
+
+          // Stage 1: badge slides in
           setTimeout(() => setAnimStage(1), 400);
-          // Stage 2: date fades in (1.5s after badge)
+
+          // Stage 2: date callout appears
           setTimeout(() => setAnimStage(2), 1900);
+
           // Stage 3: title + artist + actions reveal
           setTimeout(() => setAnimStage(3), 2600);
         }, 1200);
-
       } catch (err) {
         console.error('LastWonNotification: Failed to fetch awards', err);
       }
@@ -234,20 +287,24 @@ const LastWonNotification = () => {
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
+
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
         canvas.width = 1;
         canvas.height = 1;
+
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, 1, 1);
+
         const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
         setAmbientColor(`${r}, ${g}, ${b}`);
       } catch (e) {
-        // CORS or canvas error — fall back to category default
+        // CORS or canvas error — fall back to theme-aware defaults
         console.warn('Ambient color extraction failed:', e);
       }
     };
+
     img.src = notification.image;
   }, [notification?.image]);
 
@@ -256,6 +313,7 @@ const LastWonNotification = () => {
     if (animStage < 3) return;
 
     const startTime = Date.now();
+
     progressIntervalRef.current = setInterval(() => {
       if (progressRef.current) {
         const elapsed = Date.now() - startTime;
@@ -281,6 +339,7 @@ const LastWonNotification = () => {
   const handleSecondary = (e) => {
     e.stopPropagation();
     dismiss();
+
     if (notification?.songData) {
       const song = notification.songData;
       const mediaObj = {
@@ -291,6 +350,7 @@ const LastWonNotification = () => {
         artist: song.artist?.username || 'Unknown',
         artwork: buildUrl(song.artworkUrl),
       };
+
       playMedia(mediaObj, [mediaObj]);
     } else if (notification?.navigateTo) {
       navigate(notification.navigateTo);
@@ -306,28 +366,40 @@ const LastWonNotification = () => {
   const cat = notification.category;
 
   return (
-    <div className={`lwn-overlay ${visible ? 'lwn-visible' : ''}`} onClick={handleOverlayClick}>
+    <div
+      className={`lwn-overlay ${visible ? 'lwn-visible' : ''}`}
+      onClick={handleOverlayClick}
+    >
       <div
         className="lwn-card"
-        style={ambientColor ? {
-          background: `linear-gradient(180deg, rgba(${ambientColor}, 0.15) 0%, rgba(${ambientColor}, 0.08) 30%, #0a0a0c 70%, #0a0a0c 100%)`
-        } : undefined}
+        style={
+          ambientColor
+            ? {
+                background: `linear-gradient(180deg, rgba(${ambientColor}, 0.15) 0%, rgba(${ambientColor}, 0.08) 30%, #0a0a0c 70%, #0a0a0c 100%)`,
+              }
+            : undefined
+        }
       >
-
         {/* Ambient glow layers — inline styles so rgb interpolation works */}
         {ambientColor && (
           <>
             <div
               className="lwn-ambient-glow lwn-ambient-glow-top"
-              style={{ background: `radial-gradient(circle, rgba(${ambientColor}, 0.4) 0%, transparent 70%)` }}
+              style={{
+                background: `radial-gradient(circle, rgba(${ambientColor}, 0.4) 0%, transparent 70%)`,
+              }}
             />
             <div
               className="lwn-ambient-glow lwn-ambient-glow-bottom"
-              style={{ background: `radial-gradient(circle, rgba(${ambientColor}, 0.25) 0%, transparent 70%)` }}
+              style={{
+                background: `radial-gradient(circle, rgba(${ambientColor}, 0.25) 0%, transparent 70%)`,
+              }}
             />
             <div
               className="lwn-ambient-glow lwn-ambient-glow-edge"
-              style={{ background: `linear-gradient(180deg, rgba(${ambientColor}, 0.15) 0%, transparent 60%)` }}
+              style={{
+                background: `linear-gradient(180deg, rgba(${ambientColor}, 0.15) 0%, transparent 60%)`,
+              }}
             />
           </>
         )}
@@ -336,24 +408,36 @@ const LastWonNotification = () => {
         {ambientColor && (
           <div
             className="lwn-ambient-tint"
-            style={{ background: `linear-gradient(180deg, rgba(${ambientColor}, 0.08) 0%, transparent 40%, rgba(${ambientColor}, 0.05) 100%)` }}
+            style={{
+              background: `linear-gradient(180deg, rgba(${ambientColor}, 0.08) 0%, transparent 40%, rgba(${ambientColor}, 0.05) 100%)`,
+            }}
           />
         )}
 
         {/* ── Hero artwork ── */}
         <div className="lwn-hero">
           {notification.image ? (
-            <img src={notification.image} alt={notification.title} className="lwn-hero-img" />
+            <img
+              src={notification.image}
+              alt={notification.title}
+              className="lwn-hero-img"
+            />
           ) : (
             <div className="lwn-hero-placeholder" />
           )}
+
           {/* Hero fade uses ambient color for seamless blend */}
           <div
             className="lwn-hero-fade"
-            style={ambientColor ? {
-              background: `linear-gradient(to top, rgba(10, 12, 24, 0.95) 0%, rgba(${ambientColor}, 0.2) 50%, transparent 100%)`
-            } : undefined}
+            style={
+              ambientColor
+                ? {
+                    background: `linear-gradient(to top, rgba(10, 12, 24, 0.95) 0%, rgba(${ambientColor}, 0.2) 50%, transparent 100%)`,
+                  }
+                : undefined
+            }
           />
+
           <div className="lwn-hero-vignette" />
 
           {/* Close button */}
@@ -364,8 +448,7 @@ const LastWonNotification = () => {
 
         {/* ── Content ── */}
         <div className="lwn-content">
-
-          {/* Unis logo — with ambient glow commented out for now and can easily be added back anytime*/}
+          {/* Unis logo — with ambient glow commented out for now and can easily be added back anytime */}
           {/* <img
             src={unisLogo}
             alt="UNIS"
@@ -376,29 +459,55 @@ const LastWonNotification = () => {
           {/* Badge — slides in from left */}
           <div
             className={`lwn-tag ${animStage >= 1 ? 'lwn-tag-visible' : ''}`}
-            style={ambientColor ? {
-              background: `rgba(${ambientColor}, 0.12)`,
-              borderColor: `rgba(${ambientColor}, 0.3)`,
-              color: `rgba(${ambientColor}, 1)`,
-              filter: `brightness(1.6)`
-            } : undefined}
+            style={
+              ambientColor
+                ? {
+                    background: `rgba(${ambientColor}, 0.12)`,
+                    borderColor: `rgba(${ambientColor}, 0.3)`,
+                    color: `rgba(${ambientColor}, 1)`,
+                    filter: 'brightness(1.6)',
+                  }
+                : undefined
+            }
           >
             {/* <span className="lwn-tag-icon">{cat.icon}</span> */}
             <LetterReveal text={cat.badge} baseDelay={0.5} />
           </div>
 
-          {/* Date — fades in after badge */}
-          <div className={`lwn-date ${animStage >= 2 ? 'lwn-date-visible' : ''}`}>
-            {notification.date}
+          {/* Date callout — bold context + supporting date */}
+          <div className={`lwn-date-callout ${animStage >= 2 ? 'lwn-date-visible' : ''}`}>
+            <div
+              className="lwn-date-label"
+              style={
+                ambientColor
+                  ? {
+                      backgroundImage: `linear-gradient(180deg, #ffffff 0%, rgba(${ambientColor}, 1) 52%, rgba(${ambientColor}, 0.72) 100%)`,
+                      filter: `drop-shadow(0 0 18px rgba(${ambientColor}, 0.35)) brightness(1.35)`,
+                    }
+                  : undefined
+              }
+            >
+              {notification.dateLabel}
+            </div>
+
+            <div className="lwn-date">{notification.date}</div>
           </div>
 
           {/* Title + artist — reveals after date */}
           <div className={`lwn-title-block ${animStage >= 3 ? 'lwn-title-visible' : ''}`}>
             <h2 className="lwn-title">{notification.title}</h2>
+
             {notification.artist && (
               <p
                 className="lwn-artist"
-                style={ambientColor ? { color: `rgb(${ambientColor})`, filter: 'brightness(1.5)' } : undefined}
+                style={
+                  ambientColor
+                    ? {
+                        color: `rgb(${ambientColor})`,
+                        filter: 'brightness(1.5)',
+                      }
+                    : undefined
+                }
               >
                 {notification.artist}
               </p>
@@ -416,6 +525,7 @@ const LastWonNotification = () => {
               <VoteIcon />
               Vote Now
             </button>
+
             <button className="lwn-btn-secondary" onClick={handleSecondary}>
               <PlayIcon />
               {cat.secondaryLabel}
@@ -432,7 +542,7 @@ const LastWonNotification = () => {
               width: '100%',
               background: ambientColor
                 ? `linear-gradient(90deg, rgba(${ambientColor}, 0.6), rgba(${ambientColor}, 1))`
-                : 'linear-gradient(90deg, #163387, #4ea8f5)'
+                : 'linear-gradient(90deg, var(--unis-primary), var(--unis-primary-2))',
             }}
           />
         </div>
