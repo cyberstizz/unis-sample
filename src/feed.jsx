@@ -216,50 +216,54 @@ const Feed = () => {
 
   const handlePlayMedia = async (e, media) => {
     e.stopPropagation();
-    
-    // Track guest listening for the AuthGateSheet nudge
+
+    // Track guest listening for the AuthGateSheet nudge.
+    // Real logged-in play tracking now happens inside Player.jsx after
+    // the listener reaches the playback threshold.
     if (isGuest) {
       incrementGateSongCount();
     }
 
     let playMediaObj = media;
+
     if (media.type === 'artist') {
       try {
-        const defaultRes = await apiCall({ method: 'get', url: `/v1/users/${media.artistData.userId}/default-song` });
+        const defaultRes = await apiCall({
+          method: 'get',
+          url: `/v1/users/${media.artistData.userId}/default-song`,
+        });
+
         playMediaObj = {
           type: 'song',
           id: defaultRes.data.songId,
+          songId: defaultRes.data.songId,
           url: buildUrl(defaultRes.data.fileUrl) || song1,
+          fileUrl: buildUrl(defaultRes.data.fileUrl) || song1,
           title: defaultRes.data.title || 'Default Track',
           artist: media.artistData?.username || media.artist,
+          artistId: media.artistData?.userId,
           artwork: buildUrl(defaultRes.data.artworkUrl) || media.artworkUrl,
+          artworkUrl: buildUrl(defaultRes.data.artworkUrl) || media.artworkUrl,
         };
       } catch (err) {
         console.error('Default song fetch error:', err);
-        playMediaObj = { 
-          type: 'song', 
-          id: 'default-fallback', 
-          url: song1, 
-          title: 'Default Track', 
+
+        playMediaObj = {
+          type: 'song',
+          id: 'default-fallback',
+          songId: 'default-fallback',
+          url: song1,
+          fileUrl: song1,
+          title: 'Default Track',
           artist: media.artistData?.username || media.artist,
-          artwork: media.artworkUrl
+          artistId: media.artistData?.userId,
+          artwork: media.artworkUrl,
+          artworkUrl: media.artworkUrl,
         };
       }
     }
 
-    // Track play — backend play endpoint is public, handles missing userId gracefully
-    try {
-      const baseEndpoint = playMediaObj.type === 'song' 
-        ? `/v1/media/song/${playMediaObj.id}/play`
-        : `/v1/media/video/${playMediaObj.id}/play`;
-      const endpoint = userId ? `${baseEndpoint}?userId=${userId}` : baseEndpoint;
-      await apiCall({ method: 'post', url: endpoint });
-    } catch (err) {
-      console.error('Failed to track play:', err);
-    }
-    
     requestPlay(playMediaObj);
-
   };
 
   const handleJurisdictionChange = (e) => {

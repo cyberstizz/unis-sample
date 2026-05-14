@@ -8,6 +8,7 @@ import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
 import VotingWizard from './votingWizard';
 import { apiCall } from './components/axiosInstance';
+import { useReward } from './context/RewardContext';
 import QueuePanel from './QueuePanel';
 import DownloadModal from './DownloadModal';
 import './player.scss';
@@ -91,6 +92,7 @@ const Player = () => {
 
   const { isGuest } = useAuth();
   const { triggerGate, gateProps } = useAuthGate();
+  const { showReward } = useReward();
 
   // --- LOCAL STATE ---
   const [isPlaying, setIsPlaying] = useState(false);
@@ -111,6 +113,8 @@ const Player = () => {
   const [userId, setUserId] = useState(null);
 
   const seekbarRef = useRef(null);
+  const playRewardedRef = useRef(false);
+  const activeRewardSongIdRef = useRef(null);
   const navigate = useNavigate();
 
   // --- DERIVE VOTING DATA ---
@@ -169,6 +173,64 @@ const Player = () => {
 
     return () => { isMounted = false; };
   }, [currentMedia?.id, currentMedia?.songId, userId]);
+
+  // Reward + track a real song play only after meaningful listening.
+  // This avoids awarding points for abandoned taps or instant skips.
+  useEffect(() => {
+    const songId = currentMedia?.id || currentMedia?.songId;
+
+    if (!songId || activeRewardSongIdRef.current === songId) return;
+
+    activeRewardSongIdRef.current = songId;
+    playRewardedRef.current = false;
+  }, [currentMedia?.id, currentMedia?.songId]);
+
+  useEffect(() => {
+    if (!currentMedia || isGuest || !userId || isVideo) return;
+
+    const songId = currentMedia.id || currentMedia.songId;
+    if (!songId || playRewardedRef.current) return;
+
+    const reachedMinimumTime = currentTime >= 15;
+    const reachedMeaningfulPercent =
+      duration > 0 && currentTime >= Math.min(duration * 0.25, 30);
+
+    if (!reachedMinimumTime && !reachedMeaningfulPercent) return;
+
+    playRewardedRef.current = true;
+
+    const trackRealPlay = async () => {
+      try {
+        await apiCall({
+          method: 'post',
+          url: `/v1/media/song/${songId}/play?userId=${userId}`,
+        });
+
+        showReward({
+          points: 1,
+          label: 'Play counted',
+          type: 'play',
+          anchor: 'player',
+        });
+      } catch (err) {
+        console.error('Failed to track rewarded play:', err);
+
+        // Allow retry if the backend failed.
+        playRewardedRef.current = false;
+      }
+    };
+
+    trackRealPlay();
+  }, [
+    currentMedia,
+    currentTime,
+    duration,
+    isGuest,
+    userId,
+    isVideo,
+    showReward,
+  ]);
+
 
   // 3. Navigation
   const handleNavigateToSong = (e) => {
@@ -252,22 +314,44 @@ const Player = () => {
 
   const handleLike = async (e) => {
     e.stopPropagation();
-    if (isGuest) { triggerGate('generic'); return; }
+
+    if (isGuest) {
+      triggerGate('generic');
+      return;
+    }
 
     const songId = currentMedia.id || currentMedia.songId;
+    if (!songId || !userId) return;
+
+    const wasLiked = isLiked;
+
     try {
       const res = await apiCall({
-        method: isLiked ? 'delete' : 'post',
-        url: `/v1/media/song/${songId}/like?userId=${userId}`
+        method: wasLiked ? 'delete' : 'post',
+        url: `/v1/media/song/${songId}/like?userId=${userId}`,
       });
+
       if (res.data.success) {
-        setIsLiked(!isLiked);
-        setLikeCount(prev => isLiked ? Math.max(0, prev - 1) : prev + 1);
+        const nextLiked = !wasLiked;
+
+        setIsLiked(nextLiked);
+        setLikeCount((prev) => (wasLiked ? Math.max(0, prev - 1) : prev + 1));
+
+        // Only reward adding a like, not removing one.
+        if (nextLiked) {
+          showReward({
+            points: 2,
+            label: 'Like counted',
+            type: 'like',
+            anchor: 'player',
+          });
+        }
       }
     } catch (err) {
       console.error('Like toggle failed:', err);
     }
   };
+
 
   const handleVoteClick = async (e) => {
     e.stopPropagation();
