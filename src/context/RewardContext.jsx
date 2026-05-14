@@ -15,24 +15,31 @@ const MAX_REWARDS_ON_SCREEN = 4;
 const createRewardId = () =>
   `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    export const useReward = () => {
-    const context = useContext(RewardContext);
+export const useReward = () => {
+  const context = useContext(RewardContext);
 
-    // Test-safe fallback.
-    // This prevents standalone component tests from crashing if they render
-    // Player, Feed, or VotingWizard without wrapping them in RewardProvider.
-    if (!context) {
-        return {
-        showReward: () => {},
-        };
-    }
-
-    return context;
+  // Test-safe fallback.
+  // This prevents standalone component tests from crashing if they render
+  // Player, Feed, VotingWizard, or UserScorePill without RewardProvider.
+  if (!context) {
+    return {
+      showReward: () => {},
+      displayedScore: null,
+      setScoreTotal: () => {},
+      lastScoreBump: null,
     };
+  }
+
+  return context;
+};
 
 export const RewardProvider = ({ children }) => {
   const [rewards, setRewards] = useState([]);
+  const [displayedScore, setDisplayedScore] = useState(null);
+  const [lastScoreBump, setLastScoreBump] = useState(null);
+
   const timeoutRefs = useRef({});
+  const scoreBumpTimeoutRef = useRef(null);
 
   const removeReward = useCallback((id) => {
     setRewards((prev) => prev.filter((reward) => reward.id !== id));
@@ -41,6 +48,14 @@ export const RewardProvider = ({ children }) => {
       clearTimeout(timeoutRefs.current[id]);
       delete timeoutRefs.current[id];
     }
+  }, []);
+
+  const setScoreTotal = useCallback((score) => {
+    const numericScore = Number(score);
+
+    if (!Number.isFinite(numericScore)) return;
+
+    setDisplayedScore(numericScore);
   }, []);
 
   const showReward = useCallback(
@@ -52,6 +67,7 @@ export const RewardProvider = ({ children }) => {
     }) => {
       if (!points && points !== 0) return;
 
+      const numericPoints = Number(points);
       const id = createRewardId();
 
       const reward = {
@@ -67,6 +83,23 @@ export const RewardProvider = ({ children }) => {
         return next.slice(-MAX_REWARDS_ON_SCREEN);
       });
 
+      if (Number.isFinite(numericPoints) && numericPoints > 0) {
+        setDisplayedScore((prev) => {
+          if (typeof prev !== 'number') return prev;
+          return prev + numericPoints;
+        });
+
+        setLastScoreBump(numericPoints);
+
+        if (scoreBumpTimeoutRef.current) {
+          clearTimeout(scoreBumpTimeoutRef.current);
+        }
+
+        scoreBumpTimeoutRef.current = window.setTimeout(() => {
+          setLastScoreBump(null);
+        }, 1500);
+      }
+
       timeoutRefs.current[id] = window.setTimeout(() => {
         removeReward(id);
       }, 2600);
@@ -75,7 +108,14 @@ export const RewardProvider = ({ children }) => {
   );
 
   return (
-    <RewardContext.Provider value={{ showReward }}>
+    <RewardContext.Provider
+      value={{
+        showReward,
+        displayedScore,
+        setScoreTotal,
+        lastScoreBump,
+      }}
+    >
       {children}
 
       <div
@@ -113,10 +153,10 @@ export const RewardProvider = ({ children }) => {
                 scale: 0.97,
                 filter: 'blur(2px)',
               }}
-            transition={{
-              duration: 0.9,
-              ease: [0.22, 1, 0.36, 1],
-            }}
+              transition={{
+                duration: 0.9,
+                ease: [0.22, 1, 0.36, 1],
+              }}
             >
               <span className="reward-pulse__points">+{reward.points}</span>
 
