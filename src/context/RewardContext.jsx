@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import '../reward-pulse.scss';
+import RewardScoreSync from './RewardScoreSync';
 
 const RewardContext = createContext(null);
 
@@ -201,6 +202,7 @@ export const RewardProvider = ({ children }) => {
             </motion.div>
           ))}
         </AnimatePresence>
+        <RewardScoreSync />
       </div>
     </RewardContext.Provider>
   );
