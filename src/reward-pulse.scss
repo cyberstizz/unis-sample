@@ -1,0 +1,126 @@
+.reward-pulse-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.reward-pulse {
+  position: fixed;
+  left: 50%;
+  bottom: calc(92px + (var(--reward-stack-index, 0) * 46px));
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.16),
+      rgba(255, 255, 255, 0.055)
+    ),
+    rgba(12, 14, 22, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 16px 44px rgba(0, 0, 0, 0.3),
+    0 0 28px rgba(255, 209, 102, 0.13);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  color: #fff;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.reward-pulse::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 14px currentColor;
+  opacity: 0.9;
+}
+
+.reward-pulse__points {
+  font-size: 0.94rem;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: #ffd166;
+}
+
+.reward-pulse__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.reward-pulse--default {
+  color: #ffd166;
+}
+
+.reward-pulse--play {
+  color: #8fffc1;
+}
+
+.reward-pulse--like {
+  color: #ff7aa8;
+}
+
+.reward-pulse--vote {
+  color: #8fd3ff;
+}
+
+.reward-pulse--support {
+  color: #ffd166;
+}
+
+.reward-pulse--referral {
+  color: #bda8ff;
+}
+
+.reward-pulse--center {
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+}
+
+.reward-pulse--player {
+  bottom: calc(92px + (var(--reward-stack-index, 0) * 46px));
+}
+
+.reward-pulse--header {
+  top: calc(76px + (var(--reward-stack-index, 0) * 46px));
+  bottom: auto;
+}
+
+@media (max-width: 700px) {
+  .reward-pulse {
+    bottom: calc(84px + (var(--reward-stack-index, 0) * 44px));
+    padding: 9px 12px;
+  }
+
+  .reward-pulse--header {
+    top: calc(68px + (var(--reward-stack-index, 0) * 44px));
+  }
+
+  .reward-pulse__points {
+    font-size: 0.88rem;
+  }
+
+  .reward-pulse__label {
+    font-size: 0.74rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reward-pulse {
+    transition: none;
+  }
+}
