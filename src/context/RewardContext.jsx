@@ -15,18 +15,29 @@ const MAX_REWARDS_ON_SCREEN = 4;
 const createRewardId = () =>
   `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+const formatScore = (score) => {
+  const value = Number(score) || 0;
+
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
+  }
+
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}K`;
+  }
+
+  return value.toLocaleString();
+};
+
 export const useReward = () => {
   const context = useContext(RewardContext);
 
   // Test-safe fallback.
-  // This prevents standalone component tests from crashing if they render
-  // Player, Feed, VotingWizard, or UserScorePill without RewardProvider.
   if (!context) {
     return {
       showReward: () => {},
-      displayedScore: null,
       setScoreTotal: () => {},
-      lastScoreBump: null,
+      displayedScore: null,
     };
   }
 
@@ -36,10 +47,8 @@ export const useReward = () => {
 export const RewardProvider = ({ children }) => {
   const [rewards, setRewards] = useState([]);
   const [displayedScore, setDisplayedScore] = useState(null);
-  const [lastScoreBump, setLastScoreBump] = useState(null);
 
   const timeoutRefs = useRef({});
-  const scoreBumpTimeoutRef = useRef(null);
 
   const removeReward = useCallback((id) => {
     setRewards((prev) => prev.filter((reward) => reward.id !== id));
@@ -52,7 +61,6 @@ export const RewardProvider = ({ children }) => {
 
   const setScoreTotal = useCallback((score) => {
     const numericScore = Number(score);
-
     if (!Number.isFinite(numericScore)) return;
 
     setDisplayedScore(numericScore);
@@ -64,11 +72,40 @@ export const RewardProvider = ({ children }) => {
       label = 'Points earned',
       type = 'default',
       anchor = 'player',
+      scoreBefore,
+      scoreAfter,
     }) => {
       if (!points && points !== 0) return;
 
       const numericPoints = Number(points);
       const id = createRewardId();
+
+      let resolvedScoreBefore = null;
+      let resolvedScoreAfter = null;
+
+      setDisplayedScore((prevScore) => {
+        const hasExplicitScore =
+          Number.isFinite(Number(scoreBefore)) &&
+          Number.isFinite(Number(scoreAfter));
+
+        if (hasExplicitScore) {
+          resolvedScoreBefore = Number(scoreBefore);
+          resolvedScoreAfter = Number(scoreAfter);
+          return resolvedScoreAfter;
+        }
+
+        if (
+          typeof prevScore === 'number' &&
+          Number.isFinite(numericPoints) &&
+          numericPoints > 0
+        ) {
+          resolvedScoreBefore = prevScore;
+          resolvedScoreAfter = prevScore + numericPoints;
+          return resolvedScoreAfter;
+        }
+
+        return prevScore;
+      });
 
       const reward = {
         id,
@@ -76,29 +113,14 @@ export const RewardProvider = ({ children }) => {
         label,
         type,
         anchor,
+        scoreBefore: resolvedScoreBefore,
+        scoreAfter: resolvedScoreAfter,
       };
 
       setRewards((prev) => {
         const next = [...prev, reward];
         return next.slice(-MAX_REWARDS_ON_SCREEN);
       });
-
-      if (Number.isFinite(numericPoints) && numericPoints > 0) {
-        setDisplayedScore((prev) => {
-          if (typeof prev !== 'number') return prev;
-          return prev + numericPoints;
-        });
-
-        setLastScoreBump(numericPoints);
-
-        if (scoreBumpTimeoutRef.current) {
-          clearTimeout(scoreBumpTimeoutRef.current);
-        }
-
-        scoreBumpTimeoutRef.current = window.setTimeout(() => {
-          setLastScoreBump(null);
-        }, 1500);
-      }
 
       timeoutRefs.current[id] = window.setTimeout(() => {
         removeReward(id);
@@ -111,9 +133,8 @@ export const RewardProvider = ({ children }) => {
     <RewardContext.Provider
       value={{
         showReward,
-        displayedScore,
         setScoreTotal,
-        lastScoreBump,
+        displayedScore,
       }}
     >
       {children}
@@ -158,11 +179,25 @@ export const RewardProvider = ({ children }) => {
                 ease: [0.22, 1, 0.36, 1],
               }}
             >
-              <span className="reward-pulse__points">+{reward.points}</span>
+              <span className="reward-pulse__dot" aria-hidden="true" />
 
-              {reward.label && (
-                <span className="reward-pulse__label">{reward.label}</span>
-              )}
+              <span className="reward-pulse__content">
+                <span className="reward-pulse__mainline">
+                  <span className="reward-pulse__points">+{reward.points}</span>
+
+                  {reward.label && (
+                    <span className="reward-pulse__label">{reward.label}</span>
+                  )}
+                </span>
+
+                {typeof reward.scoreBefore === 'number' &&
+                  typeof reward.scoreAfter === 'number' && (
+                    <span className="reward-pulse__score">
+                      Score {formatScore(reward.scoreBefore)} →{' '}
+                      <strong>{formatScore(reward.scoreAfter)}</strong>
+                    </span>
+                  )}
+              </span>
             </motion.div>
           ))}
         </AnimatePresence>
