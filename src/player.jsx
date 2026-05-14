@@ -186,7 +186,10 @@ const Player = () => {
   }, [currentMedia?.id, currentMedia?.songId]);
 
   useEffect(() => {
-    if (!currentMedia || isGuest || !userId || isVideo) return;
+    if (!currentMedia || isGuest || !userId) return;
+
+    const mediaIsVideo = currentMedia.type === 'video';
+    if (mediaIsVideo) return;
 
     const songId = currentMedia.id || currentMedia.songId;
     if (!songId || playRewardedRef.current) return;
@@ -227,7 +230,6 @@ const Player = () => {
     duration,
     isGuest,
     userId,
-    isVideo,
     showReward,
   ]);
 
