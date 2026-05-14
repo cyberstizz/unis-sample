@@ -1,3 +1,8 @@
+// =============================================================================
+// Reward Pulse — theme-aware Unis points feedback
+// Uses the user-selected profile theme via --unis-* tokens.
+// =============================================================================
+
 .reward-pulse-layer {
   position: fixed;
   inset: 0;
@@ -8,7 +13,7 @@
 .reward-pulse {
   position: fixed;
   left: 50%;
-  bottom: calc(92px + (var(--reward-stack-index, 0) * 46px));
+  bottom: calc(92px + (var(--reward-stack-index, 0) * 48px));
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
@@ -20,25 +25,26 @@
   background:
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--surface-glass, rgba(255, 255, 255, 0.16)) 72%, transparent),
-      color-mix(in srgb, var(--surface-glass, rgba(255, 255, 255, 0.08)) 32%, transparent)
+      color-mix(in srgb, var(--unis-primary-soft, rgba(255, 255, 255, 0.08)) 72%, var(--unis-panel-hi, rgba(255, 255, 255, 0.07))),
+      color-mix(in srgb, var(--unis-panel-2, rgba(255, 255, 255, 0.045)) 82%, transparent)
     ),
-    color-mix(in srgb, var(--surface-primary, #0c0e16) 86%, transparent);
+    color-mix(in srgb, var(--unis-bg, #07090f) 86%, transparent);
 
   border: 1px solid color-mix(
     in srgb,
-    var(--border-subtle, rgba(255, 255, 255, 0.18)) 76%,
-    transparent
+    var(--unis-primary, #ffd166) 32%,
+    var(--unis-border-hi, rgba(255, 255, 255, 0.14))
   );
 
   box-shadow:
-    0 16px 44px color-mix(in srgb, var(--shadow-color, #000000) 32%, transparent),
-    0 0 30px color-mix(in srgb, var(--accent-color, #ffd166) 18%, transparent);
+    0 16px 44px rgba(0, 0, 0, 0.34),
+    0 0 30px var(--unis-primary-glow, rgba(255, 209, 102, 0.24)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px) saturate(1.18);
+  -webkit-backdrop-filter: blur(18px) saturate(1.18);
 
-  color: var(--accent-color, #ffd166);
+  color: var(--reward-pulse-color, var(--unis-primary-2, #ffd166));
   user-select: none;
   white-space: nowrap;
 }
@@ -47,10 +53,11 @@
   content: '';
   width: 7px;
   height: 7px;
+  flex: 0 0 auto;
   border-radius: 999px;
   background: currentColor;
   box-shadow: 0 0 14px currentColor;
-  opacity: 0.9;
+  opacity: 0.92;
 }
 
 .reward-pulse__points {
@@ -67,31 +74,44 @@
   font-size: 0.78rem;
   font-weight: 650;
   line-height: 1;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.76));
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
 }
 
-.reward-pulse--default {
-  color: var(--accent-color, #ffd166);
+.reward-pulse--default,
+.reward-pulse--support {
+  --reward-pulse-color: var(--unis-primary-2, #ffd166);
 }
 
 .reward-pulse--play {
-  color: var(--success-color, #8fffc1);
+  --reward-pulse-color: color-mix(
+    in srgb,
+    var(--unis-primary-2, #8fffc1) 74%,
+    #8fffc1
+  );
 }
 
 .reward-pulse--like {
-  color: var(--danger-color, #ff7aa8);
+  --reward-pulse-color: color-mix(
+    in srgb,
+    var(--unis-primary-2, #ff7aa8) 62%,
+    #ff7aa8
+  );
 }
 
 .reward-pulse--vote {
-  color: var(--info-color, #8fd3ff);
-}
-
-.reward-pulse--support {
-  color: var(--accent-color, #ffd166);
+  --reward-pulse-color: color-mix(
+    in srgb,
+    var(--unis-primary-2, #8fd3ff) 72%,
+    #8fd3ff
+  );
 }
 
 .reward-pulse--referral {
-  color: var(--purple-accent, #bda8ff);
+  --reward-pulse-color: color-mix(
+    in srgb,
+    var(--unis-primary-2, #bda8ff) 68%,
+    #bda8ff
+  );
 }
 
 .reward-pulse--center {
@@ -101,22 +121,22 @@
 }
 
 .reward-pulse--player {
-  bottom: calc(92px + (var(--reward-stack-index, 0) * 46px));
+  bottom: calc(92px + (var(--reward-stack-index, 0) * 48px));
 }
 
 .reward-pulse--header {
-  top: calc(76px + (var(--reward-stack-index, 0) * 46px));
+  top: calc(76px + (var(--reward-stack-index, 0) * 48px));
   bottom: auto;
 }
 
 @media (max-width: 700px) {
   .reward-pulse {
-    bottom: calc(84px + (var(--reward-stack-index, 0) * 44px));
+    bottom: calc(84px + (var(--reward-stack-index, 0) * 46px));
     padding: 9px 12px;
   }
 
   .reward-pulse--header {
-    top: calc(68px + (var(--reward-stack-index, 0) * 44px));
+    top: calc(68px + (var(--reward-stack-index, 0) * 46px));
   }
 
   .reward-pulse__points {
