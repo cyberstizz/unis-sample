@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { apiCall } from './components/axiosInstance';
+import { useReward } from './context/RewardContext';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 import './votingWizard.scss';
 import unisLogo from './assets/unisLogoThree.svg';
@@ -60,6 +61,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     selectedInterval: 'daily',
     selectedJurisdiction: 'harlem',
   });
+  const { showReward } = useReward();
   const [artistNameForward, setArtistNameForward] = useState('');
   const [artistNameBackward, setArtistNameBackward] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -286,8 +288,16 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         voteDate: new Date().toISOString().split('T')[0],
       };
 
-      await apiCall({ method: 'post', url: '/v1/vote/submit', data: voteData });
-      setVoteResult({ status: 'success', message: 'Vote Recorded' });
+    await apiCall({ method: 'post', url: '/v1/vote/submit', data: voteData });
+
+    setVoteResult({ status: 'success', message: 'Vote Recorded' });
+
+    showReward({
+      points: 25,
+      label: 'Vote counted',
+      type: 'vote',
+      anchor: 'center',
+    });
     } catch (err) {
       console.error('Vote submission failed:', err);
       const status = err.response?.status;
