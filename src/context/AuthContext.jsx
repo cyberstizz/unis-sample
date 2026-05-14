@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axiosInstance from '../components/axiosInstance';
-import RewardScoreSync from './RewardScoreSync';
+import RewardScoreSync from '../RewardScoreSync';
 
 const AuthContext = createContext();
 
