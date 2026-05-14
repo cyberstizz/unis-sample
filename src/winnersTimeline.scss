@@ -1,0 +1,714 @@
+// winnersTimeline.scss
+// Vertical timeline of past poll winners for a jurisdiction.
+// Used by both the embedded widget (jurisdiction page section)
+// and the full-page archive at /jurisdiction/:jur/winners.
+// Aesthetic: matches jurisdictionPage.scss — dark premium dashboard,
+// blue accent, DM Sans body + serif italic flourishes.
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900&family=Playfair+Display:ital,wght@1,500;1,600&display=swap');
+
+// ── Tokens ──────────────────────────────────────
+$wt-bg-base: #07080b;
+$wt-bg-panel: rgba(16, 19, 29, 0.78);
+$wt-bg-soft: rgba(255, 255, 255, 0.045);
+$wt-bg-hover: rgba(255, 255, 255, 0.08);
+
+$wt-border-soft: rgba(255, 255, 255, 0.075);
+$wt-border-medium: rgba(255, 255, 255, 0.12);
+
+$wt-blue-solid: #1b63d8;
+$wt-blue-bright: #3f8cff;
+$wt-blue-glow: rgba(63, 140, 255, 0.45);
+
+$wt-text-primary: #f5f7fb;
+$wt-text-secondary: rgba(245, 247, 251, 0.68);
+$wt-text-muted: rgba(245, 247, 251, 0.45);
+$wt-text-faint: rgba(245, 247, 251, 0.28);
+
+$wt-radius-sm: 8px;
+$wt-radius-md: 12px;
+$wt-radius-lg: 18px;
+$wt-radius-xl: 24px;
+
+$wt-shadow-card: 0 18px 52px rgba(0, 0, 0, 0.32);
+$wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
+
+// ── Animations ──────────────────────────────────
+@keyframes wt-fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wt-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes wt-pulseDot {
+  0%, 100% {
+    box-shadow: 0 0 0 4px $wt-bg-base, 0 0 16px rgba(63, 140, 255, 0.32);
+  }
+  50% {
+    box-shadow: 0 0 0 4px $wt-bg-base, 0 0 24px rgba(63, 140, 255, 0.55);
+  }
+}
+
+// ═════════════════════════════════════════════════
+// COMPONENT ROOT
+// ═════════════════════════════════════════════════
+
+.wt {
+  width: 100%;
+  color: $wt-text-primary;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  animation: wt-fadeIn 0.4s ease;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  button {
+    font-family: inherit;
+  }
+}
+
+// ── When embedded inside another page section ──
+.wt--embedded {
+  margin-top: 46px;
+}
+
+// ═════════════════════════════════════════════════
+// HEADER
+// ═════════════════════════════════════════════════
+
+.wt-header {
+  margin-bottom: 26px;
+  animation: wt-fadeUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.wt-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: $wt-blue-bright;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: $wt-blue-bright;
+    box-shadow: 0 0 16px rgba(63, 140, 255, 0.65);
+  }
+}
+
+.wt-title {
+  margin: 10px 0 0;
+  color: $wt-text-primary;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 1.02;
+
+  em {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-style: italic;
+    font-weight: 500;
+    color: $wt-blue-bright;
+    letter-spacing: -0.02em;
+  }
+}
+
+.wt-subtitle {
+  max-width: 580px;
+  margin: 14px 0 0;
+  color: $wt-text-secondary;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+// Embedded version uses a tighter header
+.wt--embedded .wt-title {
+  font-size: clamp(24px, 3vw, 30px);
+}
+
+.wt--embedded .wt-subtitle {
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+// ═════════════════════════════════════════════════
+// FILTERS
+// ═════════════════════════════════════════════════
+
+.wt-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 24px 0 32px;
+  padding: 18px 20px;
+  border-radius: $wt-radius-lg;
+  border: 1px solid $wt-border-soft;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(63, 140, 255, 0.07), transparent 50%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
+}
+
+.wt-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wt-filter-label {
+  color: $wt-text-muted;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.wt-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.wt-pill {
+  min-height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid $wt-border-medium;
+  background: rgba(255, 255, 255, 0.04);
+  color: $wt-text-secondary;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+
+  &:hover {
+    color: $wt-text-primary;
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  &.is-active {
+    color: #fff;
+    background:
+      radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.2), transparent 40%),
+      linear-gradient(135deg, $wt-blue-bright 0%, $wt-blue-solid 100%);
+    border-color: rgba(63, 140, 255, 0.6);
+    box-shadow: 0 6px 18px rgba(27, 99, 216, 0.28);
+  }
+}
+
+// ═════════════════════════════════════════════════
+// TIMELINE
+// ═════════════════════════════════════════════════
+
+.wt-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.wt-entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 18px;
+  padding-bottom: 28px;
+  animation: wt-fadeUp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+// Stagger the entry animations slightly for a cascading feel
+.wt-entry:nth-child(1) { animation-delay: 0.02s; }
+.wt-entry:nth-child(2) { animation-delay: 0.06s; }
+.wt-entry:nth-child(3) { animation-delay: 0.10s; }
+.wt-entry:nth-child(4) { animation-delay: 0.14s; }
+.wt-entry:nth-child(5) { animation-delay: 0.18s; }
+.wt-entry:nth-child(n + 6) { animation-delay: 0.22s; }
+
+// ── Gutter (the timeline rail) ─────────────────
+.wt-gutter {
+  position: relative;
+  width: 18px;
+
+  // Vertical line going down from this entry into the next gap
+  &::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 18px;
+    bottom: -28px;
+    width: 2px;
+    background: linear-gradient(
+      to bottom,
+      $wt-border-medium 0%,
+      $wt-border-soft 100%
+    );
+  }
+}
+
+// Last entry shouldn't draw a trailing line
+.wt-entry--last .wt-gutter::before {
+  background: linear-gradient(
+    to bottom,
+    $wt-border-medium 0%,
+    transparent 100%
+  );
+  bottom: 50%;
+}
+
+.wt-dot {
+  position: absolute;
+  left: 0;
+  top: 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: $wt-bg-base;
+  border: 2.5px solid $wt-blue-bright;
+  box-shadow:
+    0 0 0 4px $wt-bg-base,
+    0 0 18px rgba(63, 140, 255, 0.45);
+  z-index: 1;
+}
+
+// First dot pulses subtly to draw the eye to the most recent winner
+.wt-entry:first-child .wt-dot {
+  animation: wt-pulseDot 2.6s ease-in-out infinite;
+}
+
+.wt-entry-content {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.wt-period {
+  margin: 0 0 10px;
+  color: $wt-text-muted;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+// ═════════════════════════════════════════════════
+// WINNER CARD
+// ═════════════════════════════════════════════════
+
+.wt-card {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border-radius: $wt-radius-lg;
+  border: 1px solid $wt-border-soft;
+  background:
+    radial-gradient(circle at 95% 0%, rgba(63, 140, 255, 0.06), transparent 42%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.018));
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(63, 140, 255, 0.35);
+    box-shadow: $wt-shadow-card;
+
+    .wt-card-play {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .wt-card-art {
+      transform: scale(1.06);
+      filter: brightness(0.85) saturate(1.08);
+    }
+  }
+}
+
+.wt-card-art-wrap {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  border-radius: $wt-radius-md;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.wt-card-art {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transition: transform 0.35s ease, filter 0.35s ease;
+}
+
+.wt-card-play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: $wt-blue-solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+
+  &:hover {
+    background: $wt-blue-bright;
+  }
+}
+
+.wt-card-body {
+  min-width: 0;
+}
+
+.wt-card-title {
+  margin: 0 0 4px;
+  color: $wt-text-primary;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.22;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wt-card-meta {
+  margin: 0 0 7px;
+  color: $wt-text-secondary;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wt-card-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: $wt-blue-bright;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+// ═════════════════════════════════════════════════
+// LOAD MORE BUTTON
+// ═════════════════════════════════════════════════
+
+.wt-load-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+  padding-top: 6px;
+}
+
+.wt-load-more {
+  min-height: 46px;
+  padding: 0 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+
+  &--embedded {
+    color: $wt-text-primary;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $wt-border-medium;
+
+    &:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.24);
+    }
+  }
+
+  &--full {
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background:
+      radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.18), transparent 34%),
+      linear-gradient(135deg, $wt-blue-bright 0%, $wt-blue-solid 45%, #123b96 100%);
+    box-shadow: $wt-shadow-blue;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 42px rgba(27, 99, 216, 0.36);
+    }
+  }
+}
+
+.wt-empty {
+  padding: 24px 0;
+  color: $wt-text-muted;
+  font-size: 14px;
+  text-align: center;
+}
+
+// ═════════════════════════════════════════════════
+// FULL PAGE LAYOUT
+// ═════════════════════════════════════════════════
+
+.wt-page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px 34px 88px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'back back'
+    'main ad';
+  column-gap: 32px;
+  row-gap: 18px;
+  align-items: start;
+}
+
+.wt-back {
+  grid-area: back;
+  width: fit-content;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid $wt-border-medium;
+  background: rgba(255, 255, 255, 0.04);
+  color: $wt-text-secondary;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease,
+    border-color 0.18s ease;
+
+  &:hover {
+    color: $wt-text-primary;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.24);
+    transform: translateX(-2px);
+  }
+}
+
+.wt-page-main {
+  grid-area: main;
+  min-width: 0;
+}
+
+.wt-page-ad-slot {
+  grid-area: ad;
+  position: sticky;
+  top: 24px;
+  min-height: 460px;
+  padding: 20px;
+  border-radius: $wt-radius-lg;
+  border: 1px dashed $wt-border-medium;
+  background: rgba(255, 255, 255, 0.022);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.wt-ad-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.wt-ad-label {
+  color: $wt-text-muted;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.wt-ad-note {
+  max-width: 180px;
+  color: $wt-text-faint;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+// ═════════════════════════════════════════════════
+// RESPONSIVE
+// ═════════════════════════════════════════════════
+
+@media (max-width: 1080px) {
+  .wt-page {
+    grid-template-columns: minmax(0, 1fr) 200px;
+    column-gap: 24px;
+    padding: 28px 26px 76px;
+  }
+}
+
+@media (max-width: 900px) {
+  .wt-page {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'back'
+      'ad'
+      'main';
+    padding: 24px 20px 68px;
+  }
+
+  .wt-page-ad-slot {
+    position: static;
+    min-height: 100px;
+    padding: 14px 18px;
+  }
+
+  .wt-ad-inner {
+    flex-direction: row;
+    gap: 14px;
+  }
+
+  .wt-ad-note {
+    text-align: left;
+    max-width: 240px;
+  }
+}
+
+@media (max-width: 620px) {
+  .wt-page {
+    padding: 18px 14px 60px;
+    row-gap: 14px;
+  }
+
+  .wt--embedded {
+    margin-top: 34px;
+  }
+
+  .wt-filters {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .wt-filter-pills {
+    gap: 6px;
+  }
+
+  .wt-pill {
+    min-height: 28px;
+    padding: 0 12px;
+    font-size: 11px;
+  }
+
+  .wt-entry {
+    grid-template-columns: 16px minmax(0, 1fr);
+    gap: 14px;
+    padding-bottom: 22px;
+  }
+
+  .wt-dot {
+    width: 16px;
+    height: 16px;
+    top: 16px;
+    border-width: 2px;
+  }
+
+  .wt-gutter::before {
+    left: 7px;
+    top: 16px;
+    bottom: -22px;
+  }
+
+  .wt-card {
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .wt-card-art-wrap {
+    width: 58px;
+    height: 58px;
+  }
+
+  .wt-card-title {
+    font-size: 14px;
+  }
+
+  .wt-card-meta {
+    font-size: 12px;
+  }
+
+  // Show play button by default on touch — no hover state to reveal it
+  .wt-card-play {
+    opacity: 1;
+    transform: scale(1);
+    width: 28px;
+    height: 28px;
+  }
+
+  .wt-load-more {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .wt-page-ad-slot {
+    min-height: 80px;
+    padding: 12px 14px;
+  }
+
+  .wt-ad-inner {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+}

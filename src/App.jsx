@@ -30,6 +30,7 @@ import WaitlistPage from './WaitlistPage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import AdminPlaylistPage from './admin/AdminPlaylistPage';
 import PlayChoiceModal from './PlayChoiceModal';
+import WinnersTimelinePage from './winnersTimelinePage';
 
 // Theme
 import './theme.scss';
@@ -89,6 +90,7 @@ const AppLayout = () => {
           <Route path="/findpage" element={<FindPage />} />
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/voteawards" element={<VoteAwards />} />   
+          <Route path="/jurisdiction/:jurisdiction/winners" element={<WinnersTimelinePage />} />
         </Route>
 
         {/* Protected routes — must be logged in */}
