@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { PlayerProvider } from './context/playercontext';
+import { RewardProvider } from './context/RewardContext';
 import Player from './player';
 import Sidebar from './sidebar';
 import Feed from './feed';
@@ -134,6 +135,7 @@ const AppLayout = () => {
 
 const App = () => {
   return (
+  <RewardProvider>
     <AuthProvider>
       <PlayerProvider>
         <Router>
@@ -141,6 +143,7 @@ const App = () => {
         </Router>
       </PlayerProvider>
     </AuthProvider>
+  </RewardProvider>
   );
 };
 
