@@ -7,6 +7,7 @@ import Layout from './layout';
 import prominentArtistBg from './assets/songartworkfour.jpeg';
 import albumArt from './assets/songartworktwo.jpeg';
 import { buildUrl } from './utils/buildUrl';
+import WinnersTimeline from './winnersTimeline';
 
 // Inline play icon — same guaranteed-visibility approach as Player/Feed
 const PlayIcon = ({ size = 14 }) => (
@@ -581,6 +582,17 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           </section>
         )}
 
+         {/* ═══════ PAST WINNERS TIMELINE ═══════ */}
+        <section className="jp-section jp-winners-section">
+          <WinnersTimeline
+            jurisdiction={jurName}
+            variant="embedded"
+            initialInterval="week"
+            initialCategory="song"
+            initialCount={5}
+          />
+        </section>
+
         {/* ═══════ ABOUT JURISDICTION ═══════ */}
         <section className="jp-section jp-about-card">
           <div>
@@ -614,6 +626,11 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
 
         {error && <div className="jp-error-banner">{error}</div>}
       </div>
+      <WinnersTimeline 
+        jurisdiction={jurName}
+        variant="embedded"
+        initialCount={5}
+      />
     </Layout>
   );
 };
