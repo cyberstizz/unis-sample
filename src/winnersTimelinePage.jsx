@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import Layout from './layout';
-import WinnersTimeline from './WinnersTimeline';
+import WinnersTimeline from './winnersTimeline';
 import './winnersTimeline.scss';
 import prominentArtistBg from './assets/songartworkfour.jpeg';
 
