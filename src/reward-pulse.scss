@@ -13,23 +13,32 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  max-width: min(320px, calc(100vw - 32px));
+  max-width: min(340px, calc(100vw - 32px));
   padding: 10px 14px;
   border-radius: 999px;
+
   background:
     linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.16),
-      rgba(255, 255, 255, 0.055)
+      color-mix(in srgb, var(--surface-glass, rgba(255, 255, 255, 0.16)) 72%, transparent),
+      color-mix(in srgb, var(--surface-glass, rgba(255, 255, 255, 0.08)) 32%, transparent)
     ),
-    rgba(12, 14, 22, 0.84);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+    color-mix(in srgb, var(--surface-primary, #0c0e16) 86%, transparent);
+
+  border: 1px solid color-mix(
+    in srgb,
+    var(--border-subtle, rgba(255, 255, 255, 0.18)) 76%,
+    transparent
+  );
+
   box-shadow:
-    0 16px 44px rgba(0, 0, 0, 0.3),
-    0 0 28px rgba(255, 209, 102, 0.13);
+    0 16px 44px color-mix(in srgb, var(--shadow-color, #000000) 32%, transparent),
+    0 0 30px color-mix(in srgb, var(--accent-color, #ffd166) 18%, transparent);
+
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  color: #fff;
+
+  color: var(--accent-color, #ffd166);
   user-select: none;
   white-space: nowrap;
 }
@@ -49,7 +58,7 @@
   font-weight: 850;
   letter-spacing: 0.02em;
   line-height: 1;
-  color: #ffd166;
+  color: currentColor;
 }
 
 .reward-pulse__label {
@@ -58,31 +67,31 @@
   font-size: 0.78rem;
   font-weight: 650;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.76);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.76));
 }
 
 .reward-pulse--default {
-  color: #ffd166;
+  color: var(--accent-color, #ffd166);
 }
 
 .reward-pulse--play {
-  color: #8fffc1;
+  color: var(--success-color, #8fffc1);
 }
 
 .reward-pulse--like {
-  color: #ff7aa8;
+  color: var(--danger-color, #ff7aa8);
 }
 
 .reward-pulse--vote {
-  color: #8fd3ff;
+  color: var(--info-color, #8fd3ff);
 }
 
 .reward-pulse--support {
-  color: #ffd166;
+  color: var(--accent-color, #ffd166);
 }
 
 .reward-pulse--referral {
-  color: #bda8ff;
+  color: var(--purple-accent, #bda8ff);
 }
 
 .reward-pulse--center {

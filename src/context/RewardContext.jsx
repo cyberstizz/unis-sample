@@ -69,7 +69,7 @@ export const RewardProvider = ({ children }) => {
 
       timeoutRefs.current[id] = window.setTimeout(() => {
         removeReward(id);
-      }, 1600);
+      }, 2600);
     },
     [removeReward]
   );
@@ -113,10 +113,10 @@ export const RewardProvider = ({ children }) => {
                 scale: 0.97,
                 filter: 'blur(2px)',
               }}
-              transition={{
-                duration: 0.72,
-                ease: [0.22, 1, 0.36, 1],
-              }}
+            transition={{
+              duration: 0.9,
+              ease: [0.22, 1, 0.36, 1],
+            }}
             >
               <span className="reward-pulse__points">+{reward.points}</span>
 
