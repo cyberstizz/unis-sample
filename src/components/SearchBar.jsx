@@ -14,7 +14,11 @@ function useDebounce(value, delay) {
   return debounced;
 }
 
-const SearchBar = ({ onMobileSelect }) => {
+const SearchBar = ({
+  onMobileSelect,
+  autoFocusOnMount = false,
+  openOnMount = false,
+}) => {
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -28,6 +32,22 @@ const SearchBar = ({ onMobileSelect }) => {
   const [activeIndex, setActiveIndex] = useState(-1);
 
   const debouncedQuery = useDebounce(query, 250);
+
+  useEffect(() => {
+  if (!autoFocusOnMount && !openOnMount) return;
+
+  const frame = requestAnimationFrame(() => {
+    if (autoFocusOnMount) {
+      inputRef.current?.focus();
+    }
+
+    if (openOnMount) {
+      setFocused(true);
+    }
+  });
+
+  return () => cancelAnimationFrame(frame);
+}, [autoFocusOnMount, openOnMount]);
 
   useEffect(() => {
     try {
