@@ -123,27 +123,55 @@ function useThemeColors() {
 
   useEffect(() => {
     const root = document.documentElement;
+    let rafId = null;
+    let lastKey = '';
 
     const read = () => {
+      rafId = null;
       const styles = getComputedStyle(root);
       const primary =
         parseColor(styles.getPropertyValue('--unis-primary')) || DEFAULT_PRIMARY;
-      // Prefer an explicit light var if the theme system exposes one; otherwise derive.
       const primaryLight =
         parseColor(styles.getPropertyValue('--unis-primary-light')) ||
         lightenHsl(primary, 0.13);
+
+      // Bail when resolved colors are unchanged. Prevents a cascade of card
+      // re-renders when unrelated attributes flip on <html> or <body>.
+      const key = `${primary.join(',')}|${primaryLight.join(',')}`;
+      if (key === lastKey) return;
+      lastKey = key;
+
       setColors({ primary, primaryLight });
+    };
+
+    const schedule = () => {
+      if (rafId != null) return;
+      rafId = requestAnimationFrame(read);
     };
 
     read();
 
-    const observer = new MutationObserver(read);
+    // Watch class / data-theme only — NOT inline style.
+    // Many apps mutate <html> / <body> inline style during scroll, modal
+    // locking, viewport tracking, etc. Observing 'style' here turns every
+    // such mutation into a forced layout via getComputedStyle and tanks
+    // scroll performance across every ArtistCard mounted on the page.
+    const observer = new MutationObserver(schedule);
     observer.observe(root, {
       attributes: true,
-      attributeFilter: ['class', 'data-theme', 'style'],
+      attributeFilter: ['class', 'data-theme'],
     });
+    if (document.body) {
+      observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'data-theme'],
+      });
+    }
 
-    return () => observer.disconnect();
+    return () => {
+      if (rafId != null) cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
   }, []);
 
   return colors;
