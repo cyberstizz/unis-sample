@@ -170,7 +170,11 @@ const Header = () => {
               if (e.target === e.currentTarget) setMobileSearchOpen(false);
             }}>
               <div className="mobile-search-container">
-                <SearchBar onMobileSelect={() => setMobileSearchOpen(false)} />
+                <SearchBar
+                  autoFocusOnMount
+                  openOnMount
+                  onMobileSelect={() => setMobileSearchOpen(false)}
+                />
                 <button
                   className="mobile-search-close"
                   onClick={() => setMobileSearchOpen(false)}
