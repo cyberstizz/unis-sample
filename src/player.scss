@@ -126,14 +126,13 @@ $radius-sm: 6px;
   // ═══════════════════════════════════════
   //  MOBILE ACTIONS TOGGLE
   // ═══════════════════════════════════════
-  .mobile-actions-toggle {
+.mobile-actions-toggle {
     display: none;
     background: transparent;
     border: none;
     color: $unis-blue;
     cursor: pointer;
-    padding: 5px;
-    margin-left: 10px;
+    padding: 4px;
     transition: all 0.2s ease;
 
     &:hover {
@@ -146,6 +145,76 @@ $radius-sm: 6px;
       align-items: center;
       justify-content: center;
     }
+  }
+
+  // ═══════════════════════════════════════
+  //  MOBILE RIGHT CLUSTER — toggle stacked over queue
+  //  Gives the queue button one-tap access on mobile
+  // ═══════════════════════════════════════
+  .mobile-right-cluster {
+    display: none;
+
+    @media (max-width: 600px) {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+  }
+
+  .mobile-queue-btn {
+    display: none;
+
+    @media (max-width: 600px) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: none;
+      border: none;
+      color: $text-secondary;
+      cursor: pointer;
+      padding: 4px;
+      transition: color 0.2s ease, transform 0.2s ease;
+
+      &:hover {
+        color: $text-primary;
+        transform: scale(1.1);
+      }
+
+      &.active {
+        color: $unis-blue;
+      }
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  .mobile-queue-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    border-radius: 7px;
+    background: $unis-blue;
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
   }
 
   // ═══════════════════════════════════════

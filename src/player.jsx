@@ -561,9 +561,6 @@ const Player = () => {
                 <Heart fill={isLiked ? "white" : "none"} /><span className="label">{isLiked ? 'Liked' : 'Like'}</span>
               </button>
               <button onClick={handleDownload} className="tray-action"><span>⬇</span><span className="label">Download</span></button>
-              <button onClick={() => { setShowMobileActions(false); setShowQueue(true); }} className="tray-action">
-                <ListMusic size={20} /><span className="label">Queue</span>
-              </button>
             </div>
           </div>
 
@@ -642,9 +639,21 @@ const Player = () => {
             </div>
 
             {/* MOBILE toggle */}
-            <button className="mobile-actions-toggle" onClick={toggleMobileActions}>
-              {showMobileActions ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
-            </button>
+            <div className="mobile-right-cluster">
+              <button className="mobile-actions-toggle" onClick={toggleMobileActions}>
+                {showMobileActions ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+              </button>
+              <button
+                className={`mobile-queue-btn ${showQueue ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); setShowQueue(!showQueue); }}
+                title={`Queue${queue.length > 0 ? ` (${queue.length})` : ''}`}
+              >
+                <ListMusic size={18} />
+                {queue.length > 0 && (
+                  <span className="mobile-queue-badge">{queue.length}</span>
+                )}
+              </button>
+            </div>
           </div>
         </>
       )}
