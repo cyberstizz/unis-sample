@@ -57,6 +57,17 @@ $text-gray: #A9A9A9;
   50% { opacity: 0.6; }
 }
 
+@keyframes winner-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 6px var(--unis-primary);
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0 0 10px var(--unis-primary);
+  }
+}
+
 // ═══════════════════════════════════════
 //  LOADING STATE
 // ═══════════════════════════════════════
@@ -303,6 +314,8 @@ $text-gray: #A9A9A9;
 
 // ═══════════════════════════════════════
 //  LAST WEEK'S WINNER (lower-right of hero)
+//  Minimal: small label + square thumbnail.
+//  Title/artist only revealed on hover via tooltip.
 // ═══════════════════════════════════════
 .hero-winner {
   position: absolute;
@@ -314,63 +327,43 @@ $text-gray: #A9A9A9;
   align-items: flex-end;
   gap: 6px;
   cursor: pointer;
-  max-width: 220px;
   animation: fadeUp 0.6s ease 0.15s both;
-
-  &:hover {
-    .hero-winner-card {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.2);
-      transform: translateY(-1px);
-    }
-    .hero-winner-art img {
-      filter: brightness(1.08);
-    }
-  }
 }
 
 .hero-winner-label {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.7);
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  pointer-events: none;
 
-  svg {
-    color: var(--unis-primary);
-    filter: drop-shadow(0 0 4px var(--unis-primary-glow));
-    flex-shrink: 0;
+  &::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--unis-primary);
+    box-shadow: 0 0 6px var(--unis-primary);
+    animation: winner-pulse 2s ease-in-out infinite;
   }
 }
 
-.hero-winner-card {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 7px 11px 7px 7px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-}
-
-.hero-winner-art {
+.hero-winner-thumb {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 8px;
   overflow: hidden;
-  flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 
   img {
     width: 100%;
@@ -379,13 +372,52 @@ $text-gray: #A9A9A9;
     display: block;
     transition: filter 0.2s ease;
   }
+
+  &:hover {
+    transform: translateY(-2px) scale(1.04);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+
+    img {
+      filter: brightness(1.1);
+    }
+
+    .hero-winner-tooltip {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
-.hero-winner-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  max-width: 130px;
+.hero-winner-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  padding: 7px 10px;
+  background: rgba(15, 20, 25, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 4;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 18px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid rgba(15, 20, 25, 0.95);
+  }
 }
 
 .hero-winner-title {
@@ -393,21 +425,20 @@ $text-gray: #A9A9A9;
   font-size: 12px;
   font-weight: 700;
   color: #fff;
-  white-space: nowrap;
+  line-height: 1.2;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
 }
 
 .hero-winner-artist {
   font-size: 10.5px;
-  color: rgba(255, 255, 255, 0.6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: rgba(255, 255, 255, 0.65);
   line-height: 1.2;
   margin-top: 2px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hero-content {
@@ -885,8 +916,8 @@ $text-gray: #A9A9A9;
   }
 
   .hero-banner {
-    min-height: 160px;     
-    height: auto; 
+    min-height: 160px;
+    height: auto;
     margin-bottom: 28px;
   }
 
@@ -909,40 +940,36 @@ $text-gray: #A9A9A9;
     height: 120px;
   }
 
-    .hero-winner {
+  .hero-winner {
     bottom: 14px;
     right: 14px;
-    max-width: 165px;
-    gap: 5px;
+    gap: 4px;
   }
 
   .hero-winner-label {
     font-size: 8px;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.09em;
+
+    &::before {
+      width: 4px;
+      height: 4px;
+    }
   }
 
-  .hero-winner-card {
-    padding: 5px 9px 5px 5px;
-    gap: 7px;
-    border-radius: 10px;
-  }
-
-  .hero-winner-art {
-    width: 36px;
-    height: 36px;
+  .hero-winner-thumb {
+    width: 42px;
+    height: 42px;
     border-radius: 6px;
-  }
-
-  .hero-winner-info {
-    max-width: 95px;
   }
 
   .hero-winner-title {
     font-size: 11px;
+    max-width: 140px;
   }
 
   .hero-winner-artist {
-    font-size: 9.5px;
+    font-size: 10px;
+    max-width: 140px;
   }
 
   .feed-section {
