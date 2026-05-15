@@ -20,7 +20,7 @@ import songArtSix from './assets/songarteight.png';
 import songArtNine from './assets/albumartnine.jpg';
 import songArtTen from './assets/albumartten.jpeg';
 import songArtEleven from './assets/rapperphotoOne.jpg';
-import { JURISDICTION_NAMES } from './utils/idMappings';
+import { JURISDICTION_NAMES, INTERVAL_IDS } from './utils/idMappings';
 import LastWonNotification from './LastWonNotification';
 import './feed.scss';
 
@@ -156,26 +156,60 @@ const Feed = () => {
   })), []);
 
   // Fetch last week's winner for the hero banner
+  // Fetch last week's Song of the Week winner for the hero banner
   useEffect(() => {
     if (!selectedJurisdictionId) return;
 
     const fetchLastWinner = async () => {
+      const today = new Date();
+      const thirtyDaysAgo = new Date(today);
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const toApiDate = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      };
+
+      const todayInEst = () =>
+        new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+
       try {
         const res = await apiCall({
           method: 'get',
-          url: `/v1/awards/previous-winner?jurisdictionId=${selectedJurisdictionId}&type=song`,
+          url: `/v1/awards/past?type=song&startDate=${toApiDate(thirtyDaysAgo)}&endDate=${toApiDate(today)}&jurisdictionId=${selectedJurisdictionId}&intervalId=${INTERVAL_IDS['weekly']}`,
         });
-        if (res?.data) {
-          setLastWinner({
-            songId: res.data.songId,
-            title: res.data.title,
-            artworkUrl: buildUrl(res.data.artworkUrl),
-            artistName: res.data.artist?.username || 'Unknown',
-            artistId: res.data.artist?.userId,
-          });
+
+        // Same defensive filter LastWonNotification uses — reject future-dated
+        // awards that leak through from the UTC-midnight cron.
+        const cutoff = todayInEst();
+        const awards = (res.data || []).filter(
+          (a) => !a?.awardDate || a.awardDate <= cutoff
+        );
+
+        if (awards.length === 0) {
+          setLastWinner(null);
+          return;
         }
+
+        // Most recent award (endpoint returns sorted by date desc, but be safe)
+        const award = awards[0];
+
+        if (!award?.song) {
+          setLastWinner(null);
+          return;
+        }
+
+        setLastWinner({
+          songId: award.song.songId || award.targetId,
+          title: award.song.title || 'Unknown',
+          artworkUrl: buildUrl(award.song.artworkUrl),
+          artistName: award.song.artist?.username || 'Unknown',
+          artistId: award.song.artist?.userId,
+        });
       } catch (err) {
-        // Silent — banner just renders without it
+        // Silent — banner falls back to particles
         setLastWinner(null);
       }
     };
