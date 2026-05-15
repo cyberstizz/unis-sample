@@ -206,7 +206,7 @@ $subtle-black: #1a1a1a;
   justify-content: center;
 
   &:hover {
-    border-color: #163387;
+    border-color: var(--unis-primary);
   }
 }
 
@@ -255,13 +255,13 @@ $subtle-black: #1a1a1a;
   width: 100%;
   text-align: center;
   padding: 40px 20px;
-  background-color: rgba(22, 51, 135, 0.1);
+  background-color: color-mix(in srgb, var(--unis-primary), transparent 90%);
   border-radius: 12px;
   box-sizing: border-box;
 }
 
 .coming-soon-title {
-  color: #163387;
+  color: var(--unis-primary);
   font-size: 28px;
   margin: 0 0 10px 0;
   font-weight: bold;
@@ -615,7 +615,7 @@ $subtle-black: #1a1a1a;
 
 .jurisdiction-label {
   background: rgba(0, 0, 0, 0.7) !important;
-  border: 1px solid #163387 !important;
+  border: 1px solid var(--unis-primary) !important;
   border-radius: 4px !important;
   color: white !important;
   font-size: 11px !important;
@@ -658,8 +658,8 @@ $subtle-black: #1a1a1a;
 }
 
 .jurisdiction-list-item {
-  background: rgba(22, 51, 135, 0.2);
-  border: 1px solid rgba(22, 51, 135, 0.5);
+  background: color-mix(in srgb, var(--unis-primary), transparent 80%);
+  border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 50%);
   border-radius: 20px;
   padding: 8px 16px;
   color: #C0C0C0;
@@ -673,19 +673,19 @@ $subtle-black: #1a1a1a;
 
 .jurisdiction-list-item:hover,
 .jurisdiction-list-item:active {
-  background: rgba(22, 51, 135, 0.4);
-  border-color: #163387;
+  background: color-mix(in srgb, var(--unis-primary), transparent 60%);
+  border-color: var(--unis-primary);
   color: white;
 }
 
 .jurisdiction-list-item.selected {
-  background: #163387;
-  border-color: #163387;
+  background: var(--unis-primary);
+  border-color: var(--unis-primary);
   color: white;
 }
 
 .jurisdiction-list-item.in-chain {
-  border-color: rgba(46, 90, 172, 0.7);
+  border-color: color-mix(in srgb, var(--unis-primary-2, var(--unis-primary)), transparent 30%);
 }
 
 .jurisdiction-list-item .active-badge {

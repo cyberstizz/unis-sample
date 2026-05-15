@@ -29,6 +29,19 @@ const HARLEM_PARENT_CHAIN = [
 ];
 
 // ---------------------------------------------------------------------------
+// THEME HELPER
+// Reads a CSS variable from #root so Leaflet (which writes SVG fill attrs
+// directly) gets a resolved color string instead of a literal 'var(--...)'
+// that SVG cannot reliably parse. Falls back to the original hardcoded value
+// if the variable is unset for any reason.
+// ---------------------------------------------------------------------------
+const readThemeVar = (name, fallback) => {
+  if (typeof window === 'undefined') return fallback;
+  const el = document.getElementById('root') || document.documentElement;
+  return getComputedStyle(el).getPropertyValue(name).trim() || fallback;
+};
+
+// ---------------------------------------------------------------------------
 // MAP CONTROLLER
 // ---------------------------------------------------------------------------
 const MapController = ({ viewState, isMobile }) => {
@@ -73,7 +86,7 @@ const MapController = ({ viewState, isMobile }) => {
 const FindPage = () => {
   const navigate = useNavigate();
   const { playMedia } = useContext(PlayerContext);
-  const { user } = useAuth();
+  const { user, theme } = useAuth();
 
   // Derive userId from AuthContext — no token decode needed
   const userId = user?.userId || null;
@@ -555,13 +568,14 @@ const handleStateClick = async (feature, layer) => {
 
               {isAtUSLevel() && usGeoData && (
                 <GeoJSON
-                  key="us-states"
+                  key={`us-states-${theme}`}
                   data={usGeoData}
                   style={feature => {
+                    const primary = readThemeVar('--unis-primary', '#163387');
                     const isSelected = feature.properties.name === selectedJurisdiction?.name;
                     const isHovered = feature.properties.name === hoveredState;
                     return {
-                      fillColor: isSelected || isHovered ? '#163387' : '#EAEAEC',
+                      fillColor: isSelected || isHovered ? primary : '#EAEAEC',
                       fillOpacity: 1,
                       color: isSelected || isHovered ? '#FFFFFF' : '#999',
                       weight: isSelected || isHovered ? 2 : 1,
@@ -571,8 +585,9 @@ const handleStateClick = async (feature, layer) => {
                     layer.on({
                       click: () => handleStateClick(feature, layer),
                       mouseover: e => {
+                        const primary = readThemeVar('--unis-primary', '#163387');
                         setHoveredState(feature.properties.name);
-                        e.target.setStyle({ fillColor: '#163387', color: '#163387', weight: 2 });
+                        e.target.setStyle({ fillColor: primary, color: primary, weight: 2 });
                         e.target.bringToFront();
                       },
                       mouseout: e => {
@@ -586,18 +601,22 @@ const handleStateClick = async (feature, layer) => {
 
               {!isAtUSLevel() && currentJurisdictions.length > 0 && (
                 <GeoJSON
-                  key={`jurisdictions-${navigationStack.length}-${currentJurisdictions.length}`}
+                  key={`jurisdictions-${navigationStack.length}-${currentJurisdictions.length}-${theme}`}
                   data={jurisdictionsToGeoJSON(currentJurisdictions)}
                   style={feature => {
+                    const primary = readThemeVar('--unis-primary', '#163387');
+                    const primary2 = readThemeVar('--unis-primary-2', '#2E5AAC');
+                    const primaryGlow = readThemeVar('--unis-primary-glow', 'rgba(22, 51, 135, 0.35)');
+                    const primarySoft = readThemeVar('--unis-primary-soft', 'rgba(22, 51, 135, 0.14)');
                     const name = feature.properties?.name;
                     const isSelected = selectedJurisdiction?.name === name;
                     const isHovered = hoveredState === name;
                     const isActive = feature.properties?.isActive;
                     const inChain = feature.properties?.isInHarlemChain;
-                    let fillColor = 'rgba(22, 51, 135, 0.3)';
-                    if (isSelected || isHovered) fillColor = '#163387';
-                    else if (isActive) fillColor = '#2E5AAC';
-                    else if (inChain) fillColor = 'rgba(22, 51, 135, 0.5)';
+                    let fillColor = primarySoft;
+                    if (isSelected || isHovered) fillColor = primary;
+                    else if (isActive) fillColor = primary2;
+                    else if (inChain) fillColor = primaryGlow;
                     return {
                       fillColor,
                       fillOpacity: isSelected || isHovered ? 0.9 : 0.7,
@@ -617,19 +636,24 @@ const handleStateClick = async (feature, layer) => {
                     layer.on({
                       click: () => { if (jurisdiction) handleJurisdictionClick(jurisdiction); },
                       mouseover: e => {
+                        const primary = readThemeVar('--unis-primary', '#163387');
                         setHoveredState(feature.properties.name);
-                        e.target.setStyle({ fillColor: '#163387', fillOpacity: 1 });
+                        e.target.setStyle({ fillColor: primary, fillOpacity: 1 });
                         e.target.bringToFront();
                       },
                       mouseout: e => {
+                        const primary = readThemeVar('--unis-primary', '#163387');
+                        const primary2 = readThemeVar('--unis-primary-2', '#2E5AAC');
+                        const primaryGlow = readThemeVar('--unis-primary-glow', 'rgba(22, 51, 135, 0.35)');
+                        const primarySoft = readThemeVar('--unis-primary-soft', 'rgba(22, 51, 135, 0.14)');
                         setHoveredState(null);
                         const isActive = feature.properties?.isActive;
                         const inChain = feature.properties?.isInHarlemChain;
                         const isSelected = selectedJurisdiction?.name === feature.properties.name;
-                        let fillColor = 'rgba(22, 51, 135, 0.3)';
-                        if (isSelected) fillColor = '#163387';
-                        else if (isActive) fillColor = '#2E5AAC';
-                        else if (inChain) fillColor = 'rgba(22, 51, 135, 0.5)';
+                        let fillColor = primarySoft;
+                        if (isSelected) fillColor = primary;
+                        else if (isActive) fillColor = primary2;
+                        else if (inChain) fillColor = primaryGlow;
                         e.target.setStyle({ fillColor, fillOpacity: isSelected ? 0.9 : 0.7 });
                       },
                     });
@@ -662,9 +686,9 @@ const handleStateClick = async (feature, layer) => {
           {showComingSoon && (
             <div style={{
               width: '100%', textAlign: 'center', padding: '20px', marginBottom: '10px',
-              backgroundColor: 'rgba(22, 51, 135, 0.1)', borderRadius: '8px',
+              backgroundColor: 'var(--unis-primary-soft)', borderRadius: '8px',
             }}>
-              <p style={{ color: '#163387', fontSize: '24px', margin: '0 0 10px 0' }}>
+              <p style={{ color: 'var(--unis-primary)', fontSize: '24px', margin: '0 0 10px 0' }}>
                 {selectedJurisdiction?.name}
               </p>
               <p style={{ color: '#888', margin: 0 }}>
@@ -679,7 +703,7 @@ const handleStateClick = async (feature, layer) => {
                 <h2
                   onClick={handleJurisdictionNavigate}
                   style={{ cursor: 'pointer', transition: 'color 0.2s' }}
-                  onMouseEnter={e => (e.target.style.color = '#163387')}
+                  onMouseEnter={e => (e.target.style.color = 'var(--unis-primary)')}
                   onMouseLeave={e => (e.target.style.color = 'inherit')}
                 >
                   Top Songs in {displayTerritory}
@@ -721,7 +745,7 @@ const handleStateClick = async (feature, layer) => {
                 <h2
                   onClick={handleJurisdictionNavigate}
                   style={{ cursor: 'pointer', transition: 'color 0.2s' }}
-                  onMouseEnter={e => (e.target.style.color = '#163387')}
+                  onMouseEnter={e => (e.target.style.color = 'var(--unis-primary)')}
                   onMouseLeave={e => (e.target.style.color = 'inherit')}
                 >
                   Top Artists in {displayTerritory}
