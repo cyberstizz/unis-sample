@@ -1,0 +1,231 @@
+// ArtistCard.scss — namespaced 'ac-' to prevent global collisions.
+// All theme colors come from var(--unis-primary), so themes flip automatically.
+// color-mix() handles lighter/translucent variants in pure CSS.
+
+@keyframes ac-pulse-glow {
+  0%, 100% {
+    background-color: color-mix(in srgb, var(--unis-primary), transparent 60%);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--unis-primary), transparent 80%);
+  }
+  50% {
+    background-color: color-mix(in srgb, var(--unis-primary), white 25%);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--unis-primary), transparent 30%);
+  }
+}
+
+@keyframes ac-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(80px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.ac-wrap {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 2px;
+  // 'both' so the `from` state applies during the stagger delay,
+  // otherwise the card flashes visible before the animation starts.
+  animation: ac-slide-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform;
+}
+
+.ac-pulse-bar {
+  width: 3px;
+  flex-shrink: 0;
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+  animation: ac-pulse-glow 4s ease-in-out infinite;
+}
+
+.ac-card {
+  flex: 1;
+  height: 240px;
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+.ac-photo {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.ac-fade-right {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.15) 30%,
+    rgba(0, 0, 0, 0.5) 60%,
+    rgba(0, 0, 0, 0.85) 100%
+  );
+}
+
+.ac-fade-bottom {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 50%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+}
+
+.ac-ambient-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 70% 80% at 0% 100%,
+    color-mix(in srgb, var(--unis-primary), transparent 65%) 0%,
+    color-mix(in srgb, var(--unis-primary), transparent 90%) 50%,
+    transparent 100%
+  );
+}
+
+.ac-score {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+}
+
+.ac-score__pill {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 50%);
+  border-radius: 20px;
+  padding: 3px 8px;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--unis-primary), transparent 50%);
+}
+
+.ac-score__star {
+  color: color-mix(in srgb, var(--unis-primary), white 25%);
+  font-size: 10px;
+}
+
+.ac-score__value {
+  color: #c0c0c0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.ac-bottom {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 14px 14px 14px;
+}
+
+.ac-info {
+  flex: 1;
+  margin-right: 12px;
+  min-width: 0;
+}
+
+.ac-location {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.ac-location__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--unis-primary), white 25%);
+  box-shadow: 0 0 4px var(--unis-primary);
+  flex-shrink: 0;
+}
+
+.ac-location__label {
+  color: color-mix(in srgb, var(--unis-primary), white 25%);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.ac-name {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 26px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.ac-separator {
+  width: 40px;
+  height: 2px;
+  background-color: var(--unis-primary);
+  margin-top: 8px;
+  border-radius: 1px;
+  box-shadow: 0 0 4px color-mix(in srgb, var(--unis-primary), transparent 40%);
+}
+
+.ac-view-btn {
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 50%);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--unis-primary), transparent 70%);
+}
+
+.ac-view-btn__inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--unis-primary), transparent 85%),
+    color-mix(in srgb, var(--unis-primary), transparent 95%)
+  );
+}
+
+.ac-view-btn__label {
+  color: #c0c0c0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.ac-view-btn__arrow {
+  color: color-mix(in srgb, var(--unis-primary), white 25%);
+  font-size: 14px;
+  font-weight: 300;
+}
