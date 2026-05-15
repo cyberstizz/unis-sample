@@ -227,47 +227,30 @@ $header-height: 75px;
 }
 
 // ─── THEME-AWARE SEARCH CTA ─────────────────────────────────────
+// ─── SUBTLE THEME-AWARE SEARCH ──────────────────────────────────
+// Keeps the searchbar surface neutral while making the affordance
+// theme-aware through the icon, border, and focus state only.
 .header-center {
   .usb-container {
-    position: relative;
-    border-radius: 999px;
-    background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025)),
-      $header-primary-soft;
-    border: 1px solid color-mix(in srgb, var(--unis-primary), white 18%);
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.035) inset,
-      0 0 20px color-mix(in srgb, var(--unis-primary), transparent 78%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: none;
     transition:
-      border-color 0.2s ease,
-      background 0.2s ease,
-      box-shadow 0.2s ease,
-      transform 0.2s ease;
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
   }
 
   .usb-container:hover,
   .usb-container:focus-within {
-    border-color: $header-primary-2;
-    background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.035)),
-      color-mix(in srgb, var(--unis-primary), transparent 82%);
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--unis-primary), transparent 70%) inset,
-      0 0 26px color-mix(in srgb, var(--unis-primary), transparent 68%);
-    transform: translateY(-1px);
-  }
-
-  .usb-container input,
-  .usb-container input::placeholder {
-    color: $text-primary;
-  }
-
-  .usb-container input::placeholder {
-    color: color-mix(in srgb, var(--unis-primary-2), rgba(255, 255, 255, 0.55) 65%);
+    border-color: color-mix(in srgb, var(--unis-primary), white 22%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--unis-primary), transparent 78%);
   }
 
   .usb-container svg {
-    color: $header-primary-2;
+    color: var(--unis-primary-2);
+  }
+
+  .usb-container input::placeholder {
+    color: rgba(255, 255, 255, 0.48);
   }
 }
 
@@ -499,49 +482,27 @@ $header-height: 75px;
   .mobile-search-trigger {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.025)),
-      $header-primary-soft;
-    border: 1px solid color-mix(in srgb, var(--unis-primary), white 16%);
-    color: $header-primary-2;
+    background: none;
+    border: none;
+    color: var(--unis-primary-2);
     cursor: pointer;
-    padding: 0;
-    border-radius: 999px;
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.035) inset,
-      0 0 18px color-mix(in srgb, var(--unis-primary), transparent 76%);
-    transition:
-      background 0.15s ease,
-      border-color 0.15s ease,
-      box-shadow 0.15s ease,
-      transform 0.15s ease;
+    padding: 7px 8px;
+    border-radius: 8px;
+    transition: color 0.15s ease, background 0.15s ease;
 
     svg {
-      width: 17px;
-      height: 17px;
-      stroke-width: 2.15;
+      width: 18px;
+      height: 18px;
+      stroke-width: 2.2;
     }
 
     &:hover {
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04)),
-        color-mix(in srgb, var(--unis-primary), transparent 82%);
-      border-color: $header-primary-2;
-      box-shadow:
-        0 0 0 1px color-mix(in srgb, var(--unis-primary), transparent 70%) inset,
-        0 0 24px color-mix(in srgb, var(--unis-primary), transparent 66%);
-      transform: translateY(-1px);
-    }
-
-    &:active {
-      transform: translateY(0);
+      background: rgba(255, 255, 255, 0.08);
+      color: color-mix(in srgb, var(--unis-primary), white 34%);
     }
 
     &:focus-visible {
-      outline: 2px solid $header-primary-2;
+      outline: 2px solid color-mix(in srgb, var(--unis-primary), white 24%);
       outline-offset: 2px;
     }
   }
@@ -577,13 +538,12 @@ $header-height: 75px;
 
   .mobile-search-container {
   .usb-container {
-    background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.035)),
-      $header-primary-soft;
-    border: 1px solid $header-primary-2;
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--unis-primary), transparent 72%) inset,
-      0 0 32px color-mix(in srgb, var(--unis-primary), transparent 64%);
+    border-color: color-mix(in srgb, var(--unis-primary), white 18%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--unis-primary), transparent 82%);
+
+    svg {
+      color: var(--unis-primary-2);
+    }
   }
 }
 
