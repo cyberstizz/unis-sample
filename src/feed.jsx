@@ -60,6 +60,7 @@ const Feed = () => {
   const [popularArtists, setPopularArtists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [lastWinner, setLastWinner] = useState(null);
 
   const userId = user?.userId;
   const userJurisdictionId = user?.jurisdiction?.jurisdictionId || DEFAULT_JURISDICTION_ID;
@@ -153,6 +154,34 @@ const Feed = () => {
     playsToday: item.playsToday || 0,
     playCount: item.playCount || 0
   })), []);
+
+  // Fetch last week's winner for the hero banner
+  useEffect(() => {
+    if (!selectedJurisdictionId) return;
+
+    const fetchLastWinner = async () => {
+      try {
+        const res = await apiCall({
+          method: 'get',
+          url: `/v1/awards/previous-winner?jurisdictionId=${selectedJurisdictionId}&type=song`,
+        });
+        if (res?.data) {
+          setLastWinner({
+            songId: res.data.songId,
+            title: res.data.title,
+            artworkUrl: buildUrl(res.data.artworkUrl),
+            artistName: res.data.artist?.username || 'Unknown',
+            artistId: res.data.artist?.userId,
+          });
+        }
+      } catch (err) {
+        // Silent — banner just renders without it
+        setLastWinner(null);
+      }
+    };
+
+    fetchLastWinner();
+  }, [selectedJurisdictionId]);
 
   // Fetch feed data — fires on mount AND when jurisdiction changes
   // No longer requires userId — guests get feed with default jurisdiction
@@ -361,11 +390,41 @@ const Feed = () => {
           {/* ═══════ HERO BANNER ═══════ */}
           <div className="hero-banner" onClick={handleVoteClick}>
             <div className="hero-gradient" />
+            {lastWinner ? (
+            <div
+              className="hero-winner"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSongNav(lastWinner.songId, 'song');
+              }}
+            >
+              <div className="hero-winner-label">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M19 5h-2V3H7v2H5a2 2 0 0 0-2 2v2a4 4 0 0 0 4 4h.3a6 6 0 0 0 3.7 3.6V18H8v2h8v-2h-3v-1.4A6 6 0 0 0 16.7 13H17a4 4 0 0 0 4-4V7a2 2 0 0 0-2-2zM5 9V7h2v4a2 2 0 0 1-2-2zm14 0a2 2 0 0 1-2 2V7h2v2z"/>
+                </svg>
+                Last Week's Winner
+              </div>
+              <div className="hero-winner-card">
+                <div className="hero-winner-art">
+                  <img
+                    src={lastWinner.artworkUrl || randomRapper}
+                    alt={lastWinner.title}
+                    onError={(e) => { e.target.src = randomRapper; }}
+                  />
+                </div>
+                <div className="hero-winner-info">
+                  <div className="hero-winner-title">{lastWinner.title}</div>
+                  <div className="hero-winner-artist">{lastWinner.artistName}</div>
+                </div>
+              </div>
+            </div>
+          ) : (
             <div className="hero-particles">
               <div className="hero-particle hero-particle--1" />
               <div className="hero-particle hero-particle--2" />
               <div className="hero-particle hero-particle--3" />
             </div>
+          )}
             <div className="hero-content">
               <span className="hero-label">Featured in {selectedJurisdictionName}</span>
               <h1 className="hero-title">Vote for This Week's Top Track</h1>

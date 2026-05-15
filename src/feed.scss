@@ -301,6 +301,115 @@ $text-gray: #A9A9A9;
   }
 }
 
+// ═══════════════════════════════════════
+//  LAST WEEK'S WINNER (lower-right of hero)
+// ═══════════════════════════════════════
+.hero-winner {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  cursor: pointer;
+  max-width: 220px;
+  animation: fadeUp 0.6s ease 0.15s both;
+
+  &:hover {
+    .hero-winner-card {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+    .hero-winner-art img {
+      filter: brightness(1.08);
+    }
+  }
+}
+
+.hero-winner-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+
+  svg {
+    color: var(--unis-primary);
+    filter: drop-shadow(0 0 4px var(--unis-primary-glow));
+    flex-shrink: 0;
+  }
+}
+
+.hero-winner-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 11px 7px 7px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.hero-winner-art {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: filter 0.2s ease;
+  }
+}
+
+.hero-winner-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 130px;
+}
+
+.hero-winner-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.hero-winner-artist {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
 .hero-content {
   position: relative;
   z-index: 2;
@@ -798,6 +907,42 @@ $text-gray: #A9A9A9;
     right: 20px;
     width: 120px;
     height: 120px;
+  }
+
+    .hero-winner {
+    bottom: 14px;
+    right: 14px;
+    max-width: 165px;
+    gap: 5px;
+  }
+
+  .hero-winner-label {
+    font-size: 8px;
+    letter-spacing: 0.1em;
+  }
+
+  .hero-winner-card {
+    padding: 5px 9px 5px 5px;
+    gap: 7px;
+    border-radius: 10px;
+  }
+
+  .hero-winner-art {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+  }
+
+  .hero-winner-info {
+    max-width: 95px;
+  }
+
+  .hero-winner-title {
+    font-size: 11px;
+  }
+
+  .hero-winner-artist {
+    font-size: 9.5px;
   }
 
   .feed-section {

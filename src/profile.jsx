@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Heart, Edit3, Trash2, ArrowRight, History } from 'lucide-react';
+import { Play, Edit3, Trash2, ArrowRight, History } from 'lucide-react';
 import Layout from './layout';
 import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
@@ -275,7 +275,7 @@ const Profile = () => {
               <div className="profile-hero__featured-overlay" aria-hidden="true" />
               <div className="profile-hero__featured-content">
                 <span className="profile-hero__featured-tag">
-                  <Heart size={11} fill="currentColor" aria-hidden="true" /> I Support
+                  Featured track
                 </span>
                 <h2 className="profile-hero__featured-title">{featuredTitle}</h2>
                 <div className="profile-hero__featured-sub">
@@ -299,7 +299,7 @@ const Profile = () => {
             <div className="profile-hero__featured profile-hero__featured--empty">
               <div className="profile-hero__featured-content">
                 <span className="profile-hero__featured-tag">
-                  <Heart size={11} aria-hidden="true" /> I Support
+                  Featured track
                 </span>
                 <h2 className="profile-hero__featured-title">No artist yet</h2>
                 <div className="profile-hero__featured-sub">
