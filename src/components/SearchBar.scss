@@ -171,13 +171,14 @@ input.usb-field {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  color: var(--unis-primary-2);
   padding: 6px 16px 4px;
 }
 
 .usb-section__title {
   font-size: 11px;
   font-weight: 600;
-  color: #4a4a56;
+  color: var(--unis-primary-2);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -185,7 +186,7 @@ input.usb-field {
 .usb-section__action {
   font-size: 11px;
   font-weight: 500;
-  color: #1d42a8;
+  color: var(--unis-primary-2);
   background: none;
   border: none;
   cursor: pointer;
