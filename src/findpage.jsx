@@ -292,37 +292,35 @@ const FindPage = () => {
   // Now: byName + children fire in parallel. tops uses the id we already have.
   // Total: 2 parallel round trips instead of 4 sequential ones.
   // -------------------------------------------------------------------------
-  const handleStateClick = async (feature, layer) => {
+const handleStateClick = async (feature, layer) => {
     const stateName = feature.properties.name;
     setHoveredState(stateName);
-
-    if (stateName !== 'New York') {
-      alert(`${stateName} coming to Unis soon!`);
-      return;
-    }
 
     setLoading(true);
     setHasSelectedJurisdiction(true);
 
     try {
-      // Fire byName and (speculatively) nothing else yet — we need the ID first,
-      // but children and tops both need it, so we get ID then fire both in parallel.
-      const nyRes = await apiCall({
+      const stateRes = await apiCall({
         method: 'get',
-        url: `/v1/jurisdictions/byName/${encodeURIComponent('New York')}`,
+        url: `/v1/jurisdictions/byName/${encodeURIComponent(stateName)}`,
       });
-      const jurisdiction = nyRes.data?.[0];
-      if (!jurisdiction) throw new Error('New York not found');
+      const jurisdiction = stateRes.data?.[0];
+      if (!jurisdiction) {
+        setLoading(false);
+        setHasSelectedJurisdiction(false);
+        alert(`${stateName} coming to Unis soon!`);
+        return;
+      }
 
-      // Now we have the ID — fire children and tops in parallel
+      // We have the ID — fire children and tops in parallel
       const [children] = await Promise.all([
         fetchChildren(jurisdiction.jurisdictionId),
-        fetchTopResultsById(jurisdiction.jurisdictionId, 'New York'),
+        fetchTopResultsById(jurisdiction.jurisdictionId, stateName),
       ]);
 
       setNavigationStack([
         { name: 'United States', jurisdictionId: null, tier: 0 },
-        { name: 'New York', jurisdictionId: jurisdiction.jurisdictionId, tier: 2 },
+        { name: stateName, jurisdictionId: jurisdiction.jurisdictionId, tier: 2 },
       ]);
       setCurrentJurisdictions(children);
       setSelectedJurisdiction(jurisdiction);
@@ -331,11 +329,10 @@ const FindPage = () => {
       setViewState({ mode: 'STATE', bounds, center: null, zoom: null });
     } catch (err) {
       console.error('handleStateClick error:', err);
-      setError('Failed to load New York data');
+      setError(`Failed to load ${stateName} data`);
       setLoading(false);
     }
   };
-
   // -------------------------------------------------------------------------
   // KEY FIX: handleJurisdictionClick — was sequential (fetchChildren, then
   // fetchTopResults → byName → tops). Now: if the jurisdiction is active we
