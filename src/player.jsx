@@ -136,15 +136,6 @@ const Player = () => {
     };
   }, [currentMedia]);
 
-  // 0. pocket lock protection
-  useEffect(() => {
-    if (pocketLockEnabled) return;
-
-    document.documentElement.classList.remove('pocket-lock-scroll-locked');
-    document.body.classList.remove('pocket-lock-scroll-locked');
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
-  }, [pocketLockEnabled]);
 
   // 1. Extract User ID
   useEffect(() => {
@@ -500,14 +491,7 @@ const Player = () => {
 
   const handlePocketLockUnlock = () => {
     setPocketLockEnabled(false);
-
-    // Immediate defensive restore. The useEffect above also handles this,
-    // but this makes the UI recover instantly on mobile browsers.
-    document.documentElement.classList.remove('pocket-lock-scroll-locked');
-    document.body.classList.remove('pocket-lock-scroll-locked');
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
-};
+  };
 
   const handleCreatePatternLater = (e) => {
     e.stopPropagation();

@@ -1,9 +1,4 @@
 
-html.pocket-lock-scroll-locked,
-body.pocket-lock-scroll-locked {
-  overflow: hidden;
-  overscroll-behavior: none;
-}
 
 @keyframes pocketLockOverlayIn {
   from {
@@ -46,6 +41,8 @@ body.pocket-lock-scroll-locked {
   overflow: hidden;
   display: grid;
   grid-template-rows: auto 1fr auto;
+  width: 100vw;
+  height: 100dvh;
   min-height: 100dvh;
   padding:
     calc(18px + env(safe-area-inset-top))

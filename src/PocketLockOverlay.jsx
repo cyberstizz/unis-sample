@@ -91,21 +91,10 @@ const PocketLockOverlay = ({
         }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-
-    document.documentElement.classList.add('pocket-lock-scroll-locked');
-    document.body.classList.add('pocket-lock-scroll-locked');
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-
-        document.documentElement.classList.remove('pocket-lock-scroll-locked');
-        document.body.classList.remove('pocket-lock-scroll-locked');
-
-        // Defensive cleanup in case the browser kept an inline style around
-        // from an older version of this feature.
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
     };
     }, [onUnlock]);
 
