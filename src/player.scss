@@ -824,3 +824,306 @@ $radius-sm: 6px;
     }
   }
 }
+
+// ═══════════════════════════════════════
+//  POCKET LOCK INTRO MODAL
+// ═══════════════════════════════════════
+.pocket-lock-intro-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 50% 20%, var(--unis-primary-soft), transparent 34%),
+    rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: pocketLockFadeIn 0.18s ease both;
+}
+
+.pocket-lock-intro-modal {
+  width: min(420px, 100%);
+  position: relative;
+  overflow: hidden;
+  border-radius: 26px;
+  padding: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.035)),
+    linear-gradient(180deg, rgba(12, 14, 20, 0.96), rgba(5, 6, 10, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.62),
+    0 0 70px -34px var(--unis-primary),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  animation: pocketLockModalIn 0.24s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -40% -20% auto auto;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    background: var(--unis-primary-glow);
+    filter: blur(24px);
+    opacity: 0.62;
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 34%),
+      radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.08), transparent 30%);
+    pointer-events: none;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.pocket-lock-intro-orb {
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, var(--unis-primary), var(--unis-primary-2));
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 16px 36px -18px var(--unis-primary),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+  margin-bottom: 18px;
+}
+
+.pocket-lock-intro-copy {
+  .pocket-lock-intro-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--unis-primary-2);
+
+    &::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--unis-primary);
+      box-shadow: 0 0 10px var(--unis-primary);
+    }
+  }
+
+  h2 {
+    margin: 0;
+    max-width: 330px;
+    color: #ffffff;
+    font-size: 25px;
+    line-height: 1.04;
+    letter-spacing: -0.045em;
+    font-weight: 850;
+  }
+
+  p {
+    margin: 12px 0 0;
+    color: rgba(255, 255, 255, 0.66);
+    font-size: 13.5px;
+    line-height: 1.52;
+  }
+}
+
+.pocket-lock-intro-preview {
+  margin: 20px 0 18px;
+  display: flex;
+  justify-content: center;
+}
+
+.pocket-lock-preview-phone {
+  width: 148px;
+  min-height: 188px;
+  padding: 14px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 0%, var(--unis-primary-soft), transparent 46%),
+    rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 18px 50px rgba(0, 0, 0, 0.34);
+}
+
+.pocket-lock-preview-art {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.32);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.pocket-lock-preview-lines {
+  margin-top: 13px;
+  display: grid;
+  gap: 7px;
+
+  span {
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+
+    &:first-child {
+      width: 82%;
+    }
+
+    &:last-child {
+      width: 56%;
+      background: rgba(255, 255, 255, 0.09);
+    }
+  }
+}
+
+.pocket-lock-preview-pill {
+  width: 56px;
+  height: 18px;
+  margin: 15px auto 0;
+  border-radius: 999px;
+  background: var(--unis-primary);
+  box-shadow: 0 0 18px -4px var(--unis-primary);
+}
+
+.pocket-lock-intro-actions {
+  display: grid;
+  gap: 9px;
+}
+
+.pocket-lock-intro-primary,
+.pocket-lock-intro-secondary,
+.pocket-lock-intro-ghost {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 999px;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    filter 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.pocket-lock-intro-primary {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, var(--unis-primary), var(--unis-primary-2));
+  box-shadow:
+    0 14px 32px -18px var(--unis-primary),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+  &:hover,
+  &:active {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+}
+
+.pocket-lock-intro-secondary {
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  &:hover,
+  &:active {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+}
+
+.pocket-lock-intro-ghost {
+  min-height: 36px;
+  color: rgba(255, 255, 255, 0.48);
+  background: transparent;
+  border: 1px solid transparent;
+
+  &:hover,
+  &:active {
+    color: rgba(255, 255, 255, 0.78);
+  }
+}
+
+@keyframes pocketLockFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pocketLockModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 600px) {
+  .pocket-lock-intro-backdrop {
+    align-items: flex-end;
+    padding: 12px;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .pocket-lock-intro-modal {
+    border-radius: 24px;
+    padding: 22px;
+  }
+
+  .pocket-lock-intro-copy {
+    h2 {
+      font-size: 23px;
+    }
+
+    p {
+      font-size: 13px;
+    }
+  }
+
+  .pocket-lock-intro-preview {
+    margin: 18px 0 16px;
+  }
+
+  .pocket-lock-preview-phone {
+    width: 136px;
+    min-height: 174px;
+    border-radius: 26px;
+  }
+}

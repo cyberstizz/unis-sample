@@ -115,6 +115,7 @@ const Player = () => {
   // Pocket Lock — visual scaffold only for step 1.
   // Full overlay + intro modal comes next.
   const [pocketLockEnabled, setPocketLockEnabled] = useState(false);
+  const [showPocketLockIntro, setShowPocketLockIntro] = useState(false);
 
   const seekbarRef = useRef(null);
   const playRewardedRef = useRef(false);
@@ -459,9 +460,46 @@ const Player = () => {
     setShowMobileActions(!showMobileActions);
   };
 
-   const handlePocketLockToggle = (e) => {
+  const handlePocketLockToggle = (e) => {
     e.stopPropagation();
-    setPocketLockEnabled((prev) => !prev);
+
+    const introSeen = localStorage.getItem('unis-pocket-lock-intro-seen') === 'true';
+
+    // If lock is already on, tapping the tile turns it off immediately.
+    if (pocketLockEnabled) {
+      setPocketLockEnabled(false);
+      return;
+    }
+
+    // First-time experience: show the premium intro before enabling.
+    if (!introSeen) {
+      setShowPocketLockIntro(true);
+      return;
+    }
+
+    setPocketLockEnabled(true);
+  };
+
+  const handleUsePocketLock = (e) => {
+    e.stopPropagation();
+    localStorage.setItem('unis-pocket-lock-intro-seen', 'true');
+    setShowPocketLockIntro(false);
+    setPocketLockEnabled(true);
+  };
+
+  const handleCreatePatternLater = (e) => {
+    e.stopPropagation();
+
+    // For this step, we acknowledge the choice but still use the simple lock.
+    // The actual pattern setup screen comes after the overlay is working.
+    localStorage.setItem('unis-pocket-lock-intro-seen', 'true');
+    setShowPocketLockIntro(false);
+    setPocketLockEnabled(true);
+  };
+
+  const handleDismissPocketLockIntro = (e) => {
+    e.stopPropagation();
+    setShowPocketLockIntro(false);
   };
 
   const formatTime = (seconds) => {
@@ -502,6 +540,75 @@ const Player = () => {
           fileName: `${currentMedia.artist || 'Artist'} - ${currentMedia.title || 'Track'}.mp3`,
         } : {}}
       />
+      {showPocketLockIntro && (
+    <div className="pocket-lock-intro-backdrop" onClick={handleDismissPocketLockIntro}>
+      <div
+        className="pocket-lock-intro-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pocket-lock-intro-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="pocket-lock-intro-orb">
+          <Lock size={26} />
+        </div>
+
+        <div className="pocket-lock-intro-copy">
+          <span className="pocket-lock-intro-kicker">Pocket protection</span>
+
+          <h2 id="pocket-lock-intro-title">
+            Lock your screen while Unis keeps playing.
+          </h2>
+
+          <p>
+            Pocket Lock helps prevent accidental taps when your phone is in your pocket.
+            Your music keeps playing, but the app stays protected until you unlock it.
+          </p>
+        </div>
+
+        <div className="pocket-lock-intro-preview" aria-hidden="true">
+          <div className="pocket-lock-preview-phone">
+            <div className="pocket-lock-preview-art">
+              {currentMedia?.artwork && (
+                <img src={currentMedia.artwork} alt="" />
+              )}
+            </div>
+            <div className="pocket-lock-preview-lines">
+              <span />
+              <span />
+            </div>
+            <div className="pocket-lock-preview-pill" />
+          </div>
+        </div>
+
+        <div className="pocket-lock-intro-actions">
+          <button
+            type="button"
+            className="pocket-lock-intro-primary"
+            onClick={handleUsePocketLock}
+          >
+            Use Pocket Lock
+          </button>
+
+          <button
+            type="button"
+            className="pocket-lock-intro-secondary"
+            onClick={handleCreatePatternLater}
+          >
+            Create Pattern
+          </button>
+
+          <button
+            type="button"
+            className="pocket-lock-intro-ghost"
+            onClick={handleDismissPocketLockIntro}
+          >
+            Not Now
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
       <AuthGateSheet {...gateProps} />
     </>
   );
