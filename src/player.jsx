@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
-import { Heart, Headphones, Vote, ChevronUp, ChevronDown, ListMusic } from 'lucide-react';
+import { Heart, Headphones, Vote, ChevronUp, ChevronDown, ListMusic, Lock } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
 import VotingWizard from './votingWizard';
@@ -111,6 +111,10 @@ const Player = () => {
 
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [userId, setUserId] = useState(null);
+
+  // Pocket Lock — visual scaffold only for step 1.
+  // Full overlay + intro modal comes next.
+  const [pocketLockEnabled, setPocketLockEnabled] = useState(false);
 
   const seekbarRef = useRef(null);
   const playRewardedRef = useRef(false);
@@ -455,6 +459,11 @@ const Player = () => {
     setShowMobileActions(!showMobileActions);
   };
 
+   const handlePocketLockToggle = (e) => {
+    e.stopPropagation();
+    setPocketLockEnabled((prev) => !prev);
+  };
+
   const formatTime = (seconds) => {
     if (isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -550,19 +559,42 @@ const Player = () => {
       ) : (
         <>
           {/* ═══════ MOBILE ACTIONS TRAY ═══════ */}
-          <div className={`mobile-actions-tray ${showMobileActions ? 'open' : ''}`}>
-            <div className="tray-content">
-              <button onClick={handleVoteClick} className="tray-action">
-                <Vote size={20} />
-                <span className="label">Vote</span>
-              </button>
-              <button onClick={handleAddToPlaylist} className="tray-action"><span>➕</span><span className="label">Add</span></button>
-              <button onClick={handleLike} className={`tray-action ${isLiked ? 'liked' : ''}`}>
-                <Heart fill={isLiked ? "white" : "none"} /><span className="label">{isLiked ? 'Liked' : 'Like'}</span>
-              </button>
-              <button onClick={handleDownload} className="tray-action"><span>⬇</span><span className="label">Download</span></button>
-            </div>
+        <div className={`mobile-actions-tray ${showMobileActions ? 'open' : ''}`}>
+          <div className="tray-content">
+            <button onClick={handleVoteClick} className="tray-action">
+              <Vote size={20} />
+              <span className="label">Vote</span>
+            </button>
+
+            <button onClick={handleAddToPlaylist} className="tray-action">
+              <span>➕</span>
+              <span className="label">Add</span>
+            </button>
+
+            <button onClick={handleLike} className={`tray-action ${isLiked ? 'liked' : ''}`}>
+              <Heart fill={isLiked ? "white" : "none"} />
+              <span className="label">{isLiked ? 'Liked' : 'Like'}</span>
+            </button>
+
+            <button onClick={handleDownload} className="tray-action">
+              <span>⬇</span>
+              <span className="label">Save</span>
+            </button>
+
+            <button
+              onClick={handlePocketLockToggle}
+              className={`tray-action tray-action-lock ${pocketLockEnabled ? 'locked' : ''}`}
+              aria-pressed={pocketLockEnabled}
+              title={pocketLockEnabled ? 'Pocket Lock on' : 'Pocket Lock off'}
+            >
+              <Lock size={19} />
+              <span className="pocket-lock-switch" aria-hidden="true">
+                <span className="pocket-lock-switch-thumb" />
+              </span>
+              <span className="label">Lock</span>
+            </button>
           </div>
+        </div>
 
           {/* ═══════ 3-COLUMN MINI PLAYER ═══════ */}
           <div className="Unis-mini-player">

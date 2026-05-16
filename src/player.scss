@@ -71,53 +71,113 @@ $radius-sm: 6px;
     transition: max-height 0.3s ease, padding 0.3s ease;
 
     &.open {
-      max-height: 120px;
-      padding: 15px 20px;
+      max-height: 104px;
+      padding: 12px 12px;
     }
 
     .tray-content {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 7px;
     }
 
     .tray-action {
+      min-width: 0;
+      min-height: 66px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 5px;
-      background: rgba($unis-blue, 0.1);
-      border: 1px solid rgba($unis-blue, 0.3);
-      border-radius: 8px;
-      padding: 10px;
+      gap: 4px;
+      background: rgba($unis-blue, 0.09);
+      border: 1px solid rgba($unis-blue, 0.26);
+      border-radius: 10px;
+      padding: 7px 4px;
       color: $text-secondary;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease,
+        box-shadow 0.18s ease;
 
-      &:hover, &:active {
-        background: rgba($unis-blue, 0.2);
+      &:hover,
+      &:active {
+        background: rgba($unis-blue, 0.18);
         border-color: $unis-blue;
         color: $text-primary;
+        transform: translateY(-1px);
       }
 
-      &.liked {
+      &.liked,
+      &.locked {
         color: $unis-blue;
-        border-color: $unis-blue;
+        border-color: rgba($unis-blue, 0.75);
+        background: rgba($unis-blue, 0.14);
+        box-shadow:
+          0 8px 18px -14px var(--unis-primary-glow),
+          inset 0 1px 0 rgba(255, 255, 255, 0.08);
       }
 
       svg {
-        width: 20px;
-        height: 20px;
+        width: 19px;
+        height: 19px;
+        flex-shrink: 0;
       }
 
       .label {
-        font-size: 10px;
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1;
         text-align: center;
         white-space: nowrap;
+        letter-spacing: 0.01em;
       }
     }
 
+    .tray-action-lock {
+      position: relative;
+    }
+
+    .pocket-lock-switch {
+      width: 24px;
+      height: 12px;
+      border-radius: 999px;
+      padding: 2px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: inline-flex;
+      align-items: center;
+      transition:
+        background 0.18s ease,
+        border-color 0.18s ease;
+    }
+
+    .pocket-lock-switch-thumb {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.72);
+      transform: translateX(0);
+      transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+    }
+
+    .tray-action-lock.locked {
+      .pocket-lock-switch {
+        background: var(--unis-primary);
+        border-color: rgba(255, 255, 255, 0.22);
+      }
+
+      .pocket-lock-switch-thumb {
+        transform: translateX(11px);
+        background: #ffffff;
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+      }
+    }
     @media (max-width: 600px) {
       display: block;
     }
