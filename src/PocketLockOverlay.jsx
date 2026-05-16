@@ -84,23 +84,30 @@ const PocketLockOverlay = ({
     };
   }, []);
 
-  useEffect(() => {
+    useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
+        if (e.key === 'Escape') {
         onUnlock?.();
-      }
+        }
     };
 
     document.addEventListener('keydown', handleKeyDown);
 
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    document.documentElement.classList.add('pocket-lock-scroll-locked');
+    document.body.classList.add('pocket-lock-scroll-locked');
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = originalOverflow;
+        document.removeEventListener('keydown', handleKeyDown);
+
+        document.documentElement.classList.remove('pocket-lock-scroll-locked');
+        document.body.classList.remove('pocket-lock-scroll-locked');
+
+        // Defensive cleanup in case the browser kept an inline style around
+        // from an older version of this feature.
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
     };
-  }, [onUnlock]);
+    }, [onUnlock]);
 
   return (
     <div

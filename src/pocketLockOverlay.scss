@@ -1,4 +1,9 @@
-// src/pocketLockOverlay.scss
+
+html.pocket-lock-scroll-locked,
+body.pocket-lock-scroll-locked {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 
 @keyframes pocketLockOverlayIn {
   from {
