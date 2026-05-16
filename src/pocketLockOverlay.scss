@@ -1,0 +1,467 @@
+// src/pocketLockOverlay.scss
+
+@keyframes pocketLockOverlayIn {
+  from {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pocketLockFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-7px) scale(1.01);
+  }
+}
+
+@keyframes pocketLockPulse {
+  0%, 100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+.pocket-lock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100dvh;
+  padding:
+    calc(18px + env(safe-area-inset-top))
+    18px
+    calc(22px + env(safe-area-inset-bottom));
+  color: #ffffff;
+  background: #05060a;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: pocketLockOverlayIn 0.28s ease both;
+}
+
+.pocket-lock-bg {
+  position: absolute;
+  inset: -42px;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(34px) saturate(1.28) brightness(0.52);
+  transform: scale(1.12);
+  opacity: 0.72;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 50% 20%, var(--unis-primary-soft), transparent 38%),
+      linear-gradient(180deg, rgba(5, 6, 10, 0.26) 0%, rgba(5, 6, 10, 0.84) 72%, rgba(5, 6, 10, 0.98) 100%);
+  }
+}
+
+.pocket-lock-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 28%, transparent 0%, rgba(0, 0, 0, 0.28) 52%, rgba(0, 0, 0, 0.82) 100%),
+    radial-gradient(circle at 18% 10%, var(--unis-glow-1), transparent 34%),
+    radial-gradient(circle at 82% 88%, var(--unis-glow-2), transparent 42%);
+}
+
+.pocket-lock-topbar,
+.pocket-lock-center,
+.pocket-lock-bottom {
+  position: relative;
+  z-index: 2;
+}
+
+.pocket-lock-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.pocket-lock-brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+.pocket-lock-brand-mark {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 8px 30px rgba(0, 0, 0, 0.65);
+
+  span {
+    color: var(--unis-primary-2);
+    text-shadow: 0 0 18px var(--unis-primary);
+  }
+
+  &::after {
+    content: '';
+    width: 5px;
+    height: 5px;
+    margin-left: 5px;
+    border-radius: 999px;
+    background: var(--unis-primary);
+    box-shadow: 0 0 14px var(--unis-primary);
+  }
+}
+
+.pocket-lock-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.86);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.045));
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 16px 40px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+
+  svg {
+    color: var(--unis-primary-2);
+  }
+}
+
+.pocket-lock-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 22px 0;
+}
+
+.pocket-lock-art-shell {
+  position: relative;
+  width: min(72vw, 330px);
+  max-width: 330px;
+  aspect-ratio: 1;
+  margin-bottom: 26px;
+  animation: pocketLockFloat 6s ease-in-out infinite;
+}
+
+.pocket-lock-art-glow {
+  position: absolute;
+  inset: 10%;
+  border-radius: 34px;
+  background: var(--unis-primary);
+  filter: blur(42px);
+  opacity: 0.34;
+  transform: translateY(18px);
+  animation: pocketLockPulse 3.8s ease-in-out infinite;
+}
+
+.pocket-lock-art {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  border-radius: 34px;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.045));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 40px 90px rgba(0, 0, 0, 0.56),
+    0 0 78px -42px var(--unis-primary),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+
+  img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    border-radius: 27px;
+  }
+
+  svg {
+    width: 100%;
+    height: 100%;
+    padding: 34%;
+    color: rgba(255, 255, 255, 0.38);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 27px;
+  }
+}
+
+.pocket-lock-track-copy {
+  width: min(100%, 430px);
+  text-align: center;
+}
+
+.pocket-lock-now-playing {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+  color: var(--unis-primary-2);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px var(--unis-primary-glow);
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--unis-primary);
+    box-shadow: 0 0 14px var(--unis-primary);
+  }
+}
+
+.pocket-lock-track-copy h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(27px, 7.4vw, 44px);
+  line-height: 0.98;
+  letter-spacing: -0.07em;
+  font-weight: 900;
+  text-wrap: balance;
+  text-shadow: 0 20px 70px rgba(0, 0, 0, 0.78);
+}
+
+.pocket-lock-track-copy p {
+  margin: 11px 0 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: clamp(14px, 3.6vw, 18px);
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.pocket-lock-progress-wrap {
+  width: min(100%, 430px);
+  margin-top: 26px;
+}
+
+.pocket-lock-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.pocket-lock-progress {
+  position: relative;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.42);
+}
+
+.pocket-lock-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, var(--unis-primary), var(--unis-primary-2));
+  box-shadow: 0 0 18px var(--unis-primary-glow);
+  transition: width 0.18s linear;
+}
+
+.pocket-lock-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 4px;
+}
+
+.pocket-lock-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 13px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.pocket-lock-hint-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--unis-primary);
+  box-shadow: 0 0 14px var(--unis-primary);
+}
+
+.pocket-lock-unlock {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  cursor: pointer;
+  color: #ffffff;
+  background: transparent;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.18s ease, filter 0.18s ease;
+
+  &:active,
+  &.holding {
+    transform: scale(0.96);
+  }
+
+  &.holding {
+    filter: brightness(1.1);
+  }
+}
+
+.pocket-lock-unlock-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.46),
+    0 0 42px -18px var(--unis-primary);
+}
+
+.pocket-lock-unlock-inner {
+  position: absolute;
+  inset: 8px;
+  border-radius: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05)),
+    rgba(8, 9, 14, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -12px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  svg {
+    color: var(--unis-primary-2);
+    filter: drop-shadow(0 0 12px var(--unis-primary-glow));
+  }
+}
+
+.pocket-lock-subhint {
+  max-width: 310px;
+  margin: 13px 0 0;
+  color: rgba(255, 255, 255, 0.42);
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .pocket-lock-overlay {
+    padding:
+      calc(16px + env(safe-area-inset-top))
+      16px
+      calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .pocket-lock-center {
+    padding: 18px 0 14px;
+  }
+
+  .pocket-lock-art-shell {
+    width: min(74vw, 292px);
+    margin-bottom: 22px;
+  }
+
+  .pocket-lock-art,
+  .pocket-lock-art-glow {
+    border-radius: 30px;
+  }
+
+  .pocket-lock-art img,
+  .pocket-lock-art svg {
+    border-radius: 23px;
+  }
+
+  .pocket-lock-progress-wrap {
+    margin-top: 22px;
+  }
+
+  .pocket-lock-unlock {
+    width: 78px;
+    height: 78px;
+  }
+
+  .pocket-lock-subhint {
+    font-size: 11px;
+  }
+}
+
+@media (max-height: 720px) {
+  .pocket-lock-art-shell {
+    width: min(56vw, 230px);
+    margin-bottom: 18px;
+  }
+
+  .pocket-lock-track-copy h1 {
+    font-size: clamp(24px, 6vw, 34px);
+  }
+
+  .pocket-lock-progress-wrap {
+    margin-top: 18px;
+  }
+
+  .pocket-lock-subhint {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pocket-lock-overlay,
+  .pocket-lock-art-shell,
+  .pocket-lock-art-glow {
+    animation: none;
+  }
+
+  .pocket-lock-progress-fill {
+    transition: none;
+  }
+}

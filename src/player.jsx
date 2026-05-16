@@ -11,6 +11,7 @@ import { apiCall } from './components/axiosInstance';
 import { useReward } from './context/RewardContext';
 import QueuePanel from './QueuePanel';
 import DownloadModal from './DownloadModal';
+import PocketLockOverlay from './PocketLockOverlay';
 import './player.scss';
 
 // ─── Inline SVG icons ───
@@ -487,6 +488,10 @@ const Player = () => {
     setPocketLockEnabled(true);
   };
 
+  const handlePocketLockUnlock = () => {
+    setPocketLockEnabled(false);
+  };
+
   const handleCreatePatternLater = (e) => {
     e.stopPropagation();
 
@@ -512,6 +517,16 @@ const Player = () => {
   // Shared modal block — rendered in BOTH branches below
   const modalsAndPanels = (
     <>
+      {pocketLockEnabled && currentMedia && (
+        <PocketLockOverlay
+          currentMedia={currentMedia}
+          currentTime={currentTime}
+          duration={duration}
+          isPlaying={isPlaying}
+          onUnlock={handlePocketLockUnlock}
+          formatTime={formatTime}
+        />
+      )}
       <PlaylistWizard open={showPlaylistWizard} onClose={() => setShowPlaylistWizard(false)} selectedTrack={currentMedia} />
       <PlaylistManager open={showPlaylistManager} onClose={closePlaylistManager} />
       <QueuePanel open={showQueue} onClose={() => setShowQueue(false)} />
