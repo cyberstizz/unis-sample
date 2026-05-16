@@ -136,6 +136,16 @@ const Player = () => {
     };
   }, [currentMedia]);
 
+  // 0. pocket lock protection
+  useEffect(() => {
+    if (pocketLockEnabled) return;
+
+    document.documentElement.classList.remove('pocket-lock-scroll-locked');
+    document.body.classList.remove('pocket-lock-scroll-locked');
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+  }, [pocketLockEnabled]);
+
   // 1. Extract User ID
   useEffect(() => {
     const token = localStorage.getItem('token');
