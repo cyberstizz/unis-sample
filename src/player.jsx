@@ -737,7 +737,7 @@ const Player = () => {
                 <DownloadIcon size={18} />
               </span>
               <span className="tray-copy">
-                <span className="label">Save</span>
+                <span className="label">Download</span>
                 <span className="hint">Offline</span>
               </span>
             </button>
