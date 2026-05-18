@@ -681,43 +681,90 @@ const Player = () => {
         </div>
       ) : (
         <>
-          {/* ═══════ MOBILE ACTIONS TRAY ═══════ */}
-        <div className={`mobile-actions-tray ${showMobileActions ? 'open' : ''}`}>
+      {/* ═══════ MOBILE ACTIONS TRAY ═══════ */}
+      <div className={`mobile-actions-tray ${showMobileActions ? 'open' : ''}`}>
+        <div className="tray-shell">
+          <div className="tray-handle" aria-hidden="true" />
+
+          <div className="tray-header">
+            <div>
+              <span className="tray-kicker">Now playing tools</span>
+              <strong>Control the moment</strong>
+            </div>
+
+            <span className="tray-status-pill">
+              {queue.length > 0 ? `${queue.length} in queue` : 'Live session'}
+            </span>
+          </div>
+
           <div className="tray-content">
-            <button onClick={handleVoteClick} className="tray-action">
-              <Vote size={20} />
-              <span className="label">Vote</span>
+            <button type="button" onClick={handleVoteClick} className="tray-action tray-action-featured">
+              <span className="tray-icon">
+                <Vote size={20} />
+              </span>
+              <span className="tray-copy">
+                <span className="label">Vote</span>
+                <span className="hint">Push the song</span>
+              </span>
             </button>
 
-            <button onClick={handleAddToPlaylist} className="tray-action">
-              <span>➕</span>
-              <span className="label">Add</span>
-            </button>
-
-            <button onClick={handleLike} className={`tray-action ${isLiked ? 'liked' : ''}`}>
-              <Heart fill={isLiked ? "white" : "none"} />
-              <span className="label">{isLiked ? 'Liked' : 'Like'}</span>
-            </button>
-
-            <button onClick={handleDownload} className="tray-action">
-              <span>⬇</span>
-              <span className="label">Save</span>
+            <button type="button" onClick={handleAddToPlaylist} className="tray-action">
+              <span className="tray-icon">
+                <PlusIcon />
+              </span>
+              <span className="tray-copy">
+                <span className="label">Add</span>
+                <span className="hint">Playlist</span>
+              </span>
             </button>
 
             <button
+              type="button"
+              onClick={handleLike}
+              className={`tray-action ${isLiked ? 'liked' : ''}`}
+            >
+              <span className="tray-icon">
+                <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} />
+              </span>
+              <span className="tray-copy">
+                <span className="label">{isLiked ? 'Liked' : 'Like'}</span>
+                <span className="hint">{likeCount > 0 ? `${likeCount} total` : 'Support'}</span>
+              </span>
+            </button>
+
+            <button type="button" onClick={handleDownload} className="tray-action">
+              <span className="tray-icon">
+                <DownloadIcon size={18} />
+              </span>
+              <span className="tray-copy">
+                <span className="label">Save</span>
+                <span className="hint">Offline</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
               onClick={handlePocketLockToggle}
               className={`tray-action tray-action-lock ${pocketLockEnabled ? 'locked' : ''}`}
               aria-pressed={pocketLockEnabled}
               title={pocketLockEnabled ? 'Pocket Lock on' : 'Pocket Lock off'}
             >
-              <Lock size={19} />
+              <span className="tray-icon">
+                <Lock size={19} />
+              </span>
+
+              <span className="tray-copy">
+                <span className="label">Lock</span>
+                <span className="hint">{pocketLockEnabled ? 'Protected' : 'Pocket'}</span>
+              </span>
+
               <span className="pocket-lock-switch" aria-hidden="true">
                 <span className="pocket-lock-switch-thumb" />
               </span>
-              <span className="label">Lock</span>
             </button>
           </div>
         </div>
+      </div>
 
           {/* ═══════ 3-COLUMN MINI PLAYER ═══════ */}
           <div className="Unis-mini-player">
