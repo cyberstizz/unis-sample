@@ -473,7 +473,6 @@ const Feed = () => {
               <h2 className="section-title">
                 Trending Today in <JurisdictionSelect />
               </h2>
-              <span className="section-see-all" onClick={() => navigate('/findpage')}>Show all</span>
             </div>
             <div className="card-row">
               {trendingTodayList.map((item, index) => (
@@ -542,7 +541,6 @@ const Feed = () => {
               <h2 className="section-title">
                 New Releases
               </h2>
-              <span className="section-see-all" onClick={() => navigate('/findpage')}>Show all</span>
             </div>
             <div className="card-row">
               {newMediaList.map((item, index) => (
