@@ -7,12 +7,13 @@ import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
 import VotingWizard from './votingWizard';
 import { useAuth } from './context/AuthContext';
+import { incrementGateSongCount } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
 
 const ArtistPage = ({ isOwnProfile = false }) => {
   const { artistId } = useParams();
-  const { playMedia } = useContext(PlayerContext);
-  const { user } = useAuth();
+  const { requestPlay } = useContext(PlayerContext);
+  const { user, isGuest } = useAuth();
   const navigate = useNavigate();
 
   const userId = user?.userId;
@@ -132,10 +133,19 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const handlePlayDefault = async () => {
     if (defaultSong?.fileUrl) {
       const fullUrl = buildUrl(defaultSong.fileUrl);
-      playMedia(
-        { type: 'song', url: fullUrl, title: defaultSong.title, artist: artist.username, artwork: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl) },
-        []
-      );
+      if (isGuest) incrementGateSongCount();
+      requestPlay({
+        type: 'song',
+        id: defaultSong.songId,
+        songId: defaultSong.songId,
+        url: fullUrl,
+        fileUrl: fullUrl,
+        title: defaultSong.title,
+        artist: artist.username,
+        artistId: artist.userId,
+        artwork: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl),
+        artworkUrl: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl),
+      });
       if (defaultSong.songId && userId) {
         try {
           await apiCall({ method: 'post', url: `/v1/media/song/${defaultSong.songId}/play?userId=${userId}` });
@@ -262,14 +272,24 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                       <img src={topSongArtwork} alt={topSong.title} className="ap2-featured__artwork" />
                       <button
                         className="ap2-featured__play-overlay"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const song = songs.find(s => s.songId === topSong.songId);
-                          if (song) playMedia(
-                            { type: 'song', url: buildUrl(song.fileUrl), title: song.title, artist: artist.username, artwork: buildUrl(song.artworkUrl) || artistPhoto },
-                            []
-                          );
-                        }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const song = songs.find(s => s.songId === topSong.songId);
+                            if (!song) return;
+                            if (isGuest) incrementGateSongCount();
+                            requestPlay({
+                              type: 'song',
+                              id: song.songId,
+                              songId: song.songId,
+                              url: buildUrl(song.fileUrl),
+                              fileUrl: buildUrl(song.fileUrl),
+                              title: song.title,
+                              artist: artist.username,
+                              artistId: artist.userId,
+                              artwork: buildUrl(song.artworkUrl) || artistPhoto,
+                              artworkUrl: buildUrl(song.artworkUrl) || artistPhoto,
+                            });
+                          }}
                         aria-label="Play fans pick"
                       >
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
@@ -338,14 +358,26 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                         </span>
                         <span className="ap2-track__plays">{fmt(song.plays)} plays</span>
                       </div>
-                      <button
-                        className="ap2-track__play"
-                        onClick={() => playMedia(
-                          { type: 'song', url: buildUrl(song.fileUrl), title: song.title, artist: artist.username, artwork: buildUrl(song.artworkUrl) || artistPhoto },
-                          []
-                        )}
-                        aria-label={`Play ${song.title}`}
-                      >
+                        <button
+                          className="ap2-track__play"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isGuest) incrementGateSongCount();
+                            requestPlay({
+                              type: 'song',
+                              id: song.songId,
+                              songId: song.songId,
+                              url: buildUrl(song.fileUrl),
+                              fileUrl: buildUrl(song.fileUrl),
+                              title: song.title,
+                              artist: artist.username,
+                              artistId: artist.userId,
+                              artwork: buildUrl(song.artworkUrl) || artistPhoto,
+                              artworkUrl: buildUrl(song.artworkUrl) || artistPhoto,
+                            });
+                          }}
+                          aria-label={`Play ${song.title}`}
+                        >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
                       </button>
                     </div>

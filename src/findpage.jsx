@@ -85,7 +85,7 @@ const MapController = ({ viewState, isMobile }) => {
 // ---------------------------------------------------------------------------
 const FindPage = () => {
   const navigate = useNavigate();
-  const { playMedia } = useContext(PlayerContext);
+  const { requestPlay } = useContext(PlayerContext);
   const { user, theme } = useAuth();
 
   // Derive userId from AuthContext — no token decode needed
@@ -258,6 +258,7 @@ const FindPage = () => {
         id: song.songId || i,
         title: song.title,
         artist: song.artist?.username || 'Unknown',
+        artistId: song.artist?.userId,
         votes: song.score || 0,
         fileUrl: buildUrl(song.fileUrl),
         artwork: buildUrl(song.artworkUrl) || defaultArtwork.songs[i % 4],
@@ -465,26 +466,39 @@ const handleStateClick = async (feature, layer) => {
     let trackingId = null;
 
     if (media.fileUrl) {
-      playMedia(
-        { type: 'song', url: media.fileUrl, title: media.title || media.name, artist: media.artist || media.name, artwork: media.artwork },
-        []
-      );
+      requestPlay({
+        type: 'song',
+        id: media.id,
+        songId: media.id,
+        url: media.fileUrl,
+        fileUrl: media.fileUrl,
+        title: media.title || media.name,
+        artist: media.artist || media.name,
+        artistId: media.artistId,
+        artwork: media.artwork,
+        artworkUrl: media.artwork,
+      });
       trackingId = media.id;
     } else if (media.id && media.name) {
       try {
         const res = await apiCall({ method: 'get', url: `/v1/users/${media.id}/default-song` });
         const defaultSong = res.data;
         if (defaultSong?.fileUrl) {
-          playMedia(
-            {
-              type: 'default-song',
-              url: buildUrl(defaultSong.fileUrl),
-              title: defaultSong.title,
-              artist: media.name,
-              artwork: buildUrl(defaultSong.artworkUrl) || media.artwork,
-            },
-            []
-          );
+          const fullUrl = buildUrl(defaultSong.fileUrl);
+          const fullArtwork = buildUrl(defaultSong.artworkUrl) || media.artwork;
+
+          requestPlay({
+            type: 'song',
+            id: defaultSong.songId,
+            songId: defaultSong.songId,
+            url: fullUrl,
+            fileUrl: fullUrl,
+            title: defaultSong.title,
+            artist: media.name,
+            artistId: media.id,
+            artwork: fullArtwork,
+            artworkUrl: fullArtwork,
+          });
           trackingId = defaultSong.songId;
         }
       } catch (err) {
@@ -492,10 +506,18 @@ const handleStateClick = async (feature, layer) => {
         return;
       }
     } else {
-      playMedia(
-        { type: 'song', url: sampleSong, title: media.title || media.name, artist: media.artist || media.name, artwork: media.artwork },
-        []
-      );
+      requestPlay({
+        type: 'song',
+        id: media.id,
+        songId: media.id,
+        url: sampleSong,
+        fileUrl: sampleSong,
+        title: media.title || media.name,
+        artist: media.artist || media.name,
+        artistId: media.artistId,
+        artwork: media.artwork,
+        artworkUrl: media.artwork,
+      });
       return;
     }
 

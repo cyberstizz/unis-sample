@@ -31,7 +31,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
   const { jurisdiction: jurNameFromParams } = useParams();
   const jurName = jurNameFromParams || jurisdiction;
   const navigate = useNavigate();
-  const { playMedia } = useContext(PlayerContext);
+  const { requestPlay } = useContext(PlayerContext);
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -154,7 +154,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
   }, [jurName]);
 
   // ═══════════════════════════════════════
-  // PLAY HANDLERS — identical to original
+  // PLAY HANDLERS — gated through requestPlay
   // ═══════════════════════════════════════
 
   const handlePlayTopArtist = async () => {
@@ -169,16 +169,21 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
       const defaultSong = response.data;
 
       if (defaultSong?.fileUrl) {
-        playMedia(
-          {
-            type: 'song',
-            url: buildUrl(defaultSong.fileUrl),
-            title: defaultSong.title,
-            artist: data.artistOfMonth.name,
-            artwork: buildUrl(defaultSong.artworkUrl) || data.artistOfMonth.image,
-          },
-          []
-        );
+        const fullUrl = buildUrl(defaultSong.fileUrl);
+        const fullArtwork = buildUrl(defaultSong.artworkUrl) || data.artistOfMonth.image;
+
+        requestPlay({
+          type: 'song',
+          id: defaultSong.songId,
+          songId: defaultSong.songId,
+          url: fullUrl,
+          fileUrl: fullUrl,
+          title: defaultSong.title,
+          artist: data.artistOfMonth.name,
+          artistId: data.artistOfMonth.id,
+          artwork: fullArtwork,
+          artworkUrl: fullArtwork,
+        });
 
         if (defaultSong.songId && userId) {
           await apiCall({
@@ -200,16 +205,18 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
       return;
     }
 
-    playMedia(
-      {
-        type: 'song',
-        url: data.songOfWeek.fileUrl,
-        title: data.songOfWeek.title,
-        artist: data.songOfWeek.artist,
-        artwork: data.songOfWeek.image,
-      },
-      []
-    );
+    requestPlay({
+      type: 'song',
+      id: data.songOfWeek.id,
+      songId: data.songOfWeek.id,
+      url: data.songOfWeek.fileUrl,
+      fileUrl: data.songOfWeek.fileUrl,
+      title: data.songOfWeek.title,
+      artist: data.songOfWeek.artist,
+      artistId: data.songOfWeek.artistId,
+      artwork: data.songOfWeek.image,
+      artworkUrl: data.songOfWeek.image,
+    });
 
     if (data.songOfWeek.id && userId) {
       await apiCall({
@@ -229,16 +236,21 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
       const defaultSong = response.data;
 
       if (defaultSong?.fileUrl) {
-        playMedia(
-          {
-            type: 'song',
-            url: buildUrl(defaultSong.fileUrl),
-            title: defaultSong.title,
-            artist: artist.name,
-            artwork: buildUrl(defaultSong.artworkUrl) || artist.thumbnail,
-          },
-          []
-        );
+        const fullUrl = buildUrl(defaultSong.fileUrl);
+        const fullArtwork = buildUrl(defaultSong.artworkUrl) || artist.thumbnail;
+
+        requestPlay({
+          type: 'song',
+          id: defaultSong.songId,
+          songId: defaultSong.songId,
+          url: fullUrl,
+          fileUrl: fullUrl,
+          title: defaultSong.title,
+          artist: artist.name,
+          artistId: artist.id,
+          artwork: fullArtwork,
+          artworkUrl: fullArtwork,
+        });
 
         if (defaultSong.songId && userId) {
           await apiCall({
@@ -260,16 +272,18 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
       return;
     }
 
-    playMedia(
-      {
-        type: 'song',
-        url: song.fileUrl,
-        title: song.title,
-        artist: song.artist,
-        artwork: song.thumbnail,
-      },
-      []
-    );
+    requestPlay({
+      type: 'song',
+      id: song.id,
+      songId: song.id,
+      url: song.fileUrl,
+      fileUrl: song.fileUrl,
+      title: song.title,
+      artist: song.artist,
+      artistId: song.artistId,
+      artwork: song.thumbnail,
+      artworkUrl: song.thumbnail,
+    });
 
     if (song.id && userId) {
       await apiCall({

@@ -12,7 +12,7 @@ import { buildUrl } from './utils/buildUrl';
 
 const VoteAwards = () => {
   const navigate = useNavigate();
-  const { playMedia } = useContext(PlayerContext);
+  const { requestPlay } = useContext(PlayerContext);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef(null);
@@ -176,22 +176,18 @@ const VoteAwards = () => {
 
   const handlePlaySong = async (nominee) => {
     if (nominee.type === 'song' && nominee.mediaUrl) {
-      playMedia(
-        {
-          type: 'song',
-          url: nominee.mediaUrl,
-          title: nominee.name,
-          artist: nominee.artist,
-          artwork: nominee.imageUrl,
-        },
-        [{
-          type: 'song',
-          url: nominee.mediaUrl,
-          title: nominee.name,
-          artist: nominee.artist,
-          artwork: nominee.imageUrl,
-        }]
-      );
+      requestPlay({
+        type: 'song',
+        id: nominee.id,
+        songId: nominee.id,
+        url: nominee.mediaUrl,
+        fileUrl: nominee.mediaUrl,
+        title: nominee.name,
+        artist: nominee.artist,
+        artistId: nominee.artistId,
+        artwork: nominee.imageUrl,
+        artworkUrl: nominee.imageUrl,
+      });
 
       if (nominee.id && userId) {
         try {
@@ -220,15 +216,21 @@ const VoteAwards = () => {
       const defaultSong = response.data;
 
       if (defaultSong?.fileUrl) {
-        const playData = {
-          type: 'default-song',
-          url: buildUrl(defaultSong.fileUrl),
+        const fullUrl = buildUrl(defaultSong.fileUrl);
+        const fullArtwork = buildUrl(defaultSong.artworkUrl);
+
+        requestPlay({
+          type: 'song',
+          id: defaultSong.songId,
+          songId: defaultSong.songId,
+          url: fullUrl,
+          fileUrl: fullUrl,
           title: defaultSong.title || `${nominee.name}'s Default Track`,
           artist: nominee.name,
-          artwork: buildUrl(defaultSong.artworkUrl),
-        };
-
-        playMedia(playData, [playData]);
+          artistId: nominee.id,
+          artwork: fullArtwork,
+          artworkUrl: fullArtwork,
+        });
 
         if (defaultSong.songId && userId) {
           try {
