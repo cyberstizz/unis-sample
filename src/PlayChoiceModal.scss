@@ -6,6 +6,9 @@
 //   - Ambient backdrop derived from the song's artwork (same trick as the
 //     artist page ambient mode), painting the modal in the colors of what
 //     you're about to play.
+//   - Theme-aware accents: play icon, focus rings, hover tints, and a
+//     subtle top-edge glow all use --unis-primary tokens so the modal
+//     adapts to whichever theme the user has chosen.
 //   - iOS-style action rows (stacked, not row-of-buttons)
 //   - Bottom-sheet on mobile, centered modal on desktop
 //   - Bitcount Grid Double for the eyebrow, DM Sans for everything else
@@ -43,11 +46,31 @@
   background: rgba(17, 17, 20, 0.86);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  // Hairline border picks up a faint theme tint
+  border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 88%);
   box-shadow:
     0 24px 80px rgba(0, 0, 0, 0.55),
     inset 0 0 0 1px rgba(255, 255, 255, 0.02);
   animation: pcm-modal-in 360ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  // Subtle theme-tinted top-edge glow — sits above the ambient overlay
+  // but below content. This is what ties the modal into the user's
+  // selected theme without overpowering the artwork ambient.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 140px;
+    background: radial-gradient(
+      ellipse at 50% 0%,
+      color-mix(in srgb, var(--unis-primary), transparent 78%) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
 
   @media (max-width: 640px) {
     max-width: 100%;
@@ -209,23 +232,24 @@
 
   &:hover,
   &:focus-visible {
-    background: rgba(255, 255, 255, 0.05);
+    // Subtle theme-tinted hover wash (8% theme color)
+    background: color-mix(in srgb, var(--unis-primary), transparent 92%);
   }
 
   &:active {
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--unis-primary), transparent 88%);
     transform: scale(0.997);
   }
 
   &:focus-visible {
-    outline: 2px solid rgba(46, 90, 172, 0.7);
+    outline: 2px solid var(--unis-primary);
     outline-offset: -2px;
   }
 
-  // Slight icon emphasis on hover
+  // Stronger glow on the play icon when its row is hovered
   &:hover .pcm-action-icon--play {
     box-shadow:
-      0 6px 18px rgba(22, 51, 135, 0.5),
+      0 8px 22px color-mix(in srgb, var(--unis-primary), transparent 50%),
       0 0 0 1px rgba(255, 255, 255, 0.08);
   }
 }
@@ -240,12 +264,17 @@
   border-radius: 12px;
   transition: box-shadow 180ms ease;
 
+  // Theme-aware: gradient runs from primary → primary-2 (lighter shade)
   &--play {
-    background: linear-gradient(135deg, #163387 0%, #2E5AAC 100%);
+    background: linear-gradient(
+      135deg,
+      var(--unis-primary) 0%,
+      var(--unis-primary-2) 100%
+    );
     color: #ffffff;
     box-shadow:
-      0 6px 16px rgba(22, 51, 135, 0.42),
-      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      0 6px 16px var(--unis-primary-glow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
 
     svg {
       // Optical adjustment — play triangle reads better nudged right
@@ -253,6 +282,8 @@
     }
   }
 
+  // Queue icon stays neutral on purpose — preserves visual hierarchy
+  // (Play Now is the primary action; coloring both would mute that)
   &--queue {
     background: rgba(255, 255, 255, 0.06);
     color: #f0f0f2;
@@ -329,7 +360,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid rgba(46, 90, 172, 0.7);
+    outline: 2px solid var(--unis-primary);
     outline-offset: 2px;
   }
 
