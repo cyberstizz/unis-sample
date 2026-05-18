@@ -704,7 +704,7 @@ const Player = () => {
               </span>
               <span className="tray-copy">
                 <span className="label">Vote</span>
-                <span className="hint">Push the song</span>
+                <span className="hint">Influence</span>
               </span>
             </button>
 
