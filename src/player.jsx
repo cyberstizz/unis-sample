@@ -758,9 +758,9 @@ const Player = () => {
                 <span className="hint">{pocketLockEnabled ? 'Protected' : 'Pocket'}</span>
               </span>
 
-              <span className="pocket-lock-switch" aria-hidden="true">
+              {/* <span className="pocket-lock-switch" aria-hidden="true">
                 <span className="pocket-lock-switch-thumb" />
-              </span>
+              </span> */}
             </button>
           </div>
         </div>
