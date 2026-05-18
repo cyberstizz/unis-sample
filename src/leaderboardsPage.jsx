@@ -10,7 +10,7 @@ import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 
 const LeaderboardsPage = () => {
   const navigate = useNavigate(); 
-  const { playMedia } = useContext(PlayerContext); 
+  const { requestPlay } = useContext(PlayerContext); 
   const [location, setLocation] = useState('downtown-harlem');
   const [genre, setGenre] = useState('rap');
   const [category, setCategory] = useState('artist');
@@ -50,19 +50,22 @@ const LeaderboardsPage = () => {
       // If it's a song with fileUrl, play it directly
       if (media.fileUrl) {
         const fullUrl = buildUrl(media.fileUrl);
+        const fullArtwork = buildUrl(media.artwork);
         console.log('Playing song directly:', media.title, fullUrl);
-        
-        playMedia(
-          { 
-            type: 'song', 
-            url: fullUrl, 
-            title: media.title || media.name, 
-            artist: media.artist || media.name, 
-            artwork: buildUrl(media.artwork)
-          },
-          []
-        );
-        
+
+        requestPlay({
+          type: 'song',
+          id: media.id || media.songId,
+          songId: media.id || media.songId,
+          url: fullUrl,
+          fileUrl: fullUrl,
+          title: media.title || media.name,
+          artist: media.artist || media.name,
+          artistId: media.artistId,
+          artwork: fullArtwork,
+          artworkUrl: fullArtwork,
+        });
+
         // Track this play
         trackingId = media.id || media.songId;
         trackingType = 'song';
@@ -80,19 +83,22 @@ const LeaderboardsPage = () => {
           
           if (defaultSong && defaultSong.fileUrl) {
             const fullUrl = buildUrl(defaultSong.fileUrl);
+            const fullArtwork = buildUrl(defaultSong.artworkUrl) || media.artwork;
             console.log('Playing default song:', defaultSong.title, fullUrl);
-            
-            playMedia(
-              { 
-                type: 'default-song', 
-                url: fullUrl, 
-                title: defaultSong.title, 
-                artist: media.name, 
-                artwork: buildUrl(defaultSong.artworkUrl) || media.artwork 
-              },
-              []
-            );
-            
+
+            requestPlay({
+              type: 'song',
+              id: defaultSong.songId,
+              songId: defaultSong.songId,
+              url: fullUrl,
+              fileUrl: fullUrl,
+              title: defaultSong.title,
+              artist: media.name,
+              artistId: media.id,
+              artwork: fullArtwork,
+              artworkUrl: fullArtwork,
+            });
+
             // Track this play
             trackingId = defaultSong.songId;
             trackingType = 'song';
@@ -108,16 +114,18 @@ const LeaderboardsPage = () => {
       // Fallback to sample
       else {
         console.warn('Falling back to sample song');
-        playMedia(
-          { 
-            type: 'song', 
-            url: sampleSong, 
-            title: media.title || media.name, 
-            artist: media.artist || media.name, 
-            artwork: media.artwork 
-          },
-          []
-        );
+        requestPlay({
+          type: 'song',
+          id: media.id,
+          songId: media.id,
+          url: sampleSong,
+          fileUrl: sampleSong,
+          title: media.title || media.name,
+          artist: media.artist || media.name,
+          artistId: media.artistId,
+          artwork: media.artwork,
+          artworkUrl: media.artwork,
+        });
         return; // Don't track sample plays
       }
 

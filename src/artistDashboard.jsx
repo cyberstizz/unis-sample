@@ -53,7 +53,7 @@ const SectionError = ({ message = 'Failed to load.', onRetry }) => (
 
 const ArtistDashboard = () => {
   const { user, loading: authLoading } = useAuth();
-  const { playMedia } = useContext(PlayerContext);
+  const { requestPlay } = useContext(PlayerContext);
 
   // ---- Core data (Tier 1 — must load before the page feels "ready") ------
   const [userProfile, setUserProfile] = useState(null);
@@ -268,15 +268,23 @@ const ArtistDashboard = () => {
     const artworkUrl = buildUrl(song.artworkUrl) || buildUrl(supportedArtist.photoUrl);
     if (!songUrl) return;
     const mediaObject = {
-      type: 'song', id: songId, url: songUrl, title: song.title,
-      artist: supportedArtist.username, artwork: artworkUrl
+      type: 'song',
+      id: songId,
+      songId,
+      url: songUrl,
+      fileUrl: songUrl,
+      title: song.title,
+      artist: supportedArtist.username,
+      artistId: supportedArtist.userId,
+      artwork: artworkUrl,
+      artworkUrl: artworkUrl,
     };
     try {
       await apiCall({ method: 'post', url: `/v1/media/song/${songId}/play?userId=${user.userId}` });
     } catch (err) {
       console.error('Failed to track play:', err);
     }
-    playMedia(mediaObject, [mediaObject]);
+    requestPlay(mediaObject);
   };
 
   const downloadOwnershipContract = () => {

@@ -4,8 +4,6 @@ import Layout from './layout';
 import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
-// IMPORTANT: import path may need adjusting to wherever buildUrl actually lives
-// in your project. Common locations: ./utils/buildUrl, ./lib/buildUrl, ./helpers/buildUrl
 import buildUrl from './utils/buildUrl';
 import EditProfileWizard from './editProfileWizard';
 import DeleteAccountWizard from './deleteAccountWizard';
@@ -52,7 +50,7 @@ const SectionError = ({ message = 'Failed to load.', onRetry }) => (
 // ---------------------------------------------------------------------------
 const Profile = () => {
   const { user } = useAuth();
-  const { playMedia } = React.useContext(PlayerContext);
+  const { requestPlay } = React.useContext(PlayerContext);
 
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -152,17 +150,21 @@ const Profile = () => {
     }
     const song = supportedArtist.defaultSong;
     const songId = song.songId;
+    const songUrl = buildUrl(song.fileUrl);
+    const artworkResolved = buildUrl(song.artworkUrl) || buildUrl(supportedArtist.photoUrl) || photoUrl;
 
     const mediaObject = {
       type: 'song',
       id: songId,
       songId,
-      url: buildUrl(song.fileUrl),
+      url: songUrl,
+      fileUrl: songUrl,
       title: song.title,
       artist: supportedArtist.username,
       artistName: supportedArtist.username,
-      artwork: buildUrl(song.artworkUrl) || buildUrl(supportedArtist.photoUrl) || photoUrl,
-      artworkUrl: buildUrl(song.artworkUrl) || buildUrl(supportedArtist.photoUrl) || photoUrl,
+      artistId: supportedArtist.userId,
+      artwork: artworkResolved,
+      artworkUrl: artworkResolved,
     };
 
     try {
@@ -174,7 +176,7 @@ const Profile = () => {
       console.error('[Profile] action=track_play status=fail err=', err);
     }
 
-    playMedia(mediaObject, [mediaObject]);
+    requestPlay(mediaObject);
   };
 
   const handleShareProfile = () => {
