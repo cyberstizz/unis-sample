@@ -3,9 +3,29 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { apiCall } from './components/axiosInstance';
 import { useReward } from './context/RewardContext';
+import { useAuth } from './context/AuthContext';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 import './votingWizard.scss';
-import unisLogo from './assets/unisLogoThree.svg';
+
+// Theme-aware logo — mirrors the Header component so the wizard logo
+// follows the user's active theme instead of always being blue.
+import logoblue from './assets/unisLogoThree.svg';
+import logoorange from './assets/logo-orange.png';
+import logored from './assets/logo-red.png';
+import logogreen from './assets/logo-green.png';
+import logopurple from './assets/logo-purple.png';
+import logoyellow from './assets/logo-gold.png';
+import logodianna from './assets/logo-dianna.png';
+
+const LOGO_MAP = {
+  blue: logoblue,
+  orange: logoorange,
+  red: logored,
+  green: logogreen,
+  purple: logopurple,
+  yellow: logoyellow,
+  dianna: logodianna,
+};
 
 const TOTAL_STEPS = 3;
 
@@ -62,6 +82,9 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     selectedJurisdiction: 'harlem',
   });
   const { showReward } = useReward();
+  const { theme } = useAuth();
+  const activeLogo = LOGO_MAP[theme] || logoblue;
+
   const [artistNameForward, setArtistNameForward] = useState('');
   const [artistNameBackward, setArtistNameBackward] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -69,12 +92,12 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   const [isFetchingJurisdictions, setIsFetchingJurisdictions] = useState(false);
   const [voteResult, setVoteResult] = useState({ status: 'idle', message: '', details: '' });
 
+  // Dominant color pulled from the artwork — used to tint the ambient glow,
+  // the thumbnail ring, and the modal accent. Stored as "R, G, B" so SCSS
+  // can do rgba(var(--vw-art), <alpha>). Null = fall back to theme color.
+  const [artRGB, setArtRGB] = useState(null);
+
   // Track previous `show` so the reset effect only fires on the false→true edge.
-  // This is the bug fix: previously the reset depended on `filters`, and because
-  // VoteAwards re-creates the filters object literal every second (the countdown
-  // timer triggers a parent re-render), the effect was re-firing every second
-  // and snapping `step` back to 1. Now we read the latest props off a ref and
-  // only depend on `show`.
   const prevShowRef = useRef(false);
   const latestRef = useRef({ nominee, filters });
   latestRef.current = { nominee, filters };
@@ -112,8 +135,73 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     prevShowRef.current = show;
   }, [show]); // ← only `show` — DO NOT add `nominee` or `filters` here
 
+  // --- EXTRACT DOMINANT COLOR FROM ARTWORK --------------------------------
+  // Best-effort. CSS background-image (used for the blurred ambient layer)
+  // works regardless, so if this fails (cross-origin tainted canvas) the
+  // artwork still washes the background — we just keep the theme accent.
+  useEffect(() => {
+    if (!show || !selectedNominee?.imageUrl) {
+      setArtRGB(null);
+      return;
+    }
+
+    let active = true;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      if (!active) return;
+      try {
+        const SIZE = 20;
+        const canvas = document.createElement('canvas');
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, SIZE, SIZE);
+        const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
+
+        let r = 0, g = 0, b = 0, n = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i + 3] < 125) continue; // skip transparent
+          r += data[i];
+          g += data[i + 1];
+          b += data[i + 2];
+          n += 1;
+        }
+        if (n === 0) {
+          setArtRGB(null);
+          return;
+        }
+
+        // Mild saturation lift so the ambient reads as the artwork's
+        // color rather than a muddy gray average.
+        let R = r / n, G = g / n, B = b / n;
+        const avg = (R + G + B) / 3;
+        const lift = 1.28;
+        R = Math.max(0, Math.min(255, avg + (R - avg) * lift));
+        G = Math.max(0, Math.min(255, avg + (G - avg) * lift));
+        B = Math.max(0, Math.min(255, avg + (B - avg) * lift));
+
+        setArtRGB([Math.round(R), Math.round(G), Math.round(B)]);
+      } catch (e) {
+        // Tainted canvas (image served without CORS headers) — fine,
+        // the blurred background-image still provides the ambiance.
+        setArtRGB(null);
+      }
+    };
+
+    img.onerror = () => {
+      if (active) setArtRGB(null);
+    };
+
+    img.src = selectedNominee.imageUrl;
+
+    return () => {
+      active = false;
+    };
+  }, [show, selectedNominee?.imageUrl]);
+
   // --- FETCH ELIGIBLE JURISDICTIONS (BREADCRUMB) --------------------------
-  // Depends only on stable `nominee?.id` so it doesn't refetch every parent render.
   useEffect(() => {
     if (!show || !nominee) return;
 
@@ -170,7 +258,6 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
         setEligibleJurisdictionIds(eligibleIds);
 
-        // Auto-correct an invalid selection without forcing a reset elsewhere.
         setCurrentFilters((prev) => {
           const currentId = JURISDICTION_IDS[prev.selectedJurisdiction];
           if (currentId && !eligibleIds.includes(currentId)) {
@@ -202,7 +289,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     return () => {
       cancelled = true;
     };
-  }, [show, nominee?.id]); // ← stable id only, not the whole nominee object
+  }, [show, nominee?.id]);
 
   const isJurisdictionEligible = (optionKey) => {
     if (isFetchingJurisdictions) return false;
@@ -218,7 +305,9 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   const triggerFireworks = () => {
     const duration = 2200;
     const animationEnd = Date.now() + duration;
-    const palette = ['#163387', '#3a5fcf', '#C0C0C0', '#ffffff'];
+    const palette = artRGB
+      ? [`rgb(${artRGB.join(',')})`, '#ffffff', '#C0C0C0', '#163387']
+      : ['#163387', '#3a5fcf', '#C0C0C0', '#ffffff'];
     const defaults = {
       startVelocity: 28,
       spread: 360,
@@ -288,16 +377,16 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         voteDate: new Date().toISOString().split('T')[0],
       };
 
-    await apiCall({ method: 'post', url: '/v1/vote/submit', data: voteData });
+      await apiCall({ method: 'post', url: '/v1/vote/submit', data: voteData });
 
-    setVoteResult({ status: 'success', message: 'Vote Recorded' });
+      setVoteResult({ status: 'success', message: 'Vote Recorded' });
 
-    showReward({
-      points: 25,
-      label: 'Vote counted',
-      type: 'vote',
-      anchor: 'center',
-    });
+      showReward({
+        points: 25,
+        label: 'Vote counted',
+        type: 'vote',
+        anchor: 'center',
+      });
     } catch (err) {
       console.error('Vote submission failed:', err);
       const status = err.response?.status;
@@ -346,7 +435,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
     switch (status) {
       case 'success':
-        iconColor = '#163387';
+        iconColor = artRGB ? `rgb(${artRGB.join(',')})` : '#163387';
         IconSVG = (
           <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
             <motion.path
@@ -471,9 +560,25 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       case 1:
         return (
           <div className="vw-step">
-            <span className="vw-eyebrow">Step 1 — Review</span>
-            <h2 className="vw-title">Confirm your vote for</h2>
-            <h1 className="vw-nominee">{selectedNominee.name}</h1>
+            <div className="vw-step__head">
+              <div className="vw-step__head-main">
+                <span className="vw-eyebrow">Step 1 — Review</span>
+                <h2 className="vw-title">Confirm your vote for</h2>
+                <h1 className="vw-nominee">{selectedNominee.name}</h1>
+              </div>
+              {selectedNominee.imageUrl && (
+                <div className="vw-thumb">
+                  <img
+                    src={selectedNominee.imageUrl}
+                    alt={selectedNominee.name}
+                    onError={(e) => {
+                      const wrap = e.currentTarget.parentElement;
+                      if (wrap) wrap.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
 
             <div className="vw-fields">
               <div className="vw-field">
@@ -652,6 +757,9 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   const isResult = voteResult.status !== 'idle';
   const stepVariants = direction >= 0 ? stepVariantsForward : stepVariantsBackward;
 
+  // Inline custom property — drives the artwork-tinted glow/ring in SCSS.
+  const modalStyle = artRGB ? { '--vw-art': artRGB.join(', ') } : undefined;
+
   return (
     <AnimatePresence>
       {show && (
@@ -666,106 +774,118 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         >
           <motion.div
             className={`vw-modal ${voteResult.status === 'success' ? 'vw-modal--success' : ''}`}
+            style={modalStyle}
             variants={modalVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <header className="vw-header">
-              <div className="vw-brand">
-                <img src={unisLogo} alt="" className="vw-brand__logo" />
-                <span className="vw-brand__step">
-                  {isResult ? 'Result' : `${step} of ${TOTAL_STEPS}`}
-                </span>
-              </div>
-              <button className="vw-close" onClick={onClose} aria-label="Close">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </button>
-            </header>
-
-            {/* Progress rail */}
-            {!isResult && (
+            {/* Ambient artwork wash — blurred copy of the cover/photo */}
+            {selectedNominee?.imageUrl && (
               <div
-                className="vw-progress"
-                role="progressbar"
-                aria-valuenow={step}
-                aria-valuemin={1}
-                aria-valuemax={TOTAL_STEPS}
-              >
-                {[1, 2, 3].map((n) => (
-                  <div
-                    key={n}
-                    className={`vw-progress__seg ${n <= step ? 'vw-progress__seg--active' : ''}`}
-                  >
-                    <motion.div
-                      className="vw-progress__fill"
-                      initial={false}
-                      animate={{ scaleX: n <= step ? 1 : 0 }}
-                      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                      style={{ transformOrigin: 'left center' }}
-                    />
-                  </div>
-                ))}
-              </div>
+                className="vw-ambient"
+                style={{ backgroundImage: `url("${selectedNominee.imageUrl}")` }}
+                aria-hidden="true"
+              />
             )}
 
-            {/* Body */}
-            <div className="vw-body">
-              <AnimatePresence mode="wait" custom={direction}>
-                {isResult ? (
-                  <motion.div
-                    key="result"
-                    variants={stepVariantsForward}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                  >
-                    {renderResult()}
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key={`step-${step}`}
-                    variants={stepVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                  >
-                    {renderStepContent()}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <div className="vw-modal__inner">
+              {/* Header */}
+              <header className="vw-header">
+                <div className="vw-brand">
+                  <img src={activeLogo} alt="UNIS" className="vw-brand__logo" />
+                  <span className="vw-brand__step">
+                    {isResult ? 'Result' : `${step} of ${TOTAL_STEPS}`}
+                  </span>
+                </div>
+                <button className="vw-close" onClick={onClose} aria-label="Close">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </header>
 
-            {/* Footer */}
-            {!isResult && step < 3 && (
-              <footer className="vw-footer">
-                {step > 1 ? (
+              {/* Progress rail */}
+              {!isResult && (
+                <div
+                  className="vw-progress"
+                  role="progressbar"
+                  aria-valuenow={step}
+                  aria-valuemin={1}
+                  aria-valuemax={TOTAL_STEPS}
+                >
+                  {[1, 2, 3].map((n) => (
+                    <div
+                      key={n}
+                      className={`vw-progress__seg ${n <= step ? 'vw-progress__seg--active' : ''}`}
+                    >
+                      <motion.div
+                        className="vw-progress__fill"
+                        initial={false}
+                        animate={{ scaleX: n <= step ? 1 : 0 }}
+                        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                        style={{ transformOrigin: 'left center' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Body */}
+              <div className="vw-body">
+                <AnimatePresence mode="wait" custom={direction}>
+                  {isResult ? (
+                    <motion.div
+                      key="result"
+                      variants={stepVariantsForward}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                    >
+                      {renderResult()}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key={`step-${step}`}
+                      variants={stepVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                    >
+                      {renderStepContent()}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Footer */}
+              {!isResult && step < 3 && (
+                <footer className="vw-footer">
+                  {step > 1 ? (
+                    <button onClick={handleBack} className="vw-btn vw-btn--ghost" disabled={submitting}>
+                      Back
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+                  <button onClick={handleNext} className="vw-btn vw-btn--primary">
+                    Next
+                  </button>
+                </footer>
+              )}
+
+              {!isResult && step === 3 && (
+                <footer className="vw-footer">
                   <button onClick={handleBack} className="vw-btn vw-btn--ghost" disabled={submitting}>
                     Back
                   </button>
-                ) : (
-                  <div />
-                )}
-                <button onClick={handleNext} className="vw-btn vw-btn--primary">
-                  Next
-                </button>
-              </footer>
-            )}
-
-            {!isResult && step === 3 && (
-              <footer className="vw-footer">
-                <button onClick={handleBack} className="vw-btn vw-btn--ghost" disabled={submitting}>
-                  Back
-                </button>
-                <span className="vw-footer__hint">
-                  {!forwardMatches || !backwardMatches ? 'Type both names exactly to enable' : 'Ready to cast'}
-                </span>
-              </footer>
-            )}
+                  <span className="vw-footer__hint">
+                    {!forwardMatches || !backwardMatches ? 'Type both names exactly to enable' : 'Ready to cast'}
+                  </span>
+                </footer>
+              )}
+            </div>
           </motion.div>
         </motion.div>
       )}

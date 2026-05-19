@@ -1,12 +1,20 @@
 // =========================================================================
-// VotingWizard — refined dark surface, no whole-modal pulse
-// All class names live in the .vw- namespace to avoid collision with prior styles.
+// VotingWizard — refined dark surface with artwork-ambient background.
+// All class names live in the .vw- namespace to avoid collision.
+//
+// Theme system:
+//   --unis-primary / --unis-primary-2 / --unis-primary-glow  → user theme
+//   --vw-art  → "R, G, B" pulled from the artwork (set inline by the JSX);
+//               falls back to the theme-secondary components when absent.
 // =========================================================================
 
-$vw-blue: var(--unis-primary, #163387);
-$vw-blue-light: #3a5fcf;
-$vw-blue-glow: rgba(22, 51, 135, 0.55);
-$vw-blue-soft: rgba(22, 51, 135, 0.15);
+$vw-primary:      var(--unis-primary, #163387);
+$vw-primary-2:    var(--unis-primary-2, #3a5fcf);
+$vw-primary-glow: var(--unis-primary-glow, rgba(22, 51, 135, 0.55));
+
+// Artwork accent as raw RGB components → usable inside rgba().
+// Fallback components match the theme-secondary blue.
+$vw-art: var(--vw-art, 58, 95, 207);
 
 $vw-text: #ffffff;
 $vw-text-mute: rgba(255, 255, 255, 0.62);
@@ -46,13 +54,13 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 50% 0%, rgba(22, 51, 135, 0.25), transparent 50%);
+    background: radial-gradient(circle at 50% 0%, rgba($vw-art, 0.22), transparent 50%);
     pointer-events: none;
   }
 }
 
 // -------------------------------------------------------------------------
-// Modal shell — present, not blinking
+// Modal shell — base dark surface; artwork ambient sits above it (below content)
 // -------------------------------------------------------------------------
 .vw-modal {
   position: relative;
@@ -62,13 +70,14 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   border: 1px solid $vw-line;
   border-radius: 18px;
   overflow: hidden;
+  isolation: isolate;
   box-shadow:
     0 30px 60px -20px rgba(0, 0, 0, 0.8),
     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
-    0 0 40px -10px rgba(22, 51, 135, 0.25);
+    0 0 56px -16px rgba($vw-art, 0.42);
   transition: box-shadow 0.4s ease, border-color 0.4s ease;
 
-  // Soft single top accent — replaces the old whole-border pulse
+  // Soft single top accent — tinted by the artwork
   &::before {
     content: "";
     position: absolute;
@@ -76,17 +85,52 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
     left: 20%;
     right: 20%;
     height: 1px;
-    background: linear-gradient(90deg, transparent, $vw-blue 50%, transparent);
-    opacity: 0.7;
+    z-index: 2;
+    background: linear-gradient(90deg, transparent, rgba($vw-art, 0.95) 50%, transparent);
+    opacity: 0.85;
   }
 
   &--success {
-    border-color: rgba(22, 51, 135, 0.4);
+    border-color: rgba($vw-art, 0.45);
     box-shadow:
       0 30px 60px -20px rgba(0, 0, 0, 0.8),
-      0 0 0 1px rgba(22, 51, 135, 0.2) inset,
-      0 0 80px -10px rgba(22, 51, 135, 0.5);
+      0 0 0 1px rgba($vw-art, 0.22) inset,
+      0 0 90px -10px rgba($vw-art, 0.55);
   }
+}
+
+// -------------------------------------------------------------------------
+// Ambient artwork layer — blurred cover/photo + readability scrim
+// -------------------------------------------------------------------------
+.vw-ambient {
+  position: absolute;
+  inset: -25%;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(50px) saturate(1.5) brightness(0.92);
+  transform: scale(1.18);
+  opacity: 0.62;
+  pointer-events: none;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(130% 95% at 50% 0%,
+        rgba($vw-surface-1, 0.45),
+        rgba($vw-surface-1, 0.88) 72%),
+      linear-gradient(180deg,
+        rgba(10, 10, 12, 0.70) 0%,
+        rgba(10, 10, 12, 0.93) 100%);
+  }
+}
+
+.vw-modal__inner {
+  position: relative;
+  z-index: 1;
 }
 
 // -------------------------------------------------------------------------
@@ -142,7 +186,7 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 // -------------------------------------------------------------------------
-// Progress rail
+// Progress rail — driven by the user's THEME (primary → primary-2)
 // -------------------------------------------------------------------------
 .vw-progress {
   display: grid;
@@ -155,13 +199,18 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
     background: $vw-line;
     border-radius: 999px;
     overflow: hidden;
+    transition: box-shadow 0.32s $vw-ease;
+
+    &--active {
+      box-shadow: 0 0 10px $vw-primary-glow;
+    }
   }
 
   &__fill {
     height: 100%;
     width: 100%;
-    background: linear-gradient(90deg, $vw-blue, $vw-blue-light);
     border-radius: 999px;
+    background: linear-gradient(90deg, $vw-primary 0%, $vw-primary-2 100%);
   }
 }
 
@@ -179,12 +228,47 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   flex-direction: column;
 }
 
+// Step 1 head: text block + square artwork thumbnail
+.vw-step__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.vw-step__head-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.vw-thumb {
+  flex-shrink: 0;
+  width: 78px;
+  height: 78px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 10px 22px -10px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba($vw-art, 0.30),
+    0 0 18px -4px rgba($vw-art, 0.35);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
 .vw-eyebrow {
+  display: block;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: $vw-blue-light;
+  color: $vw-primary-2;
   margin-bottom: 14px;
 }
 
@@ -199,7 +283,7 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   em {
     font-style: italic;
-    color: $vw-blue-light;
+    color: $vw-primary-2;
     font-weight: 400;
   }
 }
@@ -215,7 +299,7 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   font-family: $vw-display;
   font-size: 30px;
   font-weight: 700;
-  margin: 4px 0 22px;
+  margin: 4px 0 0;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   line-height: 1.1;
@@ -287,8 +371,8 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
   &:focus {
     outline: none;
-    border-color: $vw-blue;
-    background-color: rgba(22, 51, 135, 0.08);
+    border-color: $vw-primary;
+    background-color: rgba($vw-art, 0.10);
   }
 
   option {
@@ -400,7 +484,7 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   font-family: $vw-display;
   font-size: 13px;
   letter-spacing: 0.02em;
-  color: $vw-blue-light;
+  color: $vw-primary-2;
   text-transform: uppercase;
   max-width: 60%;
   text-align: right;
@@ -433,8 +517,8 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
     }
     &:focus {
       outline: none;
-      border-color: $vw-blue;
-      background-color: rgba(22, 51, 135, 0.08);
+      border-color: $vw-primary;
+      background-color: rgba($vw-art, 0.10);
     }
     &:disabled {
       opacity: 0.5;
@@ -508,16 +592,16 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   transition: all 0.18s $vw-ease;
 
   &--primary {
-    background: $vw-blue;
+    background: $vw-primary;
     color: white;
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.15) inset,
-      0 0 0 1px rgba(22, 51, 135, 0.4);
+      0 0 0 1px rgba($vw-art, 0.40);
 
     &:hover:not(:disabled) {
       transform: translateY(-1px);
       box-shadow:
-        0 6px 18px -4px $vw-blue-glow,
+        0 6px 18px -4px rgba($vw-art, 0.55),
         0 1px 0 rgba(255, 255, 255, 0.2) inset;
     }
 
@@ -633,8 +717,8 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
 .vw-receipt {
   width: 100%;
-  background: linear-gradient(180deg, rgba(22, 51, 135, 0.06), rgba(22, 51, 135, 0.02));
-  border: 1px solid rgba(22, 51, 135, 0.2);
+  background: linear-gradient(180deg, rgba($vw-art, 0.08), rgba($vw-art, 0.02));
+  border: 1px solid rgba($vw-art, 0.22);
   border-radius: 12px;
   padding: 20px 18px;
   margin-top: 4px;
@@ -661,7 +745,7 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   &__rule {
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(22, 51, 135, 0.5), transparent);
+    background: linear-gradient(90deg, transparent, rgba($vw-art, 0.55), transparent);
     margin: 0 0 16px;
   }
 
@@ -708,6 +792,13 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
   .vw-nominee {
     font-size: 24px;
+  }
+  .vw-thumb {
+    width: 60px;
+    height: 60px;
+  }
+  .vw-step__head {
+    gap: 12px;
   }
   .vw-receipt__grid {
     grid-template-columns: 1fr 1fr;
