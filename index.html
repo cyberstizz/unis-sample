@@ -6,41 +6,49 @@
     <!-- PWA & Mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#163387" />
+    <meta name="msapplication-TileColor" content="#163387" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Unis" />
     <meta name="description" content="Discover, vote, and support music from your neighborhood." />
 
     <!-- Icons -->
-    <link rel="icon" type="image/x-icon" href="/public/favicons/logo-blue.ico" />
-    <link rel="shortcut icon" type="image/x-icon" href="/public/favicons/logo-blue.ico" />
-    <meta name="theme-color" content="#1d42a8" />
-    <link rel="apple-touch-icon" href="/public/favicons/logo-blue.ico" />
+    <link rel="icon" type="image/x-icon" href="/favicons/logo-blue.ico" />
+    <link rel="shortcut icon" type="image/x-icon" href="/favicons/logo-blue.ico" />
+    <link rel="apple-touch-icon" href="/favicons/logo-blue.ico" />
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
 
-    <!-- Leaflet (existing) -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
 
     <title>UNIS</title>
   </head>
+
   <body>
     <div id="root"></div>
+
     <script type="module" src="/src/main.jsx"></script>
 
     <!-- Service Worker Registration -->
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then(
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js").then(
             (reg) => {
-              console.log('Unis SW registered:', reg.scope);
-              // Check for updates every 60 seconds — ensures new deploys
-              // take effect without users needing to hard-refresh
-              setInterval(() => reg.update(), 60 * 1000);
+              console.log("Unis SW registered:", reg.scope);
+
+              setInterval(() => {
+                reg.update();
+              }, 60 * 1000);
             },
-            (err) => console.warn('Unis SW registration failed:', err)
+            (err) => {
+              console.warn("Unis SW registration failed:", err);
+            }
           );
         });
       }
