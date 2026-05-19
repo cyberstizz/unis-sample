@@ -1,78 +1,65 @@
-// Comment Section Premium Styles - Unis Blue Glass Version
+// =============================================================================
+// Comment Section — Premium Unis Theme-Aware Redesign
+// =============================================================================
 
-// Unis Design System Variables
-$text-silver: #C0C0C0;
-$accent-white: #FFFFFF;
-$border-silver: #C0C0C0;
-$bg-dark: #1A1A1A;
-$unis-blue: var(--unis-primary);
-$unis-silver: #918f8f;
-
-// Extended palette for comments
-$glow-blue: #1f5eff;
-$glow-blue-light: rgba(31, 94, 255, 0.38);
-$glow-blue-subtle: rgba(31, 94, 255, 0.12);
-
-$comment-bg: rgba(9, 11, 18, 0.72);
-$comment-bg-hover: rgba(13, 17, 28, 0.88);
-$reply-bg: rgba(31, 94, 255, 0.08);
-
-$text-muted: #6B7280;
-$success-green: #10B981;
-$danger-red: #EF4444;
-
-// Typography for comments
-$font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+$font-comment: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
 
 .comments-section-premium {
-  margin-top: 2.5rem;
-  padding: 1.25rem;
-  border-radius: 18px;
+  --comment-accent: var(--unis-primary);
+  --comment-accent-2: var(--unis-primary-2, color-mix(in srgb, var(--unis-primary), white 25%));
+  --comment-soft: var(--unis-primary-soft, color-mix(in srgb, var(--unis-primary), transparent 86%));
+  --comment-glow: var(--unis-primary-glow, color-mix(in srgb, var(--unis-primary), transparent 65%));
+
+  margin-top: 2.6rem;
+  padding: 1.15rem;
   position: relative;
   overflow: hidden;
+  border-radius: 28px;
 
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-
-  // Unis-safe ambient fallback.
-  // This prevents the orange/brown wash when --ambient-glow is not provided.
-  --ambient-color: var(--ambient-glow, rgba(31, 94, 255, 0.32));
+  font-family: $font-comment;
 
   background:
-    radial-gradient(
-      circle at 18% 0%,
-      color-mix(in srgb, var(--ambient-color) 18%, transparent) 0%,
-      transparent 34%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(16, 19, 31, 0.92) 0%,
-      rgba(9, 11, 18, 0.96) 52%,
-      rgba(5, 6, 10, 0.98) 100%
-    );
+    radial-gradient(720px 300px at 12% 0%, var(--comment-soft), transparent 62%),
+    radial-gradient(520px 260px at 92% 12%, var(--unis-glow-1, var(--comment-soft)), transparent 64%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.078), rgba(255, 255, 255, 0.026)),
+    rgba(7, 9, 15, 0.86);
 
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
 
   box-shadow:
-    0 18px 48px rgba(0, 0, 0, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    inset 0 0 34px color-mix(in srgb, var(--ambient-color) 8%, transparent);
+    0 24px 70px rgba(0, 0, 0, 0.42),
+    0 0 54px -34px var(--comment-accent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 
-  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+  backdrop-filter: blur(24px) saturate(1.18);
+  -webkit-backdrop-filter: blur(24px) saturate(1.18);
 
   &::before {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;
     background:
-      linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.035),
-        transparent
-      );
-    opacity: 0.45;
+      linear-gradient(115deg, rgba(255, 255, 255, 0.09), transparent 26%),
+      linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.045), transparent);
+    opacity: 0.52;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 22px;
+    right: 22px;
+    top: 0;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--comment-accent) 58%, white 14%),
+      transparent
+    );
+    opacity: 0.74;
   }
 
   > * {
@@ -80,163 +67,191 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
     z-index: 1;
   }
 
+  // ===========================================================================
   // Header
+  // ===========================================================================
   .comments-header {
-    margin-bottom: 1.35rem;
+    margin-bottom: 1rem;
 
     h2 {
+      min-height: 48px;
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      color: $accent-white;
-      font-family: $font-comment;
-      font-size: 1.25rem;
-      font-weight: 650;
-      letter-spacing: -0.02em;
+      gap: 0.7rem;
       margin: 0;
-      padding-bottom: 0.85rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 0 0 0.95rem;
+
+      color: var(--unis-text, #fff);
+      font-size: 1.28rem;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.055em;
+
+      border-bottom: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
 
       svg {
-        color: color-mix(in srgb, var(--ambient-color) 85%, $glow-blue);
-        filter: drop-shadow(0 0 8px color-mix(in srgb, var(--ambient-color) 55%, transparent));
-        transition: all 0.5s ease;
+        width: 34px;
+        height: 34px;
+        padding: 8px;
+        border-radius: 14px;
+        color: var(--comment-accent-2);
+        background:
+          radial-gradient(circle at 50% 0%, var(--comment-soft), transparent 68%),
+          rgba(255, 255, 255, 0.055);
+        border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+        box-shadow:
+          0 12px 24px rgba(0, 0, 0, 0.24),
+          0 0 24px -15px var(--comment-accent),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
       }
 
       .comment-count {
+        min-width: 28px;
+        height: 28px;
+        padding: 0 9px;
+        margin-left: auto;
+
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 28px;
-        height: 28px;
-        padding: 0 8px;
-        background: linear-gradient(
-          135deg,
-          color-mix(in srgb, var(--ambient-color) 75%, $glow-blue) 0%,
-          color-mix(in srgb, var(--ambient-color) 45%, $unis-blue) 100%
-        );
-        border-radius: 14px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: white;
-        box-shadow: 0 2px 12px color-mix(in srgb, var(--ambient-color) 45%, transparent);
-        transition: all 0.5s ease;
+
+        border-radius: 999px;
+        color: #fff;
+        font-size: 0.74rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+
+        background:
+          linear-gradient(135deg, var(--comment-accent), var(--comment-accent-2));
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow:
+          0 12px 26px -16px var(--comment-accent),
+          inset 0 1px 0 rgba(255, 255, 255, 0.22);
       }
     }
   }
 
-  // New Comment Form
+  // ===========================================================================
+  // Composer
+  // ===========================================================================
   .new-comment-form {
-    margin-bottom: 2rem;
+    margin-bottom: 1.45rem;
 
     .input-wrapper {
+      min-height: 58px;
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      padding: 0.72rem 0.72rem 0.72rem 1rem;
+      padding: 0.66rem 0.66rem 0.66rem 1rem;
+
+      border-radius: 20px;
+      border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
 
       background:
-        linear-gradient(
-          180deg,
-          rgba(18, 22, 35, 0.78),
-          rgba(10, 12, 20, 0.82)
-        );
-
-      border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.085);
+        radial-gradient(360px 120px at 0% 0%, var(--comment-soft), transparent 64%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.072), rgba(255, 255, 255, 0.028)),
+        rgba(255, 255, 255, 0.032);
 
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.04),
-        0 10px 28px rgba(0, 0, 0, 0.22);
+        0 16px 36px rgba(0, 0, 0, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.085);
 
       transition:
-        border-color 0.25s ease,
-        box-shadow 0.25s ease,
-        background 0.25s ease;
+        border-color 0.22s ease,
+        box-shadow 0.22s ease,
+        background 0.22s ease,
+        transform 0.22s ease;
 
       &:focus-within {
-        border-color: color-mix(in srgb, var(--ambient-color) 55%, rgba(255, 255, 255, 0.12));
-
+        transform: translateY(-1px);
+        border-color: color-mix(in srgb, var(--comment-accent) 48%, rgba(255, 255, 255, 0.14));
         background:
-          linear-gradient(
-            180deg,
-            rgba(20, 25, 42, 0.86),
-            rgba(11, 14, 24, 0.9)
-          );
+          radial-gradient(420px 140px at 0% 0%, var(--comment-soft), transparent 64%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.035)),
+          rgba(255, 255, 255, 0.045);
 
         box-shadow:
-          0 0 0 3px color-mix(in srgb, var(--ambient-color) 18%, transparent),
-          0 14px 34px rgba(0, 0, 0, 0.32),
-          inset 0 1px 0 rgba(255, 255, 255, 0.065);
+          0 0 0 4px color-mix(in srgb, var(--comment-accent) 12%, transparent),
+          0 20px 44px rgba(0, 0, 0, 0.32),
+          0 0 38px -26px var(--comment-accent),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
       }
     }
 
     .comment-textarea {
       flex: 1;
-      background: transparent;
+      min-height: 25px;
+      max-height: 150px;
+      resize: none;
+      outline: none;
       border: none;
-      color: $accent-white;
+      background: transparent;
+
+      color: var(--unis-text, #fff);
       font-family: $font-comment;
       font-size: 0.95rem;
+      font-weight: 600;
       line-height: 1.5;
-      resize: none;
-      min-height: 24px;
-      max-height: 150px;
-      outline: none;
 
       &::placeholder {
-        color: rgba(156, 163, 175, 0.78);
+        color: var(--unis-text-4, rgba(255, 255, 255, 0.32));
+        font-weight: 650;
       }
     }
 
     .submit-button {
+      height: 42px;
+      min-width: 92px;
+      padding: 0 1rem;
+
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.45rem;
-      min-width: 88px;
-      height: 42px;
-      padding: 0 1rem;
+      gap: 0.46rem;
 
-      background: linear-gradient(
-        135deg,
-        color-mix(in srgb, $unis-blue 86%, #ffffff 8%) 0%,
-        color-mix(in srgb, $unis-blue 78%, #000000 12%) 100%
-      );
-
-      border: 1px solid color-mix(in srgb, var(--ambient-color) 35%, rgba(255, 255, 255, 0.22));
       border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.19);
 
-      color: white;
+      color: #fff;
+      background:
+        linear-gradient(135deg, var(--comment-accent), var(--comment-accent-2));
+
       font-family: $font-comment;
-      font-size: 0.86rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
+      font-size: 0.84rem;
+      font-weight: 900;
+      letter-spacing: -0.025em;
 
       cursor: pointer;
       flex-shrink: 0;
 
       box-shadow:
-        0 10px 24px color-mix(in srgb, var(--ambient-color) 24%, transparent),
-        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        0 14px 30px -18px var(--comment-accent),
+        0 12px 24px rgba(0, 0, 0, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24);
 
       transition:
-        transform 0.22s ease,
-        box-shadow 0.22s ease,
-        opacity 0.22s ease,
-        filter 0.22s ease;
+        transform 0.18s ease,
+        filter 0.18s ease,
+        opacity 0.18s ease,
+        box-shadow 0.18s ease;
+
+      &::after {
+        content: 'Post';
+      }
 
       svg {
-        transition: transform 0.22s ease;
+        width: 17px;
+        height: 17px;
+        transition: transform 0.18s ease;
       }
 
       &:hover:not(:disabled) {
         transform: translateY(-2px);
-        filter: brightness(1.08);
-
+        filter: brightness(1.1);
         box-shadow:
-          0 14px 32px color-mix(in srgb, var(--ambient-color) 34%, transparent),
-          inset 0 1px 0 rgba(255, 255, 255, 0.24);
+          0 18px 36px -18px var(--comment-accent),
+          0 16px 30px rgba(0, 0, 0, 0.27),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3);
 
         svg {
           transform: translateX(1px);
@@ -244,135 +259,115 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
       }
 
       &:active:not(:disabled) {
-        transform: translateY(0);
-
-        box-shadow:
-          0 5px 16px color-mix(in srgb, var(--ambient-color) 24%, transparent),
-          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        transform: translateY(0) scale(0.985);
       }
 
       &:focus-visible {
         outline: none;
-
         box-shadow:
-          0 0 0 3px color-mix(in srgb, var(--ambient-color) 30%, transparent),
-          0 12px 30px color-mix(in srgb, var(--ambient-color) 34%, transparent);
+          0 0 0 4px color-mix(in srgb, var(--comment-accent) 24%, transparent),
+          0 16px 32px -18px var(--comment-accent);
       }
 
       &:disabled {
-        opacity: 0.42;
+        opacity: 0.38;
         cursor: not-allowed;
+        filter: grayscale(0.22);
         transform: none;
-        filter: grayscale(0.25);
         box-shadow: none;
       }
     }
   }
 
-  .comment-limit-reached {
-    padding: 16px 20px;
-    background: rgba(255, 255, 255, 0.035);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    margin-bottom: 24px;
+  .comment-limit-hint {
+    margin-top: 0.55rem;
+    padding-left: 0.35rem;
+    color: var(--comment-accent-2);
+    font-size: 0.78rem;
+    font-weight: 750;
+  }
+
+  .comment-limit-reached,
+  .login-prompt {
+    margin-bottom: 1.45rem;
+    padding: 1rem 1.05rem;
+    border-radius: 18px;
+    text-align: center;
+
+    background:
+      radial-gradient(320px 120px at 50% 0%, var(--comment-soft), transparent 66%),
+      rgba(255, 255, 255, 0.04);
+    border: 1px dashed color-mix(in srgb, var(--comment-accent) 28%, rgba(255, 255, 255, 0.13));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 
     p {
       margin: 0;
-      color: #9ca3af;
+      color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
       font-size: 0.9rem;
-      text-align: center;
+      font-weight: 650;
       line-height: 1.5;
     }
   }
 
-  .comment-limit-hint {
-    margin-top: 6px;
-    padding: 0 4px;
-    font-size: 0.8rem;
-    color: color-mix(in srgb, var(--ambient-color) 65%, #aebcff);
-  }
-
-  // Login Prompt
-  .login-prompt {
-    padding: 1.5rem;
-    text-align: center;
-    background: $comment-bg;
-    border-radius: 12px;
-    border: 1px dashed color-mix(in srgb, var(--ambient-color) 24%, rgba(255, 255, 255, 0.16));
-    margin-bottom: 2rem;
-
-    p {
-      color: $text-muted;
-      font-family: $font-comment;
-      margin: 0;
-    }
-  }
-
-  // Comments List
+  // ===========================================================================
+  // List
+  // ===========================================================================
   .comments-list-premium {
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 0.65rem;
   }
 
-  // Individual Comment
   .comment-item {
     position: relative;
-    padding: 1.25rem 0;
+    padding: 0.95rem;
+    border-radius: 22px;
+    border: 1px solid transparent;
 
-    border-bottom: 1px solid transparent;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
 
-    background-image: linear-gradient(
-      90deg,
-      transparent 0%,
-      color-mix(in srgb, var(--ambient-color) 24%, transparent) 25%,
-      color-mix(in srgb, var(--ambient-color) 36%, transparent) 50%,
-      color-mix(in srgb, var(--ambient-color) 24%, transparent) 75%,
-      transparent 100%
-    );
-
-    background-size: 100% 1px;
-    background-repeat: no-repeat;
-    background-position: bottom;
-    transition: all 0.4s ease;
-
-    &:last-child {
-      background-image: none;
-    }
+    transition:
+      background 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease,
+      opacity 0.18s ease;
 
     &:hover {
-      background-color: color-mix(in srgb, var(--ambient-color) 4%, transparent);
+      transform: translateY(-1px);
+      border-color: var(--unis-border, rgba(255, 255, 255, 0.07));
+      background:
+        radial-gradient(320px 130px at 0% 0%, color-mix(in srgb, var(--comment-accent) 8%, transparent), transparent 70%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.063), rgba(255, 255, 255, 0.024));
+      box-shadow:
+        0 16px 34px rgba(0, 0, 0, 0.21),
+        inset 0 1px 0 rgba(255, 255, 255, 0.075);
     }
 
     &.reply {
-      padding: 1rem 0 1rem 1rem;
-      margin-left: 3.5rem;
-
-      border-left: 2px solid color-mix(in srgb, var(--ambient-color) 45%, rgba(31, 94, 255, 0.24));
-
-      background: linear-gradient(
-        90deg,
-        color-mix(in srgb, var(--ambient-color) 8%, transparent) 0%,
-        transparent 100%
-      );
-
-      background-image: none;
-      border-radius: 0 8px 8px 0;
+      margin-left: 3.35rem;
+      padding: 0.85rem 0.9rem;
+      border-radius: 18px;
+      border-left: 2px solid color-mix(in srgb, var(--comment-accent) 55%, rgba(255, 255, 255, 0.18));
+      background:
+        linear-gradient(90deg, color-mix(in srgb, var(--comment-accent) 8%, transparent), transparent 78%),
+        rgba(255, 255, 255, 0.025);
 
       .user-avatar {
         width: 32px;
         height: 32px;
-        font-size: 0.75rem;
+        font-size: 0.76rem;
       }
 
       .comment-text {
-        font-size: 0.875rem;
+        font-size: 0.88rem;
       }
     }
 
     .comment-content {
       display: flex;
-      gap: 1rem;
+      gap: 0.88rem;
     }
 
     .avatar-container {
@@ -382,34 +377,41 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
     .user-avatar {
       width: 44px;
       height: 44px;
-      border-radius: 50%;
       object-fit: cover;
+      border-radius: 16px;
 
-      border: 2px solid color-mix(in srgb, var(--ambient-color) 38%, rgba(255, 255, 255, 0.18));
-      box-shadow: 0 0 15px color-mix(in srgb, var(--ambient-color) 24%, transparent);
-      transition: all 0.4s ease;
+      border: 1px solid color-mix(in srgb, var(--comment-accent) 38%, rgba(255, 255, 255, 0.16));
+      box-shadow:
+        0 12px 22px rgba(0, 0, 0, 0.26),
+        0 0 24px -18px var(--comment-accent),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+      transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
 
       &.placeholder {
         display: flex;
         align-items: center;
         justify-content: center;
 
-        background: linear-gradient(
-          135deg,
-          $unis-blue 0%,
-          color-mix(in srgb, var(--ambient-color) 30%, $unis-blue) 100%
-        );
+        color: #fff;
+        background:
+          radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.24), transparent 48%),
+          linear-gradient(135deg, var(--comment-accent), var(--comment-accent-2));
 
-        color: white;
-        font-family: $font-comment;
-        font-weight: 600;
+        font-weight: 900;
         font-size: 1rem;
+        letter-spacing: -0.03em;
       }
 
       &:hover {
-        border-color: color-mix(in srgb, var(--ambient-color) 70%, rgba(255, 255, 255, 0.2));
-        box-shadow: 0 0 25px color-mix(in srgb, var(--ambient-color) 36%, transparent);
-        transform: scale(1.05);
+        transform: scale(1.04);
+        border-color: color-mix(in srgb, var(--comment-accent) 70%, rgba(255, 255, 255, 0.2));
+        box-shadow:
+          0 16px 28px rgba(0, 0, 0, 0.28),
+          0 0 30px -18px var(--comment-accent);
       }
     }
 
@@ -420,50 +422,53 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
 
     .comment-header {
       display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 0.5rem;
-      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 0.65rem;
+      margin-bottom: 0.45rem;
 
       .user-info {
+        min-width: 0;
         display: flex;
         flex-direction: column;
-        gap: 1px;
+        gap: 2px;
 
         .username {
-          color: $accent-white;
-          font-family: $font-comment;
-          font-weight: 600;
-          font-size: 0.9rem;
-          letter-spacing: -0.01em;
-          transition: color 0.3s ease;
-
-          &:hover {
-            color: color-mix(in srgb, var(--ambient-color) 55%, $accent-white);
-            cursor: pointer;
-            text-shadow: 0 0 10px color-mix(in srgb, var(--ambient-color) 42%, transparent);
-          }
+          max-width: 180px;
+          color: var(--unis-text, #fff);
+          font-size: 0.91rem;
+          font-weight: 850;
+          letter-spacing: -0.025em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .user-jurisdiction {
-          color: color-mix(in srgb, var(--ambient-color) 62%, #9fb4ff);
-          font-family: $font-comment;
-          font-size: 0.7rem;
-          font-weight: 500;
-          letter-spacing: 0.01em;
-          transition: all 0.3s ease;
+          width: fit-content;
+          max-width: 160px;
+          padding: 2px 7px;
+          border-radius: 999px;
 
-          &:hover {
-            cursor: pointer;
-            text-shadow: 0 0 8px color-mix(in srgb, var(--ambient-color) 45%, transparent);
-          }
+          color: var(--comment-accent-2);
+          background: color-mix(in srgb, var(--comment-accent) 10%, transparent);
+          border: 1px solid color-mix(in srgb, var(--comment-accent) 18%, transparent);
+
+          font-size: 0.67rem;
+          font-weight: 850;
+          line-height: 1.25;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       }
 
       .timestamp {
-        color: $text-muted;
-        font-family: $font-comment;
-        font-size: 0.75rem;
+        margin-top: 1px;
+        color: var(--unis-text-4, rgba(255, 255, 255, 0.32));
+        font-size: 0.73rem;
+        font-weight: 750;
+        white-space: nowrap;
       }
 
       .comment-menu {
@@ -471,67 +476,94 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
         position: relative;
 
         .menu-trigger {
-          display: flex;
+          width: 30px;
+          height: 30px;
+          display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 28px;
-          height: 28px;
+
+          border: 1px solid transparent;
+          border-radius: 999px;
           background: transparent;
-          border: none;
-          border-radius: 6px;
-          color: $text-muted;
+          color: var(--unis-text-4, rgba(255, 255, 255, 0.32));
           cursor: pointer;
-          transition: all 0.2s ease;
+
           opacity: 0;
+          transform: scale(0.94);
+
+          transition:
+            opacity 0.16s ease,
+            transform 0.16s ease,
+            color 0.16s ease,
+            background 0.16s ease,
+            border-color 0.16s ease;
 
           &:hover {
-            background: color-mix(in srgb, var(--ambient-color) 12%, transparent);
-            color: $accent-white;
+            color: var(--unis-text, #fff);
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--unis-border, rgba(255, 255, 255, 0.07));
           }
         }
 
         .menu-dropdown {
           position: absolute;
-          top: 100%;
+          top: calc(100% + 6px);
           right: 0;
-          margin-top: 4px;
-          background: rgba(12, 14, 22, 0.98);
-          border: 1px solid color-mix(in srgb, var(--ambient-color) 18%, rgba(255, 255, 255, 0.1));
-          border-radius: 8px;
-          padding: 4px;
-          min-width: 120px;
-
-          box-shadow:
-            0 10px 40px rgba(0, 0, 0, 0.5),
-            0 0 20px color-mix(in srgb, var(--ambient-color) 15%, transparent);
-
           z-index: 100;
-          animation: menuSlide 0.15s ease;
+
+          min-width: 126px;
+          padding: 5px;
+          border-radius: 14px;
+
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.032)),
+            rgba(7, 9, 15, 0.98);
+
+          border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+          box-shadow:
+            0 18px 44px rgba(0, 0, 0, 0.48),
+            0 0 32px -22px var(--comment-accent),
+            inset 0 1px 0 rgba(255, 255, 255, 0.09);
+
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+
+          animation: commentMenuIn 0.14s ease both;
 
           .menu-item {
+            width: 100%;
+            min-height: 34px;
+            padding: 8px 10px;
+
             display: flex;
             align-items: center;
             gap: 8px;
-            width: 100%;
-            padding: 8px 12px;
-            background: none;
-            border: none;
-            border-radius: 4px;
-            color: $text-silver;
+
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+
             font-family: $font-comment;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
+            font-weight: 800;
             cursor: pointer;
-            transition: all 0.15s ease;
+
+            transition:
+              background 0.14s ease,
+              color 0.14s ease;
 
             &:hover {
-              background: color-mix(in srgb, var(--ambient-color) 12%, transparent);
+              background: rgba(255, 255, 255, 0.07);
+              color: var(--unis-text, #fff);
             }
 
             &.delete {
-              color: $danger-red;
+              color: #ff7f7f;
 
               &:hover {
-                background: rgba(239, 68, 68, 0.15);
+                background: rgba(239, 68, 68, 0.13);
+                color: #ff9999;
               }
             }
           }
@@ -541,193 +573,256 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
 
     &:hover .comment-menu .menu-trigger {
       opacity: 1;
+      transform: scale(1);
     }
 
     .comment-text {
-      color: $text-silver;
-      font-family: $font-comment;
+      margin: 0 0 0.78rem;
+      color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
       font-size: 0.95rem;
-      line-height: 1.6;
-      margin: 0 0 0.75rem 0;
+      font-weight: 500;
+      line-height: 1.62;
       word-wrap: break-word;
       white-space: pre-wrap;
     }
 
     .reply-trigger {
+      min-height: 32px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 12px;
-      background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
-      color: $text-muted;
+      padding: 6px 11px;
+
+      border-radius: 999px;
+      border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+
+      color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
       font-family: $font-comment;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
+      font-weight: 850;
+
       cursor: pointer;
-      transition: all 0.3s ease;
+
+      transition:
+        transform 0.16s ease,
+        color 0.16s ease,
+        border-color 0.16s ease,
+        background 0.16s ease,
+        box-shadow 0.16s ease;
 
       &:hover {
-        border-color: color-mix(in srgb, var(--ambient-color) 50%, rgba(255, 255, 255, 0.16));
-        color: color-mix(in srgb, var(--ambient-color) 60%, $accent-white);
-        background: color-mix(in srgb, var(--ambient-color) 12%, transparent);
-        box-shadow: 0 0 15px color-mix(in srgb, var(--ambient-color) 22%, transparent);
+        transform: translateY(-1px);
+        color: var(--comment-accent-2);
+        border-color: color-mix(in srgb, var(--comment-accent) 42%, rgba(255, 255, 255, 0.14));
+        background:
+          radial-gradient(circle at 50% 0%, var(--comment-soft), transparent 62%),
+          rgba(255, 255, 255, 0.055);
+        box-shadow: 0 0 24px -18px var(--comment-accent);
       }
     }
 
     .reply-input-container {
+      margin-top: 0.8rem;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-      padding: 0.5rem;
-      background: rgba(255, 255, 255, 0.035);
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      transition: all 0.4s ease;
+      gap: 0.55rem;
+      padding: 0.48rem 0.48rem 0.48rem 0.75rem;
+
+      border-radius: 16px;
+      border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+      background:
+        radial-gradient(280px 90px at 0% 0%, var(--comment-soft), transparent 68%),
+        rgba(255, 255, 255, 0.035);
+
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+
+      transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease;
 
       &:focus-within {
-        border-color: color-mix(in srgb, var(--ambient-color) 50%, rgba(255, 255, 255, 0.12));
-
+        border-color: color-mix(in srgb, var(--comment-accent) 42%, rgba(255, 255, 255, 0.15));
         box-shadow:
-          0 0 20px color-mix(in srgb, var(--ambient-color) 24%, transparent),
-          inset 0 0 10px color-mix(in srgb, var(--ambient-color) 5%, transparent);
+          0 0 0 3px color-mix(in srgb, var(--comment-accent) 10%, transparent),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
       }
 
       .reply-input {
         flex: 1;
-        background: transparent;
+        min-width: 0;
+        padding: 8px 0;
         border: none;
-        color: $accent-white;
+        outline: none;
+        background: transparent;
+
+        color: var(--unis-text, #fff);
         font-family: $font-comment;
         font-size: 0.875rem;
-        padding: 8px;
-        outline: none;
+        font-weight: 650;
 
         &::placeholder {
-          color: $text-muted;
+          color: var(--unis-text-4, rgba(255, 255, 255, 0.32));
         }
       }
 
       .reply-submit {
-        display: flex;
+        width: 34px;
+        height: 34px;
+        flex-shrink: 0;
+
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
 
-        background: linear-gradient(
-          135deg,
-          color-mix(in srgb, var(--ambient-color) 70%, $glow-blue) 0%,
-          color-mix(in srgb, var(--ambient-color) 50%, $unis-blue) 100%
-        );
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        background:
+          linear-gradient(135deg, var(--comment-accent), var(--comment-accent-2));
 
-        border: none;
-        border-radius: 6px;
-        color: white;
+        color: #fff;
         cursor: pointer;
-        transition: all 0.3s ease;
+
+        box-shadow:
+          0 12px 24px -16px var(--comment-accent),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+        transition:
+          transform 0.16s ease,
+          filter 0.16s ease,
+          opacity 0.16s ease;
 
         &:hover:not(:disabled) {
-          box-shadow: 0 0 15px color-mix(in srgb, var(--ambient-color) 42%, transparent);
-          transform: scale(1.05);
+          transform: translateY(-1px) scale(1.03);
+          filter: brightness(1.1);
         }
 
         &:disabled {
-          opacity: 0.4;
+          opacity: 0.38;
           cursor: not-allowed;
+          box-shadow: none;
         }
       }
     }
   }
 
+  // ===========================================================================
+  // Replies
+  // ===========================================================================
   .replies-section {
-    margin-top: 0.75rem;
-    margin-left: 3.5rem;
+    margin-top: 0.7rem;
+    margin-left: 3.35rem;
 
     .toggle-replies {
+      min-height: 32px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 0;
-      background: none;
-      border: none;
+      padding: 6px 10px;
 
-      color: color-mix(in srgb, var(--ambient-color) 70%, $glow-blue);
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
 
+      color: var(--comment-accent-2);
       font-family: $font-comment;
-      font-size: 0.8rem;
-      font-weight: 500;
+      font-size: 0.78rem;
+      font-weight: 850;
       cursor: pointer;
-      transition: all 0.3s ease;
+
+      transition:
+        color 0.16s ease,
+        background 0.16s ease,
+        text-shadow 0.16s ease;
 
       &:hover {
-        color: color-mix(in srgb, var(--ambient-color) 85%, #ffffff);
-        text-shadow: 0 0 10px color-mix(in srgb, var(--ambient-color) 45%, transparent);
+        color: var(--unis-text, #fff);
+        background: color-mix(in srgb, var(--comment-accent) 10%, transparent);
+        text-shadow: 0 0 14px var(--comment-glow);
       }
 
       svg {
-        transition: transform 0.2s ease;
+        transition: transform 0.16s ease;
       }
     }
 
     .replies-list {
-      margin-top: 0.5rem;
-      animation: fadeIn 0.3s ease;
+      margin-top: 0.45rem;
+      display: grid;
+      gap: 0.55rem;
+      animation: commentFadeIn 0.22s ease both;
     }
   }
 
+  // ===========================================================================
+  // Loading / Empty
+  // ===========================================================================
   .loading-state,
   .empty-state {
+    min-height: 220px;
+    padding: 2.7rem 1rem;
+
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 3rem 1rem;
+
+    border-radius: 24px;
     text-align: center;
 
+    background:
+      radial-gradient(360px 160px at 50% 0%, var(--comment-soft), transparent 66%),
+      rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+
+    svg {
+      color: var(--comment-accent-2);
+      opacity: 0.72;
+      filter: drop-shadow(0 0 16px var(--comment-glow));
+    }
+
     p {
-      color: $text-silver;
-      font-family: $font-comment;
+      margin: 1rem 0 0.25rem;
+      color: var(--unis-text, #fff);
       font-size: 1rem;
-      margin: 1rem 0 0.25rem 0;
+      font-weight: 850;
+      letter-spacing: -0.025em;
     }
 
     span {
-      color: $text-muted;
-      font-family: $font-comment;
+      color: var(--unis-text-4, rgba(255, 255, 255, 0.32));
       font-size: 0.875rem;
-    }
-
-    svg {
-      color: color-mix(in srgb, var(--ambient-color) 50%, $text-muted);
-      opacity: 0.6;
-      filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ambient-color) 32%, transparent));
+      font-weight: 650;
     }
   }
 
   .loading-spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid color-mix(in srgb, var(--ambient-color) 26%, transparent);
-    border-top-color: color-mix(in srgb, var(--ambient-color) 80%, $glow-blue);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    box-shadow: 0 0 20px color-mix(in srgb, var(--ambient-color) 32%, transparent);
+    border: 3px solid color-mix(in srgb, var(--comment-accent) 16%, rgba(255, 255, 255, 0.1));
+    border-top-color: var(--comment-accent-2);
+    box-shadow: 0 0 22px -10px var(--comment-accent);
+    animation: commentSpin 0.8s linear infinite;
   }
 }
 
+// =============================================================================
 // Animations
-@keyframes spin {
+// =============================================================================
+
+@keyframes commentSpin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes fadeIn {
+@keyframes commentFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-6px);
   }
 
   to {
@@ -736,10 +831,10 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
   }
 }
 
-@keyframes menuSlide {
+@keyframes commentMenuIn {
   from {
     opacity: 0;
-    transform: translateY(-8px) scale(0.95);
+    transform: translateY(-6px) scale(0.96);
   }
 
   to {
@@ -748,65 +843,131 @@ $font-comment: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, s
   }
 }
 
-@keyframes ambientPulse {
-  0%, 100% {
-    box-shadow:
-      inset 0 0 60px -40px var(--ambient-color),
-      0 0 40px -20px color-mix(in srgb, var(--ambient-color) 30%, transparent);
-  }
-
-  50% {
-    box-shadow:
-      inset 0 0 80px -40px var(--ambient-color),
-      0 0 60px -20px color-mix(in srgb, var(--ambient-color) 40%, transparent);
-  }
-}
-
+// =============================================================================
 // Responsive
+// =============================================================================
+
 @media (max-width: 640px) {
   .comments-section-premium {
-    padding: 1rem;
-    margin-top: 1.5rem;
+    margin-top: 1.6rem;
+    padding: 0.9rem;
+    border-radius: 24px;
 
-    .new-comment-form {
-      .input-wrapper {
-        gap: 0.6rem;
-        padding: 0.68rem;
-      }
+    .comments-header {
+      margin-bottom: 0.9rem;
 
-      .submit-button {
-        min-width: 42px;
-        width: 42px;
-        padding: 0;
+      h2 {
+        font-size: 1.12rem;
+        padding-bottom: 0.8rem;
 
-        span {
-          display: none;
+        svg {
+          width: 31px;
+          height: 31px;
+          padding: 7px;
+          border-radius: 13px;
+        }
+
+        .comment-count {
+          min-width: 26px;
+          height: 26px;
+          font-size: 0.7rem;
         }
       }
     }
 
+    .new-comment-form {
+      margin-bottom: 1.05rem;
+
+      .input-wrapper {
+        align-items: flex-end;
+        gap: 0.55rem;
+        padding: 0.62rem;
+        border-radius: 18px;
+      }
+
+      .comment-textarea {
+        font-size: 0.9rem;
+        min-height: 38px;
+      }
+
+      .submit-button {
+        width: 42px;
+        min-width: 42px;
+        height: 42px;
+        padding: 0;
+
+        &::after {
+          content: '';
+        }
+      }
+    }
+
+    .comments-list-premium {
+      gap: 0.55rem;
+    }
+
     .comment-item {
+      padding: 0.82rem;
+      border-radius: 20px;
+
       &.reply {
-        margin-left: 2rem;
-        padding-left: 0.75rem;
+        margin-left: 1.7rem;
+        padding: 0.75rem 0.8rem;
+      }
+
+      .comment-content {
+        gap: 0.68rem;
       }
 
       .user-avatar {
-        width: 36px;
-        height: 36px;
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
 
         &.placeholder {
           font-size: 0.85rem;
         }
       }
 
-      .comment-content {
-        gap: 0.75rem;
+      .comment-header {
+        gap: 0.45rem;
+
+        .user-info {
+          .username {
+            max-width: 140px;
+            font-size: 0.86rem;
+          }
+
+          .user-jurisdiction {
+            max-width: 130px;
+            font-size: 0.62rem;
+          }
+        }
+
+        .timestamp {
+          font-size: 0.68rem;
+        }
+
+        .comment-menu .menu-trigger {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .comment-text {
+        font-size: 0.9rem;
+        line-height: 1.55;
       }
     }
 
     .replies-section {
-      margin-left: 2rem;
+      margin-left: 1.7rem;
+    }
+
+    .loading-state,
+    .empty-state {
+      min-height: 190px;
+      padding: 2.2rem 1rem;
     }
   }
 }
