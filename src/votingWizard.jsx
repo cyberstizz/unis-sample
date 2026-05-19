@@ -5,6 +5,7 @@ import { apiCall } from './components/axiosInstance';
 import { useReward } from './context/RewardContext';
 import { useAuth } from './context/AuthContext';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
+import { buildUrl } from './utils/buildUrl';
 import './votingWizard.scss';
 
 // Theme-aware logo — mirrors the Header component so the wizard logo
@@ -28,6 +29,61 @@ const LOGO_MAP = {
 };
 
 const TOTAL_STEPS = 3;
+
+// -------------------------------------------------------------------------
+// Artwork resolver.
+//
+// The nominee object's shape depends on WHERE the wizard was opened:
+//   - From voteawards.jsx it's normalized and has `imageUrl` (already
+//     absolute, via buildUrl).
+//   - From the home/song/artist pages it's often the raw entity, where the
+//     field is `artworkUrl` (song) or `photoUrl` (artist) and the path is
+//     RELATIVE.
+//
+// So: pick the first present field, and only run buildUrl when the value
+// isn't already absolute (avoids double-prefixing the voteawards URL).
+// -------------------------------------------------------------------------
+const ARTWORK_KEYS = [
+  'imageUrl',
+  'artworkUrl',
+  'photoUrl',
+  'artwork',
+  'image',
+  'coverUrl',
+  'cover',
+  'thumbnailUrl',
+  'pictureUrl',
+];
+
+function resolveArtwork(n) {
+  if (!n) return null;
+  let raw = null;
+  for (const k of ARTWORK_KEYS) {
+    if (n[k] && typeof n[k] === 'string') {
+      raw = n[k];
+      break;
+    }
+  }
+  // Nested fallbacks some payloads use (e.g. n.song.artworkUrl)
+  if (!raw) {
+    const nested = n.song || n.track || n.artistProfile || n.user || null;
+    if (nested) {
+      for (const k of ARTWORK_KEYS) {
+        if (nested[k] && typeof nested[k] === 'string') {
+          raw = nested[k];
+          break;
+        }
+      }
+    }
+  }
+  if (!raw) return null;
+  if (/^(https?:|data:|blob:)/i.test(raw)) return raw; // already absolute
+  try {
+    return buildUrl(raw);
+  } catch (e) {
+    return raw;
+  }
+}
 
 // --- ANIMATION VARIANTS ---------------------------------------------------
 
@@ -92,17 +148,20 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   const [isFetchingJurisdictions, setIsFetchingJurisdictions] = useState(false);
   const [voteResult, setVoteResult] = useState({ status: 'idle', message: '', details: '' });
 
-  // Dominant color pulled from the artwork — used to tint the ambient glow,
-  // the thumbnail ring, and the modal accent. Stored as "R, G, B" so SCSS
-  // can do rgba(var(--vw-art), <alpha>). Null = fall back to theme color.
+  // Dominant color pulled from the artwork — tints the ambient glow, the
+  // thumbnail ring, and the modal accent. "R, G, B"; null → theme fallback.
   const [artRGB, setArtRGB] = useState(null);
+  // Whether the artwork actually loaded (false → hide thumb/ambient cleanly).
+  const [artworkOk, setArtworkOk] = useState(false);
 
-  // Track previous `show` so the reset effect only fires on the false→true edge.
   const prevShowRef = useRef(false);
   const latestRef = useRef({ nominee, filters });
   latestRef.current = { nominee, filters };
 
   const selectedNominee = nominee;
+
+  // Resolve the artwork URL once per nominee, regardless of field name.
+  const artworkUrl = useMemo(() => resolveArtwork(selectedNominee), [selectedNominee]);
 
   const reversedNomineeName = useMemo(
     () => (selectedNominee ? selectedNominee.name.split('').reverse().join('') : ''),
@@ -111,6 +170,25 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
   const getKeyFromId = (id) =>
     Object.keys(JURISDICTION_IDS).find((k) => JURISDICTION_IDS[k] === id);
+
+  // --- DIAGNOSTIC ---------------------------------------------------------
+  // If the wizard is open with a nominee but we couldn't resolve any
+  // artwork, log exactly what keys the nominee DOES have so the missing
+  // field can be added (to the payload or to ARTWORK_KEYS above).
+  useEffect(() => {
+    if (show && selectedNominee && !artworkUrl) {
+      console.warn(
+        '[VotingWizard] No artwork could be resolved for this nominee. ' +
+          'The ambient background and thumbnail need an image URL. ' +
+          'Nominee keys present:',
+        Object.keys(selectedNominee),
+        '\nFull nominee object:',
+        selectedNominee
+      );
+    } else if (show && artworkUrl) {
+      console.debug('[VotingWizard] Resolved artwork URL:', artworkUrl);
+    }
+  }, [show, selectedNominee, artworkUrl]);
 
   // --- RESET STATE ONLY ON OPEN TRANSITION --------------------------------
   useEffect(() => {
@@ -135,13 +213,11 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     prevShowRef.current = show;
   }, [show]); // ← only `show` — DO NOT add `nominee` or `filters` here
 
-  // --- EXTRACT DOMINANT COLOR FROM ARTWORK --------------------------------
-  // Best-effort. CSS background-image (used for the blurred ambient layer)
-  // works regardless, so if this fails (cross-origin tainted canvas) the
-  // artwork still washes the background — we just keep the theme accent.
+  // --- LOAD ARTWORK + EXTRACT DOMINANT COLOR ------------------------------
   useEffect(() => {
-    if (!show || !selectedNominee?.imageUrl) {
+    if (!show || !artworkUrl) {
       setArtRGB(null);
+      setArtworkOk(false);
       return;
     }
 
@@ -151,6 +227,8 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
     img.onload = () => {
       if (!active) return;
+      setArtworkOk(true); // image is real & reachable
+
       try {
         const SIZE = 20;
         const canvas = document.createElement('canvas');
@@ -162,7 +240,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
         let r = 0, g = 0, b = 0, n = 0;
         for (let i = 0; i < data.length; i += 4) {
-          if (data[i + 3] < 125) continue; // skip transparent
+          if (data[i + 3] < 125) continue;
           r += data[i];
           g += data[i + 1];
           b += data[i + 2];
@@ -173,8 +251,6 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
           return;
         }
 
-        // Mild saturation lift so the ambient reads as the artwork's
-        // color rather than a muddy gray average.
         let R = r / n, G = g / n, B = b / n;
         const avg = (R + G + B) / 3;
         const lift = 1.28;
@@ -184,22 +260,25 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
         setArtRGB([Math.round(R), Math.round(G), Math.round(B)]);
       } catch (e) {
-        // Tainted canvas (image served without CORS headers) — fine,
-        // the blurred background-image still provides the ambiance.
+        // Tainted canvas (no CORS headers). The blurred CSS background still
+        // works — we just keep the theme accent instead of an art-derived one.
         setArtRGB(null);
       }
     };
 
     img.onerror = () => {
-      if (active) setArtRGB(null);
+      if (!active) return;
+      setArtworkOk(false);
+      setArtRGB(null);
+      console.warn('[VotingWizard] Artwork failed to load:', artworkUrl);
     };
 
-    img.src = selectedNominee.imageUrl;
+    img.src = artworkUrl;
 
     return () => {
       active = false;
     };
-  }, [show, selectedNominee?.imageUrl]);
+  }, [show, artworkUrl]);
 
   // --- FETCH ELIGIBLE JURISDICTIONS (BREADCRUMB) --------------------------
   useEffect(() => {
@@ -417,7 +496,6 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   const formatText = (str) =>
     str ? str.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '';
 
-  // Real-time match indicators for step 3
   const forwardMatches =
     artistNameForward.length > 0 &&
     artistNameForward.toLowerCase() === (selectedNominee?.name || '').toLowerCase();
@@ -425,6 +503,8 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     artistNameBackward.length > 0 &&
     artistNameBackward.toLowerCase() === reversedNomineeName.toLowerCase();
   const canSubmit = forwardMatches && backwardMatches && !submitting;
+
+  const showArtwork = Boolean(artworkUrl) && artworkOk;
 
   // --- RESULT RENDER ------------------------------------------------------
   const renderResult = () => {
@@ -566,15 +646,12 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
                 <h2 className="vw-title">Confirm your vote for</h2>
                 <h1 className="vw-nominee">{selectedNominee.name}</h1>
               </div>
-              {selectedNominee.imageUrl && (
+              {showArtwork && (
                 <div className="vw-thumb">
                   <img
-                    src={selectedNominee.imageUrl}
+                    src={artworkUrl}
                     alt={selectedNominee.name}
-                    onError={(e) => {
-                      const wrap = e.currentTarget.parentElement;
-                      if (wrap) wrap.style.display = 'none';
-                    }}
+                    onError={() => setArtworkOk(false)}
                   />
                 </div>
               )}
@@ -757,7 +834,6 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   const isResult = voteResult.status !== 'idle';
   const stepVariants = direction >= 0 ? stepVariantsForward : stepVariantsBackward;
 
-  // Inline custom property — drives the artwork-tinted glow/ring in SCSS.
   const modalStyle = artRGB ? { '--vw-art': artRGB.join(', ') } : undefined;
 
   return (
@@ -782,10 +858,10 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
             onClick={(e) => e.stopPropagation()}
           >
             {/* Ambient artwork wash — blurred copy of the cover/photo */}
-            {selectedNominee?.imageUrl && (
+            {showArtwork && (
               <div
                 className="vw-ambient"
-                style={{ backgroundImage: `url("${selectedNominee.imageUrl}")` }}
+                style={{ backgroundImage: `url("${artworkUrl}")` }}
                 aria-hidden="true"
               />
             )}
