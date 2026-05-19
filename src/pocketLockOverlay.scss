@@ -107,31 +107,16 @@
   min-height: 34px;
 }
 
-.pocket-lock-brand-mark {
-  position: relative;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 1px;
-  font-size: 17px;
-  font-weight: 900;
-  letter-spacing: -0.055em;
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 8px 30px rgba(0, 0, 0, 0.65);
-
-  span {
-    color: var(--unis-primary-2);
-    text-shadow: 0 0 18px var(--unis-primary);
-  }
-
-  &::after {
-    content: '';
-    width: 5px;
-    height: 5px;
-    margin-left: 5px;
-    border-radius: 999px;
-    background: var(--unis-primary);
-    box-shadow: 0 0 14px var(--unis-primary);
-  }
+.pocket-lock-brand-logo {
+  height: 56px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+  filter:
+    drop-shadow(0 10px 28px rgba(0, 0, 0, 0.62))
+    drop-shadow(0 0 18px var(--unis-primary-glow));
 }
 
 .pocket-lock-status-pill {

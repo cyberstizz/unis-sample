@@ -1,6 +1,15 @@
 // src/PocketLockOverlay.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Lock, Unlock, Music2 } from 'lucide-react';
+import { useAuth } from './context/AuthContext';
+
+import logoblue from './assets/unisLogoThree.svg';
+import logoorange from './assets/logo-orange.png';
+import logored from './assets/logo-red.png';
+import logogreen from './assets/logo-green.png';
+import logopurple from './assets/logo-purple.png';
+import logoyellow from './assets/logo-gold.png';
+import logodianna from './assets/logo-dianna.png';
 import './pocketLockOverlay.scss';
 
 const UNLOCK_HOLD_MS = 1100;
@@ -18,6 +27,20 @@ const PocketLockOverlay = ({
 
   const holdStartRef = useRef(null);
   const rafRef = useRef(null);
+
+  const { theme } = useAuth();
+
+  const LOGO_MAP = {
+    blue: logoblue,
+    orange: logoorange,
+    red: logored,
+    green: logogreen,
+    purple: logopurple,
+    yellow: logoyellow,
+    dianna: logodianna,
+  };
+
+  const activeLogo = LOGO_MAP[theme] || logoblue;
 
   const artwork = useMemo(() => {
     return (
@@ -115,11 +138,14 @@ const PocketLockOverlay = ({
       <div className="pocket-lock-vignette" aria-hidden="true" />
 
       <div className="pocket-lock-topbar">
-        <div className="pocket-lock-brand" aria-label="Unis">
-          <span className="pocket-lock-brand-mark">
-            UN<span>i</span>S
-          </span>
-        </div>
+      <div className="pocket-lock-brand" aria-label="Unis">
+        <img
+          src={activeLogo}
+          alt="UNIS"
+          className="pocket-lock-brand-logo"
+          draggable="false"
+        />
+      </div>
 
         <div className="pocket-lock-status-pill">
           <Lock size={13} />
