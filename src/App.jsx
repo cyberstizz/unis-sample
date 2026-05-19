@@ -33,6 +33,7 @@ import AdminPlaylistPage from './admin/AdminPlaylistPage';
 import PlayChoiceModal from './PlayChoiceModal';
 import WinnersTimelinePage from './winnersTimelinePage';
 import RewardScoreSync from './RewardScoreSync';
+import ThemeDocumentSync from "./components/ThemeDocumentSync";
 
 // Theme
 import './theme.scss';
@@ -138,6 +139,7 @@ const App = () => {
   return (
   <RewardProvider>
     <AuthProvider>
+      <ThemeDocumentSync />
       <RewardScoreSync />
       <PlayerProvider>
         <Router>
