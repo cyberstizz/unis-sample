@@ -83,6 +83,75 @@ const Header = () => {
 
   const activeLogo = LOGO_MAP[theme] || logoblue;
 
+
+  const FAVICON_MAP = {
+    blue: "../public/favicons/logo-blue.ico",
+    orange: "../public/favicons/logo-orange.ico",
+    red: "../public/favicons/logo-red.ico",
+    green: "../public/favicons/logo-green.ico",
+    purple: "../public/favicons/logo-purple.ico",
+    yellow: "../public/favicons/logo-gold.ico",
+    dianna: "../public/favicons/logo-dianna.ico",
+  };
+
+  const THEME_COLOR_FALLBACKS = {
+    blue: "#1d42a8",
+    orange: "#f97316",
+    red: "#ef4444",
+    green: "#22c55e",
+    purple: "#8b5cf6",
+    yellow: "#d4a017",
+    dianna: "#d4a017",
+  };
+
+
+  useEffect(() => {
+    const fallbackTheme = "blue";
+    const safeTheme = theme || fallbackTheme;
+
+    // 1. Update favicon
+    const faviconHref = FAVICON_MAP[safeTheme] || FAVICON_MAP[fallbackTheme];
+
+    let favicon = document.querySelector("link[rel='icon']");
+    if (!favicon) {
+      favicon = document.createElement("link");
+      favicon.rel = "icon";
+      document.head.appendChild(favicon);
+    }
+
+    favicon.type = "image/x-icon";
+
+    // The query string helps force browsers to refresh the icon instead of using cache.
+    favicon.href = `${faviconHref}?theme=${safeTheme}`;
+
+    // 2. Update browser top theme color
+    const rootStyles = getComputedStyle(document.documentElement);
+
+    const cssThemeColor =
+      rootStyles.getPropertyValue("--unis-primary").trim() ||
+      THEME_COLOR_FALLBACKS[safeTheme] ||
+      THEME_COLOR_FALLBACKS[fallbackTheme];
+
+    let themeColorMeta = document.querySelector("meta[name='theme-color']");
+    if (!themeColorMeta) {
+      themeColorMeta = document.createElement("meta");
+      themeColorMeta.name = "theme-color";
+      document.head.appendChild(themeColorMeta);
+    }
+
+    themeColorMeta.setAttribute("content", cssThemeColor);
+
+    // Optional: useful for pinned tiles / some browser integrations
+    let tileColorMeta = document.querySelector("meta[name='msapplication-TileColor']");
+    if (!tileColorMeta) {
+      tileColorMeta = document.createElement("meta");
+      tileColorMeta.name = "msapplication-TileColor";
+      document.head.appendChild(tileColorMeta);
+    }
+
+    tileColorMeta.setAttribute("content", cssThemeColor);
+  }, [theme]);
+
   const navItems = [
     { label: "Vote", path: "/voteawards", handler: handleClick, icon: "vote" },
     { label: "Awards", path: "/milestones", handler: handleMilestones, icon: "awards" },
