@@ -1,7 +1,7 @@
 // src/components/ThemeDocumentSync.jsx
 
 import { useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "./context/AuthContext";
 
 const THEME_DOCUMENT_MAP = {
   blue: {
