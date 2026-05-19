@@ -119,6 +119,8 @@ const Player = () => {
   const [showPocketLockIntro, setShowPocketLockIntro] = useState(false);
 
   const seekbarRef = useRef(null);
+  const mobileTrayRef = useRef(null);
+  const mobileActionsToggleRef = useRef(null);
   const playRewardedRef = useRef(false);
   const activeRewardSongIdRef = useRef(null);
   const navigate = useNavigate();
@@ -462,6 +464,25 @@ const Player = () => {
     setShowMobileActions(!showMobileActions);
   };
 
+  useEffect(() => {
+    if (!showMobileActions) return;
+
+    const handleOutsidePointerDown = (event) => {
+      const target = event.target;
+
+      if (mobileTrayRef.current?.contains(target)) return;
+      if (mobileActionsToggleRef.current?.contains(target)) return;
+
+      setShowMobileActions(false);
+    };
+
+    document.addEventListener('pointerdown', handleOutsidePointerDown, true);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+    };
+  }, [showMobileActions]);
+
   const handlePocketLockToggle = (e) => {
     e.stopPropagation();
 
@@ -682,7 +703,10 @@ const Player = () => {
       ) : (
         <>
       {/* ═══════ MOBILE ACTIONS TRAY ═══════ */}
-      <div className={`mobile-actions-tray ${showMobileActions ? 'open' : ''}`}>
+        <div
+          ref={mobileTrayRef}
+          className={`mobile-actions-tray ${showMobileActions ? 'open' : ''}`}
+        >
         <div className="tray-shell">
           <div className="tray-handle" aria-hidden="true" />
 
@@ -842,7 +866,7 @@ const Player = () => {
 
             {/* MOBILE toggle */}
             <div className="mobile-right-cluster">
-              <button className="mobile-actions-toggle" onClick={toggleMobileActions}>
+              <button className="mobile-actions-toggle" ref={mobileActionsToggleRef} onClick={toggleMobileActions}>
                 {showMobileActions ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
               </button>
               <button
