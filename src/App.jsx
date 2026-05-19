@@ -33,7 +33,7 @@ import AdminPlaylistPage from './admin/AdminPlaylistPage';
 import PlayChoiceModal from './PlayChoiceModal';
 import WinnersTimelinePage from './winnersTimelinePage';
 import RewardScoreSync from './RewardScoreSync';
-import ThemeDocumentSync from "./components/ThemeDocumentSync";
+import ThemeDocumentSync from "../public/favicons/ThemeDocumentSync";
 
 // Theme
 import './theme.scss';
