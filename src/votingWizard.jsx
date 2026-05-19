@@ -152,8 +152,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   // thumbnail ring, and the modal accent. "R, G, B"; null → theme fallback.
   const [artRGB, setArtRGB] = useState(null);
   // Whether the artwork actually loaded (false → hide thumb/ambient cleanly).
-  const [artworkOk, setArtworkOk] = useState(false);
-
+  const [artworkFailed, setArtworkFailed] = useState(false);
   const prevShowRef = useRef(false);
   const latestRef = useRef({ nominee, filters });
   latestRef.current = { nominee, filters };
@@ -215,60 +214,72 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
   // --- LOAD ARTWORK + EXTRACT DOMINANT COLOR ------------------------------
   useEffect(() => {
+    setArtworkFailed(false);
+
     if (!show || !artworkUrl) {
       setArtRGB(null);
-      setArtworkOk(false);
       return;
     }
 
     let active = true;
     const img = new Image();
-    img.crossOrigin = 'anonymous';
 
     img.onload = () => {
       if (!active) return;
-      setArtworkOk(true); // image is real & reachable
 
       try {
         const SIZE = 20;
         const canvas = document.createElement('canvas');
         canvas.width = SIZE;
         canvas.height = SIZE;
+
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, SIZE, SIZE);
+
         const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
 
-        let r = 0, g = 0, b = 0, n = 0;
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        let n = 0;
+
         for (let i = 0; i < data.length; i += 4) {
           if (data[i + 3] < 125) continue;
+
           r += data[i];
           g += data[i + 1];
           b += data[i + 2];
           n += 1;
         }
+
         if (n === 0) {
           setArtRGB(null);
           return;
         }
 
-        let R = r / n, G = g / n, B = b / n;
+        let R = r / n;
+        let G = g / n;
+        let B = b / n;
+
         const avg = (R + G + B) / 3;
         const lift = 1.28;
+
         R = Math.max(0, Math.min(255, avg + (R - avg) * lift));
         G = Math.max(0, Math.min(255, avg + (G - avg) * lift));
         B = Math.max(0, Math.min(255, avg + (B - avg) * lift));
 
         setArtRGB([Math.round(R), Math.round(G), Math.round(B)]);
       } catch (e) {
-        // Tainted canvas (no CORS headers). The blurred CSS background still
-        // works — we just keep the theme accent instead of an art-derived one.
+        // This can happen when the image loads visually but the canvas is tainted.
+        // Keep the artwork visible and simply fall back to the theme color.
         setArtRGB(null);
       }
     };
 
     img.onerror = () => {
       if (!active) return;
-      setArtworkOk(false);
+
+      setArtworkFailed(true);
       setArtRGB(null);
       console.warn('[VotingWizard] Artwork failed to load:', artworkUrl);
     };
@@ -504,7 +515,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     artistNameBackward.toLowerCase() === reversedNomineeName.toLowerCase();
   const canSubmit = forwardMatches && backwardMatches && !submitting;
 
-  const showArtwork = Boolean(artworkUrl) && artworkOk;
+  const showArtwork = Boolean(artworkUrl) && !artworkFailed;
 
   // --- RESULT RENDER ------------------------------------------------------
   const renderResult = () => {
@@ -651,7 +662,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
                   <img
                     src={artworkUrl}
                     alt={selectedNominee.name}
-                    onError={() => setArtworkOk(false)}
+                    onError={() => setArtworkFailed(true)}
                   />
                 </div>
               )}
