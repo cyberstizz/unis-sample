@@ -355,7 +355,7 @@ export default function DownloadModal({
           </div>
 
           <div className="download-modal__eyebrow">
-            <span>Unis download</span>
+            <span>Download</span>
           </div>
 
           <h3 id="download-modal-title" className="download-modal__title">
