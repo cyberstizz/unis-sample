@@ -365,7 +365,7 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
             ref={textareaReference}
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Share your thoughts on this track..."
+            placeholder="Share your thoughts..."
             rows={1}
             className="comment-textarea"
             onInput={autoGrowTextarea}
