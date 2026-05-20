@@ -197,7 +197,14 @@ const SongPage = () => {
   const handleVoteSuccess = () => setShowVotingWizard(false);
 
   const handleVote = () => {
-    setSelectedNominee({ id: song.id, name: song.title, type: 'song', jurisdiction: song.jurisdiction });
+    setSelectedNominee({ 
+      id: song.id,
+      name: song.title, 
+      type: 'song', 
+      jurisdiction: song.jurisdiction, 
+      artwork: song.artwork,          
+      artworkUrl: song.artwork,
+   });
     setShowVotingWizard(true);
   };
 

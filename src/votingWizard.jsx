@@ -64,7 +64,6 @@ function resolveArtwork(n) {
       break;
     }
   }
-  // Nested fallbacks some payloads use (e.g. n.song.artworkUrl)
   if (!raw) {
     const nested = n.song || n.track || n.artistProfile || n.user || null;
     if (nested) {
@@ -77,7 +76,11 @@ function resolveArtwork(n) {
     }
   }
   if (!raw) return null;
-  if (/^(https?:|data:|blob:)/i.test(raw)) return raw; // already absolute
+
+  // Always run buildUrl. It handles three cases idempotently:
+  //   - private R2 URLs → rewritten to the public CDN
+  //   - already-public URLs → safe-encoded, returned as-is
+  //   - relative paths → prefixed with API_BASE_URL
   try {
     return buildUrl(raw);
   } catch (e) {
