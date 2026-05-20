@@ -134,7 +134,10 @@ const Player = () => {
       type: 'song',
       jurisdiction: currentMedia.jurisdiction,
       genreKey: currentMedia.genreKey || 'rap-hiphop',
-      artist: currentMedia.artist
+      artist: currentMedia.artist,
+      artwork: currentMedia.artwork,              
+      artworkUrl: currentMedia.artworkUrl,       
+      imageUrl: currentMedia.imageUrl,
     };
   }, [currentMedia]);
 
@@ -404,7 +407,10 @@ const Player = () => {
           type: 'song',
           jurisdiction: jurisdictionName,
           genreKey: songData.genre?.name || 'rap-hiphop',
-          artist: safeArtist
+          artist: safeArtist,
+          artwork: currentMedia.artwork,                                 
+          artworkUrl: songData.artworkUrl || currentMedia.artworkUrl,    
+          imageUrl: songData.imageUrl || currentMedia.imageUrl,
         },
         filters: {
           selectedType: 'song',
