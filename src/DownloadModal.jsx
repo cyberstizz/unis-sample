@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import "./DownloadModal.scss";
 
 // ── Inline SVG Icons ────────────────────────────────────────────────
 const IconDownload = () => (
@@ -24,19 +25,24 @@ const IconX = () => (
 );
 
 const IconCheck = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
 const IconDollar = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="12" y1="1" x2="12" y2="23" />
     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
   </svg>
 );
 
-// ── Component ───────────────────────────────────────────────────────
+const IconSparkle = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" />
+    <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" />
+  </svg>
+);
 
 export default function DownloadModal({
   isOpen = false,
@@ -44,58 +50,107 @@ export default function DownloadModal({
   song = {},
   onPurchase = () => {},
 }) {
-  const [status, setStatus] = useState("idle"); // idle | downloading | purchased | complete | error
+  const [status, setStatus] = useState("idle");
   const [animate, setAnimate] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      // Small delay so the CSS transition plays
-      requestAnimationFrame(() => setAnimate(true));
-      setStatus("idle");
-    } else {
-      setAnimate(false);
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
   const {
+    id,
     title = "Untitled",
     artist = "Unknown Artist",
     artworkUrl,
     downloadUrl,
-    downloadPolicy = "free", // "free" | "paid" | "unavailable"
+    downloadPolicy = "free",
     downloadPrice = null,
     fileName,
-  } = song;
+  } = song || {};
 
-  const priceFormatted = downloadPrice
-    ? `$${(downloadPrice / 100).toFixed(2)}`
-    : "Free";
+  const artistName = typeof artist === "string"
+    ? artist
+    : artist?.name || artist?.username || "Unknown Artist";
 
-  // ── Handlers ────────────────────────────────────────────────────
+  const priceFormatted = useMemo(() => {
+    if (!downloadPrice) return "Free";
+    return `$${(Number(downloadPrice) / 100).toFixed(2)}`;
+  }, [downloadPrice]);
+
+  const safeFileName = fileName || `${title} - ${artistName}.mp3`;
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    setStatus("idle");
+    const frame = requestAnimationFrame(() => setAnimate(true));
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") handleClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const handleClose = () => {
     setAnimate(false);
-    setTimeout(onClose, 200);
+    window.setTimeout(onClose, 220);
   };
 
-  const handleFreeDownload = async () => {
-    if (!downloadUrl) return;
-    setStatus("downloading");
+  const startBrowserDownload = async (urlToDownload) => {
+    if (!urlToDownload) {
+      setStatus("error");
+      return;
+    }
+
     try {
-      const response = await fetch(downloadUrl);
+      const response = await fetch(urlToDownload);
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName || `${title} - ${artist}.mp3`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      const objectUrl = window.URL.createObjectURL(blob);
+
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = safeFileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      // Some public storage URLs may block fetch() because of CORS.
+      // Fallback to a normal browser download/open behavior.
+      const anchor = document.createElement("a");
+      anchor.href = urlToDownload;
+      anchor.download = safeFileName;
+      anchor.rel = "noopener noreferrer";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+    }
+  };
+
+  const handleFreeDownload = async (overrideUrl) => {
+    const urlToDownload = overrideUrl || downloadUrl;
+
+    if (!urlToDownload) {
+      setStatus("error");
+      return;
+    }
+
+    setStatus("downloading");
+
+    try {
+      await startBrowserDownload(urlToDownload);
       setStatus("complete");
-      setTimeout(handleClose, 1500);
+      window.setTimeout(handleClose, 1400);
     } catch (err) {
       console.error("Download failed:", err);
       setStatus("error");
@@ -104,423 +159,218 @@ export default function DownloadModal({
 
   const handlePurchase = async () => {
     setStatus("purchasing");
+
     try {
-      // This should call your backend endpoint which:
-      // 1. Creates a Stripe PaymentIntent or charges the user
-      // 2. Records the purchase
-      // 3. Returns a signed download URL
-      await onPurchase(song.id);
+      const purchaseResult = await onPurchase(id);
+
+      const signedDownloadUrl =
+        typeof purchaseResult === "string"
+          ? purchaseResult
+          : purchaseResult?.downloadUrl ||
+            purchaseResult?.data?.downloadUrl ||
+            purchaseResult?.data?.signedDownloadUrl ||
+            downloadUrl;
+
       setStatus("purchased");
-      // After purchase confirmation, trigger the download
-      setTimeout(() => handleFreeDownload(), 600);
+
+      window.setTimeout(() => {
+        handleFreeDownload(signedDownloadUrl);
+      }, 550);
     } catch (err) {
       console.error("Purchase failed:", err);
       setStatus("error");
     }
   };
 
-  // ── Render helpers ──────────────────────────────────────────────
+  const isBusy = status === "downloading" || status === "purchasing" || status === "purchased";
 
   const renderContent = () => {
     if (status === "complete") {
       return (
-        <div style={styles.successState}>
-          <div style={styles.successIcon}>
+        <div className="download-modal__state download-modal__state--success">
+          <div className="download-modal__success-orb">
             <IconCheck />
           </div>
-          <p style={styles.successText}>Download started!</p>
+          <div>
+            <p className="download-modal__state-title">Download started</p>
+            <p className="download-modal__state-copy">Your track is being prepared by your browser.</p>
+          </div>
         </div>
       );
     }
 
     if (status === "error") {
       return (
-        <div style={styles.errorState}>
-          <p style={styles.errorText}>Something went wrong. Please try again.</p>
-          <button style={styles.btnSecondary} onClick={() => setStatus("idle")}>
+        <div className="download-modal__state download-modal__state--error">
+          <p className="download-modal__state-title">Something went wrong</p>
+          <p className="download-modal__state-copy">
+            We could not start the download. Please try again.
+          </p>
+
+          <button className="download-modal__button download-modal__button--secondary" onClick={() => setStatus("idle")}>
             Retry
           </button>
         </div>
       );
     }
 
-    switch (downloadPolicy) {
-      case "unavailable":
-        return (
-          <>
-            <div style={styles.policyBadge}>
-              <IconLock />
-              <span>Download Unavailable</span>
-            </div>
-            <p style={styles.description}>
-              The artist has chosen not to make this track available for download.
-              You can still stream it anytime on Unis.
-            </p>
-            <button style={styles.btnSecondary} onClick={handleClose}>
-              Got it
-            </button>
-          </>
-        );
+    if (downloadPolicy === "unavailable") {
+      return (
+        <>
+          <div className="download-modal__badge download-modal__badge--locked">
+            <IconLock />
+            <span>Streaming only</span>
+          </div>
 
-      case "paid":
-        return (
-          <>
-            <div style={{ ...styles.policyBadge, ...styles.policyPaid }}>
-              <IconDollar />
-              <span>{priceFormatted}</span>
-            </div>
-            <p style={styles.description}>
-              Purchase this track to download a high-quality copy you can keep forever.
-            </p>
-            <p style={{
-              margin: 0,
-              fontSize: '11px',
-              lineHeight: 1.4,
-              color: 'rgba(255,255,255,0.3)',
-              textAlign: 'center',
-              padding: '0 12px',
-            }}>
-              All song purchases are final. You've previewed this track for free — by purchasing, you agree that digital downloads are non-refundable.
-            </p>
-            <button
-              style={{
-                ...styles.btnPrimary,
-                opacity: status === "purchasing" ? 0.7 : 1,
-                pointerEvents: status === "purchasing" ? "none" : "auto",
-              }}
-              onClick={handlePurchase}
-            >
-              {status === "purchasing" ? (
-                <span style={styles.spinner} />
-              ) : (
-                <>
-                  <IconDollar />
-                  <span>Purchase & Download — {priceFormatted}</span>
-                </>
-              )}
-            </button>
-            <button style={styles.btnGhost} onClick={handleClose}>
-              Cancel
-            </button>
-          </>
-        );
+          <p className="download-modal__description">
+            The artist has not enabled downloads for this track. You can still keep it in rotation on Unis.
+          </p>
 
-      case "free":
-      default:
-        return (
-          <>
-            <div style={{ ...styles.policyBadge, ...styles.policyFree }}>
-              <IconDownload />
-              <span>Free Download</span>
-            </div>
-            <p style={styles.description}>
-              This track is available as a free download from the artist.
-            </p>
-            <button
-              style={{
-                ...styles.btnPrimary,
-                opacity: status === "downloading" ? 0.7 : 1,
-                pointerEvents: status === "downloading" ? "none" : "auto",
-              }}
-              onClick={handleFreeDownload}
-            >
-              {status === "downloading" ? (
-                <span style={styles.spinner} />
-              ) : (
-                <>
-                  <IconDownload />
-                  <span>Download Track</span>
-                </>
-              )}
-            </button>
-            <button style={styles.btnGhost} onClick={handleClose}>
-              Cancel
-            </button>
-          </>
-        );
+          <button className="download-modal__button download-modal__button--secondary" onClick={handleClose}>
+            Got it
+          </button>
+        </>
+      );
     }
+
+    if (downloadPolicy === "paid") {
+      return (
+        <>
+          <div className="download-modal__badge download-modal__badge--paid">
+            <IconDollar />
+            <span>{priceFormatted}</span>
+          </div>
+
+          <p className="download-modal__description">
+            Own a high-quality copy of this track and support the artist directly.
+          </p>
+
+          <div className="download-modal__notice">
+            <IconSparkle />
+            <span>
+              Digital downloads are final after purchase. You have already had the chance to preview this track on Unis.
+            </span>
+          </div>
+
+          <button
+            className="download-modal__button download-modal__button--primary"
+            onClick={handlePurchase}
+            disabled={isBusy}
+          >
+            {status === "purchasing" || status === "purchased" ? (
+              <>
+                <span className="download-modal__spinner" />
+                <span>{status === "purchased" ? "Unlocking download..." : "Processing..."}</span>
+              </>
+            ) : (
+              <>
+                <IconDollar />
+                <span>Purchase & Download — {priceFormatted}</span>
+              </>
+            )}
+          </button>
+
+          <button className="download-modal__button download-modal__button--ghost" onClick={handleClose}>
+            Not now
+          </button>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div className="download-modal__badge download-modal__badge--free">
+          <IconDownload />
+          <span>Free download</span>
+        </div>
+
+        <p className="download-modal__description">
+          The artist made this track available for you to save and enjoy offline.
+        </p>
+
+        <button
+          className="download-modal__button download-modal__button--primary"
+          onClick={() => handleFreeDownload()}
+          disabled={isBusy}
+        >
+          {status === "downloading" ? (
+            <>
+              <span className="download-modal__spinner" />
+              <span>Starting download...</span>
+            </>
+          ) : (
+            <>
+              <IconDownload />
+              <span>Download Track</span>
+            </>
+          )}
+        </button>
+
+        <button className="download-modal__button download-modal__button--ghost" onClick={handleClose}>
+          Cancel
+        </button>
+      </>
+    );
   };
 
   return (
     <div
-      style={{
-        ...styles.overlay,
-        opacity: animate ? 1 : 0,
-        pointerEvents: animate ? "auto" : "none",
-      }}
-      onClick={handleClose}
+      className={`download-modal ${animate ? "is-visible" : ""}`}
+      onMouseDown={handleClose}
+      role="presentation"
     >
       <div
-        style={{
-          ...styles.modal,
-          transform: animate ? "translateY(0) scale(1)" : "translateY(24px) scale(0.96)",
-          opacity: animate ? 1 : 0,
-        }}
-        onClick={(e) => e.stopPropagation()}
+        className="download-modal__shell"
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="download-modal-title"
       >
-        {/* Close button */}
-        <button style={styles.closeBtn} onClick={handleClose}>
+        <div className="download-modal__ambient download-modal__ambient--one" />
+        <div className="download-modal__ambient download-modal__ambient--two" />
+
+        {artworkUrl && (
+          <div
+            className="download-modal__art-backdrop"
+            style={{ backgroundImage: `url(${artworkUrl})` }}
+            aria-hidden="true"
+          />
+        )}
+
+        <button className="download-modal__close" onClick={handleClose} aria-label="Close download modal">
           <IconX />
         </button>
 
-        {/* Artwork + Track Info */}
-        <div style={styles.trackInfo}>
-          <div style={styles.artworkWrapper}>
+        <div className="download-modal__hero">
+          <div className="download-modal__art-wrap">
             {artworkUrl ? (
-              <img src={artworkUrl} alt={title} style={styles.artwork} />
+              <img className="download-modal__art" src={artworkUrl} alt={`${title} artwork`} />
             ) : (
-              <div style={styles.artworkPlaceholder}>
+              <div className="download-modal__art download-modal__art--placeholder">
                 <IconDownload />
               </div>
             )}
-            {/* Ambient glow behind artwork */}
-            {artworkUrl && (
-              <div
-                style={{
-                  ...styles.artworkGlow,
-                  backgroundImage: `url(${artworkUrl})`,
-                }}
-              />
-            )}
+
+            <div className="download-modal__art-ring" aria-hidden="true" />
           </div>
-          <h3 style={styles.trackTitle}>{title}</h3>
-          <p style={styles.trackArtist}>{artist}</p>
+
+          <div className="download-modal__eyebrow">
+            <span>Unis download</span>
+          </div>
+
+          <h3 id="download-modal-title" className="download-modal__title">
+            {title}
+          </h3>
+
+          <p className="download-modal__artist">{artistName}</p>
         </div>
 
-        {/* Divider */}
-        <div style={styles.divider} />
+        <div className="download-modal__divider" />
 
-        {/* Dynamic content area */}
-        <div style={styles.contentArea}>{renderContent()}</div>
+        <div className="download-modal__content">
+          {renderContent()}
+        </div>
       </div>
     </div>
   );
 }
-
-// ── Styles ──────────────────────────────────────────────────────────
-
-const styles = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0, 0, 0, 0.75)",
-    backdropFilter: "blur(8px)",
-    WebkitBackdropFilter: "blur(8px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 9999,
-    transition: "opacity 0.2s ease",
-    padding: "20px",
-  },
-  modal: {
-    background: "#1a1a1f",
-    borderRadius: "16px",
-    border: "1px solid rgba(255,255,255,0.08)",
-    width: "100%",
-    maxWidth: "360px",
-    padding: "28px 24px 24px",
-    position: "relative",
-    transition: "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease",
-    boxShadow: "0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
-  },
-  closeBtn: {
-    position: "absolute",
-    top: "12px",
-    right: "12px",
-    background: "rgba(255,255,255,0.06)",
-    border: "none",
-    borderRadius: "50%",
-    width: "32px",
-    height: "32px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "rgba(255,255,255,0.5)",
-    cursor: "pointer",
-    transition: "all 0.15s ease",
-  },
-  trackInfo: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center",
-    marginBottom: "4px",
-  },
-  artworkWrapper: {
-    position: "relative",
-    width: "100px",
-    height: "100px",
-    marginBottom: "16px",
-  },
-  artwork: {
-    width: "100px",
-    height: "100px",
-    borderRadius: "12px",
-    objectFit: "cover",
-    position: "relative",
-    zIndex: 1,
-  },
-  artworkGlow: {
-    position: "absolute",
-    inset: "-8px",
-    borderRadius: "20px",
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    filter: "blur(24px)",
-    opacity: 0.35,
-    zIndex: 0,
-  },
-  artworkPlaceholder: {
-    width: "100px",
-    height: "100px",
-    borderRadius: "12px",
-    background: "rgba(255,255,255,0.06)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "rgba(255,255,255,0.25)",
-  },
-  trackTitle: {
-    margin: 0,
-    fontSize: "17px",
-    fontWeight: 600,
-    color: "#fff",
-    fontFamily: "'DM Sans', sans-serif",
-    lineHeight: 1.3,
-  },
-  trackArtist: {
-    margin: "4px 0 0",
-    fontSize: "13px",
-    color: "rgba(255,255,255,0.45)",
-    fontFamily: "'DM Sans', sans-serif",
-  },
-  divider: {
-    height: "1px",
-    background: "rgba(255,255,255,0.06)",
-    margin: "20px 0",
-  },
-  contentArea: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "14px",
-  },
-  policyBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "8px 16px",
-    borderRadius: "100px",
-    background: "rgba(255,255,255,0.06)",
-    color: "rgba(255,255,255,0.55)",
-    fontSize: "13px",
-    fontWeight: 500,
-    fontFamily: "'DM Sans', sans-serif",
-  },
-  policyFree: {
-    background: "rgba(22, 51, 135, 0.2)",
-    color: "#6b8cff",
-  },
-  policyPaid: {
-    background: "rgba(255, 177, 60, 0.12)",
-    color: "#ffb13c",
-  },
-  description: {
-    margin: 0,
-    fontSize: "14px",
-    lineHeight: 1.5,
-    color: "rgba(255,255,255,0.45)",
-    textAlign: "center",
-    fontFamily: "'DM Sans', sans-serif",
-    padding: "0 8px",
-  },
-  btnPrimary: {
-    width: "100%",
-    padding: "14px 20px",
-    borderRadius: "12px",
-    border: "none",
-    background: "#163387",
-    color: "#fff",
-    fontSize: "15px",
-    fontWeight: 600,
-    fontFamily: "'DM Sans', sans-serif",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    transition: "all 0.15s ease",
-    marginTop: "4px",
-  },
-  btnSecondary: {
-    width: "100%",
-    padding: "14px 20px",
-    borderRadius: "12px",
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(255,255,255,0.04)",
-    color: "#fff",
-    fontSize: "15px",
-    fontWeight: 500,
-    fontFamily: "'DM Sans', sans-serif",
-    cursor: "pointer",
-    transition: "all 0.15s ease",
-  },
-  btnGhost: {
-    background: "transparent",
-    border: "none",
-    color: "rgba(255,255,255,0.4)",
-    fontSize: "13px",
-    fontFamily: "'DM Sans', sans-serif",
-    cursor: "pointer",
-    padding: "4px 8px",
-  },
-  successState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "12px",
-    padding: "8px 0",
-  },
-  successIcon: {
-    width: "48px",
-    height: "48px",
-    borderRadius: "50%",
-    background: "rgba(34, 197, 94, 0.15)",
-    color: "#22c55e",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  successText: {
-    margin: 0,
-    fontSize: "15px",
-    fontWeight: 500,
-    color: "#22c55e",
-    fontFamily: "'DM Sans', sans-serif",
-  },
-  errorState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "12px",
-    padding: "8px 0",
-    width: "100%",
-  },
-  errorText: {
-    margin: 0,
-    fontSize: "14px",
-    color: "#f87171",
-    textAlign: "center",
-    fontFamily: "'DM Sans', sans-serif",
-  },
-  spinner: {
-    width: "20px",
-    height: "20px",
-    border: "2px solid rgba(255,255,255,0.2)",
-    borderTopColor: "#fff",
-    borderRadius: "50%",
-    display: "inline-block",
-    animation: "spin 0.6s linear infinite",
-  },
-};
