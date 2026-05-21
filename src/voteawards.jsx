@@ -686,7 +686,7 @@ const VoteAwards = () => {
           <div className="va-last-winner-copy">
             <span className="va-last-winner-kicker">
               <span className="va-last-winner-dot" />
-              {lastWinner ? `Current ${intervalLabel} Winner` : 'First winner pending'}
+              {lastWinner ? `Current ${intervalLabel}` : 'First winner pending'}
             </span>
 
             {lastWinner ? (
