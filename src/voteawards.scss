@@ -253,7 +253,7 @@ $green-badge: #22c55e;
 .va-last-winner {
   width: fit-content;
   max-width: min(100%, 420px);
-  margin: -8px auto 26px;
+  margin: -8px 0 26px auto;
   padding: 10px 12px;
   display: inline-flex;
   align-items: center;
@@ -987,7 +987,7 @@ $wizard-subtle-black: #1a1a1a;
   }
 
   .va-last-winner {
-    margin: -4px auto 20px;
+    margin: -4px 0 20px auto;
     padding: 9px 10px;
     gap: 9px;
     border-radius: 10px;
