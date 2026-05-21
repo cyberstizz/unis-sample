@@ -424,8 +424,6 @@ const VoteAwards = () => {
 
         const awards = (res.data || [])
           .filter((award) => award?.awardId)
-          .filter((award) => award?.determinationMethod !== 'FALLBACK')
-          .filter((award) => !award?.awardDate || award.awardDate <= cutoff)
           .filter((award) => getWinnerTargetId(award))
           .sort((a, b) => {
             const aTime = new Date(a.awardDate || 0).getTime();
