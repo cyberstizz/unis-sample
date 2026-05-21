@@ -272,6 +272,7 @@ $green-badge: #22c55e;
   position: relative;
   overflow: hidden;
   animation: va-searchSlide 0.22s ease-out;
+  right: 0;
 
   &.has-winner {
     cursor: pointer;
