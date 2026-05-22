@@ -660,7 +660,7 @@ const VoteAwards = () => {
             </h1>
           </div>
           <div className="va-countdown">
-            <span className="va-countdown-label"><span className="va-live-badge"><span className="va-live-dot" />LIVE</span>  Poll ends in</span>
+            <span className="va-countdown-label"><span className="va-live-badge">LIVE</span>  Poll ends in</span>
             <span className="va-countdown-time">
               {countdown.days > 0 && (
                 <span className="va-countdown-days">{countdown.days}D&nbsp;</span>
