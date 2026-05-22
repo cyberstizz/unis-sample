@@ -22,7 +22,7 @@ import './ThemePicker.scss';
 // =============================================================================
 
 const THEMES = [
-  { id: 'blue',   label: 'Unis Blue', hex: '#163387' },
+  { id: 'blue',   label: 'Blue', hex: '#163387' },
   { id: 'orange', label: 'Orange',    hex: '#C44B0A' },
   { id: 'red',    label: 'Red',       hex: '#B51C24' },
   { id: 'green',  label: 'Green',     hex: '#0F7A3E' },
