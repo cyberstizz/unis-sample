@@ -70,7 +70,7 @@ const ReferralCodeCard = ({ referralCode = '', username = '', isArtist = false }
         <p className="referral-card__desc">
           {isArtist
             ? <>Share this code with listeners and other artists. Earn <strong>+5 points</strong> for every listener and <strong>+2</strong> for every artist who joins with your code.</>
-            : <>Every listener who joins UNIS with your code adds <strong>+5 points</strong> to your score and helps your home jurisdiction climb the rankings.</>}
+            : <>Every user who joins UNIS with your code earns you passive income.<strong>Earn Cash</strong> when your referrals use the platform. You earn a percentage of the income earned from their browsing when they view, watch, and listen to ads</>}
         </p>
 
         <div className="referral-card__code-row">
