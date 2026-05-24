@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Twitter, Instagram, Link2, Sparkles } from 'lucide-react';
+import { Copy, Check, Sparkles } from 'lucide-react';
 import './ReferralCodeCard.scss';
 
 // =============================================================================
@@ -32,33 +32,6 @@ const ReferralCodeCard = ({ referralCode = '', username = '', isArtist = false }
     });
   };
 
-  const handleShare = (platform) => {
-    if (!referralCode) return;
-    const shareUrl = `${window.location.origin}/?ref=${referralCode}`;
-    const namePart = username ? ` — ${username} thinks you'd vibe with this` : '';
-    const message = `Join me on UNIS${namePart}. Use code ${referralCode} when you sign up.`;
-
-    switch (platform) {
-      case 'twitter':
-        window.open(
-          `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}&url=${encodeURIComponent(shareUrl)}`,
-          '_blank',
-          'noopener,noreferrer'
-        );
-        return;
-      case 'instagram':
-        // Instagram has no direct web share — copy formatted message instead
-        navigator.clipboard?.writeText(`${message} ${shareUrl}`);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-        return;
-      case 'link':
-      default:
-        navigator.clipboard?.writeText(shareUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    }
-  };
 
   return (
     <div className="referral-card">
@@ -86,36 +59,6 @@ const ReferralCodeCard = ({ referralCode = '', username = '', isArtist = false }
           >
             {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
             {copied ? 'Copied' : 'Copy'}
-          </button>
-        </div>
-
-        <div className="referral-card__share-row">
-          <button
-            type="button"
-            className="referral-card__share-pill"
-            onClick={() => handleShare('twitter')}
-            disabled={!referralCode}
-            aria-label="Share on Twitter / X"
-          >
-            <Twitter size={13} aria-hidden="true" /> Twitter / X
-          </button>
-          <button
-            type="button"
-            className="referral-card__share-pill"
-            onClick={() => handleShare('instagram')}
-            disabled={!referralCode}
-            aria-label="Copy share message for Instagram"
-          >
-            <Instagram size={13} aria-hidden="true" /> Instagram
-          </button>
-          <button
-            type="button"
-            className="referral-card__share-pill"
-            onClick={() => handleShare('link')}
-            disabled={!referralCode}
-            aria-label="Copy direct referral link"
-          >
-            <Link2 size={13} aria-hidden="true" /> Direct link
           </button>
         </div>
       </div>
