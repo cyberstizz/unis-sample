@@ -736,7 +736,7 @@ $font-comment: var(
 .comments-mobile-sheet {
   position: fixed;
   inset: 0;
-  z-index: 9998;
+  z-index: 9998 !important;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.22s ease;
