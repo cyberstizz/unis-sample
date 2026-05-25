@@ -10,8 +10,10 @@ import DeleteAccountWizard from './deleteAccountWizard';
 import VoteHistoryModal from './voteHistoryModal';
 import ChangePasswordWizard from './changePasswordWizard';
 import ReferralCodeCard from './ReferralCodeCard';
+import SocialLinksSection from './SocialLinksSection';
 import ThemePicker from './ThemePicker';
 import AccountSettings from './AccountSettings';
+import CollapsibleSection from './CollapsibleSection';
 import './profile.scss';
 
 // ---------------------------------------------------------------------------
@@ -39,9 +41,9 @@ const SectionError = ({ message = 'Failed to load.', onRetry }) => (
 // Profile — single fetch, single error boundary, single source of truth.
 //
 // All data for this page comes from GET /v1/users/profile-summary/{userId}.
-// Children (ReferralCodeCard, ThemePicker, AccountSettings) receive their
-// data as props. They own their *write* paths but not their *read* paths,
-// which eliminates the cache drift between components.
+// Children (ReferralCodeCard, SocialLinksSection, ThemePicker, AccountSettings)
+// receive their data as props. They own their *write* paths but not their
+// *read* paths, which eliminates cache drift between components.
 //
 // URL building uses the shared buildUrl utility, which handles:
 //   - Private R2 URLs → rewrites to public CDN
@@ -176,19 +178,9 @@ const Profile = () => {
       console.error('[Profile] action=track_play status=fail err=', err);
     }
 
+    // requestPlay: empty queue → plays immediately,
+    //              non-empty   → opens PlayChoiceModal (preserves queue)
     requestPlay(mediaObject);
-  };
-
-  const handleShareProfile = () => {
-    const shareUrl = `${window.location.origin}/profile/${profile.username}`;
-    if (navigator.share) {
-      navigator.share({
-        title: `${profile.username} on UNIS`,
-        url: shareUrl,
-      }).catch(err => console.log('[Profile] share cancelled or failed:', err));
-    } else {
-      navigator.clipboard?.writeText(shareUrl);
-    }
   };
 
   // -----------------------------------------------------------------------
@@ -263,7 +255,6 @@ const Profile = () => {
               >
                 <Edit3 size={14} aria-hidden="true" /> Edit Profile
               </button>
-             
             </div>
           </div>
 
@@ -316,25 +307,11 @@ const Profile = () => {
         </section>
 
         {/* ============== VOTE HISTORY ============== */}
-        <section className="profile-section" aria-labelledby="vote-history-heading">
-          <div className="profile-section__head">
-            <div>
-              <div className="profile-section__eyebrow">Your Activity</div>
-              <h2 id="vote-history-heading" className="profile-section__title">
-                Vote <em>history</em>
-              </h2>
-            </div>
-            {voteHistory?.totalCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowVoteHistory(true)}
-                className="profile-section__link"
-              >
-                View all <ArrowRight size={12} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-
+        <CollapsibleSection
+          id="vote-history"
+          eyebrow="Your Activity"
+          title={<>Vote <em>history</em></>}
+        >
           <div className="profile-vote-card">
             <div className="profile-vote-summary">
               <div className="profile-vote-summary__number">
@@ -359,59 +336,60 @@ const Profile = () => {
               )}
             </div>
           </div>
-        </section>
+        </CollapsibleSection>
 
         {/* ============== REFERRAL ============== */}
-        <section className="profile-section" aria-labelledby="referral-heading">
-          <div className="profile-section__head">
-            <div>
-              <div className="profile-section__eyebrow">Grow the network</div>
-              <h2 id="referral-heading" className="profile-section__title">
-                Refer <em>&amp; earn</em>
-              </h2>
-            </div>
-          </div>
+        <CollapsibleSection
+          id="referral"
+          eyebrow="Grow the network"
+          title={<>Refer <em>&amp; earn</em></>}
+        >
           <ReferralCodeCard
             referralCode={referralCode}
             username={profile.username}
             isArtist={profile.role === 'artist'}
           />
-        </section>
+        </CollapsibleSection>
+
+        {/* ============== SOCIAL LINKS ============== */}
+        <CollapsibleSection
+          id="social-links"
+          eyebrow="Find me online"
+          title={<>Social <em>links</em></>}
+        >
+          <SocialLinksSection
+            userId={user.userId}
+            profile={profile}
+            onUpdated={reload}
+          />
+        </CollapsibleSection>
 
         {/* ============== PREFERENCES ============== */}
-        <section className="profile-section" aria-labelledby="theme-heading">
-          <div className="profile-section__head">
-            <div>
-              <div className="profile-section__eyebrow">Personalization</div>
-              <h2 id="theme-heading" className="profile-section__title">
-                Color <em>theme</em>
-              </h2>
-            </div>
-          </div>
+        <CollapsibleSection
+          id="theme"
+          eyebrow="Personalization"
+          title={<>Color <em>theme</em></>}
+        >
           {/*
             ThemePicker keeps its existing useAuth()-based state.
             No prop changes needed — theme lives in AuthContext, not in
             the profile summary, so it was never part of the fetch waterfall.
           */}
           <ThemePicker userId={user.userId} />
-        </section>
+        </CollapsibleSection>
 
         {/* ============== ACCOUNT (toggles) ============== */}
-        <section className="profile-section" aria-labelledby="account-heading">
-          <div className="profile-section__head">
-            <div>
-              <div className="profile-section__eyebrow">Account</div>
-              <h2 id="account-heading" className="profile-section__title">
-                Notifications <em>&amp; privacy</em>
-              </h2>
-            </div>
-          </div>
+        <CollapsibleSection
+          id="account"
+          eyebrow="Account"
+          title={<>Notifications <em>&amp; privacy</em></>}
+        >
           <AccountSettings
             userId={user.userId}
             settings={settings}
             onUpdated={reload}
           />
-        </section>
+        </CollapsibleSection>
 
         {/* ============== DANGER ZONE ============== */}
         <div className="profile-danger" role="region" aria-labelledby="danger-heading">
