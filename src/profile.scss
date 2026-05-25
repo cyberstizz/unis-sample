@@ -819,3 +819,64 @@
   flex-shrink: 0 !important;
 }
 
+
+// =============================================================================
+// COLLAPSIBLE SECTIONS
+// =============================================================================
+.profile-section__head--toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  &:hover .profile-section__chevron {
+    color: var(--unis-text);
+    transform: translateY(1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--unis-primary);
+    outline-offset: 6px;
+    border-radius: 4px;
+  }
+
+  @media (max-width: 600px) {
+    align-items: flex-start;
+    flex-direction: row; // keep chevron on right even when stacked
+  }
+}
+
+.profile-section__head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-section__chevron {
+  flex: none;
+  color: var(--unis-text-3);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.15s;
+}
+
+.profile-section.is-closed .profile-section__chevron {
+  transform: rotate(-90deg);
+}
+
+.profile-section.is-closed .profile-section__head {
+  padding-bottom: 0;
+}
+
+.profile-section__panel[hidden] {
+  display: none;
+}
