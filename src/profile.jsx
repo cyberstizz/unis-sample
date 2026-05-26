@@ -163,9 +163,8 @@ const Profile = () => {
   // the default song's artwork only if the artist has no photo. The default
   // song still PLAYS unchanged -- this only affects the hero image.
   const featuredArt = supportedArtist
-    ? (buildUrl(supportedArtist.photoUrl) ||
-       buildUrl(supportedArtist.defaultSong?.artworkUrl))
-    : null;
+  ? (buildUrl(supportedArtist.photoUrl) || buildUrl(supportedArtist.defaultSong?.artworkUrl))
+  : null;
 
   const featuredTitle = supportedArtist?.defaultSong?.title || supportedArtist?.username;
   const hasPlayableSong = Boolean(supportedArtist?.defaultSong);
