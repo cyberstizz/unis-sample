@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Edit3, Trash2, ArrowRight, History } from 'lucide-react';
+import { Play, Edit3, Trash2, ArrowRight, History, Clock } from 'lucide-react';
 import Layout from './layout';
 import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
@@ -38,7 +38,7 @@ const SectionError = ({ message = 'Failed to load.', onRetry }) => (
 );
 
 // ---------------------------------------------------------------------------
-// Profile — single fetch, single error boundary, single source of truth.
+// Profile -- single fetch, single error boundary, single source of truth.
 //
 // All data for this page comes from GET /v1/users/profile-summary/{userId}.
 // Children (ReferralCodeCard, SocialLinksSection, ThemePicker, AccountSettings)
@@ -46,9 +46,9 @@ const SectionError = ({ message = 'Failed to load.', onRetry }) => (
 // *read* paths, which eliminates cache drift between components.
 //
 // URL building uses the shared buildUrl utility, which handles:
-//   - Private R2 URLs → rewrites to public CDN
-//   - Already-full URLs → safely encoded pass-through
-//   - Relative paths → prepended with API base
+//   - Private R2 URLs -> rewrites to public CDN
+//   - Already-full URLs -> safely encoded pass-through
+//   - Relative paths -> prepended with API base
 // ---------------------------------------------------------------------------
 const Profile = () => {
   const { user } = useAuth();
@@ -63,6 +63,9 @@ const Profile = () => {
   const [showDeleteWizard, setShowDeleteWizard] = useState(false);
   const [showVoteHistory, setShowVoteHistory] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+
+  // ---- Pending supported-artist cancel state ----------------------------
+  const [cancellingPending, setCancellingPending] = useState(false);
 
   // -----------------------------------------------------------------------
   // Single consolidated fetch
@@ -97,6 +100,28 @@ const Profile = () => {
     if (user?.userId) fetchSummary(user.userId);
   }, [user?.userId, fetchSummary]);
 
+  // Cancel a queued supported-artist change.
+  const cancelPendingArtist = async () => {
+    if (!user?.userId) return;
+    setCancellingPending(true);
+    const startedAt = performance.now();
+    try {
+      await apiCall({
+        method: 'delete',
+        url: `/v1/users/${user.userId}/supported-artist/pending`,
+      });
+      const ms = Math.round(performance.now() - startedAt);
+      console.log(`[Profile] action=cancel_pending_artist status=ok durationMs=${ms}`);
+      reload();
+    } catch (err) {
+      const ms = Math.round(performance.now() - startedAt);
+      console.error(`[Profile] action=cancel_pending_artist status=fail durationMs=${ms} err=`, err);
+      alert('Failed to cancel the pending change. Please try again.');
+    } finally {
+      setCancellingPending(false);
+    }
+  };
+
   // -----------------------------------------------------------------------
   // Early returns
   // -----------------------------------------------------------------------
@@ -126,21 +151,31 @@ const Profile = () => {
   }
 
   // -----------------------------------------------------------------------
-  // Derived display values — all URL building goes through the shared
+  // Derived display values -- all URL building goes through the shared
   // buildUrl utility for proper R2/CDN handling
   // -----------------------------------------------------------------------
-  const { profile, supportedArtist, voteHistory, referralCode, settings } = summary;
+  const { profile, supportedArtist, pendingSupportedArtist, voteHistory, referralCode, settings } = summary;
 
   const photoUrl = buildUrl(profile.photoUrl);
   const userInitial = (profile.username || '?').charAt(0).toUpperCase();
 
+  // Show the ARTIST for clarity: prefer the artist's own photo, fall back to
+  // the default song's artwork only if the artist has no photo. The default
+  // song still PLAYS unchanged -- this only affects the hero image.
   const featuredArt = supportedArtist
-    ? (buildUrl(supportedArtist.defaultSong?.artworkUrl) ||
-       buildUrl(supportedArtist.photoUrl))
+    ? (buildUrl(supportedArtist.photoUrl) ||
+       buildUrl(supportedArtist.defaultSong?.artworkUrl))
     : null;
 
   const featuredTitle = supportedArtist?.defaultSong?.title || supportedArtist?.username;
   const hasPlayableSong = Boolean(supportedArtist?.defaultSong);
+
+  // Pending-change display
+  const pendingEffective = pendingSupportedArtist?.effectiveDate
+    ? new Date(pendingSupportedArtist.effectiveDate).toLocaleDateString(undefined, {
+        month: 'long', day: 'numeric',
+      })
+    : null;
 
   // -----------------------------------------------------------------------
   // Actions
@@ -178,8 +213,8 @@ const Profile = () => {
       console.error('[Profile] action=track_play status=fail err=', err);
     }
 
-    // requestPlay: empty queue → plays immediately,
-    //              non-empty   → opens PlayChoiceModal (preserves queue)
+    // requestPlay: empty queue -> plays immediately,
+    //              non-empty   -> opens PlayChoiceModal (preserves queue)
     requestPlay(mediaObject);
   };
 
@@ -223,7 +258,7 @@ const Profile = () => {
                   {profile.username}
                 </h1>
                 <p className="profile-hero__tagline">
-                  {profile.bio || 'No bio yet — tell Harlem who you are!'}
+                  {profile.bio || 'No bio yet -- tell Harlem who you are!'}
                 </p>
               </div>
             </div>
@@ -263,17 +298,17 @@ const Profile = () => {
               className="profile-hero__featured"
               style={{ backgroundImage: `url(${featuredArt})` }}
               role="img"
-              aria-label={`Featured: ${featuredTitle} by ${supportedArtist.username}`}
+              aria-label={`Supporting ${supportedArtist.username}`}
             >
               <div className="profile-hero__featured-overlay" aria-hidden="true" />
               <div className="profile-hero__featured-content">
                 <span className="profile-hero__featured-tag">
-                  Featured track
+                  You support
                 </span>
-                <h2 className="profile-hero__featured-title">{featuredTitle}</h2>
+                <h2 className="profile-hero__featured-title">{supportedArtist.username}</h2>
                 <div className="profile-hero__featured-sub">
                   {hasPlayableSong
-                    ? `by ${supportedArtist.username}`
+                    ? `Featured track: ${featuredTitle}`
                     : 'No featured track yet'}
                 </div>
                 {hasPlayableSong && (
@@ -283,8 +318,26 @@ const Profile = () => {
                     onClick={playDefaultSong}
                   >
                     <Play size={12} fill="currentColor" aria-hidden="true" />
-                    Listen to your pick
+                    Listen to their pick
                   </button>
+                )}
+
+                {pendingSupportedArtist && (
+                  <div className="profile-hero__pending" role="status">
+                    <Clock size={12} aria-hidden="true" />
+                    <span>
+                      Switching to <strong>{pendingSupportedArtist.username}</strong>
+                      {pendingEffective ? ` on ${pendingEffective}` : ''}
+                    </span>
+                    <button
+                      type="button"
+                      className="profile-hero__pending-cancel"
+                      onClick={cancelPendingArtist}
+                      disabled={cancellingPending}
+                    >
+                      {cancellingPending ? 'Cancelling…' : 'Cancel'}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -292,7 +345,7 @@ const Profile = () => {
             <div className="profile-hero__featured profile-hero__featured--empty">
               <div className="profile-hero__featured-content">
                 <span className="profile-hero__featured-tag">
-                  Featured track
+                  You support
                 </span>
                 <h2 className="profile-hero__featured-title">No artist yet</h2>
                 <div className="profile-hero__featured-sub">
@@ -322,7 +375,7 @@ const Profile = () => {
                 <p className="profile-vote-summary__cta">
                   {(voteHistory?.totalCount ?? 0) > 0
                     ? 'Every vote shapes the leaderboard. See your full influence.'
-                    : 'No votes yet — go support your favorites!'}
+                    : 'No votes yet -- go support your favorites!'}
                 </p>
               </div>
               {(voteHistory?.totalCount ?? 0) > 0 && (
@@ -372,7 +425,7 @@ const Profile = () => {
         >
           {/*
             ThemePicker keeps its existing useAuth()-based state.
-            No prop changes needed — theme lives in AuthContext, not in
+            No prop changes needed -- theme lives in AuthContext, not in
             the profile summary, so it was never part of the fetch waterfall.
           */}
           <ThemePicker userId={user.userId} />
