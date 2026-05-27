@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Edit3, Trash2, ArrowRight, History, Clock } from 'lucide-react';
+import { Play, Edit3, Trash2, ArrowRight, Clock, Heart } from 'lucide-react';
 import Layout from './layout';
 import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
@@ -7,13 +7,14 @@ import { PlayerContext } from './context/playercontext';
 import buildUrl from './utils/buildUrl';
 import EditProfileWizard from './editProfileWizard';
 import DeleteAccountWizard from './deleteAccountWizard';
-import VoteHistoryModal from './voteHistoryModal';
 import ChangePasswordWizard from './changePasswordWizard';
 import ReferralCodeCard from './ReferralCodeCard';
 import SocialLinksSection from './SocialLinksSection';
 import ThemePicker from './ThemePicker';
 import AccountSettings from './AccountSettings';
 import CollapsibleSection from './CollapsibleSection';
+import VoteHistorySection from './VoteHistorySection';
+import SupportedArtistPicker from './SupportedArtistPicker';
 import './profile.scss';
 
 // ---------------------------------------------------------------------------
@@ -40,15 +41,11 @@ const SectionError = ({ message = 'Failed to load.', onRetry }) => (
 // ---------------------------------------------------------------------------
 // Profile -- single fetch, single error boundary, single source of truth.
 //
-// All data for this page comes from GET /v1/users/profile-summary/{userId}.
-// Children (ReferralCodeCard, SocialLinksSection, ThemePicker, AccountSettings)
-// receive their data as props. They own their *write* paths but not their
-// *read* paths, which eliminates cache drift between components.
+// Core data comes from GET /v1/users/profile-summary/{userId}. Vote history is
+// owned by VoteHistorySection (its own /v1/vote/history fetch) because the
+// summary can't cheaply resolve nominee names/images.
 //
-// URL building uses the shared buildUrl utility, which handles:
-//   - Private R2 URLs -> rewrites to public CDN
-//   - Already-full URLs -> safely encoded pass-through
-//   - Relative paths -> prepended with API base
+// URL building uses the shared buildUrl utility (R2/CDN aware).
 // ---------------------------------------------------------------------------
 const Profile = () => {
   const { user } = useAuth();
@@ -61,8 +58,8 @@ const Profile = () => {
   // ---- UI state ---------------------------------------------------------
   const [showEditWizard, setShowEditWizard] = useState(false);
   const [showDeleteWizard, setShowDeleteWizard] = useState(false);
-  const [showVoteHistory, setShowVoteHistory] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showArtistPicker, setShowArtistPicker] = useState(false);
 
   // ---- Pending supported-artist cancel state ----------------------------
   const [cancellingPending, setCancellingPending] = useState(false);
@@ -151,8 +148,7 @@ const Profile = () => {
   }
 
   // -----------------------------------------------------------------------
-  // Derived display values -- all URL building goes through the shared
-  // buildUrl utility for proper R2/CDN handling
+  // Derived display values -- all URL building goes through buildUrl
   // -----------------------------------------------------------------------
   const { profile, supportedArtist, pendingSupportedArtist, voteHistory, referralCode, settings } = summary;
 
@@ -163,8 +159,9 @@ const Profile = () => {
   // the default song's artwork only if the artist has no photo. The default
   // song still PLAYS unchanged -- this only affects the hero image.
   const featuredArt = supportedArtist
-  ? (buildUrl(supportedArtist.photoUrl) || buildUrl(supportedArtist.defaultSong?.artworkUrl))
-  : null;
+    ? (buildUrl(supportedArtist.photoUrl) ||
+       buildUrl(supportedArtist.defaultSong?.artworkUrl))
+    : null;
 
   const featuredTitle = supportedArtist?.defaultSong?.title || supportedArtist?.username;
   const hasPlayableSong = Boolean(supportedArtist?.defaultSong);
@@ -310,16 +307,26 @@ const Profile = () => {
                     ? `Featured track: ${featuredTitle}`
                     : 'No featured track yet'}
                 </div>
-                {hasPlayableSong && (
+
+                <div className="profile-hero__featured-actions">
+                  {hasPlayableSong && (
+                    <button
+                      type="button"
+                      className="profile-hero__featured-cta"
+                      onClick={playDefaultSong}
+                    >
+                      <Play size={12} fill="currentColor" aria-hidden="true" />
+                      Listen to their pick
+                    </button>
+                  )}
                   <button
                     type="button"
-                    className="profile-hero__featured-cta"
-                    onClick={playDefaultSong}
+                    className="profile-hero__featured-change"
+                    onClick={() => setShowArtistPicker(true)}
                   >
-                    <Play size={12} fill="currentColor" aria-hidden="true" />
-                    Listen to their pick
+                    <Heart size={12} aria-hidden="true" /> Change
                   </button>
-                )}
+                </div>
 
                 {pendingSupportedArtist && (
                   <div className="profile-hero__pending" role="status">
@@ -350,9 +357,13 @@ const Profile = () => {
                 <div className="profile-hero__featured-sub">
                   Find an artist whose voice you want to amplify.
                 </div>
-                <a href="/find" className="profile-hero__featured-cta">
-                  Discover artists <ArrowRight size={12} aria-hidden="true" />
-                </a>
+                <button
+                  type="button"
+                  className="profile-hero__featured-cta"
+                  onClick={() => setShowArtistPicker(true)}
+                >
+                  <Heart size={12} aria-hidden="true" /> Choose an artist
+                </button>
               </div>
             </div>
           )}
@@ -364,30 +375,7 @@ const Profile = () => {
           eyebrow="Your Activity"
           title={<>Vote <em>history</em></>}
         >
-          <div className="profile-vote-card">
-            <div className="profile-vote-summary">
-              <div className="profile-vote-summary__number">
-                {voteHistory?.totalCount ?? 0}
-              </div>
-              <div className="profile-vote-summary__text">
-                <div className="profile-vote-summary__label">Total Votes Cast</div>
-                <p className="profile-vote-summary__cta">
-                  {(voteHistory?.totalCount ?? 0) > 0
-                    ? 'Every vote shapes the leaderboard. See your full influence.'
-                    : 'No votes yet -- go support your favorites!'}
-                </p>
-              </div>
-              {(voteHistory?.totalCount ?? 0) > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowVoteHistory(true)}
-                  className="profile-btn profile-btn--ghost"
-                >
-                  <History size={14} aria-hidden="true" /> View History
-                </button>
-              )}
-            </div>
-          </div>
+          <VoteHistorySection userId={user.userId} />
         </CollapsibleSection>
 
         {/* ============== REFERRAL ============== */}
@@ -468,7 +456,7 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* ============== WIZARDS ============== */}
+        {/* ============== WIZARDS / MODALS ============== */}
         {showEditWizard && (
           <EditProfileWizard
             show={showEditWizard}
@@ -485,16 +473,17 @@ const Profile = () => {
           />
         )}
 
-        <VoteHistoryModal
-          show={showVoteHistory}
-          onClose={() => setShowVoteHistory(false)}
-          votes={voteHistory?.recent || []}
-          useDummyData={false}
-        />
-
         <ChangePasswordWizard
           show={showChangePassword}
           onClose={() => setShowChangePassword(false)}
+        />
+
+        <SupportedArtistPicker
+          show={showArtistPicker}
+          onClose={() => setShowArtistPicker(false)}
+          userId={user.userId}
+          currentArtistId={supportedArtist?.userId || null}
+          onSuccess={reload}
         />
 
       </div>
