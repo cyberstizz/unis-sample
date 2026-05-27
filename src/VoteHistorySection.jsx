@@ -3,7 +3,7 @@ import { History, Music, User, ArrowRight } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import VoteHistoryModal from './voteHistoryModal';
-import './VoteHistorySection.scss';
+import './VoteHIstorySection.scss';
 
 // =============================================================================
 // VoteHistorySection
