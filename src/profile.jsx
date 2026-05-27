@@ -316,7 +316,7 @@ const Profile = () => {
                       onClick={playDefaultSong}
                     >
                       <Play size={12} fill="currentColor" aria-hidden="true" />
-                      Listen to their pick
+                      Listen
                     </button>
                   )}
                   <button
