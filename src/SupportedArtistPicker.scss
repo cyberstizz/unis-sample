@@ -1,0 +1,335 @@
+// SupportedArtistPicker.scss -- premium glassmorphic, theme-aware (unis tokens)
+
+.sap-overlay {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 18%, var(--unis-primary-soft), transparent 44%),
+    rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  font-family: var(--unis-font-sans);
+  backdrop-filter: blur(8px);
+  animation: sapFade 0.2s ease;
+}
+
+.sap-modal {
+  position: relative;
+  width: 90%;
+  max-width: 480px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.01) 42%, transparent),
+    var(--unis-panel);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-lg);
+  overflow: hidden;
+  animation: sapSlide 0.28s ease;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.035),
+    0 0 38px -20px var(--unis-primary-glow);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(460px 240px at 50% 0%, var(--unis-primary-soft), transparent 68%);
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+.sap-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  display: flex;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-sm);
+  color: var(--unis-text-3);
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+
+  &:hover { background: var(--unis-primary-soft); color: var(--unis-text); transform: scale(1.04); }
+  &:focus-visible { outline: 2px solid var(--unis-primary-glow); outline-offset: 3px; }
+}
+
+.sap-header {
+  position: relative;
+  z-index: 1;
+  padding: 1.75rem 1.75rem 1rem;
+  border-bottom: 1px solid var(--unis-border);
+
+  &__title {
+    margin: 0 0 0.35rem;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--unis-text);
+  }
+  &__sub {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--unis-text-3);
+    max-width: 90%;
+  }
+}
+
+.sap-search {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 1.25rem 0.5rem;
+  padding: 0.7rem 0.9rem;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-sm);
+  color: var(--unis-text-3);
+
+  &:focus-within {
+    border-color: var(--unis-primary-glow);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft);
+  }
+
+  input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--unis-text);
+    font-size: 0.92rem;
+    font-family: inherit;
+
+    &::placeholder { color: var(--unis-text-3); }
+  }
+}
+
+.sap-list {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 1.25rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: var(--unis-border-hi); border-radius: 999px; }
+}
+
+.sap-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  text-align: left;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
+    rgba(0, 0, 0, 0.14);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-sm);
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+
+  &:hover {
+    border-color: var(--unis-border-hi);
+    transform: translateX(3px);
+  }
+  &.is-selected {
+    border-color: var(--unis-primary-glow);
+    background:
+      linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.03)),
+      rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 26px -18px var(--unis-primary-glow);
+  }
+  &:focus-visible { outline: 2px solid var(--unis-primary-glow); outline-offset: 2px; }
+
+  &__avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--unis-primary);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft);
+
+    &--ph {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--unis-text);
+      background: linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.04));
+    }
+  }
+
+  &__info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  &__name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--unis-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2px;
+    font-size: 0.74rem;
+    color: var(--unis-text-3);
+    font-weight: 600;
+  }
+  &__current-tag {
+    padding: 1px 7px;
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--unis-primary-2);
+    background: var(--unis-primary-soft);
+    border: 1px solid var(--unis-primary-glow);
+    border-radius: 999px;
+  }
+  &__check {
+    display: flex;
+    flex-shrink: 0;
+    color: var(--unis-primary-2);
+  }
+}
+
+.sap-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  color: var(--unis-text-3);
+  text-align: center;
+
+  &--error { color: #f87171; }
+}
+
+.sap-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--unis-border);
+  border-top-color: var(--unis-primary);
+  animation: sapSpin 0.8s linear infinite;
+}
+
+.sap-inline-error {
+  position: relative;
+  z-index: 1;
+  margin: 0 1.25rem;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.82rem;
+  color: #fca5a5;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: var(--unis-radius-sm);
+}
+
+.sap-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--unis-border);
+}
+
+.sap-btn {
+  flex: 1;
+  padding: 0.8rem 1rem;
+  border-radius: var(--unis-radius-sm);
+  font-size: 0.92rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.16s ease, opacity 0.16s ease;
+  border: 1px solid transparent;
+
+  &--ghost {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--unis-border);
+    color: var(--unis-text-2);
+    &:hover { background: rgba(255, 255, 255, 0.09); color: var(--unis-text); }
+  }
+  &--primary {
+    background: linear-gradient(135deg, var(--unis-primary), var(--unis-primary-2));
+    color: #fff;
+    box-shadow: 0 12px 28px -14px var(--unis-primary-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    &:hover:not(:disabled) { transform: translateY(-1px); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+  &:focus-visible { outline: 2px solid var(--unis-primary-glow); outline-offset: 2px; }
+}
+
+.sap-success {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.5rem 2rem 2rem;
+  gap: 0.5rem;
+
+  &__icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+    border-radius: 18px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--unis-primary), var(--unis-primary-2));
+    box-shadow: 0 14px 30px -12px var(--unis-primary-glow), 0 0 0 4px var(--unis-primary-soft);
+  }
+  &__title {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--unis-text);
+  }
+  &__body {
+    margin: 0 0 1.25rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--unis-text-3);
+    max-width: 30ch;
+  }
+  .sap-btn { flex: none; min-width: 140px; }
+}
+
+@keyframes sapFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sapSlide {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes sapSpin { to { transform: rotate(360deg); } }
+
+@media (max-width: 480px) {
+  .sap-modal { width: 95%; max-height: 88vh; }
+  .sap-header { padding: 1.4rem 1.4rem 0.9rem; }
+  .sap-header__title { font-size: 1.2rem; }
+}
