@@ -324,7 +324,7 @@ const Profile = () => {
                     className="profile-hero__featured-change"
                     onClick={() => setShowArtistPicker(true)}
                   >
-                    <Heart size={12} aria-hidden="true" /> Change
+                    Change
                   </button>
                 </div>
 
