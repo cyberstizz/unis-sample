@@ -27,7 +27,7 @@
   display: flex;
   flex-direction: column;
   background:
-    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.01) 42%, transparent),
+    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.01) 42%, transparent 68%),
     var(--unis-panel);
   border: 1px solid var(--unis-border);
   border-radius: var(--unis-radius-lg);
