@@ -115,12 +115,12 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
           {immediate ? <Sparkles size={28} /> : <Clock size={28} />}
         </div>
         <h3 className="sap-success__title">
-          {immediate ? 'You\u2019re now supporting them!' : 'Change queued'}
+          {immediate ? 'Youre now supporting them!' : 'Change queued'}
         </h3>
         <p className="sap-success__body">
           {immediate
             ? `${selectedArtist?.username || 'Your artist'} now receives a share of your ad revenue.`
-            : `You\u2019ll start supporting ${selectedArtist?.username || 'them'}${effective ? ` on ${effective}` : ' next month'}. Your current artist keeps earning until then.`}
+            : `Youll start supporting ${selectedArtist?.username || 'them'}${effective ? ` on ${effective}` : ' next month'}. Your current artist keeps earning until then.`}
         </p>
         <button type="button" className="sap-btn sap-btn--primary" onClick={onClose}>
           Done
@@ -148,7 +148,7 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
           </h2>
           <p className="sap-header__sub">
             {isFirstPick
-              ? 'Pick an artist to back \u2014 a share of your ad revenue goes to them.'
+              ? 'Pick an artist to back a share of your ad revenue goes to them.'
               : 'Changes take effect at the start of next month. Your current artist keeps earning until then.'}
           </p>
         </div>
@@ -161,7 +161,7 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
               <Search size={16} aria-hidden="true" />
               <input
                 type="text"
-                placeholder="Search artists by name\u2026"
+                placeholder="Search artists by name"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 aria-label="Search artists"
@@ -172,7 +172,7 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
               {loading ? (
                 <div className="sap-state">
                   <div className="sap-spinner" aria-hidden="true" />
-                  <p>Loading artists\u2026</p>
+                  <p>Loading artists</p>
                 </div>
               ) : error ? (
                 <div className="sap-state sap-state--error" role="alert">
@@ -180,7 +180,7 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
                 </div>
               ) : filtered.length === 0 ? (
                 <div className="sap-state">
-                  <p>No artists match \u201C{query}\u201D.</p>
+                  <p>No artists match</p>
                 </div>
               ) : (
                 filtered.map((artist) => {
@@ -237,7 +237,7 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
                 disabled={!selectedId || submitting || (selectedId === currentArtistId)}
               >
                 {submitting
-                  ? 'Saving\u2026'
+                  ? 'Saving'
                   : selectedId === currentArtistId
                     ? 'Already supported'
                     : isFirstPick ? 'Support this artist' : 'Queue change'}
