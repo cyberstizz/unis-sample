@@ -281,7 +281,7 @@ export default function DownloadModal({
       <>
         <div className="download-modal__badge download-modal__badge--free">
           <IconDownload />
-          <span>Free download</span>
+          <span>Free</span>
         </div>
 
         <p className="download-modal__description">
