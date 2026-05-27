@@ -7,7 +7,8 @@ import './voteHistoryModal.scss';
 // VoteHistoryModal -- purely presentational. Receives the full vote list from
 // VoteHistorySection (which owns the single /v1/vote/history fetch). No data
 // fetching, no dummy data. Images go through the shared buildUrl for R2/CDN
-// consistency.
+// consistency. Visual language mirrors SupportedArtistPicker so the two modals
+// read as one family.
 // =============================================================================
 const VoteHistoryModal = ({ show, onClose, votes = [] }) => {
   if (!show) return null;
@@ -33,22 +34,24 @@ const VoteHistoryModal = ({ show, onClose, votes = [] }) => {
     return labels[interval?.toLowerCase()] || interval || 'Daily';
   };
 
+  const count = votes.length;
+  const countLabel = count === 1 ? 'vote cast' : 'votes cast';
+
   return (
     <div className="vote-history-modal-overlay" onClick={onClose}>
       <div className="vote-history-modal" onClick={(e) => e.stopPropagation()}>
         <button className="close-button" onClick={onClose} aria-label="Close">
-          <X size={24} />
+          <X size={22} />
         </button>
 
         <div className="modal-header">
-          <div className="header-icon">
-            <History size={28} />
-          </div>
-          <h2>Vote History</h2>
+          <h2>Vote history</h2>
           <p className="modal-subtitle">
-            {votes.length} {votes.length === 1 ? 'vote' : 'votes'} cast
-            <br />
-            <span style={{ color: 'var(--unis-primary-2)' }}>You voted for</span>
+            <span className="modal-subtitle__count">{count}</span>
+            <span className="modal-subtitle__label">{countLabel}</span>
+            {count > 0 && (
+              <span className="modal-subtitle__voted-for">You voted for</span>
+            )}
           </p>
         </div>
 
@@ -65,7 +68,7 @@ const VoteHistoryModal = ({ show, onClose, votes = [] }) => {
                         <img src={img} alt={vote.nomineeName} className="nominee-image" />
                       ) : (
                         <div className="nominee-placeholder">
-                          {isArtist ? <User size={24} /> : <Music size={24} />}
+                          {isArtist ? <User size={20} /> : <Music size={20} />}
                         </div>
                       )}
                     </div>
@@ -83,9 +86,9 @@ const VoteHistoryModal = ({ show, onClose, votes = [] }) => {
             })
           ) : (
             <div className="empty-state">
-              <History size={48} />
+              <History size={44} />
               <p>No votes yet</p>
-              <span>Go support your favorite artists and songs!</span>
+              <span>Go support your favorite artists and songs.</span>
             </div>
           )}
         </div>
