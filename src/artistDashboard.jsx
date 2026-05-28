@@ -1,6 +1,26 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import LyricsWizard from './lyricsWizard';
-import { Upload, Play, FileText, Vote, Eye, Heart, Users, X, Download, Music, Trash2, Edit3, History } from 'lucide-react';
+import {
+  Upload,
+  Play,
+  FileText,
+  Vote,
+  Eye,
+  Heart,
+  Users,
+  X,
+  Download,
+  Music,
+  Trash2,
+  Edit3,
+  History,
+  Trophy,
+  MapPin,
+  DollarSign,
+  ArrowRight,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
 import UploadWizard from './uploadWizard';
 import ChangeDefaultSongWizard from './changeDefaultSongWizard';
 import EditProfileWizard from './editProfileWizard';
@@ -237,12 +257,80 @@ const ArtistDashboard = () => {
   }
 
   // Core data loaded — safe to derive display values
+  const buildUrl = (url) => {
+    if (!url) return null;
+    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  };
+
   const displayName = userProfile.username || 'Artist';
-  const displayPhoto = userProfile.photoUrl
-    ? (userProfile.photoUrl.startsWith('http') ? userProfile.photoUrl : `${API_BASE_URL}${userProfile.photoUrl}`)
-    : backimage;
+  const displayPhoto = buildUrl(userProfile.photoUrl) || backimage;
   const displayBio = userProfile.bio || 'No bio yet. Click Edit to add one.';
 
+  const artistInitial = displayName.charAt(0).toUpperCase();
+  const levelLabel = userProfile.level || 'Silver';
+  const artistJurisdiction =
+    userProfile.jurisdiction?.name ||
+    userProfile.jurisdictionName ||
+    'Home jurisdiction';
+
+  const artistGenre =
+    userProfile.genre?.name ||
+    userProfile.genreName ||
+    'Artist genre';
+
+  const featuredArtwork =
+    buildUrl(defaultSong?.artworkUrl) ||
+    displayPhoto ||
+    backimage;
+
+  const recentAward = awards?.[0] || null;
+
+  const currentBalanceDollars = Number.parseFloat(
+    earningsSummary?.currentBalance || 0
+  );
+
+  const isStripeReady = Boolean(
+    stripeStatus?.onboardingComplete && stripeStatus?.payoutsEnabled
+  );
+
+  const nextMoves = [
+    !userProfile.bio && {
+      title: 'Add your artist story',
+      text: 'A short bio helps listeners understand why they should support you.',
+      action: 'Edit profile',
+      onClick: () => setShowEditProfile(true),
+    },
+    !defaultSong && {
+      title: 'Set your featured song',
+      text: 'Your featured song is the first track people see when they visit your artist presence.',
+      action: 'Set featured',
+      onClick: () => setShowDefaultSongWizard(true),
+    },
+    songs.length < 2 && {
+      title: 'Build your catalog',
+      text: 'A second track gives listeners more to explore and gives you more chances to win.',
+      action: 'Upload song',
+      onClick: () => setShowUploadWizard(true),
+    },
+    !userProfile.instagramUrl && !userProfile.tiktokUrl && !userProfile.twitterUrl && {
+      title: 'Connect your socials',
+      text: 'Let supporters continue following you beyond Unis.',
+      action: 'Add links',
+      onClick: () => {
+        const section = document.querySelector('.artist-social-card');
+        section?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      },
+    },
+    userProfile?.role === 'artist' && !isStripeReady && {
+      title: 'Prepare your payouts',
+      text: 'Connect payout access before your revenue is ready to cash out.',
+      action: 'Review revenue',
+      onClick: () => {
+        const section = document.querySelector('.artist-revenue-card');
+        section?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      },
+    },
+  ].filter(Boolean);
   // -----------------------------------------------------------------------
   // Handlers (unchanged logic, just reorganised)
   // -----------------------------------------------------------------------
@@ -252,10 +340,6 @@ const ArtistDashboard = () => {
       .catch(() => setDefaultSong(null));
   };
 
-  const buildUrl = (url) => {
-    if (!url) return null;
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-  };
 
   const playSupportedArtistSong = async () => {
     if (!supportedArtist?.defaultSong) {
@@ -284,6 +368,47 @@ const ArtistDashboard = () => {
     } catch (err) {
       console.error('Failed to track play:', err);
     }
+    requestPlay(mediaObject);
+  };
+
+  const playDefaultSong = async () => {
+    if (!defaultSong) {
+      setShowDefaultSongWizard(true);
+      return;
+    }
+
+    const songId = defaultSong.songId || defaultSong.id;
+    const songUrl = buildUrl(defaultSong.fileUrl);
+    const artworkUrl = buildUrl(defaultSong.artworkUrl) || displayPhoto;
+
+    if (!songUrl) {
+      alert('This featured song is missing its audio file.');
+      return;
+    }
+
+    const mediaObject = {
+      type: 'song',
+      id: songId,
+      songId,
+      url: songUrl,
+      fileUrl: songUrl,
+      title: defaultSong.title,
+      artist: displayName,
+      artistName: displayName,
+      artistId: user.userId,
+      artwork: artworkUrl,
+      artworkUrl,
+    };
+
+    try {
+      await apiCall({
+        method: 'post',
+        url: `/v1/media/song/${songId}/play?userId=${user.userId}`,
+      });
+    } catch (err) {
+      console.error('Failed to track artist featured song play:', err);
+    }
+
     requestPlay(mediaObject);
   };
 
@@ -436,315 +561,514 @@ const ArtistDashboard = () => {
         )}
 
         <div className="dashboard-content">
+          <section className="artist-hero" aria-labelledby="artist-dashboard-title">
+           <div className="artist-hero__left">
+           <div className="artist-hero__eyebrow">
+            Artist · {levelLabel} Tier
+           </div>
 
-          <div className="dashboard-header">
-            <h1 className='dashboard-h1'>Dashboard</h1>
+          <div className="artist-hero__identity">
+            {displayPhoto ? (
+              <img
+                src={displayPhoto}
+                alt={`${displayName}'s artist profile`}
+                className="artist-hero__avatar"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="artist-hero__avatar artist-hero__avatar--placeholder">
+                {artistInitial}
+              </div>
+            )}
+
+            <div className="artist-hero__copy">
+              <h1 id="artist-dashboard-title">{displayName}</h1>
+              <p>{displayBio}</p>
+            </div>
           </div>
 
-          {/* Profile */}
-          <div className="profile-section card">
-            <div className="profile-content">
-              <img src={displayPhoto} alt={displayName} className="profile-image profile-image-bordered" />
-              <div className="profile-info">
-                <h2 className="artist-name">{displayName}</h2>
-                <p className="artist-bio">{displayBio}</p>
-                <div className="profile-header">
-                  <button className="btn btn-primary" onClick={() => setShowEditProfile(true)}>Edit Profile</button>
+          <div className="artist-hero__stats">
+            <div className="artist-hero__stat">
+              <span>Score</span>
+              <strong>{(userProfile.score || 0).toLocaleString()}</strong>
+            </div>
+            <div className="artist-hero__stat">
+              <span>Supporters</span>
+              <strong>{supporters.toLocaleString()}</strong>
+            </div>
+            <div className="artist-hero__stat">
+              <span>Plays</span>
+              <strong>{totalPlays.toLocaleString()}</strong>
+            </div>
+            <div className="artist-hero__stat">
+              <span>Votes</span>
+              <strong>{totalVotes.toLocaleString()}</strong>
+            </div>
+          </div>
+
+          <div className="artist-hero__actions">
+            <button type="button" className="artist-btn artist-btn--primary" onClick={() => setShowUploadWizard(true)}>
+              <Upload size={15} /> Upload Song
+            </button>
+            <button type="button" className="artist-btn artist-btn--ghost" onClick={() => setShowEditProfile(true)}>
+              <Edit3 size={15} /> Edit Profile
+            </button>
+            <button type="button" className="artist-btn artist-btn--ghost" onClick={downloadOwnershipContract}>
+              <Download size={15} /> Agreement
+            </button>
+          </div>
+        </div>
+
+        <div
+          className="artist-featured"
+          style={{ backgroundImage: `url(${featuredArtwork})` }}
+        >
+          <div className="artist-featured__overlay" />
+          <div className="artist-featured__content">
+            <span className="artist-featured__tag">Featured song</span>
+            <h2>{defaultSong?.title || 'No featured song set'}</h2>
+            <p>
+              {defaultSong
+                ? `${defaultSong.playCount || 0} plays · Lead with your strongest record.`
+                : 'Choose the track that should represent you first.'}
+            </p>
+
+            <div className="artist-featured__actions">
+              <button type="button" className="artist-featured__play" onClick={playDefaultSong}>
+                <Play size={13} fill="currentColor" /> {defaultSong ? 'Play' : 'Choose'}
+              </button>
+              <button type="button" className="artist-featured__change" onClick={() => setShowDefaultSongWizard(true)}>
+                Change
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {statsLoading ? (
+        <SectionLoader label="Loading artist momentum..." />
+      ) : statsError ? (
+        <SectionError message={statsError} onRetry={() => fetchStats(user.userId)} />
+      ) : (
+        <section className="artist-section">
+          <div className="artist-section__head">
+            <div>
+              <span className="artist-section__eyebrow">Today on Unis</span>
+              <h2>Artist <em>momentum</em></h2>
+            </div>
+          </div>
+
+          <div className="artist-momentum-grid">
+            <div className="artist-metric-card">
+              <div>
+                <span>Supporters</span>
+                <strong>{supporters.toLocaleString()}</strong>
+                <p>People directly backing your artist journey.</p>
+              </div>
+              <Users size={24} />
+            </div>
+
+            <div className="artist-metric-card">
+              <div>
+                <span>Followers</span>
+                <strong>{followers.toLocaleString()}</strong>
+                <p>Listeners keeping up with your movement.</p>
+              </div>
+              <Heart size={24} />
+            </div>
+
+            <div className="artist-metric-card">
+              <div>
+                <span>Catalog</span>
+                <strong>{songs.length}</strong>
+                <p>Tracks available for discovery and voting.</p>
+              </div>
+              <Music size={24} />
+            </div>
+
+            <div className="artist-metric-card">
+              <div>
+                <span>Awards</span>
+                <strong>{awards.length}</strong>
+                <p>Wins earned through votes, plays, and score.</p>
+              </div>
+              <Trophy size={24} />
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="artist-section">
+        <div className="artist-section__head">
+          <div>
+            <span className="artist-section__eyebrow">Local advantage</span>
+            <h2>Territory <em>signal</em></h2>
+          </div>
+        </div>
+
+        <div className="artist-territory-grid">
+          <div className="artist-territory-card">
+            <div className="artist-territory-card__icon">
+              <MapPin size={22} />
+            </div>
+            <div>
+              <span>Home base</span>
+              <strong>{artistJurisdiction}</strong>
+              <p>Your local identity is the foundation for Unis discovery.</p>
+            </div>
+          </div>
+
+          <div className="artist-territory-card">
+            <div className="artist-territory-card__icon">
+              <Music size={22} />
+            </div>
+            <div>
+              <span>Primary lane</span>
+              <strong>{artistGenre}</strong>
+              <p>Your genre connects you to awards, leaderboards, and local competition.</p>
+            </div>
+          </div>
+
+          <div className="artist-territory-card artist-territory-card--wide">
+            <div className="artist-territory-card__icon">
+              <Sparkles size={22} />
+            </div>
+            <div>
+              <span>Coming soon</span>
+              <strong>Rank movement</strong>
+              <p>
+                This area will eventually show your rank by neighborhood, Harlem, NYC,
+                New York, and Unis-wide once the dashboard summary endpoint is added.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="artist-section">
+        <div className="artist-section__head">
+          <div>
+            <span className="artist-section__eyebrow">Catalog command</span>
+            <h2>Your <em>songs</em></h2>
+          </div>
+
+          <button type="button" className="artist-btn artist-btn--primary artist-btn--small" onClick={() => setShowUploadWizard(true)}>
+            <Upload size={14} /> Upload
+          </button>
+        </div>
+
+        <div className="artist-catalog">
+          {songs.length > 0 ? songs.map((song, index) => {
+            const songArtwork = buildUrl(song.artworkUrl) || displayPhoto || backimage;
+            const isFeatured = defaultSong?.songId === song.songId;
+
+            return (
+              <article key={song.songId || song.id || index} className="artist-song-card">
+                <img src={songArtwork} alt={`${song.title} artwork`} className="artist-song-card__art" />
+
+                <div className="artist-song-card__body">
+                  <div className="artist-song-card__title-row">
+                    <div>
+                      <h3>{song.title}</h3>
+                      <p>{isFeatured ? 'Featured track' : 'Catalog track'}</p>
+                    </div>
+
+                    {isFeatured && <span className="artist-song-card__badge">Featured</span>}
+                  </div>
+
+                  <div className="artist-song-card__stats">
+                    <span><Play size={12} /> {song.playCount || song.plays || 0} plays</span>
+                    <span><Vote size={12} /> {song.votes || song.voteCount || 0} votes</span>
+                    {song.isrc ? (
+                      <span><ShieldCheck size={12} /> ISRC {formatIsrc(song.isrc)}</span>
+                    ) : (
+                      <span className="artist-song-card__warn">No ISRC</span>
+                    )}
+                  </div>
                 </div>
-                <div className="profile-actions">
-                  <button className="btn btn-secondary" onClick={downloadOwnershipContract}>
-                    <Download size={16} /> Download Ownership Contract
+
+                <div className="artist-song-card__actions">
+                  <button type="button" onClick={() => setEditingSong(song)} aria-label={`Edit ${song.title}`}>
+                    <Edit3 size={16} />
+                  </button>
+                  <button type="button" onClick={() => { setLyricsSong(song); setShowLyricsWizard(true); }} aria-label={`Edit lyrics for ${song.title}`}>
+                    <FileText size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteSongClick(song)}
+                    disabled={deletingSongId === song.songId}
+                    aria-label={`Delete ${song.title}`}
+                  >
+                    {deletingSongId === song.songId ? '...' : <Trash2 size={16} />}
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats */}
-          {statsLoading ? (
-            <SectionLoader label="Loading stats..." />
-          ) : statsError ? (
-            <SectionError message={statsError} onRetry={() => fetchStats(user.userId)} />
-          ) : (
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-content">
-                  <div className="stat-info"><p className="stat-label">Score</p><p className="stat-value">{(userProfile.score || 0).toLocaleString()}</p></div>
-                  <div className="stat-icon stat-icon-blue"><Eye size={28} /></div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-content">
-                  <div className="stat-info"><p className="stat-label">Supporters</p><p className="stat-value">{supporters.toLocaleString()}</p></div>
-                  <div className="stat-icon stat-icon-purple"><Users size={28} /></div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-content">
-                  <div className="stat-info"><p className="stat-label">Followers</p><p className="stat-value">{followers.toLocaleString()}</p></div>
-                  <div className="stat-icon stat-icon-green"><Heart size={28} /></div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-content">
-                  <div className="stat-info"><p className="stat-label">Plays</p><p className="stat-value">{totalPlays.toLocaleString()}</p></div>
-                  <div className="stat-icon stat-icon-red"><Play size={28} /></div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-content">
-                  <div className="stat-info"><p className="stat-label">Songs</p><p className="stat-value">{songs.length}</p></div>
-                  <div className="stat-icon stat-icon-orange"><Music size={28} /></div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-content">
-                  <div className="stat-info"><p className="stat-label">Votes</p><p className="stat-value">{totalVotes.toLocaleString()}</p></div>
-                  <div className="stat-icon stat-icon-black"><Vote size={28} /></div>
-                </div>
-              </div>
+              </article>
+            );
+          }) : (
+            <div className="artist-empty-state">
+              <Music size={34} />
+              <h3>No songs yet</h3>
+              <p>Upload your first track and start building your local signal.</p>
+              <button type="button" className="artist-btn artist-btn--primary" onClick={() => setShowUploadWizard(true)}>
+                <Upload size={14} /> Upload first song
+              </button>
             </div>
           )}
+        </div>
+      </section>
 
-          {/* Featured Song */}
-          <div className="main-song-section card">
-            <div className="section-header">
-              <h3>Featured Song</h3>
-              <button className="link-button" onClick={() => setShowDefaultSongWizard(true)} style={{ fontWeight: '600', color: 'var(--unis-primary)' }}>
-                Change Featured
-              </button>
-            </div>
-            <div className="main-song-card">
-              <div className="song-icon"><Play size={28} fill="white" /></div>
-              <div className="song-info">
-                <h4>{defaultSong?.title || 'No featured song set'}</h4>
-                {defaultSong && (
-                  <div className="song-stats">
-                    <span><Eye size={14} /> {defaultSong.playCount || 0} plays</span>
-                  </div>
-                )}
-              </div>
-            </div>
+      <section className="artist-section">
+        <div className="artist-section__head">
+          <div>
+            <span className="artist-section__eyebrow">Recognition</span>
+            <h2>Trophy <em>case</em></h2>
           </div>
+        </div>
 
-          {/* Songs */}
-          <div className="content-section card">
-            <div className="section-header">
-              <h3><Play size={20} /> Songs</h3>
-              <button className="btn btn-primary btn-small" onClick={() => setShowUploadWizard(true)}>
-                <Upload size={16} /> Upload
-              </button>
-            </div>
-            <div className="content-list">
-              {songs.length > 0 ? songs.map((song, index) => (
-                <div key={song.songId || song.id || index} className="content-item">
-                  <div className="item-header">
-                    <h4>{song.title}</h4>
-                    <div className="item-actions">
-                      <button className="edit-button" onClick={() => setEditingSong(song)}><Edit3 size={16} /></button>
-                      <button className="lyrics-button" onClick={() => { setLyricsSong(song); setShowLyricsWizard(true); }}><FileText size={16} /></button>
-                      <button className="delete-button" onClick={() => handleDeleteSongClick(song)} disabled={deletingSongId === song.songId}>
-                        {deletingSongId === song.songId ? '...' : <Trash2 size={16} />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="item-stats">
-                    <span><Play size={12} /> {song.playCount || song.plays || 0} plays</span>
-                    {song.isrc ? (
-                      <span style={{ color: '#A9A9A9', fontSize: '12px', marginLeft: '8px' }}>ISRC: {formatIsrc(song.isrc)}</span>
-                    ) : (
-                      <span style={{ color: '#f59e0b', fontSize: '11px', marginLeft: '8px' }}>No ISRC</span>
-                    )}
-                  </div>
+        <div className="artist-awards-card">
+          {awardsLoading ? (
+            <SectionLoader label="Loading awards..." />
+          ) : awardsError ? (
+            <SectionError message={awardsError} onRetry={() => fetchAwards(user.userId)} />
+          ) : awards.length > 0 ? (
+            <>
+              <div className="artist-awards-card__featured">
+                <div className="artist-awards-card__trophy">🏆</div>
+                <div>
+                  <span>Latest win</span>
+                  <h3>{recentAward?.interval?.name || 'Award'} Winner</h3>
+                  <p>
+                    {recentAward?.jurisdiction?.name || 'Location'}
+                    {recentAward?.genre?.name && ` · ${recentAward.genre.name}`}
+                    {recentAward?.awardDate && ` · ${formatAwardDate(recentAward.awardDate)}`}
+                  </p>
                 </div>
-              )) : <p>No songs yet — upload your first!</p>}
-            </div>
-          </div>
+              </div>
 
-          {/* Social Media */}
-          <div className="social-media-section card">
-            <div className="section-header"><h3>Social Media Links</h3></div>
-            <div className="social-links-edit">
-              <div className="social-link-item">
-                <label>📷 Instagram</label>
-                <input type="text" placeholder="https://instagram.com/yourprofile" defaultValue={userProfile.instagramUrl || ''} onBlur={(e) => handleSocialMediaUpdate('instagram', e.target.value)} className="social-input" />
-              </div>
-              <div className="social-link-item">
-                <label>𝕏 Twitter / X</label>
-                <input type="text" placeholder="https://twitter.com/yourprofile" defaultValue={userProfile.twitterUrl || ''} onBlur={(e) => handleSocialMediaUpdate('twitter', e.target.value)} className="social-input" />
-              </div>
-              <div className="social-link-item">
-                <label>🎵 TikTok</label>
-                <input type="text" placeholder="https://tiktok.com/@yourprofile" defaultValue={userProfile.tiktokUrl || ''} onBlur={(e) => handleSocialMediaUpdate('tiktok', e.target.value)} className="social-input" />
-              </div>
-            </div>
-          </div>
-
-          {/* Supported Artist */}
-          {supportedArtist && (
-            <div className="supported-artist-section card" style={{ marginTop: '2rem' }}>
-              <div className="section-header"><h3><Heart size={20} /> I Support</h3></div>
-              <div className="artist-support-card" style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '15px' }}>
-                <img src={supportedArtist.photoUrl ? buildUrl(supportedArtist.photoUrl) : backimage} alt={supportedArtist.username} className="artist-photo" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} />
-                <div className="artist-info" style={{ flex: 1 }}>
-                  <h4 style={{ margin: 0, fontSize: '1.2rem', color: '#e0e0e0' }}>{supportedArtist.username}</h4>
-                  {supportedArtist.defaultSong ? (
-                    <div style={{ display: 'flex', alignItems: 'center', marginTop: '5px' }}>
-                      <p style={{ margin: 0, color: '#aaa', fontSize: '0.9rem', marginRight: '15px' }}>
-                        <Music size={12} style={{ display: 'inline', marginRight: '5px' }} />
-                        {supportedArtist.defaultSong.title}
+              <div className="artist-awards-list">
+                {awards.map((award, index) => (
+                  <div key={index} className="artist-award-row">
+                    <span>{getAwardEmoji(award.determinationMethod)}</span>
+                    <div>
+                      <strong>{award.interval?.name || 'Award'} Winner</strong>
+                      <p>
+                        {award.jurisdiction?.name || 'Location'}
+                        {award.genre?.name && ` · ${award.genre.name}`}
                       </p>
-                      <button onClick={playSupportedArtistSong} style={{ background: 'transparent', border: '1px solid #aaa', borderRadius: '50%', padding: '5px', cursor: 'pointer', color: 'white' }}>
-                        <Play size={14} fill="white" />
-                      </button>
                     </div>
-                  ) : (
-                    <p style={{ color: '#777', fontStyle: 'italic', fontSize: '0.9rem' }}>No featured song set</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Vote History */}
-          <div className="vote-history-section card" style={{ marginTop: '1.5rem' }}>
-            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3><History size={20} /> Vote History</h3>
-              {!votesLoading && !votesError && (
-                <button className="btn btn-secondary btn-small" onClick={() => setShowVoteHistory(true)}>View Full History</button>
-              )}
-            </div>
-            {votesLoading ? (
-              <SectionLoader label="Loading vote history..." />
-            ) : votesError ? (
-              <SectionError message={votesError} onRetry={fetchVotes} />
-            ) : (
-              <div style={{ padding: '15px', textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--unis-primary)' }}>{voteHistory.length}</div>
-                <p style={{ color: '#aaa', margin: '5px 0' }}>Total Votes Cast</p>
-                <p style={{ fontSize: '0.9rem', color: '#777', marginTop: '10px' }}>
-                  {voteHistory.length > 0 ? 'Keep voting to support the best talent!' : 'No votes yet. Go explore and support your favorites!'}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Awards */}
-          <div className="awards-section card" style={{ marginTop: '1.5rem' }}>
-            <div className="section-header"><h3>🏆 Awards Won</h3></div>
-            {awardsLoading ? (
-              <SectionLoader label="Loading awards..." />
-            ) : awardsError ? (
-              <SectionError message={awardsError} onRetry={() => fetchAwards(user.userId)} />
-            ) : (
-              <div className="content-list">
-                {awards.length > 0 ? (
-                  <>
-                    {awards.map((award, index) => (
-                      <div key={index} className="content-item" style={{
-                        background: 'linear-gradient(135deg, var(--unis-primary-subtle), rgba(0,0,0,0))',
-                        borderLeft: '4px solid var(--unis-primary)'
-                      }}>
-                        <div className="item-header">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '1.5rem' }}>{getAwardEmoji(award.determinationMethod)}</span>
-                            <div>
-                              <h4 style={{ margin: 0, color: '#e0e0e0' }}>{award.interval?.name || 'Award'} Winner</h4>
-                              <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#aaa' }}>
-                                {award.jurisdiction?.name || 'Location'}{award.genre?.name && ` • ${award.genre.name}`}
-                              </p>
-                            </div>
-                          </div>
-                          <span style={{ fontSize: '0.85rem', color: '#888' }}>{formatAwardDate(award.awardDate)}</span>
-                        </div>
-                        <div className="item-stats" style={{ marginTop: '8px' }}>
-                          <span style={{ color: 'var(--unis-primary)', fontWeight: '600' }}>{award.votesCount || 0} votes</span>
-                          <span style={{ color: '#666' }}>•</span>
-                          <span style={{ color: '#888' }}>{award.engagementScore || 0} score</span>
-                          {award.determinationMethod && (
-                            <>
-                              <span style={{ color: '#666' }}>•</span>
-                              <span style={{ color: '#6c757d', fontSize: '0.8rem', fontWeight: '500' }}>
-                                Won by {award.determinationMethod.toLowerCase()}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                    {hasMoreAwards && (
-                      <div style={{ textAlign: 'center', padding: '15px' }}>
-                        <button className="btn btn-secondary btn-small" onClick={loadMoreAwards} disabled={loadingMoreAwards} style={{ minWidth: '120px' }}>
-                          {loadingMoreAwards ? 'Loading...' : 'Load More'}
-                        </button>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div style={{ padding: '30px', textAlign: 'center', color: '#777' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🏆</div>
-                    <p style={{ fontSize: '1.1rem', marginBottom: '5px' }}>No awards yet</p>
-                    <p style={{ fontSize: '0.9rem', color: '#888', marginTop: '10px' }}>Keep creating and engaging with your audience to earn awards!</p>
+                    <small>{formatAwardDate(award.awardDate)}</small>
                   </div>
-                )}
+                ))}
               </div>
-            )}
-          </div>
 
-          {/* Cashout */}
-          {userProfile?.role === 'artist' && (
-            <div className="card" style={{ marginTop: '1.5rem', padding: '0', overflow: 'hidden' }}>
-              <div className="section-header" style={{ padding: '1.5rem 1.5rem 0' }}>
-                <h3>💰 Earnings & Cashout</h3>
-              </div>
-              <div style={{ padding: '0 1.5rem 1.5rem' }}>
-                <CashoutPanel
-                  balance={Math.round(parseFloat(earningsSummary?.currentBalance || 0) * 100)}
-                  pendingBalance={0}
-                  minimumPayout={5000}
-                  stripeConnected={stripeStatus?.onboardingComplete && stripeStatus?.payoutsEnabled}
-                  onRequestPayout={async (amount) => {
-                    const res = await apiCall({ url: '/v1/stripe/payout', method: 'post' });
-                    if (res.data?.success) {
-                      fetchStats(user.userId);
-                    }
-                  }}
-                  onConnectStripe={async () => {
-                    const res = await apiCall({ url: '/v1/stripe/onboard', method: 'post' });
-                    if (res.data?.url) window.location.href = res.data.url;
-                  }}
-                  payoutHistory={payoutHistory.map(p => ({
-                    id: p.payoutId,
-                    amount: Math.round(parseFloat(p.amount || 0) * 100),
-                    status: p.status || 'pending',
-                    date: p.createdAt,
-                  }))}
-                />
-              </div>
+              {hasMoreAwards && (
+                <button
+                  type="button"
+                  className="artist-btn artist-btn--ghost artist-btn--small"
+                  onClick={loadMoreAwards}
+                  disabled={loadingMoreAwards}
+                >
+                  {loadingMoreAwards ? 'Loading...' : 'Load more awards'}
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="artist-empty-state">
+              <Trophy size={34} />
+              <h3>No awards yet</h3>
+              <p>Keep collecting votes, plays, likes, and score to earn your first local win.</p>
             </div>
           )}
+        </div>
+      </section>
 
-          {/* Referral Code — artist */}
-          <ReferralCodeCard userId={user?.userId} isArtist={true} />
+      {userProfile?.role === 'artist' && (
+        <section className="artist-section artist-revenue-card">
+          <div className="artist-section__head">
+            <div>
+              <span className="artist-section__eyebrow">Revenue</span>
+              <h2>Earnings <em>&amp; cashout</em></h2>
+            </div>
 
-          {/* Theme Picker */}
-          <ThemePicker userId={user?.userId} />
-
-          {/* Danger Zone */}
-          <div className="card" style={{ border: '2px solid #dc3545', marginTop: '3rem' }}>
-            <div style={{ padding: '1.5rem', textAlign: 'center' }}>
-              <h3 style={{ color: '#dc3545', marginBottom: '0.5rem' }}>Danger Zone</h3>
-              <p style={{ color: '#721c24', marginBottom: '1rem' }}>Once you delete your account, there is no going back.</p>
-              <button onClick={() => setShowChangePassword(true)}
-                style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer', marginRight: '12px' }}>
-                Change Password
-              </button>
-              <button className="btn btn-primary" style={{ background: '#dc3545', border: 'none' }} onClick={() => setShowDeleteWizard(true)}>
-                Delete Account
-              </button>
+            <div className={`artist-status-pill ${isStripeReady ? 'is-ready' : ''}`}>
+              <DollarSign size={13} />
+              {isStripeReady ? 'Payout ready' : 'Setup needed'}
             </div>
           </div>
 
+          <div className="artist-revenue-summary">
+            <div>
+              <span>Current balance</span>
+              <strong>${currentBalanceDollars.toFixed(2)}</strong>
+              <p>Minimum payout: $50.00</p>
+            </div>
+            <div>
+              <span>Payout history</span>
+              <strong>{payoutHistory.length}</strong>
+              <p>Completed or pending artist payout records.</p>
+            </div>
+          </div>
+
+          <CashoutPanel
+            balance={Math.round(currentBalanceDollars * 100)}
+            pendingBalance={0}
+            minimumPayout={5000}
+            stripeConnected={isStripeReady}
+            onRequestPayout={async () => {
+              const res = await apiCall({ url: '/v1/stripe/payout', method: 'post' });
+              if (res.data?.success) fetchStats(user.userId);
+            }}
+            onConnectStripe={async () => {
+              const res = await apiCall({ url: '/v1/stripe/onboard', method: 'post' });
+              if (res.data?.url) window.location.href = res.data.url;
+            }}
+            payoutHistory={payoutHistory.map(p => ({
+              id: p.payoutId,
+              amount: Math.round(parseFloat(p.amount || 0) * 100),
+              status: p.status || 'pending',
+              date: p.createdAt,
+            }))}
+          />
+        </section>
+      )}
+
+      <section className="artist-section">
+        <div className="artist-section__head">
+          <div>
+            <span className="artist-section__eyebrow">Next move</span>
+            <h2>Growth <em>checklist</em></h2>
+          </div>
+        </div>
+
+        <div className="artist-next-grid">
+          {nextMoves.length > 0 ? nextMoves.map((move, index) => (
+            <button key={index} type="button" className="artist-next-card" onClick={move.onClick}>
+              <div>
+                <strong>{move.title}</strong>
+                <p>{move.text}</p>
+              </div>
+              <span>{move.action} <ArrowRight size={13} /></span>
+            </button>
+          )) : (
+            <div className="artist-next-card artist-next-card--complete">
+              <div>
+                <strong>Your launch basics are complete</strong>
+                <p>Keep driving listeners to vote, support, and share your music.</p>
+              </div>
+              <span>Keep building <ArrowRight size={13} /></span>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="artist-section artist-social-card">
+        <div className="artist-section__head">
+          <div>
+            <span className="artist-section__eyebrow">Artist presence</span>
+            <h2>Social <em>links</em></h2>
+          </div>
+        </div>
+
+        <div className="social-links-edit">
+          <div className="social-link-item">
+            <label>Instagram</label>
+            <input
+              type="text"
+              placeholder="https://instagram.com/yourprofile"
+              defaultValue={userProfile.instagramUrl || ''}
+              onBlur={(e) => handleSocialMediaUpdate('instagram', e.target.value)}
+              className="social-input"
+            />
+          </div>
+
+          <div className="social-link-item">
+            <label>Twitter / X</label>
+            <input
+              type="text"
+              placeholder="https://twitter.com/yourprofile"
+              defaultValue={userProfile.twitterUrl || ''}
+              onBlur={(e) => handleSocialMediaUpdate('twitter', e.target.value)}
+              className="social-input"
+            />
+          </div>
+
+          <div className="social-link-item">
+            <label>TikTok</label>
+            <input
+              type="text"
+              placeholder="https://tiktok.com/@yourprofile"
+              defaultValue={userProfile.tiktokUrl || ''}
+              onBlur={(e) => handleSocialMediaUpdate('tiktok', e.target.value)}
+              className="social-input"
+            />
+          </div>
+        </div>
+      </section>
+
+      {supportedArtist && (
+        <section className="artist-section">
+          <div className="artist-section__head">
+            <div>
+              <span className="artist-section__eyebrow">Community</span>
+              <h2>I <em>support</em></h2>
+            </div>
+          </div>
+
+          <div className="artist-support-card">
+            <img
+              src={buildUrl(supportedArtist.photoUrl) || backimage}
+              alt={supportedArtist.username}
+            />
+            <div>
+              <strong>{supportedArtist.username}</strong>
+              <p>{supportedArtist.defaultSong?.title || 'No featured song set'}</p>
+            </div>
+            {supportedArtist.defaultSong && (
+              <button type="button" onClick={playSupportedArtistSong}>
+                <Play size={14} fill="currentColor" />
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      <section className="artist-section">
+        <div className="artist-section__head">
+          <div>
+            <span className="artist-section__eyebrow">Network</span>
+            <h2>Refer <em>&amp; earn</em></h2>
+          </div>
+        </div>
+        <ReferralCodeCard userId={user?.userId} isArtist={true} />
+      </section>
+
+      <section className="artist-section">
+        <div className="artist-section__head">
+          <div>
+            <span className="artist-section__eyebrow">Personalization</span>
+            <h2>Color <em>theme</em></h2>
+          </div>
+        </div>
+        <ThemePicker userId={user?.userId} />
+      </section>
+
+      <section className="artist-danger">
+        <div>
+          <strong>Danger zone</strong>
+          <p>Change your password or permanently delete your account. Deletion cannot be undone.</p>
+        </div>
+        <div className="artist-danger__actions">
+          <button type="button" className="artist-btn artist-btn--ghost" onClick={() => setShowChangePassword(true)}>
+            Change Password
+          </button>
+          <button type="button" className="artist-btn artist-btn--danger" onClick={() => setShowDeleteWizard(true)}>
+            <Trash2 size={14} /> Delete Account
+          </button>
+        </div>
+      </section>
         </div>
 
         {/* Wizards */}
