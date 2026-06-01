@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Upload, Type, User, Camera } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import cacheService from './services/cacheService';
+import buildUrl from './utils/buildUrl';
 import './editProfileWizard.scss';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -10,11 +11,7 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
   const [activeTab, setActiveTab] = useState('photo');
   const [bio, setBio] = useState(userProfile?.bio || '');
   const [photoFile, setPhotoFile] = useState(null);
-  const [preview, setPreview] = useState(
-    userProfile?.photoUrl 
-  ? (userProfile.photoUrl.startsWith('http') ? userProfile.photoUrl : `${API_BASE_URL}${userProfile.photoUrl}`)
-  : null
-  );
+  const [preview, setPreview] = useState(buildUrl(userProfile?.photoUrl));
   const [loading, setLoading] = useState(false);
 
   if (!show) return null;

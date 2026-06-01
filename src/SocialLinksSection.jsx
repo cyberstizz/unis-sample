@@ -68,6 +68,10 @@ const SocialLinksSection = ({ userId, profile, onUpdated }) => {
     setEditing(false);
   };
 
+  // Belt + suspenders to the server-side validation. Returns the URL if it's
+  // a safe http(s) link; returns '#' otherwise so a malicious value never
+  // renders as an executable href.
+
   const update = (key, value) => setValues(v => ({ ...v, [key]: value }));
 
   const hasAny = Boolean(values.instagramUrl || values.twitterUrl || values.tiktokUrl);
@@ -156,6 +160,18 @@ const SocialLinksSection = ({ userId, profile, onUpdated }) => {
   );
 };
 
+  const safeUrl = (url) => {
+    if (!url || typeof url !== 'string') return '#';
+    const trimmed = url.trim();
+    const lower = trimmed.toLowerCase();
+    if (lower.startsWith('http://') || lower.startsWith('https://')) {
+      if (lower.includes('javascript:') || lower.includes('data:')) return '#';
+      return trimmed;
+    }
+    return '#';
+  };
+
+
 const SocialRow = ({ icon, placeholder, value, onChange }) => (
   <div className="social-links-row">
     <span className="social-links-row__icon">{icon}</span>
@@ -171,7 +187,7 @@ const SocialRow = ({ icon, placeholder, value, onChange }) => (
 
 const SocialDisplay = ({ href, icon, label }) => (
   <a
-    href={href}
+    href={safeUrl(href)}
     target="_blank"
     rel="noopener noreferrer"
     className="social-links-row social-links-row--display"
