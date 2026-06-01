@@ -606,7 +606,7 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
 
               <div className="comments-mobile-preview__text">
                 <span className="comments-mobile-preview__snippet">
-                  No comments yet. Start the conversation.
+                  Comment to earn points
                 </span>
               </div>
             </>
