@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Search, Check, Clock, Sparkles } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import './SupportedArtistPicker.scss';
+import useModalA11y from './hooks/useModalA11y';
 
 // =============================================================================
 // SupportedArtistPicker
@@ -30,6 +31,9 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
   const [result, setResult] = useState(null); // { status, effectiveDate, pendingArtistId }
 
   const isFirstPick = !currentArtistId;
+
+  const modalRef = useRef(null);
+  useModalA11y({ active: show, onClose, modalRef });
 
   useEffect(() => {
     if (!show) return;
@@ -133,10 +137,11 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
     <div className="sap-overlay" onClick={onClose}>
       <div
         className="sap-modal"
-        onClick={(e) => e.stopPropagation()}
+        ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="sap-title"
+        onClick={(e) => e.stopPropagation()}
       >
         <button className="sap-close" onClick={onClose} aria-label="Close">
           <X size={22} />
