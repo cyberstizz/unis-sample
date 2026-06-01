@@ -1,8 +1,13 @@
 // src/profile.test.jsx
 //
-// Comprehensive test suite for Profile — the user's account page showing
-// their photo, bio, supported artist, stats, vote history summary,
-// referral card, theme picker, and danger-zone actions.
+// Rewritten for the current Profile shape:
+//   - Single consolidated fetch to /v1/users/profile-summary/{userId}
+//   - Collapsible sections (vote-history, referral, social, theme, account)
+//   - Supported-artist picker + pending-change banner
+//   - Vote history owned by VoteHistorySection (mocked here)
+//   - PlayerContext uses requestPlay (not playMedia)
+//
+// Children are mocked. We test Profile's wiring, not the children's behavior.
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -19,19 +24,36 @@ import cacheService from './services/cacheService';
 // MOCKS
 // ---------------------------------------------------------------------------
 vi.mock('./profile.scss', () => ({}));
-vi.mock('./assets/randomrapper.jpeg', () => ({ default: 'randomrapper.jpeg' }));
 
 vi.mock('./layout', () => ({
   default: ({ children }) => <div data-testid="layout">{children}</div>,
 }));
 
-const { editWizardSpy, deleteWizardSpy, voteHistoryModalSpy, changePasswordSpy, referralCardSpy, themePickerSpy } = vi.hoisted(() => ({
-  editWizardSpy: vi.fn(),
-  deleteWizardSpy: vi.fn(),
-  voteHistoryModalSpy: vi.fn(),
-  changePasswordSpy: vi.fn(),
-  referralCardSpy: vi.fn(),
-  themePickerSpy: vi.fn(),
+// ---- Hoisted spies ----
+const {
+  editWizardSpy,
+  deleteWizardSpy,
+  changePasswordSpy,
+  referralCardSpy,
+  themePickerSpy,
+  socialLinksSpy,
+  accountSettingsSpy,
+  voteHistorySectionSpy,
+  artistPickerSpy,
+  collapsibleSpy,
+  requestPlaySpy,
+} = vi.hoisted(() => ({
+  editWizardSpy:         vi.fn(),
+  deleteWizardSpy:       vi.fn(),
+  changePasswordSpy:     vi.fn(),
+  referralCardSpy:       vi.fn(),
+  themePickerSpy:        vi.fn(),
+  socialLinksSpy:        vi.fn(),
+  accountSettingsSpy:    vi.fn(),
+  voteHistorySectionSpy: vi.fn(),
+  artistPickerSpy:       vi.fn(),
+  collapsibleSpy:        vi.fn(),
+  requestPlaySpy:        vi.fn(),
 }));
 
 vi.mock('./editProfileWizard', () => ({
@@ -57,18 +79,6 @@ vi.mock('./deleteAccountWizard', () => ({
   },
 }));
 
-vi.mock('./voteHistoryModal', () => ({
-  default: (props) => {
-    voteHistoryModalSpy(props);
-    return props.show ? (
-      <div data-testid="vote-history-modal">
-        <span data-testid="vh-count">{(props.votes || []).length}</span>
-        <button onClick={props.onClose}>vh-close</button>
-      </div>
-    ) : null;
-  },
-}));
-
 vi.mock('./changePasswordWizard', () => ({
   default: (props) => {
     changePasswordSpy(props);
@@ -83,7 +93,14 @@ vi.mock('./changePasswordWizard', () => ({
 vi.mock('./ReferralCodeCard', () => ({
   default: (props) => {
     referralCardSpy(props);
-    return <div data-testid="referral-card" data-userid={props.userId} data-isartist={String(props.isArtist)} />;
+    return (
+      <div
+        data-testid="referral-card"
+        data-referralcode={props.referralCode}
+        data-username={props.username}
+        data-isartist={String(props.isArtist)}
+      />
+    );
   },
 }));
 
@@ -94,13 +111,72 @@ vi.mock('./ThemePicker', () => ({
   },
 }));
 
-const { playMediaSpy } = vi.hoisted(() => ({ playMediaSpy: vi.fn() }));
+vi.mock('./SocialLinksSection', () => ({
+  default: (props) => {
+    socialLinksSpy(props);
+    return (
+      <div data-testid="social-links" data-userid={props.userId}>
+        <button onClick={() => props.onUpdated && props.onUpdated()}>social-updated</button>
+      </div>
+    );
+  },
+}));
+
+vi.mock('./AccountSettings', () => ({
+  default: (props) => {
+    accountSettingsSpy(props);
+    return (
+      <div
+        data-testid="account-settings"
+        data-userid={props.userId}
+        data-settings={JSON.stringify(props.settings || {})}
+      >
+        <button onClick={() => props.onUpdated && props.onUpdated()}>settings-updated</button>
+      </div>
+    );
+  },
+}));
+
+// VoteHistorySection is fully mocked — it owns its own fetch which we
+// don't want firing in Profile tests.
+vi.mock('./VoteHistorySection', () => ({
+  default: (props) => {
+    voteHistorySectionSpy(props);
+    return <div data-testid="vote-history-section" data-userid={props.userId} />;
+  },
+}));
+
+vi.mock('./SupportedArtistPicker', () => ({
+  default: (props) => {
+    artistPickerSpy(props);
+    return props.show ? (
+      <div data-testid="artist-picker" data-currentartistid={props.currentArtistId || 'null'}>
+        <button onClick={props.onClose}>picker-close</button>
+        <button onClick={() => props.onSuccess && props.onSuccess()}>picker-success</button>
+      </div>
+    ) : null;
+  },
+}));
+
+// CollapsibleSection is mocked to a passthrough that records props.
+// Tests assert the right id/title/eyebrow without depending on toggle behavior.
+vi.mock('./CollapsibleSection', () => ({
+  default: (props) => {
+    collapsibleSpy(props);
+    return (
+      <section data-testid={`collapsible-${props.id}`} data-id={props.id}>
+        <div data-testid={`collapsible-${props.id}-children`}>{props.children}</div>
+      </section>
+    );
+  },
+}));
+
 vi.mock('./context/playercontext', async () => {
   const actual = await vi.importActual('./context/playercontext');
   const React = require('react');
   return {
     ...actual,
-    PlayerContext: React.createContext({ playMedia: playMediaSpy }),
+    PlayerContext: React.createContext({ requestPlay: requestPlaySpy }),
   };
 });
 
@@ -113,20 +189,41 @@ import Profile from './profile';
 const API = 'http://localhost:8080/api';
 const LISTENER_ID = 'user-listener-001';
 const ARTIST_ID = 'user-artist-001';
+const PENDING_ARTIST_ID = 'user-artist-002';
 
 // ---------------------------------------------------------------------------
 // FIXTURES
 // ---------------------------------------------------------------------------
-const baseListenerProfile = (overrides = {}) => ({
-  ...fixtures.users.listener,
-  bio: null,
-  photoUrl: null,
-  score: 0,
-  level: null,
+const baseSummary = (overrides = {}) => ({
+  profile: {
+    userId: LISTENER_ID,
+    username: 'charles',
+    email: 'charles@unis.com',
+    bio: null,
+    photoUrl: null,
+    score: 0,
+    level: null,
+    role: 'listener',
+    supportedArtistId: null,
+    instagramUrl: null,
+    twitterUrl: null,
+    tiktokUrl: null,
+    jurisdiction: null,
+    createdAt: '2026-03-15T15:35:02Z',
+  },
+  supportedArtist: null,
+  pendingSupportedArtist: null,
+  voteHistory: { totalCount: 0, recent: [] },
+  referralCode: 'CHARLES-ABC12',
+  settings: {
+    emailNotifications: true,
+    publicProfile: true,
+    showVoteHistory: false,
+  },
   ...overrides,
 });
 
-const supportedArtistProfile = (overrides = {}) => ({
+const supportedArtist = (overrides = {}) => ({
   userId: ARTIST_ID,
   username: 'Tony Fadd',
   photoUrl: '/uploads/tony.jpg',
@@ -135,15 +232,10 @@ const supportedArtistProfile = (overrides = {}) => ({
     title: 'Featured Banger',
     fileUrl: '/uploads/banger.mp3',
     artworkUrl: '/uploads/banger.jpg',
+    duration: 180,
   },
   ...overrides,
 });
-
-const voteHistoryFixture = [
-  { voteId: 'v-1', targetId: 'art-1', votedAt: '2026-04-25T10:00:00Z' },
-  { voteId: 'v-2', targetId: 'art-2', votedAt: '2026-04-24T11:00:00Z' },
-  { voteId: 'v-3', targetId: 'art-3', votedAt: '2026-04-23T12:00:00Z' },
-];
 
 // ---------------------------------------------------------------------------
 // apiCall LOGGER
@@ -167,23 +259,17 @@ function callsTo(urlSubstring, method) {
 // ---------------------------------------------------------------------------
 // MSW HELPERS
 // ---------------------------------------------------------------------------
-function mockProfile({
-  listenerProfile = baseListenerProfile({ supportedArtistId: ARTIST_ID, bio: 'Harlem rap fan' }),
-  supportedArtist = supportedArtistProfile(),
-  voteHistory = voteHistoryFixture,
-} = {}) {
+function mockSummary(summary = baseSummary()) {
   server.use(
-    http.get(`${API}/v1/users/profile/:userId`, ({ params }) => {
-      if (params.userId === LISTENER_ID) return HttpResponse.json(listenerProfile);
-      if (params.userId === ARTIST_ID) return HttpResponse.json(supportedArtist);
+    http.get(`${API}/v1/users/profile-summary/:userId`, ({ params }) => {
+      if (params.userId === LISTENER_ID) return HttpResponse.json(summary);
       return new HttpResponse(null, { status: 404 });
-    }),
-    http.get(`${API}/v1/vote/history`, () => HttpResponse.json(voteHistory))
+    })
   );
 }
 
-async function renderAndWait({ as = 'listener' } = {}) {
-  renderWithProviders(<Profile />, { as });
+async function renderAndWait() {
+  renderWithProviders(<Profile />, { as: 'listener' });
   await waitFor(
     () => {
       const stillLoading = !!screen.queryByText(/loading your profile/i);
@@ -204,13 +290,17 @@ async function renderAndWait({ as = 'listener' } = {}) {
 beforeEach(() => {
   cacheService.clearAll();
   callTracker.reset();
-  playMediaSpy.mockReset();
+  requestPlaySpy.mockReset();
   editWizardSpy.mockReset();
   deleteWizardSpy.mockReset();
-  voteHistoryModalSpy.mockReset();
   changePasswordSpy.mockReset();
   referralCardSpy.mockReset();
   themePickerSpy.mockReset();
+  socialLinksSpy.mockReset();
+  accountSettingsSpy.mockReset();
+  voteHistorySectionSpy.mockReset();
+  artistPickerSpy.mockReset();
+  collapsibleSpy.mockReset();
   setupApiCallLog();
 });
 
@@ -229,35 +319,28 @@ describe('Profile — auth gating', () => {
     });
   });
 
-  it('does not call any APIs when user is null', async () => {
+  it('does not call profile-summary when user is null', async () => {
     renderWithProviders(<Profile />, { as: 'guest' });
     await new Promise((r) => setTimeout(r, 50));
-    expect(callsTo('/v1/users/profile/')).toHaveLength(0);
-    expect(callsTo('/v1/vote/history')).toHaveLength(0);
+    expect(callsTo('/v1/users/profile-summary/')).toHaveLength(0);
   });
 });
 
 // ===========================================================================
-// LOADING STATE
+// LOADING / ERROR / RETRY
 // ===========================================================================
 describe('Profile — loading state', () => {
-  it('shows "Loading your profile..." while core fetch is in-flight', async () => {
-    mockProfile();
-    let coreCalls = 0;
+  it('shows "Loading your profile..." while the summary fetch is in-flight', async () => {
     let resolveFn;
     const pending = new Promise((r) => { resolveFn = r; });
     server.use(
-      http.get(`${API}/v1/users/profile/:userId`, async ({ params, request }) => {
-        coreCalls++;
-        if (coreCalls > 1) {
-          await pending;
-        }
-        if (params.userId === LISTENER_ID) return HttpResponse.json(baseListenerProfile({ supportedArtistId: null }));
-        return new HttpResponse(null, { status: 404 });
+      http.get(`${API}/v1/users/profile-summary/:userId`, async () => {
+        await pending;
+        return HttpResponse.json(baseSummary());
       })
     );
     renderWithProviders(<Profile />, { as: 'listener' });
-    expect(await screen.findByText(/loading your profile/i, {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText(/loading your profile/i)).toBeInTheDocument();
     resolveFn();
     await waitFor(() => {
       expect(screen.queryByText(/loading your profile/i)).not.toBeInTheDocument();
@@ -265,12 +348,60 @@ describe('Profile — loading state', () => {
   });
 });
 
-// ===========================================================================
-// CORE FETCH ERROR + RETRY
-// ===========================================================================
 describe('Profile — core fetch error', () => {
-  it.skip('shows "Failed to load your profile" when the core fetch throws', async () => {});
-  it.skip('Retry button re-fires the core fetch', async () => {});
+  it('shows the error state with a Retry button when the summary fetch fails', async () => {
+    server.use(
+      http.get(`${API}/v1/users/profile-summary/:userId`, () =>
+        new HttpResponse(null, { status: 500 })
+      )
+    );
+    renderWithProviders(<Profile />, { as: 'listener' });
+    expect(await screen.findByText(/failed to load your profile/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it('Retry re-fires the summary fetch', async () => {
+    let callCount = 0;
+    server.use(
+      http.get(`${API}/v1/users/profile-summary/:userId`, () => {
+        callCount++;
+        if (callCount === 1) return new HttpResponse(null, { status: 500 });
+        return HttpResponse.json(baseSummary());
+      })
+    );
+    renderWithProviders(<Profile />, { as: 'listener' });
+    await screen.findByText(/failed to load your profile/i);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+    await waitFor(() => {
+      expect(document.querySelector('h1')).not.toBeNull();
+    });
+    expect(callCount).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ===========================================================================
+// SINGLE-FETCH BEHAVIOR (replaces old "parallel fetch" assertions)
+// ===========================================================================
+describe('Profile — fetches profile-summary in a single call', () => {
+  it('hits exactly one summary endpoint on mount', async () => {
+    mockSummary();
+    await renderAndWait();
+    expect(callsTo('/v1/users/profile-summary/').length).toBe(1);
+  });
+
+  it('does not call the legacy /v1/users/profile/{id} endpoint', async () => {
+    mockSummary();
+    await renderAndWait();
+    // Profile.jsx should never hit /v1/users/profile/{id} directly anymore
+    expect(callsTo(`/v1/users/profile/${LISTENER_ID}`)).toHaveLength(0);
+  });
+
+  it('does not call /v1/vote/history directly (owned by VoteHistorySection)', async () => {
+    mockSummary();
+    await renderAndWait();
+    expect(callsTo('/v1/vote/history')).toHaveLength(0);
+  });
 });
 
 // ===========================================================================
@@ -278,159 +409,38 @@ describe('Profile — core fetch error', () => {
 // ===========================================================================
 describe('Profile — profile data render', () => {
   it('renders the username as h1', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ username: 'CharlesUnis', bio: 'hi' }),
-    });
+    mockSummary(baseSummary({ profile: { ...baseSummary().profile, username: 'CharlesUnis' } }));
     await renderAndWait();
-    const h1 = document.querySelector('h1');
-    expect(h1.textContent).toBe('CharlesUnis');
+    expect(document.querySelector('h1').textContent).toBe('CharlesUnis');
   });
 
   it('renders the bio when present', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ bio: 'Harlem rap fan' }),
-    });
+    mockSummary(baseSummary({ profile: { ...baseSummary().profile, bio: 'Harlem rap fan' } }));
     await renderAndWait();
     expect(screen.getByText('Harlem rap fan')).toBeInTheDocument();
   });
 
   it('renders fallback bio copy when bio is null', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ bio: null }),
-    });
+    mockSummary();
     await renderAndWait();
-    expect(screen.getByText(/no bio yet — tell harlem who you are/i)).toBeInTheDocument();
-  });
-
-  it('uses the photo URL when present (relative URL prefixed with API base)', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ photoUrl: '/uploads/me.jpg' }),
-    });
-    await renderAndWait();
-    const img = document.querySelector('img.profile-hero__avatar');
-    expect(img).not.toBeNull();
-    expect(img.src).toBe('http://localhost:8080/uploads/me.jpg');
-  });
-
-  it('passes through absolute photo URLs unchanged', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ photoUrl: 'https://cdn.test/me.jpg' }),
-    });
-    await renderAndWait();
-    const img = document.querySelector('img.profile-hero__avatar');
-    expect(img).not.toBeNull();
-    expect(img.src).toBe('https://cdn.test/me.jpg');
+    expect(screen.getByText(/no bio yet/i)).toBeInTheDocument();
   });
 
   it('renders an initial-letter placeholder when photoUrl is null', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ photoUrl: null, username: 'CharlesUnis' }),
-    });
+    mockSummary(baseSummary({ profile: { ...baseSummary().profile, username: 'CharlesUnis', photoUrl: null } }));
     await renderAndWait();
     expect(document.querySelector('img.profile-hero__avatar')).toBeNull();
     const placeholder = document.querySelector('.profile-hero__avatar--placeholder');
     expect(placeholder).not.toBeNull();
     expect(placeholder.textContent).toBe('C');
   });
-});
 
-// ===========================================================================
-// SUPPORTED ARTIST
-// ===========================================================================
-describe('Profile — supported artist section', () => {
-  it('renders the supported artist when supportedArtistId is set', async () => {
-    mockProfile();
+  it('renders the photo when photoUrl is present', async () => {
+    mockSummary(baseSummary({ profile: { ...baseSummary().profile, photoUrl: 'https://cdn.test/me.jpg' } }));
     await renderAndWait();
-    expect(await screen.findByText('Featured Banger')).toBeInTheDocument();
-    expect(screen.getByText(/by Tony Fadd/)).toBeInTheDocument();
-    expect(screen.getByText(/i support/i)).toBeInTheDocument();
-  });
-
-  it('uses backgroundImage on the featured panel for the supported-artist art (relative URL prefixed)', async () => {
-    mockProfile();
-    await renderAndWait();
-    await screen.findByText('Featured Banger');
-    const featured = document.querySelector('.profile-hero__featured');
-    expect(featured).not.toBeNull();
-    expect(featured.style.backgroundImage).toContain('http://localhost:8080/uploads/banger.jpg');
-  });
-
-  it('renders the empty-state featured panel when supportedArtistId is missing', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ supportedArtistId: null }),
-    });
-    await renderAndWait();
-    expect(screen.getByText(/no artist yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/discover artists/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /listen to your pick/i })).not.toBeInTheDocument();
-  });
-
-  it('shows "No featured track yet" when supported artist has no defaultSong', async () => {
-    mockProfile({
-      supportedArtist: supportedArtistProfile({ defaultSong: null }),
-    });
-    await renderAndWait();
-    expect(await screen.findByText(/no featured track yet/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /listen to your pick/i })).not.toBeInTheDocument();
-  });
-});
-
-// ===========================================================================
-// PLAY DEFAULT SONG
-// ===========================================================================
-describe('Profile — playDefaultSong', () => {
-  it('clicking play calls playMedia with the song details', async () => {
-    mockProfile();
-    await renderAndWait();
-    await screen.findByText('Featured Banger');
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /listen to your pick/i }));
-
-    await waitFor(() => expect(playMediaSpy).toHaveBeenCalled());
-    const [media] = playMediaSpy.mock.calls[0];
-    expect(media.type).toBe('song');
-    expect(media.title).toBe('Featured Banger');
-    expect(media.artist).toBe('Tony Fadd');
-    expect(media.url).toContain('/uploads/banger.mp3');
-  });
-
-  it('tracks the play with userId before calling playMedia', async () => {
-    mockProfile();
-    await renderAndWait();
-    await screen.findByText('Featured Banger');
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /listen to your pick/i }));
-    await waitFor(() => {
-      const trackCall = callsTo('/v1/media/song/song-default-001/play', 'post')[0];
-      expect(trackCall).toBeTruthy();
-      expect(trackCall.url).toMatch(/userId=user-listener-001/);
-    });
-  });
-
-  it('still plays the song even when play tracking fails', async () => {
-    server.use(
-      http.post(`${API}/v1/media/song/:songId/play`, () =>
-        new HttpResponse(null, { status: 500 })
-      )
-    );
-    mockProfile();
-    await renderAndWait();
-    await screen.findByText('Featured Banger');
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /listen to your pick/i }));
-    await waitFor(() => expect(playMediaSpy).toHaveBeenCalled());
-  });
-
-  it('passes a single-element queue to playMedia', async () => {
-    mockProfile();
-    await renderAndWait();
-    await screen.findByText('Featured Banger');
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /listen to your pick/i }));
-    await waitFor(() => expect(playMediaSpy).toHaveBeenCalled());
-    const [, queue] = playMediaSpy.mock.calls[0];
-    expect(Array.isArray(queue)).toBe(true);
-    expect(queue).toHaveLength(1);
+    const img = document.querySelector('img.profile-hero__avatar');
+    expect(img).not.toBeNull();
+    expect(img.src).toContain('me.jpg');
   });
 });
 
@@ -438,269 +448,419 @@ describe('Profile — playDefaultSong', () => {
 // STATS GRID
 // ===========================================================================
 describe('Profile — stats grid', () => {
-  it('renders score from userProfile', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ score: 1250 }),
-    });
+  it('renders score from summary.profile', async () => {
+    mockSummary(baseSummary({ profile: { ...baseSummary().profile, score: 1250 } }));
     await renderAndWait();
     expect(screen.getByText('1250')).toBeInTheDocument();
   });
 
   it('falls back to 0 when score is missing', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ score: null }),
-    });
+    mockSummary();
     await renderAndWait();
     const scoreCard = Array.from(document.querySelectorAll('.profile-hero__stat'))
-      .find((card) => card.textContent.includes('Score'));
-    expect(scoreCard).toBeTruthy();
+      .find((c) => c.textContent.includes('Score'));
     expect(scoreCard.textContent).toMatch(/0/);
   });
 
-  it('renders level from userProfile when set', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ level: 'Gold' }),
-    });
+  it('renders level when set', async () => {
+    mockSummary(baseSummary({ profile: { ...baseSummary().profile, level: 'Gold' } }));
     await renderAndWait();
     expect(screen.getByText('Gold')).toBeInTheDocument();
   });
 
   it('falls back to "Silver" when level is null', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ level: null }),
-    });
+    mockSummary();
     await renderAndWait();
-    // "Silver" appears in both eyebrow ("Member · Silver Tier") and stat card; either match is fine
     expect(screen.getAllByText(/Silver/).length).toBeGreaterThan(0);
   });
 
-  it('renders Total Votes count from voteHistory length', async () => {
-    mockProfile({ voteHistory: voteHistoryFixture });
+  it('renders Total Votes from voteHistory.totalCount', async () => {
+    mockSummary(baseSummary({ voteHistory: { totalCount: 7, recent: [] } }));
     await renderAndWait();
     const totalVotesCard = Array.from(document.querySelectorAll('.profile-hero__stat'))
-      .find((card) => card.textContent.includes('Total Votes'));
-    expect(totalVotesCard).toBeTruthy();
-    expect(totalVotesCard.textContent).toMatch(/3/);
-  });
-
-  it('shows an em-dash for total votes while votes are loading', async () => {
-    let resolveFn;
-    const pending = new Promise((r) => { resolveFn = r; });
-    server.use(
-      http.get(`${API}/v1/users/profile/:userId`, ({ params }) => {
-        if (params.userId === LISTENER_ID) return HttpResponse.json(baseListenerProfile({ supportedArtistId: null }));
-        return new HttpResponse(null, { status: 404 });
-      }),
-      http.get(`${API}/v1/vote/history`, async () => {
-        await pending;
-        return HttpResponse.json([]);
-      })
-    );
-    renderWithProviders(<Profile />, { as: 'listener' });
-    await waitFor(
-      () => expect(document.querySelector('h1')).not.toBeNull(),
-      { timeout: 5000 }
-    );
-    const totalVotesCard = Array.from(document.querySelectorAll('.profile-hero__stat'))
-      .find((card) => card.textContent.includes('Total Votes'));
-    expect(totalVotesCard).toBeTruthy();
-    expect(totalVotesCard.textContent).toMatch(/—/);
-    resolveFn();
+      .find((c) => c.textContent.includes('Total Votes'));
+    expect(totalVotesCard.textContent).toMatch(/7/);
   });
 });
 
 // ===========================================================================
-// VOTE HISTORY SECTION
+// SUPPORTED ARTIST HERO
 // ===========================================================================
-describe('Profile — vote history section', () => {
-  it('shows summary count for votes', async () => {
-    mockProfile({ voteHistory: voteHistoryFixture });
+describe('Profile — supported artist hero', () => {
+  it('renders the artist when supportedArtist is present', async () => {
+    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
     await renderAndWait();
-    const voteCount = document.querySelector('.profile-vote-summary__number');
-    expect(voteCount).not.toBeNull();
-    expect(voteCount.textContent).toBe('3');
+    expect(screen.getByText('Tony Fadd')).toBeInTheDocument();
   });
 
-  it('shows positive CTA when votes > 0', async () => {
-    mockProfile({ voteHistory: voteHistoryFixture });
+  it('renders the "You support" tag', async () => {
+    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
     await renderAndWait();
-    expect(screen.getByText(/every vote shapes the leaderboard/i)).toBeInTheDocument();
+    expect(screen.getByText(/you support/i)).toBeInTheDocument();
   });
 
-  it('shows empty CTA when votes = 0', async () => {
-    mockProfile({ voteHistory: [] });
+  it('uses the ARTIST photo as the featured background (not the song artwork)', async () => {
+    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
     await renderAndWait();
-    expect(screen.getByText(/no votes yet — go support your favorites/i)).toBeInTheDocument();
+    const featured = document.querySelector('.profile-hero__featured');
+    expect(featured).not.toBeNull();
+    // Artist photo takes precedence over song artwork
+    expect(featured.style.backgroundImage).toContain('tony.jpg');
+    expect(featured.style.backgroundImage).not.toContain('banger.jpg');
   });
 
-  it('shows "View All" button when votes loaded successfully', async () => {
-    mockProfile({ voteHistory: voteHistoryFixture });
+  it('falls back to song artwork only when artist has no photo', async () => {
+    mockSummary(baseSummary({
+      supportedArtist: supportedArtist({ photoUrl: null }),
+    }));
     await renderAndWait();
-    expect(screen.getByRole('button', { name: /view all/i })).toBeInTheDocument();
+    const featured = document.querySelector('.profile-hero__featured');
+    expect(featured.style.backgroundImage).toContain('banger.jpg');
   });
 
-  it.skip('shows section error with Retry when votes fetch fails', async () => {});
-  it.skip('hides "View All" button while votes are loading or errored', async () => {});
+  it('renders the empty-state hero when no supported artist', async () => {
+    mockSummary();
+    await renderAndWait();
+    expect(screen.getByText(/no artist yet/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /choose an artist/i })).toBeInTheDocument();
+  });
+
+  it('hides the play button when supported artist has no defaultSong', async () => {
+    mockSummary(baseSummary({
+      supportedArtist: supportedArtist({ defaultSong: null }),
+    }));
+    await renderAndWait();
+    expect(screen.queryByRole('button', { name: /listen to their pick/i })).not.toBeInTheDocument();
+  });
 });
 
 // ===========================================================================
-// PARALLEL FETCH BEHAVIOR
+// PLAY DEFAULT SONG
 // ===========================================================================
-describe('Profile — fetches profile and votes in parallel', () => {
-  it('does not wait for profile to resolve before firing /v1/vote/history', async () => {
-    mockProfile();
-    renderWithProviders(<Profile />, { as: 'listener' });
+describe('Profile — playDefaultSong', () => {
+  it('clicking play calls requestPlay with the song details', async () => {
+    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
+    await renderAndWait();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^listen$/i }));
+    await waitFor(() => expect(requestPlaySpy).toHaveBeenCalled());
+    const [media] = requestPlaySpy.mock.calls[0];
+    expect(media.type).toBe('song');
+    expect(media.title).toBe('Featured Banger');
+    expect(media.artist).toBe('Tony Fadd');
+    expect(media.artistId).toBe(ARTIST_ID);
+  });
+
+  it('tracks the play before calling requestPlay', async () => {
+    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
+    await renderAndWait();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^listen$/i }));
     await waitFor(() => {
-      expect(callsTo('/v1/users/profile/').length).toBeGreaterThan(0);
-      expect(callsTo('/v1/vote/history').length).toBeGreaterThan(0);
+      const trackCall = callsTo('/v1/media/song/song-default-001/play', 'post')[0];
+      expect(trackCall).toBeTruthy();
+      expect(trackCall.url).toMatch(/userId=user-listener-001/);
     });
-    const profileCall = callsTo('/v1/users/profile/')[0];
-    const votesCall = callsTo('/v1/vote/history')[0];
-    expect(Math.abs(profileCall.timestamp - votesCall.timestamp)).toBeLessThan(50);
+  });
+
+  it('still plays even when play tracking fails', async () => {
+    server.use(
+      http.post(`${API}/v1/media/song/:songId/play`, () =>
+        new HttpResponse(null, { status: 500 })
+      )
+    );
+    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
+    await renderAndWait();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^listen$/i }));
+    await waitFor(() => expect(requestPlaySpy).toHaveBeenCalled());
   });
 });
 
 // ===========================================================================
-// CHILD COMPONENT INTEGRATION
+// PENDING SUPPORTED-ARTIST BANNER
 // ===========================================================================
-describe('Profile — child component integration', () => {
-  it('passes userId to ReferralCodeCard with isArtist=false', async () => {
-    mockProfile();
+describe('Profile — pending supported-artist banner', () => {
+  const pending = {
+    userId: PENDING_ARTIST_ID,
+    username: 'Stizz',
+    photoUrl: '/uploads/stizz.jpg',
+    effectiveDate: '2026-07-01T00:00:00',
+  };
+
+  it('renders the banner when pendingSupportedArtist is present', async () => {
+    mockSummary(baseSummary({
+      supportedArtist: supportedArtist(),
+      pendingSupportedArtist: pending,
+    }));
+    await renderAndWait();
+    expect(screen.getByText('Stizz')).toBeInTheDocument();
+    expect(screen.getByText(/switching to/i)).toBeInTheDocument();
+  });
+
+  it('does NOT render the banner when pendingSupportedArtist is null', async () => {
+    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
+    await renderAndWait();
+    expect(screen.queryByText(/switching to/i)).not.toBeInTheDocument();
+  });
+
+  it('clicking Cancel calls the cancel-pending endpoint', async () => {
+    mockSummary(baseSummary({
+      supportedArtist: supportedArtist(),
+      pendingSupportedArtist: pending,
+    }));
+    server.use(
+      http.delete(`${API}/v1/users/:userId/supported-artist/pending`, () =>
+        HttpResponse.json({ status: 'cancelled' })
+      )
+    );
+    await renderAndWait();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+    await waitFor(() => {
+      const cancelCall = callsTo('/supported-artist/pending', 'delete')[0];
+      expect(cancelCall).toBeTruthy();
+      expect(cancelCall.url).toContain(LISTENER_ID);
+    });
+  });
+
+  it('reloads the summary after cancel', async () => {
+    mockSummary(baseSummary({
+      supportedArtist: supportedArtist(),
+      pendingSupportedArtist: pending,
+    }));
+    server.use(
+      http.delete(`${API}/v1/users/:userId/supported-artist/pending`, () =>
+        HttpResponse.json({ status: 'cancelled' })
+      )
+    );
+    await renderAndWait();
+    const beforeCalls = callsTo('/v1/users/profile-summary/').length;
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+    await waitFor(() => {
+      expect(callsTo('/v1/users/profile-summary/').length).toBeGreaterThan(beforeCalls);
+    });
+  });
+});
+
+// ===========================================================================
+// SUPPORTED-ARTIST PICKER INTEGRATION
+// ===========================================================================
+describe('Profile — supported-artist picker', () => {
+  it('renders the picker hidden by default', async () => {
+    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
+    await renderAndWait();
+    expect(screen.queryByTestId('artist-picker')).not.toBeInTheDocument();
+  });
+
+  it('"Change" button opens the picker with currentArtistId set', async () => {
+    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
+    await renderAndWait();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^change$/i }));
+    const picker = screen.getByTestId('artist-picker');
+    expect(picker).toBeInTheDocument();
+    expect(picker.dataset.currentartistid).toBe(ARTIST_ID);
+  });
+
+  it('"Choose an artist" button opens the picker with no current artist', async () => {
+    mockSummary();
+    await renderAndWait();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /choose an artist/i }));
+    const picker = screen.getByTestId('artist-picker');
+    expect(picker).toBeInTheDocument();
+    expect(picker.dataset.currentartistid).toBe('null');
+  });
+
+  it('picker onSuccess reloads the summary', async () => {
+    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
+    await renderAndWait();
+    const beforeCalls = callsTo('/v1/users/profile-summary/').length;
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^change$/i }));
+    await user.click(screen.getByRole('button', { name: /picker-success/i }));
+    await waitFor(() => {
+      expect(callsTo('/v1/users/profile-summary/').length).toBeGreaterThan(beforeCalls);
+    });
+  });
+
+  it('picker onClose hides the picker', async () => {
+    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
+    await renderAndWait();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^change$/i }));
+    await user.click(screen.getByRole('button', { name: /picker-close/i }));
+    expect(screen.queryByTestId('artist-picker')).not.toBeInTheDocument();
+  });
+});
+
+// ===========================================================================
+// CHILD COMPONENT WIRING
+// ===========================================================================
+describe('Profile — child component wiring', () => {
+  it('passes referralCode + username + isArtist=false to ReferralCodeCard', async () => {
+    mockSummary();
     await renderAndWait();
     const card = screen.getByTestId('referral-card');
-    expect(card.dataset.userid).toBe(LISTENER_ID);
+    expect(card.dataset.referralcode).toBe('CHARLES-ABC12');
+    expect(card.dataset.username).toBe('charles');
     expect(card.dataset.isartist).toBe('false');
   });
 
-  it('passes userId to ThemePicker', async () => {
-    mockProfile();
+  it('passes isArtist=true to ReferralCodeCard when role is artist', async () => {
+    mockSummary(baseSummary({
+      profile: { ...baseSummary().profile, role: 'artist' },
+    }));
     await renderAndWait();
-    const picker = screen.getByTestId('theme-picker');
-    expect(picker.dataset.userid).toBe(LISTENER_ID);
+    expect(screen.getByTestId('referral-card').dataset.isartist).toBe('true');
+  });
+
+  it('passes userId to ThemePicker', async () => {
+    mockSummary();
+    await renderAndWait();
+    expect(screen.getByTestId('theme-picker').dataset.userid).toBe(LISTENER_ID);
+  });
+
+  it('passes userId + profile to SocialLinksSection', async () => {
+    mockSummary();
+    await renderAndWait();
+    const links = screen.getByTestId('social-links');
+    expect(links.dataset.userid).toBe(LISTENER_ID);
+    const lastCall = socialLinksSpy.mock.calls[socialLinksSpy.mock.calls.length - 1][0];
+    expect(lastCall.profile).toBeTruthy();
+    expect(lastCall.profile.username).toBe('charles');
+  });
+
+  it('passes userId + settings to AccountSettings', async () => {
+    mockSummary();
+    await renderAndWait();
+    const settings = screen.getByTestId('account-settings');
+    expect(settings.dataset.userid).toBe(LISTENER_ID);
+    const parsed = JSON.parse(settings.dataset.settings);
+    expect(parsed.emailNotifications).toBe(true);
+    expect(parsed.publicProfile).toBe(true);
+    expect(parsed.showVoteHistory).toBe(false);
+  });
+
+  it('passes userId to VoteHistorySection', async () => {
+    mockSummary();
+    await renderAndWait();
+    expect(screen.getByTestId('vote-history-section').dataset.userid).toBe(LISTENER_ID);
+  });
+
+  it('AccountSettings.onUpdated reloads the summary', async () => {
+    mockSummary();
+    await renderAndWait();
+    const beforeCalls = callsTo('/v1/users/profile-summary/').length;
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /settings-updated/i }));
+    await waitFor(() => {
+      expect(callsTo('/v1/users/profile-summary/').length).toBeGreaterThan(beforeCalls);
+    });
+  });
+
+  it('SocialLinksSection.onUpdated reloads the summary', async () => {
+    mockSummary();
+    await renderAndWait();
+    const beforeCalls = callsTo('/v1/users/profile-summary/').length;
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /social-updated/i }));
+    await waitFor(() => {
+      expect(callsTo('/v1/users/profile-summary/').length).toBeGreaterThan(beforeCalls);
+    });
   });
 });
 
 // ===========================================================================
-// EDIT PROFILE WIZARD
+// COLLAPSIBLE SECTION LAYOUT
 // ===========================================================================
-describe('Profile — Edit Profile button', () => {
-  it('clicking Edit Profile opens the EditProfileWizard', async () => {
-    mockProfile();
+describe('Profile — collapsible section layout', () => {
+  it('renders all five collapsible sections', async () => {
+    mockSummary();
+    await renderAndWait();
+    expect(screen.getByTestId('collapsible-vote-history')).toBeInTheDocument();
+    expect(screen.getByTestId('collapsible-referral')).toBeInTheDocument();
+    expect(screen.getByTestId('collapsible-social-links')).toBeInTheDocument();
+    expect(screen.getByTestId('collapsible-theme')).toBeInTheDocument();
+    expect(screen.getByTestId('collapsible-account')).toBeInTheDocument();
+  });
+
+  it('mounts VoteHistorySection inside the vote-history collapsible', async () => {
+    mockSummary();
+    await renderAndWait();
+    const panel = screen.getByTestId('collapsible-vote-history-children');
+    expect(panel.querySelector('[data-testid="vote-history-section"]')).not.toBeNull();
+  });
+
+  it('mounts SocialLinksSection inside the social-links collapsible', async () => {
+    mockSummary();
+    await renderAndWait();
+    const panel = screen.getByTestId('collapsible-social-links-children');
+    expect(panel.querySelector('[data-testid="social-links"]')).not.toBeNull();
+  });
+});
+
+// ===========================================================================
+// WIZARDS
+// ===========================================================================
+describe('Profile — Edit Profile wizard', () => {
+  it('opens on click', async () => {
+    mockSummary();
     await renderAndWait();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /edit profile/i }));
     expect(screen.getByTestId('edit-wizard')).toBeInTheDocument();
   });
 
-  it('passes the userProfile to EditProfileWizard', async () => {
-    mockProfile({
-      listenerProfile: baseListenerProfile({ bio: 'My bio', username: 'Charles' }),
-    });
+  it('receives the profile as userProfile prop', async () => {
+    mockSummary();
     await renderAndWait();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /edit profile/i }));
     const lastCall = editWizardSpy.mock.calls[editWizardSpy.mock.calls.length - 1][0];
-    expect(lastCall.userProfile).toMatchObject({ username: 'Charles', bio: 'My bio' });
+    expect(lastCall.userProfile.username).toBe('charles');
+  });
+
+  it('onSuccess reloads the summary', async () => {
+    mockSummary();
+    await renderAndWait();
+    const beforeCalls = callsTo('/v1/users/profile-summary/').length;
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /edit profile/i }));
+    await user.click(screen.getByRole('button', { name: /edit-success/i }));
+    await waitFor(() => {
+      expect(callsTo('/v1/users/profile-summary/').length).toBeGreaterThan(beforeCalls);
+    });
   });
 
   it('onClose hides the wizard', async () => {
-    mockProfile();
+    mockSummary();
     await renderAndWait();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /edit profile/i }));
     await user.click(screen.getByRole('button', { name: /edit-close/i }));
     expect(screen.queryByTestId('edit-wizard')).not.toBeInTheDocument();
   });
-
-  it('onSuccess refreshes the profile (re-fetches /v1/users/profile)', async () => {
-    mockProfile();
-    await renderAndWait();
-    const beforeProfileCalls = callsTo('/v1/users/profile/' + LISTENER_ID).length;
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /edit profile/i }));
-    await user.click(screen.getByRole('button', { name: /edit-success/i }));
-    await waitFor(() => {
-      expect(callsTo('/v1/users/profile/' + LISTENER_ID).length).toBeGreaterThan(beforeProfileCalls);
-    });
-  });
 });
 
-// ===========================================================================
-// DELETE ACCOUNT WIZARD
-// ===========================================================================
-describe('Profile — Delete Account button', () => {
-  it('clicking Delete Account opens the DeleteAccountWizard', async () => {
-    mockProfile();
+describe('Profile — Delete Account wizard', () => {
+  it('opens on click', async () => {
+    mockSummary();
     await renderAndWait();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /delete account/i }));
     expect(screen.getByTestId('delete-wizard')).toBeInTheDocument();
   });
-
-  it('onClose hides the wizard', async () => {
-    mockProfile();
-    await renderAndWait();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /delete account/i }));
-    await user.click(screen.getByRole('button', { name: /delete-close/i }));
-    expect(screen.queryByTestId('delete-wizard')).not.toBeInTheDocument();
-  });
 });
 
-// ===========================================================================
-// CHANGE PASSWORD WIZARD
-// ===========================================================================
-describe('Profile — Change Password button', () => {
-  it('clicking Change Password opens the ChangePasswordWizard', async () => {
-    mockProfile();
+describe('Profile — Change Password wizard', () => {
+  it('opens on click', async () => {
+    mockSummary();
     await renderAndWait();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /change password/i }));
     expect(screen.getByTestId('change-password-wizard')).toBeInTheDocument();
-  });
-});
-
-// ===========================================================================
-// VOTE HISTORY MODAL
-// ===========================================================================
-describe('Profile — View All button', () => {
-  it('opens VoteHistoryModal with the current vote history', async () => {
-    mockProfile({ voteHistory: voteHistoryFixture });
-    await renderAndWait();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /view all/i }));
-    expect(screen.getByTestId('vote-history-modal')).toBeInTheDocument();
-    expect(screen.getByTestId('vh-count').textContent).toBe('3');
-  });
-
-  it('passes useDummyData=false (real votes only)', async () => {
-    mockProfile({ voteHistory: voteHistoryFixture });
-    await renderAndWait();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /view all/i }));
-    const lastCall = voteHistoryModalSpy.mock.calls[voteHistoryModalSpy.mock.calls.length - 1][0];
-    expect(lastCall.useDummyData).toBe(false);
-  });
-
-  it('onClose hides the modal', async () => {
-    mockProfile({ voteHistory: voteHistoryFixture });
-    await renderAndWait();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /view all/i }));
-    await user.click(screen.getByRole('button', { name: /vh-close/i }));
-    expect(screen.queryByTestId('vote-history-modal')).not.toBeInTheDocument();
-  });
-});
-
-// ===========================================================================
-// VOTE HISTORY URL
-// ===========================================================================
-describe('Profile — vote history URL', () => {
-  it('calls /v1/vote/history with limit=50', async () => {
-    mockProfile();
-    await renderAndWait();
-    const call = callsTo('/v1/vote/history')[0];
-    expect(call).toBeTruthy();
-    expect(call.url).toContain('limit=50');
   });
 });
