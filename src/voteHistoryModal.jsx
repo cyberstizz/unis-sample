@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';    
 import { X, History, Music, User } from 'lucide-react';
 import buildUrl from './utils/buildUrl';
+import useModalA11y from './hooks/useModalA11y';
 import './voteHistoryModal.scss';
+
 
 // =============================================================================
 // VoteHistoryModal -- purely presentational. Receives the full vote list from
@@ -11,7 +13,12 @@ import './voteHistoryModal.scss';
 // read as one family.
 // =============================================================================
 const VoteHistoryModal = ({ show, onClose, votes = [] }) => {
+
+  const modalRef = useRef(null);
+  useModalA11y({ active: show, onClose, modalRef });
+
   if (!show) return null;
+  
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -36,16 +43,24 @@ const VoteHistoryModal = ({ show, onClose, votes = [] }) => {
 
   const count = votes.length;
   const countLabel = count === 1 ? 'vote cast' : 'votes cast';
+  
 
   return (
     <div className="vote-history-modal-overlay" onClick={onClose}>
-      <div className="vote-history-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="vote-history-modal"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="vh-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button className="close-button" onClick={onClose} aria-label="Close">
           <X size={22} />
         </button>
 
         <div className="modal-header">
-          <h2>Vote history</h2>
+          <h2 id="vh-title">Vote history</h2>
           <p className="modal-subtitle">
             <span className="modal-subtitle__count">{count}</span>
             <span className="modal-subtitle__label">{countLabel}</span>
