@@ -1,0 +1,97 @@
+// =============================================================================
+// visual-fixes.scss
+//
+// TWO FIXES IN ONE FILE -- both small, both surgical.
+//
+// 1. CollapsibleSection: kill the orange tap-highlight on section toggles.
+//    Affects mobile Safari and Chrome on touch devices. Applied to the
+//    toggle button so neither tap nor active states flash any color.
+//
+// 2. VoteHistoryModal: give it a real, opaque background so it doesn't
+//    look invisible. The previous version layered a translucent gradient
+//    over var(--unis-panel) which is rgba(255,255,255,0.025) -- effectively
+//    transparent. Now we paint a solid dark base FIRST, then layer the
+//    subtle theme tint on top so the theme still reads but the modal is
+//    readable.
+//
+// HOW TO USE: import this file once in App.jsx after the other styles, or
+// paste these rules into profile.scss / voteHistoryModal.scss directly.
+// Recommended: keep them isolated here so it's obvious what they do.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// FIX 1 -- Kill the orange tap highlight on collapsible section toggles.
+// -----------------------------------------------------------------------------
+// The orange flash you see is the browser's default tap-highlight color (a
+// platform behavior on touch devices). Three properties together kill it
+// for good across all browsers:
+//   - -webkit-tap-highlight-color: transparent -> removes mobile tap flash
+//   - outline: none on :focus (with :focus-visible kept for keyboard a11y)
+//   - background unchanged on :active/:focus
+//
+// We deliberately keep :focus-visible styles intact so keyboard users still
+// see a focus ring. Only the touch-tap orange goes away.
+.profile-section__head--toggle {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+
+  // Kill the active-state flash on click/tap.
+  &:active,
+  &:focus {
+    background: transparent !important;
+    outline: none;
+  }
+
+  // Keyboard focus still shows a ring -- a11y stays intact.
+  &:focus-visible {
+    outline: 2px solid var(--unis-primary-glow);
+    outline-offset: 2px;
+    border-radius: var(--unis-radius-sm);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// FIX 2 -- Make the VoteHistoryModal actually opaque.
+// -----------------------------------------------------------------------------
+// The bug: the modal's background was
+//   linear-gradient(..., var(--unis-primary-soft), ..., transparent ...),
+//   var(--unis-panel)   <-- this is rgba(255,255,255,0.025), basically air
+// So the whole modal was effectively transparent and the page bled through.
+//
+// The fix: paint a solid dark base FIRST as the bottom layer. The gradient
+// stays on top as a subtle theme tint. The user sees a proper modal with
+// a hint of theme color, not a floating outline.
+//
+// Note the order in the `background` shorthand: TOP layer first, BOTTOM
+// layer last. The opaque #0a0e16 is last, so it sits behind everything
+// else and guarantees the modal can't be see-through.
+.vote-history-modal {
+  background:
+    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.02) 42%, transparent 68%),
+    #0a0e16 !important;
+}
+
+// Same fix for the backdrop overlay -- it was also too transparent, letting
+// the underlying page show through enough to compete with the modal.
+.vote-history-modal-overlay {
+  background:
+    radial-gradient(circle at 50% 18%, var(--unis-primary-soft), transparent 74%),
+    rgba(0, 0, 0, 0.85) !important;
+}
+
+// And apply the same opacity treatment to the SupportedArtistPicker so the
+// two modals stay visually consistent (they were already paired by design;
+// might as well pair them by opacity too). If picker already looks fine to
+// you, you can delete these two rules -- they don't break anything either way.
+.sap-modal {
+  background:
+    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.02) 42%, transparent 68%),
+    #0a0e16 !important;
+}
+
+.sap-overlay {
+  background:
+    radial-gradient(circle at 50% 18%, var(--unis-primary-soft), transparent 74%),
+    rgba(0, 0, 0, 0.85) !important;
+}

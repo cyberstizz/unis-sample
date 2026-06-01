@@ -38,6 +38,7 @@ import ThemeDocumentSync from "./ThemeDocumentSync";
 // Theme
 import './theme.scss';
 import './unis-design-tokens.scss';
+import './visual-fixes.scss';   
 
 // Admin pages
 import AdminDashboard from './admin/AdminDashboard';
