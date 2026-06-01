@@ -527,8 +527,8 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
       return (
         <div className="empty-state">
           <MessageCircle size={48} strokeWidth={1} />
-          <p>No comments yet</p>
-          <span>Be the first to share your thoughts</span>
+          <p>Comment to earn points</p>
+          <span>share your thoughts</span>
         </div>
       );
     }
