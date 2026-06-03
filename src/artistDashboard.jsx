@@ -19,8 +19,12 @@ import {
   ShieldCheck,
   Sparkles,
   ChevronDown,
-  Compass,
+  BarChart3,
+  TrendingUp,
+  Radio,
+  Target,
   Gauge,
+  Compass,
   Activity,
   Lock,
 } from 'lucide-react';
@@ -34,7 +38,6 @@ import VoteHistoryModal from './voteHistoryModal';
 import ReferralCodeCard from './ReferralCodeCard';
 import ThemePicker from './ThemePicker';
 import CashoutPanel from './CashoutPanel';
-import FanbaseFunnel from './FanbaseFunnel'; // ★ analytics: real fanbase funnel section
 import './artistDashboard.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
@@ -116,6 +119,12 @@ const ArtistCollapsibleSection = ({
     </section>
   );
 };
+
+const AnalyticsReadinessPill = ({ status = 'ready', children }) => (
+  <span className={`analytics-readiness-pill analytics-readiness-pill--${status}`}>
+    {children}
+  </span>
+);
 
 const ArtistDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -412,6 +421,67 @@ const ArtistDashboard = () => {
 
   const recentAward = awards?.[0] || null;
 
+  const topSong = songs.length > 0
+      ? [...songs].sort((a, b) => {
+          const bPlays = b.playCount || b.plays || 0;
+          const aPlays = a.playCount || a.plays || 0;
+          return bPlays - aPlays;
+        })[0]
+      : null;
+
+    const catalogPlayCount = songs.reduce(
+      (sum, song) => sum + (song.playCount || song.plays || 0),
+      0
+    );
+
+    const catalogVoteCount = songs.reduce(
+      (sum, song) => sum + (song.votes || song.voteCount || 0),
+      0
+    );
+
+    const supporterConversionLabel =
+      totalPlays > 0
+        ? `${((supporters / totalPlays) * 100).toFixed(1)}%`
+        : 'Waiting for plays';
+
+    const awardMomentumLabel =
+      awards.length > 0
+        ? `${awards.length} career ${awards.length === 1 ? 'win' : 'wins'}`
+        : 'No wins yet';
+
+    const readinessItems = [
+      {
+        label: 'Plays',
+        status: 'ready',
+        text: 'Live from song play events and artist totals.',
+      },
+      {
+        label: 'Votes',
+        status: 'ready',
+        text: 'Live from Unis voting and award mechanics.',
+      },
+      {
+        label: 'Awards',
+        status: 'ready',
+        text: 'Live from jurisdiction, interval, and genre winners.',
+      },
+      {
+        label: 'Listener geography',
+        status: 'soon',
+        text: 'Needs listener_jurisdiction_id on play events for historical accuracy.',
+      },
+      {
+        label: 'Completion rate',
+        status: 'soon',
+        text: 'Needs completed / percent_played on play events.',
+      },
+      {
+        label: 'Source attribution',
+        status: 'soon',
+        text: 'Needs source on play events: feed, profile, search, playlist, share, etc.',
+      },
+    ];
+
   const currentBalanceDollars = Number.parseFloat(
     earningsSummary?.currentBalance || 0
   );
@@ -472,9 +542,6 @@ const ArtistDashboard = () => {
       .catch(() => setDefaultSong(null));
   };
 
-  // ★ play-flow: no longer fires its own /play POST. The Player component
-  // counts the play once the listener crosses the 15s/25% threshold. We only
-  // tag the media with a source so analytics can attribute discovery.
   const playSupportedArtistSong = async () => {
     if (!supportedArtist?.defaultSong) {
       alert('This artist has not set a featured song yet.');
@@ -500,13 +567,20 @@ const ArtistDashboard = () => {
       artistId: supportedArtist.userId,
       artwork: artworkUrl,
       artworkUrl,
-      source: 'dashboard-support', // ★ play-flow: discovery source tag
     };
+
+    try {
+      await apiCall({
+        method: 'post',
+        url: `/v1/media/song/${songId}/play?userId=${user.userId}`,
+      });
+    } catch (err) {
+      console.error('Failed to track play:', err);
+    }
 
     requestPlay(mediaObject);
   };
 
-  // ★ play-flow: same change — let the Player count the play, just tag source.
   const playDefaultSong = async () => {
     if (!defaultSong) {
       setShowDefaultSongWizard(true);
@@ -534,8 +608,16 @@ const ArtistDashboard = () => {
       artistId: user.userId,
       artwork: artworkUrl,
       artworkUrl,
-      source: 'dashboard', // ★ play-flow: discovery source tag
     };
+
+    try {
+      await apiCall({
+        method: 'post',
+        url: `/v1/media/song/${songId}/play?userId=${user.userId}`,
+      });
+    } catch (err) {
+      console.error('Failed to track artist featured song play:', err);
+    }
 
     requestPlay(mediaObject);
   };
@@ -945,62 +1027,195 @@ const ArtistDashboard = () => {
             </section>
           )}
 
-          {/* ★ analytics: real fanbase funnel replaces the old placeholder
-              "Artist intelligence" collapsible. Self-fetching, handles zero
-              states gracefully (pre-launch shows an intentional empty state). */}
-          <FanbaseFunnel artistId={user?.userId} />
-
-          {/* Honest roadmap preview — data is now being captured on play events
-              (completed / percent_played / source / listener_jurisdiction_id);
-              these cards surface it in a later pass. */}
           <ArtistCollapsibleSection
-            eyebrow="Future analytics"
-            title={<>Signal <em>preview</em></>}
-            defaultOpen={false}
-            className="artist-signal-preview-section"
-          >
-            <div className="artist-signal-preview-grid">
-              <article className="artist-signal-preview-card">
-                <div className="artist-signal-preview-card__icon">
-                  <Compass size={22} />
-                </div>
-                <span>Listener geography</span>
-                <strong>{artistJurisdiction}</strong>
-                <p>
-                  Today this uses profile and jurisdiction data. Now that play events
-                  capture listener location, this will show where listeners were when
-                  each play happened.
-                </p>
-                <small><Lock size={12} /> surfacing soon</small>
-              </article>
+  eyebrow="Competitive analytics"
+  title={<>Artist <em>intelligence</em></>}
+  defaultOpen
+  className="artist-analytics-section"
+>
+  <div className="artist-analytics-hero">
+    <div className="artist-analytics-hero__copy">
+      <span>Unis advantage</span>
+      <h3>Analytics built for local artist competition, not just passive streaming.</h3>
+      <p>
+        Spotify and SoundCloud tell artists what happened. Unis can tell artists
+        where they are gaining power, who is supporting them, and how close they
+        are to winning inside their real community.
+      </p>
+    </div>
 
-              <article className="artist-signal-preview-card">
-                <div className="artist-signal-preview-card__icon">
-                  <Gauge size={22} />
-                </div>
-                <span>Completion quality</span>
-                <strong>Coming soon</strong>
-                <p>
-                  This will separate real listening from quick skips so artists understand
-                  which songs hold attention.
-                </p>
-                <small><Lock size={12} /> surfacing soon</small>
-              </article>
+    <div className="artist-analytics-hero__score">
+      <strong>{awardMomentumLabel}</strong>
+      <span>Recognition signal</span>
+    </div>
+  </div>
 
-              <article className="artist-signal-preview-card">
-                <div className="artist-signal-preview-card__icon">
-                  <Activity size={22} />
-                </div>
-                <span>Discovery source</span>
-                <strong>Coming soon</strong>
-                <p>
-                  This will show whether listeners found you from feed, profile, search,
-                  playlist, jurisdiction pages, or shared links.
-                </p>
-                <small><Lock size={12} /> surfacing soon</small>
-              </article>
-            </div>
-          </ArtistCollapsibleSection>
+  <div className="artist-intelligence-grid">
+    <article className="artist-intel-card artist-intel-card--primary">
+      <div className="artist-intel-card__icon">
+        <BarChart3 size={22} />
+      </div>
+      <div>
+        <span>Catalog performance</span>
+        <strong>{catalogPlayCount.toLocaleString()}</strong>
+        <p>
+          Total visible song plays across your uploaded catalog. This becomes
+          stronger once daily song stats are added.
+        </p>
+      </div>
+    </article>
+
+    <article className="artist-intel-card">
+      <div className="artist-intel-card__icon">
+        <Target size={22} />
+      </div>
+      <div>
+        <span>Supporter conversion</span>
+        <strong>{supporterConversionLabel}</strong>
+        <p>
+          A first-pass signal showing whether listeners are becoming real supporters.
+        </p>
+      </div>
+    </article>
+
+    <article className="artist-intel-card">
+      <div className="artist-intel-card__icon">
+        <TrendingUp size={22} />
+      </div>
+      <div>
+        <span>Vote momentum</span>
+        <strong>{(totalVotes || catalogVoteCount).toLocaleString()}</strong>
+        <p>
+          Votes are Unis&apos; strongest competitive signal because they connect music
+          to local rank, awards, and community movement.
+        </p>
+      </div>
+    </article>
+
+    <article className="artist-intel-card">
+      <div className="artist-intel-card__icon">
+        <Radio size={22} />
+      </div>
+      <div>
+        <span>Top song</span>
+        <strong>{topSong?.title || 'Waiting for catalog'}</strong>
+        <p>
+          Your leading track by available play data. Later this can include saves,
+          completions, skips, and first-week release movement.
+        </p>
+      </div>
+    </article>
+  </div>
+
+  <div className="artist-compare-panel">
+    <div className="artist-compare-panel__head">
+      <div>
+        <span className="artist-section__eyebrow">Dashboard comparison</span>
+        <h3>Why this can become better for independent artists</h3>
+      </div>
+    </div>
+
+    <div className="artist-compare-grid">
+      <div className="artist-compare-card">
+        <div className="artist-compare-card__brand">Spotify-style</div>
+        <ul>
+          <li>Streams and listener trends</li>
+          <li>Audience geography</li>
+          <li>Playlist and release performance</li>
+        </ul>
+      </div>
+
+      <div className="artist-compare-card">
+        <div className="artist-compare-card__brand">SoundCloud-style</div>
+        <ul>
+          <li>Plays, likes, comments, repost-like signals</li>
+          <li>Top listeners and locations</li>
+          <li>Track-level engagement</li>
+        </ul>
+      </div>
+
+      <div className="artist-compare-card artist-compare-card--unis">
+        <div className="artist-compare-card__brand">Unis advantage</div>
+        <ul>
+          <li>Neighborhood and jurisdiction momentum</li>
+          <li>Votes, supporters, and awards</li>
+          <li>Local rank movement and revenue attribution</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div className="artist-readiness-panel">
+    <div className="artist-readiness-panel__head">
+      <div>
+        <span className="artist-section__eyebrow">Data readiness</span>
+        <h3>What is live now vs. what unlocks after database additions</h3>
+      </div>
+    </div>
+
+    <div className="artist-readiness-grid">
+      {readinessItems.map((item) => (
+        <div key={item.label} className="artist-readiness-card">
+          <div className="artist-readiness-card__top">
+            <strong>{item.label}</strong>
+            <AnalyticsReadinessPill status={item.status}>
+              {item.status === 'ready' ? 'Live now' : 'After DB update'}
+            </AnalyticsReadinessPill>
+          </div>
+          <p>{item.text}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+  </ArtistCollapsibleSection>
+
+  <ArtistCollapsibleSection
+    eyebrow="Future analytics"
+    title={<>Signal <em>preview</em></>}
+    defaultOpen={false}
+    className="artist-signal-preview-section"
+  >
+    <div className="artist-signal-preview-grid">
+      <article className="artist-signal-preview-card">
+        <div className="artist-signal-preview-card__icon">
+          <Compass size={22} />
+        </div>
+        <span>Listener geography</span>
+        <strong>{artistJurisdiction}</strong>
+        <p>
+          Today this uses profile and jurisdiction data. After the play-event update,
+          this can show where listeners were located when each play happened.
+        </p>
+        <small><Lock size={12} /> waiting for listener_jurisdiction_id</small>
+      </article>
+
+      <article className="artist-signal-preview-card">
+        <div className="artist-signal-preview-card__icon">
+          <Gauge size={22} />
+        </div>
+        <span>Completion quality</span>
+        <strong>Coming soon</strong>
+        <p>
+          This will separate real listening from quick skips so artists understand
+          which songs hold attention.
+        </p>
+        <small><Lock size={12} /> waiting for completed / percent_played</small>
+      </article>
+
+      <article className="artist-signal-preview-card">
+        <div className="artist-signal-preview-card__icon">
+          <Activity size={22} />
+        </div>
+        <span>Discovery source</span>
+        <strong>Coming soon</strong>
+        <p>
+          This will show whether listeners found you from feed, profile, search,
+          playlist, jurisdiction pages, or shared links.
+        </p>
+        <small><Lock size={12} /> waiting for play source</small>
+      </article>
+    </div>
+  </ArtistCollapsibleSection>
 
           <section className="artist-section">
             <div className="artist-section__head">
