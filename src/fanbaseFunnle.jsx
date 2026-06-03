@@ -47,7 +47,7 @@ const FanbaseFunnel = ({ artistId }) => {
     setError(null);
     try {
       const res = await apiCall({
-        url: `/v1/analytics/artist/${id}/fanbase`,
+        url: `/v1/artist-analytics/artist/${id}/fanbase`,
         method: 'get',
         useCache: false,
       });
