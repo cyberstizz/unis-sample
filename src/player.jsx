@@ -123,6 +123,14 @@ const Player = () => {
   const mobileActionsToggleRef = useRef(null);
   const playRewardedRef = useRef(false);
   const activeRewardSongIdRef = useRef(null);
+
+  // ★ PLAY-FLOW (change 1 of 3): refs to carry the play row id + last listened %
+  // currentPlayIdRef holds the play_id returned by the backend when a play is
+  // counted, so we can later tell the backend that play completed.
+  // lastPercentRef tracks how far through the song the listener got.
+  const currentPlayIdRef = useRef(null);
+  const lastPercentRef = useRef(0);
+
   const navigate = useNavigate();
 
   // --- DERIVE VOTING DATA ---
@@ -135,11 +143,30 @@ const Player = () => {
       jurisdiction: currentMedia.jurisdiction,
       genreKey: currentMedia.genreKey || 'rap-hiphop',
       artist: currentMedia.artist,
-      artwork: currentMedia.artwork,              
-      artworkUrl: currentMedia.artworkUrl,       
+      artwork: currentMedia.artwork,
+      artworkUrl: currentMedia.artworkUrl,
       imageUrl: currentMedia.imageUrl,
     };
   }, [currentMedia]);
+
+
+  // ★ PLAY-FLOW (change 3 of 3): tell the backend the current play finished.
+  // Safe to call any time: if no play was counted (e.g. the listener skipped
+  // before the 15s/25% threshold), currentPlayIdRef is null and this no-ops.
+  // Sending is guarded so the same play can't be completed twice.
+  const completeCurrentPlay = () => {
+    const playId = currentPlayIdRef.current;
+    if (!playId) return;
+    currentPlayIdRef.current = null; // guard against double-send
+    apiCall({
+      method: 'post',
+      url: '/v1/media/play/complete',
+      data: {
+        playId,
+        percentPlayed: Math.round(lastPercentRef.current * 100) / 100,
+      },
+    }).catch((err) => console.error('Play completion failed:', err));
+  };
 
 
   // 1. Extract User ID
@@ -187,11 +214,15 @@ const Player = () => {
   }, [currentMedia?.id, currentMedia?.songId, userId]);
 
   // Reward + track a real song play only after meaningful listening.
-  // This avoids awarding points for abandoned taps or instant skips.
+  // This effect resets the per-song tracking flags whenever the song changes.
+  // ★ PLAY-FLOW: it now also finalizes the OUTGOING song's play before resetting,
+  // so skipping to the next track still records how far the listener got.
   useEffect(() => {
     const songId = currentMedia?.id || currentMedia?.songId;
 
     if (!songId || activeRewardSongIdRef.current === songId) return;
+
+    completeCurrentPlay(); // ★ PLAY-FLOW: finalize the previous track first
 
     activeRewardSongIdRef.current = songId;
     playRewardedRef.current = false;
@@ -216,10 +247,15 @@ const Player = () => {
 
     const trackRealPlay = async () => {
       try {
-        await apiCall({
+        // ★ PLAY-FLOW (change 2 of 3): send `source` and capture the returned
+        // playId. Everything else here (the 15s/25% gate above, the reward
+        // below, guest handling) is unchanged.
+        const res = await apiCall({
           method: 'post',
-          url: `/v1/media/song/${songId}/play?userId=${userId}`,
+          url: `/v1/media/song/${songId}/play?userId=${userId}&source=${encodeURIComponent(currentMedia.source || 'player')}`,
         });
+
+        currentPlayIdRef.current = res?.data?.playId || null; // ★ PLAY-FLOW
 
         showReward({
           points: 1,
@@ -258,12 +294,13 @@ const Player = () => {
     if (currentMedia?.artistId) navigate(`/artist/${currentMedia.artistId}`);
   };
 
-  // 4. Audio Listeners
+  // 4. Audio Listeners — load + play when the track changes
   useEffect(() => {
     if (currentMedia && audioRef.current) {
       const media = audioRef.current;
       media.currentTime = 0;
       setCurrentTime(0);
+      lastPercentRef.current = 0; // ★ PLAY-FLOW: reset progress for the new track
 
       const mediaUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
       if (!mediaUrl) return;
@@ -280,15 +317,30 @@ const Player = () => {
     }
   }, [currentMedia, audioRef]);
 
+  // 4b. Audio Listeners — play/pause/time/end events
   useEffect(() => {
     const media = audioRef.current;
     if (!media) return;
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
-    const handleTimeUpdate = () => setCurrentTime(media.currentTime);
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(media.currentTime);
+      // ★ PLAY-FLOW: keep the last listened % up to date for completion tracking
+      if (media.duration && isFinite(media.duration)) {
+        lastPercentRef.current = (media.currentTime / media.duration) * 100;
+      }
+    };
+
     const handleLoadedMetadata = () => setDuration(media.duration || 0);
-    const handleEnded = () => { setIsPlaying(false); next(); };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      lastPercentRef.current = 100;   // ★ PLAY-FLOW: finished = 100%
+      completeCurrentPlay();          // ★ PLAY-FLOW: record completion
+      next();
+    };
 
     media.addEventListener('play', handlePlay);
     media.addEventListener('pause', handlePause);
@@ -408,8 +460,8 @@ const Player = () => {
           jurisdiction: jurisdictionName,
           genreKey: songData.genre?.name || 'rap-hiphop',
           artist: safeArtist,
-          artwork: currentMedia.artwork,                                 
-          artworkUrl: songData.artworkUrl || currentMedia.artworkUrl,    
+          artwork: currentMedia.artwork,
+          artworkUrl: songData.artworkUrl || currentMedia.artworkUrl,
           imageUrl: songData.imageUrl || currentMedia.imageUrl,
         },
         filters: {
@@ -787,10 +839,6 @@ const Player = () => {
                 <span className="label">Lock</span>
                 <span className="hint">{pocketLockEnabled ? 'Protected' : 'Pocket'}</span>
               </span>
-
-              {/* <span className="pocket-lock-switch" aria-hidden="true">
-                <span className="pocket-lock-switch-thumb" />
-              </span> */}
             </button>
           </div>
         </div>
