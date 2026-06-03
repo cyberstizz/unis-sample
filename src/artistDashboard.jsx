@@ -34,7 +34,7 @@ import VoteHistoryModal from './voteHistoryModal';
 import ReferralCodeCard from './ReferralCodeCard';
 import ThemePicker from './ThemePicker';
 import CashoutPanel from './CashoutPanel';
-import FanbaseFunnel from './FanbaseFunnel'; // ★ analytics: real fanbase funnel section
+import FanbaseFunnel from './fanbaseFunnel'; // ★ analytics: real fanbase funnel section
 import './artistDashboard.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
