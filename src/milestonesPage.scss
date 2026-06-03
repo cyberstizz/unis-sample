@@ -8,6 +8,8 @@ $surface-1: rgba(15, 18, 30, 0.6);
 $surface-2: rgba(20, 24, 40, 0.5);
 $surface-row: rgba(255, 255, 255, 0.025);
 $surface-row-hover: rgba(255, 255, 255, 0.045);
+$unis-blue: var(--unis-primary, #1b63d8);
+
 
 $border-faint: rgba(255, 255, 255, 0.06);
 $border-soft: rgba(255, 255, 255, 0.10);
@@ -132,7 +134,7 @@ $accent-blue-glow: rgba(79, 172, 254, 0.4);
     padding: 11px 26px;
     background: linear-gradient(135deg, $accent-blue 0%, $accent-blue-strong 100%);
     border: none;
-    color: #fff;
+    color: $unis-blue;
     border-radius: 999px;
     font-size: 0.8125rem;
     font-weight: 600;
