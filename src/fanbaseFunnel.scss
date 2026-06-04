@@ -6,6 +6,7 @@
 .fanbase {
   width: 100%;
   min-width: 0;
+  overflow: hidden;              // ★ guard: nothing inside can widen the page
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -52,8 +53,13 @@
     flex: none;
     text-align: right;
 
+    .fanbase__ratio-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     strong {
-      display: block;
       color: var(--unis-text);
       font-size: 26px;
       font-weight: 900;
@@ -61,7 +67,7 @@
       line-height: 1;
     }
 
-    span {
+    .fanbase__ratio-label {
       display: block;
       margin-top: 5px;
       color: var(--unis-primary-2);
@@ -152,6 +158,7 @@
   }
 
   &__bar {
+    position: relative;          // ★ positioning context for the tooltip
     display: flex;
     align-items: center;
     gap: 12px;
@@ -221,6 +228,106 @@
     font-weight: 900;
     letter-spacing: -0.04em;
   }
+}
+
+// =============================================================================
+// ★ Tooltips — hover on desktop, tap on mobile. Fully out of flow so they
+//   can never stretch a bar or push the page wide.
+// =============================================================================
+
+.fanbase-help {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  margin-left: 10px;
+
+  &__btn {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--unis-border-hi);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--unis-text-2);
+    cursor: pointer;
+    transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+
+    &:hover {
+      color: var(--unis-text);
+      background: rgba(255, 255, 255, 0.12);
+    }
+  }
+
+  // info button on the highlighted supporter bar needs light contrast
+  &--invert .fanbase-help__btn {
+    border-color: rgba(255, 255, 255, 0.34);
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+.fanbase-tip {
+  position: absolute;
+  bottom: calc(100% + 10px);     // float above the icon by default
+  right: 0;
+  z-index: 50;
+  width: min(280px, 72vw);       // capped → never overflows the viewport
+  padding: 12px 14px;
+  border-radius: var(--unis-radius-sm);
+  background: var(--unis-panel);
+  border: 1px solid var(--unis-border-hi);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  color: var(--unis-text-2);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;             // override nearby uppercase/spacing
+  text-transform: none;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;          // hidden state ignores the cursor
+  transition: opacity 0.16s ease, transform 0.16s ease;
+
+  &::after {                     // little arrow pointing down at the icon
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 12px;
+    border: 6px solid transparent;
+    border-top-color: var(--unis-border-hi);
+  }
+}
+
+// the ratio tooltip lives at the very top of the panel — flip it below the
+// icon so it doesn't clip against the panel's top edge
+.fanbase-help--below .fanbase-tip {
+  bottom: auto;
+  top: calc(100% + 10px);
+  text-align: left;
+
+  &::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: var(--unis-border-hi);
+  }
+}
+
+// reveal: hover/keyboard-focus (desktop) OR tapped-open (mobile)
+.fanbase-help:hover .fanbase-tip,
+.fanbase-help:focus-within .fanbase-tip,
+.fanbase-tip.is-open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 // =============================================================================

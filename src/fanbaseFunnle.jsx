@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Heart, Vote, UserPlus, Star, Info } from 'lucide-react'; // ★ C: Info
+import { Play, Heart, Vote, UserPlus, Star, Info } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import './fanbaseFunnel.scss';
@@ -19,22 +19,20 @@ const STAGE_ICONS = {
   supporters: Star,
 };
 
-// ★ C: plain-language definition per stage. Keyed the same as funnel stages.
+// plain-language definition per stage
 const STAGE_TIPS = {
   listeners:
     "Unique people who've played at least one of your songs past the count threshold (15s / 25%). One person counts once here, no matter how many times they replay.",
   likers: 'Listeners who liked at least one of your songs.',
   voters:
     'Listeners who spent a vote on you during an award cycle. Votes are scarce, so this is a stronger signal than a like.',
-  followers:
-    'Listeners who followed you to keep up with new releases and wins.',
+  followers: 'Listeners who followed you to keep up with new releases and wins.',
   supporters:
     'Listeners who chose you as their supported artist — the deepest commitment on Unis. Each member can back exactly one artist at a time.',
 };
 
-// ★ C: the metric you flagged as unclear.
 const REPEAT_TIP =
-  'Total plays ÷ unique listeners. Above 1.0× means people come back to replay your music instead of listening once and leaving — a sign your songs stick.';
+  'Total plays ÷ unique listeners. Above 1.0× means people replay your music instead of listening once and leaving — a sign your songs stick.';
 
 const formatNumber = (n) => Number(n || 0).toLocaleString();
 
@@ -51,7 +49,7 @@ const FanbaseFunnel = ({ artistId }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [openTip, setOpenTip] = useState(null); // ★ C: which tooltip is tapped open (mobile)
+  const [openTip, setOpenTip] = useState(null); // which tip is tapped open (mobile)
 
   const fetchFanbase = useCallback(async (id) => {
     if (!id) return;
@@ -76,13 +74,11 @@ const FanbaseFunnel = ({ artistId }) => {
     fetchFanbase(artistId);
   }, [artistId, fetchFanbase]);
 
-  // ★ C: tap-to-open tooltips close when you tap anywhere outside a tooltip control.
+  // tap-to-open tips close when tapping anywhere outside a tip control
   useEffect(() => {
     if (!openTip) return;
     const handleOutside = (e) => {
-      if (!e.target.closest('.fanbase-stage__help, .fanbase__ratio')) {
-        setOpenTip(null);
-      }
+      if (!e.target.closest('.fanbase-help')) setOpenTip(null);
     };
     document.addEventListener('click', handleOutside);
     return () => document.removeEventListener('click', handleOutside);
@@ -98,7 +94,6 @@ const FanbaseFunnel = ({ artistId }) => {
   const growth = data?.supporterGrowth || [];
   const repeatRatio = data?.repeatListenRatio || 0;
   const uniqueListeners = data?.uniqueListeners || 0;
-  const totalPlays = data?.totalPlays || 0;
 
   const hasAnyFanbase = funnel.some((s) => Number(s.value || 0) > 0);
   const maxGrowth = growth.reduce((m, g) => Math.max(m, Number(g.count || 0)), 0);
@@ -114,27 +109,31 @@ const FanbaseFunnel = ({ artistId }) => {
         </div>
 
         {hasAnyFanbase && uniqueListeners > 0 && (
-          // ★ C: ratio now carries a tooltip instead of a bare title attribute
           <div className="fanbase__ratio">
-            <div className="fanbase__ratio-value">
+            <div className="fanbase__ratio-row">
               <strong>{repeatRatio.toFixed(2)}×</strong>
-              <button
-                type="button"
-                className="fanbase-stage__info"
-                aria-label="What is the repeat-listen rate?"
-                aria-expanded={openTip === 'repeat'}
-                onClick={() => toggleTip('repeat')}
-              >
-                <Info size={13} />
-              </button>
+              <span className="fanbase-help fanbase-help--below">
+                <button
+                  type="button"
+                  className="fanbase-help__btn"
+                  aria-label="What is the repeat-listen rate?"
+                  aria-expanded={openTip === 'repeat'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleTip('repeat');
+                  }}
+                >
+                  <Info size={13} />
+                </button>
+                <span
+                  className={`fanbase-tip ${openTip === 'repeat' ? 'is-open' : ''}`}
+                  role="tooltip"
+                >
+                  {REPEAT_TIP}
+                </span>
+              </span>
             </div>
-            <span>Repeat-listen rate</span>
-            <div
-              className={`fanbase-stage__tip ${openTip === 'repeat' ? 'is-open' : ''}`}
-              role="tooltip"
-            >
-              {REPEAT_TIP}
-            </div>
+            <span className="fanbase__ratio-label">Repeat-listen rate</span>
           </div>
         )}
       </div>
@@ -171,7 +170,8 @@ const FanbaseFunnel = ({ artistId }) => {
                 topOfFunnel > 0
                   ? Math.max(8, Math.round((value / topOfFunnel) * 100))
                   : 8;
-              const tip = STAGE_TIPS[stage.key]; // ★ C
+              const tip = STAGE_TIPS[stage.key];
+              const isSupporter = stage.key === 'supporters';
 
               return (
                 <div className="fanbase-stage" key={stage.key}>
@@ -186,9 +186,7 @@ const FanbaseFunnel = ({ artistId }) => {
                   )}
 
                   <div
-                    className={`fanbase-stage__bar ${
-                      stage.key === 'supporters' ? 'is-supporter' : ''
-                    }`}
+                    className={`fanbase-stage__bar ${isSupporter ? 'is-supporter' : ''}`}
                     style={{ width: `${width}%` }}
                   >
                     <span className="fanbase-stage__icon">
@@ -199,22 +197,24 @@ const FanbaseFunnel = ({ artistId }) => {
                       {formatNumber(value)}
                     </strong>
 
-                    {/* ★ C: per-stage tooltip control */}
                     {tip && (
-                      <span className="fanbase-stage__help">
+                      <span
+                        className={`fanbase-help ${isSupporter ? 'fanbase-help--invert' : ''}`}
+                      >
                         <button
                           type="button"
-                          className="fanbase-stage__info"
+                          className="fanbase-help__btn"
                           aria-label={`What does "${stage.label}" mean?`}
                           aria-expanded={openTip === stage.key}
-                          onClick={() => toggleTip(stage.key)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleTip(stage.key);
+                          }}
                         >
                           <Info size={13} />
                         </button>
                         <span
-                          className={`fanbase-stage__tip ${
-                            openTip === stage.key ? 'is-open' : ''
-                          }`}
+                          className={`fanbase-tip ${openTip === stage.key ? 'is-open' : ''}`}
                           role="tooltip"
                         >
                           {tip}
