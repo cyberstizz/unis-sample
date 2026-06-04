@@ -1,64 +1,80 @@
 $unis-blue: var(--unis-primary);
 
-
 .song-notification {
   position: fixed;
   bottom: 100px;
   left: 20px;
   z-index: 101;
-  animation: slideIn 0.5s ease-out forwards, slideOut 0.5s 2.5s ease-in forwards;
+  animation: slideIn 0.5s ease-out forwards,
+             slideOut 0.5s 2.5s ease-in forwards;
 
   .card {
     display: flex;
     align-items: center;
     position: relative;
-    background: rgba(20, 20, 20, 0.6); // base fallback, ambient-bg paints over this
+    background: rgba(20, 20, 20, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border-radius: 16px;
     padding: 0;
-    box-shadow: 
+
+    box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.4),
       0 2px 8px rgba(0, 0, 0, 0.2);
+
     min-width: 320px;
     overflow: hidden;
+
     animation: flashingThemeBorder 1.5s ease-in-out infinite;
 
-    // --- Ambient blurred image background ---
     .ambient-bg {
       position: absolute;
       top: -50%;
       left: -50%;
       width: 200%;
       height: 200%;
+
       background-size: cover;
       background-position: center;
+
       filter: blur(40px) saturate(180%);
       opacity: 0.4;
+
       z-index: 0;
       pointer-events: none;
+
       transition: all 0.5s ease;
     }
 
-    // --- Glass content layer on top ---
     .glass-content {
       position: relative;
       z-index: 1;
+
       padding: 14px;
+
       display: flex;
       align-items: center;
       gap: 14px;
+
       width: 100%;
       box-sizing: border-box;
-      background: linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 100%);
+
+      background: linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.5) 0%,
+        rgba(0, 0, 0, 0.15) 100%
+      );
     }
 
     .notification-artwork {
       width: 60px;
       height: 60px;
+
       border-radius: 10px;
       object-fit: cover;
+
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
       flex-shrink: 0;
     }
 
@@ -69,13 +85,19 @@ $unis-blue: var(--unis-primary);
       h3 {
         font-size: 16px;
         font-weight: 700;
+
         margin: 0 0 4px 0;
+
         color: #ffffff;
+
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
         line-height: 1.3;
+
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+
         max-width: 220px;
       }
 
@@ -98,6 +120,73 @@ $unis-blue: var(--unis-primary);
           gap: 4px;
         }
       }
+
+      .notification-waveform {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+
+        height: 18px;
+        margin-top: 8px;
+
+        overflow: hidden;
+        position: relative;
+
+        &::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.15),
+            transparent
+          );
+
+          animation: waveformShimmer 3s linear infinite;
+          pointer-events: none;
+        }
+      }
+
+      .wave-bar {
+        width: 3px;
+        border-radius: 999px;
+
+        background: var(--unis-primary);
+
+        box-shadow:
+          0 0 4px var(--unis-primary),
+          0 0 8px rgba(255, 255, 255, 0.15);
+
+        opacity: 0.85;
+
+        transform-origin: bottom center;
+      }
+
+      .wave-bar-0 {
+        animation: waveA 1s ease-in-out infinite;
+      }
+
+      .wave-bar-1 {
+        animation: waveB 1.3s ease-in-out infinite;
+      }
+
+      .wave-bar-2 {
+        animation: waveC 0.9s ease-in-out infinite;
+      }
+
+      .wave-bar-3 {
+        animation: waveD 1.4s ease-in-out infinite;
+      }
+
+      .wave-bar-4 {
+        animation: waveB 1.1s ease-in-out infinite;
+      }
+
+      .wave-bar-5 {
+        animation: waveC 1.6s ease-in-out infinite;
+      }
     }
   }
 }
@@ -107,31 +196,95 @@ $unis-blue: var(--unis-primary);
   font-weight: 600 !important;
 }
 
-  @keyframes flashingThemeBorder {
-    0%, 100% {
-      border-color: transparent;
-      box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.4),
-        0 2px 8px rgba(0, 0, 0, 0.2);
-    }
-    50% {
-      border-color: var(--unis-primary);
-      box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.4),
-        0 2px 8px rgba(0, 0, 0, 0.2),
-        0 0 20px var(--unis-primary),
-        inset 0 0 20px var(--unis-primary);
-    }
+@keyframes flashingThemeBorder {
+  0%,
+  100% {
+    border-color: transparent;
+
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 2px 8px rgba(0, 0, 0, 0.2);
   }
 
+  50% {
+    border-color: var(--unis-primary);
+
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 2px 8px rgba(0, 0, 0, 0.2),
+      0 0 20px var(--unis-primary),
+      inset 0 0 20px var(--unis-primary);
+  }
+}
+
+@keyframes waveA {
+  0%, 100% {
+    height: 5px;
+  }
+  50% {
+    height: 16px;
+  }
+}
+
+@keyframes waveB {
+  0%, 100% {
+    height: 10px;
+  }
+  50% {
+    height: 18px;
+  }
+}
+
+@keyframes waveC {
+  0%, 100% {
+    height: 4px;
+  }
+  50% {
+    height: 12px;
+  }
+}
+
+@keyframes waveD {
+  0%, 100% {
+    height: 7px;
+  }
+  50% {
+    height: 15px;
+  }
+}
+
+@keyframes waveformShimmer {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
 @keyframes slideIn {
-  from { transform: translateX(-120%); opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
+  from {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideOut {
-  from { transform: translateX(0);     opacity: 1; }
-  to   { transform: translateX(-120%); opacity: 0; }
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
 }
 
 @media (max-width: 480px) {

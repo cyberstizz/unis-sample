@@ -1,4 +1,5 @@
 // src/components/SongNotification.js
+
 import React, { useContext, useEffect, useState } from 'react';
 import { PlayerContext } from './context/playercontext';
 import './songNotification.scss';
@@ -36,10 +37,24 @@ const SongNotification = () => {
             alt="Artwork"
             className="notification-artwork"
           />
+
           <div className="notification-info">
             <h3>{currentMedia.title || 'Unknown Track'}</h3>
-            <p className="artistName">{currentMedia.artist || 'Unknown Artist'}</p>
+
+            <p className="artistName">
+              {currentMedia.artist || 'Unknown Artist'}
+            </p>
+
+            <div className="notification-waveform">
+              {[...Array(18)].map((_, i) => (
+                <span
+                  key={i}
+                  className={`wave-bar wave-bar-${i % 6}`}
+                />
+              ))}
+            </div>
           </div>
+
         </div>
 
       </div>
