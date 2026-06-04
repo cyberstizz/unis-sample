@@ -23,6 +23,7 @@ import {
   Gauge,
   Activity,
   Lock,
+  Clock, // ★ H: pending supported-artist display
 } from 'lucide-react';
 import UploadWizard from './uploadWizard';
 import ChangeDefaultSongWizard from './changeDefaultSongWizard';
@@ -35,6 +36,7 @@ import ReferralCodeCard from './ReferralCodeCard';
 import ThemePicker from './ThemePicker';
 import CashoutPanel from './CashoutPanel';
 import FanbaseFunnel from './fanbaseFunnle'; // ★ analytics: real fanbase funnel section
+import SupportedArtistPicker from './SupportedArtistPicker'; // ★ H: change-artist picker (same component Profile uses)
 import './artistDashboard.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
@@ -137,6 +139,7 @@ const ArtistDashboard = () => {
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState(null);
   const [supportedArtist, setSupportedArtist] = useState(null);
+  const [pendingSupportedArtist, setPendingSupportedArtist] = useState(null); // ★ H: queued change display
   const [earningsSummary, setEarningsSummary] = useState(null);
   const [stripeStatus, setStripeStatus] = useState(null);
   const [payoutHistory, setPayoutHistory] = useState([]);
@@ -166,6 +169,8 @@ const ArtistDashboard = () => {
   const [editingLyricsSong, setEditingLyricsSong] = useState(null);
   const [currentLyrics, setCurrentLyrics] = useState('');
   const [loadingMoreAwards, setLoadingMoreAwards] = useState(false);
+  const [showArtistPicker, setShowArtistPicker] = useState(false); // ★ H
+  const [cancellingPending, setCancellingPending] = useState(false); // ★ H
 
   // -----------------------------------------------------------------------
   // Fetch helpers
@@ -203,6 +208,7 @@ const ArtistDashboard = () => {
       setUserProfile(profile);
       setReferralCode(summary?.referralCode || null);
       setSupportedArtist(summary?.supportedArtist || null);
+      setPendingSupportedArtist(summary?.pendingSupportedArtist || null); // ★ H: summary already returns this for Profile
       setSongs(songsRes.data || []);
       setDefaultSong(defaultSongRes.data);
 
@@ -420,6 +426,14 @@ const ArtistDashboard = () => {
     stripeStatus?.onboardingComplete && stripeStatus?.payoutsEnabled
   );
 
+  // ★ H: pending-change effective date (mirrors Profile.jsx)
+  const pendingEffective = pendingSupportedArtist?.effectiveDate
+    ? new Date(pendingSupportedArtist.effectiveDate).toLocaleDateString(undefined, {
+        month: 'long',
+        day: 'numeric',
+      })
+    : null;
+
   const nextMoves = [
     !userProfile.bio && {
       title: 'Add your artist story',
@@ -598,8 +612,27 @@ const ArtistDashboard = () => {
         setUserProfile(summary.profile);
         setReferralCode(summary.referralCode || null);
         setSupportedArtist(summary.supportedArtist || null);
+        setPendingSupportedArtist(summary.pendingSupportedArtist || null); // ★ H: keep pending in sync after a change
       })
       .catch((err) => console.error('Failed to refresh profile summary:', err));
+  };
+
+  // ★ H: cancel a queued supported-artist change (mirrors Profile.jsx).
+  const cancelPendingArtist = async () => {
+    if (!user?.userId) return;
+    setCancellingPending(true);
+    try {
+      await apiCall({
+        method: 'delete',
+        url: `/v1/users/${user.userId}/supported-artist/pending`,
+      });
+      handleProfileUpdate();
+    } catch (err) {
+      console.error('Failed to cancel pending supported-artist change:', err);
+      alert('Failed to cancel the pending change. Please try again.');
+    } finally {
+      setCancellingPending(false);
+    }
   };
 
   const handleSocialMediaUpdate = async (platform, url) => {
@@ -1164,36 +1197,46 @@ const ArtistDashboard = () => {
             </div>
           </section>
 
-          <section className="artist-section">
-            <div className="artist-section__head">
-              <div>
-                <span className="artist-section__eyebrow">Recognition</span>
-                <h2>
-                  Trophy <em>case</em>
-                </h2>
-              </div>
-            </div>
-
-            <div className="artist-awards-card">
-              {awardsLoading ? (
-                <SectionLoader label="Loading awards..." />
-              ) : awardsError ? (
-                <SectionError message={awardsError} onRetry={() => fetchAwards(user.userId)} />
-              ) : awards.length > 0 ? (
-                <>
-                  <div className="artist-awards-card__featured">
-                    <div className="artist-awards-card__trophy">🏆</div>
-                    <div>
-                      <span>Latest win</span>
-                      <h3>{recentAward?.interval?.name || 'Award'} Winner</h3>
-                      <p>
-                        {recentAward?.jurisdiction?.name || 'Location'}
-                        {recentAward?.genre?.name && ` · ${recentAward.genre.name}`}
-                        {recentAward?.awardDate && ` · ${formatAwardDate(recentAward.awardDate)}`}
-                      </p>
-                    </div>
+          {/* ★ F: trophy case is now collapsible + height-capped so a heavy
+              award-winner no longer pushes the whole page down. The featured
+              win + a count summary stay visible; the full list scrolls inside
+              a fixed-height box and "Load more" lives inside that box. */}
+          <ArtistCollapsibleSection
+            eyebrow="Recognition"
+            title={<>Trophy <em>case</em></>}
+            className="artist-trophy-section"
+            defaultOpen={true}
+          >
+            {awardsLoading ? (
+              <SectionLoader label="Loading awards..." />
+            ) : awardsError ? (
+              <SectionError message={awardsError} onRetry={() => fetchAwards(user.userId)} />
+            ) : awards.length > 0 ? (
+              <>
+                <div className="artist-awards-card__featured">
+                  <div className="artist-awards-card__trophy">🏆</div>
+                  <div>
+                    <span>Latest win</span>
+                    <h3>{recentAward?.interval?.name || 'Award'} Winner</h3>
+                    <p>
+                      {recentAward?.jurisdiction?.name || 'Location'}
+                      {recentAward?.genre?.name && ` · ${recentAward.genre.name}`}
+                      {recentAward?.awardDate && ` · ${formatAwardDate(recentAward.awardDate)}`}
+                    </p>
                   </div>
+                </div>
 
+                {/* ★ F: count summary so artists see the total without scrolling all rows */}
+                <div className="artist-awards-summary">
+                  <Trophy size={14} />
+                  <span>
+                    {awards.length}
+                    {hasMoreAwards ? '+' : ''} {awards.length === 1 ? 'win' : 'wins'} earned
+                  </span>
+                </div>
+
+                {/* ★ F: capped, scrollable list instead of expanding down the page */}
+                <div className="artist-awards-scroll">
                   <div className="artist-awards-list">
                     {awards.map((award, index) => (
                       <div key={index} className="artist-award-row">
@@ -1213,23 +1256,23 @@ const ArtistDashboard = () => {
                   {hasMoreAwards && (
                     <button
                       type="button"
-                      className="artist-btn artist-btn--ghost artist-btn--small"
+                      className="artist-btn artist-btn--ghost artist-btn--small artist-awards-more"
                       onClick={loadMoreAwards}
                       disabled={loadingMoreAwards}
                     >
                       {loadingMoreAwards ? 'Loading...' : 'Load more awards'}
                     </button>
                   )}
-                </>
-              ) : (
-                <div className="artist-empty-state">
-                  <Trophy size={34} />
-                  <h3>No awards yet</h3>
-                  <p>Keep collecting votes, plays, likes, and score to earn your first local win.</p>
                 </div>
-              )}
-            </div>
-          </section>
+              </>
+            ) : (
+              <div className="artist-empty-state">
+                <Trophy size={34} />
+                <h3>No awards yet</h3>
+                <p>Keep collecting votes, plays, likes, and score to earn your first local win.</p>
+              </div>
+            )}
+          </ArtistCollapsibleSection>
 
           {userProfile?.role === 'artist' && (
             <section className="artist-section artist-revenue-card">
@@ -1377,35 +1420,93 @@ const ArtistDashboard = () => {
             </div>
           </section>
 
-          {supportedArtist && (
-            <section className="artist-section">
-              <div className="artist-section__head">
-                <div>
-                  <span className="artist-section__eyebrow">Community</span>
-                  <h2>
-                    I <em>support</em>
-                  </h2>
-                </div>
-              </div>
-
-              <div className="artist-support-card">
-                <img
-                  src={buildUrl(supportedArtist.photoUrl) || backimage}
-                  alt={supportedArtist.username}
+          {/* ★ H: full supported-artist section (ported from Profile.jsx).
+              Always rendered — legacy artists with a null supported artist get
+              a graceful "choose an artist" state instead of the section
+              disappearing. Wrapped in the global collapsible per the design rule. */}
+          <ArtistCollapsibleSection
+            eyebrow="Community"
+            title={<>You <em>support</em></>}
+            className="artist-support-section"
+            defaultOpen={true}
+          >
+            {supportedArtist ? (
+              <div className="artist-support-feature">
+                <div
+                  className="artist-support-feature__media"
+                  style={{
+                    backgroundImage: `url(${
+                      buildUrl(supportedArtist.photoUrl) ||
+                      buildUrl(supportedArtist.defaultSong?.artworkUrl) ||
+                      backimage
+                    })`,
+                  }}
                 />
-                <div>
-                  <strong>{supportedArtist.username}</strong>
-                  <p>{supportedArtist.defaultSong?.title || 'No featured song set'}</p>
-                </div>
+                <div className="artist-support-feature__overlay" />
+                <div className="artist-support-feature__content">
+                  <span className="artist-support-feature__tag">You support</span>
+                  <h3>{supportedArtist.username}</h3>
+                  <p>
+                    {supportedArtist.defaultSong
+                      ? `Featured track: ${supportedArtist.defaultSong.title}`
+                      : 'No featured track yet'}
+                  </p>
 
-                {supportedArtist.defaultSong && (
-                  <button type="button" onClick={playSupportedArtistSong}>
-                    <Play size={14} fill="currentColor" />
-                  </button>
-                )}
+                  <div className="artist-support-feature__actions">
+                    {supportedArtist.defaultSong && (
+                      <button
+                        type="button"
+                        className="artist-support-feature__play"
+                        onClick={playSupportedArtistSong}
+                      >
+                        <Play size={13} fill="currentColor" /> Listen
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="artist-support-feature__change"
+                      onClick={() => setShowArtistPicker(true)}
+                    >
+                      Change
+                    </button>
+                  </div>
+
+                  {pendingSupportedArtist && (
+                    <div className="artist-support-feature__pending" role="status">
+                      <Clock size={12} />
+                      <span>
+                        Switching to <strong>{pendingSupportedArtist.username}</strong>
+                        {pendingEffective ? ` on ${pendingEffective}` : ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={cancelPendingArtist}
+                        disabled={cancellingPending}
+                      >
+                        {cancellingPending ? 'Cancelling…' : 'Cancel'}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </section>
-          )}
+            ) : (
+              <div className="artist-empty-state">
+                <Heart size={34} />
+                <h3>No supported artist yet</h3>
+                <p>
+                  Every Unis member backs one artist. Choose the artist whose voice
+                  you want to amplify — you can change it later.
+                </p>
+                <button
+                  type="button"
+                  className="artist-btn artist-btn--primary"
+                  onClick={() => setShowArtistPicker(true)}
+                >
+                  <Heart size={14} /> Choose an artist
+                </button>
+              </div>
+            )}
+          </ArtistCollapsibleSection>
 
           <section className="artist-section">
             <div className="artist-section__head">
@@ -1548,6 +1649,18 @@ const ArtistDashboard = () => {
           onConfirm={handleConfirmDelete}
           onCancel={() => setSongToDelete(null)}
           isDeleting={!!deletingSongId}
+        />
+
+        {/* ★ H: supported-artist picker (same component Profile uses). */}
+        <SupportedArtistPicker
+          show={showArtistPicker}
+          onClose={() => setShowArtistPicker(false)}
+          userId={user.userId}
+          currentArtistId={supportedArtist?.userId || null}
+          onSuccess={() => {
+            setShowArtistPicker(false);
+            handleProfileUpdate();
+          }}
         />
 
         {editingLyricsSong && (
