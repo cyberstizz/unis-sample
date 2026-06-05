@@ -1085,7 +1085,7 @@ const ArtistDashboard = () => {
           {/* ★ collapsible: Catalog (collapsed by default) */}
           <ArtistCollapsibleSection
             eyebrow="Catalog command"
-            title={<>Your <em>songs</em></>}
+            title={<>Songs </>}
             defaultOpen={false}
           >
             <div className="artist-catalog-actions">
