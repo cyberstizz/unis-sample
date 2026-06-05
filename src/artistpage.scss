@@ -1,7 +1,7 @@
 // artistpage.scss — v2 "Stitch Mockup" implementation
 // ALL classes prefixed ap2- to avoid collisions with feed, song, or any other page.
 // Fonts: Playfair Display italic (hero name), Bitcount Grid Double (jurisdiction),
-//        DM Sans (body). Colors: #111114 base, Unis blue #163387.
+//        DM Sans (body). Colors: #111114 base, theme accent via --unis-primary.
 
 // ─── Tokens (scoped, no globals) ───────────────────────────────
 $ap2-base: #111114;
@@ -104,7 +104,7 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
     height: 32px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid rgba($ap2-blue-raw, 0.6);
+    border: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 60%, transparent);
     flex-shrink: 0;
   }
 
@@ -236,6 +236,99 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   }
 }
 
+// ─── AWARD RAIL ────────────────────────────────────────────────
+// Vertical column on the left edge, upper-left → lower-left.
+// Only earned awards render (max 12). Count is theme-colored.
+.ap2-awards {
+  position: absolute;
+  z-index: 3;
+  left: 16px;
+  top: 84px;
+  bottom: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 12px;
+  width: 52px;
+  pointer-events: none;
+
+  @media (max-width: 600px) {
+    left: 10px;
+    top: 70px;
+    bottom: 130px;
+    width: 44px;
+    gap: 9px;
+  }
+}
+
+.ap2-award {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  pointer-events: auto;
+  cursor: default;
+  animation: ap2-fadeUp 0.5s ease-out both;
+
+  &__medal {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $ap2-text-1;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 55%, rgba(255, 255, 255, 0.25));
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    transition: transform 0.2s, border-color 0.2s;
+
+    @media (max-width: 600px) {
+      width: 26px;
+      height: 26px;
+    }
+  }
+
+  // Artist medals lean on the theme accent; song medals stay neutral-gold
+  &--artist &__medal {
+    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 32%, rgba(0, 0, 0, 0.45));
+    color: #fff;
+  }
+  &--song &__medal {
+    color: #f5d990;
+    border-color: rgba(245, 217, 144, 0.55);
+  }
+
+  &:hover &__medal {
+    transform: scale(1.12);
+  }
+
+  &__caption {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-family: 'DM Sans', sans-serif;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  &__int {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: $ap2-text-3;
+    text-transform: uppercase;
+  }
+
+  &__count {
+    font-size: 9px;
+    font-weight: 800;
+    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 75%, #ffffff);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  }
+}
+
 .ap2-hero__content {
   position: relative;
   z-index: 1;
@@ -243,33 +336,88 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   width: 100%;
   // Left-aligned like the Stitch mockup (not centered)
   animation: ap2-fadeUp 0.8s ease-out both;
+
+  // When the award rail is present, clear its column so nothing collides
+  &--inset {
+    padding-left: 60px;
+
+    @media (max-width: 600px) { padding-left: 50px; }
+  }
+}
+
+.ap2-hero__tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+
+  @media (max-width: 600px) { margin-bottom: 10px; }
 }
 
 .ap2-hero__jurisdiction {
-  display: inline-block;
-  padding: 5px 14px;
-  border-radius: 4px;
-  background: rgba($ap2-blue-raw, 0.25);
-  border: 1px solid rgba($ap2-blue-raw, 0.45);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 55%, transparent);
   font-family: "Bitcount Grid Double", system-ui;
-  font-size: 11px;
-  font-weight: 400;
+  font-size: 12px;
+  font-weight: 500;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: $ap2-blue-raw;
-  margin-bottom: 14px;
+  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.2s;
+
+  svg { flex-shrink: 0; }
 
   &:hover {
-    background: rgba($ap2-blue-raw, 0.4);
+    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, transparent);
+    transform: translateY(-1px);
   }
 
   @media (max-width: 600px) {
     font-size: 10px;
-    padding: 4px 11px;
+    padding: 5px 11px;
     letter-spacing: 1.5px;
-    margin-bottom: 10px;
+  }
+}
+
+.ap2-hero__rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 5px;
+  background: var(--unis-primary, #{$ap2-blue-raw});
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, transparent);
+
+  svg { flex-shrink: 0; }
+
+  &-up {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    margin-left: 2px;
+    padding: 1px 5px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.22);
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  @media (max-width: 600px) {
+    font-size: 10px;
+    padding: 5px 10px;
   }
 }
 
@@ -299,7 +447,7 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   animation-delay: 0.15s;
 
   @media (max-width: 600px) {
-    gap: 24px;
+    gap: 22px;
     margin-bottom: 20px;
   }
 }
@@ -357,14 +505,14 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   letter-spacing: 0.3px;
   cursor: pointer;
   transition: transform 0.2s, filter 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 24px $ap2-glow;
+  box-shadow: 0 4px 24px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, transparent);
 
   svg { flex-shrink: 0; margin-left: -2px; }
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
     filter: brightness(1.2);
-    box-shadow: 0 6px 32px $ap2-glow;
+    box-shadow: 0 6px 32px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 50%, transparent);
   }
   &:active:not(:disabled) { transform: translateY(0); }
   &:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -419,6 +567,7 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
 .ap2-hero__btn-vote {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   padding: 14px 28px;
   border-radius: 50px;
   background: rgba(255, 255, 255, 0.06);
@@ -431,6 +580,8 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   backdrop-filter: blur(8px);
   transition: all 0.2s;
 
+  svg { flex-shrink: 0; }
+
   &:hover {
     background: rgba(255, 255, 255, 0.12);
     border-color: rgba(255, 255, 255, 0.35);
@@ -441,6 +592,21 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
     padding: 12px 22px;
     font-size: 13px;
   }
+}
+
+.ap2-hero__votehint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, #cfcfda);
+  animation: ap2-fadeUp 0.6s ease-out both;
+  animation-delay: 0.4s;
+
+  svg { flex-shrink: 0; color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 55%, #ffffff); }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -506,6 +672,7 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
 .ap2-grid {
   display: grid;
   gap: 20px;
+  align-items: start;
 
   @media (max-width: 600px) { gap: 16px; }
 }
@@ -526,6 +693,14 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   }
 }
 
+.ap2-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  @media (max-width: 600px) { gap: 16px; }
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CARD BASE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -539,9 +714,6 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   transition: border-color 0.25s, transform 0.25s;
   animation: ap2-fadeUp 0.5s ease-out both;
 
-  &:nth-child(1) { animation-delay: 0.05s; }
-  &:nth-child(2) { animation-delay: 0.15s; }
-
   &:hover {
     border-color: $ap2-border-hover;
   }
@@ -549,6 +721,121 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   @media (max-width: 600px) {
     padding: 18px;
     border-radius: 14px;
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STANDING STRIP — democratic ranking
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-standing {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 12%, $ap2-surface);
+  border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 26%, transparent);
+
+  &__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 22%, transparent);
+    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, #ffffff);
+  }
+
+  &__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  &__label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: $ap2-text-3;
+  }
+
+  &__value {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: $ap2-text-1;
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 9px 16px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff);
+    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, transparent);
+    transition: all 0.2s;
+
+    svg { flex-shrink: 0; }
+
+    &:hover {
+      background: var(--unis-primary, #{$ap2-blue-raw});
+      color: #fff;
+      transform: translateY(-1px);
+    }
+  }
+
+  @media (max-width: 600px) {
+    padding: 14px;
+    gap: 11px;
+
+    &__icon { width: 36px; height: 36px; }
+    &__value { font-size: 13.5px; }
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// FEATURED VIDEO
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-video {
+  &__label {
+    display: block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: $ap2-text-3;
+    margin-bottom: 14px;
+  }
+
+  &__frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid $ap2-border;
+  }
+
+  &__el {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 }
 
@@ -627,12 +914,12 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   width: fit-content;
   padding: 3px 10px;
   border-radius: 4px;
-  background: rgba($ap2-blue-raw, 0.2);
-  border: 1px solid rgba($ap2-blue-raw, 0.35);
+  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 38%, transparent);
   font-family: 'DM Sans', sans-serif;
   font-size: 10px;
   font-weight: 700;
-  color: $ap2-blue-raw;
+  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff);
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 12px;
@@ -653,7 +940,7 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   transition: color 0.2s;
   line-height: 1.2;
 
-  &:hover { color: $ap2-blue-raw; }
+  &:hover { color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 50%, #ffffff); }
 
   @media (max-width: 600px) { font-size: 22px; }
 }
@@ -679,6 +966,113 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   color: $ap2-text-3;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SUPPORT CARD — image avatar + Support / Follow / Shop
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-support {
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 10%, $ap2-surface);
+  border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 24%, transparent);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+  }
+
+  &__avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, rgba(255, 255, 255, 0.15));
+  }
+
+  &__copy { min-width: 0; }
+
+  &__title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: $ap2-text-1;
+    margin: 0 0 3px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 22%, $ap2-text-2);
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  &__btn {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    transition: all 0.2s;
+
+    svg { flex-shrink: 0; }
+
+    &--support {
+      background: $ap2-blue;
+      border: 1px solid $ap2-blue;
+      color: #fff;
+      box-shadow: 0 4px 18px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, transparent);
+
+      &:hover { filter: brightness(1.15); transform: translateY(-1px); }
+    }
+
+    &--follow {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: $ap2-text-1;
+
+      &:hover { background: rgba(255, 255, 255, 0.12); transform: translateY(-1px); }
+    }
+
+    &--following {
+      background: $ap2-blue;
+      border-color: $ap2-blue;
+      color: #fff;
+
+      &:hover { filter: brightness(1.12); background: $ap2-blue; }
+    }
+
+    &--shop {
+      background: transparent;
+      border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, transparent);
+      color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 38%, #ffffff);
+
+      &:hover {
+        background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 14%, transparent);
+        transform: translateY(-1px);
+      }
+    }
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -743,8 +1137,14 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// POPULAR CARD — Track list
+// POPULAR CARD — Track list (theme-tinted card + ambient rows)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-popular {
+  // Card surface picks up the user's selected theme
+  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 16%, rgba(20, 20, 24, 0.82));
+  border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 28%, transparent);
+}
+
 .ap2-popular__header {
   display: flex;
   align-items: center;
@@ -776,31 +1176,30 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
 .ap2-popular__list {
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 
 .ap2-track {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 8px;
-  border-radius: 8px;
-  transition: background 0.15s;
+  padding: 10px 10px;
+  border-radius: 10px;
+  // Per-song ambient tint is applied inline; this is the neutral fallback
+  background-color: rgba(255, 255, 255, 0.03);
+  transition: filter 0.15s, transform 0.15s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.04);
+    filter: brightness(1.18);
+    transform: translateX(2px);
 
     .ap2-track__play { opacity: 1; }
     .ap2-track__num { opacity: 0; }
   }
 
-  // Subtle separator between tracks
-  & + & {
-    border-top: 1px solid rgba(255, 255, 255, 0.04);
-  }
-
   @media (max-width: 600px) {
     gap: 10px;
-    padding: 8px 4px;
+    padding: 8px 8px;
   }
 }
 
@@ -809,10 +1208,11 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   text-align: center;
   font-family: 'DM Sans', sans-serif;
   font-size: 14px;
-  font-weight: 500;
-  color: $ap2-text-3;
+  font-weight: 600;
+  color: $ap2-text-1;
   flex-shrink: 0;
   transition: opacity 0.15s;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .ap2-track__art {
@@ -821,6 +1221,7 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   border-radius: 6px;
   object-fit: cover;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 
   @media (max-width: 600px) {
     width: 40px;
@@ -846,34 +1247,40 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: color 0.2s;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 
-  &:hover { color: $ap2-blue-raw; }
+  &:hover { color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff); }
 }
 
 .ap2-track__plays {
   font-family: 'DM Sans', sans-serif;
   font-size: 12px;
-  color: $ap2-text-3;
+  color: $ap2-text-2;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .ap2-track__play {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  color: $ap2-text-1;
+  // Play button always reflects the user's theme
+  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 32%, rgba(0, 0, 0, 0.3));
+  border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, transparent);
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
+  transition: opacity 0.15s, background 0.15s, transform 0.15s;
 
   svg { margin-left: 1px; }
 
-  &:hover { background: $ap2-blue; }
+  &:hover {
+    background: var(--unis-primary, #{$ap2-blue-raw});
+    transform: scale(1.08);
+  }
 
   @media (hover: none) { opacity: 1; }
 }
