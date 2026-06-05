@@ -543,7 +543,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                   <img src={artistPhoto} alt={artist.username} className="ap2-support__avatar" />
                   <div className="ap2-support__copy">
                     <h3 className="ap2-support__title">Support {artist.username}</h3>
-                    <p className="ap2-support__sub">Back the artist directly — 60% goes straight to them</p>
+                    <p className="ap2-support__sub">Back the artist directly</p>
                   </div>
                 </div>
                 <div className="ap2-support__actions">
