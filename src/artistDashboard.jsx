@@ -931,9 +931,9 @@ const ArtistDashboard = () => {
             <section className="artist-section">
               <div className="artist-section__head">
                 <div>
-                  <span className="artist-section__eyebrow">Today on Unis</span>
+                  <span className="artist-section__eyebrow">Stats On Unis</span>
                   <h2>
-                    Artist <em>momentum</em>
+                    Your <em>fanbases</em>
                   </h2>
                 </div>
               </div>
