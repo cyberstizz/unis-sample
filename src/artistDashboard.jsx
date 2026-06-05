@@ -21,6 +21,7 @@ import {
   ChevronDown,
   Compass,
   Gauge,
+  BarChart3,
   Activity,
   Lock,
   Clock, // ★ H: pending supported-artist display
@@ -38,6 +39,7 @@ import CashoutPanel from './CashoutPanel';
 import FanbaseFunnel from './fanbaseFunnle'; // ★ analytics: real fanbase funnel section
 import SupportedArtistPicker from './SupportedArtistPicker'; // ★ H: change-artist picker (same component Profile uses)
 import './artistDashboard.scss';
+import SongStatsModal from './SongStatsModal'; // ★ D: per-song funnel modal
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import { useAuth } from './context/AuthContext';
@@ -146,6 +148,7 @@ const ArtistDashboard = () => {
   const [voteHistory, setVoteHistory] = useState([]);
   const [votesLoading, setVotesLoading] = useState(true);
   const [votesError, setVotesError] = useState(null);
+  const [statsSong, setStatsSong] = useState(null); 
 
   const [awards, setAwards] = useState([]);
   const [awardsPage, setAwardsPage] = useState(0);
@@ -1144,7 +1147,16 @@ const ArtistDashboard = () => {
                         </div>
                       </div>
 
-                      <div className="artist-song-card__actions">
+<div className="artist-song-card__actions">
+                        {/* ★ D: per-song stats */}
+                        <button
+                          type="button"
+                          onClick={() => setStatsSong(song)}
+                          aria-label={`View stats for ${song.title}`}
+                        >
+                          <BarChart3 size={16} />
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => setEditingSong(song)}
@@ -1651,6 +1663,13 @@ const ArtistDashboard = () => {
             setShowArtistPicker(false);
             handleProfileUpdate();
           }}
+        />
+
+        <SongStatsModal
+          show={!!statsSong}
+          onClose={() => setStatsSong(null)}
+          artistId={user.userId}
+          song={statsSong}
         />
 
         {editingLyricsSong && (
