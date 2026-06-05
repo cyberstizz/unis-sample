@@ -1,15 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Heart, Vote, UserPlus, Star, Info } from 'lucide-react';
+import { Play, Heart, Vote, UserPlus, Star, Info, ArrowUp, ArrowDown } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import './fanbaseFunnel.scss';
-
-/**
- * FanbaseFunnel
- * -------------
- * listener -> liker -> voter -> follower -> supporter, plus the named people
- * who actually back this artist. 100% live data from existing tables.
- */
 
 const STAGE_ICONS = {
   listeners: Play,
@@ -19,7 +12,6 @@ const STAGE_ICONS = {
   supporters: Star,
 };
 
-// plain-language definition per stage
 const STAGE_TIPS = {
   listeners:
     "Unique people who've played at least one of your songs past the count threshold (15s / 25%). One person counts once here, no matter how many times they replay.",
@@ -33,6 +25,24 @@ const STAGE_TIPS = {
 
 const REPEAT_TIP =
   'Total plays ÷ unique listeners. Above 1.0× means people replay your music instead of listening once and leaving — a sign your songs stick.';
+
+// ★ period: toggle options. Keys match the backend's accepted values.
+const PERIODS = [
+  { key: 'today', label: 'Today' },
+  { key: 'week', label: 'Week' },
+  { key: 'month', label: 'Month' },
+  { key: 'year', label: 'Year' },
+  { key: 'all', label: 'All time' },
+];
+
+// ★ period: label for the "vs previous" comparison line
+const PREV_LABEL = {
+  today: 'vs yesterday',
+  week: 'vs last week',
+  month: 'vs last month',
+  year: 'vs last year',
+  all: '',
+};
 
 const formatNumber = (n) => Number(n || 0).toLocaleString();
 
@@ -49,15 +59,16 @@ const FanbaseFunnel = ({ artistId }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [openTip, setOpenTip] = useState(null); // which tip is tapped open (mobile)
+  const [openTip, setOpenTip] = useState(null);
+  const [period, setPeriod] = useState('all'); // ★ period: default all-time
 
-  const fetchFanbase = useCallback(async (id) => {
+  const fetchFanbase = useCallback(async (id, p) => {
     if (!id) return;
     setLoading(true);
     setError(null);
     try {
       const res = await apiCall({
-        url: `/v1/artist-analytics/artist/${id}/fanbase`,
+        url: `/v1/artist-analytics/artist/${id}/fanbase?period=${p}`,
         method: 'get',
         useCache: false,
       });
@@ -71,10 +82,9 @@ const FanbaseFunnel = ({ artistId }) => {
   }, []);
 
   useEffect(() => {
-    fetchFanbase(artistId);
-  }, [artistId, fetchFanbase]);
+    fetchFanbase(artistId, period);
+  }, [artistId, period, fetchFanbase]);
 
-  // tap-to-open tips close when tapping anywhere outside a tip control
   useEffect(() => {
     if (!openTip) return;
     const handleOutside = (e) => {
@@ -84,8 +94,7 @@ const FanbaseFunnel = ({ artistId }) => {
     return () => document.removeEventListener('click', handleOutside);
   }, [openTip]);
 
-  const toggleTip = (key) =>
-    setOpenTip((prev) => (prev === key ? null : key));
+  const toggleTip = (key) => setOpenTip((prev) => (prev === key ? null : key));
 
   const funnel = data?.funnel || [];
   const topOfFunnel = funnel.length > 0 ? Number(funnel[0].value || 0) : 0;
@@ -97,14 +106,15 @@ const FanbaseFunnel = ({ artistId }) => {
 
   const hasAnyFanbase = funnel.some((s) => Number(s.value || 0) > 0);
   const maxGrowth = growth.reduce((m, g) => Math.max(m, Number(g.count || 0)), 0);
+  const prevLabel = PREV_LABEL[period] || '';
 
   return (
     <section className="fanbase" aria-labelledby="fanbase-title">
       <div className="fanbase__head">
         <div>
-          <span className="artist-section__eyebrow">Your Fanbase Funnel</span>
+          <span className="artist-section__eyebrow">The Unis advantage</span>
           <h2 id="fanbase-title">
-            Your <em>momentum</em>
+            Your <em>fanbase</em>
           </h2>
         </div>
 
@@ -138,6 +148,22 @@ const FanbaseFunnel = ({ artistId }) => {
         )}
       </div>
 
+      {/* ★ period: segmented toggle */}
+      <div className="fanbase__periods" role="tablist" aria-label="Time range">
+        {PERIODS.map((opt) => (
+          <button
+            key={opt.key}
+            type="button"
+            role="tab"
+            aria-selected={period === opt.key}
+            className={`fanbase__period ${period === opt.key ? 'is-active' : ''}`}
+            onClick={() => setPeriod(opt.key)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
       <p className="fanbase__lede">
         Most platforms stop at play counts. Unis shows you the journey from a
         first listen all the way to a real supporter — and exactly who those
@@ -152,7 +178,7 @@ const FanbaseFunnel = ({ artistId }) => {
       ) : error ? (
         <div className="fanbase__state fanbase__state--error">
           <p>{error}</p>
-          <button type="button" onClick={() => fetchFanbase(artistId)}>
+          <button type="button" onClick={() => fetchFanbase(artistId, period)}>
             Retry
           </button>
         </div>
@@ -172,6 +198,12 @@ const FanbaseFunnel = ({ artistId }) => {
                   : 8;
               const tip = STAGE_TIPS[stage.key];
               const isSupporter = stage.key === 'supporters';
+
+              // ★ period: delta arrow (null on all-time, or when no prev data)
+              const delta = stage.delta;
+              const hasDelta = delta !== null && delta !== undefined;
+              const deltaUp = hasDelta && delta > 0;
+              const deltaDown = hasDelta && delta < 0;
 
               return (
                 <div className="fanbase-stage" key={stage.key}>
@@ -193,9 +225,25 @@ const FanbaseFunnel = ({ artistId }) => {
                       <Icon size={16} />
                     </span>
                     <span className="fanbase-stage__label">{stage.label}</span>
+
                     <strong className="fanbase-stage__value">
                       {formatNumber(value)}
                     </strong>
+
+                    {/* ★ period: up/down delta vs previous period */}
+                    {hasDelta && (
+                      <span
+                        className={`fanbase-stage__delta ${
+                          deltaUp ? 'is-up' : deltaDown ? 'is-down' : 'is-flat'
+                        }`}
+                        title={`${delta > 0 ? '+' : ''}${delta} ${prevLabel}`}
+                      >
+                        {deltaUp && <ArrowUp size={12} />}
+                        {deltaDown && <ArrowDown size={12} />}
+                        {deltaUp ? '+' : ''}
+                        {delta}
+                      </span>
+                    )}
 
                     {tip && (
                       <span
@@ -230,16 +278,16 @@ const FanbaseFunnel = ({ artistId }) => {
           {!hasAnyFanbase && (
             <div className="fanbase__empty">
               <Star size={26} />
-              <h3>Your fanbase starts here</h3>
+              <h3>{period === 'all' ? 'Your fanbase starts here' : 'No activity in this period'}</h3>
               <p>
-                As listeners discover, like, vote for, follow, and support you,
-                this is where you'll watch casual plays turn into a real
-                community.
+                {period === 'all'
+                  ? "As listeners discover, like, vote for, follow, and support you, this is where you'll watch casual plays turn into a real community."
+                  : 'Try a wider time range, or check back as new activity comes in.'}
               </p>
             </div>
           )}
 
-          {/* ---------------- Supporter growth (real data) ---------------- */}
+          {/* ---------------- Supporter growth (always 30d) ---------------- */}
           {growth.length > 0 && (
             <div className="fanbase__growth">
               <div className="fanbase__growth-head">
@@ -267,15 +315,13 @@ const FanbaseFunnel = ({ artistId }) => {
             </div>
           )}
 
-          {/* ---------------- Named supporters ---------------- */}
+          {/* ---------------- Named supporters (always all-time) ---------------- */}
           <div className="fanbase__supporters">
             <div className="fanbase__supporters-head">
               <span className="artist-section__eyebrow">Who's backing you</span>
               <h3>
                 {supporters > 0
-                  ? `${formatNumber(supporters)} ${
-                      supporters === 1 ? 'supporter' : 'supporters'
-                    }`
+                  ? `${formatNumber(supporters)} ${supporters === 1 ? 'supporter' : 'supporters'}`
                   : 'Your supporters'}
               </h3>
             </div>
