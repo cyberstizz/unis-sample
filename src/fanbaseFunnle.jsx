@@ -112,9 +112,9 @@ const FanbaseFunnel = ({ artistId }) => {
     <section className="fanbase" aria-labelledby="fanbase-title">
       <div className="fanbase__head">
         <div>
-          <span className="artist-section__eyebrow">The Unis advantage</span>
+          <span className="artist-section__eyebrow">Your Audience Funnel</span>
           <h2 id="fanbase-title">
-            Your <em>fanbase</em>
+            Your <em>momentum</em>
           </h2>
         </div>
 
