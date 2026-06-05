@@ -1035,38 +1035,34 @@ const ArtistDashboard = () => {
             </div>
           </ArtistCollapsibleSection>
 
-          <section className="artist-section">
-            <div className="artist-section__head">
-              <div>
-                <span className="artist-section__eyebrow">Local advantage</span>
-                <h2>
-                  Territory <em>signal</em>
-                </h2>
-              </div>
-            </div>
+  {/* ★ collapsible: Territory signal (collapsed by default) */}
+          <ArtistCollapsibleSection
+              eyebrow="Local advantage"
+              title={<>Territory <em>signal</em></>}
+              defaultOpen={false}
+            >
+              <div className="artist-territory-grid">
+                <div className="artist-territory-card">
+                  <div className="artist-territory-card__icon">
+                    <MapPin size={22} />
+                  </div>
+                  <div>
+                    <span>Home base</span>
+                    <strong>{artistJurisdiction}</strong>
+                    <p>Your local identity is the foundation for Unis discovery.</p>
+                  </div>
+                </div>
 
-            <div className="artist-territory-grid">
-              <div className="artist-territory-card">
-                <div className="artist-territory-card__icon">
-                  <MapPin size={22} />
+                <div className="artist-territory-card">
+                  <div className="artist-territory-card__icon">
+                    <Music size={22} />
+                  </div>
+                  <div>
+                    <span>Primary lane</span>
+                    <strong>{artistGenre}</strong>
+                    <p>Your genre connects you to awards, leaderboards, and local competition.</p>
+                  </div>
                 </div>
-                <div>
-                  <span>Home base</span>
-                  <strong>{artistJurisdiction}</strong>
-                  <p>Your local identity is the foundation for Unis discovery.</p>
-                </div>
-              </div>
-
-              <div className="artist-territory-card">
-                <div className="artist-territory-card__icon">
-                  <Music size={22} />
-                </div>
-                <div>
-                  <span>Primary lane</span>
-                  <strong>{artistGenre}</strong>
-                  <p>Your genre connects you to awards, leaderboards, and local competition.</p>
-                </div>
-              </div>
 
               <div className="artist-territory-card artist-territory-card--wide">
                 <div className="artist-territory-card__icon">
@@ -1082,17 +1078,17 @@ const ArtistDashboard = () => {
                 </div>
               </div>
             </div>
-          </section>
 
-          <section className="artist-section">
-            <div className="artist-section__head">
-              <div>
-                <span className="artist-section__eyebrow">Catalog command</span>
-                <h2>
-                  Your <em>songs</em>
-                </h2>
-              </div>
+          </ArtistCollapsibleSection>
 
+
+          {/* ★ collapsible: Catalog (collapsed by default) */}
+          <ArtistCollapsibleSection
+            eyebrow="Catalog command"
+            title={<>Your <em>songs</em></>}
+            defaultOpen={false}
+          >
+            <div className="artist-catalog-actions">
               <button
                 type="button"
                 className="artist-btn artist-btn--primary artist-btn--small"
@@ -1190,13 +1186,14 @@ const ArtistDashboard = () => {
                     className="artist-btn artist-btn--primary"
                     onClick={() => setShowUploadWizard(true)}
                   >
-                    <Upload size={14} /> Upload first song
+                <Upload size={14} /> Upload first song
                   </button>
                 </div>
               )}
             </div>
-          </section>
+          </ArtistCollapsibleSection>
 
+          {/* ★ F: trophy case is now collapsible
           {/* ★ F: trophy case is now collapsible + height-capped so a heavy
               award-winner no longer pushes the whole page down. The featured
               win + a count summary stay visible; the full list scrolls inside
@@ -1205,7 +1202,7 @@ const ArtistDashboard = () => {
             eyebrow="Recognition"
             title={<>Trophy <em>case</em></>}
             className="artist-trophy-section"
-            defaultOpen={true}
+            defaultOpen={false}
           >
             {awardsLoading ? (
               <SectionLoader label="Loading awards..." />
@@ -1332,16 +1329,12 @@ const ArtistDashboard = () => {
             </section>
           )}
 
-          <section className="artist-section">
-            <div className="artist-section__head">
-              <div>
-                <span className="artist-section__eyebrow">Next move</span>
-                <h2>
-                  Growth <em>checklist</em>
-                </h2>
-              </div>
-            </div>
-
+      {/* ★ collapsible: Growth checklist (collapsed by default) */}
+          <ArtistCollapsibleSection
+            eyebrow="Next move"
+            title={<>Growth <em>checklist</em></>}
+            defaultOpen={false}
+          >
             <div className="artist-next-grid">
               {nextMoves.length > 0 ? (
                 nextMoves.map((move, index) => (
@@ -1369,12 +1362,18 @@ const ArtistDashboard = () => {
                   <span>
                     Keep building <ArrowRight size={13} />
                   </span>
-                </div>
+</div>
               )}
             </div>
-          </section>
+          </ArtistCollapsibleSection>
 
-          <section className="artist-section artist-social-card">
+          {/* ★ collapsible: Social links (collapsed by default) */}
+          <ArtistCollapsibleSection
+            eyebrow="Artist presence"
+            title={<>Social <em>links</em></>}
+            defaultOpen={false}
+            className="artist-social-card"
+          >
             <div className="artist-section__head">
               <div>
                 <span className="artist-section__eyebrow">Artist presence</span>
@@ -1418,8 +1417,7 @@ const ArtistDashboard = () => {
                 />
               </div>
             </div>
-          </section>
-
+          </ArtistCollapsibleSection>
           {/* ★ H: full supported-artist section (ported from Profile.jsx).
               Always rendered — legacy artists with a null supported artist get
               a graceful "choose an artist" state instead of the section
@@ -1428,7 +1426,7 @@ const ArtistDashboard = () => {
             eyebrow="Community"
             title={<>You <em>support</em></>}
             className="artist-support-section"
-            defaultOpen={true}
+            defaultOpen={false}
           >
             {supportedArtist ? (
               <div className="artist-support-feature">
@@ -1508,35 +1506,27 @@ const ArtistDashboard = () => {
             )}
           </ArtistCollapsibleSection>
 
-          <section className="artist-section">
-            <div className="artist-section__head">
-              <div>
-                <span className="artist-section__eyebrow">Network</span>
-                <h2>
-                  Refer <em>&amp; earn</em>
-                </h2>
-              </div>
-            </div>
-
+          {/* ★ collapsible: Referral (collapsed by default) */}
+          <ArtistCollapsibleSection
+            eyebrow="Network"
+            title={<>Refer <em>&amp; earn</em></>}
+            defaultOpen={false}
+          >
             <ReferralCodeCard
               referralCode={referralCode}
               username={displayName}
               isArtist={true}
             />
-          </section>
+          </ArtistCollapsibleSection>
 
-          <section className="artist-section">
-            <div className="artist-section__head">
-              <div>
-                <span className="artist-section__eyebrow">Personalization</span>
-                <h2>
-                  Color <em>theme</em>
-                </h2>
-              </div>
-            </div>
-
+          {/* ★ collapsible: Theme (collapsed by default) */}
+          <ArtistCollapsibleSection
+            eyebrow="Personalization"
+            title={<>Color <em>theme</em></>}
+            defaultOpen={false}
+          >
             <ThemePicker userId={user?.userId} />
-          </section>
+          </ArtistCollapsibleSection>
 
           <section className="artist-danger">
             <div>

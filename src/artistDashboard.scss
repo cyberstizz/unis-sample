@@ -1996,3 +1996,11 @@
     }
   }
 }
+
+
+// ★ collapsible catalog: upload button row (was in the section head)
+.artist-catalog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
