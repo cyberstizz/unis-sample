@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import UploadWizard from './uploadWizard';
 import ChangeDefaultSongWizard from './changeDefaultSongWizard';
+import SongSalesModal from './SongSalesModal'; // ★ sales: per-song revenue modal
 import EditProfileWizard from './editProfileWizard';
 import DeleteAccountWizard from './deleteAccountWizard';
 import EditSongWizard from './editSongWizard';
@@ -149,6 +150,7 @@ const ArtistDashboard = () => {
   const [votesLoading, setVotesLoading] = useState(true);
   const [votesError, setVotesError] = useState(null);
   const [statsSong, setStatsSong] = useState(null); 
+  const [salesSong, setSalesSong] = useState(null); // ★ sales: song whose sales modal is open
 
   const [awards, setAwards] = useState([]);
   const [awardsPage, setAwardsPage] = useState(0);
@@ -1157,6 +1159,15 @@ const ArtistDashboard = () => {
                           <BarChart3 size={16} />
                         </button>
 
+                        {/* ★ sales: per-song revenue */}
+                        <button
+                          type="button"
+                          onClick={() => setSalesSong(song)}
+                          aria-label={`View sales for ${song.title}`}
+                        >
+                          <DollarSign size={16} />
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => setEditingSong(song)}
@@ -1670,6 +1681,14 @@ const ArtistDashboard = () => {
           onClose={() => setStatsSong(null)}
           artistId={user.userId}
           song={statsSong}
+        />
+
+        {/* ★ sales: per-song revenue modal */}
+        <SongSalesModal
+          show={!!salesSong}
+          onClose={() => setSalesSong(null)}
+          artistId={user.userId}
+          song={salesSong}
         />
 
         {editingLyricsSong && (
