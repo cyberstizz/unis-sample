@@ -4,7 +4,6 @@ import {
 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
-import useDominantColor from './hooks/useDominantColor'; 
 import './songStatsModal.scss';
 
 const STAGE_ICONS = {
@@ -88,13 +87,7 @@ const SongStatsModal = ({ show, onClose, artistId, song }) => {
 
   const songId = song?.songId || song?.id;
   const artworkUrl = buildUrl(song?.artworkUrl) || null;
-  const rgb = useDominantColor(artworkUrl); // ★ ambient color (null → theme fallback)
-
-  const ambientStyle = rgb
-    ? {
-        backgroundImage: `linear-gradient(160deg, rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.42), rgba(8,8,12,0.92) 62%), var(--unis-panel)`,
-      }
-    : undefined;
+  
 
   const fetchFunnel = useCallback(
     async (p) => {
@@ -160,14 +153,22 @@ const SongStatsModal = ({ show, onClose, artistId, song }) => {
 
   return (
     <div className="songstats-overlay" onClick={onClose}>
-      <div
+     <div
         className="songstats-modal"
-        style={ambientStyle}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={`Stats for ${song?.title || 'song'}`}
       >
+        {/* ★ ambient: blurred artwork bleed, same technique as FindPage */}
+        {artworkUrl && (
+          <div
+            className="songstats-ambient"
+            style={{ backgroundImage: `url(${artworkUrl})` }}
+            aria-hidden="true"
+          />
+        )}
+        
         <button type="button" className="songstats-close" onClick={onClose} aria-label="Close">
           <X size={22} />
         </button>

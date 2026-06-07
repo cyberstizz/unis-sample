@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { X, DollarSign, ShoppingBag, TrendingUp } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
-import useDominantColor from './hooks/useDominantColor';
 import './songSalesModal.scss';
 
 const money = (cents) => `$${(Number(cents || 0) / 100).toFixed(2)}`;
@@ -152,13 +151,8 @@ const SongSalesModal = ({ show, onClose, artistId, song }) => {
 
   const songId = song?.songId || song?.id;
   const artworkUrl = buildUrl(song?.artworkUrl) || null;
-  const rgb = useDominantColor(artworkUrl);
 
-  const ambientStyle = rgb
-    ? {
-        backgroundImage: `linear-gradient(160deg, rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.42), rgba(8,8,12,0.92) 62%), var(--unis-panel)`,
-      }
-    : undefined;
+  
 
   const fetchSales = useCallback(async () => {
     if (!artistId || !songId) return;
@@ -194,7 +188,7 @@ const SongSalesModal = ({ show, onClose, artistId, song }) => {
     <div className="songsales-overlay" onClick={onClose}>
       <div
         className="songsales-modal"
-        style={ambientStyle}
+        style={{ backgroundImage: `url(${artworkUrl})` }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -203,6 +197,10 @@ const SongSalesModal = ({ show, onClose, artistId, song }) => {
         <button type="button" className="songsales-close" onClick={onClose} aria-label="Close">
           <X size={22} />
         </button>
+
+        <div className="songsales-ambient" style={{ backgroundImage: `url(${artworkUrl})` }} aria-hidden="true" />
+
+
 
         <div className="songsales-head">
           {artworkUrl && (
