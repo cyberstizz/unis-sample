@@ -150,7 +150,7 @@ $header-height: 75px;
   gap: 6px;
   padding: 7px 16px;
   border-radius: 100px;
-  background: linear-gradient(135deg, $unis-blue-bright 0%, lighten($unis-blue-bright, 6%) 100%);
+  background: linear-gradient(135deg, $unis-blue-bright 0%, $unis-blue-bright, 6% 100%);
   border: 1px solid rgba($unis-silver, 0.25);
   color: #fff;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;

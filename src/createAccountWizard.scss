@@ -267,7 +267,7 @@ $step-gradients: (
   // Dynamic gradient background per step
   @for $i from 1 through 8 {
     &[data-step="#{$i}"] {
-      background: map-get($step-gradients, $i);
+      background: $unis-blue;
     }
   }
   
@@ -1408,10 +1408,10 @@ $step-gradients: (
     
     @for $i from 1 through 50 {
       &:nth-child(#{$i}) {
-        left: random(100) * 1%;
-        animation-delay: random(20) * 0.1s;
+        left: 51 * 1%;
+        animation-delay: 11 * 0.1s;
         background: nth(($gradient-purple, $gradient-pink, $gradient-orange, $gradient-teal, $gradient-green, $gradient-blue), random(6));
-        transform: rotate(random(360) * 1deg);
+        transform: 200 * 1deg;
       }
     }
   }

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { X, DollarSign, ShoppingBag, TrendingUp } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
-import useDominantColor from './useDominantColor';
+import useDominantColor from './hooks/useDominantColor';
 import './songSalesModal.scss';
 
 const money = (cents) => `$${(Number(cents || 0) / 100).toFixed(2)}`;
