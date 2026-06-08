@@ -1050,6 +1050,8 @@ const ArtistDashboard = () => {
 
           {/* ★ collapsible: Territory signal (collapsed by default) */}
           <ArtistCollapsibleSection
+              id="nav-territory"
+              onRegister={registerSection}
               eyebrow="Local advantage"
               title={<>Territory <em>signal</em></>}
               defaultOpen={false}
@@ -1094,9 +1096,10 @@ const ArtistDashboard = () => {
 
           </ArtistCollapsibleSection>
 
-
           {/* ★ collapsible: Catalog (collapsed by default) */}
           <ArtistCollapsibleSection
+            id="nav-catalog"
+            onRegister={registerSection}
             eyebrow="Catalog command"
             title={<>Songs </>}
             defaultOpen={false}
@@ -1230,6 +1233,8 @@ const ArtistDashboard = () => {
               win + a count summary stay visible; the full list scrolls inside
               a fixed-height box and "Load more" lives inside that box. */}
           <ArtistCollapsibleSection
+            id="nav-trophy"
+            onRegister={registerSection}
             eyebrow="Recognition"
             title={<>Trophy <em>case</em></>}
             className="artist-trophy-section"
@@ -1362,6 +1367,8 @@ const ArtistDashboard = () => {
 
       {/* ★ collapsible: Growth checklist (collapsed by default) */}
           <ArtistCollapsibleSection
+            id="nav-growth"
+            onRegister={registerSection}
             eyebrow="Next move"
             title={<>Growth <em>checklist</em></>}
             defaultOpen={false}
@@ -1400,6 +1407,8 @@ const ArtistDashboard = () => {
 
           {/* ★ collapsible: Social links (collapsed by default) */}
           <ArtistCollapsibleSection
+            id="nav-social" 
+            onRegister={registerSection}
             eyebrow="Artist presence"
             title={<>Social <em>links</em></>}
             defaultOpen={false}
@@ -1454,6 +1463,8 @@ const ArtistDashboard = () => {
               a graceful "choose an artist" state instead of the section
               disappearing. Wrapped in the global collapsible per the design rule. */}
           <ArtistCollapsibleSection
+            id="nav-support" 
+            onRegister={registerSection}
             eyebrow="Community"
             title={<>You <em>support</em></>}
             className="artist-support-section"
@@ -1539,6 +1550,8 @@ const ArtistDashboard = () => {
 
           {/* ★ collapsible: Referral (collapsed by default) */}
           <ArtistCollapsibleSection
+            id="nav-referral" 
+            onRegister={registerSection}
             eyebrow="Network"
             title={<>Refer <em>&amp; earn</em></>}
             defaultOpen={false}
@@ -1552,6 +1565,8 @@ const ArtistDashboard = () => {
 
           {/* ★ collapsible: Theme (collapsed by default) */}
           <ArtistCollapsibleSection
+            id="nav-theme" 
+            onRegister={registerSection}
             eyebrow="Personalization"
             title={<>Color <em>theme</em></>}
             defaultOpen={false}
