@@ -42,6 +42,7 @@ import ReferralCodeCard from './ReferralCodeCard';
 import ThemePicker from './ThemePicker';
 import CashoutPanel from './CashoutPanel';
 import FanbaseFunnel from './fanbaseFunnle'; // ★ analytics: real fanbase funnel section
+import SupportersSection from './SupportersSection'; // ★ item 5: supporters split out
 import SupportedArtistPicker from './SupportedArtistPicker'; // ★ H: change-artist picker (same component Profile uses)
 import './artistDashboard.scss';
 import SongStatsModal from './SongStatsModal'; // ★ D: per-song funnel modal
@@ -501,6 +502,7 @@ const ArtistDashboard = () => {
   const navItems = [
     { id: 'nav-momentum', label: 'Fanbase', icon: Gauge },
     { id: 'nav-fanbase', label: 'Audience', icon: BarChart3 },
+    { id: 'nav-supporters', label: 'Supporters', icon: Users }, // ★ item 5
     { id: 'nav-territory', label: 'Territory', icon: MapPin },
     { id: 'nav-catalog', label: 'Catalog', icon: Music },
     { id: 'nav-trophy', label: 'Trophies', icon: Trophy },
@@ -1187,6 +1189,11 @@ const ArtistDashboard = () => {
             ambientImage={featuredArtwork}
           />
           </div>          
+
+           {/* ★ Supporters section */}
+          <div id="nav-supporters">
+            <SupportersSection artistId={user?.userId} />
+          </div>
 
           {/* ★ collapsible: Territory signal (collapsed by default) */}
           <ArtistCollapsibleSection

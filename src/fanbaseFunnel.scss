@@ -1,16 +1,16 @@
 // =============================================================================
-// FanbaseFunnel — listener -> supporter conversion + named supporters
-// Uses the existing --unis-* design tokens so it matches the dashboard exactly.
+// FanbaseFunnel — listener -> supporter conversion + advanced metrics.
+// Supporters grid/#1/growth now live in SupportersSection (own section).
 // =============================================================================
 
 .fanbase {
   width: 100%;
   min-width: 0;
-  position: relative;            // ★ item 5: ambient layer positioning context
-  overflow: hidden;              // ★ guard: nothing inside can widen the page
+  position: relative;              // ★ ambient layer positioning context
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
   padding: 28px;
   border-radius: var(--unis-radius-lg);
   background:
@@ -26,26 +26,15 @@
   @media (max-width: 680px) {
     padding: 20px 18px;
 
-
-    .fanbase__title-wrap {
-      gap: 10px;
-    }
-
-    .fanbase__artist-avatar {
-      width: 46px;
-      height: 46px;
-    }
-
-    .fanbase__head h2 {
-      font-size: 24px;
-    }
-
+    .fanbase__title-wrap { gap: 10px; }
+    .fanbase__artist-avatar { width: 46px; height: 46px; }
+    .fanbase__head h2 { font-size: 24px; }
   }
 
   &__head {
     display: flex;
-    flex-wrap: wrap;                 // ★ item 5: ratio drops below on narrow widths
-    align-items: flex-start;         // ★ item 5: fixes the cramped top alignment
+    flex-wrap: wrap;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
 
@@ -95,27 +84,13 @@
     }
   }
 
-  &__lede {
-    // ★ item 5: marketing paragraph replaced with a quiet one-liner
-    margin: 2px auto 0;
-    text-align: center;
-    color: var(--unis-text-3);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-  }
-
   // ---- loading / error states ---------------------------------------------
   &__state {
     padding: 32px;
     text-align: center;
     color: var(--unis-text-2);
 
-    p {
-      margin: 12px 0 0;
-      font-size: 14px;
-    }
+    p { margin: 12px 0 0; font-size: 14px; }
 
     &--error {
       color: #fca5a5;
@@ -130,9 +105,7 @@
         cursor: pointer;
         font-weight: 700;
 
-        &:hover {
-          background: rgba(255, 255, 255, 0.1);
-        }
+        &:hover { background: rgba(255, 255, 255, 0.1); }
       }
     }
   }
@@ -147,16 +120,19 @@
     animation: spin 0.8s linear infinite;
   }
 }
+
 .fanbase__title-wrap {
   display: flex;
   align-items: flex-start;
   gap: 14px;
-}
 
-.fanbase__title-wrap > div:last-child {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  > div:last-child {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .artist-section__eyebrow { white-space: nowrap; }
 }
 
 .fanbase__artist-avatar {
@@ -166,11 +142,9 @@
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 16px;
-
   border: 3px solid var(--unis-primary);
-
   box-shadow:
-    0 0 0 4px rgba(255,255,255,.04),
+    0 0 0 4px rgba(255, 255, 255, 0.04),
     0 0 30px var(--unis-primary-glow);
 
   img {
@@ -181,10 +155,115 @@
   }
 }
 
+.fanbase__artist-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--unis-text);
+  font-size: 26px;
+  font-weight: 850;
+  background: linear-gradient(135deg, var(--unis-primary-soft), rgba(0, 0, 0, 0.5));
+}
+
+// =============================================================================
+// ★ item 5: single-row control bar
+// =============================================================================
+.fanbase__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--unis-radius);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--unis-border);
+}
+
+.fanbase__control {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  &--wide { flex: 1.4 1 0; }
+
+  > span {
+    color: var(--unis-text-3);
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  select {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px 12px;
+    border-radius: var(--unis-radius-sm);
+    background: rgba(0, 0, 0, 0.32);
+    border: 1px solid var(--unis-border-hi);
+    color: var(--unis-text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 750;
+    cursor: pointer;
+    color-scheme: dark;            // ★ native arrow + option list render dark
+    text-overflow: ellipsis;       // ★ clip long values (e.g. Downtown Harlem)
+
+    &:hover:not(:disabled) { border-color: var(--unis-primary); }
+
+    &:focus {
+      outline: none;
+      border-color: var(--unis-primary);
+      box-shadow: 0 0 0 3px var(--unis-primary-soft);
+    }
+
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  @media (max-width: 600px) {
+    flex: 1 1 calc(50% - 5px);
+  }
+}
+
+// =============================================================================
+// ★ item 5: horizontal active-selection summary
+// =============================================================================
+.fanbase__summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: -4px;
+}
+
+.fanbase__summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--unis-border);
+  color: var(--unis-text-2);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+
+  &--date {
+    background: var(--unis-primary-soft);
+    border-color: var(--unis-border-hi);
+    color: var(--unis-primary-2);
+    font-weight: 800;
+  }
+}
+
 // =============================================================================
 // Conversion funnel
 // =============================================================================
-
 .fanbase__funnel {
   display: flex;
   flex-direction: column;
@@ -204,14 +283,12 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
 
-      &.is-muted {
-        color: var(--unis-text-3);
-      }
+      &.is-muted { color: var(--unis-text-3); }
     }
   }
 
   &__bar {
-    position: relative;          // ★ positioning context for the tooltip
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -244,9 +321,7 @@
       }
 
       .fanbase-stage__label,
-      .fanbase-stage__value {
-        color: #fff;
-      }
+      .fanbase-stage__value { color: #fff; }
     }
 
     @media (max-width: 560px) {
@@ -281,13 +356,48 @@
     font-weight: 900;
     letter-spacing: -0.04em;
   }
+
+  &__delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 12px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+
+    &.is-up {
+      color: #86efac;
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.28);
+    }
+    &.is-down {
+      color: #fca5a5;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
+    &.is-flat {
+      color: var(--unis-text-3);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--unis-border);
+    }
+
+    .is-supporter & {
+      &.is-up, &.is-down, &.is-flat {
+        background: rgba(255, 255, 255, 0.18);
+        border-color: rgba(255, 255, 255, 0.3);
+        color: #fff;
+      }
+    }
+  }
 }
 
 // =============================================================================
-// ★ Tooltips — hover on desktop, tap on mobile. Fully out of flow so they
-//   can never stretch a bar or push the page wide.
+// Tooltips
 // =============================================================================
-
 .fanbase-help {
   position: relative;
   flex: none;
@@ -305,7 +415,7 @@
     background: rgba(255, 255, 255, 0.06);
     color: var(--unis-text-2);
     cursor: pointer;
-    transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+    transition: color 0.16s ease, background 0.16s ease;
 
     &:hover {
       color: var(--unis-text);
@@ -313,24 +423,21 @@
     }
   }
 
-  // info button on the highlighted supporter bar needs light contrast
   &--invert .fanbase-help__btn {
     border-color: rgba(255, 255, 255, 0.34);
     background: rgba(255, 255, 255, 0.2);
     color: #fff;
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
+    &:hover { background: rgba(255, 255, 255, 0.3); }
   }
 }
 
 .fanbase-tip {
   position: absolute;
-  bottom: calc(100% + 10px);     // float above the icon by default
+  bottom: calc(100% + 10px);
   right: 0;
   z-index: 50;
-  width: min(280px, 72vw);       // capped → never overflows the viewport
+  width: min(280px, 72vw);
   padding: 12px 14px;
   border-radius: var(--unis-radius-sm);
   background: var(--unis-panel);
@@ -340,16 +447,16 @@
   font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
-  letter-spacing: 0;             // override nearby uppercase/spacing
+  letter-spacing: 0;
   text-transform: none;
   text-align: left;
   white-space: normal;
   opacity: 0;
   transform: translateY(6px);
-  pointer-events: none;          // hidden state ignores the cursor
+  pointer-events: none;
   transition: opacity 0.16s ease, transform 0.16s ease;
 
-  &::after {                     // little arrow pointing down at the icon
+  &::after {
     content: '';
     position: absolute;
     top: 100%;
@@ -359,8 +466,6 @@
   }
 }
 
-// the ratio tooltip lives at the very top of the panel — flip it below the
-// icon so it doesn't clip against the panel's top edge
 .fanbase-help--below .fanbase-tip {
   bottom: auto;
   top: calc(100% + 10px);
@@ -374,7 +479,6 @@
   }
 }
 
-// reveal: hover/keyboard-focus (desktop) OR tapped-open (mobile)
 .fanbase-help:hover .fanbase-tip,
 .fanbase-help:focus-within .fanbase-tip,
 .fanbase-tip.is-open {
@@ -384,9 +488,8 @@
 }
 
 // =============================================================================
-// Empty states
+// Empty state
 // =============================================================================
-
 .fanbase__empty {
   padding: 30px 22px;
   text-align: center;
@@ -395,10 +498,7 @@
   background: rgba(0, 0, 0, 0.18);
   border: 1px dashed var(--unis-border-hi);
 
-  svg {
-    color: var(--unis-primary-2);
-    margin-bottom: 8px;
-  }
+  svg { color: var(--unis-primary-2); margin-bottom: 8px; }
 
   h3 {
     margin: 0;
@@ -413,229 +513,151 @@
     font-size: 13px;
     line-height: 1.55;
   }
-
-  &--soft {
-    padding: 22px;
-    border-style: solid;
-    border-color: var(--unis-border);
-    background: rgba(0, 0, 0, 0.14);
-
-    p {
-      margin: 0 auto;
-    }
-  }
 }
 
 // =============================================================================
-// Supporter growth sparkline (real per-day data)
+// ★ item 5: advanced metrics (mirrors the per-song modal)
 // =============================================================================
-
-.fanbase__growth {
-  padding: 20px 22px;
-  border-radius: var(--unis-radius);
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--unis-border);
-
-  &-head {
-    margin-bottom: 14px;
-
-    h3 {
-      margin: 0;
-      color: var(--unis-text);
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-  }
-}
-
-.fanbase__sparkline {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 72px;
-}
-
-.fanbase__bar {
-  flex: 1 1 auto;
-  min-width: 3px;
-  border-radius: 3px 3px 0 0;
-  background: linear-gradient(180deg, var(--unis-primary-2), var(--unis-primary));
-  opacity: 0.85;
-  transition: opacity 0.16s ease;
-
-  &:hover {
-    opacity: 1;
-  }
-}
-
-// =============================================================================
-// Named supporters
-// =============================================================================
-
-.fanbase__supporters {
-  padding: 22px;
-  border-radius: var(--unis-radius);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0.006)),
-    rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--unis-border);
-
-  &-head {
-    margin-bottom: 16px;
-
-    h3 {
-      margin: 0;
-      color: var(--unis-text);
-      font-size: 20px;
-      font-weight: 850;
-      letter-spacing: -0.03em;
-    }
-  }
-}
-
-.fanbase__supporter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 14px;
-}
-
-.fanbase-supporter {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 6px;
-
-  img,
-  &__placeholder {
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid var(--unis-border-hi);
-  }
-
-  &__placeholder {
-    display: grid;
-    place-items: center;
-    color: var(--unis-text);
-    font-size: 22px;
-    font-weight: 850;
-    background: linear-gradient(135deg, var(--unis-primary-soft), rgba(0, 0, 0, 0.5));
-  }
-
-  strong {
-    color: var(--unis-text);
-    font-size: 12px;
-    font-weight: 700;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  small {
-    color: var(--unis-text-3);
-    font-size: 10px;
-    letter-spacing: 0.04em;
-  }
-}
-
-// =============================================================================
-// ★ period: segmented time-range toggle
-// =============================================================================
-
-.fanbase__periods {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;          // ★ item 5a: center the wrapped "All time"
-  gap: 6px;
-  margin: -4px 0 0;
-  padding: 4px;
-  border-radius: var(--unis-radius-sm);
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px solid var(--unis-border);
-  width: fit-content;
-  max-width: 100%;
-}
-
-.fanbase__period {
-  flex: 0 0 auto;
-  padding: 8px 14px;
-  border: 0;
-  border-radius: calc(var(--unis-radius-sm) - 2px);
-  background: transparent;
-  color: var(--unis-text-2);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: color 0.16s ease, background 0.16s ease;
-
-  &:hover {
-    color: var(--unis-text);
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  &.is-active {
-    color: #fff;
-    background: var(--unis-primary);
-    box-shadow: 0 8px 20px -10px var(--unis-primary-glow);
-  }
-}
-
-// =============================================================================
-// ★ period: per-stage up/down delta vs previous period
-// =============================================================================
-
-.fanbase-stage__delta {
+.fanbase-advanced-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  margin-left: 12px;
-  padding: 3px 8px;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 9px 16px;
   border-radius: 999px;
+  border: 1px solid var(--unis-border-hi);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--unis-text);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
 
-  &.is-up {
-    color: #86efac;
-    background: rgba(34, 197, 94, 0.12);
-    border: 1px solid rgba(34, 197, 94, 0.28);
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--unis-primary);
   }
 
-  &.is-down {
-    color: #fca5a5;
-    background: rgba(248, 113, 113, 0.12);
-    border: 1px solid rgba(248, 113, 113, 0.3);
+  svg { transition: transform 0.18s ease; }
+  &.is-open svg { transform: rotate(180deg); }
+}
+
+.fanbase-advanced {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fanbase-adv-card {
+  padding: 18px;
+  border-radius: var(--unis-radius);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--unis-border);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+}
+
+.fanbase-completion {
+  strong {
+    display: block;
+    color: var(--unis-text);
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    line-height: 1;
   }
 
-  &.is-flat {
-    color: var(--unis-text-3);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--unis-border);
+  &__bar {
+    margin: 12px 0 10px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--unis-primary-2), var(--unis-primary));
+      transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
   }
 
-  // keep legible on the highlighted supporter bar
-  .is-supporter & {
-    &.is-up,
-    &.is-down,
-    &.is-flat {
-      background: rgba(255, 255, 255, 0.18);
-      border-color: rgba(255, 255, 255, 0.3);
-      color: #fff;
+  p {
+    margin: 0;
+    color: var(--unis-text-2);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
+.fanbase-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fanbase-source-row {
+  &__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+
+    span {
+      color: var(--unis-text-2);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    strong {
+      color: var(--unis-text);
+      font-size: 13px;
+      font-weight: 850;
+
+      small {
+        color: var(--unis-text-3);
+        font-weight: 700;
+      }
+    }
+  }
+
+  &__bar {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--unis-primary-2), var(--unis-primary));
+      transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
   }
 }
 
+.fanbase-adv-empty {
+  margin: 0;
+  color: var(--unis-text-3);
+  font-size: 12px;
+}
 
 // =============================================================================
-// ★ item 5: ambient blurred-artwork layer (replaces ColorThief)
-// Same technique as SongStatsModal / FindPage — CSS background image only.
+// ★ item 5: ambient blurred-artwork layer
 // =============================================================================
 .fanbase-ambient {
   position: absolute;
@@ -654,190 +676,4 @@
 .fanbase > *:not(.fanbase-ambient) {
   position: relative;
   z-index: 1;
-}
-
-// ★ item 5: keep the eyebrow on one line so it stops colliding with the avatar
-.fanbase__title-wrap .artist-section__eyebrow {
-  white-space: nowrap;
-}
-
-// ★ item 5: artist-photo fallback when no photo is set
-.fanbase__artist-avatar-fallback {
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  color: var(--unis-text);
-  font-size: 26px;
-  font-weight: 850;
-  background: linear-gradient(135deg, var(--unis-primary-soft), rgba(0, 0, 0, 0.5));
-}
-
-// ★ item 5b: active-window date stamp — centered + accented to be noticed
-.fanbase__datestamp {
-  align-self: center;
-  width: fit-content;
-  margin: 2px auto 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: var(--unis-primary-soft);
-  border: 1px solid var(--unis-border-hi);
-  color: var(--unis-primary-2);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-
-  svg { flex: none; }
-}
-
-// ★ item 5f: #1 supporter spotlight (actual supporters only)
-.fanbase__topfan {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  border-radius: var(--unis-radius);
-  background:
-    radial-gradient(380px 160px at 0% 0%, var(--unis-primary-soft), transparent 70%),
-    var(--unis-primary);
-  border: 1px solid var(--unis-primary-2);
-  box-shadow: 0 16px 40px -18px var(--unis-primary-glow);
-  color: #fff;
-
-  &-badge {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 9px;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.32);
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    font-size: 9px;
-    font-weight: 850;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  img,
-  &-placeholder {
-    flex: none;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-  }
-
-  &-placeholder {
-    display: grid;
-    place-items: center;
-    background: rgba(255, 255, 255, 0.18);
-    font-size: 22px;
-    font-weight: 850;
-  }
-
-  &-meta {
-    min-width: 0;
-
-    strong {
-      display: block;
-      font-size: 18px;
-      font-weight: 850;
-      letter-spacing: -0.02em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    small {
-      display: block;
-      margin-top: 3px;
-      color: rgba(255, 255, 255, 0.82);
-      font-size: 12px;
-    }
-  }
-}
-
-// =============================================================================
-// ★ item 5d/5e: drill-down filter bar
-// =============================================================================
-.fanbase__filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-  padding: 14px;
-  border-radius: var(--unis-radius);
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--unis-border);
-
-  &-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding-bottom: 9px;
-    color: var(--unis-primary-2);
-    font-size: 10px;
-    font-weight: 850;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-  }
-}
-
-.fanbase__filter {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 5px;
-
-  > span {
-    color: var(--unis-text-3);
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
-  select {
-    min-height: 40px;
-    min-width: 140px;
-    padding: 8px 12px;
-    border-radius: var(--unis-radius-sm);
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid var(--unis-border-hi);
-    color: var(--unis-text);
-    font: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    color-scheme: dark; // ★ native arrow + option list render dark, not dark-on-dark
-
-    &:hover {
-      border-color: var(--unis-primary);
-    }
-
-    &:focus {
-      outline: none;
-      border-color: var(--unis-primary);
-      box-shadow: 0 0 0 3px var(--unis-primary-soft);
-    }
-  }
-
-  @media (max-width: 560px) {
-    flex: 1 1 100%;
-
-    select {
-      width: 100%;
-    }
-  }
 }
