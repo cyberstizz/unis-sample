@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Heart, Vote, UserPlus, Star, Info, ArrowUp, ArrowDown } from 'lucide-react';
-import ColorThief from 'colorthief';
+import {
+  Play, Heart, Vote, UserPlus, Star, Info, ArrowUp, ArrowDown,
+  Headphones, Crown, CalendarDays, // ★ item 5
+} from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import './fanbaseFunnel.scss';
 
+// ★ item 5c: Plays now leads the funnel.
 const STAGE_ICONS = {
+  plays: Headphones,
   listeners: Play,
   likers: Heart,
   voters: Vote,
@@ -14,6 +18,8 @@ const STAGE_ICONS = {
 };
 
 const STAGE_TIPS = {
+  plays:
+    'Total counted plays of your songs in this window — every play past the 15s / 25% threshold, including replays. The Listeners bar below dedupes this down to unique people.',
   listeners:
     "Unique people who've played at least one of your songs past the count threshold (15s / 25%). One person counts once here, no matter how many times they replay.",
   likers: 'Listeners who liked at least one of your songs.',
@@ -27,7 +33,6 @@ const STAGE_TIPS = {
 const REPEAT_TIP =
   'Total plays ÷ unique listeners. Above 1.0× means people replay your music instead of listening once and leaving — a sign your songs stick.';
 
-// ★ period: toggle options. Keys match the backend's accepted values.
 const PERIODS = [
   { key: 'today', label: 'Today' },
   { key: 'week', label: 'Week' },
@@ -36,7 +41,6 @@ const PERIODS = [
   { key: 'all', label: 'All time' },
 ];
 
-// ★ period: label for the "vs previous" comparison line
 const PREV_LABEL = {
   today: 'vs yesterday',
   week: 'vs last week',
@@ -56,17 +60,65 @@ const formatSince = (value) => {
 
 const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
 
-  const FanbaseFunnel = ({
-    artistId,
-    artistPhoto,
-    artistName,
-  }) => {
+// ★ item 5b: active-window date stamp helpers ------------------------------
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+const ordinal = (n) => {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
+const fmtFullDay = (d) => `${MONTHS[d.getMonth()]} ${ordinal(d.getDate())} ${d.getFullYear()}`;
+
+// NOTE: assumes the backend windows are — today = current calendar day,
+// week = trailing 7 days incl. today, month = current calendar month,
+// year = current calendar year. If the service uses different bounds (e.g.
+// last-30/last-365 or Mon–Sun weeks) this label will drift. Cleanest fix is
+// to have the endpoint return windowStart/windowEnd and format those instead.
+const buildPeriodStamp = (period) => {
+  const now = new Date();
+  switch (period) {
+    case 'today':
+      return fmtFullDay(now);
+    case 'week': {
+      const start = new Date(now);
+      start.setDate(now.getDate() - 6);
+      const sameYear = start.getFullYear() === now.getFullYear();
+      const left = `${MONTHS[start.getMonth()]} ${ordinal(start.getDate())}${
+        sameYear ? '' : ` ${start.getFullYear()}`
+      }`;
+      const right = `${MONTHS[now.getMonth()]} ${ordinal(now.getDate())} ${now.getFullYear()}`;
+      return `${left} – ${right}`;
+    }
+    case 'month':
+      return `${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+    case 'year':
+      return `${now.getFullYear()}`;
+    case 'all':
+    default:
+      return 'All time';
+  }
+};
+
+const FanbaseFunnel = ({
+  artistId,
+  artistPhoto,
+  artistName,
+  ambientImage, // ★ item 5: blurred-artwork ambient source (featured artwork)
+}) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openTip, setOpenTip] = useState(null);
-  const [period, setPeriod] = useState('all'); // ★ period: default all-time
-  const [ambientColors, setAmbientColors] = useState(null);
+  const [period, setPeriod] = useState('all');
+
+  // ★ item 5: ambient is a blurred CSS background — no ColorThief, no canvas,
+  // no CORS. Falls back to the artist photo if no featured artwork was passed.
+  const ambient = ambientImage || artistPhoto || null;
 
   const fetchFanbase = useCallback(async (id, p) => {
     if (!id) return;
@@ -92,7 +144,7 @@ const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
   }, [artistId, period, fetchFanbase]);
 
   useEffect(() => {
-    if (!openTip) return;
+    if (!openTip) return undefined;
     const handleOutside = (e) => {
       if (!e.target.closest('.fanbase-help')) setOpenTip(null);
     };
@@ -100,90 +152,61 @@ const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
     return () => document.removeEventListener('click', handleOutside);
   }, [openTip]);
 
-    useEffect(() => {
-      if (!artistPhoto) return;
-
-      const img = new Image();
-
-      img.crossOrigin = 'anonymous';
-
-      img.onload = () => {
-        try {
-          const thief = new ColorThief();
-          const palette = thief.getPalette(img, 3);
-
-          if (palette?.length) {
-            setAmbientColors({
-              primary: palette[0],
-              secondary: palette[1] || palette[0],
-            });
-          }
-        } catch (err) {
-          console.error('ColorThief failed:', err);
-        }
-      };
-
-      img.src = artistPhoto;
-    }, [artistPhoto]);
-
   const toggleTip = (key) => setOpenTip((prev) => (prev === key ? null : key));
 
-  const funnel = data?.funnel || [];
-  const topOfFunnel = funnel.length > 0 ? Number(funnel[0].value || 0) : 0;
-  const supporters = funnel.find((s) => s.key === 'supporters')?.value || 0;
-  const recentSupporters = data?.recentSupporters || [];
-  const growth = data?.supporterGrowth || [];
+  const baseFunnel = data?.funnel || [];
   const repeatRatio = data?.repeatListenRatio || 0;
   const uniqueListeners = data?.uniqueListeners || 0;
 
-  const hasAnyFanbase = funnel.some((s) => Number(s.value || 0) > 0);
+  // ★ item 5c: derive plays from ratio × unique listeners (interim — backend
+  // should eventually supply an exact plays stage with its own delta).
+  const derivedPlays = Math.round(uniqueListeners * repeatRatio);
+  const playsStage = { key: 'plays', label: 'Plays', value: derivedPlays, delta: null };
+  const displayFunnel = baseFunnel.length ? [playsStage, ...baseFunnel] : [];
+  const topOfFunnel = displayFunnel.length
+    ? Math.max(...displayFunnel.map((s) => Number(s.value || 0)))
+    : 0;
+
+  const supporters = baseFunnel.find((s) => s.key === 'supporters')?.value || 0;
+  const recentSupporters = data?.recentSupporters || [];
+  const growth = data?.supporterGrowth || [];
+  const hasAnyFanbase = baseFunnel.some((s) => Number(s.value || 0) > 0);
   const maxGrowth = growth.reduce((m, g) => Math.max(m, Number(g.count || 0)), 0);
   const prevLabel = PREV_LABEL[period] || '';
+  const periodStamp = buildPeriodStamp(period);
 
   return (
-    <section
-      className="fanbase"
-      aria-labelledby="fanbase-title"
-      style={
-        ambientColors
-          ? {
-              background: `
-                radial-gradient(
-                  700px 300px at 0% 0%,
-                  rgba(${ambientColors.primary.join(',')}, .22),
-                  transparent 60%
-                ),
-                radial-gradient(
-                  500px 250px at 100% 100%,
-                  rgba(${ambientColors.secondary.join(',')}, .16),
-                  transparent 60%
-                ),
-                linear-gradient(
-                  135deg,
-                  rgba(255,255,255,.025),
-                  rgba(255,255,255,.01)
-                ),
-                var(--unis-panel)
-              `,
-            }
-          : undefined
-      }
-    >
+    <section className="fanbase" aria-labelledby="fanbase-title">
+      {/* ★ item 5: blurred-artwork ambient layer (behind all content) */}
+      {ambient && (
+        <div
+          className="fanbase-ambient"
+          style={{ backgroundImage: `url(${ambient})` }}
+          aria-hidden="true"
+        />
+      )}
+
       <div className="fanbase__head">
         <div className="fanbase__title-wrap">
           <div className="fanbase__artist-avatar">
-            <img
-              src={artistPhoto}
-              alt={artistName}
-              loading="lazy"
-            />
+            {artistPhoto ? (
+              <img
+                src={artistPhoto}
+                alt={artistName || 'Artist'}
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <span className="fanbase__artist-avatar-fallback">
+                {initialOf(artistName)}
+              </span>
+            )}
           </div>
 
           <div>
-            <span className="artist-section__eyebrow">
-              Your Audience Funnel
-            </span>
-
+            <span className="artist-section__eyebrow">Audience funnel</span>
             <h2 id="fanbase-title">
               Your <em>momentum</em>
             </h2>
@@ -220,7 +243,7 @@ const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
         )}
       </div>
 
-      {/* ★ period: segmented toggle */}
+      {/* ★ period: segmented toggle (centered — item 5a) */}
       <div className="fanbase__periods" role="tablist" aria-label="Time range">
         {PERIODS.map((opt) => (
           <button
@@ -236,11 +259,14 @@ const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
         ))}
       </div>
 
-      <p className="fanbase__lede">
-        Most platforms stop at play counts. Unis shows you the journey from a
-        first listen all the way to a real supporter — and exactly who those
-        supporters are.
-      </p>
+      {/* ★ item 5b: active-window stamp */}
+      <div className="fanbase__datestamp" aria-live="polite">
+        <CalendarDays size={13} />
+        <span>{periodStamp}</span>
+      </div>
+
+      {/* ★ item 5: one-liner replaces the old marketing paragraph */}
+      <p className="fanbase__lede">Your advanced audience funnel</p>
 
       {loading ? (
         <div className="fanbase__state">
@@ -258,12 +284,20 @@ const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
         <>
           {/* ---------------- Conversion funnel ---------------- */}
           <div className="fanbase__funnel">
-            {funnel.map((stage, index) => {
+            {displayFunnel.map((stage, index) => {
               const Icon = STAGE_ICONS[stage.key] || Star;
               const value = Number(stage.value || 0);
-              const prev = index > 0 ? Number(funnel[index - 1].value || 0) : null;
+              const prevStage = index > 0 ? displayFunnel[index - 1] : null;
+              const prevVal = prevStage ? Number(prevStage.value || 0) : null;
+              const isFromPlays = prevStage?.key === 'plays';
+
+              // ★ item 5c: plays→listeners is events→people (a dedup, not a
+              // drop-off), so suppress the misleading "% continue" there.
               const conversion =
-                prev && prev > 0 ? Math.round((value / prev) * 100) : null;
+                prevVal && prevVal > 0 && !isFromPlays
+                  ? Math.round((value / prevVal) * 100)
+                  : null;
+
               const width =
                 topOfFunnel > 0
                   ? Math.max(8, Math.round((value / topOfFunnel) * 100))
@@ -271,7 +305,6 @@ const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
               const tip = STAGE_TIPS[stage.key];
               const isSupporter = stage.key === 'supporters';
 
-              // ★ period: delta arrow (null on all-time, or when no prev data)
               const delta = stage.delta;
               const hasDelta = delta !== null && delta !== undefined;
               const deltaUp = hasDelta && delta > 0;
@@ -302,7 +335,6 @@ const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
                       {formatNumber(value)}
                     </strong>
 
-                    {/* ★ period: up/down delta vs previous period */}
                     {hasDelta && (
                       <span
                         className={`fanbase-stage__delta ${
@@ -350,7 +382,11 @@ const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
           {!hasAnyFanbase && (
             <div className="fanbase__empty">
               <Star size={26} />
-              <h3>{period === 'all' ? 'Your fanbase starts here' : 'No activity in this period'}</h3>
+              <h3>
+                {period === 'all'
+                  ? 'Your fanbase starts here'
+                  : 'No activity in this period'}
+              </h3>
               <p>
                 {period === 'all'
                   ? "As listeners discover, like, vote for, follow, and support you, this is where you'll watch casual plays turn into a real community."
@@ -397,6 +433,38 @@ const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
                   : 'Your supporters'}
               </h3>
             </div>
+
+            {/* ★ item 5f: #1 supporter spotlight — renders once the backend
+                returns data.topSupporter (actual supporter, ranked by plays). */}
+            {data?.topSupporter && (
+              <div className="fanbase__topfan">
+                <span className="fanbase__topfan-badge">
+                  <Crown size={11} /> #1 Supporter
+                </span>
+                {data.topSupporter.photoUrl ? (
+                  <img
+                    src={buildUrl(data.topSupporter.photoUrl)}
+                    alt={data.topSupporter.username || 'Top supporter'}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <span className="fanbase__topfan-placeholder">
+                    {initialOf(data.topSupporter.username)}
+                  </span>
+                )}
+                <div className="fanbase__topfan-meta">
+                  <strong>{data.topSupporter.username || 'Supporter'}</strong>
+                  <small>
+                    {data.topSupporter.plays != null
+                      ? `${formatNumber(data.topSupporter.plays)} plays · `
+                      : ''}
+                    since {formatSince(data.topSupporter.since)}
+                  </small>
+                </div>
+              </div>
+            )}
 
             {recentSupporters.length > 0 ? (
               <div className="fanbase__supporter-grid">

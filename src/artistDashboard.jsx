@@ -1184,6 +1184,7 @@ const ArtistDashboard = () => {
             artistId={user?.userId}
             artistPhoto={displayPhoto}
             artistName={displayName}
+            ambientImage={featuredArtwork}
           />
           </div>          
 

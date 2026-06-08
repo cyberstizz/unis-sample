@@ -6,6 +6,7 @@
 .fanbase {
   width: 100%;
   min-width: 0;
+  position: relative;            // ★ item 5: ambient layer positioning context
   overflow: hidden;              // ★ guard: nothing inside can widen the page
   display: flex;
   flex-direction: column;
@@ -43,7 +44,8 @@
 
   &__head {
     display: flex;
-    align-items: flex-end;
+    flex-wrap: wrap;                 // ★ item 5: ratio drops below on narrow widths
+    align-items: flex-start;         // ★ item 5: fixes the cramped top alignment
     justify-content: space-between;
     gap: 16px;
 
@@ -94,11 +96,14 @@
   }
 
   &__lede {
-    max-width: 720px;
-    margin: -6px 0 0;
-    color: var(--unis-text-2);
-    font-size: 14px;
-    line-height: 1.6;
+    // ★ item 5: marketing paragraph replaced with a quiet one-liner
+    margin: 2px auto 0;
+    text-align: center;
+    color: var(--unis-text-3);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
   }
 
   // ---- loading / error states ---------------------------------------------
@@ -544,6 +549,7 @@
 .fanbase__periods {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;          // ★ item 5a: center the wrapped "All time"
   gap: 6px;
   margin: -4px 0 0;
   padding: 4px;
@@ -622,6 +628,141 @@
       background: rgba(255, 255, 255, 0.18);
       border-color: rgba(255, 255, 255, 0.3);
       color: #fff;
+    }
+  }
+}
+
+
+// =============================================================================
+// ★ item 5: ambient blurred-artwork layer (replaces ColorThief)
+// Same technique as SongStatsModal / FindPage — CSS background image only.
+// =============================================================================
+.fanbase-ambient {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(48px) saturate(180%);
+  opacity: 0.28;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.fanbase > *:not(.fanbase-ambient) {
+  position: relative;
+  z-index: 1;
+}
+
+// ★ item 5: keep the eyebrow on one line so it stops colliding with the avatar
+.fanbase__title-wrap .artist-section__eyebrow {
+  white-space: nowrap;
+}
+
+// ★ item 5: artist-photo fallback when no photo is set
+.fanbase__artist-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--unis-text);
+  font-size: 26px;
+  font-weight: 850;
+  background: linear-gradient(135deg, var(--unis-primary-soft), rgba(0, 0, 0, 0.5));
+}
+
+// ★ item 5b: active-window date stamp — centered + accented to be noticed
+.fanbase__datestamp {
+  align-self: center;
+  width: fit-content;
+  margin: 2px auto 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--unis-primary-soft);
+  border: 1px solid var(--unis-border-hi);
+  color: var(--unis-primary-2);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+
+  svg { flex: none; }
+}
+
+// ★ item 5f: #1 supporter spotlight (actual supporters only)
+.fanbase__topfan {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: var(--unis-radius);
+  background:
+    radial-gradient(380px 160px at 0% 0%, var(--unis-primary-soft), transparent 70%),
+    var(--unis-primary);
+  border: 1px solid var(--unis-primary-2);
+  box-shadow: 0 16px 40px -18px var(--unis-primary-glow);
+  color: #fff;
+
+  &-badge {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.32);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  img,
+  &-placeholder {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+  }
+
+  &-placeholder {
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.18);
+    font-size: 22px;
+    font-weight: 850;
+  }
+
+  &-meta {
+    min-width: 0;
+
+    strong {
+      display: block;
+      font-size: 18px;
+      font-weight: 850;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    small {
+      display: block;
+      margin-top: 3px;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 12px;
     }
   }
 }
