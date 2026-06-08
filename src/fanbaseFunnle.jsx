@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Play, Heart, Vote, UserPlus, Star, Info, ArrowUp, ArrowDown } from 'lucide-react';
+import ColorThief from 'colorthief';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import './fanbaseFunnel.scss';
@@ -55,12 +56,17 @@ const formatSince = (value) => {
 
 const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
 
-const FanbaseFunnel = ({ artistId }) => {
+  const FanbaseFunnel = ({
+    artistId,
+    artistPhoto,
+    artistName,
+  }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openTip, setOpenTip] = useState(null);
   const [period, setPeriod] = useState('all'); // ★ period: default all-time
+  const [ambientColors, setAmbientColors] = useState(null);
 
   const fetchFanbase = useCallback(async (id, p) => {
     if (!id) return;
@@ -94,6 +100,32 @@ const FanbaseFunnel = ({ artistId }) => {
     return () => document.removeEventListener('click', handleOutside);
   }, [openTip]);
 
+    useEffect(() => {
+      if (!artistPhoto) return;
+
+      const img = new Image();
+
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        try {
+          const thief = new ColorThief();
+          const palette = thief.getPalette(img, 3);
+
+          if (palette?.length) {
+            setAmbientColors({
+              primary: palette[0],
+              secondary: palette[1] || palette[0],
+            });
+          }
+        } catch (err) {
+          console.error('ColorThief failed:', err);
+        }
+      };
+
+      img.src = artistPhoto;
+    }, [artistPhoto]);
+
   const toggleTip = (key) => setOpenTip((prev) => (prev === key ? null : key));
 
   const funnel = data?.funnel || [];
@@ -109,13 +141,53 @@ const FanbaseFunnel = ({ artistId }) => {
   const prevLabel = PREV_LABEL[period] || '';
 
   return (
-    <section className="fanbase" aria-labelledby="fanbase-title">
+    <section
+      className="fanbase"
+      aria-labelledby="fanbase-title"
+      style={
+        ambientColors
+          ? {
+              background: `
+                radial-gradient(
+                  700px 300px at 0% 0%,
+                  rgba(${ambientColors.primary.join(',')}, .22),
+                  transparent 60%
+                ),
+                radial-gradient(
+                  500px 250px at 100% 100%,
+                  rgba(${ambientColors.secondary.join(',')}, .16),
+                  transparent 60%
+                ),
+                linear-gradient(
+                  135deg,
+                  rgba(255,255,255,.025),
+                  rgba(255,255,255,.01)
+                ),
+                var(--unis-panel)
+              `,
+            }
+          : undefined
+      }
+    >
       <div className="fanbase__head">
-        <div>
-          <span className="artist-section__eyebrow">Your Audience Funnel</span>
-          <h2 id="fanbase-title">
-            Your <em>momentum</em>
-          </h2>
+        <div className="fanbase__title-wrap">
+          <div className="fanbase__artist-avatar">
+            <img
+              src={artistPhoto}
+              alt={artistName}
+              loading="lazy"
+            />
+          </div>
+
+          <div>
+            <span className="artist-section__eyebrow">
+              Your Audience Funnel
+            </span>
+
+            <h2 id="fanbase-title">
+              Your <em>momentum</em>
+            </h2>
+          </div>
         </div>
 
         {hasAnyFanbase && uniqueListeners > 0 && (

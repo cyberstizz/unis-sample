@@ -1180,7 +1180,11 @@ const ArtistDashboard = () => {
               "Artist intelligence" collapsible. Self-fetching, handles zero
               states gracefully (pre-launch shows an intentional empty state). */}
           <div id="nav-fanbase" className="artist-funnel-anchor">
-          <FanbaseFunnel artistId={user?.userId} />
+          <FanbaseFunnel
+            artistId={user?.userId}
+            artistPhoto={displayPhoto}
+            artistName={displayName}
+          />
           </div>          
 
           {/* ★ collapsible: Territory signal (collapsed by default) */}
