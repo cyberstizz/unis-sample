@@ -1192,7 +1192,7 @@ const ArtistDashboard = () => {
 
            {/* ★ Supporters section */}
           <div id="nav-supporters">
-            <SupportersSection artistId={user?.userId} />
+            <SupporterSection artistId={user?.userId} />
           </div>
 
           {/* ★ collapsible: Territory signal (collapsed by default) */}
