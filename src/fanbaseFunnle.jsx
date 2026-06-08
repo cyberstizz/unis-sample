@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Play, Heart, Vote, UserPlus, Star, Info, ArrowUp, ArrowDown,
-  Headphones, Crown, CalendarDays, // ★ item 5
+  Headphones, Crown, CalendarDays, SlidersHorizontal, // ★ item 5
 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import './fanbaseFunnel.scss';
 
-// ★ item 5c: Plays now leads the funnel.
 const STAGE_ICONS = {
   plays: Headphones,
   listeners: Play,
@@ -49,6 +48,29 @@ const PREV_LABEL = {
   all: '',
 };
 
+// ★ item 5d: gender buckets. NOTE — these `key` values are sent verbatim and
+// matched case-insensitively against users.gender. Confirm they match what
+// CreateAccountWizard actually stores (e.g. 'non-binary' vs 'nonbinary') and
+// adjust here if needed.
+const GENDER_OPTIONS = [
+  { key: 'all', label: 'All genders' },
+  { key: 'male', label: 'Male' },
+  { key: 'female', label: 'Female' },
+  { key: 'non-binary', label: 'Non-binary' },
+  { key: 'unknown', label: 'Not specified' },
+];
+
+// ★ item 5d: age buckets (backend maps to a DOB age range or NULL check).
+const AGE_OPTIONS = [
+  { key: 'all', label: 'All ages' },
+  { key: '13-17', label: '13–17' },
+  { key: '18-24', label: '18–24' },
+  { key: '25-34', label: '25–34' },
+  { key: '35-44', label: '35–44' },
+  { key: '45+', label: '45+' },
+  { key: 'unknown', label: 'Not specified' },
+];
+
 const formatNumber = (n) => Number(n || 0).toLocaleString();
 
 const formatSince = (value) => {
@@ -60,7 +82,6 @@ const formatSince = (value) => {
 
 const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
 
-// ★ item 5b: active-window date stamp helpers ------------------------------
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -74,11 +95,9 @@ const ordinal = (n) => {
 
 const fmtFullDay = (d) => `${MONTHS[d.getMonth()]} ${ordinal(d.getDate())} ${d.getFullYear()}`;
 
-// NOTE: assumes the backend windows are — today = current calendar day,
-// week = trailing 7 days incl. today, month = current calendar month,
-// year = current calendar year. If the service uses different bounds (e.g.
-// last-30/last-365 or Mon–Sun weeks) this label will drift. Cleanest fix is
-// to have the endpoint return windowStart/windowEnd and format those instead.
+// NOTE: assumes today = current calendar day, week = trailing 7 days,
+// month = trailing 30, year = trailing 365 — matching the service. If the
+// service windows change, have it return windowStart/windowEnd and format those.
 const buildPeriodStamp = (period) => {
   const now = new Date();
   switch (period) {
@@ -104,29 +123,33 @@ const buildPeriodStamp = (period) => {
   }
 };
 
-const FanbaseFunnel = ({
-  artistId,
-  artistPhoto,
-  artistName,
-  ambientImage, // ★ item 5: blurred-artwork ambient source (featured artwork)
-}) => {
+const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openTip, setOpenTip] = useState(null);
   const [period, setPeriod] = useState('all');
 
-  // ★ item 5: ambient is a blurred CSS background — no ColorThief, no canvas,
-  // no CORS. Falls back to the artist photo if no featured artwork was passed.
+  // ★ item 5d/5e: drill-down filter state
+  const [gender, setGender] = useState('all');
+  const [age, setAge] = useState('all');
+  const [jurisdictionId, setJurisdictionId] = useState('all');
+
   const ambient = ambientImage || artistPhoto || null;
 
-  const fetchFanbase = useCallback(async (id, p) => {
+  const fetchFanbase = useCallback(async (id, p, filters = {}) => {
     if (!id) return;
     setLoading(true);
     setError(null);
     try {
+      const params = new URLSearchParams({ period: p });
+      if (filters.gender && filters.gender !== 'all') params.set('gender', filters.gender);
+      if (filters.age && filters.age !== 'all') params.set('age', filters.age);
+      if (filters.jurisdictionId && filters.jurisdictionId !== 'all') {
+        params.set('jurisdictionId', filters.jurisdictionId);
+      }
       const res = await apiCall({
-        url: `/v1/artist-analytics/artist/${id}/fanbase?period=${p}`,
+        url: `/v1/artist-analytics/artist/${id}/fanbase?${params.toString()}`,
         method: 'get',
         useCache: false,
       });
@@ -140,8 +163,8 @@ const FanbaseFunnel = ({
   }, []);
 
   useEffect(() => {
-    fetchFanbase(artistId, period);
-  }, [artistId, period, fetchFanbase]);
+    fetchFanbase(artistId, period, { gender, age, jurisdictionId });
+  }, [artistId, period, gender, age, jurisdictionId, fetchFanbase]);
 
   useEffect(() => {
     if (!openTip) return undefined;
@@ -154,30 +177,27 @@ const FanbaseFunnel = ({
 
   const toggleTip = (key) => setOpenTip((prev) => (prev === key ? null : key));
 
-  const baseFunnel = data?.funnel || [];
+  // ★ item 5c: funnel now arrives with Plays as the first stage from the backend.
+  const funnel = data?.funnel || [];
   const repeatRatio = data?.repeatListenRatio || 0;
   const uniqueListeners = data?.uniqueListeners || 0;
-
-  // ★ item 5c: derive plays from ratio × unique listeners (interim — backend
-  // should eventually supply an exact plays stage with its own delta).
-  const derivedPlays = Math.round(uniqueListeners * repeatRatio);
-  const playsStage = { key: 'plays', label: 'Plays', value: derivedPlays, delta: null };
-  const displayFunnel = baseFunnel.length ? [playsStage, ...baseFunnel] : [];
-  const topOfFunnel = displayFunnel.length
-    ? Math.max(...displayFunnel.map((s) => Number(s.value || 0)))
+  const topOfFunnel = funnel.length
+    ? Math.max(...funnel.map((s) => Number(s.value || 0)))
     : 0;
 
-  const supporters = baseFunnel.find((s) => s.key === 'supporters')?.value || 0;
+  const supporters = funnel.find((s) => s.key === 'supporters')?.value || 0;
   const recentSupporters = data?.recentSupporters || [];
   const growth = data?.supporterGrowth || [];
-  const hasAnyFanbase = baseFunnel.some((s) => Number(s.value || 0) > 0);
+  const availableJurisdictions = data?.availableJurisdictions || [];
+  const hasAnyFanbase = funnel.some((s) => Number(s.value || 0) > 0);
   const maxGrowth = growth.reduce((m, g) => Math.max(m, Number(g.count || 0)), 0);
   const prevLabel = PREV_LABEL[period] || '';
   const periodStamp = buildPeriodStamp(period);
 
+  const retry = () => fetchFanbase(artistId, period, { gender, age, jurisdictionId });
+
   return (
     <section className="fanbase" aria-labelledby="fanbase-title">
-      {/* ★ item 5: blurred-artwork ambient layer (behind all content) */}
       {ambient && (
         <div
           className="fanbase-ambient"
@@ -243,7 +263,10 @@ const FanbaseFunnel = ({
         )}
       </div>
 
-      {/* ★ period: segmented toggle (centered — item 5a) */}
+      {/* ★ item 5: one-liner now ABOVE the toggle */}
+      <p className="fanbase__lede">Your advanced audience funnel</p>
+
+      {/* ★ period: centered segmented toggle (item 5a) */}
       <div className="fanbase__periods" role="tablist" aria-label="Time range">
         {PERIODS.map((opt) => (
           <button
@@ -265,8 +288,42 @@ const FanbaseFunnel = ({
         <span>{periodStamp}</span>
       </div>
 
-      {/* ★ item 5: one-liner replaces the old marketing paragraph */}
-      <p className="fanbase__lede">Your advanced audience funnel</p>
+      {/* ★ item 5d/5e: drill-down filters */}
+      <div className="fanbase__filters">
+        <span className="fanbase__filters-label">
+          <SlidersHorizontal size={13} /> Drill down
+        </span>
+
+        <label className="fanbase__filter">
+          <span>Gender</span>
+          <select value={gender} onChange={(e) => setGender(e.target.value)}>
+            {GENDER_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="fanbase__filter">
+          <span>Age</span>
+          <select value={age} onChange={(e) => setAge(e.target.value)}>
+            {AGE_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
+          </select>
+        </label>
+
+        {availableJurisdictions.length > 0 && (
+          <label className="fanbase__filter">
+            <span>Location</span>
+            <select value={jurisdictionId} onChange={(e) => setJurisdictionId(e.target.value)}>
+              <option value="all">All locations</option>
+              {availableJurisdictions.map((j) => (
+                <option key={j.id} value={j.id}>{j.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
 
       {loading ? (
         <div className="fanbase__state">
@@ -276,18 +333,15 @@ const FanbaseFunnel = ({
       ) : error ? (
         <div className="fanbase__state fanbase__state--error">
           <p>{error}</p>
-          <button type="button" onClick={() => fetchFanbase(artistId, period)}>
-            Retry
-          </button>
+          <button type="button" onClick={retry}>Retry</button>
         </div>
       ) : (
         <>
-          {/* ---------------- Conversion funnel ---------------- */}
           <div className="fanbase__funnel">
-            {displayFunnel.map((stage, index) => {
+            {funnel.map((stage, index) => {
               const Icon = STAGE_ICONS[stage.key] || Star;
               const value = Number(stage.value || 0);
-              const prevStage = index > 0 ? displayFunnel[index - 1] : null;
+              const prevStage = index > 0 ? funnel[index - 1] : null;
               const prevVal = prevStage ? Number(prevStage.value || 0) : null;
               const isFromPlays = prevStage?.key === 'plays';
 
@@ -383,19 +437,18 @@ const FanbaseFunnel = ({
             <div className="fanbase__empty">
               <Star size={26} />
               <h3>
-                {period === 'all'
+                {period === 'all' && gender === 'all' && age === 'all' && jurisdictionId === 'all'
                   ? 'Your fanbase starts here'
-                  : 'No activity in this period'}
+                  : 'No activity for this slice'}
               </h3>
               <p>
-                {period === 'all'
+                {period === 'all' && gender === 'all' && age === 'all' && jurisdictionId === 'all'
                   ? "As listeners discover, like, vote for, follow, and support you, this is where you'll watch casual plays turn into a real community."
-                  : 'Try a wider time range, or check back as new activity comes in.'}
+                  : 'Try a wider time range or fewer filters — early on, demographic data is sparse.'}
               </p>
             </div>
           )}
 
-          {/* ---------------- Supporter growth (always 30d) ---------------- */}
           {growth.length > 0 && (
             <div className="fanbase__growth">
               <div className="fanbase__growth-head">
@@ -423,7 +476,6 @@ const FanbaseFunnel = ({
             </div>
           )}
 
-          {/* ---------------- Named supporters (always all-time) ---------------- */}
           <div className="fanbase__supporters">
             <div className="fanbase__supporters-head">
               <span className="artist-section__eyebrow">Who's backing you</span>
@@ -434,8 +486,7 @@ const FanbaseFunnel = ({
               </h3>
             </div>
 
-            {/* ★ item 5f: #1 supporter spotlight — renders once the backend
-                returns data.topSupporter (actual supporter, ranked by plays). */}
+            {/* ★ item 5f: #1 supporter spotlight (actual supporter, by plays) */}
             {data?.topSupporter && (
               <div className="fanbase__topfan">
                 <span className="fanbase__topfan-badge">
