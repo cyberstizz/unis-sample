@@ -42,7 +42,7 @@ import ReferralCodeCard from './ReferralCodeCard';
 import ThemePicker from './ThemePicker';
 import CashoutPanel from './CashoutPanel';
 import FanbaseFunnel from './fanbaseFunnle'; // ★ analytics: real fanbase funnel section
-import SupportersSection from './SupportersSection'; // ★ item 5: supporters split out
+import SupporterSection from './SupportersSection'; // ★ item 5: supporters split out
 import SupportedArtistPicker from './SupportedArtistPicker'; // ★ H: change-artist picker (same component Profile uses)
 import './artistDashboard.scss';
 import SongStatsModal from './SongStatsModal'; // ★ D: per-song funnel modal
