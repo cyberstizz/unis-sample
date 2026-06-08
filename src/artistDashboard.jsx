@@ -595,43 +595,178 @@ const ArtistDashboard = () => {
     requestPlay(mediaObject);
   };
 
+// ★ item 2a: launch-ready ownership & revenue-share agreement
   const downloadOwnershipContract = () => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 56;
+    const contentW = pageW - margin * 2;
+    const bottom = pageH - 64;
+    const lineH = 14;
+    let y = margin;
+    let pageNum = 1;
 
-    doc.setTextColor(240, 240, 240);
-    doc.setFontSize(80);
-    doc.setFont('helvetica', 'bold');
-
-    for (let i = 0; i < 10; i += 1) {
-      doc.text('UNIS', 100 + i * 100, 200 + i * 80, { angle: 45 });
-    }
-
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(24);
-    doc.setFont('helvetica', 'bold');
-    doc.text('UNIS ARTIST OWNERSHIP & REVENUE SHARE AGREEMENT', 40, 80, {
-      textAlign: 'center',
-      maxWidth: 500,
+    const today = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
 
-    doc.setFontSize(12);
-    doc.text(
-      `This Agreement is entered into as of ${new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })}`,
-      60,
-      180
-    );
-    doc.text('Between:', 60, 220);
-    doc.text('UNIS MUSIC PLATFORM ("Unis"), a digital music discovery service,', 80, 240);
-    doc.text('and', 80, 260);
-    doc.text(`${displayName} ("Artist"), an independent creator.`, 80, 280);
+    const watermark = () => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(120);
+      doc.setTextColor(242, 243, 245);
+      doc.text('UNIS', pageW / 2, pageH / 2 + 40, { align: 'center', angle: 32 });
+    };
 
-    doc.save(`unis_ownership_agreement_${displayName.replace(/\s/g, '_')}.pdf`);
+    const footer = () => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text('Unis Music Corporation · Artist Ownership & Revenue Share Agreement', margin, pageH - 36);
+      doc.text(`Page ${pageNum}`, pageW - margin, pageH - 36, { align: 'right' });
+    };
+
+    const addPageBreak = () => {
+      footer();
+      doc.addPage();
+      pageNum += 1;
+      watermark();
+      y = margin;
+    };
+
+    const need = (h) => {
+      if (y + h > bottom) addPageBreak();
+    };
+
+    const h2 = (txt) => {
+      need(lineH * 2.4);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(17, 17, 17);
+      doc.text(txt, margin, y);
+      y += lineH + 3;
+    };
+
+    const p = (txt) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(45, 45, 45);
+      const lines = doc.splitTextToSize(txt, contentW);
+      lines.forEach((ln) => {
+        need(lineH);
+        doc.text(ln, margin, y);
+        y += lineH;
+      });
+      y += 6;
+    };
+
+    watermark();
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(19);
+    doc.setTextColor(12, 12, 12);
+    doc.text('ARTIST OWNERSHIP &', pageW / 2, y + 6, { align: 'center' });
+    doc.text('REVENUE SHARE AGREEMENT', pageW / 2, y + 30, { align: 'center' });
+    y += 56;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+    doc.text(`Effective Date: ${today}`, pageW / 2, y, { align: 'center' });
+    y += 28;
+
+    p(`This Artist Ownership & Revenue Share Agreement (the "Agreement") is entered into as of the Effective Date above, by and between Unis Music Corporation, a New York corporation and wholly-owned subsidiary of Lamb Services, Inc. ("Unis," "we," or "us"), and ${displayName} ("Artist," "you"), an independent music creator. Unis and Artist are each a "Party" and together the "Parties."`);
+
+    h2('1. Definitions');
+    p('"Platform" means the Unis hyperlocal music discovery, voting, and sales service, including its websites, mobile applications, and related services. "Content" means the audio recordings, artwork, lyrics, metadata, and other materials you upload. "Master Recording" means a sound recording you own or control. "Net Revenue" means amounts actually received by Unis attributable to your Content, less payment-processor fees, refunds, chargebacks, and applicable taxes.');
+
+    h2('2. Ownership of Your Content');
+    p('You retain all right, title, and interest in and to your Content, including all Master Recordings and underlying compositions you own or control. Nothing in this Agreement transfers ownership of your Content to Unis. Unis claims no ownership of your music.');
+
+    h2('3. License Grant');
+    p('You grant Unis a non-exclusive, worldwide, royalty-bearing, revocable license to host, store, reproduce, stream, publicly perform, display, promote, and (where you enable sales or downloads) distribute your Content on and through the Platform for the purpose of operating its discovery, voting, and sales features. This license exists only while your Content remains on the Platform and terminates as described in Section 8.');
+
+    h2('4. Revenue Share Schedule');
+    p('Subject to the payment terms below, Unis will pay you the following share of Net Revenue attributable to your Content in each revenue stream:');
+
+    // ★ item 2a + item 11 FLAG: confirm these percentages against the published
+    // terms at artists.unismusic.com AND the reconciled EarningsService before
+    // this document is distributed to any artist.
+    const rows = [
+      ['Direct song sales & downloads', '85% to Artist'],
+      ['Paid subscription streaming pool', '50% to Artist'],
+      ['Audio advertising revenue', '60% to Artist'],
+      ['Supporter contributions', '15% to Artist'],
+    ];
+    const rowH = 18;
+    need(rowH * rows.length + 10);
+    rows.forEach((r, i) => {
+      if (i % 2 === 0) {
+        doc.setFillColor(247, 248, 250);
+        doc.rect(margin, y - 12, contentW, rowH, 'F');
+      }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(40);
+      doc.text(r[0], margin + 8, y);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(20);
+      doc.text(r[1], pageW - margin - 8, y, { align: 'right' });
+      y += rowH;
+    });
+    y += 10;
+    p('Revenue-stream definitions and the methodology for allocating pooled revenue (such as the subscription streaming pool) are described in the then-current published terms at artists.unismusic.com, which are incorporated by reference. Where this Schedule and the published terms conflict, the published terms control.');
+
+    h2('5. Referral Program');
+    p('Where you refer new members using your referral code, you may earn referral income on qualifying Net Revenue generated by your referrals: 10% on first-tier (direct) referrals, 5% on second-tier referrals, and 2% on third-tier referrals, in each case as further described in the published referral terms. Referral tiers and rates may be adjusted prospectively on notice.');
+
+    h2('6. Payments and Payouts');
+    p('Unis processes artist payouts through Stripe. You are responsible for completing Stripe onboarding and providing accurate payout information. Payouts are made periodically once your available balance meets the minimum payout threshold (currently $50.00). You are solely responsible for all taxes on amounts you receive. Unis may withhold or offset amounts subject to refund, chargeback, or fraud review.');
+
+    h2('7. Your Representations and Warranties');
+    p("You represent and warrant that: (a) you own or control all rights necessary to grant the license in Section 3; (b) your Content does not infringe any third party's copyright, trademark, publicity, privacy, or other rights; (c) you have paid or will pay any co-writers, producers, featured performers, or rights holders any share of the revenue you receive that is due to them; and (d) your Content complies with the Platform's content standards and applicable law.");
+
+    h2('8. Term and Termination');
+    p('This Agreement begins on the Effective Date and continues until terminated. You may remove your Content or close your account at any time, which terminates the Section 3 license on a going-forward basis (subject to cached copies and completed transactions). Unis may suspend or remove Content that violates this Agreement, the content standards, or law, including in response to a valid DMCA notice. Provisions that by their nature should survive termination — including ownership, payment for amounts already earned, warranties, and limitation of liability — survive.');
+
+    h2('9. Copyright and DMCA');
+    p('Unis operates a notice-and-takedown process under the Digital Millennium Copyright Act. If Unis receives a valid infringement notice concerning your Content, Unis may remove or disable access to that Content. You may submit a counter-notice where permitted by law. Repeat infringers may be terminated.');
+
+    h2('10. Limitation of Liability');
+    p("To the maximum extent permitted by law, Unis will not be liable for indirect, incidental, special, consequential, or punitive damages, or for lost profits or revenues, arising out of or relating to this Agreement. Unis's total aggregate liability arising out of this Agreement will not exceed the greater of the amounts paid or payable to you in the twelve months preceding the claim, or $100.");
+
+    h2('11. Independent Relationship');
+    p('The Parties are independent contractors. Nothing in this Agreement creates a partnership, joint venture, employment, or agency relationship, and neither Party may bind the other.');
+
+    h2('12. Governing Law and Disputes');
+    p('This Agreement is governed by the laws of the State of New York, without regard to its conflict-of-laws rules. The state and federal courts located in New York County, New York will have jurisdiction over disputes not otherwise subject to an agreed dispute-resolution process.');
+
+    h2('13. Entire Agreement; Changes');
+    p('This Agreement, together with the published terms incorporated by reference, is the entire agreement between the Parties regarding its subject matter. Unis may update the published terms prospectively; your continued use of the Platform after an update constitutes acceptance. No modification by you is effective unless agreed in writing by Unis.');
+
+    need(140);
+    y += 6;
+    h2('Acknowledgement & Signatures');
+    p('By downloading, retaining, or continuing to use the Platform to distribute your Content, you acknowledge that you have read, understood, and agree to this Agreement.');
+
+    y += 24;
+    const sigY = y + 24;
+    doc.setDrawColor(120);
+    doc.line(margin, sigY, margin + 220, sigY);
+    doc.line(pageW - margin - 220, sigY, pageW - margin, sigY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(70);
+    doc.text(`${displayName} (Artist)`, margin, sigY + 14);
+    doc.text('Unis Music Corporation', pageW - margin - 220, sigY + 14);
+    doc.text(`Date: ${today}`, margin, sigY + 30);
+    doc.text('By: Authorized Officer', pageW - margin - 220, sigY + 30);
+
+    footer();
+    doc.save(`Unis_Artist_Agreement_${displayName.replace(/\s+/g, '_')}.pdf`);
   };
-
+  
   const handleUploadSuccess = () => {
     setShowUploadWizard(false);
 
@@ -1308,7 +1443,7 @@ const ArtistDashboard = () => {
           </ArtistCollapsibleSection>
 
           {userProfile?.role === 'artist' && (
-            <section className="artist-section artist-revenue-card">
+            <section id="nav-revenue" className="artist-section artist-revenue-card">
               <div className="artist-section__head">
                 <div>
                   <span className="artist-section__eyebrow">Revenue</span>
