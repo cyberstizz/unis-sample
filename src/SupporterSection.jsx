@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Crown, Heart } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
-import './supportersSection.scss';
+import './supporterSection.scss';
 
 const formatNumber = (n) => Number(n || 0).toLocaleString();
 const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
