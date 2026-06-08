@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import LyricsWizard from './lyricsWizard';
 import {
   Upload,
@@ -24,7 +24,11 @@ import {
   BarChart3,
   Activity,
   Lock,
-  Clock, // ★ H: pending supported-artist display
+  Clock, 
+  Link2,
+  Share2,
+  Palette,
+  LayoutGrid
 } from 'lucide-react';
 import UploadWizard from './uploadWizard';
 import ChangeDefaultSongWizard from './changeDefaultSongWizard';
@@ -87,44 +91,59 @@ const SectionError = ({ message = 'Failed to load.', onRetry }) => (
 );
 
 const ArtistCollapsibleSection = ({
-  eyebrow,
-  title,
-  children,
-  defaultOpen = true,
-  className = '',
-}) => {
-  const [open, setOpen] = useState(defaultOpen);
+    id,                 // ★ item 3
+    eyebrow,
+    title,
+    children,
+    defaultOpen = true,
+    className = '',
+    onRegister,         // ★ item 3
+  }) => {
+    const [open, setOpen] = useState(defaultOpen);
 
-  return (
-    <section className={`artist-collapsible ${className} ${open ? 'is-open' : ''}`}>
-      <button
-        type="button"
-        className="artist-collapsible__trigger"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-expanded={open}
-      >
-        <div>
-          {eyebrow && <span className="artist-section__eyebrow">{eyebrow}</span>}
-          <h2>{title}</h2>
-        </div>
+    // ★ item 3: register an "open me" fn so the quick-nav can expand this section
+    useEffect(() => {
+      if (id && onRegister) onRegister(id, () => setOpen(true));
+    }, [id, onRegister]);
 
-        <span className="artist-collapsible__chevron" aria-hidden="true">
-          <ChevronDown size={20} />
-        </span>
-      </button>
+    return (
+      <section id={id} className={`artist-collapsible ${className} ${open ? 'is-open' : ''}`}>
+        <button
+          type="button"
+          className="artist-collapsible__trigger"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-expanded={open}
+        >
+          <div>
+            {eyebrow && <span className="artist-section__eyebrow">{eyebrow}</span>}
+            <h2>{title}</h2>
+          </div>
 
-      {open && (
-        <div className="artist-collapsible__body">
-          {children}
-        </div>
-      )}
-    </section>
-  );
-};
+          <span className="artist-collapsible__chevron" aria-hidden="true">
+            <ChevronDown size={20} />
+          </span>
+        </button>
+
+        {open && <div className="artist-collapsible__body">{children}</div>}
+      </section>
+    );
+  };
 
 const ArtistDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { requestPlay } = useContext(PlayerContext);
+
+  // ★ item 3: quick-nav — collapsibles register an opener; nav opens then scrolls
+  const sectionOpeners = useRef({});
+  const registerSection = useCallback((sectionId, opener) => {
+    sectionOpeners.current[sectionId] = opener;
+  }, []);
+  const goToSection = useCallback((sectionId) => {
+    sectionOpeners.current[sectionId]?.();
+    requestAnimationFrame(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
 
   // ---- Core data ---------------------------------------------------------
   const [userProfile, setUserProfile] = useState(null);
@@ -477,6 +496,23 @@ const ArtistDashboard = () => {
       },
     },
   ].filter(Boolean);
+
+  // ★ item 3: quick-nav targets (revenue only shows for artists)
+  const navItems = [
+    { id: 'nav-momentum', label: 'Fanbase', icon: Gauge },
+    { id: 'nav-fanbase', label: 'Audience', icon: BarChart3 },
+    { id: 'nav-territory', label: 'Territory', icon: MapPin },
+    { id: 'nav-catalog', label: 'Catalog', icon: Music },
+    { id: 'nav-trophy', label: 'Trophies', icon: Trophy },
+    ...(userProfile?.role === 'artist'
+      ? [{ id: 'nav-revenue', label: 'Revenue', icon: DollarSign }]
+      : []),
+    { id: 'nav-growth', label: 'Growth', icon: Sparkles },
+    { id: 'nav-social', label: 'Socials', icon: Link2 },
+    { id: 'nav-support', label: 'You Support', icon: Heart },
+    { id: 'nav-referral', label: 'Refer', icon: Share2 },
+    { id: 'nav-theme', label: 'Theme', icon: Palette },
+  ];
 
   // -----------------------------------------------------------------------
   // Handlers
@@ -928,12 +964,33 @@ const ArtistDashboard = () => {
             </div>
           </section>
 
+
+          {/* ★ item 3: quick-nav shortcut bar */}
+          <nav className="artist-quicknav" aria-label="Jump to a section">
+            <span className="artist-quicknav__label">
+              <LayoutGrid size={13} /> Jump to
+            </span>
+            <div className="artist-quicknav__grid">
+              {navItems.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="artist-quicknav__btn"
+                  onClick={() => goToSection(id)}
+                >
+                  <span className="artist-quicknav__icon"><Icon size={16} /></span>
+                  <span className="artist-quicknav__text">{label}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+
           {statsLoading ? (
             <SectionLoader label="Loading artist momentum..." />
           ) : statsError ? (
             <SectionError message={statsError} onRetry={() => fetchStats(user.userId)} />
           ) : (
-            <section className="artist-section">
+            <section id="nav-momentum" className="artist-section">
               <div className="artist-section__head">
                 <div>
                   <span className="artist-section__eyebrow">Stats On Unis</span>
@@ -962,13 +1019,14 @@ const ArtistDashboard = () => {
                   <Heart size={24} />
                 </div>
 
+                {/* ★ item 4: Catalog card replaced with Total plays */}
                 <div className="artist-metric-card">
                   <div>
-                    <span>Catalog</span>
-                    <strong>{songs.length}</strong>
-                    <p>Tracks available for discovery and voting.</p>
+                    <span>Total plays</span>
+                    <strong>{totalPlays.toLocaleString()}</strong>
+                    <p>All-time plays across your catalog.</p>
                   </div>
-                  <Music size={24} />
+                  <Play size={24} />
                 </div>
 
                 <div className="artist-metric-card">
@@ -986,61 +1044,11 @@ const ArtistDashboard = () => {
           {/* ★ analytics: real fanbase funnel replaces the old placeholder
               "Artist intelligence" collapsible. Self-fetching, handles zero
               states gracefully (pre-launch shows an intentional empty state). */}
+          <div id="nav-fanbase" className="artist-funnel-anchor">
           <FanbaseFunnel artistId={user?.userId} />
+          </div>          
 
-          {/* Honest roadmap preview — data is now being captured on play events
-              (completed / percent_played / source / listener_jurisdiction_id);
-              these cards surface it in a later pass. */}
-          <ArtistCollapsibleSection
-            eyebrow="Future analytics"
-            title={<>Signal <em>preview</em></>}
-            defaultOpen={false}
-            className="artist-signal-preview-section"
-          >
-            <div className="artist-signal-preview-grid">
-              <article className="artist-signal-preview-card">
-                <div className="artist-signal-preview-card__icon">
-                  <Compass size={22} />
-                </div>
-                <span>Listener geography</span>
-                <strong>{artistJurisdiction}</strong>
-                <p>
-                  Today this uses profile and jurisdiction data. Now that play events
-                  capture listener location, this will show where listeners were when
-                  each play happened.
-                </p>
-                <small><Lock size={12} /> surfacing soon</small>
-              </article>
-
-              <article className="artist-signal-preview-card">
-                <div className="artist-signal-preview-card__icon">
-                  <Gauge size={22} />
-                </div>
-                <span>Completion quality</span>
-                <strong>Coming soon</strong>
-                <p>
-                  This will separate real listening from quick skips so artists understand
-                  which songs hold attention.
-                </p>
-                <small><Lock size={12} /> surfacing soon</small>
-              </article>
-
-              <article className="artist-signal-preview-card">
-                <div className="artist-signal-preview-card__icon">
-                  <Activity size={22} />
-                </div>
-                <span>Discovery source</span>
-                <strong>Coming soon</strong>
-                <p>
-                  This will show whether listeners found you from feed, profile, search,
-                  playlist, jurisdiction pages, or shared links.
-                </p>
-                <small><Lock size={12} /> surfacing soon</small>
-              </article>
-            </div>
-          </ArtistCollapsibleSection>
-
-  {/* ★ collapsible: Territory signal (collapsed by default) */}
+          {/* ★ collapsible: Territory signal (collapsed by default) */}
           <ArtistCollapsibleSection
               eyebrow="Local advantage"
               title={<>Territory <em>signal</em></>}
