@@ -144,8 +144,14 @@
 }
 .fanbase__title-wrap {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
+}
+
+.fanbase__title-wrap > div:last-child {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .fanbase__artist-avatar {
