@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Play, Heart, Vote, UserPlus, Star, Info, ArrowUp, ArrowDown,
+  Play, Heart, Vote, UserPlus, Star, ArrowUp, ArrowDown,
   Headphones, CalendarDays, ChevronDown,
 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
@@ -17,9 +17,9 @@ const STAGE_ICONS = {
 
 const STAGE_TIPS = {
   plays:
-    'Total counted plays of your songs in this window — every play past the 15s / 25% threshold, including replays. The Listeners bar below dedupes this down to unique people.',
+    'Total counted plays of your songs in this window — every play past the 15s / 25% threshold, including replays. Listeners below dedupes this down to unique people.',
   listeners:
-    "Unique people who've played at least one of your songs past the count threshold (15s / 25%). One person counts once here, no matter how many times they replay.",
+    "Unique people who've played at least one of your songs past the count threshold (15s / 25%). One person counts once, no matter how many replays.",
   likers: 'Listeners who liked at least one of your songs.',
   voters:
     'Listeners who spent a vote on you during an award cycle. Votes are scarce, so this is a stronger signal than a like.',
@@ -29,7 +29,7 @@ const STAGE_TIPS = {
 };
 
 const REPEAT_TIP =
-  'Total plays ÷ unique listeners. Above 1.0× means people replay your music instead of listening once and leaving — a sign your songs stick.';
+  'Total plays ÷ unique listeners. Above 1.0× means people replay your music instead of listening once and leaving.';
 const COMPLETION_TIP =
   'The share of plays that reached the finish across your catalog, not skipped early. High completion means your songs hold attention.';
 const SOURCE_TIP =
@@ -51,7 +51,6 @@ const PREV_LABEL = {
   all: '',
 };
 
-// ★ item 5d: keys sent verbatim, matched case-insensitively vs users.gender.
 const GENDER_OPTIONS = [
   { key: 'all', label: 'All genders' },
   { key: 'male', label: 'Male' },
@@ -108,8 +107,6 @@ const ordinal = (n) => {
 
 const fmtFullDay = (d) => `${MONTHS[d.getMonth()]} ${ordinal(d.getDate())} ${d.getFullYear()}`;
 
-// NOTE: mirrors the service windows (today=calendar day, week/month/year =
-// trailing 7/30/365). If the service bounds change, return windowStart/End.
 const buildPeriodStamp = (period) => {
   const now = new Date();
   switch (period) {
@@ -135,6 +132,23 @@ const buildPeriodStamp = (period) => {
   }
 };
 
+// ★ ui: tooltip now lives on the number itself — hover (desktop) or tap
+// (mobile). No more Info icon.
+const TipValue = ({ tipKey, tip, openTip, onToggle, className = '', children }) => (
+  <span
+    className={`fanbase-tipwrap ${className}`}
+    onClick={(e) => {
+      e.stopPropagation();
+      onToggle(tipKey);
+    }}
+  >
+    {children}
+    <span className={`fanbase-tip ${openTip === tipKey ? 'is-open' : ''}`} role="tooltip">
+      {tip}
+    </span>
+  </span>
+);
+
 const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -147,7 +161,9 @@ const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
   const [jurisdictionId, setJurisdictionId] = useState('all');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const ambient = ambientImage || artistPhoto || null;
+  // ★ ambient: profile photo first — the song artwork was taking precedence,
+  // which is why the glow didn't match the artist's image.
+  const ambient = artistPhoto || ambientImage || null;
 
   const fetchFanbase = useCallback(async (id, p, filters = {}) => {
     if (!id) return;
@@ -178,10 +194,11 @@ const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
     fetchFanbase(artistId, period, { gender, age, jurisdictionId });
   }, [artistId, period, gender, age, jurisdictionId, fetchFanbase]);
 
+  // ★ ui: tap-open tooltips dismiss on outside click
   useEffect(() => {
     if (!openTip) return undefined;
     const handleOutside = (e) => {
-      if (!e.target.closest('.fanbase-help')) setOpenTip(null);
+      if (!e.target.closest('.fanbase-tipwrap')) setOpenTip(null);
     };
     document.addEventListener('click', handleOutside);
     return () => document.removeEventListener('click', handleOutside);
@@ -201,7 +218,6 @@ const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
   const periodStamp = buildPeriodStamp(period);
   const noFilters = gender === 'all' && age === 'all' && jurisdictionId === 'all';
 
-  // advanced data
   const completion = data?.completion || {};
   const completionRate = Number(completion.completionRate || 0);
   const completedPlays = Number(completion.completedPlays || 0);
@@ -209,7 +225,6 @@ const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
   const sources = data?.sources || [];
   const sourceTotal = sources.reduce((sum, s) => sum + Number(s.count || 0), 0);
 
-  // active-filter readout chips
   const genderLabel = GENDER_OPTIONS.find((o) => o.key === gender)?.label;
   const ageLabel = AGE_OPTIONS.find((o) => o.key === age)?.label;
   const jurisdictionLabel =
@@ -256,93 +271,75 @@ const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
 
         {hasAnyFanbase && uniqueListeners > 0 && (
           <div className="fanbase__ratio">
-            <div className="fanbase__ratio-row">
+            <TipValue
+              tipKey="repeat"
+              tip={REPEAT_TIP}
+              openTip={openTip}
+              onToggle={toggleTip}
+              className="fanbase-tipwrap--below"
+            >
               <strong>{repeatRatio.toFixed(2)}×</strong>
-              <span className="fanbase-help fanbase-help--below">
-                <button
-                  type="button"
-                  className="fanbase-help__btn"
-                  aria-label="What is the repeat-listen rate?"
-                  aria-expanded={openTip === 'repeat'}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleTip('repeat');
-                  }}
-                >
-                  <Info size={13} />
-                </button>
-                <span
-                  className={`fanbase-tip ${openTip === 'repeat' ? 'is-open' : ''}`}
-                  role="tooltip"
-                >
-                  {REPEAT_TIP}
-                </span>
-              </span>
-            </div>
+            </TipValue>
             <span className="fanbase__ratio-label">Repeat-listen rate</span>
           </div>
         )}
       </div>
 
-      {/* ★ item 5: single-row control bar — interval + 3 drill-down selectors */}
-      <div className="fanbase__controls">
-        <label className="fanbase__control">
-          <span>Interval</span>
-          <select value={period} onChange={(e) => setPeriod(e.target.value)}>
-            {PERIODS.map((o) => (
-              <option key={o.key} value={o.key}>{o.label}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="fanbase__control">
-          <span>Gender</span>
-          <select value={gender} onChange={(e) => setGender(e.target.value)}>
-            {GENDER_OPTIONS.map((o) => (
-              <option key={o.key} value={o.key}>{o.label}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="fanbase__control">
-          <span>Age</span>
-          <select value={age} onChange={(e) => setAge(e.target.value)}>
-            {AGE_OPTIONS.map((o) => (
-              <option key={o.key} value={o.key}>{o.label}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="fanbase__control fanbase__control--wide">
-          <span>Location</span>
-          <select
-            value={jurisdictionId}
-            onChange={(e) => setJurisdictionId(e.target.value)}
-            disabled={availableJurisdictions.length === 0}
-          >
-            <option value="all">All locations</option>
-            {availableJurisdictions.map((j) => (
-              <option key={j.id} value={j.id}>{j.name}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {/* ★ item 5: horizontal active-selection readout (replaces the old
-          one-liner + datestamp + vertical filter stack) */}
+      {/* ★ ui: search information ABOVE the toggles */}
       <div className="fanbase__summary" aria-live="polite">
         <span className="fanbase__summary-chip fanbase__summary-chip--date">
           <CalendarDays size={12} /> {periodStamp}
         </span>
-        {gender !== 'all' && (
-          <span className="fanbase__summary-chip">{genderLabel}</span>
-        )}
-        {age !== 'all' && (
-          <span className="fanbase__summary-chip">{ageLabel}</span>
-        )}
+        {gender !== 'all' && <span className="fanbase__summary-chip">{genderLabel}</span>}
+        {age !== 'all' && <span className="fanbase__summary-chip">{ageLabel}</span>}
         {jurisdictionId !== 'all' && jurisdictionLabel && (
           <span className="fanbase__summary-chip">{jurisdictionLabel}</span>
         )}
+      </div>
+
+      {/* ★ ui: single compact row — 4 selectors, no labels, no wrap */}
+      <div className="fanbase__controls">
+        <select
+          aria-label="Time interval"
+          value={period}
+          onChange={(e) => setPeriod(e.target.value)}
+        >
+          {PERIODS.map((o) => (
+            <option key={o.key} value={o.key}>{o.label}</option>
+          ))}
+        </select>
+
+        <select
+          aria-label="Gender"
+          value={gender}
+          onChange={(e) => setGender(e.target.value)}
+        >
+          {GENDER_OPTIONS.map((o) => (
+            <option key={o.key} value={o.key}>{o.label}</option>
+          ))}
+        </select>
+
+        <select
+          aria-label="Age"
+          value={age}
+          onChange={(e) => setAge(e.target.value)}
+        >
+          {AGE_OPTIONS.map((o) => (
+            <option key={o.key} value={o.key}>{o.label}</option>
+          ))}
+        </select>
+
+        <select
+          aria-label="Location"
+          value={jurisdictionId}
+          onChange={(e) => setJurisdictionId(e.target.value)}
+          disabled={availableJurisdictions.length === 0}
+        >
+          <option value="all">All locations</option>
+          {availableJurisdictions.map((j) => (
+            <option key={j.id} value={j.id}>{j.name}</option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -403,10 +400,7 @@ const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
                     </span>
                     <span className="fanbase-stage__label">{stage.label}</span>
 
-                    <strong className="fanbase-stage__value">
-                      {formatNumber(value)}
-                    </strong>
-
+                    {/* ★ ui: delta arrow now LEFT of the number */}
                     {hasDelta && (
                       <span
                         className={`fanbase-stage__delta ${
@@ -421,29 +415,23 @@ const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
                       </span>
                     )}
 
-                    {tip && (
-                      <span
-                        className={`fanbase-help ${isSupporter ? 'fanbase-help--invert' : ''}`}
+                    {/* ★ ui: hover/tap the number for the explanation */}
+                    {tip ? (
+                      <TipValue
+                        tipKey={stage.key}
+                        tip={tip}
+                        openTip={openTip}
+                        onToggle={toggleTip}
+                        className="fanbase-stage__valuewrap"
                       >
-                        <button
-                          type="button"
-                          className="fanbase-help__btn"
-                          aria-label={`What does "${stage.label}" mean?`}
-                          aria-expanded={openTip === stage.key}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleTip(stage.key);
-                          }}
-                        >
-                          <Info size={13} />
-                        </button>
-                        <span
-                          className={`fanbase-tip ${openTip === stage.key ? 'is-open' : ''}`}
-                          role="tooltip"
-                        >
-                          {tip}
-                        </span>
-                      </span>
+                        <strong className="fanbase-stage__value">
+                          {formatNumber(value)}
+                        </strong>
+                      </TipValue>
+                    ) : (
+                      <strong className="fanbase-stage__value fanbase-stage__valuewrap">
+                        {formatNumber(value)}
+                      </strong>
                     )}
                   </div>
                 </div>
@@ -467,7 +455,6 @@ const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
             </div>
           )}
 
-          {/* ★ item 5: advanced metrics (same model as the per-song modal) */}
           {hasAnyFanbase && (
             <>
               <button
@@ -484,26 +471,15 @@ const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
                 <div className="fanbase-advanced">
                   <div className="fanbase-adv-card">
                     <div className="fanbase-adv-card__head">
-                      <span className="artist-section__eyebrow">Completion quality</span>
-                      <span className="fanbase-help fanbase-help--below">
-                        <button
-                          type="button"
-                          className="fanbase-help__btn"
-                          aria-label="What is completion quality?"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleTip('completion');
-                          }}
-                        >
-                          <Info size={13} />
-                        </button>
-                        <span
-                          className={`fanbase-tip ${openTip === 'completion' ? 'is-open' : ''}`}
-                          role="tooltip"
-                        >
-                          {COMPLETION_TIP}
-                        </span>
-                      </span>
+                      <TipValue
+                        tipKey="completion"
+                        tip={COMPLETION_TIP}
+                        openTip={openTip}
+                        onToggle={toggleTip}
+                        className="fanbase-tipwrap--below"
+                      >
+                        <span className="artist-section__eyebrow">Completion quality</span>
+                      </TipValue>
                     </div>
 
                     <div className="fanbase-completion">
@@ -520,26 +496,15 @@ const FanbaseFunnel = ({ artistId, artistPhoto, artistName, ambientImage }) => {
 
                   <div className="fanbase-adv-card">
                     <div className="fanbase-adv-card__head">
-                      <span className="artist-section__eyebrow">Where plays come from</span>
-                      <span className="fanbase-help fanbase-help--below">
-                        <button
-                          type="button"
-                          className="fanbase-help__btn"
-                          aria-label="What is the discovery source?"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleTip('source');
-                          }}
-                        >
-                          <Info size={13} />
-                        </button>
-                        <span
-                          className={`fanbase-tip ${openTip === 'source' ? 'is-open' : ''}`}
-                          role="tooltip"
-                        >
-                          {SOURCE_TIP}
-                        </span>
-                      </span>
+                      <TipValue
+                        tipKey="source"
+                        tip={SOURCE_TIP}
+                        openTip={openTip}
+                        onToggle={toggleTip}
+                        className="fanbase-tipwrap--below"
+                      >
+                        <span className="artist-section__eyebrow">Where plays come from</span>
+                      </TipValue>
                     </div>
 
                     {sources.length > 0 && sourceTotal > 0 ? (

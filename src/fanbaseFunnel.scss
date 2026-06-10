@@ -1,30 +1,25 @@
 // =============================================================================
-// FanbaseFunnel — listener -> supporter conversion + advanced metrics.
-// Supporters grid/#1/growth now live in SupportersSection (own section).
+// FanbaseFunnel — FindPage-style ambient card + compact single-row controls.
 // =============================================================================
 
 .fanbase {
   width: 100%;
   min-width: 0;
-  position: relative;              // ★ ambient layer positioning context
+  position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 28px;
+  gap: 16px;
+  padding: 26px 28px;
   border-radius: var(--unis-radius-lg);
-  background:
-    radial-gradient(720px 260px at 100% 0%, var(--unis-primary-soft), transparent 64%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.008)),
-    var(--unis-panel);
-  border: 1px solid var(--unis-border);
-  box-shadow:
-    0 22px 80px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  // ★ ambient: FindPage recipe — simple dark glass so the artwork bleed reads
+  background: rgba(20, 20, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 22px 80px rgba(0, 0, 0, 0.3);
   animation: artist-rise 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 
   @media (max-width: 680px) {
-    padding: 20px 18px;
+    padding: 20px 16px;
 
     .fanbase__title-wrap { gap: 10px; }
     .fanbase__artist-avatar { width: 46px; height: 46px; }
@@ -59,18 +54,13 @@
     flex: none;
     text-align: right;
 
-    .fanbase__ratio-row {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
     strong {
       color: var(--unis-text);
       font-size: 26px;
       font-weight: 900;
       letter-spacing: -0.05em;
       line-height: 1;
+      cursor: help;
     }
 
     .fanbase__ratio-label {
@@ -84,7 +74,6 @@
     }
   }
 
-  // ---- loading / error states ---------------------------------------------
   &__state {
     padding: 32px;
     text-align: center;
@@ -167,50 +156,70 @@
 }
 
 // =============================================================================
-// ★ item 5: single-row control bar
+// ★ ui: search-information chips (now ABOVE the controls)
+// =============================================================================
+.fanbase__summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.fanbase__summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--unis-border-hi);
+  color: var(--unis-text-2);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  backdrop-filter: blur(6px);
+
+  &--date {
+    background: var(--unis-primary-soft);
+    color: var(--unis-primary-2);
+    font-weight: 800;
+  }
+}
+
+// =============================================================================
+// ★ ui: single-row compact control bar (4 selects, no wrap, no labels)
 // =============================================================================
 .fanbase__controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: var(--unis-radius);
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px solid var(--unis-border);
-}
-
-.fanbase__control {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  &--wide { flex: 1.4 1 0; }
-
-  > span {
-    color: var(--unis-text-3);
-    font-size: 9px;
-    font-weight: 850;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-  }
+  flex-wrap: nowrap;
+  gap: 8px;
+  width: 100%;
 
   select {
-    width: 100%;
+    flex: 1 1 0;
     min-width: 0;
-    min-height: 42px;
-    padding: 9px 12px;
+    min-height: 36px;
+    padding: 6px 26px 6px 10px;
     border-radius: var(--unis-radius-sm);
-    background: rgba(0, 0, 0, 0.32);
+    background: rgba(0, 0, 0, 0.45);
     border: 1px solid var(--unis-border-hi);
     color: var(--unis-text);
     font: inherit;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 750;
     cursor: pointer;
-    color-scheme: dark;            // ★ native arrow + option list render dark
-    text-overflow: ellipsis;       // ★ clip long values (e.g. Downtown Harlem)
+    color-scheme: dark;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    backdrop-filter: blur(6px);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C0C0C0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 13px;
 
     &:hover:not(:disabled) { border-color: var(--unis-primary); }
 
@@ -223,41 +232,10 @@
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 
-  @media (max-width: 600px) {
-    flex: 1 1 calc(50% - 5px);
-  }
-}
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
 
-// =============================================================================
-// ★ item 5: horizontal active-selection summary
-// =============================================================================
-.fanbase__summary {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: -4px;
-}
-
-.fanbase__summary-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 13px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid var(--unis-border);
-  color: var(--unis-text-2);
-  font-size: 12px;
-  font-weight: 750;
-  letter-spacing: 0.01em;
-
-  &--date {
-    background: var(--unis-primary-soft);
-    border-color: var(--unis-border-hi);
-    color: var(--unis-primary-2);
-    font-weight: 800;
+    select { flex: 1 1 calc(50% - 4px); }
   }
 }
 
@@ -297,14 +275,14 @@
     padding: 0 18px;
     border-radius: var(--unis-radius-sm);
     background:
-      linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.014)),
-      rgba(0, 0, 0, 0.22);
-    border: 1px solid var(--unis-border);
+      linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.25) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(4px);
     transition: transform 0.18s ease, border-color 0.18s ease;
 
     &:hover {
       transform: translateX(3px);
-      border-color: var(--unis-border-hi);
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     &.is-supporter {
@@ -349,19 +327,12 @@
     text-transform: uppercase;
   }
 
-  &__value {
-    margin-left: auto;
-    color: var(--unis-text);
-    font-size: 22px;
-    font-weight: 900;
-    letter-spacing: -0.04em;
-  }
-
+  // ★ ui: delta pushes right; it now sits to the LEFT of the value
   &__delta {
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    margin-left: 12px;
+    margin-left: auto;
     padding: 3px 8px;
     border-radius: 999px;
     font-size: 11px;
@@ -393,60 +364,55 @@
       }
     }
   }
-}
 
-// =============================================================================
-// Tooltips
-// =============================================================================
-.fanbase-help {
-  position: relative;
-  flex: none;
-  display: inline-flex;
-  margin-left: 10px;
+  // when there's no delta (all-time), the value itself pushes right
+  &__valuewrap {
+    margin-left: auto;
 
-  &__btn {
-    display: grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border-radius: 50%;
-    border: 1px solid var(--unis-border-hi);
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--unis-text-2);
-    cursor: pointer;
-    transition: color 0.16s ease, background 0.16s ease;
-
-    &:hover {
-      color: var(--unis-text);
-      background: rgba(255, 255, 255, 0.12);
+    .fanbase-stage__delta + & {
+      margin-left: 0;
     }
   }
 
-  &--invert .fanbase-help__btn {
-    border-color: rgba(255, 255, 255, 0.34);
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
-
-    &:hover { background: rgba(255, 255, 255, 0.3); }
+  &__value {
+    color: var(--unis-text);
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    cursor: help;
   }
+}
+
+// =============================================================================
+// ★ ui: tooltips — opaque premium surface, on hover/tap of the number itself
+// =============================================================================
+.fanbase-tipwrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 
 .fanbase-tip {
   position: absolute;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 12px);
   right: 0;
-  z-index: 50;
+  z-index: 60;
   width: min(280px, 72vw);
-  padding: 12px 14px;
+  padding: 13px 15px;
   border-radius: var(--unis-radius-sm);
-  background: var(--unis-panel);
-  border: 1px solid var(--unis-border-hi);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
-  color: var(--unis-text-2);
-  font-size: 12px;
+  // ★ fix: was var(--unis-panel) (≈ transparent) → invisible gray-on-gray.
+  // Now an opaque dark glass with a theme edge.
+  background: rgba(12, 14, 19, 0.97);
+  border: 1px solid var(--unis-primary-glow);
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 12px 40px -18px var(--unis-primary-glow);
+  backdrop-filter: blur(12px);
+  color: var(--unis-text);
+  font-size: 12.5px;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.55;
   letter-spacing: 0;
   text-transform: none;
   text-align: left;
@@ -460,27 +426,28 @@
     content: '';
     position: absolute;
     top: 100%;
-    right: 12px;
+    right: 14px;
     border: 6px solid transparent;
-    border-top-color: var(--unis-border-hi);
+    border-top-color: rgba(12, 14, 19, 0.97);
   }
 }
 
-.fanbase-help--below .fanbase-tip {
+// repeat-ratio + advanced-card tips sit near the panel top — flip below
+.fanbase-tipwrap--below .fanbase-tip {
   bottom: auto;
-  top: calc(100% + 10px);
-  text-align: left;
+  top: calc(100% + 12px);
 
   &::after {
     top: auto;
     bottom: 100%;
     border-top-color: transparent;
-    border-bottom-color: var(--unis-border-hi);
+    border-bottom-color: rgba(12, 14, 19, 0.97);
   }
 }
 
-.fanbase-help:hover .fanbase-tip,
-.fanbase-help:focus-within .fanbase-tip,
+// reveal on hover (desktop), keyboard focus, or tap-open (mobile)
+.fanbase-tipwrap:hover .fanbase-tip,
+.fanbase-tipwrap:focus-within .fanbase-tip,
 .fanbase-tip.is-open {
   opacity: 1;
   transform: translateY(0);
@@ -495,7 +462,7 @@
   text-align: center;
   color: var(--unis-text-2);
   border-radius: var(--unis-radius);
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.3);
   border: 1px dashed var(--unis-border-hi);
 
   svg { color: var(--unis-primary-2); margin-bottom: 8px; }
@@ -516,7 +483,7 @@
 }
 
 // =============================================================================
-// ★ item 5: advanced metrics (mirrors the per-song modal)
+// Advanced metrics
 // =============================================================================
 .fanbase-advanced-toggle {
   display: inline-flex;
@@ -526,17 +493,18 @@
   padding: 9px 16px;
   border-radius: 999px;
   border: 1px solid var(--unis-border-hi);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.4);
   color: var(--unis-text);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
+  backdrop-filter: blur(6px);
   transition: background 0.16s ease, border-color 0.16s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.55);
     border-color: var(--unis-primary);
   }
 
@@ -557,14 +525,17 @@
 .fanbase-adv-card {
   padding: 18px;
   border-radius: var(--unis-radius);
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid var(--unis-border);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
 
   &__head {
     display: flex;
     align-items: center;
     gap: 6px;
     margin-bottom: 14px;
+
+    .artist-section__eyebrow { cursor: help; }
   }
 }
 
@@ -657,7 +628,7 @@
 }
 
 // =============================================================================
-// ★ item 5: ambient blurred-artwork layer
+// ★ ambient: FindPage-matched blurred-artwork layer
 // =============================================================================
 .fanbase-ambient {
   position: absolute;
@@ -667,8 +638,8 @@
   height: 200%;
   background-size: cover;
   background-position: center;
-  filter: blur(48px) saturate(180%);
-  opacity: 0.28;
+  filter: blur(40px) saturate(180%);
+  opacity: 0.3;
   z-index: 0;
   pointer-events: none;
 }
