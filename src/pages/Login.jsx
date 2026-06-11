@@ -129,6 +129,10 @@ const Login = () => {
             >
               Browse As A Guest
             </button>
+
+            <div className="login-social-proof">
+              Discover the top artists in your community.
+            </div>
           </>
         )}
 
