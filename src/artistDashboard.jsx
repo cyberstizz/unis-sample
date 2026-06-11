@@ -1124,62 +1124,6 @@ const ArtistDashboard = () => {
             </div>
           </nav>
 
-          {statsLoading ? (
-            <SectionLoader label="Loading artist momentum..." />
-          ) : statsError ? (
-            <SectionError message={statsError} onRetry={() => fetchStats(user.userId)} />
-          ) : (
-            <section id="nav-momentum" className="artist-section">
-              <div className="artist-section__head">
-                <div>
-                  <span className="artist-section__eyebrow">Stats On Unis</span>
-                  <h2>
-                    Your <em>fanbases</em>
-                  </h2>
-                </div>
-              </div>
-
-              <div className="artist-momentum-grid">
-                <div className="artist-metric-card">
-                  <div>
-                    <span>Supporters</span>
-                    <strong>{supporters.toLocaleString()}</strong>
-                    <p>People directly backing your artist journey.</p>
-                  </div>
-                  <Users size={24} />
-                </div>
-
-                <div className="artist-metric-card">
-                  <div>
-                    <span>Followers</span>
-                    <strong>{followers.toLocaleString()}</strong>
-                    <p>Listeners keeping up with your movement.</p>
-                  </div>
-                  <Heart size={24} />
-                </div>
-
-                {/* ★ item 4: Catalog card replaced with Total plays */}
-                <div className="artist-metric-card">
-                  <div>
-                    <span>Total plays</span>
-                    <strong>{totalPlays.toLocaleString()}</strong>
-                    <p>All-time plays across your catalog.</p>
-                  </div>
-                  <Play size={24} />
-                </div>
-
-                <div className="artist-metric-card">
-                  <div>
-                    <span>Awards</span>
-                    <strong>{awards.length}</strong>
-                    <p>Wins earned through votes, plays, and score.</p>
-                  </div>
-                  <Trophy size={24} />
-                </div>
-              </div>
-            </section>
-          )}
-
           {/* ★ analytics: real fanbase funnel replaces the old placeholder
               "Artist intelligence" collapsible. Self-fetching, handles zero
               states gracefully (pre-launch shows an intentional empty state). */}
