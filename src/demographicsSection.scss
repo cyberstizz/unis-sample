@@ -449,3 +449,20 @@
   color: var(--unis-text-3);
   font-size: 12.5px;
 }
+
+// ★ territory explorer: top drill bar (replaces the bottom chip grid)
+.demo__explorer-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.demo__explorer-select {
+  flex: 1;
+  min-width: 0;
+  max-width: 340px;
+}
+
+.demo__opt-chevron {
+  color: var(--unis-primary-2);
+}

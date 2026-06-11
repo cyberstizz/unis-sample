@@ -4,6 +4,7 @@ import {
   Heart, UserPlus, Star, CalendarDays,
 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import ScrollSelect from './ScrollSelect'; 
 import './demographicsSection.scss';
 
 const PERIODS = [
@@ -278,104 +279,104 @@ const DemographicsSection = ({ artistId }) => {
         )
       )}
 
-      {/* ================== TAB 2: TERRITORY EXPLORER ================== */}
+{/* ================== TAB 2: TERRITORY EXPLORER ================== */}
       {tab === 'map' && (
-        <>
-          <div className="demo__crumbs">
+        terLoading ? (
+          <div className="demo__state">
+            <div className="demo__spinner" aria-hidden="true" />
+            <p>Loading territory…</p>
+          </div>
+        ) : terError ? (
+          <div className="demo__state demo__state--error">
+            <p>{terError}</p>
             <button
               type="button"
-              className="demo__crumb"
-              onClick={() => jumpTo(-1)}
-              disabled={stack.length === 0}
+              onClick={() =>
+                fetchTerritory(artistId, period, stack.length ? stack[stack.length - 1].id : null)
+              }
             >
-              {territory && stack.length === 0
-                ? territory.jurisdiction?.name
-                : 'Unis'}
+              Retry
             </button>
-            {stack.map((s, i) => (
-              <React.Fragment key={s.id}>
-                <ChevronRight size={12} />
-                <button
-                  type="button"
-                  className="demo__crumb"
-                  onClick={() => jumpTo(i)}
-                  disabled={i === stack.length - 1}
-                >
-                  {s.name}
-                </button>
-              </React.Fragment>
-            ))}
           </div>
+        ) : (
+          <>
+            {/* ★ drill control at the TOP — replaces the bottom chip grid */}
+            <div className="demo__explorer-bar">
+              {stack.length > 0 && (
+                <button type="button" className="demo__back" onClick={goBack}>
+                  <ArrowLeft size={13} /> Back
+                </button>
+              )}
 
-          {terLoading ? (
-            <div className="demo__state">
-              <div className="demo__spinner" aria-hidden="true" />
-              <p>Loading territory…</p>
+              <div className="demo__explorer-select">
+                <ScrollSelect
+                  ariaLabel="Choose a sub-territory"
+                  value={currentName}
+                  placeholder={currentName}
+                  visibleRows={3}
+                  options={[
+                    { value: currentName, label: `${currentName} (current)` },
+                    ...children.map((c) => ({
+                      value: c.id,
+                      label: c.name,
+                      trailing: c.hasChildren ? (
+                        <ChevronRight size={13} className="demo__opt-chevron" />
+                      ) : null,
+                    })),
+                  ]}
+                  onChange={(val) => {
+                    if (val === currentName) return; // re-selected current → no-op
+                    const child = children.find((c) => c.id === val);
+                    if (child) drillInto(child);
+                  }}
+                />
+              </div>
             </div>
-          ) : terError ? (
-            <div className="demo__state demo__state--error">
-              <p>{terError}</p>
+
+            {/* breadcrumb trail for orientation */}
+            <div className="demo__crumbs">
               <button
                 type="button"
-                onClick={() =>
-                  fetchTerritory(artistId, period, stack.length ? stack[stack.length - 1].id : null)
-                }
+                className="demo__crumb"
+                onClick={() => jumpTo(-1)}
+                disabled={stack.length === 0}
               >
-                Retry
+                {stack.length === 0 ? currentName : 'Unis'}
               </button>
-            </div>
-          ) : (
-            <>
-              <div className="demo__territory-head">
-                {stack.length > 0 && (
-                  <button type="button" className="demo__back" onClick={goBack}>
-                    <ArrowLeft size={13} /> Back
+              {stack.map((s, i) => (
+                <React.Fragment key={s.id}>
+                  <ChevronRight size={12} />
+                  <button
+                    type="button"
+                    className="demo__crumb"
+                    onClick={() => jumpTo(i)}
+                    disabled={i === stack.length - 1}
+                  >
+                    {s.name}
                   </button>
-                )}
-                <h3>{currentName}</h3>
-                <span className="demo__territory-period">
-                  <CalendarDays size={11} />
-                  {PERIODS.find((o) => o.key === period)?.label}
-                </span>
-              </div>
+                </React.Fragment>
+              ))}
+            </div>
 
-              <div className="demo__stats">
-                {STAT_DEFS.map(({ key, label, icon: Icon }) => (
-                  <div className="demo__stat" key={key}>
-                    <Icon size={16} />
-                    <strong>{formatNumber(stats[key])}</strong>
-                    <span>{label}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="demo__stats">
+              {STAT_DEFS.map(({ key, label, icon: Icon }) => (
+                <div className="demo__stat" key={key}>
+                  <Icon size={16} />
+                  <strong>{formatNumber(stats[key])}</strong>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
 
-              {children.length > 0 ? (
-                <>
-                  <p className="demo__children-label">Drill into a sub-territory</p>
-                  <div className="demo__children">
-                    {children.map((c) => (
-                      <button
-                        type="button"
-                        key={c.id}
-                        className="demo__child"
-                        onClick={() => drillInto(c)}
-                      >
-                        {c.name}
-                        {c.hasChildren && <ChevronRight size={13} />}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <p className="demo__leaf-note">
-                  This is the most local level — no smaller territories inside {currentName}.
-                </p>
-              )}
-            </>
-          )}
-        </>
+            {children.length === 0 && (
+              <p className="demo__leaf-note">
+                This is the most local level — no smaller territories inside {currentName}.
+              </p>
+            )}
+          </>
+        )
       )}
-    </section>
+       </section>
   );
 };
 

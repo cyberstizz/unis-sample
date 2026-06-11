@@ -28,12 +28,34 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState(null); // { status, effectiveDate, pendingArtistId }
+  const [result, setResult] = useState(null); 
 
   const isFirstPick = !currentArtistId;
 
   const modalRef = useRef(null);
+  const listRef = useRef(null);         
+  const [scrollTop, setScrollTop] = useState(0); 
   useModalA11y({ active: show, onClose, modalRef });
+
+
+  // ★ windowing: jump back to top whenever the filter changes
+  useEffect(() => {
+    setScrollTop(0);
+    if (listRef.current) listRef.current.scrollTop = 0;
+  }, [query]);
+
+  // ★ windowing: render only the rows in view (+ buffer) so 1000s of artists
+  // mount ~15 nodes instead of all of them.
+  const ROW_H = 64;       // approx .sap-row height incl. gap
+  const VIEWPORT_H = 320; // matches .sap-list max-height in scss
+  const BUFFER = 4;
+  const total = filtered.length;
+  const startIndex = Math.max(0, Math.floor(scrollTop / ROW_H) - BUFFER);
+  const visibleCount = Math.ceil(VIEWPORT_H / ROW_H) + BUFFER * 2;
+  const endIndex = Math.min(total, startIndex + visibleCount);
+  const padTop = startIndex * ROW_H;
+  const padBottom = Math.max(0, (total - endIndex) * ROW_H);
+  const windowed = filtered.slice(startIndex, endIndex);
 
   useEffect(() => {
     if (!show) return;
@@ -45,6 +67,8 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
       setResult(null);
       setSelectedId(null);
       setQuery('');
+      etScrollTop(0); // ★ windowing: reset scroll on reload
+
       const startedAt = performance.now();
       try {
         const res = await apiCall({ url: '/v1/users/artists/with-preview' });
@@ -173,7 +197,13 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
               />
             </div>
 
-            <div className="sap-list" role="listbox" aria-label="Artists">
+            <div
+              className="sap-list"
+              role="listbox"
+              aria-label="Artists"
+              ref={listRef}
+              onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+            >
               {loading ? (
                 <div className="sap-state">
                   <div className="sap-spinner" aria-hidden="true" />
@@ -188,42 +218,48 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
                   <p>No artists match</p>
                 </div>
               ) : (
-                filtered.map((artist) => {
-                  const isCurrent = artist.userId === currentArtistId;
-                  const isSelected = artist.userId === selectedId;
-                  const photo = buildUrl(artist.photoUrl);
-                  const initial = (artist.username || '?').charAt(0).toUpperCase();
-                  return (
-                    <button
-                      key={artist.userId}
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      className={`sap-row ${isSelected ? 'is-selected' : ''} ${isCurrent ? 'is-current' : ''}`}
-                      onClick={() => setSelectedId(artist.userId)}
-                    >
-                      {photo ? (
-                        <img src={photo} alt="" className="sap-row__avatar" />
-                      ) : (
-                        <div className="sap-row__avatar sap-row__avatar--ph" aria-hidden="true">
-                          {initial}
+                <>
+                  {/* ★ windowing: top spacer */}
+                  <div style={{ height: padTop, flex: 'none' }} aria-hidden="true" />
+                  {windowed.map((artist) => {
+                    const isCurrent = artist.userId === currentArtistId;
+                    const isSelected = artist.userId === selectedId;
+                    const photo = buildUrl(artist.photoUrl);
+                    const initial = (artist.username || '?').charAt(0).toUpperCase();
+                    return (
+                      <button
+                        key={artist.userId}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        className={`sap-row ${isSelected ? 'is-selected' : ''} ${isCurrent ? 'is-current' : ''}`}
+                        onClick={() => setSelectedId(artist.userId)}
+                      >
+                        {photo ? (
+                          <img src={photo} alt="" className="sap-row__avatar" />
+                        ) : (
+                          <div className="sap-row__avatar sap-row__avatar--ph" aria-hidden="true">
+                            {initial}
+                          </div>
+                        )}
+                        <div className="sap-row__info">
+                          <span className="sap-row__name">{artist.username}</span>
+                          <span className="sap-row__meta">
+                            {artist.score ?? 0} pts
+                            {isCurrent && <span className="sap-row__current-tag">Current</span>}
+                          </span>
                         </div>
-                      )}
-                      <div className="sap-row__info">
-                        <span className="sap-row__name">{artist.username}</span>
-                        <span className="sap-row__meta">
-                          {artist.score ?? 0} pts
-                          {isCurrent && <span className="sap-row__current-tag">Current</span>}
-                        </span>
-                      </div>
-                      {isSelected && (
-                        <span className="sap-row__check" aria-hidden="true">
-                          <Check size={16} />
-                        </span>
-                      )}
-                    </button>
-                  );
-                })
+                        {isSelected && (
+                          <span className="sap-row__check" aria-hidden="true">
+                            <Check size={16} />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {/* ★ windowing: bottom spacer */}
+                  <div style={{ height: padBottom, flex: 'none' }} aria-hidden="true" />
+                </>
               )}
             </div>
 
