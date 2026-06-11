@@ -72,8 +72,13 @@ const Login = () => {
       <div className="login-card">
         <img src={unisLogo} alt="UNIS" className="login-logo" />
 
-        <h2 className="login-title">Welcome back</h2>
+        <h1 className="login-title">
+          Discover the Sound of Your City
+        </h1>
 
+        <p className="login-subtitle">
+          Vote. Stream. Rise.
+        </p>
         {error && !showWaitlistModal && <p className="login-error">{error}</p>}
 
         {!showWaitlistModal && (
