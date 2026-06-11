@@ -1,0 +1,160 @@
+// =============================================================================
+// ScrollSelect — theme-aware dropdown with a height-capped, scrollable menu.
+// =============================================================================
+
+.scrollselect {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  font-family: var(--unis-font-sans);
+}
+
+.scrollselect__trigger {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: var(--unis-radius-sm);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--unis-border-hi);
+  color: var(--unis-text);
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: border-color 0.16s ease, background 0.16s ease;
+
+  &:hover:not(:disabled) { border-color: var(--unis-primary); }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--unis-primary);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft);
+  }
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .scrollselect.is-open & {
+    border-color: var(--unis-primary);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft);
+  }
+}
+
+.scrollselect__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scrollselect__chevron {
+  flex: none;
+  color: var(--unis-text-3);
+  transition: transform 0.18s ease, color 0.18s ease;
+
+  .scrollselect.is-open & {
+    transform: rotate(180deg);
+    color: var(--unis-primary-2);
+  }
+}
+
+.scrollselect__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  padding: 6px;
+  border-radius: var(--unis-radius);
+  // opaque premium surface — same recipe as the funnel tooltip fix
+  background: rgba(12, 14, 19, 0.98);
+  border: 1px solid var(--unis-primary-glow);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 12px 40px -18px var(--unis-primary-glow);
+  backdrop-filter: blur(14px);
+  animation: scrollselect-pop 0.16s ease both;
+}
+
+@keyframes scrollselect-pop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scrollselect__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--unis-border-hi) transparent;
+
+  &::-webkit-scrollbar { width: 7px; }
+  &::-webkit-scrollbar-thumb {
+    background: var(--unis-border-hi);
+    border-radius: 999px;
+  }
+  &::-webkit-scrollbar-track { background: transparent; }
+}
+
+.scrollselect__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 46px; // keep in sync with ROW_PX
+  padding: 8px 12px;
+  text-align: left;
+  border: 0;
+  border-radius: var(--unis-radius-sm);
+  background: transparent;
+  color: var(--unis-text-2);
+  cursor: pointer;
+  transition: background 0.13s ease, color 0.13s ease;
+
+  &.is-active { background: rgba(255, 255, 255, 0.06); color: var(--unis-text); }
+
+  &.is-selected {
+    color: #fff;
+    background: var(--unis-primary-soft);
+  }
+}
+
+.scrollselect__option-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scrollselect__option-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scrollselect__option-meta {
+  color: var(--unis-text-3);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.scrollselect__option-check {
+  flex: none;
+  color: var(--unis-primary-2);
+}
+
+.scrollselect__empty {
+  padding: 18px;
+  text-align: center;
+  color: var(--unis-text-3);
+  font-size: 12px;
+}
