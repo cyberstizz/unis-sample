@@ -67,7 +67,7 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
       setResult(null);
       setSelectedId(null);
       setQuery('');
-      etScrollTop(0); // ★ windowing: reset scroll on reload
+      setScrollTop(0); // ★ windowing: reset scroll on reload
 
       const startedAt = performance.now();
       try {
