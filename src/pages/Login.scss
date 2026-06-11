@@ -91,12 +91,30 @@
     border: 1px solid #ccc;
     border-radius: 8px;
     font-size: 1rem;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.08);
+    color: white;
+    height: 58px;
+    transition: all .25s ease;
+
+  }
+
+    &:focus {
+    border-color: #2952cc;
+
+    box-shadow:
+      0 0 0 4px rgba(41,82,204,.15);
   }
 
   button {
     margin-top: 0.5rem;
     padding: 0.75rem;
-    background: #163387;
+    background: linear-gradient(
+      135deg,
+      #2952cc,
+      #163387
+    );;
+    box-shadow: 0 12px 30px rgba(22,51,135,.45);
     color: #fff;
     border: none;
     border-radius: 8px;
