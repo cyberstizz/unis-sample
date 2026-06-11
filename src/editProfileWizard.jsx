@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { X, Upload, Type, User, Camera } from 'lucide-react';
+import { X, Upload, Type, Camera } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import cacheService from './services/cacheService';
 import buildUrl from './utils/buildUrl';
 import './editProfileWizard.scss';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
   const [activeTab, setActiveTab] = useState('photo');
@@ -16,6 +14,9 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
 
   if (!show) return null;
 
+  const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
+  const ambient = userProfile?.photoUrl ? buildUrl(userProfile.photoUrl) : null;
+
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -25,29 +26,18 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
   };
 
   const handleSavePhoto = async () => {
-    if (!photoFile) {
-      onClose();
-      return;
-    }
-
+    if (!photoFile) { onClose(); return; }
     setLoading(true);
     const formData = new FormData();
     formData.append('photo', photoFile);
-
     try {
-      await apiCall({
-        method: 'patch',
-        url: '/v1/users/profile',
-        data: formData,
-      });
-
+      await apiCall({ method: 'patch', url: '/v1/users/profile', data: formData });
       cacheService.invalidate('user', userProfile.userId);
       cacheService.invalidate('artist', userProfile.userId);
-
       onSuccess?.();
       onClose();
     } catch (err) {
-      console.error(err)
+      console.error(err);
       alert('Failed to update photo. Please try again.');
     } finally {
       setLoading(false);
@@ -55,27 +45,16 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
   };
 
   const handleSaveBio = async () => {
-    if (bio === userProfile?.bio) {
-      onClose();
-      return;
-    }
-
+    if (bio === userProfile?.bio) { onClose(); return; }
     setLoading(true);
-    const formData = new FormData();
-    formData.append('bio', bio);
-
     try {
       await apiCall({
         method: 'put',
         url: `/v1/users/profile/${userProfile.userId}/bio`,
-        data:  {
-        bio: bio.trim(),
-      },
+        data: { bio: bio.trim() },
       });
-
       cacheService.invalidate('user', userProfile.userId);
       cacheService.invalidate('artist', userProfile.userId);
-
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -86,110 +65,152 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
     }
   };
 
+  const isSaveDisabled =
+    loading ||
+    (activeTab === 'photo' && !photoFile) ||
+    (activeTab === 'bio' && bio === userProfile?.bio);
+
   return (
-    <div className="upload-wizard-overlay">
-      <div className="upload-wizard">
-        <button className="close-button" onClick={onClose}>
-          <X size={28} />
-        </button>
+    <div className="epw-overlay">
+      <div className="epw" role="dialog" aria-modal="true" aria-label="Edit profile">
 
-        <h2>Edit Profile</h2>
+        {/* Ambient blurred photo — drives the atmospheric tint */}
+        {ambient && (
+          <div
+            className="epw-ambient"
+            style={{ backgroundImage: `url(${ambient})` }}
+            aria-hidden="true"
+          />
+        )}
 
-        {/* Tab Navigation */}
-        <div className="edit-profile-tabs">
-          <button
-            className={`tab-button ${activeTab === 'photo' ? 'active' : ''}`}
-            onClick={() => setActiveTab('photo')}
-          >
-            <Camera size={16} /> Photo
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'bio' ? 'active' : ''}`}
-            onClick={() => setActiveTab('bio')}
-          >
-            <Type size={16} /> Bio
+        {/* ── Header ── */}
+        <div className="epw__header">
+          <div className="epw__avatar">
+            {preview ? (
+              <img
+                src={preview}
+                alt={userProfile?.displayName || 'Artist'}
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            ) : (
+              <span className="epw__avatar-fallback">
+                {initialOf(userProfile?.displayName)}
+              </span>
+            )}
+          </div>
+
+          <div className="epw__titles">
+            <span className="artist-section__eyebrow">Your profile</span>
+            <h2>Edit <em>profile</em></h2>
+          </div>
+
+          <button className="epw__close" onClick={onClose} aria-label="Close">
+            <X size={16} />
           </button>
         </div>
 
-        <div className="step-content">
-          {/* Photo Tab */}
+        {/* ── Tab strip ── */}
+        <div className="epw__tabs" role="tablist">
+          <button
+            role="tab"
+            aria-selected={activeTab === 'photo'}
+            className={`epw__tab ${activeTab === 'photo' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('photo')}
+          >
+            <Camera size={13} aria-hidden="true" />
+            Photo
+          </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === 'bio'}
+            className={`epw__tab ${activeTab === 'bio' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('bio')}
+          >
+            <Type size={13} aria-hidden="true" />
+            Bio
+          </button>
+        </div>
+
+        {/* ── Scrollable body ── */}
+        <div className="epw__body" role="tabpanel">
+
           {activeTab === 'photo' && (
-            <div className="form-group">
-              <label className="upload-section-header">
-                <User size={18} /> Profile Photo
-              </label>
-              <p className="wizard-intro">
-                Upload a photo that represents you as an artist.
-              </p>
-              <div style={{ textAlign: 'center', margin: '1.5rem 0' }}>
-                <img
-                  src={preview || '/default-avatar.jpg'}
-                  alt="Profile preview"
-                  style={{
-                    width: 160,
-                    height: 160,
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '4px solid #004aad22',
-                  }}
-                />
+            <>
+              <div className="epw__section-label">
+                <Camera size={12} aria-hidden="true" />
+                Profile photo
               </div>
-              <label className="input-field" style={{ cursor: 'pointer', textAlign: 'center' }}>
-                <Upload size={18} style={{ verticalAlign: 'middle', marginRight: 8 }} />
-                Choose New Photo
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  style={{ display: 'none' }}
-                />
-              </label>
-              {photoFile && (
-                <p className="file-preview">Selected: {photoFile.name}</p>
-              )}
-            </div>
+              <p className="epw__intro">
+                This is how artists and listeners see you across Unis.
+              </p>
+
+              <div className="epw__photo-preview">
+                <div className="epw__photo-ring">
+                  {preview ? (
+                    <img
+                      src={preview}
+                      alt="Profile preview"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="epw__photo-fallback">
+                      {initialOf(userProfile?.displayName)}
+                    </div>
+                  )}
+                </div>
+
+                <label className="epw__file-label">
+                  <Upload size={14} aria-hidden="true" />
+                  Choose new photo
+                  <input type="file" accept="image/*" onChange={handlePhotoChange} />
+                </label>
+
+                {photoFile && (
+                  <p className="epw__file-name">{photoFile.name}</p>
+                )}
+              </div>
+            </>
           )}
 
-          {/* Bio Tab */}
           {activeTab === 'bio' && (
-            <div className="form-group">
-              <label className="upload-section-header">
-                <Type size={18} /> Bio
-              </label>
-              <p className="wizard-intro">
+            <>
+              <div className="epw__section-label">
+                <Type size={12} aria-hidden="true" />
+                Bio
+              </div>
+              <p className="epw__intro">
                 Tell the world about your sound, your story, your roots.
               </p>
               <textarea
+                className="epw__textarea"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 rows={6}
-                placeholder="Share your musical journey, influences, and what makes you unique..."
+                placeholder="Share your musical journey, influences, and what makes you unique…"
                 maxLength={500}
               />
-              <p style={{ textAlign: 'right', color: '#666', fontSize: '0.8rem', marginTop: '4px' }}>
-                {bio.length}/500
-              </p>
-            </div>
+              <p className="epw__char-count">{bio.length} / 500</p>
+            </>
           )}
         </div>
 
-        {/* Buttons */}
-        <div className="button-group">
-          <button className="back-button" onClick={onClose}>
+        {/* ── Footer ── */}
+        <div className="epw__footer">
+          <button className="epw__btn epw__btn--cancel" onClick={onClose}>
             Cancel
           </button>
           <button
-            className="submit-upload-button"
+            className="epw__btn epw__btn--save"
             onClick={activeTab === 'photo' ? handleSavePhoto : handleSaveBio}
-            disabled={loading || (activeTab === 'photo' && !photoFile) || (activeTab === 'bio' && bio === userProfile?.bio)}
+            disabled={isSaveDisabled}
           >
-            {loading ? 'Saving...' : `Save ${activeTab === 'photo' ? 'Photo' : 'Bio'}`}
+            {loading ? 'Saving…' : `Save ${activeTab === 'photo' ? 'photo' : 'bio'}`}
           </button>
         </div>
+
       </div>
     </div>
   );
 };
 
 export default EditProfileWizard;
- 
