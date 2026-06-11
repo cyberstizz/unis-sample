@@ -43,7 +43,7 @@ import ThemePicker from './ThemePicker';
 import CashoutPanel from './CashoutPanel';
 import FanbaseFunnel from './fanbaseFunnle'; // ★ analytics: real fanbase funnel section
 import SupporterSection from './SupporterSection'; // ★ item 5: supporters split out
-import DemographicsSection from './DemographicsSection'; // ★ item 6
+import DemographicsSection from './demographicsSection'; // ★ item 6
 import SupportedArtistPicker from './SupportedArtistPicker'; // ★ H: change-artist picker (same component Profile uses)
 import './artistDashboard.scss';
 import SongStatsModal from './SongStatsModal'; // ★ D: per-song funnel modal
