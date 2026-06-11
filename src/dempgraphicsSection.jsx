@@ -4,7 +4,7 @@ import {
   Heart, UserPlus, Star, CalendarDays,
 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
-import ScrollSelect from './ScrollSelect'; 
+import ScrollSelect from './scrollSelect'; 
 import './demographicsSection.scss';
 
 const PERIODS = [
