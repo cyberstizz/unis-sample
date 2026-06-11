@@ -28,34 +28,14 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState(null); 
+  const [result, setResult] = useState(null);
 
   const isFirstPick = !currentArtistId;
 
   const modalRef = useRef(null);
-  const listRef = useRef(null);         
-  const [scrollTop, setScrollTop] = useState(0); 
+  const listRef = useRef(null);
+  const [scrollTop, setScrollTop] = useState(0);
   useModalA11y({ active: show, onClose, modalRef });
-
-
-  // ★ windowing: jump back to top whenever the filter changes
-  useEffect(() => {
-    setScrollTop(0);
-    if (listRef.current) listRef.current.scrollTop = 0;
-  }, [query]);
-
-  // ★ windowing: render only the rows in view (+ buffer) so 1000s of artists
-  // mount ~15 nodes instead of all of them.
-  const ROW_H = 64;       // approx .sap-row height incl. gap
-  const VIEWPORT_H = 320; // matches .sap-list max-height in scss
-  const BUFFER = 4;
-  const total = filtered.length;
-  const startIndex = Math.max(0, Math.floor(scrollTop / ROW_H) - BUFFER);
-  const visibleCount = Math.ceil(VIEWPORT_H / ROW_H) + BUFFER * 2;
-  const endIndex = Math.min(total, startIndex + visibleCount);
-  const padTop = startIndex * ROW_H;
-  const padBottom = Math.max(0, (total - endIndex) * ROW_H);
-  const windowed = filtered.slice(startIndex, endIndex);
 
   useEffect(() => {
     if (!show) return;
@@ -96,6 +76,25 @@ const SupportedArtistPicker = ({ show, onClose, userId, currentArtistId, onSucce
     if (!q) return artists;
     return artists.filter((a) => (a.username || '').toLowerCase().includes(q));
   }, [artists, query]);
+
+  // ★ windowing: jump back to top whenever the filter changes
+  useEffect(() => {
+    setScrollTop(0);
+    if (listRef.current) listRef.current.scrollTop = 0;
+  }, [query]);
+
+  // ★ windowing: render only the rows in view (+ buffer) so 1000s of artists
+  // mount ~15 nodes instead of all of them. MUST sit after `filtered`.
+  const ROW_H = 64;       // approx .sap-row height incl. gap
+  const VIEWPORT_H = 320; // matches .sap-list height in scss
+  const BUFFER = 4;
+  const total = filtered.length;
+  const startIndex = Math.max(0, Math.floor(scrollTop / ROW_H) - BUFFER);
+  const visibleCount = Math.ceil(VIEWPORT_H / ROW_H) + BUFFER * 2;
+  const endIndex = Math.min(total, startIndex + visibleCount);
+  const padTop = startIndex * ROW_H;
+  const padBottom = Math.max(0, (total - endIndex) * ROW_H);
+  const windowed = filtered.slice(startIndex, endIndex);
 
   const selectedArtist = useMemo(
     () => artists.find((a) => a.userId === selectedId) || null,
