@@ -36,8 +36,12 @@
 
 /* Login card — centered above overlay */
 .login-card {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 2.5rem 2rem;
+  background: rgba(10, 12, 20, 0.72);
+
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+
+  border: 1px solid rgba(255,255,255,.08);  padding: 2.5rem 2rem;
   border-radius: 16px;
   width: 90%;
   max-width: 380px;
