@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  PieChart, Map, ChevronRight, ArrowLeft, Headphones, Play,
+  PieChart, Map as MapIcon, ChevronRight, ArrowLeft, Headphones, Play,
   Heart, UserPlus, Star, CalendarDays,
 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
@@ -173,7 +173,7 @@ const DemographicsSection = ({ artistId }) => {
             className={`demo__tab ${tab === 'map' ? 'is-active' : ''}`}
             onClick={() => setTab('map')}
           >
-            <Map size={14} /> Territory explorer
+            <MapIcon size={14} /> Territory explorer
           </button>
         </div>
       </div>
