@@ -71,14 +71,21 @@
 }
 
 .login-logo {
-  width: 120px;
+  width: 150px;
   margin-bottom: 1rem;
+  filter:
+  drop-shadow(
+    0 0 25px rgba(41,82,204,.35)
+  );
 }
 
 .login-title {
   margin: 0 0 1.5rem;
   font-size: 1.8rem;
   color: #163387;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .login-form {
@@ -115,6 +122,7 @@
       #163387
     );;
     box-shadow: 0 12px 30px rgba(22,51,135,.45);
+    transform: translateY(-2px);
     color: #fff;
     border: none;
     border-radius: 8px;
@@ -131,6 +139,13 @@
       background: #0e246e;
     }
   }
+}
+
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .login-error {
