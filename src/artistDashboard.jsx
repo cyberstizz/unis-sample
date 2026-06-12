@@ -38,6 +38,7 @@ import DeleteAccountWizard from './deleteAccountWizard';
 import EditSongWizard from './editSongWizard';
 import DeleteSongModal from './deleteSongModal';
 import VoteHistoryModal from './voteHistoryModal';
+import TerritoryRankSection from './TerritoryRankSection'; // ★ territory rank
 import ReferralCodeCard from './ReferralCodeCard';
 import ThemePicker from './ThemePicker';
 import CashoutPanel from './CashoutPanel';
@@ -1154,45 +1155,8 @@ const ArtistDashboard = () => {
               eyebrow="Local advantage"
               title={<>Territory <em>signal</em></>}
               defaultOpen={false}
-            >
-              <div className="artist-territory-grid">
-                <div className="artist-territory-card">
-                  <div className="artist-territory-card__icon">
-                    <MapPin size={22} />
-                  </div>
-                  <div>
-                    <span>Home base</span>
-                    <strong>{artistJurisdiction}</strong>
-                    <p>Your local identity is the foundation for Unis discovery.</p>
-                  </div>
-                </div>
-
-                <div className="artist-territory-card">
-                  <div className="artist-territory-card__icon">
-                    <Music size={22} />
-                  </div>
-                  <div>
-                    <span>Primary lane</span>
-                    <strong>{artistGenre}</strong>
-                    <p>Your genre connects you to awards, leaderboards, and local competition.</p>
-                  </div>
-                </div>
-
-              <div className="artist-territory-card artist-territory-card--wide">
-                <div className="artist-territory-card__icon">
-                  <Sparkles size={22} />
-                </div>
-                <div>
-                  <span>Coming soon</span>
-                  <strong>Rank movement</strong>
-                  <p>
-                    This area will eventually show your rank by neighborhood, Harlem, NYC,
-                    New York, and Unis-wide once the dashboard summary endpoint is added.
-                  </p>
-                </div>
-              </div>
-            </div>
-
+          >
+            <TerritoryRankSection artistId={user?.userId} ambientImage={featuredArtwork} />
           </ArtistCollapsibleSection>
 
           {/* ★ collapsible: Catalog (collapsed by default) */}
