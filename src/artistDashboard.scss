@@ -2170,3 +2170,30 @@
   border: 1px solid var(--unis-border);
   backdrop-filter: blur(8px);
 }
+
+
+// ★ per-song artwork ambient (same recipe as the songstats / funnel cards)
+.artist-song-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.artist-song-card__ambient {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(40px) saturate(180%);
+  opacity: 0.28;
+  z-index: 0;
+  pointer-events: none;
+}
+
+// lift the card's content above its ambient (absolute child stays out of the grid)
+.artist-song-card > *:not(.artist-song-card__ambient) {
+  position: relative;
+  z-index: 1;
+}

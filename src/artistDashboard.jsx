@@ -1199,6 +1199,11 @@ const ArtistDashboard = () => {
                       key={song.songId || song.id || index}
                       className="artist-song-card"
                     >
+                    <div
+                      className="artist-song-card__ambient"
+                      style={{ backgroundImage: `url(${songArtwork})` }}
+                      aria-hidden="true"
+                    />
                       <img
                         src={songArtwork}
                         alt={`${song.title} artwork`}
