@@ -1176,6 +1176,7 @@ const ArtistDashboard = () => {
             eyebrow="Catalog command"
             title={<>Songs </>}
             defaultOpen={false}
+            ambientImage={displayPhoto}     
           >
             <div className="artist-catalog-actions">
               <button
