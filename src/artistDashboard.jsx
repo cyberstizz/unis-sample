@@ -94,23 +94,32 @@ const SectionError = ({ message = 'Failed to load.', onRetry }) => (
 );
 
 const ArtistCollapsibleSection = ({
-    id,                 // ★ item 3
+    id,
     eyebrow,
     title,
     children,
     defaultOpen = true,
     className = '',
-    onRegister,         // ★ item 3
+    onRegister,
+    ambientImage,          // ★ blurred profile-image backdrop (funnel-style)
   }) => {
     const [open, setOpen] = useState(defaultOpen);
 
-    // ★ item 3: register an "open me" fn so the quick-nav can expand this section
     useEffect(() => {
       if (id && onRegister) onRegister(id, () => setOpen(true));
     }, [id, onRegister]);
 
     return (
       <section id={id} className={`artist-collapsible ${className} ${open ? 'is-open' : ''}`}>
+        {/* ★ ambient: blurred artist image behind the whole section */}
+        {ambientImage && (
+          <div
+            className="artist-collapsible__ambient"
+            style={{ backgroundImage: `url(${ambientImage})` }}
+            aria-hidden="true"
+          />
+        )}
+
         <button
           type="button"
           className="artist-collapsible__trigger"
@@ -1155,8 +1164,9 @@ const ArtistDashboard = () => {
               eyebrow="Local advantage"
               title={<>Territory <em>signal</em></>}
               defaultOpen={false}
+              ambientImage={displayPhoto}
           >
-            <TerritoryRankSection artistId={user?.userId} ambientImage={featuredArtwork} />
+            <TerritoryRankSection artistId={user?.userId} />
           </ArtistCollapsibleSection>
 
           {/* ★ collapsible: Catalog (collapsed by default) */}
