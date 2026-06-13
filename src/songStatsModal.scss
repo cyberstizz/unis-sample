@@ -249,11 +249,11 @@
     letter-spacing: -0.04em;
   }
 
-  &__delta {
+  &4 {
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    margin-left: 12px;
+    margin-left: auto;
     padding: 3px 8px;
     border-radius: 999px;
     font-size: 11px;
@@ -614,4 +614,12 @@
 .songstats-modal > *:not(.songstats-ambient) {
   position: relative;
   z-index: 1;
+}
+
+.songstats-help {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  margin-left: 0;               // ★ was 10px — the flex gap handles spacing now
+  /* …rest unchanged… */
 }

@@ -272,7 +272,6 @@ const SongStatsModal = ({ show, onClose, artistId, song }) => {
                         <Icon size={16} />
                       </span>
                       <span className="songstats-stage__label">{stage.label}</span>
-                      <strong className="songstats-stage__value">{formatNumber(value)}</strong>
 
                       {hasDelta && (
                         <span
@@ -285,6 +284,8 @@ const SongStatsModal = ({ show, onClose, artistId, song }) => {
                           {delta}
                         </span>
                       )}
+
+                      <strong className="songstats-stage__value">{formatNumber(value)}</strong>
 
                       {tip && (
                         <span className={`songstats-help ${isSupporter ? 'songstats-help--invert' : ''}`}>

@@ -3,16 +3,9 @@ import { MapPin, Clock, Sparkles, RefreshCw } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import './territoryRankSection.scss';
 
-// Period vocabulary matches ArtistFanbaseService.VALID_PERIODS / the funnel toggle.
-const PERIOD_ORDER = ['today', 'week', 'month', 'quarter', 'year', 'all'];
-const PERIOD_LABELS = {
-  today: 'Day',
-  week: 'Week',
-  month: 'Month',
-  quarter: 'Quarter',
-  year: 'Year',
-  all: 'All-time',
-};
+// ★ Dashboard shows only Week / Month / Year. All-time lives on the Discover page.
+const PERIOD_ORDER = ['week', 'month', 'year'];
+const PERIOD_LABELS = { week: 'Week', month: 'Month', year: 'Year' };
 
 const formatUpdated = (iso) => {
   if (!iso) return null;
@@ -21,7 +14,7 @@ const formatUpdated = (iso) => {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-const TerritoryRankSection = ({ artistId, ambientImage }) => {
+const TerritoryRankSection = ({ artistId }) => {
   const [data, setData] = useState(null);
   const [period, setPeriod] = useState('year');
   const [loading, setLoading] = useState(true);
@@ -41,7 +34,8 @@ const TerritoryRankSection = ({ artistId, ambientImage }) => {
       .then((res) => {
         if (cancelled) return;
         setData(res.data || null);
-        if (res.data?.defaultPeriod) setPeriod(res.data.defaultPeriod);
+        const dp = res.data?.defaultPeriod;
+        if (dp && PERIOD_ORDER.includes(dp)) setPeriod(dp);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -104,14 +98,6 @@ const TerritoryRankSection = ({ artistId, ambientImage }) => {
 
   return (
     <div className="territory-rank">
-      {ambientImage && (
-        <div
-          className="territory-rank__ambient"
-          style={{ backgroundImage: `url(${ambientImage})` }}
-          aria-hidden="true"
-        />
-      )}
-
       <div className="territory-rank__head">
         <p className="territory-rank__caption">
           Your standing where you&apos;re from, ranked by points.
@@ -157,7 +143,7 @@ const TerritoryRankSection = ({ artistId, ambientImage }) => {
                   <strong>{j.jurisdictionName}</strong>
                   {j.genreRank != null && genreName && (
                     <span className="territory-rank__genre">
-                      #{j.genreRank} of {j.genreTotal} · {genreName}
+                      #{j.genreRank} · {genreName}
                     </span>
                   )}
                 </div>
@@ -168,7 +154,6 @@ const TerritoryRankSection = ({ artistId, ambientImage }) => {
                   <>
                     <span className="territory-rank__hash">#</span>
                     <span className="territory-rank__num">{j.overallRank}</span>
-                    <span className="territory-rank__of">of {j.overallTotal}</span>
                   </>
                 ) : (
                   <span className="territory-rank__none">—</span>

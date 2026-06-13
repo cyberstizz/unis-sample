@@ -2135,3 +2135,38 @@
     }
   }
 }
+
+// ★ ambient: blurred profile image behind a collapsible section (funnel recipe)
+.artist-collapsible {
+  position: relative;            // needed for the absolute ambient
+}
+
+.artist-collapsible__ambient {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(40px) saturate(180%);
+  opacity: 0.3;
+  z-index: 0;
+  pointer-events: none;
+}
+
+// lift the section content above the ambient
+.artist-collapsible__trigger,
+.artist-collapsible__body {
+  position: relative;
+  z-index: 1;
+}
+
+// ★ frosted-glass panel for the song list (matches the songstats card surface)
+.artist-catalog {
+  padding: 16px;
+  border-radius: var(--unis-radius);
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--unis-border);
+  backdrop-filter: blur(8px);
+}
