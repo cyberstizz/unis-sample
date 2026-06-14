@@ -114,20 +114,23 @@ const Login = () => {
               Forgot Password?
             </button>
 
+            {/* ★ NEW: divider to separate sign-in from create/guest actions */}
+            <div className="login-divider">or</div>
+
             <button
               type="button"
               onClick={() => setShowWizard(true)}
               className="create-account-btn"
               disabled={loading}
             >
-              Don't have an account? Create one
+              Create an account{/* ★ cleaner copy than "Don't have an account? Create one" */}
             </button>
             <button 
               className="guest-browse-btn"
               onClick={() => navigate('/')}
               type="button"
             >
-              Browse As A Guest
+              Browse as a guest{/* ★ sentence case for consistency */}
             </button>
 
             <div className="login-social-proof">
