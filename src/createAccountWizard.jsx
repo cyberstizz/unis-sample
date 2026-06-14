@@ -2116,7 +2116,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
     <div className="wizard-overlay">
       <div className="wizard-container">
       <button className="wizard-close" onClick={onClose} aria-label="Close">{/* ★ uses existing .wizard-close + Lucide X */}
-        <X size={16} />
+        <X size={10} />
       </button>
       
         <div className="wizard-illustration">{/* ★ fixed brand backdrop, no data-step */}
