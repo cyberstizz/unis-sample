@@ -152,8 +152,6 @@ const SongSalesModal = ({ show, onClose, artistId, song }) => {
   const songId = song?.songId || song?.id;
   const artworkUrl = buildUrl(song?.artworkUrl) || null;
 
-  
-
   const fetchSales = useCallback(async () => {
     if (!artistId || !songId) return;
     setLoading(true);
@@ -186,9 +184,10 @@ const SongSalesModal = ({ show, onClose, artistId, song }) => {
 
   return (
     <div className="songsales-overlay" onClick={onClose}>
+      {/* ★ removed inline backgroundImage — the blurred .songsales-ambient layer
+          now carries the artwork, exactly like the song-stats modal. */}
       <div
         className="songsales-modal"
-        style={{ backgroundImage: `url(${artworkUrl})` }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -199,8 +198,6 @@ const SongSalesModal = ({ show, onClose, artistId, song }) => {
         </button>
 
         <div className="songsales-ambient" style={{ backgroundImage: `url(${artworkUrl})` }} aria-hidden="true" />
-
-
 
         <div className="songsales-head">
           {artworkUrl && (

@@ -1,5 +1,7 @@
 // =============================================================================
 // SongSalesModal — per-song sales + premium revenue chart.
+// ★ Frame now matches the song-stats / fanbase-funnel card exactly: plain dark
+//   glass + a blurred artwork ambient. No raw artwork as a modal background.
 // =============================================================================
 
 .songsales-overlay {
@@ -31,11 +33,10 @@
   gap: 20px;
   padding: 30px;
   border-radius: var(--unis-radius-lg);
-  background:
-    radial-gradient(720px 260px at 100% 0%, var(--unis-primary-soft), transparent 64%),
-    var(--unis-panel);
-  border: 1px solid var(--unis-border-hi);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+  // ★ match songstats/funnel: simple dark glass so the artwork ambient reads
+  background: rgba(20, 20, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 22px 80px rgba(0, 0, 0, 0.3);
 
   @media (max-width: 600px) {
     padding: 22px 18px;
@@ -52,14 +53,15 @@
   height: 36px;
   border-radius: 50%;
   border: 1px solid var(--unis-border);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.55);          // ★ match songstats close button
   color: var(--unis-text-2);
   cursor: pointer;
+  backdrop-filter: blur(6px);
   transition: color 0.16s ease, background 0.16s ease;
 
   &:hover {
     color: var(--unis-text);
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.72);
   }
 }
 
@@ -297,6 +299,7 @@
   animation: spin 0.8s linear infinite;
 }
 
+// ★ ambient now matches .fanbase-ambient exactly (blur 40 / opacity 0.3)
 .songsales-ambient {
   position: absolute;
   top: -50%;
@@ -305,8 +308,8 @@
   height: 200%;
   background-size: cover;
   background-position: center;
-  filter: blur(48px) saturate(180%);
-  opacity: 0.32;
+  filter: blur(40px) saturate(180%);
+  opacity: 0.3;
   z-index: 0;
   pointer-events: none;
 }
