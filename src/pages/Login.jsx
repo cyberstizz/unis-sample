@@ -77,7 +77,7 @@ const Login = () => {
         </h1>
 
         <p className="login-subtitle">
-          Vote. Stream. Rise.
+          Harlems Finest
         </p>
         {error && !showWaitlistModal && <p className="login-error">{error}</p>}
 
