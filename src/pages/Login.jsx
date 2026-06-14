@@ -134,7 +134,7 @@ const Login = () => {
             </button>
 
             <div className="login-social-proof">
-              Discover the top artists in your community.
+              Unis Music Corporation @2026
             </div>
           </>
         )}
