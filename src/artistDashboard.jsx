@@ -45,7 +45,6 @@ import CashoutPanel from './CashoutPanel';
 import FanbaseFunnel from './fanbaseFunnle'; // ★ analytics: real fanbase funnel section
 import SupporterSection from './SupporterSection'; // ★ item 5: supporters split out
 import DemographicsSection from './dempgraphicsSection'; // ★ item 6
-import VoteHistoryModal from './voteHistoryModal';
 import VoteHistorySection from './VoteHistorySection';   // ★
 import SupportedArtistPicker from './SupportedArtistPicker'; // ★ H: change-artist picker (same component Profile uses)
 import './artistDashboard.scss';
