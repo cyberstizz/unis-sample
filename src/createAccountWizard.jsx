@@ -2115,31 +2115,10 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   return (
     <div className="wizard-overlay">
       <div className="wizard-container">
-      <button 
-        onClick={onClose}
-        style={{
-          position: 'absolute',
-          top: '16px',
-          right: '16px',
-          width: '44px',
-          height: '44px',
-          borderRadius: '50%',
-          background: 'rgba(255, 255, 255, 0.2)',
-          border: '2px solid white',
-          color: 'white',
-          fontSize: '24px',
-          fontWeight: 'bold',
-          lineHeight: '1',
-          padding: '0',
-          cursor: 'pointer',
-          zIndex: 99999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        ✕
-      </button>        
+      <button className="wizard-close" onClick={onClose} aria-label="Close">{/* ★ uses existing .wizard-close + Lucide X */}
+        <X size={24} />
+      </button>
+      
         <div className="wizard-illustration">{/* ★ fixed brand backdrop, no data-step */}
           <div className="wizard-step-icon">
             <StepIcon size={40} strokeWidth={1.5} />
@@ -2174,7 +2153,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
               <span className="chev"><ChevronDown size={14} /></span>
             </span>
           </div>
-          
+
         </div>
         
         {!success && !partialSuccess && (
