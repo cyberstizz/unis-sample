@@ -1296,13 +1296,13 @@ $step-gradients: (
   }
   
     .btn-primary {
-    background: linear-gradient(135deg, $unis-blue, #4a90d9);
+    background: linear-gradient(135deg, #2952cc, #163387);
     border: none;
     color: $accent-white;
     
     &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba($unis-blue, 0.4);
+      box-shadow: 0 10px 30px rgba(22, 51, 135, 0.45)
     }
     
     &.loading {
