@@ -73,7 +73,7 @@ const Login = () => {
         <img src={unisLogo} alt="UNIS" className="login-logo" />
 
         <h1 className="login-title">
-          Discover The Best Music From Harlem
+          Discover The Best Songs From Harlem
         </h1>
 
         <p className="login-subtitle">
