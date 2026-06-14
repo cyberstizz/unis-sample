@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  X, ChevronRight, ChevronLeft, Check, AlertCircle, 
+  X, ChevronRight, ChevronDown, ChevronLeft, Check, AlertCircle, 
   User, Mail, Lock, MapPin, Music, Headphones, Mic2,
   Upload, Image, FileAudio, Search, Play, Pause, Square,
   Loader2, CheckCircle2, XCircle, Info, Gift, Users,
@@ -350,6 +350,20 @@ const SUBMIT_PHASE_MESSAGES = {
       review: ReviewIllustration,
     };
 
+    // ★ Premium step icons — replace the per-step gradient-blob illustrations
+const STEP_ICONS = {
+  welcome: Gift,
+  basicInfo: User,
+  location: MapPin,
+  role: Sparkles,
+  artistProfile: Mic2,
+  songUpload: Music,
+  listenerProfile: Image,
+  listenerBio: Headphones,
+  supportArtist: Heart,
+  review: CheckCircle2,
+};
+
 
 // ============================================
 // Utilities
@@ -455,6 +469,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [songIsrc, setSongIsrc] = useState('');
+  const contentRef = useRef(null);                           
+  const [showScrollCue, setShowScrollCue] = useState(false);  
   
   // Step configuration
   const getSteps = () => {
@@ -905,6 +921,21 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   };
 
 
+  // ★ Scroll affordance — cue appears whenever a step overflows below the fold
+  const updateScrollCue = () => {
+    const el = contentRef.current;
+    if (!el) return;
+    setShowScrollCue(el.scrollHeight - el.clientHeight - el.scrollTop > 12);
+  };
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (el) el.scrollTop = 0;              
+    const id = requestAnimationFrame(updateScrollCue);
+    return () => cancelAnimationFrame(id);
+  }, [currentStep]);
+
+
   // ============================================
   // Submit — Layer 2 & 3: phased progress + specific errors
   // ============================================
@@ -1119,8 +1150,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
       
   if (!show) return null;
   
-  const IllustrationComponent = STEP_ILLUSTRATIONS[currentStepData?.illustration] || WelcomeIllustration;
-  
+  const StepIcon = STEP_ICONS[currentStepData?.id] || Gift; // ★  
 
   // ============================================
   // Render helpers
@@ -2110,11 +2140,12 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
       >
         ✕
       </button>        
-        <div className="wizard-illustration" data-step={currentStep}>
-          <IllustrationComponent />
-        </div>
-        
-        <div className="wizard-content">
+        <div className="wizard-illustration">{/* ★ fixed brand backdrop, no data-step */}
+          <div className="wizard-step-icon">
+            <StepIcon size={40} strokeWidth={1.5} />
+          </div>
+        </div>        
+        <div className="wizard-content" ref={contentRef} onScroll={updateScrollCue}>
           <div className="wizard-progress">
             {steps.map((step, index) => (
               <div key={step.id} className={`progress-step ${index + 1 < currentStep ? 'completed' : index + 1 === currentStep ? 'active' : ''}`} />
@@ -2135,6 +2166,15 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
           <div className="step-wrapper" key={currentStep} style={{ animation: `${stepDirection === 'forward' ? 'slideInRight' : 'slideInLeft'} 0.3s ease-out` }}>
             {renderStepContent()}
           </div>
+
+          {/* ★ Scroll cue — fades out automatically at the bottom */}
+          <div className={`scroll-cue ${showScrollCue ? 'visible' : ''}`}>
+            <span className="scroll-cue-pill">
+              More below
+              <span className="chev"><ChevronDown size={14} /></span>
+            </span>
+          </div>
+          
         </div>
         
         {!success && !partialSuccess && (

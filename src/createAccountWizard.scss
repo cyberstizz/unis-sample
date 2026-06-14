@@ -152,6 +152,19 @@ $step-gradients: (
   }
 }
 
+
+  @keyframes auroraDriftA { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(40px,20px) scale(1.15); } }
+  @keyframes auroraDriftB { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-30px,-25px) scale(1.1); } }
+  @keyframes stepIconIn  { from { opacity: 0; transform: translateY(10px) scale(0.92); } to { opacity: 1; transform: none; } }
+  @keyframes cueBounce   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wizard-illustration::before,
+    .wizard-illustration::after,
+    .wizard-step-icon,
+    .scroll-cue .chev { animation: none; }
+}
+
 // === MIXINS ===
 @mixin glass-effect {
   background: rgba(255, 255, 255, 0.05);
@@ -263,47 +276,91 @@ $step-gradients: (
   display: flex;
   align-items: center;
   justify-content: center;
-  
-  // Dynamic gradient background per step
-  @for $i from 1 through 8 {
-    &[data-step="#{$i}"] {
-      background: $unis-blue;
-    }
-  }
-  
-  // Animated background waves
+
+  // ★ Fixed brand backdrop — no longer tied to --unis-primary, so the
+  //   signup header can never inherit the last user's theme color.
+  background:
+    radial-gradient(120% 130% at 50% 125%, rgba(41, 82, 204, 0.30), transparent 60%),
+    linear-gradient(160deg, #0e1838 0%, #0a0d1c 55%, #07090f 100%);
+
+  // ★ Ambient aurora (replaces the old white/black wave pseudo-elements)
   &::before,
   &::after {
     content: '';
     position: absolute;
-    width: 200%;
-    height: 200%;
-    border-radius: 40%;
-    opacity: 0.3;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.55;
+    pointer-events: none;
   }
-  
   &::before {
-    background: rgba(255, 255, 255, 0.1);
-    top: -50%;
-    left: -50%;
-    animation: waveMove 8s ease-in-out infinite;
+    background: radial-gradient(circle, rgba(41, 82, 204, 0.9), transparent 70%);
+    top: -130px; left: -70px;
+    animation: auroraDriftA 16s ease-in-out infinite;
   }
-  
   &::after {
-    background: rgba(0, 0, 0, 0.1);
-    bottom: -60%;
-    right: -50%;
-    animation: waveMove 10s ease-in-out infinite reverse;
+    background: radial-gradient(circle, rgba(107, 138, 255, 0.65), transparent 70%);
+    bottom: -150px; right: -70px;
+    animation: auroraDriftB 20s ease-in-out infinite;
   }
-  
-  .illustration-svg {
-    position: relative;
-    z-index: 1;
-    width: 140px;
-    height: 140px;
-    animation: float 4s ease-in-out infinite;
-    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+}
+
+// ★ Glass step-icon chip — the one consistent premium element across all 8 steps
+.wizard-step-icon {
+  position: relative;
+  z-index: 1;
+  width: 92px;
+  height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24px;
+  color: #dbe4ff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  animation: stepIconIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+
+  svg { width: 40px; height: 40px; stroke-width: 1.5; }
+}
+
+// ★ Scroll affordance — sticky cue at the bottom of the content scroller
+.scroll-cue {
+  position: sticky;
+  bottom: 0;
+  margin: 0 -32px 0;                 // bleed past the 32px content padding
+  height: 64px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 10px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(10, 10, 10, 0), $bg-dark 78%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+
+  &.visible { opacity: 1; }
+
+  .scroll-cue-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: $text-silver;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 6px 12px;
+    backdrop-filter: blur(8px);
   }
+  .chev { display: inline-flex; animation: cueBounce 1.4s ease-in-out infinite; }
 }
 
 // === CONTENT AREA ===
@@ -1433,11 +1490,14 @@ $step-gradients: (
   .wizard-illustration {
     height: 160px;
     
-    .illustration-svg {
-      width: 100px;
-      height: 100px;
+    .wizard-step-icon {            // ★ was .illustration-svg
+      width: 76px;
+      height: 76px;
+      svg { width: 34px; height: 34px; }
     }
   }
+
+  .scroll-cue { margin: 0 -24px 0; } 
   
   .wizard-content {
     padding: 24px;
