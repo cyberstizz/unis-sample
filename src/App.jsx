@@ -34,6 +34,7 @@ import PlayChoiceModal from './PlayChoiceModal';
 import WinnersTimelinePage from './winnersTimelinePage';
 import RewardScoreSync from './RewardScoreSync';
 import ThemeDocumentSync from "./ThemeDocumentSync";
+import VerifyEmail from './pages/VerifyEmail';   
 
 // Theme
 import './theme.scss';
@@ -77,6 +78,7 @@ const AppLayout = () => {
         {/* Public routes — no auth needed at all */}
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />  
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/cookie" element={<CookiePolicy />} />
