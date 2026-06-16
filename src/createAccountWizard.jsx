@@ -1617,6 +1617,27 @@ const handleSubmit = async () => {
                 </div>
               </div>
             )}
+
+                        {/* ★ Theme picker — sets the user's palette from signup */}
+            <div className="form-group">
+              <label>Pick your theme</label>
+              <div className="theme-swatches">
+                {THEME_OPTIONS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`theme-swatch ${formData.themePreference === t.id ? 'selected' : ''}`}
+                    style={{ '--sw': t.color }}
+                    onClick={() => updateForm('themePreference', t.id)}
+                    title={t.label}
+                    aria-label={t.label}
+                  >
+                    {formData.themePreference === t.id && <Check size={16} />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
           </>
         );
       
