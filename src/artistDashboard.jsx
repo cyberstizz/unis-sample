@@ -826,16 +826,24 @@ const ArtistDashboard = () => {
     }
   };
 
-  const handleSocialMediaUpdate = async (platform, url) => {
-    try {
-      const field = `${platform}Url`;
 
+  const SOCIAL_FIELDS = {
+  instagram: 'instagramUrl',
+  twitter: 'twitterUrl',
+  tiktok: 'tiktokUrl',
+  youtube: 'youtubeUrl',
+  contactEmail: 'contactEmail',
+};
+
+
+  const handleSocialMediaUpdate = async (platform, value) => {
+    try {
+      const field = SOCIAL_FIELDS[platform] || `${platform}Url`;
       await apiCall({
         method: 'put',
         url: `/v1/users/profile/${user.userId}`,
-        data: { [field]: url },
+        data: { [field]: value },
       });
-
       handleProfileUpdate();
       alert(`${platform} link updated successfully!`);
     } catch (err) {
@@ -1198,7 +1206,7 @@ const ArtistDashboard = () => {
                   return (
                     <article
                       key={song.songId || song.id || index}
-                      className="artist-song-card"
+                      className={`artist-song-card ${isFeatured ? 'artist-song-card--featured' : ''}`}
                     >
                     <div
                       className="artist-song-card__ambient"
@@ -1505,14 +1513,6 @@ const ArtistDashboard = () => {
             defaultOpen={false}
             className="artist-social-card"
           >
-            <div className="artist-section__head">
-              <div>
-                <span className="artist-section__eyebrow">Artist presence</span>
-                <h2>
-                  Social <em>links</em>
-                </h2>
-              </div>
-            </div>
 
             <div className="social-links-edit">
               <div className="social-link-item">
@@ -1546,6 +1546,29 @@ const ArtistDashboard = () => {
                   onBlur={(e) => handleSocialMediaUpdate('tiktok', e.target.value)}
                   className="social-input"
                 />
+              </div>
+
+
+              <div className="social-link-item">
+                <label>YouTube</label>
+                <input
+                  type="text"
+                  placeholder="https://youtube.com/@yourchannel"
+                  defaultValue={userProfile.youtubeUrl || ''}
+                  onBlur={(e) => handleSocialMediaUpdate('youtube', e.target.value)}
+                  className="social-input"
+                />
+              </div>
+
+              <div className="social-link-item">
+                  <label>Contact email</label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    defaultValue={userProfile.contactEmail || ''}
+                    onBlur={(e) => handleSocialMediaUpdate('contactEmail', e.target.value)}
+                    className="social-input"
+                  />
               </div>
             </div>
           </ArtistCollapsibleSection>
