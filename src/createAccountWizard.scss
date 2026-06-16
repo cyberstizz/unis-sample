@@ -1528,12 +1528,16 @@ $step-gradients: (
   }
 }
 
-.theme-swatches { display: flex; flex-wrap: wrap; gap: 10px; }
-.theme-swatch {
-  width: 40px; height: 40px; border-radius: 12px; cursor: pointer;
-  background: var(--sw); border: 2px solid rgba(255,255,255,0.12);
-  display: flex; align-items: center; justify-content: center; color: #fff;
-  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
-  &:hover { transform: translateY(-2px); }
-  &.selected { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.18); }
+// ★ SCOPED under .wizard-container so these signup-only swatch styles no longer
+// leak globally and clobber the dashboard/profile ThemePicker (.theme-swatch).
+.wizard-container {
+  .theme-swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .theme-swatch {
+    width: 40px; height: 40px; border-radius: 12px; cursor: pointer;
+    background: var(--sw); border: 2px solid rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center; color: #fff;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+    &:hover { transform: translateY(-2px); }
+    &.selected { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.18); }
+  }
 }
