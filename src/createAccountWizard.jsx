@@ -2017,7 +2017,17 @@ const handleSubmit = async () => {
                     </div>
                   </div>
                 )}
-                <p style={{ opacity: 0.7, fontSize: 14, marginTop: 12 }}>Redirecting you to login…</p>
+                <p style={{ opacity: 0.7, fontSize: 14, marginTop: 12 }}>
+                  Check your email to verify your account, then log in to add your track.
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ marginTop: 16, width: '100%' }}
+                  onClick={() => { onClose(); navigate('/login'); }}
+                >
+                  Go to Login
+                </button>
               </div>
             </div>
           );
