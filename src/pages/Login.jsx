@@ -5,6 +5,7 @@ import unisLogo from '../assets/unisLogoThree.svg';
 import spaceVideo from '../assets/space-bg.mp4';
 import CreateAccountWizard from '../createAccountWizard'; 
 import ForgotPasswordWizard from '../forgotPasswordWizard';
+import { apiCall } from '../components/axiosInstance'; 
 import './Login.scss';
 
 const Login = () => {
@@ -18,6 +19,8 @@ const Login = () => {
   const [waitlistInfo, setWaitlistInfo] = useState(null);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState(''); 
+  const [resendMsg, setResendMsg] = useState(''); 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -32,9 +35,10 @@ const Login = () => {
     if (result.success) {
       navigate('/');
     } else {
-      // Check if the error response contains waitlist data
       const data = result.data;
-      if (data?.waitlist) {
+      if (data?.unverified) {                          
+        setUnverifiedEmail(data.email || email);
+      } else if (data?.waitlist) {
         setWaitlistInfo(data);
         setShowWaitlistModal(true);
       } else {
@@ -49,6 +53,16 @@ const Login = () => {
       navigator.clipboard.writeText(waitlistInfo.referralCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleResendVerification = async () => {      
+    setResendMsg('Sending…');
+    try {
+      await apiCall({ url: '/auth/resend-verification', method: 'post', data: { email: unverifiedEmail } });
+      setResendMsg('Sent! Check your inbox.');
+    } catch {
+      setResendMsg('Could not resend right now. Try again shortly.');
     }
   };
 
