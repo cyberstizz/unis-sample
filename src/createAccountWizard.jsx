@@ -364,6 +364,16 @@ const STEP_ICONS = {
   review: CheckCircle2,
 };
 
+  // ★ mirrors VALID_THEMES + theme.scss primaries
+  const THEME_OPTIONS = [
+    { id: 'blue',   label: 'Blue',   color: '#163387' },
+    { id: 'orange', label: 'Orange', color: '#C44B0A' },
+    { id: 'red',    label: 'Red',    color: '#B51C24' },
+    { id: 'green',  label: 'Green',  color: '#0F7A3E' },
+    { id: 'purple', label: 'Purple', color: '#4A1A8C' },
+    { id: 'yellow', label: 'Yellow', color: '#C49A0A' },
+    { id: 'dianna', label: 'Dianna', color: '#C8A84B' },
+  ];
 
 // ============================================
 // Utilities
@@ -425,6 +435,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
     detectingLocation: false,
     detectedCoords: null,
     showWaitlistPrompt: false,
+    gender: '',              
+    themePreference: 'blue', 
   });
   
   const [validation, setValidation] = useState({
@@ -471,6 +483,9 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   const [songIsrc, setSongIsrc] = useState('');
   const contentRef = useRef(null);                           
   const [showScrollCue, setShowScrollCue] = useState(false);  
+
+  const [verificationSent, setVerificationSent] = useState(false);  
+  const [verificationEmail, setVerificationEmail] = useState(''); 
   
   // Step configuration
   const getSteps = () => {
@@ -940,27 +955,25 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
   // Submit — Layer 2 & 3: phased progress + specific errors
   // ============================================
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
     setLoading(true);
     setError('');
     setSubmitPhase(null);
     setPartialSuccess(false);
-    
+
     try {
       let photoUrl = null;
-      
-      // ---- Phase 1: Photo upload ----
-      const photoFile = formData.role === 'artist' 
-        ? formData.artistPhotoFile 
+
+      // ---- Phase 1: Photo upload (anonymous endpoint) ----
+      const photoFile = formData.role === 'artist'
+        ? formData.artistPhotoFile
         : formData.listenerPhotoFile;
-        
+
       if (photoFile) {
         setSubmitPhase('uploading-photo');
-
         try {
           const photoFormData = new FormData();
           photoFormData.append('photo', photoFile);
-          
           const photoResponse = await apiCall({
             url: '/v1/users/profile/photo',
             method: 'patch',
@@ -968,10 +981,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
           });
           photoUrl = photoResponse.data?.photoUrl;
         } catch (photoErr) {
-          // Determine a specific message based on the status/response
           const status = photoErr.response?.status;
           const serverMsg = photoErr.response?.data?.message || '';
-
           let userMessage;
           if (status === 413 || serverMsg.toLowerCase().includes('size') || serverMsg.toLowerCase().includes('large')) {
             userMessage = `Your photo couldn't be uploaded — it's too large. Please go back to the photo step and choose a file under ${FILE_LIMITS.photo.sizeLabel}.`;
@@ -982,15 +993,14 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
           } else {
             userMessage = `Your photo couldn't be uploaded (${serverMsg || 'server error'}). Please go back and try a different image, or try again in a moment.`;
           }
-
           setError(userMessage);
           setSubmitPhase(null);
           setLoading(false);
-          return; // Stop — nothing has been created yet, safe to retry
+          return;
         }
       }
-      
-      // ---- Phase 2: Account registration ----
+
+      // ---- Phase 2: Account registration (creates an UNVERIFIED account) ----
       setSubmitPhase('creating-account');
 
       const registerPayload = {
@@ -1005,85 +1015,54 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         genreId: formData.role === 'artist' ? formData.genreId : null,
         photoUrl: photoUrl,
         dateOfBirth: formData.dateOfBirth || null,
-        themePreference: 'blue',     
+        gender: formData.gender || null,                      // ★ now collected
+        themePreference: formData.themePreference || 'blue',  // ★ honors the picker
       };
-      
-      let newUser;
+
+      let reg;
       try {
         const registerResponse = await apiCall({
           url: '/v1/users/register',
           method: 'post',
           data: registerPayload,
         });
-        newUser = registerResponse.data;
+        reg = registerResponse.data; // { userId, role, signupToken, emailVerificationSent }
       } catch (regErr) {
         const serverMsg = regErr.response?.data?.message || '';
         const status = regErr.response?.status;
-
         let userMessage;
         if (status === 409 || serverMsg.toLowerCase().includes('already') || serverMsg.toLowerCase().includes('taken') || serverMsg.toLowerCase().includes('exists')) {
-          userMessage = `An account with this email or username already exists. Please go back and use different credentials.`;
+          userMessage = 'An account with this email or username already exists. Please go back and use different credentials.';
         } else if (serverMsg) {
           userMessage = `Account creation failed: ${serverMsg}`;
         } else {
           userMessage = 'Account creation failed due to a server error. Please try again in a moment.';
         }
-
         setError(userMessage);
         setSubmitPhase(null);
         setLoading(false);
-        return; // Safe to retry — no account was created
+        return;
       }
-      
-      // ---- Phase 3 & 4: Artist-only song upload ----
+
+      // ---- Phase 3: Artist debut song (token-authorized, NO login) ----
       if (formData.role === 'artist' && formData.songFile) {
-
-        // Phase 3: Login to get auth token
-        setSubmitPhase('logging-in');
-
-        let token;
-        try {
-          const loginResponse = await apiCall({
-            url: '/auth/login',
-            method: 'post',
-            data: {
-              email: formData.email,
-              password: formData.password,
-            },
-          });
-          
-          token = loginResponse.data?.token;
-          if (token) {
-            localStorage.setItem('token', token);
-          }
-        } catch (loginErr) {
-          // Account exists but auto-login failed — not catastrophic
-          localStorage.removeItem('token');
+        if (!reg.signupToken) {
           setPartialSuccess(true);
-          setError('Your account was created! However, we couldn\'t auto-login to upload your song. You can upload it from your dashboard after logging in.');
+          setVerificationEmail(formData.email);
+          setError("Your account was created, but we couldn't prepare the song upload. You can add your debut track from your dashboard after verifying your email.");
           setSubmitPhase(null);
           setLoading(false);
-          // Still redirect to login after a delay
-          setTimeout(() => {
-            navigate('/login', {
-              state: { message: 'Account created successfully. Please log in to upload your song.' }
-            });
-          }, 4000);
           return;
         }
 
-        // Phase 4: Song upload
         setSubmitPhase('uploading-song');
-
         try {
           const songData = {
             title: formData.songTitle,
-            artistId: newUser.userId,
             genreId: formData.genreId,
             jurisdictionId: formData.jurisdictionId,
             isrc: songIsrc || null,
           };
-
           const songFormData = new FormData();
           songFormData.append('song', JSON.stringify(songData));
           songFormData.append('file', formData.songFile);
@@ -1092,18 +1071,15 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
           }
 
           await apiCall({
-            url: '/v1/media/song',
+            url: `/v1/media/signup-song?signupToken=${encodeURIComponent(reg.signupToken)}`,
             method: 'post',
             data: songFormData,
           });
         } catch (songErr) {
-          // Account exists, song upload failed — partial success
-          localStorage.removeItem('token');
           setPartialSuccess(true);
-
+          setVerificationEmail(formData.email);
           const serverMsg = songErr.response?.data?.message || '';
           const status = songErr.response?.status;
-
           let detail;
           if (status === 413 || serverMsg.toLowerCase().includes('size') || serverMsg.toLowerCase().includes('large')) {
             detail = 'The audio file was too large.';
@@ -1112,41 +1088,26 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
           } else {
             detail = 'a server error occurred';
           }
-
-          setError(`Your account was created! However, your song couldn't be uploaded (${detail}). You can upload it from your dashboard after logging in.`);
+          setError(`Your account was created! However, your song couldn't be uploaded (${detail}). You can upload it from your dashboard after verifying your email.`);
           setSubmitPhase(null);
           setLoading(false);
-          setTimeout(() => {
-            navigate('/login', {
-              state: { message: 'Account created successfully. Please log in to upload your song from the dashboard.' }
-            });
-          }, 4000);
           return;
         }
-
-        // Clean up token — user should go through login page for proper AuthContext init
-        localStorage.removeItem('token');
       }
-      
-      // ---- All phases succeeded ----
+
+      // ---- All phases succeeded — account created, verification email sent ----
+      setVerificationEmail(formData.email);   // ★
+      setVerificationSent(true);              // ★
       setSubmitPhase(null);
       setSuccess(true);
-      setTimeout(() => {
-        navigate('/login', {
-          state: { message: 'Account created successfully. Please log in.' }
-        });
-      }, 1500);
-      
+      // No auto-login: the user must verify before they can sign in.
     } catch (err) {
-      // Unexpected / uncaught error — should not normally reach here
-      localStorage.removeItem('token');
       setSubmitPhase(null);
       setError(err.response?.data?.message || 'Something unexpected went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
   };
-
       
   if (!show) return null;
   
@@ -1423,6 +1384,18 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
                 Your date of birth is private and never shown publicly. Used for age verification only.
               </div>
             </div>
+
+            {/* ★ Gender — feeds the artist demographics filter */}
+            <div className="form-group">
+              <label>Gender (optional)</label>
+              <select value={formData.gender} onChange={(e) => updateForm('gender', e.target.value)}>
+                <option value="">Prefer not to say</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="non-binary">Non-binary</option>
+              </select>
+            </div>
+
           </>
         );
       
@@ -1985,9 +1958,23 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
           return (
             <div className="review-section">
               <div className="success-animation">
-                <div className="checkmark-circle"><Check size={40} /></div>
-                <h3>Welcome to Unis!</h3>
-                <p>Your account has been created.</p>
+                <div className="checkmark-circle"><Mail size={40} /></div>
+                <h3>Check your email</h3>
+                <p style={{ marginBottom: 8 }}>
+                  Your account is created. We sent a confirmation link to <strong>{verificationEmail}</strong>.
+                </p>
+                <p style={{ opacity: 0.7, fontSize: 14 }}>
+                  Click the link to verify it's you, then log in.
+                  {formData.role === 'artist' && ' Your debut track is attached and goes live once you verify.'}
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ marginTop: 20, width: '100%' }}
+                  onClick={() => { onClose(); navigate('/login'); }}
+                >
+                  Go to Login
+                </button>
               </div>
             </div>
           );
