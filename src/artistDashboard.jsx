@@ -495,7 +495,7 @@ const ArtistDashboard = () => {
       text: 'Let supporters continue following you beyond Unis.',
       action: 'Add links',
       onClick: () => {
-        const section = document.querySelector('.artist-social-card');
+        const section = document.querySelector('#nav-social');
         section?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       },
     },
