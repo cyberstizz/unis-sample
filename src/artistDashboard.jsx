@@ -1511,7 +1511,6 @@ const ArtistDashboard = () => {
             eyebrow="Artist presence"
             title={<>Social <em>links</em></>}
             defaultOpen={false}
-            className="artist-social-card"
           >
 
             <div className="social-links-edit">
