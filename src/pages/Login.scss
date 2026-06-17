@@ -66,6 +66,10 @@ $font: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe U
   width: 90%;
   max-width: 400px;
   padding: 2.75rem 2.25rem 2.25rem;
+  max-height: calc(100dvh - 4rem);  
+  scrollbar-width: none;             
+  &::-webkit-scrollbar { width: 0; }
+  overflow-y: auto;                  
   text-align: center;
   border-radius: 22px;
   background: rgba(12, 14, 22, 0.66);
