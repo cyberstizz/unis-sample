@@ -956,20 +956,16 @@ const ArtistDashboard = () => {
     });
   };
 
-  const getAwardEmoji = (determinationMethod) => {
-    switch (determinationMethod) {
-      case 'VOTES':
-        return '🏆';
-      case 'SCORE':
-        return '⭐';
-      case 'SENIORITY':
-        return '👑';
-      case 'FALLBACK':
-        return '🎖️';
-      default:
-        return '🏅';
-    }
+  // Replace getAwardEmoji with this:
+  const getAwardTitle = (interval) => {
+    const name = (interval?.name || '').toLowerCase();
+    if (name === 'daily'   || name.includes('day'))    return 'Artist of the Day';
+    if (name === 'weekly'  || name.includes('week'))   return 'Artist of the Week';
+    if (name === 'monthly' || name.includes('month'))  return 'Artist of the Month';
+    if (name.includes('year') || name.includes('annual')) return 'Artist of the Year';
+    return interval?.name ? `${interval.name} Award` : 'Award';
   };
+
 
   const formatIsrc = (isrc) => {
     if (!isrc || isrc.length !== 12) return isrc || '';
@@ -1334,11 +1330,33 @@ const ArtistDashboard = () => {
               <SectionError message={awardsError} onRetry={() => fetchAwards(user.userId)} />
             ) : awards.length > 0 ? (
               <>
+                {/* ★ Featured latest win with ambient artwork */}
                 <div className="artist-awards-card__featured">
-                  <div className="artist-awards-card__trophy">🏆</div>
-                  <div>
+                  <div
+                    className="artist-awards-card__ambient"
+                    style={{
+                      backgroundImage: `url(${
+                        buildUrl(recentAward?.song?.artworkUrl) || featuredArtwork || displayPhoto
+                      })`,
+                    }}
+                    aria-hidden="true"
+                  />
+
+                  {/* Artist/song artwork replaces generic trophy emoji */}
+                  <div className="artist-awards-card__artwork">
+                    <img
+                      src={buildUrl(recentAward?.song?.artworkUrl) || featuredArtwork || displayPhoto}
+                      alt={`${displayName} award`}
+                      onError={(e) => { e.currentTarget.src = displayPhoto; }}
+                    />
+                    <div className="artist-awards-card__interval-badge">
+                      {recentAward?.interval?.name || 'Award'}
+                    </div>
+                  </div>
+
+                  <div className="artist-awards-card__info">
                     <span>Latest win</span>
-                    <h3>{recentAward?.interval?.name || 'Award'} Winner</h3>
+                    <h3>{getAwardTitle(recentAward?.interval)}</h3>
                     <p>
                       {recentAward?.jurisdiction?.name || 'Location'}
                       {recentAward?.genre?.name && ` · ${recentAward.genre.name}`}
@@ -1347,7 +1365,6 @@ const ArtistDashboard = () => {
                   </div>
                 </div>
 
-                {/* ★ F: count summary so artists see the total without scrolling all rows */}
                 <div className="artist-awards-summary">
                   <Trophy size={14} />
                   <span>
@@ -1356,22 +1373,37 @@ const ArtistDashboard = () => {
                   </span>
                 </div>
 
-                {/* ★ F: capped, scrollable list instead of expanding down the page */}
                 <div className="artist-awards-scroll">
                   <div className="artist-awards-list">
-                    {awards.map((award, index) => (
-                      <div key={index} className="artist-award-row">
-                        <span>{getAwardEmoji(award.determinationMethod)}</span>
-                        <div>
-                          <strong>{award.interval?.name || 'Award'} Winner</strong>
-                          <p>
-                            {award.jurisdiction?.name || 'Location'}
-                            {award.genre?.name && ` · ${award.genre.name}`}
-                          </p>
+                    {awards.map((award, index) => {
+                      const artSrc =
+                        buildUrl(award.song?.artworkUrl) || featuredArtwork || displayPhoto;
+                      return (
+                        <div key={index} className="artist-award-row">
+                          {/* Per-row ambient */}
+                          <div
+                            className="artist-award-row__ambient"
+                            style={{ backgroundImage: `url(${artSrc})` }}
+                            aria-hidden="true"
+                          />
+                          {/* Artwork image instead of emoji */}
+                          <img
+                            src={artSrc}
+                            alt={getAwardTitle(award.interval)}
+                            className="artist-award-row__img"
+                            onError={(e) => { e.currentTarget.src = displayPhoto; }}
+                          />
+                          <div>
+                            <strong>{getAwardTitle(award.interval)}</strong>
+                            <p>
+                              {award.jurisdiction?.name || 'Location'}
+                              {award.genre?.name && ` · ${award.genre.name}`}
+                            </p>
+                          </div>
+                          <small>{formatAwardDate(award.awardDate)}</small>
                         </div>
-                        <small>{formatAwardDate(award.awardDate)}</small>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {hasMoreAwards && (

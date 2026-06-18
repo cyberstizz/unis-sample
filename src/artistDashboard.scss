@@ -741,6 +741,8 @@
   gap: 16px;
 
   &__featured {
+    position: relative;
+    overflow: hidden;
     display: flex;
     align-items: center;
     gap: 18px;
@@ -755,6 +757,12 @@
       align-items: flex-start;
     }
 
+    // Lift all direct children above the ambient layer
+    > *:not(.artist-awards-card__ambient) {
+      position: relative;
+      z-index: 1;
+    }
+
     span {
       color: var(--unis-primary-2);
       font-size: 10px;
@@ -766,8 +774,10 @@
     h3 {
       margin: 6px 0 0;
       color: var(--unis-text);
-      font-size: 24px;
+      font-size: 22px;
+      font-weight: 850;
       letter-spacing: -0.04em;
+      line-height: 1.06;
     }
 
     p {
@@ -777,16 +787,63 @@
     }
   }
 
-  &__trophy {
+  // Blurred ambient — same recipe as song cards / collapsible sections
+  &__ambient {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(40px) saturate(200%);
+    opacity: 0.28;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  // Artwork image container (replaces the old __trophy emoji)
+  &__artwork {
     flex: none;
-    width: 62px;
-    height: 62px;
-    display: grid;
-    place-items: center;
-    border-radius: 20px;
-    background: var(--unis-primary-soft);
-    border: 1px solid var(--unis-border-hi);
-    font-size: 32px;
+    position: relative;
+    width: 72px;
+    height: 72px;
+
+    img {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      object-fit: cover;
+      border: 2px solid var(--unis-primary);
+      box-shadow:
+        0 0 0 3px var(--unis-primary-soft),
+        0 10px 28px rgba(0, 0, 0, 0.5);
+      display: block;
+    }
+  }
+
+  // Interval label pill on the artwork corner (e.g. "Daily", "Weekly")
+  &__interval-badge {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--unis-primary);
+    color: #fff;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  }
+
+  // Text block next to the artwork
+  &__info {
+    flex: 1;
+    min-width: 0;
   }
 }
 
@@ -797,6 +854,8 @@
 }
 
 .artist-award-row {
+  position: relative;
+  overflow: hidden;
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 12px;
@@ -805,18 +864,28 @@
   border-radius: var(--unis-radius-sm);
   background: rgba(0, 0, 0, 0.18);
   border: 1px solid var(--unis-border);
+  transition: border-color 0.16s ease;
+
+  &:hover {
+    border-color: var(--unis-border-hi);
+  }
 
   @media (max-width: 560px) {
     grid-template-columns: auto 1fr;
 
-    small {
-      grid-column: 2;
-    }
+    small { grid-column: 2; }
+  }
+
+  // Content above ambient
+  > *:not(.artist-award-row__ambient) {
+    position: relative;
+    z-index: 1;
   }
 
   strong {
     color: var(--unis-text);
     font-size: 14px;
+    font-weight: 750;
   }
 
   p {
@@ -828,6 +897,34 @@
   small {
     color: var(--unis-text-3);
     font-size: 11px;
+    white-space: nowrap;
+  }
+
+  // Blurred per-row ambient
+  &__ambient {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(40px) saturate(180%);
+    opacity: 0.16;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  // Small rounded artwork image (replaces emoji span)
+  &__img {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 1px solid var(--unis-border-hi);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    display: block;
+    flex-shrink: 0;
   }
 }
 
