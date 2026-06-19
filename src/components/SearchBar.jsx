@@ -127,7 +127,7 @@ const SearchBar = ({
     if (query.trim().length < 1) return;
     setFocused(false);
     inputRef.current?.blur();
-    navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+    navigate(`/discover?q=${encodeURIComponent(query.trim())}`);  
   };
 
   const handleKeyDown = (e) => {
