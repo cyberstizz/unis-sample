@@ -35,8 +35,8 @@ import WinnersTimelinePage from './winnersTimelinePage';
 import RewardScoreSync from './RewardScoreSync';
 import ThemeDocumentSync from "./ThemeDocumentSync";
 import VerifyEmail from './pages/VerifyEmail';   
-import DiscoverPage from './pages/DiscoverPage';   
-import ListenerPage from './pages/ListenerPage';   
+import DiscoverPage from './DiscoverPage';   
+import ListenerPage from './ListenerPage';   
 
 // Theme
 import './theme.scss';
