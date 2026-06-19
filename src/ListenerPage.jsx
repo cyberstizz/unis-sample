@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { buildUrl } from "./utils/buildUrl";
-import { apiCall } from "./components/axiosInstance";
-import { useAuth } from "./context/AuthContext";
-import { PlayerContext } from "./context/playercontext";
-import Layout from "./layout";
-import VoteHistorySection from "./VoteHistorySection"; 
+import { buildUrl } from "../utils/buildUrl";
+import { apiCall } from "../components/axiosInstance";
+import { useAuth } from "../context/AuthContext";
+import Layout from "../layout";
+import VoteHistorySection from "../VoteHistorySection"; // ★ read-only; fetches the logged-in user's votes (self-view only)
 import "./ListenerPage.scss";
 
 // ----------------------------------------------------------------------------
@@ -17,7 +16,6 @@ const Crown = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="curre
 const Pin = () => (<svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M10 2c-3.3 0-6 2.7-6 6 0 4.5 6 10 6 10s6-5.5 6-10c0-3.3-2.7-6-6-6z" stroke="currentColor" strokeWidth="1.5" /><circle cx="10" cy="8" r="2" stroke="currentColor" strokeWidth="1.5" /></svg>);
 const Cal = () => (<svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M3 8h14M7 2v3M13 2v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>);
 
-// badge glyphs
 const BADGE_ICONS = {
   bolt: <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" /></svg>,
   star: <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20l1.2-6.5L2.5 8.9 9.1 8 12 2z" /></svg>,
@@ -41,7 +39,7 @@ const memberSince = (iso) => {
   if (isNaN(d)) return null;
   return d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
 };
-// ★ derive badges from real signals until a badges service exists
+// ★ derive badges from real public signals until a badges service exists
 const deriveBadges = ({ votes, supporting, level }) => {
   const lvl = (level || "silver").toLowerCase();
   return [
@@ -60,31 +58,44 @@ const deriveBadges = ({ votes, supporting, level }) => {
 const ListenerPage = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { requestPlay } = useContext(PlayerContext);
+  const { user: authUser } = useAuth();
 
-  const [summary, setSummary] = useState(null);
+  const [user, setUser] = useState(null);
+  const [supportedArtist, setSupportedArtist] = useState(null);
+  const [followers, setFollowers] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState("votes");
   const [following, setFollowing] = useState(false);
 
-  const isSelf = user?.userId && user.userId === userId;
+  const isSelf = authUser?.userId && authUser.userId === userId;
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    apiCall({ url: `/v1/users/profile-summary/${userId}` })
-      .then((res) => {
+    (async () => {
+      try {
+        // ★ public profile endpoint (permitAll, no ownership guard) — not profile-summary (owner-only)
+        const profRes = await apiCall({ url: `/v1/users/profile/${userId}` });
         if (cancelled) return;
-        const data = res.data || {};
-        // Artists have the dedicated artist page — send them there.
-        if (data.profile?.role === "artist") { navigate(`/artist/${userId}`, { replace: true }); return; }
-        setSummary(data);
-      })
-      .catch(() => { if (!cancelled) setError("Couldn't load this profile."); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+        const u = profRes.data || {};
+        if (u.role === "artist") { navigate(`/artist/${userId}`, { replace: true }); return; }
+        setUser(u);
+
+        const [folRes, supRes] = await Promise.all([
+          apiCall({ url: `/v1/users/${userId}/followers/count` }).catch(() => null),
+          u.supportedArtistId ? apiCall({ url: `/v1/users/profile/${u.supportedArtistId}` }).catch(() => null) : Promise.resolve(null),
+        ]);
+        if (cancelled) return;
+        if (folRes?.data?.count != null) setFollowers(Number(folRes.data.count));
+        if (supRes?.data) setSupportedArtist(supRes.data);
+      } catch (e) {
+        if (!cancelled) setError("Couldn't load this profile.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
     return () => { cancelled = true; };
   }, [userId, navigate]);
 
@@ -96,41 +107,26 @@ const ListenerPage = () => {
     } catch (e) { setFollowing(!next); }
   }, [following, userId]);
 
-  const playSupported = useCallback((artist) => {
-    const song = artist?.defaultSong;
-    if (!song) return;
-    const full = buildUrl(song.fileUrl);
-    const art = buildUrl(song.artworkUrl) || buildUrl(artist.photoUrl);
-    // ★ requestPlay only — Player.jsx owns play-tracking
-    requestPlay({
-      type: "song", id: song.songId, songId: song.songId,
-      url: full, fileUrl: full, title: song.title,
-      artist: artist.username, artistId: artist.userId,
-      artwork: art, artworkUrl: art,
-    });
-  }, [requestPlay]);
-
   if (loading) {
     return <Layout><div className="lpr-wrap"><div className="lpr-loading"><div className="lpr-loading__spinner" /></div></div></Layout>;
   }
-  if (error || !summary) {
+  if (error || !user) {
     return <Layout><div className="lpr-wrap"><div className="lpr-empty"><h3>{error || "Profile not found"}</h3><p>This listener may have moved or set their profile to private.</p></div></div></Layout>;
   }
 
-  const { profile = {}, supportedArtist, voteHistory } = summary;
-  const tier = (profile.level || "silver").toLowerCase();
-  const photo = buildUrl(profile.photoUrl);
-  const initial = (profile.username || "?").charAt(0).toUpperCase();
-  const votes = voteHistory?.totalCount ?? 0;
-  const jName = profile.jurisdiction?.name || null;
-  const jId = profile.jurisdiction?.jurisdictionId || profile.jurisdictionId || null;
-  const since = memberSince(profile.createdAt);
+  const tier = (user.level || "silver").toLowerCase();
+  const photo = buildUrl(user.photoUrl);
+  const initial = (user.username || "?").charAt(0).toUpperCase();
+  const votes = user.totalVotes ?? 0;
+  const jName = user.jurisdiction?.name || null;
+  const jId = user.jurisdiction?.jurisdictionId || user.jurisdictionId || null;
+  const since = memberSince(user.createdAt);
   const badges = deriveBadges({ votes, supporting: Boolean(supportedArtist), level: tier });
 
   const socials = [
-    profile.instagramUrl && { label: "Instagram", url: profile.instagramUrl, icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="1.6" /><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6" /><circle cx="17" cy="7" r="1.2" fill="currentColor" /></svg> },
-    profile.twitterUrl && { label: "X", url: profile.twitterUrl, icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h3l-7 8 8 12h-6l-5-7-5 7H0l8-9L0 2h6l4 6 5-6z" /></svg> },
-    profile.tiktokUrl && { label: "TikTok", url: profile.tiktokUrl, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 3v10.5a3.5 3.5 0 11-3-3.46" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><path d="M14 5.5A4.5 4.5 0 0019 9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg> },
+    user.instagramUrl && { label: "Instagram", url: user.instagramUrl, icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="1.6" /><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6" /><circle cx="17" cy="7" r="1.2" fill="currentColor" /></svg> },
+    user.twitterUrl && { label: "X", url: user.twitterUrl, icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h3l-7 8 8 12h-6l-5-7-5 7H0l8-9L0 2h6l4 6 5-6z" /></svg> },
+    user.tiktokUrl && { label: "TikTok", url: user.tiktokUrl, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 3v10.5a3.5 3.5 0 11-3-3.46" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><path d="M14 5.5A4.5 4.5 0 0019 9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg> },
   ].filter(Boolean);
 
   const discoverHref = jId ? `/discover?jid=${jId}&jname=${encodeURIComponent(jName || "")}` : "/discover";
@@ -148,17 +144,17 @@ const ListenerPage = () => {
           </div>
           <div className="lpr-id">
             <p className="eyebrow"><span className="dot" /> Listener{jName ? ` · ${jName}` : ""}</p>
-            <h1 className="lpr-name">{profile.username}</h1>
+            <h1 className="lpr-name">{user.username}</h1>
             <p className="lpr-tagline">
-              <b>{tier.toUpperCase()}</b> &nbsp;·&nbsp; <em>{profile.bio || "exploring Harlem's finest"}</em>
+              <b>{tier.toUpperCase()}</b> &nbsp;·&nbsp; <em>{user.bio || "exploring Harlem's finest"}</em>
             </p>
 
             <div className="lpr-ribbon">
-              <div className="lpr-stat points"><div className="v"><Diamond />{fmtCount(profile.score)}</div><div className="l">Points</div></div>
+              <div className="lpr-stat points"><div className="v"><Diamond />{fmtCount(user.score)}</div><div className="l">Points</div></div>
               <div className="lpr-stat"><div className="v">{fmtCount(votes)}</div><div className="l">Votes cast</div></div>
               <div className="lpr-stat"><div className="v">{supportedArtist ? 1 : 0}</div><div className="l">Supporting</div></div>
-              {profile.followerCount != null && (
-                <div className="lpr-stat"><div className="v">{fmtCount(profile.followerCount)}</div><div className="l">Followers</div></div>
+              {followers != null && (
+                <div className="lpr-stat"><div className="v">{fmtCount(followers)}</div><div className="l">Followers</div></div>
               )}
             </div>
 
@@ -204,11 +200,6 @@ const ListenerPage = () => {
                     <div className="sub">Backing directly{jName ? ` · ${jName}` : ""}</div>
                   </div>
                   <div className="support-actions">
-                    {supportedArtist.defaultSong && (
-                      <button className="lpr-btn ghost icon" aria-label="Play their pick" onClick={() => playSupported(supportedArtist)}>
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M3 2v10l9-5-9-5z" /></svg>
-                      </button>
-                    )}
                     <button className="lpr-btn ghost" onClick={() => navigate(`/artist/${supportedArtist.userId}`)}>Visit</button>
                   </div>
                 </div>
@@ -238,7 +229,7 @@ const ListenerPage = () => {
                   )
               )}
               {tab === "comments" && (
-                <div className="lpr-soft-block"><p>No public comments yet.</p><span className="hint">Comments {profile.username} leaves on songs will show up here.</span></div>
+                <div className="lpr-soft-block"><p>No public comments yet.</p><span className="hint">Comments {user.username} leaves on songs will show up here.</span></div>
               )}
               {tab === "taste" && (
                 <div className="lpr-soft-block">
@@ -265,7 +256,7 @@ const ListenerPage = () => {
 
             <div className="lpr-card lpr-about">
               <h2 className="lpr-sec-title">About</h2>
-              {profile.bio && <p>{profile.bio}</p>}
+              {user.bio && <p>{user.bio}</p>}
               <div className="lpr-meta">
                 {jName && <div className="r"><Pin /> <b>{jName}</b></div>}
                 {since && <div className="r"><Cal /> Member since <b>{since}</b></div>}
