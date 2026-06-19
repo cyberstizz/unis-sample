@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useContext, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { buildUrl } from "../utils/buildUrl";
-import { apiCall } from "../components/axiosInstance";
-import { useAuth } from "../context/AuthContext";
-import { PlayerContext } from "../context/playercontext";
-import Layout from "../layout";
-import VoteHistorySection from "../VoteHistorySection"; // ★ reused read-only; fetches the logged-in user's votes (self-view only)
+import { buildUrl } from "./utils/buildUrl";
+import { apiCall } from "./components/axiosInstance";
+import { useAuth } from "./context/AuthContext";
+import { PlayerContext } from "./context/playercontext";
+import Layout from "./layout";
+import VoteHistorySection from "./VoteHistorySection"; 
 import "./ListenerPage.scss";
 
 // ----------------------------------------------------------------------------

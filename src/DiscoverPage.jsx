@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { buildUrl } from "../utils/buildUrl";
-import { apiCall } from "../components/axiosInstance"; // ★ song-detail + jurisdiction fetches (matches songPage/findpage)
-import { PlayerContext } from "../context/playercontext"; // ★ requestPlay convention — Discover NEVER tracks plays
-import Layout from "../layout";
+import { buildUrl } from "./utils/buildUrl";
+import { apiCall } from "./components/axiosInstance"; // ★ song-detail + jurisdiction fetches (matches songPage/findpage)
+import { PlayerContext } from "./context/playercontext"; // ★ requestPlay convention — Discover NEVER tracks plays
+import Layout from "./layout";
 import "./DiscoverPage.scss"; // ★ ported next from the mockup; tokens + #root::before gradient are already global
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
