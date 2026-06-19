@@ -35,6 +35,8 @@ import WinnersTimelinePage from './winnersTimelinePage';
 import RewardScoreSync from './RewardScoreSync';
 import ThemeDocumentSync from "./ThemeDocumentSync";
 import VerifyEmail from './pages/VerifyEmail';   
+import DiscoverPage from './pages/DiscoverPage';   
+import ListenerPage from './pages/ListenerPage';   
 
 // Theme
 import './theme.scss';
@@ -61,6 +63,11 @@ const AuthRequiredRoute = () => {
   if (!authLoaded) return null;
   if (!user) return <Navigate to="/login" />;
   return <Outlet />;
+};
+
+const SearchRedirect = () => {
+  const { search } = useLocation();
+  return <Navigate to={`/discover${search}`} replace />;
 };
 
 const AppLayout = () => {
@@ -94,7 +101,9 @@ const AppLayout = () => {
           <Route path="/milestones" element={<MilestonesPage />} />
           <Route path="/leaderboards" element={<Leaderboards />} />
           <Route path="/findpage" element={<FindPage />} />
-          <Route path="/search" element={<SearchResultsPage />} />
+          <Route path="/discover" element={<DiscoverPage />} />        
+          <Route path="/user/:userId" element={<ListenerPage />} />    
+          <Route path="/search" element={<SearchRedirect />} />        
           <Route path="/voteawards" element={<VoteAwards />} />   
           <Route path="/jurisdiction/:jurisdiction/winners" element={<WinnersTimelinePage />} />
         </Route>
