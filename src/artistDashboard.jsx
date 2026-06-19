@@ -190,6 +190,16 @@ const ArtistDashboard = () => {
   const [awardsLoading, setAwardsLoading] = useState(true);
   const [awardsError, setAwardsError] = useState(null);
 
+
+  // ---- Song awards (trophy toggle) ----------------------------------------
+  const [awardTab, setAwardTab] = useState('artist');
+  const [songAwards, setSongAwards] = useState([]);
+  const [songAwardsPage, setSongAwardsPage] = useState(0);
+  const [hasMoreSongAwards, setHasMoreSongAwards] = useState(true);
+  const [songAwardsLoading, setSongAwardsLoading] = useState(true);
+  const [songAwardsError, setSongAwardsError] = useState(null);
+  const [loadingMoreSongAwards, setLoadingMoreSongAwards] = useState(false);
+
   // ---- UI state ----------------------------------------------------------
   const [showWelcomePopup, setShowWelcomePopup] = useState(true);
   const [showUploadWizard, setShowUploadWizard] = useState(false);
@@ -375,6 +385,48 @@ const ArtistDashboard = () => {
     }
   }, []);
 
+  const fetchSongAwards = useCallback(async (userId) => {
+  setSongAwardsLoading(true);
+  setSongAwardsError(null);
+  try {
+    const res = await apiCall({
+      url: `/v1/awards/artist/${userId}/songs?limit=10&offset=0`,
+      method: 'get',
+      useCache: false,
+    });
+    const data = res.data || [];
+    setSongAwards(data);
+    setSongAwardsPage(0);
+    setHasMoreSongAwards(data.length === 10);
+  } catch (err) {
+    console.error('Song awards fetch failed:', err);
+    setSongAwardsError('Could not load song awards.');
+    setSongAwards([]);
+  } finally {
+    setSongAwardsLoading(false);
+  }
+}, []);
+
+  const loadMoreSongAwards = async () => {
+    setLoadingMoreSongAwards(true);
+    try {
+      const nextPage = songAwardsPage + 1;
+      const res = await apiCall({
+        url: `/v1/awards/artist/${user.userId}/songs?limit=10&offset=${nextPage * 10}`,
+        method: 'get',
+        useCache: false,
+      });
+      const newAwards = res.data || [];
+      setSongAwards((prev) => [...prev, ...newAwards]);
+      setSongAwardsPage(nextPage);
+      setHasMoreSongAwards(newAwards.length === 10);
+    } catch (err) {
+      console.error('Failed to load more song awards:', err);
+    } finally {
+      setLoadingMoreSongAwards(false);
+    }
+  };
+
   useEffect(() => {
     if (authLoading || !user?.userId) return;
 
@@ -384,7 +436,8 @@ const ArtistDashboard = () => {
     fetchStats(userId);
     fetchVotes();
     fetchAwards(userId);
-  }, [user?.userId, authLoading, fetchCore, fetchStats, fetchVotes, fetchAwards]);
+    fetchSongAwards(userId); 
+  }, [user?.userId, authLoading, fetchCore, fetchStats, fetchVotes, fetchAwards, fetchSongAwards]);
 
   // -----------------------------------------------------------------------
   // Early returns
@@ -454,6 +507,8 @@ const ArtistDashboard = () => {
     backimage;
 
   const recentAward = awards?.[0] || null;
+
+  const recentSongAward = songAwards?.[0] || null;
 
   const currentBalanceDollars = Number.parseFloat(
     earningsSummary?.currentBalance || 0
@@ -956,16 +1011,15 @@ const ArtistDashboard = () => {
     });
   };
 
-  // Replace getAwardEmoji with this:
-  const getAwardTitle = (interval) => {
+  const getAwardTitle = (interval, type = 'artist') => {
     const name = (interval?.name || '').toLowerCase();
-    if (name === 'daily'   || name.includes('day'))    return 'Artist of the Day';
-    if (name === 'weekly'  || name.includes('week'))   return 'Artist of the Week';
-    if (name === 'monthly' || name.includes('month'))  return 'Artist of the Month';
-    if (name.includes('year') || name.includes('annual')) return 'Artist of the Year';
-    return interval?.name ? `${interval.name} Award` : 'Award';
+    const subject = type === 'song' ? 'Song' : 'Artist';
+    if (name === 'daily'   || name.includes('day'))    return `${subject} of the Day`;
+    if (name === 'weekly'  || name.includes('week'))   return `${subject} of the Week`;
+    if (name === 'monthly' || name.includes('month'))  return `${subject} of the Month`;
+    if (name.includes('year') || name.includes('annual')) return `${subject} of the Year`;
+    return interval?.name ? `${interval.name} ${subject} Award` : `${subject} Award`;
   };
-
 
   const formatIsrc = (isrc) => {
     if (!isrc || isrc.length !== 12) return isrc || '';
@@ -1324,77 +1378,85 @@ const ArtistDashboard = () => {
             className="artist-trophy-section"
             defaultOpen={false}
           >
-            {awardsLoading ? (
-              <SectionLoader label="Loading awards..." />
-            ) : awardsError ? (
-              <SectionError message={awardsError} onRetry={() => fetchAwards(user.userId)} />
-            ) : awards.length > 0 ? (
-              <>
-                {/* ★ Featured latest win with ambient artwork */}
-                <div className="artist-awards-card__featured">
-                  <div
-                    className="artist-awards-card__ambient"
-                    style={{
-                      backgroundImage: `url(${
-                        buildUrl(recentAward?.song?.artworkUrl) || featuredArtwork || displayPhoto
-                      })`,
-                    }}
-                    aria-hidden="true"
-                  />
+            {/* ★ Artist | Songs toggle */}
+            <div className="artist-awards-toggle">
+              <button
+                type="button"
+                className={`artist-awards-toggle__btn ${awardTab === 'artist' ? 'artist-awards-toggle__btn--active' : ''}`}
+                onClick={() => setAwardTab('artist')}
+              >
+                Artist
+              </button>
+              <button
+                type="button"
+                className={`artist-awards-toggle__btn ${awardTab === 'song' ? 'artist-awards-toggle__btn--active' : ''}`}
+                onClick={() => setAwardTab('song')}
+              >
+                Songs
+              </button>
+            </div>
 
-                  {/* Artist/song artwork replaces generic trophy emoji */}
-                  <div className="artist-awards-card__artwork">
-                    <img
-                      src={buildUrl(recentAward?.song?.artworkUrl) || featuredArtwork || displayPhoto}
-                      alt={`${displayName} award`}
-                      onError={(e) => { e.currentTarget.src = displayPhoto; }}
+            {/* ====================== ARTIST AWARDS ====================== */}
+            {awardTab === 'artist' && (
+              awardsLoading ? (
+                <SectionLoader label="Loading awards..." />
+              ) : awardsError ? (
+                <SectionError message={awardsError} onRetry={() => fetchAwards(user.userId)} />
+              ) : awards.length > 0 ? (
+                <>
+                  <div className="artist-awards-card__featured">
+                    <div
+                      className="artist-awards-card__ambient"
+                      style={{
+                        backgroundImage: `url(${featuredArtwork || displayPhoto})`,
+                      }}
+                      aria-hidden="true"
                     />
-                    <div className="artist-awards-card__interval-badge">
-                      {recentAward?.interval?.name || 'Award'}
+                    <div className="artist-awards-card__artwork">
+                      <img
+                        src={featuredArtwork || displayPhoto}
+                        alt={`${displayName} artist award`}
+                        onError={(e) => { e.currentTarget.src = displayPhoto; }}
+                      />
+                      <div className="artist-awards-card__interval-badge">
+                        {recentAward?.interval?.name || 'Award'}
+                      </div>
+                    </div>
+                    <div className="artist-awards-card__info">
+                      <span>Latest win</span>
+                      <h3>{getAwardTitle(recentAward?.interval, 'artist')}</h3>
+                      <p>
+                        {recentAward?.jurisdiction?.name || 'Location'}
+                        {recentAward?.genre?.name && ` · ${recentAward.genre.name}`}
+                        {recentAward?.awardDate && ` · ${formatAwardDate(recentAward.awardDate)}`}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="artist-awards-card__info">
-                    <span>Latest win</span>
-                    <h3>{getAwardTitle(recentAward?.interval)}</h3>
-                    <p>
-                      {recentAward?.jurisdiction?.name || 'Location'}
-                      {recentAward?.genre?.name && ` · ${recentAward.genre.name}`}
-                      {recentAward?.awardDate && ` · ${formatAwardDate(recentAward.awardDate)}`}
-                    </p>
+                  <div className="artist-awards-summary">
+                    <Trophy size={14} />
+                    <span>
+                      {awards.length}{hasMoreAwards ? '+' : ''} {awards.length === 1 ? 'win' : 'wins'} earned
+                    </span>
                   </div>
-                </div>
 
-                <div className="artist-awards-summary">
-                  <Trophy size={14} />
-                  <span>
-                    {awards.length}
-                    {hasMoreAwards ? '+' : ''} {awards.length === 1 ? 'win' : 'wins'} earned
-                  </span>
-                </div>
-
-                <div className="artist-awards-scroll">
-                  <div className="artist-awards-list">
-                    {awards.map((award, index) => {
-                      const artSrc =
-                        buildUrl(award.song?.artworkUrl) || featuredArtwork || displayPhoto;
-                      return (
+                  <div className="artist-awards-scroll">
+                    <div className="artist-awards-list">
+                      {awards.map((award, index) => (
                         <div key={index} className="artist-award-row">
-                          {/* Per-row ambient */}
                           <div
                             className="artist-award-row__ambient"
-                            style={{ backgroundImage: `url(${artSrc})` }}
+                            style={{ backgroundImage: `url(${featuredArtwork || displayPhoto})` }}
                             aria-hidden="true"
                           />
-                          {/* Artwork image instead of emoji */}
                           <img
-                            src={artSrc}
-                            alt={getAwardTitle(award.interval)}
+                            src={featuredArtwork || displayPhoto}
+                            alt={getAwardTitle(award.interval, 'artist')}
                             className="artist-award-row__img"
                             onError={(e) => { e.currentTarget.src = displayPhoto; }}
                           />
                           <div>
-                            <strong>{getAwardTitle(award.interval)}</strong>
+                            <strong>{getAwardTitle(award.interval, 'artist')}</strong>
                             <p>
                               {award.jurisdiction?.name || 'Location'}
                               {award.genre?.name && ` · ${award.genre.name}`}
@@ -1402,28 +1464,126 @@ const ArtistDashboard = () => {
                           </div>
                           <small>{formatAwardDate(award.awardDate)}</small>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
+                    {hasMoreAwards && (
+                      <button
+                        type="button"
+                        className="artist-btn artist-btn--ghost artist-btn--small artist-awards-more"
+                        onClick={loadMoreAwards}
+                        disabled={loadingMoreAwards}
+                      >
+                        {loadingMoreAwards ? 'Loading...' : 'Load more awards'}
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="artist-empty-state">
+                  <Trophy size={34} />
+                  <h3>No artist awards yet</h3>
+                  <p>Keep collecting votes, plays, likes, and score to earn your first local win.</p>
+                </div>
+              )
+            )}
+
+            {/* ====================== SONG AWARDS ====================== */}
+            {awardTab === 'song' && (
+              songAwardsLoading ? (
+                <SectionLoader label="Loading song awards..." />
+              ) : songAwardsError ? (
+                <SectionError message={songAwardsError} onRetry={() => fetchSongAwards(user.userId)} />
+              ) : songAwards.length > 0 ? (
+                <>
+                  {(() => {
+                    const recentSong = recentSongAward;
+                    const artSrc = buildUrl(recentSong?.song?.artworkUrl) || featuredArtwork || displayPhoto;
+                    return (
+                      <div className="artist-awards-card__featured">
+                        <div
+                          className="artist-awards-card__ambient"
+                          style={{ backgroundImage: `url(${artSrc})` }}
+                          aria-hidden="true"
+                        />
+                        <div className="artist-awards-card__artwork">
+                          <img
+                            src={artSrc}
+                            alt={recentSong?.song?.title || 'Song award'}
+                            onError={(e) => { e.currentTarget.src = displayPhoto; }}
+                          />
+                          <div className="artist-awards-card__interval-badge">
+                            {recentSong?.interval?.name || 'Award'}
+                          </div>
+                        </div>
+                        <div className="artist-awards-card__info">
+                          <span>Latest song win</span>
+                          <h3>{getAwardTitle(recentSong?.interval, 'song')}</h3>
+                          <p>
+                            {recentSong?.song?.title && `"${recentSong.song.title}"`}
+                            {recentSong?.jurisdiction?.name && ` · ${recentSong.jurisdiction.name}`}
+                            {recentSong?.awardDate && ` · ${formatAwardDate(recentSong.awardDate)}`}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="artist-awards-summary">
+                    <Trophy size={14} />
+                    <span>
+                      {songAwards.length}{hasMoreSongAwards ? '+' : ''} song {songAwards.length === 1 ? 'win' : 'wins'} earned
+                    </span>
                   </div>
 
-                  {hasMoreAwards && (
-                    <button
-                      type="button"
-                      className="artist-btn artist-btn--ghost artist-btn--small artist-awards-more"
-                      onClick={loadMoreAwards}
-                      disabled={loadingMoreAwards}
-                    >
-                      {loadingMoreAwards ? 'Loading...' : 'Load more awards'}
-                    </button>
-                  )}
+                  <div className="artist-awards-scroll">
+                    <div className="artist-awards-list">
+                      {songAwards.map((award, index) => {
+                        const artSrc = buildUrl(award.song?.artworkUrl) || featuredArtwork || displayPhoto;
+                        return (
+                          <div key={index} className="artist-award-row">
+                            <div
+                              className="artist-award-row__ambient"
+                              style={{ backgroundImage: `url(${artSrc})` }}
+                              aria-hidden="true"
+                            />
+                            <img
+                              src={artSrc}
+                              alt={award.song?.title || getAwardTitle(award.interval, 'song')}
+                              className="artist-award-row__img"
+                              onError={(e) => { e.currentTarget.src = displayPhoto; }}
+                            />
+                            <div>
+                              <strong>{getAwardTitle(award.interval, 'song')}</strong>
+                              <p>
+                                {award.song?.title && `"${award.song.title}"`}
+                                {award.jurisdiction?.name && ` · ${award.jurisdiction.name}`}
+                                {award.genre?.name && ` · ${award.genre.name}`}
+                              </p>
+                            </div>
+                            <small>{formatAwardDate(award.awardDate)}</small>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {hasMoreSongAwards && (
+                      <button
+                        type="button"
+                        className="artist-btn artist-btn--ghost artist-btn--small artist-awards-more"
+                        onClick={loadMoreSongAwards}
+                        disabled={loadingMoreSongAwards}
+                      >
+                        {loadingMoreSongAwards ? 'Loading...' : 'Load more'}
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="artist-empty-state">
+                  <Music size={34} />
+                  <h3>No song awards yet</h3>
+                  <p>When one of your tracks wins Song of the Day, Week, or Month it'll appear here.</p>
                 </div>
-              </>
-            ) : (
-              <div className="artist-empty-state">
-                <Trophy size={34} />
-                <h3>No awards yet</h3>
-                <p>Keep collecting votes, plays, likes, and score to earn your first local win.</p>
-              </div>
+              )
             )}
           </ArtistCollapsibleSection>
 
