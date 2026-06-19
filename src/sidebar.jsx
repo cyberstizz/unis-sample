@@ -1,7 +1,7 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import './sidebar.scss';
 import { useNavigate } from 'react-router-dom';
-import { Vote, Search, Trophy, Settings, DollarSign, House, Music, Shield } from 'lucide-react';
+import { Vote, Search, Trophy, Settings, DollarSign, House, Music, Shield, Compass } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { PlayerContext } from './context/playercontext';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
@@ -83,6 +83,10 @@ const Sidebar = () => {
           <li onClick={() => handleNav('/findpage')}>
             <span className="sidebar-icon"><Search size={24} /></span>
             <span className="sidebar-text">Find</span>
+          </li>
+          <li onClick={() => handleNav('/discover')}>        
+            <span className="sidebar-icon"><Compass size={24} /></span>
+            <span className="sidebar-text">Discover</span>
           </li>
           <li onClick={() => handleNav('/leaderboards')}>
             <span className="sidebar-icon"><Trophy size={24} /></span>
