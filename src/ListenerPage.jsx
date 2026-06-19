@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { buildUrl } from "../utils/buildUrl";
-import { apiCall } from "../components/axiosInstance";
-import { useAuth } from "../context/AuthContext";
-import Layout from "../layout";
-import VoteHistorySection from "../VoteHistorySection"; // ★ read-only; fetches the logged-in user's votes (self-view only)
+import { buildUrl } from "./utils/buildUrl";
+import { apiCall } from "./components/axiosInstance";
+import { useAuth } from "./context/AuthContext";
+import Layout from "./layout";
+import VoteHistorySection from "./VoteHistorySection"; // ★ read-only; fetches the logged-in user's votes (self-view only)
 import "./ListenerPage.scss";
 
 // ----------------------------------------------------------------------------
