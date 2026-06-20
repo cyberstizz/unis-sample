@@ -56,7 +56,7 @@ import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import { jsPDF } from 'jspdf';
 import ChangePasswordWizard from './changePasswordWizard';
-import RevenueSection from './RevenueSection'; 
+import RevenueSection from './revenueSection'; 
 
 // ---------------------------------------------------------------------------
 // Small inline loader shown per-section while data is in flight
