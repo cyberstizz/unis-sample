@@ -188,7 +188,7 @@
 .dsc-search input::placeholder { color: var(--unis-text-4); }
 
 /* ---- section / rail ---- */
-.dsc-section { margin-top: 34px; }
+.dsc-section { margin-top: 28px; min-width: 0 }
 .dsc-sec-head {
   display: flex;
   align-items: baseline;
