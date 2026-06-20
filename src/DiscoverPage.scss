@@ -1,5 +1,8 @@
 .dsc-wrap {
   max-width: 1080px;
+  width: 100%;            
+  min-width: 0;           
+  box-sizing: border-box; 
   margin: 0 auto;
   padding: 26px 18px 120px; 
   font-family: var(--unis-font-sans);
