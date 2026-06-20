@@ -1,0 +1,380 @@
+// =============================================================================
+// CashoutPanel — theme-aware styling
+// Replaces the old inline Stripe-purple palette (#163387 / #635bff / #1a1a1f)
+// with the --unis-* token system so the panel inherits the user's theme.
+// =============================================================================
+
+.cashout-panel {
+  font-family: var(--unis-font-sans);
+  width: 100%;
+  max-width: 440px;
+  color: var(--unis-text);
+}
+
+// ── Balance card ────────────────────────────────────────────────────────────
+.cashout-balance {
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  border-radius: var(--unis-radius);
+  background:
+    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.012) 52%, transparent),
+    rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--unis-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  &__glow {
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--unis-primary-glow) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  // lift content above the glow
+  > *:not(.cashout-balance__glow) {
+    position: relative;
+    z-index: 1;
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    color: var(--unis-primary-2);
+    background: var(--unis-primary-soft);
+    border: 1px solid var(--unis-border-hi);
+  }
+
+  &__label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--unis-text-3);
+  }
+
+  &__amount {
+    font-size: 38px;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    line-height: 1.05;
+    color: var(--unis-text);
+  }
+}
+
+.cashout-pending {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffb13c;
+}
+
+.cashout-action {
+  margin-top: 22px;
+}
+
+// ── Buttons ───────────────────────────────────────────────────────────────
+.cashout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border: 0;
+  border-radius: var(--unis-radius-sm);
+  font-family: var(--unis-font-sans);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 0.14s ease, background 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+
+  &:active { transform: translateY(1px); }
+
+  &--payout {
+    color: #fff;
+    background: var(--unis-primary);
+    box-shadow:
+      0 0 0 1px var(--unis-primary-glow),
+      0 16px 34px -16px var(--unis-primary-glow);
+
+    &:hover {
+      background: var(--unis-primary-2);
+      transform: translateY(-1px);
+    }
+  }
+
+  // Stripe connect — themed (no more #635bff), Stripe wordmark stays
+  &--stripe {
+    color: #fff;
+    background: var(--unis-primary);
+    box-shadow: 0 12px 30px -16px var(--unis-primary-glow);
+
+    &:hover { background: var(--unis-primary-2); }
+  }
+
+  &--confirm {
+    color: #fff;
+    background: #22c55e;
+    box-shadow: 0 12px 30px -16px rgba(34, 197, 94, 0.7);
+
+    &:hover { filter: brightness(1.05); }
+  }
+}
+
+.cashout-btn--cancel {
+  width: 100%;
+  padding: 9px;
+  border: 0;
+  background: transparent;
+  color: var(--unis-text-3);
+  font-family: var(--unis-font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.16s ease;
+
+  &:hover { color: var(--unis-text); }
+}
+
+// ── Connect prompt ──────────────────────────────────────────────────────────
+.cashout-connect {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &__text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--unis-text-3);
+  }
+}
+
+// ── Below minimum ───────────────────────────────────────────────────────────
+.cashout-minimum {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &__text {
+    margin: 0;
+    font-size: 13px;
+    color: var(--unis-text-3);
+  }
+}
+
+.cashout-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+
+  &__fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--unis-primary), var(--unis-primary-2));
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+// ── Confirm panel ───────────────────────────────────────────────────────────
+.cashout-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  &__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--unis-text);
+  }
+
+  &__buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+.cashout-amounts {
+  display: flex;
+  gap: 8px;
+}
+
+.cashout-amount {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: var(--unis-radius-sm);
+  border: 1px solid var(--unis-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--unis-text-3);
+  font-family: var(--unis-font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+
+  &.is-active {
+    color: var(--unis-primary-2);
+    background: var(--unis-primary-soft);
+    border-color: var(--unis-border-hi);
+  }
+}
+
+.cashout-custom {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: var(--unis-radius-sm);
+  background: rgba(0, 0, 0, 0.26);
+  border: 1px solid var(--unis-border);
+
+  &:focus-within { border-color: var(--unis-primary); }
+
+  &__sign {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--unis-text-4);
+  }
+
+  &__input {
+    flex: 1;
+    padding: 12px 8px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--unis-text);
+    font-family: var(--unis-font-sans);
+    font-size: 18px;
+    font-weight: 700;
+  }
+}
+
+.cashout-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--unis-text-4);
+}
+
+.cashout-error {
+  margin: 0;
+  font-size: 12px;
+  color: #f87171;
+
+  &--center { text-align: center; font-size: 13px; }
+}
+
+.cashout-success {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--unis-radius-sm);
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.18);
+  color: #22c55e;
+  font-size: 14px;
+  line-height: 1.4;
+
+  &__dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+  }
+}
+
+.cashout-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: cashout-spin 0.6s linear infinite;
+}
+
+@keyframes cashout-spin {
+  to { transform: rotate(360deg); }
+}
+
+// ── Payout history ──────────────────────────────────────────────────────────
+.cashout-history {
+  margin-top: 20px;
+
+  &__title {
+    margin: 0 0 12px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--unis-text-3);
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: var(--unis-radius-sm);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--unis-border);
+  }
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__date {
+    font-size: 13px;
+    color: var(--unis-text-4);
+  }
+
+  &__amount {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--unis-text);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.cashout-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}

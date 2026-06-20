@@ -1,86 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import "./cashoutPanel.scss"; // ★ theme: styling moved out of inline objects into --unis-* SCSS
 
 /*
  * CashoutPanel — Unis Earnings Payout via Stripe Connect
  *
- * Usage:
+ * Presentation only. All behaviour is driven by props; the parent owns the
+ * actual Stripe calls (onRequestPayout / onConnectStripe).
+ *
  *   <CashoutPanel
- *     balance={7523}                    // balance in cents ($75.23)
+ *     balance={7523}                    // available balance in cents ($75.23)
  *     pendingBalance={1250}             // pending/uncleared balance in cents
  *     minimumPayout={5000}              // minimum payout in cents ($50.00)
- *     stripeConnected={true}            // whether user has connected Stripe
- *     onRequestPayout={(amount) => {}}  // calls your backend
+ *     stripeConnected={true}            // whether the user has onboarded Stripe
+ *     onRequestPayout={(amount) => {}}  // cents; resolves on success, rejects on failure
  *     onConnectStripe={() => {}}        // opens Stripe Connect onboarding
  *     payoutHistory={[                  // recent payouts
  *       { id: "po_1", amount: 5000, status: "paid", date: "2026-04-01" },
  *     ]}
  *   />
  *
- * ─── BACKEND IMPLEMENTATION GUIDE ───────────────────────────────────
- *
- * You already have Stripe Connect set up. Here's what you need to add:
- *
- * 1. GET /api/earnings/{userId}
- *    Returns:
- *    {
- *      availableBalance: 7523,     // cents, withdrawable now
- *      pendingBalance: 1250,       // cents, still clearing
- *      lifetimeEarnings: 45000,    // cents, total ever earned
- *      stripeAccountId: "acct_...",
- *      stripeConnected: true,
- *      payoutHistory: [...]
- *    }
- *
- *    In your Spring Boot service:
- *    - Call stripe.balance.retrieve({ stripeAccount: acctId })
- *    - available[0].amount = withdrawable, pending[0].amount = clearing
- *    - Or maintain your own ledger in PostgreSQL and sync periodically
- *
- * 2. POST /api/earnings/{userId}/payout
- *    Body: { amount: 5000 }  // cents, must be >= minimumPayout
- *    
- *    In your Spring Boot service:
- *    - Validate amount >= $50.00 and <= available balance
- *    - Create a Stripe payout:
- *        Payout.create(
- *          PayoutCreateParams.builder()
- *            .setAmount(amount)
- *            .setCurrency("usd")
- *            .build(),
- *          RequestOptions.builder()
- *            .setStripeAccount(stripeAccountId)
- *            .build()
- *        );
- *    - Record the payout in your payouts table
- *    - Return { success: true, payoutId: "po_..." }
- *
- *    IMPORTANT: Stripe Connect payouts go to the connected account's
- *    external account (their bank). Make sure artists have completed
- *    onboarding and added a bank account/debit card.
- *
- * 3. Database additions:
- *    CREATE TABLE payouts (
- *      id BIGSERIAL PRIMARY KEY,
- *      user_id BIGINT NOT NULL REFERENCES users(id),
- *      stripe_payout_id VARCHAR(255),
- *      amount INTEGER NOT NULL,          -- in cents
- *      status VARCHAR(50) DEFAULT 'pending', -- pending, paid, failed, canceled
- *      requested_at TIMESTAMP DEFAULT NOW(),
- *      completed_at TIMESTAMP,
- *      failure_reason TEXT
- *    );
- *
- * 4. Stripe Webhooks (add these to your existing webhook handler):
- *    - payout.paid      → update status to 'paid', set completed_at
- *    - payout.failed    → update status to 'failed', set failure_reason
- *    - payout.canceled  → update status to 'canceled'
- *
- * 5. Stripe Connect Onboarding (if not already implemented):
- *    POST /api/stripe/connect/onboard
- *    - Creates an Account Link for Standard or Express onboarding
- *    - Redirects user to Stripe's hosted onboarding flow
- *    - On return, verify account.charges_enabled && account.payouts_enabled
- * ────────────────────────────────────────────────────────────────────
+ * ★ theme: the only inline styles that remain are the confirm button's
+ *   pointerEvents/opacity (a behavioural lock the test-suite asserts on) and
+ *   the per-status badge colors (semantic, not the old Stripe purple). Every
+ *   other surface now reads --unis-primary and friends.
  */
 
 // ── Inline SVG Icons ────────────────────────────────────────────────
@@ -144,9 +86,11 @@ const formatCents = (cents) => {
 };
 
 const formatDate = (dateStr) => {
-  // Parse YYYY-MM-DD as a local date so timezones west of UTC don't roll
-  // the display back by one day (e.g. "2026-04-01" rendering as "Mar 31, 2026" in NYC).
-  const [year, month, day] = dateStr.split("-").map(Number);
+  // ★ Robust to both "2026-04-01" and ISO datetimes. Parse YYYY-MM-DD as a
+  // local date so timezones west of UTC don't roll the display back a day.
+  if (!dateStr) return "";
+  const [year, month, day] = String(dateStr).slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return String(dateStr);
   const d = new Date(year, month - 1, day);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
@@ -187,7 +131,6 @@ export default function CashoutPanel({
   const handlePayout = async () => {
     // Guard: pointer-events: none is purely visual — assistive tech,
     // programmatic dispatch, and rapid double-taps can still fire onClick.
-    // Bail out explicitly when we're already processing or the amount is invalid.
     if (payoutStatus === "processing") return;
     if (useCustom && !isValidAmount) return;
 
@@ -207,99 +150,96 @@ export default function CashoutPanel({
     }
   };
 
+  const confirmLocked = payoutStatus === "processing" || (useCustom && !isValidAmount);
+
   return (
-    <div style={styles.container}>
+    <div className="cashout-panel">
       {/* ── Balance Card ─────────────────────────────── */}
-      <div style={styles.balanceCard}>
-        <div style={styles.balanceGlow} />
-        <div style={styles.balanceHeader}>
-          <div style={styles.balanceIcon}>
+      <div className="cashout-balance">
+        <div className="cashout-balance__glow" aria-hidden="true" />
+        <div className="cashout-balance__head">
+          <div className="cashout-balance__icon">
             <IconWallet />
           </div>
-          <span style={styles.balanceLabel}>Available Balance</span>
+          <span className="cashout-balance__label">Available Balance</span>
         </div>
-        <div style={styles.balanceAmount}>{formatCents(balance)}</div>
+        <div className="cashout-balance__amount">{formatCents(balance)}</div>
         {pendingBalance > 0 && (
-          <div style={styles.pendingRow}>
+          <div className="cashout-pending">
             <IconClock />
             <span>{formatCents(pendingBalance)} pending</span>
           </div>
         )}
 
         {/* Action area */}
-        <div style={styles.actionArea}>
+        <div className="cashout-action">
           {!stripeConnected ? (
             // ── Not connected: show onboarding CTA ──
-            <div style={styles.connectPrompt}>
-              <p style={styles.connectText}>
+            <div className="cashout-connect">
+              <p className="cashout-connect__text">
                 Connect your bank account via Stripe to start receiving payouts.
               </p>
-              <button style={styles.btnStripe} onClick={onConnectStripe}>
+              <button className="cashout-btn cashout-btn--stripe" onClick={onConnectStripe} type="button">
                 <IconStripe />
                 <span>Connect with Stripe</span>
               </button>
             </div>
           ) : !canPayout ? (
             // ── Connected but below minimum ──
-            <div style={styles.minimumNotice}>
-              <div style={styles.progressBarTrack}>
+            <div className="cashout-minimum">
+              <div className="cashout-progress">
                 <div
-                  style={{
-                    ...styles.progressBarFill,
-                    width: `${Math.min((balance / minimumPayout) * 100, 100)}%`,
-                  }}
+                  className="cashout-progress__fill"
+                  style={{ width: `${Math.min((balance / minimumPayout) * 100, 100)}%` }}
                 />
               </div>
-              <p style={styles.minimumText}>
+              <p className="cashout-minimum__text">
                 {formatCents(shortfall)} more to reach the {formatCents(minimumPayout)} minimum payout
               </p>
             </div>
           ) : !showConfirm ? (
             // ── Ready to cash out ──
             <button
-              style={styles.btnPayout}
+              className="cashout-btn cashout-btn--payout"
               onClick={() => setShowConfirm(true)}
+              type="button"
             >
               <IconArrowUp />
               <span>Cash Out</span>
             </button>
           ) : (
             // ── Confirmation step ──
-            <div style={styles.confirmPanel}>
+            <div className="cashout-confirm">
               {payoutStatus === "success" ? (
-                <div style={styles.payoutSuccess}>
-                  <div style={styles.successDot} />
+                <div className="cashout-success">
+                  <div className="cashout-success__dot" />
                   <span>Payout requested! Funds typically arrive in 1–2 business days.</span>
                 </div>
               ) : (
                 <>
-                  <p style={styles.confirmTitle}>Confirm Payout</p>
+                  <p className="cashout-confirm__title">Confirm Payout</p>
 
                   {/* Amount selector */}
-                  <div style={styles.amountOptions}>
+                  <div className="cashout-amounts">
                     <button
-                      style={{
-                        ...styles.amountOption,
-                        ...((!useCustom) ? styles.amountOptionActive : {}),
-                      }}
+                      className={`cashout-amount ${!useCustom ? "is-active" : ""}`}
                       onClick={() => { setUseCustom(false); setCustomAmount(""); }}
+                      type="button"
                     >
                       Full balance — {formatCents(balance)}
                     </button>
                     <button
-                      style={{
-                        ...styles.amountOption,
-                        ...(useCustom ? styles.amountOptionActive : {}),
-                      }}
+                      className={`cashout-amount ${useCustom ? "is-active" : ""}`}
                       onClick={() => setUseCustom(true)}
+                      type="button"
                     >
                       Custom amount
                     </button>
                   </div>
 
                   {useCustom && (
-                    <div style={styles.customInputWrapper}>
-                      <span style={styles.dollarSign}>$</span>
+                    <div className="cashout-custom">
+                      <span className="cashout-custom__sign">$</span>
                       <input
                         type="number"
                         min={(minimumPayout / 100).toFixed(2)}
@@ -308,54 +248,60 @@ export default function CashoutPanel({
                         placeholder={(minimumPayout / 100).toFixed(2)}
                         value={customAmount}
                         onChange={(e) => setCustomAmount(e.target.value)}
-                        style={styles.customInput}
+                        className="cashout-custom__input"
                       />
                     </div>
                   )}
 
                   {useCustom && customAmount && !isValidAmount && (
-                    <p style={styles.validationError}>
+                    <p className="cashout-error">
                       {payoutAmount < minimumPayout
                         ? `Minimum payout is ${formatCents(minimumPayout)}`
                         : `Cannot exceed your balance of ${formatCents(balance)}`}
                     </p>
                   )}
 
-                  <div style={styles.confirmInfo}>
+                  <div className="cashout-info">
                     <IconBank />
                     <span>Funds will be sent to your connected bank account</span>
                   </div>
 
-                  <div style={styles.confirmButtons}>
+                  <div className="cashout-confirm__buttons">
                     <button
+                      className="cashout-btn cashout-btn--confirm"
+                      // ★ behavioural lock kept inline — the test-suite asserts
+                      //   toHaveStyle({ pointerEvents: 'none' }) when invalid.
                       style={{
-                        ...styles.btnConfirm,
-                        opacity: (payoutStatus === "processing" || (useCustom && !isValidAmount)) ? 0.5 : 1,
-                        pointerEvents: (payoutStatus === "processing" || (useCustom && !isValidAmount)) ? "none" : "auto",
+                        opacity: confirmLocked ? 0.5 : 1,
+                        pointerEvents: confirmLocked ? "none" : "auto",
                       }}
                       onClick={handlePayout}
+                      type="button"
                     >
                       {payoutStatus === "processing" ? (
-                        <span style={styles.spinner} />
+                        <span className="cashout-spinner" />
                       ) : (
                         `Confirm ${formatCents(payoutAmount)} Payout`
                       )}
                     </button>
                     <button
-                      style={styles.btnCancel}
+                      className="cashout-btn--cancel"
                       onClick={() => {
                         setShowConfirm(false);
                         setPayoutStatus("idle");
                         setUseCustom(false);
                         setCustomAmount("");
                       }}
+                      type="button"
                     >
                       Cancel
                     </button>
                   </div>
 
                   {payoutStatus === "error" && (
-                    <p style={styles.errorText}>Payout failed. Please try again or contact support.</p>
+                    <p className="cashout-error cashout-error--center">
+                      Payout failed. Please try again or contact support.
+                    </p>
                   )}
                 </>
               )}
@@ -366,21 +312,21 @@ export default function CashoutPanel({
 
       {/* ── Payout History ────────────────────────────── */}
       {payoutHistory.length > 0 && (
-        <div style={styles.historySection}>
-          <h4 style={styles.historyTitle}>Payout History</h4>
-          <div style={styles.historyList}>
+        <div className="cashout-history">
+          <h4 className="cashout-history__title">Payout History</h4>
+          <div className="cashout-history__list">
             {payoutHistory.map((payout) => {
               const sc = statusConfig[payout.status] || statusConfig.pending;
               return (
-                <div key={payout.id} style={styles.historyItem}>
-                  <div style={styles.historyLeft}>
-                    <div style={{ ...styles.statusBadge, background: sc.bg, color: sc.color }}>
+                <div key={payout.id} className="cashout-history__item">
+                  <div className="cashout-history__left">
+                    <div className="cashout-status" style={{ background: sc.bg, color: sc.color }}>
                       {sc.icon}
                       <span>{sc.label}</span>
                     </div>
-                    <span style={styles.historyDate}>{formatDate(payout.date)}</span>
+                    <span className="cashout-history__date">{formatDate(payout.date)}</span>
                   </div>
-                  <span style={styles.historyAmount}>{formatCents(payout.amount)}</span>
+                  <span className="cashout-history__amount">{formatCents(payout.amount)}</span>
                 </div>
               );
             })}
@@ -390,326 +336,3 @@ export default function CashoutPanel({
     </div>
   );
 }
-
-// ── Styles ──────────────────────────────────────────────────────────
-
-const styles = {
-  container: {
-    fontFamily: "'DM Sans', sans-serif",
-    maxWidth: "440px",
-    width: "100%",
-  },
-  balanceCard: {
-    position: "relative",
-    background: "#1a1a1f",
-    borderRadius: "16px",
-    border: "1px solid rgba(255,255,255,0.06)",
-    padding: "24px",
-    overflow: "hidden",
-  },
-  balanceGlow: {
-    position: "absolute",
-    top: "-40px",
-    right: "-40px",
-    width: "160px",
-    height: "160px",
-    borderRadius: "50%",
-    background: "radial-gradient(circle, rgba(22,51,135,0.25) 0%, transparent 70%)",
-    pointerEvents: "none",
-  },
-  balanceHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    marginBottom: "8px",
-  },
-  balanceIcon: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "10px",
-    background: "rgba(22,51,135,0.2)",
-    color: "#6b8cff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  balanceLabel: {
-    fontSize: "13px",
-    color: "rgba(255,255,255,0.45)",
-    fontWeight: 500,
-    letterSpacing: "0.02em",
-    textTransform: "uppercase",
-  },
-  balanceAmount: {
-    fontSize: "36px",
-    fontWeight: 700,
-    color: "#fff",
-    letterSpacing: "-0.02em",
-    lineHeight: 1.2,
-    marginBottom: "4px",
-  },
-  pendingRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    fontSize: "13px",
-    color: "#ffb13c",
-    marginBottom: "4px",
-  },
-  actionArea: {
-    marginTop: "20px",
-  },
-  // ── Stripe Connect ──
-  connectPrompt: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  connectText: {
-    margin: 0,
-    fontSize: "14px",
-    lineHeight: 1.5,
-    color: "rgba(255,255,255,0.4)",
-  },
-  btnStripe: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    padding: "14px",
-    borderRadius: "12px",
-    border: "none",
-    background: "#635bff",
-    color: "#fff",
-    fontSize: "15px",
-    fontWeight: 600,
-    fontFamily: "'DM Sans', sans-serif",
-    cursor: "pointer",
-    transition: "opacity 0.15s",
-  },
-  // ── Below minimum ──
-  minimumNotice: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  progressBarTrack: {
-    height: "6px",
-    borderRadius: "3px",
-    background: "rgba(255,255,255,0.06)",
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: "100%",
-    borderRadius: "3px",
-    background: "linear-gradient(90deg, #163387, #6b8cff)",
-    transition: "width 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
-  },
-  minimumText: {
-    margin: 0,
-    fontSize: "13px",
-    color: "rgba(255,255,255,0.4)",
-  },
-  // ── Cash out button ──
-  btnPayout: {
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    padding: "14px",
-    borderRadius: "12px",
-    border: "none",
-    background: "#163387",
-    color: "#fff",
-    fontSize: "15px",
-    fontWeight: 600,
-    fontFamily: "'DM Sans', sans-serif",
-    cursor: "pointer",
-    transition: "all 0.15s",
-  },
-  // ── Confirm panel ──
-  confirmPanel: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "14px",
-  },
-  confirmTitle: {
-    margin: 0,
-    fontSize: "16px",
-    fontWeight: 600,
-    color: "#fff",
-  },
-  amountOptions: {
-    display: "flex",
-    gap: "8px",
-  },
-  amountOption: {
-    flex: 1,
-    padding: "10px 12px",
-    borderRadius: "10px",
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.03)",
-    color: "rgba(255,255,255,0.5)",
-    fontSize: "12px",
-    fontWeight: 500,
-    fontFamily: "'DM Sans', sans-serif",
-    cursor: "pointer",
-    transition: "all 0.15s",
-    textAlign: "center",
-  },
-  amountOptionActive: {
-    border: "1px solid rgba(22,51,135,0.5)",
-    background: "rgba(22,51,135,0.15)",
-    color: "#6b8cff",
-  },
-  customInputWrapper: {
-    display: "flex",
-    alignItems: "center",
-    background: "rgba(255,255,255,0.04)",
-    borderRadius: "10px",
-    border: "1px solid rgba(255,255,255,0.08)",
-    padding: "0 14px",
-  },
-  dollarSign: {
-    fontSize: "18px",
-    fontWeight: 600,
-    color: "rgba(255,255,255,0.3)",
-  },
-  customInput: {
-    flex: 1,
-    background: "transparent",
-    border: "none",
-    outline: "none",
-    color: "#fff",
-    fontSize: "18px",
-    fontWeight: 600,
-    fontFamily: "'DM Sans', sans-serif",
-    padding: "12px 8px",
-  },
-  validationError: {
-    margin: 0,
-    fontSize: "12px",
-    color: "#f87171",
-  },
-  confirmInfo: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    fontSize: "13px",
-    color: "rgba(255,255,255,0.35)",
-  },
-  confirmButtons: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  btnConfirm: {
-    width: "100%",
-    padding: "14px",
-    borderRadius: "12px",
-    border: "none",
-    background: "#22c55e",
-    color: "#fff",
-    fontSize: "15px",
-    fontWeight: 600,
-    fontFamily: "'DM Sans', sans-serif",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.15s",
-  },
-  btnCancel: {
-    background: "transparent",
-    border: "none",
-    color: "rgba(255,255,255,0.4)",
-    fontSize: "13px",
-    fontFamily: "'DM Sans', sans-serif",
-    cursor: "pointer",
-    padding: "8px",
-  },
-  payoutSuccess: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    padding: "14px",
-    borderRadius: "12px",
-    background: "rgba(34,197,94,0.08)",
-    border: "1px solid rgba(34,197,94,0.15)",
-    fontSize: "14px",
-    color: "#22c55e",
-    lineHeight: 1.4,
-  },
-  successDot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    background: "#22c55e",
-    flexShrink: 0,
-  },
-  errorText: {
-    margin: 0,
-    fontSize: "13px",
-    color: "#f87171",
-    textAlign: "center",
-  },
-  spinner: {
-    width: "20px",
-    height: "20px",
-    border: "2px solid rgba(255,255,255,0.2)",
-    borderTopColor: "#fff",
-    borderRadius: "50%",
-    display: "inline-block",
-    animation: "spin 0.6s linear infinite",
-  },
-  // ── History ──
-  historySection: {
-    marginTop: "20px",
-  },
-  historyTitle: {
-    margin: "0 0 12px",
-    fontSize: "14px",
-    fontWeight: 600,
-    color: "rgba(255,255,255,0.6)",
-    letterSpacing: "0.02em",
-    textTransform: "uppercase",
-  },
-  historyList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  historyItem: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "12px 16px",
-    borderRadius: "12px",
-    background: "rgba(255,255,255,0.02)",
-    border: "1px solid rgba(255,255,255,0.04)",
-  },
-  historyLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  },
-  statusBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "5px",
-    padding: "4px 10px",
-    borderRadius: "100px",
-    fontSize: "12px",
-    fontWeight: 500,
-  },
-  historyDate: {
-    fontSize: "13px",
-    color: "rgba(255,255,255,0.3)",
-  },
-  historyAmount: {
-    fontSize: "15px",
-    fontWeight: 600,
-    color: "#fff",
-  },
-};
