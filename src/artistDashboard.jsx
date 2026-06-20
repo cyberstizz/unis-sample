@@ -41,7 +41,6 @@ import VoteHistoryModal from './voteHistoryModal';
 import TerritoryRankSection from './TerritoryRankSection'; // ★ territory rank
 import ReferralCodeCard from './ReferralCodeCard';
 import ThemePicker from './ThemePicker';
-import CashoutPanel from './CashoutPanel';
 import FanbaseFunnel from './fanbaseFunnle'; // ★ analytics: real fanbase funnel section
 import SupporterSection from './SupporterSection'; // ★ item 5: supporters split out
 import DemographicsSection from './dempgraphicsSection'; // ★ item 6
@@ -57,6 +56,7 @@ import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import { jsPDF } from 'jspdf';
 import ChangePasswordWizard from './changePasswordWizard';
+import RevenueSection from './RevenueSection'; 
 
 // ---------------------------------------------------------------------------
 // Small inline loader shown per-section while data is in flight
@@ -1598,64 +1598,17 @@ const ArtistDashboard = () => {
             <VoteHistorySection userId={user?.userId} />
           </ArtistCollapsibleSection>
 
-          {userProfile?.role === 'artist' && (
-            <section id="nav-revenue" className="artist-section artist-revenue-card">
-              <div className="artist-section__head">
-                <div>
-                  <span className="artist-section__eyebrow">Revenue</span>
-                  <h2>
-                    Earnings <em>&amp; cashout</em>
-                  </h2>
-                </div>
-
-                <div className={`artist-status-pill ${isStripeReady ? 'is-ready' : ''}`}>
-                  <DollarSign size={13} />
-                  {isStripeReady ? 'Payout ready' : 'Setup needed'}
-                </div>
-              </div>
-
-              <div className="artist-revenue-summary">
-                <div>
-                  <span>Current balance</span>
-                  <strong>${currentBalanceDollars.toFixed(2)}</strong>
-                  <p>Minimum payout: $50.00</p>
-                </div>
-                <div>
-                  <span>Payout history</span>
-                  <strong>{payoutHistory.length}</strong>
-                  <p>Completed or pending artist payout records.</p>
-                </div>
-              </div>
-
-              <CashoutPanel
-                balance={Math.round(currentBalanceDollars * 100)}
-                pendingBalance={0}
-                minimumPayout={5000}
-                stripeConnected={isStripeReady}
-                onRequestPayout={async () => {
-                  const res = await apiCall({
-                    url: '/v1/stripe/payout',
-                    method: 'post',
-                  });
-                  if (res.data?.success) fetchStats(user.userId);
-                }}
-                onConnectStripe={async () => {
-                  const res = await apiCall({
-                    url: '/v1/stripe/onboard',
-                    method: 'post',
-                  });
-                  if (res.data?.url) window.location.href = res.data.url;
-                }}
-                payoutHistory={payoutHistory.map((p) => ({
-                  id: p.payoutId,
-                  amount: Math.round(parseFloat(p.amount || 0) * 100),
-                  status: p.status || 'pending',
-                  date: p.createdAt,
-                }))}
-              />
-            </section>
-          )}
-
+        {userProfile?.role === 'artist' && (
+          <RevenueSection
+            artistId={user?.userId}
+            artistPhoto={displayPhoto}
+            earningsSummary={earningsSummary}
+            stripeStatus={stripeStatus}
+            payoutHistory={payoutHistory}
+            isStripeReady={isStripeReady}
+            onPayoutSuccess={() => fetchStats(user.userId)}
+          />
+        )}
       {/* ★ collapsible: Growth checklist (collapsed by default) */}
           <ArtistCollapsibleSection
             id="nav-growth"
