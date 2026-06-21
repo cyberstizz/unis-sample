@@ -28,7 +28,8 @@ import {
   Link2,
   Share2,
   Palette,
-  LayoutGrid
+  LayoutGrid,
+  ImagePlus
 } from 'lucide-react';
 import UploadWizard from './uploadWizard';
 import ChangeDefaultSongWizard from './changeDefaultSongWizard';
@@ -58,6 +59,8 @@ import { jsPDF } from 'jspdf';
 import ChangePasswordWizard from './changePasswordWizard';
 import RevenueSection from './revenueSection'; 
 import VerificationGate from './VerificationGate';
+import ArtistPhotosManager from './ArtistPhotosManager';
+
 
 
 // ---------------------------------------------------------------------------
@@ -576,6 +579,7 @@ const ArtistDashboard = () => {
     { id: 'nav-territory', label: 'Territory', icon: MapPin },
     { id: 'nav-catalog', label: 'Catalog', icon: Music },
     { id: 'nav-trophy', label: 'Trophies', icon: Trophy },
+    { id: 'nav-photos', label: 'Photos', icon: ImagePlus },
     ...(userProfile?.role === 'artist'
       ? [{ id: 'nav-revenue', label: 'Revenue', icon: DollarSign }]
       : []),
@@ -1367,7 +1371,17 @@ const ArtistDashboard = () => {
             </div>
           </ArtistCollapsibleSection>
 
-          {/* ★ F: trophy case is now collapsible
+          <ArtistCollapsibleSection
+            id="nav-photos"
+            onRegister={registerSection}
+            eyebrow="Gallery"
+            title={<>Artist <em>photos</em></>}
+            defaultOpen={false}
+            ambientImage={displayPhoto}
+          >
+            <ArtistPhotosManager artistId={user?.userId} />
+          </ArtistCollapsibleSection>
+
           {/* ★ F: trophy case is now collapsible + height-capped so a heavy
               award-winner no longer pushes the whole page down. The featured
               win + a count summary stay visible; the full list scrolls inside
