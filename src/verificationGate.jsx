@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
-import PhoneVerificationModal from './PhoneVerificationModal';
+import PhoneVerificationModal from './phoneVerificationModal';
 import './verificationGate.scss';
 
 /**
