@@ -104,6 +104,17 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+    const refreshUser = async () => {
+    const token = localStorage.getItem('token');
+    const userId = token && decodeToken(token);
+    if (!userId) return;
+    try {
+      const res = await axiosInstance.get(`/v1/users/profile/${userId}`);
+      setUser((prev) => ({ ...(prev || {}), ...res.data }));
+    } catch (e) { console.error('refreshUser failed', e); }
+  };
+  // …add refreshUser to the `value` object
+
   const login = async (credentials) => {
     try {
       const response = await axiosInstance.post('/auth/login', credentials);
@@ -170,6 +181,7 @@ export const AuthProvider = ({ children }) => {
     isGuest,
     theme,
     setTheme,
+    refreshUser,
   };
   
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

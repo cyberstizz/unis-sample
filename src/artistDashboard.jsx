@@ -57,6 +57,8 @@ import buildUrl from './utils/buildUrl';
 import { jsPDF } from 'jspdf';
 import ChangePasswordWizard from './changePasswordWizard';
 import RevenueSection from './revenueSection'; 
+import VerificationGate from './VerificationGate';
+
 
 // ---------------------------------------------------------------------------
 // Small inline loader shown per-section while data is in flight
@@ -1814,11 +1816,14 @@ const ArtistDashboard = () => {
             title={<>Refer <em>&amp; earn</em></>}
             defaultOpen={false}
           >
+            <VerificationGate title="Verify your phone to refer & earn">
             <ReferralCodeCard
               referralCode={referralCode}
               username={displayName}
               isArtist={true}
             />
+            </VerificationGate>
+
           </ArtistCollapsibleSection>
 
           {/* ★ collapsible: Theme (collapsed by default) */}

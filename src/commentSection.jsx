@@ -13,6 +13,8 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import './commentSection.scss';
+import VerificationGate from './VerificationGate';
+
 
 const CommentSection = ({ songId, userId, songArtistId }) => {
   const [comments, setComments] = useState([]);
@@ -359,6 +361,7 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
     }
 
     return (
+      <VerificationGate compact title="Verify your phone to comment">
       <form onSubmit={handleSubmitComment} className={`new-comment-form new-comment-form--${variant}`}>
         <div className="input-wrapper">
           <textarea
@@ -388,6 +391,7 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
           </div>
         )}
       </form>
+      </VerificationGate>
     );
   };
 

@@ -129,6 +129,8 @@ const iconDraw = {
   visible: { pathLength: 1, opacity: 1, transition: { duration: 0.7, ease: 'easeInOut' } },
 };
 
+
+
 // --- COMPONENT ------------------------------------------------------------
 
 const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }) => {
@@ -141,7 +143,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     selectedJurisdiction: 'harlem',
   });
   const { showReward } = useReward();
-  const { theme } = useAuth();
+  const { theme, user } = useAuth();
   const activeLogo = LOGO_MAP[theme] || logoblue;
 
   const [artistNameForward, setArtistNameForward] = useState('');
@@ -469,6 +471,12 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         intervalId: INTERVAL_IDS[currentFilters.selectedInterval],
         voteDate: new Date().toISOString().split('T')[0],
       };
+
+      // …in the submit handler, before the apiCall:
+      if (!user?.phoneVerified) {
+        setVoteResult({ status: 'error', message: 'Verify your phone number to vote.' });
+        return;
+      }
 
       await apiCall({ method: 'post', url: '/v1/vote/submit', data: voteData });
 
