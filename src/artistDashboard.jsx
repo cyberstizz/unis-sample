@@ -59,7 +59,7 @@ import { jsPDF } from 'jspdf';
 import ChangePasswordWizard from './changePasswordWizard';
 import RevenueSection from './revenueSection'; 
 import VerificationGate from './verificationGate';
-import ArtistPhotosManager from './ArtistPhotosManager';
+import ArtistPhotosManager from './artistPhotosManager';
 
 
 
