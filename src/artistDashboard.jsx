@@ -58,7 +58,7 @@ import buildUrl from './utils/buildUrl';
 import { jsPDF } from 'jspdf';
 import ChangePasswordWizard from './changePasswordWizard';
 import RevenueSection from './revenueSection'; 
-import VerificationGate from './VerificationGate';
+import VerificationGate from './verificationGate';
 import ArtistPhotosManager from './ArtistPhotosManager';
 
 
