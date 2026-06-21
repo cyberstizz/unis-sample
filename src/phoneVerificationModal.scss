@@ -1,0 +1,185 @@
+// =============================================================================
+// PhoneVerificationModal
+// =============================================================================
+
+.pv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 50% 35%, var(--unis-primary-soft), transparent 36%),
+    rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(14px);
+}
+
+.pv-modal {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 34px 30px 30px;
+  border-radius: var(--unis-radius-lg);
+  text-align: center;
+  font-family: var(--unis-font-sans);
+  color: var(--unis-text);
+  background:
+    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.02) 52%, transparent),
+    rgba(20, 20, 22, 0.92);
+  border: 1px solid var(--unis-border-hi);
+  box-shadow: 0 26px 90px rgba(0, 0, 0, 0.58);
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 27px;
+    font-weight: 850;
+    letter-spacing: -0.03em;
+
+    em {
+      font-family: var(--unis-font-italic);
+      font-style: italic;
+      font-weight: 400;
+      color: var(--unis-primary-2);
+    }
+  }
+}
+
+.pv-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--unis-border);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--unis-text-3);
+  cursor: pointer;
+
+  &:hover { color: var(--unis-text); border-color: var(--unis-border-hi); }
+}
+
+.pv-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--unis-primary);
+  box-shadow: 0 0 38px var(--unis-primary-glow);
+}
+
+.pv-sub {
+  margin: 0 0 20px;
+  color: var(--unis-text-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.pv-field {
+  display: block;
+  text-align: left;
+  margin-bottom: 14px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 7px;
+    color: var(--unis-primary-2);
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  input {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 14px;
+    border-radius: var(--unis-radius-sm);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--unis-border);
+    color: var(--unis-text);
+    font: inherit;
+    font-size: 16px;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+
+    &:focus {
+      outline: none;
+      border-color: var(--unis-primary);
+      box-shadow: 0 0 0 3px var(--unis-primary-soft);
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    &::placeholder { color: var(--unis-text-4); }
+  }
+}
+
+.pv-code-input {
+  text-align: center;
+  font-size: 26px !important;
+  font-weight: 800;
+  letter-spacing: 0.4em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
+  padding: 13px 20px;
+  border: 0;
+  border-radius: var(--unis-radius-sm);
+  background: var(--unis-primary);
+  color: #fff;
+  font-family: var(--unis-font-sans);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 16px 34px -16px var(--unis-primary-glow);
+  transition: background 0.18s ease, transform 0.14s ease, opacity 0.18s ease;
+
+  &:hover:not(:disabled) { background: var(--unis-primary-2); transform: translateY(-1px); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+}
+
+.pv-error {
+  margin: 0 0 12px;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+.pv-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+  color: var(--unis-text-4);
+  font-size: 12px;
+}
+
+.pv-link {
+  border: 0;
+  background: transparent;
+  color: var(--unis-primary-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover { text-decoration: underline; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
