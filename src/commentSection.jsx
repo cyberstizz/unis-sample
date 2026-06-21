@@ -13,7 +13,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import './commentSection.scss';
-import VerificationGate from './VerificationGate';
+import VerificationGate from './verificationGate';
 
 
 const CommentSection = ({ songId, userId, songArtistId }) => {
