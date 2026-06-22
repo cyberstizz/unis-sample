@@ -15,7 +15,7 @@ import AccountSettings from './AccountSettings';
 import CollapsibleSection from './CollapsibleSection';
 import VoteHistorySection from './VoteHistorySection';
 import SupportedArtistPicker from './SupportedArtistPicker';
-import VerificationGate from './VerificationGate';
+import VerificationGate from './verificationGate';
 import './profile.scss';
 
 // ---------------------------------------------------------------------------
