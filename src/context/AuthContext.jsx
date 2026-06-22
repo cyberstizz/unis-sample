@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       const userId = decodeToken(token);
       if (userId) {
-        axiosInstance.get(`/v1/users/profile/${userId}`)
+        axiosInstance.get(`/v1/users/profile/${userId}`, { useCache: false })
           .then(async (res) => {
             const profileData = res.data;
 
@@ -109,7 +109,7 @@ export const AuthProvider = ({ children }) => {
     const userId = token && decodeToken(token);
     if (!userId) return;
     try {
-      const res = await axiosInstance.get(`/v1/users/profile/${userId}`);
+      const res = await axiosInstance.get(`/v1/users/profile/${userId}`, { useCache: false });
       setUser((prev) => ({ ...(prev || {}), ...res.data }));
     } catch (e) { console.error('refreshUser failed', e); }
   };
@@ -122,7 +122,7 @@ export const AuthProvider = ({ children }) => {
 
       const userId = decodeToken(response.data.token);
       if (userId) {
-        const profileRes = await axiosInstance.get(`/v1/users/profile/${userId}`);
+        const profileRes = await axiosInstance.get(`/v1/users/profile/${userId}`, { useCache: false });
         const profileData = profileRes.data;
 
         if (profileData.themePreference) {

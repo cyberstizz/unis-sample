@@ -154,6 +154,14 @@ function extractQueryParams(url) {
 
 // UPDATED: Better cache invalidation logic
 function invalidateCachesForMutation(url, method) {
+
+  // Phone verification flips phone_verified on the user
+  if (url.includes('/v1/phone/')) {
+    cacheService.invalidateType('user');
+    return;
+  }
+
+
   // Play tracking - invalidate song, trending, user, and artist caches
   if (url.includes('/play')) {
     const songIdMatch = url.match(/\/song\/([^\/\?]+)\/play/);
