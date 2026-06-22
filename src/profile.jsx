@@ -15,6 +15,7 @@ import AccountSettings from './AccountSettings';
 import CollapsibleSection from './CollapsibleSection';
 import VoteHistorySection from './VoteHistorySection';
 import SupportedArtistPicker from './SupportedArtistPicker';
+import VerificationGate from './VerificationGate';
 import './profile.scss';
 
 // ---------------------------------------------------------------------------
@@ -384,11 +385,13 @@ const Profile = () => {
           eyebrow="Grow the network"
           title={<>Refer <em>&amp; earn</em></>}
         >
+        <VerificationGate title="Verify your phone to refer & earn">
           <ReferralCodeCard
             referralCode={referralCode}
             username={profile.username}
             isArtist={profile.role === 'artist'}
           />
+        </VerificationGate>
         </CollapsibleSection>
 
         {/* ============== SOCIAL LINKS ============== */}
