@@ -1,0 +1,61 @@
+//
+// Real-time receive channel for direct messages. Sends still go over REST
+// (POST /v1/messages); this hook just opens a STOMP-over-SockJS connection,
+// authenticates with the JWT in the CONNECT frame (matching the backend's
+// StompAuthChannelInterceptor), and streams inbound messages from
+// /user/queue/messages to the callback you pass in.
+//
+// Deps:  npm i @stomp/stompjs sockjs-client
+// Vite:  sockjs-client expects a `global`. If you hit "global is not defined",
+//        add `define: { global: 'globalThis' }` to vite.config.js.
+
+import { useEffect, useRef, useState } from 'react';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+
+function resolveWsUrl() {
+  // Backend origin without the /api suffix the REST client uses.
+  const raw = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  const origin = raw.replace(/\/api\/?$/, '');
+  return `${origin}/ws`;
+}
+
+export function useMessagingSocket(onMessage) {
+  const [connected, setConnected] = useState(false);
+  const handlerRef = useRef(onMessage);
+  handlerRef.current = onMessage;
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return undefined;
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(resolveWsUrl()),
+      connectHeaders: { Authorization: `Bearer ${token}` },
+      reconnectDelay: 4000,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+      onConnect: () => {
+        setConnected(true);
+        client.subscribe('/user/queue/messages', (frame) => {
+          try {
+            const message = JSON.parse(frame.body);
+            handlerRef.current?.(message);
+          } catch (_) {
+            /* malformed frame — ignore */
+          }
+        });
+      },
+      onDisconnect: () => setConnected(false),
+      onStompError: () => setConnected(false),
+      onWebSocketClose: () => setConnected(false),
+    });
+
+    client.activate();
+    return () => {
+      client.deactivate();
+    };
+  }, []);
+
+  return { connected };
+}
