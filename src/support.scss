@@ -1,0 +1,167 @@
+// src/support.scss
+// Tip sheet — themed on --unis-* tokens, money-green accent for the support action.
+
+$money: #2fd29a;
+
+.usp {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 5, 10, 0.66);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-family: var(--unis-font-sans);
+
+  &.is-visible { opacity: 1; }
+
+  &__shell {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    padding: 26px 24px 22px;
+    border-radius: var(--unis-radius-lg);
+    background: var(--unis-panel-2, #11151d);
+    background-color: #0d1119;
+    border: 1px solid var(--unis-border-hi);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+    color: var(--unis-text);
+    overflow: hidden;
+    transform: translateY(8px) scale(0.98);
+    transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.2, 1);
+
+    .usp.is-visible & { transform: translateY(0) scale(1); }
+  }
+
+  &__glow {
+    position: absolute;
+    top: -60px; right: -40px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(47, 210, 154, 0.18), transparent 70%);
+    pointer-events: none;
+  }
+
+  &__close {
+    position: absolute; top: 14px; right: 14px;
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--unis-panel-hi); border: none; cursor: pointer;
+    color: var(--unis-text-2); border-radius: 50%;
+    transition: background 0.15s ease;
+    &:hover { background: var(--unis-border-hi); color: var(--unis-text); }
+  }
+
+  &__head { text-align: center; margin-bottom: 20px; position: relative; }
+  &__bolt {
+    width: 48px; height: 48px; margin: 0 auto 12px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: rgba(47, 210, 154, 0.12);
+    color: $money;
+    border: 1px solid rgba(47, 210, 154, 0.4);
+  }
+  &__title { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  &__sub { font-size: 13px; color: var(--unis-text-3); margin: 5px 0 0; }
+
+  &__body { display: flex; flex-direction: column; gap: 12px; }
+}
+
+.usp-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+.usp-chip {
+  height: 46px;
+  font-size: 15px; font-weight: 600; font-family: inherit;
+  color: var(--unis-text);
+  background: var(--unis-panel-2);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  &:hover { background: var(--unis-panel-hi); }
+  &.active {
+    border-color: $money;
+    background: rgba(47, 210, 154, 0.10);
+    color: $money;
+  }
+}
+
+.usp-custom {
+  display: flex; align-items: center;
+  background: var(--unis-panel-2);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-sm);
+  padding: 0 14px;
+  &__dollar { color: var(--unis-text-3); font-size: 15px; }
+  &__input {
+    flex: 1; height: 46px; border: none; background: transparent; outline: none;
+    color: var(--unis-text); font-size: 15px; font-family: inherit; padding-left: 6px;
+    &::placeholder { color: var(--unis-text-4); }
+  }
+}
+
+.usp-note {
+  height: 44px; padding: 0 14px;
+  background: var(--unis-panel-2);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-sm);
+  color: var(--unis-text); font-size: 14px; font-family: inherit; outline: none;
+  &::placeholder { color: var(--unis-text-4); }
+  &:focus { border-color: var(--unis-primary-border); }
+}
+
+.usp-pay { display: flex; flex-direction: column; gap: 14px; }
+
+.usp-btn {
+  height: 48px;
+  font-size: 15px; font-weight: 600; font-family: inherit;
+  border-radius: var(--unis-radius);
+  cursor: pointer; border: none;
+  transition: transform 0.12s ease, opacity 0.15s ease, background 0.15s ease;
+  &:active:not(:disabled) { transform: scale(0.99); }
+  &:disabled { opacity: 0.5; cursor: default; }
+
+  &--primary {
+    background: $money; color: #04150f;
+    &:hover:not(:disabled) { background: #36e0a6; }
+  }
+  &--ghost {
+    background: transparent; color: var(--unis-text-3);
+    &:hover:not(:disabled) { color: var(--unis-text); }
+  }
+}
+
+.usp-error {
+  font-size: 13px; color: #f0a5a5;
+  background: rgba(229, 75, 74, 0.10);
+  border: 1px solid rgba(229, 75, 74, 0.35);
+  padding: 8px 12px; border-radius: var(--unis-radius-sm);
+}
+
+.usp__done { text-align: center; padding: 14px 0 8px; }
+.usp__check {
+  width: 56px; height: 56px; margin: 0 auto 14px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: rgba(47, 210, 154, 0.14); color: $money;
+}
+.usp__done-title { font-size: 18px; font-weight: 700; margin: 0; }
+.usp__done-sub { font-size: 13px; color: var(--unis-text-3); margin: 5px 0 0; }
+
+// ── Trigger button (profile) ─────────────────────────────────
+.usp-trigger {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px;
+  font-family: var(--unis-font-sans); font-size: 14px; font-weight: 600;
+  color: #04150f;
+  background: $money;
+  border: none; border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+  &:hover { background: #36e0a6; }
+  &:active { transform: scale(0.97); }
+  svg { color: #04150f; }
+}
