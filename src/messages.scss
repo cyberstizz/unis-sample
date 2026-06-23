@@ -304,3 +304,8 @@ $money: #2fd29a;
   .udm-back { display: inline-flex; }
   .udm-row { max-width: 84%; }
 }
+
+.udm-composer__support {
+  color: $money;
+  &:hover { background: rgba(47, 210, 154, 0.12); color: $money; }
+}
