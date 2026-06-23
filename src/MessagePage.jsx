@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+// src/MessagePage.jsx
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import { useAuth } from './context/AuthContext';
@@ -22,29 +24,73 @@ function relativeTime(iso) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
+// Let the sidebar badge know unread counts may have changed.
+function pingUnread() {
+  window.dispatchEvent(new Event('unis:messages-updated'));
+}
+
 export default function MessagesPage() {
   const { user } = useAuth();
   const currentUserId = user?.userId;
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [conversations, setConversations] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [incoming, setIncoming] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // recipientId passed by the profile "Message" button → open that thread
+  const openWith = location.state?.openWith || null;
+  const openWithHandled = useRef(false);
+
   const loadConversations = useCallback(async () => {
     try {
       const res = await apiCall({ url: '/v1/conversations', useCache: false });
       setConversations(res.data || []);
+      return res.data || [];
     } catch (_) {
       setConversations([]);
+      return [];
     } finally {
       setLoading(false);
+      pingUnread();
     }
   }, []);
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
-  // Inbound real-time message → refresh inbox ordering/unread, fan to thread
+  const openConversation = useCallback((conv) => {
+    setSelectedId(conv.id);
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conv.id ? { ...c, unreadCount: 0 } : c)));
+    pingUnread();
+  }, []);
+
+  // Resolve the profile-button hand-off: select the matching conversation, or
+  // create it then select. Runs once after the first inbox load.
+  useEffect(() => {
+    if (!openWith || loading || openWithHandled.current) return;
+    openWithHandled.current = true;
+
+    const existing = conversations.find((c) => c.otherUserId === openWith);
+    if (existing) {
+      openConversation(existing);
+    } else {
+      (async () => {
+        try {
+          await apiCall({ method: 'post', url: '/v1/messages/start', data: { recipientId: openWith } });
+          const list = await loadConversations();
+          const conv = list.find((c) => c.otherUserId === openWith);
+          if (conv) openConversation(conv);
+        } catch (_) { /* gate/error already surfaced on the profile button */ }
+      })();
+    }
+    // Clear the nav state so a refresh/back doesn't re-trigger.
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [openWith, loading, conversations, openConversation, loadConversations, navigate, location.pathname]);
+
+  // Inbound real-time message → refresh inbox, fan to the open thread
   const onSocketMessage = useCallback((message) => {
     setIncoming(message);
     loadConversations();
@@ -56,13 +102,6 @@ export default function MessagesPage() {
     () => conversations.find((c) => c.id === selectedId) || null,
     [conversations, selectedId],
   );
-
-  const openConversation = useCallback((conv) => {
-    setSelectedId(conv.id);
-    // Optimistically clear unread; server marks read when the thread loads.
-    setConversations((prev) =>
-      prev.map((c) => (c.id === conv.id ? { ...c, unreadCount: 0 } : c)));
-  }, []);
 
   const totalUnread = conversations.reduce((n, c) => n + (c.unreadCount || 0), 0);
 

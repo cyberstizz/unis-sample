@@ -10,10 +10,12 @@ $money: #2fd29a;
 .udm {
   display: grid;
   grid-template-columns: 340px 1fr;
-  height: calc(100dvh - 140px);
+  margin-left: var(--sidebar-width, 0px);
+  width: calc(100% - var(--sidebar-width, 0px));
+  max-width: 1180px;
+  margin-top: 12px;
+  height: calc(100dvh - 104px);   // clears the fixed 80px player + breathing room
   min-height: 480px;
-  margin: 0 auto;
-  max-width: 1100px;
   border: 1px solid var(--unis-border);
   border-radius: var(--unis-radius-lg);
   background: var(--unis-panel);
@@ -288,7 +290,9 @@ $money: #2fd29a;
 @media (max-width: 820px) {
   .udm {
     grid-template-columns: 1fr;
-    height: calc(100dvh - 110px);
+    max-width: none;
+    margin-top: 0;
+    height: calc(100dvh - 96px);
     border-radius: 0;
     border-left: none; border-right: none;
   }
