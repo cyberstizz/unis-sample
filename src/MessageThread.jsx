@@ -1,6 +1,8 @@
+// src/MessageThread.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeft, Music, Zap, Play, ArrowUp } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import SupportSheet from './SupportSheet';
 
 function initials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -26,6 +28,7 @@ export default function MessageThread({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [supportOpen, setSupportOpen] = useState(false);
   const scrollRef = useRef(null);
 
   const otherId = conversation.otherUserId;
@@ -37,6 +40,14 @@ export default function MessageThread({
       if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
     });
   }, []);
+
+  const appendDeduped = useCallback((msg) => {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev;
+      return [...prev.filter((m) => !m._temp), msg];
+    });
+    scrollToBottom();
+  }, [scrollToBottom]);
 
   // Load thread when the conversation changes (server marks it read on read)
   useEffect(() => {
@@ -57,16 +68,11 @@ export default function MessageThread({
   // Live messages for this thread (deduped by id)
   useEffect(() => {
     if (!incomingMessage || incomingMessage.conversationId !== conversation.id) return;
-    setMessages((prev) => {
-      if (prev.some((m) => m.id === incomingMessage.id)) return prev;
-      return [...prev.filter((m) => !m._temp), incomingMessage];
-    });
-    scrollToBottom();
-    // We're looking at it — clear unread server-side.
+    appendDeduped(incomingMessage);
     if (incomingMessage.senderId !== currentUserId) {
       apiCall({ method: 'post', url: `/v1/conversations/${conversation.id}/read` }).catch(() => {});
     }
-  }, [incomingMessage, conversation.id, currentUserId, scrollToBottom]);
+  }, [incomingMessage, conversation.id, currentUserId, appendDeduped]);
 
   const send = useCallback(async () => {
     const body = draft.trim();
@@ -96,7 +102,7 @@ export default function MessageThread({
       const saved = res.data;
       setMessages((prev) => {
         const withoutTemp = prev.filter((m) => m.id !== temp.id);
-        if (withoutTemp.some((m) => m.id === saved.id)) return withoutTemp; // socket echo beat us
+        if (withoutTemp.some((m) => m.id === saved.id)) return withoutTemp;
         return [...withoutTemp, saved];
       });
       onActivity?.(saved);
@@ -108,6 +114,19 @@ export default function MessageThread({
       setSending(false);
     }
   }, [draft, sending, conversation.id, currentUserId, otherId, onActivity, scrollToBottom]);
+
+  // Support sent from inside the thread → post a DM carrying the supportPaymentId
+  const handleSupportSent = useCallback(async ({ supportId, note }) => {
+    try {
+      const res = await apiCall({
+        method: 'post',
+        url: '/v1/messages',
+        data: { recipientId: otherId, body: note || '', supportPaymentId: supportId, source: 'dm' },
+      });
+      appendDeduped(res.data);
+      onActivity?.(res.data);
+    } catch (_) { /* support recorded; bubble will appear on next load */ }
+  }, [otherId, appendDeduped, onActivity]);
 
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -192,6 +211,14 @@ export default function MessageThread({
         <button className="udm-composer__icon" aria-label="Share a track" title="Share a track">
           <Music size={20} aria-hidden="true" />
         </button>
+        <button
+          className="udm-composer__icon udm-composer__support"
+          aria-label="Send support"
+          title="Send support"
+          onClick={() => setSupportOpen(true)}
+        >
+          <Zap size={20} aria-hidden="true" />
+        </button>
         <textarea
           className="udm-composer__input"
           placeholder={`Message ${otherName}…`}
@@ -209,6 +236,15 @@ export default function MessageThread({
           <ArrowUp size={20} aria-hidden="true" />
         </button>
       </div>
+
+      <SupportSheet
+        isOpen={supportOpen}
+        onClose={() => setSupportOpen(false)}
+        artistId={otherId}
+        artistName={otherName}
+        source="dm"
+        onSuccess={handleSupportSent}
+      />
     </div>
   );
 }
