@@ -37,6 +37,7 @@ import ThemeDocumentSync from "./ThemeDocumentSync";
 import VerifyEmail from './pages/VerifyEmail';   
 import DiscoverPage from './DiscoverPage';   
 import ListenerPage from './ListenerPage';   
+import MessagesPage from './MessagePage';
 
 // Theme
 import './theme.scss';
@@ -113,6 +114,7 @@ const AppLayout = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/earnings" element={<Earnings />} />
           <Route path="/artistDashboard" element={<ArtistDashboard />} />
+          <Route path="/messages" element={<MessagesPage />} />
         </Route>
 
         {/* Admin routes — all tiers */}

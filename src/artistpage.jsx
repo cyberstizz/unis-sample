@@ -9,6 +9,7 @@ import VotingWizard from './votingWizard';
 import { useAuth } from './context/AuthContext';
 import { incrementGateSongCount } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
+import MessageButton from './MessageButton';
 
 // ─── Award rail definitions ────────────────────────────────────
 // 12 fixed slots (Song + Artist across 6 intervals). A medal only
@@ -436,6 +437,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
                     Play Discography
                   </button>
+                  <MessageButton recipientId={artistId} />
                   <button onClick={handleFollow} className={`ap2-hero__btn-follow ${isFollowing ? 'ap2-hero__btn-follow--active' : ''}`}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
