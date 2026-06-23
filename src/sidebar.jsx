@@ -1,8 +1,9 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import './sidebar.scss';
 import { useNavigate } from 'react-router-dom';
-import { Vote, Search, Trophy, Settings, DollarSign, House, Music, Shield, Compass } from 'lucide-react';
+import { Vote, Search, Trophy, Settings, DollarSign, House, Music, Shield, Compass, MessageCircle } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
+import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 
@@ -17,11 +18,36 @@ const Sidebar = () => {
 
   const sidebarRef = useRef(null);
 
+  // ── Unread messages badge ──────────────────────────────────
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || isGuest) { setUnreadCount(0); return undefined; }
+    let alive = true;
+    const load = async () => {
+      try {
+        const res = await apiCall({ url: '/v1/conversations', useCache: false });
+        if (!alive) return;
+        const total = (res.data || []).reduce((n, c) => n + (c.unreadCount || 0), 0);
+        setUnreadCount(total);
+      } catch (_) { /* ignore */ }
+    };
+    load();
+    const onUpdate = () => load();
+    window.addEventListener('unis:messages-updated', onUpdate);
+    window.addEventListener('focus', onUpdate);
+    return () => {
+      alive = false;
+      window.removeEventListener('unis:messages-updated', onUpdate);
+      window.removeEventListener('focus', onUpdate);
+    };
+  }, [user, isGuest]);
+
   useEffect(() => {
       const updateSidebarWidth = () => {
         const isMobile = window.innerWidth <= 1024;
         const width = isMobile ? 0 : (sidebarRef.current ? sidebarRef.current.offsetWidth : 0);
-        
+
         document.documentElement.style.setProperty(
           "--sidebar-width",
           `${width}px`
@@ -84,13 +110,25 @@ const Sidebar = () => {
             <span className="sidebar-icon"><Search size={24} /></span>
             <span className="sidebar-text">Find</span>
           </li>
-          <li onClick={() => handleNav('/discover')}>        
+          <li onClick={() => handleNav('/discover')}>
             <span className="sidebar-icon"><Compass size={24} /></span>
             <span className="sidebar-text">Discover</span>
           </li>
           <li onClick={() => handleNav('/leaderboards')}>
             <span className="sidebar-icon"><Trophy size={24} /></span>
             <span className="sidebar-text">Leaderboards</span>
+          </li>
+          <li onClick={() => {
+              if (isGuest) { triggerGate('profile'); return; }
+              handleNav('/messages');
+          }}>
+            <span className="sidebar-icon">
+              <MessageCircle size={24} />
+              {unreadCount > 0 && (
+                <span className="sidebar-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+              )}
+            </span>
+            <span className="sidebar-text">Messages</span>
           </li>
           <li onClick={ () => {
               if (isGuest) { triggerGate('profile'); return; }
