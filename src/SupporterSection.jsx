@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Crown, Heart } from 'lucide-react';
+import { Crown, Heart, MessageCircle, Megaphone, Send, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import './supporterSection.scss';
@@ -14,12 +15,78 @@ const formatSince = (value) => {
   return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 };
 
+// ── Broadcast composer ───────────────────────────────────────
+const BroadcastComposer = ({ supporterCount, onClose }) => {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const send = async () => {
+    const body = text.trim();
+    if (!body || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await apiCall({ method: 'post', url: '/v1/messages/broadcast', data: { body } });
+      setResult(res.data);
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Could not send the broadcast.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="scb" onMouseDown={onClose} role="presentation">
+      <div className="scb__shell" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <button className="scb__close" onClick={onClose} aria-label="Close"><X size={18} /></button>
+
+        <div className="scb__head">
+          <div className="scb__icon"><Megaphone size={20} /></div>
+          <h3>Message your supporters</h3>
+          <p>Sends to all {formatNumber(supporterCount)} {supporterCount === 1 ? 'supporter' : 'supporters'} as a direct message.</p>
+        </div>
+
+        {result ? (
+          <div className="scb__done">
+            <Send size={26} aria-hidden="true" />
+            <p className="scb__done-title">
+              Sent to {formatNumber(result.sent)} {result.sent === 1 ? 'supporter' : 'supporters'}
+            </p>
+            {result.skipped > 0 && (
+              <p className="scb__done-sub">{formatNumber(result.skipped)} skipped (blocked or unavailable)</p>
+            )}
+            <button className="scb__btn scb__btn--primary" onClick={onClose}>Done</button>
+          </div>
+        ) : (
+          <>
+            <textarea
+              className="scb__input"
+              rows={4}
+              maxLength={1000}
+              placeholder="Share a new drop, a show, or just say thanks…"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+            {error && <div className="scb__error">{error}</div>}
+            <button className="scb__btn scb__btn--primary" onClick={send} disabled={!text.trim() || busy}>
+              {busy ? 'Sending…' : 'Send to all supporters'}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ★ item 5: supporters pulled out of the funnel into their own section.
-// All-time / fixed-window — independent of the funnel's period & filters.
 const SupportersSection = ({ artistId }) => {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
 
   const fetchSupporters = useCallback(async (id) => {
     if (!id) return;
@@ -44,6 +111,11 @@ const SupportersSection = ({ artistId }) => {
     fetchSupporters(artistId);
   }, [artistId, fetchSupporters]);
 
+  const messageUser = (userId) => {
+    if (!userId) return;
+    navigate('/messages', { state: { openWith: userId } });
+  };
+
   const count = Number(data?.supportersCount || 0);
   const topSupporter = data?.topSupporter || null;
   const recentSupporters = data?.recentSupporters || [];
@@ -57,6 +129,11 @@ const SupportersSection = ({ artistId }) => {
         <h2 id="sup-title">
           Your <em>supporters</em>
         </h2>
+        {count > 0 && (
+          <button type="button" className="sup__broadcast-btn" onClick={() => setBroadcastOpen(true)}>
+            <Megaphone size={15} aria-hidden="true" /> Broadcast
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -98,6 +175,16 @@ const SupportersSection = ({ artistId }) => {
                   since {formatSince(topSupporter.since)}
                 </small>
               </div>
+              {topSupporter.userId && (
+                <button
+                  type="button"
+                  className="sup-msg-btn"
+                  aria-label={`Message ${topSupporter.username || 'supporter'}`}
+                  onClick={() => messageUser(topSupporter.userId)}
+                >
+                  <MessageCircle size={15} aria-hidden="true" />
+                </button>
+              )}
             </div>
           )}
 
@@ -123,6 +210,14 @@ const SupportersSection = ({ artistId }) => {
                   )}
                   <strong>{s.username || 'Supporter'}</strong>
                   <small>since {formatSince(s.since)}</small>
+                  <button
+                    type="button"
+                    className="sup-msg-btn"
+                    aria-label={`Message ${s.username || 'supporter'}`}
+                    onClick={() => messageUser(s.userId)}
+                  >
+                    <MessageCircle size={15} aria-hidden="true" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -163,6 +258,10 @@ const SupportersSection = ({ artistId }) => {
             </div>
           )}
         </>
+      )}
+
+      {broadcastOpen && (
+        <BroadcastComposer supporterCount={count} onClose={() => setBroadcastOpen(false)} />
       )}
     </section>
   );
