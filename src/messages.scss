@@ -10,12 +10,13 @@ $money: #2fd29a;
 .udm {
   display: grid;
   grid-template-columns: 340px 1fr;
-  margin-left: var(--sidebar-width, 0px);
-  width: calc(100% - var(--sidebar-width, 0px));
+  width: 100%;
   max-width: 1180px;
-  margin-top: 12px;
-  height: calc(100dvh - 104px);   // clears the fixed 80px player + breathing room
-  min-height: 480px;
+  margin: 0 auto;
+  // header space is handled by .layout-container's padding-top (11vh);
+  // 110px leaves room for the fixed player. Tweak that one number if needed.
+  height: calc(100vh - 11vh - 110px);
+  min-height: 420px;
   border: 1px solid var(--unis-border);
   border-radius: var(--unis-radius-lg);
   background: var(--unis-panel);
@@ -288,14 +289,15 @@ $money: #2fd29a;
 
 // ── Mobile: single pane ──────────────────────────────────────
 @media (max-width: 820px) {
-  .udm {
+.udm {
     grid-template-columns: 1fr;
     max-width: none;
-    margin-top: 0;
-    height: calc(100dvh - 96px);
+    height: calc(100dvh - 11vh - 130px);
     border-radius: 0;
-    border-left: none; border-right: none;
+    border-left: none;
+    border-right: none;
   }
+  
   .udm-main { display: none; }
   .udm--thread-open {
     .udm-list { display: none; }
