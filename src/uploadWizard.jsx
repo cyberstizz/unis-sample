@@ -169,6 +169,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
       const cleanMetadata = {
         title: title + ' (Clean)', description, genreId, artistId,
         jurisdictionId, explicit: false, isrc: null,
+        isCleanVersion: true,
       };
       cleanFormData.append('song', JSON.stringify(cleanMetadata));
       cleanFormData.append('file', cleanFile);

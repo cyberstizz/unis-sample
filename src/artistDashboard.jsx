@@ -532,6 +532,15 @@ const ArtistDashboard = () => {
     : null;
 
   const nextMoves = [
+    user && !user.phoneVerified && {
+      title: 'Verify your phone number',
+      text: 'Unlocks voting, commenting, and referral earnings — and keeps Unis spam-free.',
+      action: 'Verify phone',
+      onClick: () => {
+        const section = document.querySelector('#nav-referral');
+        section?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      },
+    },
     !userProfile.bio && {
       title: 'Add your artist story',
       text: 'A short bio helps listeners understand why they should support you.',
