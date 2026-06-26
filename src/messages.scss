@@ -311,3 +311,12 @@ $money: #2fd29a;
   color: $money;
   &:hover { background: rgba(47, 210, 154, 0.12); color: $money; }
 }
+
+.udm-list__back {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; margin-right: 2px; flex-shrink: 0;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--unis-text-2); border-radius: 8px;
+  transition: background .15s ease, color .15s ease;
+  &:hover { background: var(--unis-panel-hi); color: var(--unis-text); }
+}

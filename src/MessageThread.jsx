@@ -33,6 +33,7 @@ export default function MessageThread({
 
   const otherId = conversation.otherUserId;
   const otherName = conversation.otherUsername || 'Unknown';
+  const isDraft = !!conversation._draft;
 
   const scrollToBottom = useCallback((smooth = true) => {
     requestAnimationFrame(() => {
@@ -49,9 +50,15 @@ export default function MessageThread({
     scrollToBottom();
   }, [scrollToBottom]);
 
-  // Load thread when the conversation changes (server marks it read on read)
+  // Load thread. A draft conversation has no row yet — show an empty, ready
+  // composer instead of fetching (which would 404).
   useEffect(() => {
     let alive = true;
+    if (isDraft) {
+      setMessages([]);
+      setLoading(false);
+      return () => { alive = false; };
+    }
     setLoading(true);
     setError(null);
     apiCall({ url: `/v1/conversations/${conversation.id}/messages`, useCache: false })
@@ -63,7 +70,7 @@ export default function MessageThread({
       .catch(() => alive && setError('Could not load this conversation.'))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
-  }, [conversation.id, scrollToBottom]);
+  }, [conversation.id, isDraft, scrollToBottom]);
 
   // Live messages for this thread (deduped by id)
   useEffect(() => {

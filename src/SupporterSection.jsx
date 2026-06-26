@@ -45,7 +45,7 @@ const BroadcastComposer = ({ supporterCount, onClose }) => {
         <div className="scb__head">
           <div className="scb__icon"><Megaphone size={20} /></div>
           <h3>Message your supporters</h3>
-          <p>Sends to all {formatNumber(supporterCount)} {supporterCount === 1 ? 'supporter' : 'supporters'} as a direct message.</p>
+          <p>Each of your {formatNumber(supporterCount)} {supporterCount === 1 ? 'supporter' : 'supporters'} gets this as a direct message they can reply to.</p>
         </div>
 
         {result ? (
@@ -111,9 +111,13 @@ const SupportersSection = ({ artistId }) => {
     fetchSupporters(artistId);
   }, [artistId, fetchSupporters]);
 
-  const messageUser = (userId) => {
-    if (!userId) return;
-    navigate('/messages', { state: { openWith: userId } });
+  // Open a direct thread with this supporter. Passes name + photo so the thread
+  // opens with the right person even before any message exists.
+  const messageSupporter = (sup) => {
+    if (!sup?.userId) return;
+    navigate('/messages', {
+      state: { compose: { userId: sup.userId, username: sup.username, photoUrl: sup.photoUrl } },
+    });
   };
 
   const count = Number(data?.supportersCount || 0);
@@ -180,7 +184,7 @@ const SupportersSection = ({ artistId }) => {
                   type="button"
                   className="sup-msg-btn"
                   aria-label={`Message ${topSupporter.username || 'supporter'}`}
-                  onClick={() => messageUser(topSupporter.userId)}
+                  onClick={() => messageSupporter(topSupporter)}
                 >
                   <MessageCircle size={15} aria-hidden="true" />
                 </button>
@@ -214,7 +218,7 @@ const SupportersSection = ({ artistId }) => {
                     type="button"
                     className="sup-msg-btn"
                     aria-label={`Message ${s.username || 'supporter'}`}
-                    onClick={() => messageUser(s.userId)}
+                    onClick={() => messageSupporter(s)}
                   >
                     <MessageCircle size={15} aria-hidden="true" />
                   </button>
