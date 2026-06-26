@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageCircle, ArrowLeft } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import buildUrl from './utils/buildUrl';
 import { useAuth } from './context/AuthContext';
 import { useMessagingSocket } from './useMessagingSocket';
 import Layout from './layout';
@@ -153,7 +154,9 @@ export default function MessagesPage() {
                 onClick={() => openExisting(c)}
               >
                 <div className="udm-avatar" aria-hidden="true">
-                  {c.otherPhotoUrl ? <img src={c.otherPhotoUrl} alt="" /> : <span>{initials(c.otherUsername)}</span>}
+                  {c.otherPhotoUrl
+                    ? <img src={buildUrl(c.otherPhotoUrl)} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    : <span>{initials(c.otherUsername)}</span>}
                 </div>
                 <div className="udm-conv__body">
                   <div className="udm-conv__top">

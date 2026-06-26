@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeft, Music, Zap, Play, ArrowUp } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import buildUrl from './utils/buildUrl';
 import SupportSheet from './SupportSheet';
 
 function initials(name = '') {
@@ -150,7 +151,7 @@ export default function MessageThread({
         </button>
         <div className="udm-avatar" aria-hidden="true">
           {conversation.otherPhotoUrl
-            ? <img src={conversation.otherPhotoUrl} alt="" />
+            ? <img src={buildUrl(conversation.otherPhotoUrl)} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             : <span>{initials(otherName)}</span>}
         </div>
         <div className="udm-thread__who">
