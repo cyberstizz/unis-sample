@@ -334,3 +334,27 @@
   .sap-header { padding: 1.4rem 1.4rem 0.9rem; }
   .sap-header__title { font-size: 1.2rem; }
 }
+
+.sap-jur-list {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 320px; overflow-y: auto; padding: 4px 0;
+}
+.sap-jur {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; width: 100%;
+  background: var(--unis-panel-2); border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius); cursor: pointer; text-align: left;
+  color: var(--unis-text); font-family: var(--unis-font-sans);
+  transition: border-color .15s ease, background .15s ease;
+  &:hover { background: var(--unis-panel-hi); border-color: var(--unis-primary-border); }
+  svg { color: var(--unis-primary-2); flex-shrink: 0; }
+  &__name { flex: 1; font-size: 15px; font-weight: 600; }
+  &__go { font-size: 12px; color: var(--unis-text-3); }
+}
+.sap-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: none; cursor: pointer;
+  color: var(--unis-text-3); font-family: var(--unis-font-sans); font-size: 13px; font-weight: 600;
+  padding: 4px 2px 10px;
+  &:hover { color: var(--unis-text); }
+}

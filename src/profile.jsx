@@ -486,6 +486,8 @@ const Profile = () => {
           onClose={() => setShowArtistPicker(false)}
           userId={user.userId}
           currentArtistId={supportedArtist?.userId || null}
+          userJurisdictionId={user.jurisdiction?.jurisdictionId}
+          userJurisdictionName={user.jurisdiction?.name}
           onSuccess={reload}
         />
 
