@@ -38,6 +38,10 @@ export const PlayerProvider = ({ children }) => {
   const [isShuffled, setIsShuffled] = useState(false);
   const [originalQueue, setOriginalQueue] = useState([]);
   const [autoplay, setAutoplay] = useState(false);
+  const [repeatMode, setRepeatMode] = useState('off');
+  const cycleRepeat = useCallback(() => { // ★
+    setRepeatMode(m => (m === 'off' ? 'all' : m === 'all' ? 'one' : 'off'));
+  }, []);
 
   // --- Playlist library state ---
   const [playlists, setPlaylists] = useState([]);
@@ -205,18 +209,19 @@ export const PlayerProvider = ({ children }) => {
     if (queue.length === 0) return;
     const nextIndex = currentIndex + 1;
 
-    if (nextIndex >= queue.length) {
-      if (autoplay) {
-        setIsPlaying(false);
-      } else {
-        setIsPlaying(false);
-      }
-      return;
+  if (nextIndex >= queue.length) {
+    if (repeatMode === 'all') {     
+    setCurrentIndex(0);
+    setCurrentMedia(queue[0]);
+    return;
     }
+    setIsPlaying(false);           
+    return;
+  }
 
     setCurrentIndex(nextIndex);
     setCurrentMedia(queue[nextIndex]);
-  }, [queue, currentIndex, autoplay]);
+  }, [queue, currentIndex, repeatMode]);
 
   const prev = useCallback(() => {
     if (queue.length === 0) return;
@@ -580,6 +585,11 @@ export const PlayerProvider = ({ children }) => {
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
     const handleEnded = () => {
+      if (repeatMode === 'one' && audio) {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+        return;
+      }
       setIsPlaying(false);
       next();
     };
@@ -816,6 +826,10 @@ export const PlayerProvider = ({ children }) => {
       // Shuffle
       isShuffled,
       toggleShuffle,
+      
+      // Repeat  // 
+      repeatMode,
+      cycleRepeat,
 
       // Autoplay
       autoplay,
