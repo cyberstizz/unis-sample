@@ -78,6 +78,37 @@
     }
   }
 
+  // ★ --- Headline ("You're #3 in …") -------------------------------------
+  &__headline {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 2px 2px 4px;
+  }
+
+  &__headline-lead {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--unis-text-muted, rgba(244, 244, 245, 0.7));
+  }
+
+  &__headline-num {
+    font-family: var(--unis-font-italic, inherit);
+    font-style: italic;
+    font-weight: 800;
+    font-size: 2.6rem;
+    line-height: 0.9;
+    color: var(--unis-primary-2, #8b85ff);
+    text-shadow: 0 2px 18px rgba(108, 99, 255, 0.35);
+  }
+
+  &__headline-in {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--unis-text, #f4f4f5);
+  }
+
   // --- Rank list ----------------------------------------------------------
   &__list {
     list-style: none;

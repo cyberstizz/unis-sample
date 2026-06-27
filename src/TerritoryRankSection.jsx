@@ -94,6 +94,7 @@ const TerritoryRankSection = ({ artistId }) => {
 
   const genreName = data.genreName || null;
   const rows = (data.periods && data.periods[period]) || [];
+  const home = rows[0] || null; // ★ home / most-local jurisdiction
   const updated = formatUpdated(data.computedAt);
 
   return (
@@ -123,6 +124,15 @@ const TerritoryRankSection = ({ artistId }) => {
           </button>
         ))}
       </div>
+
+      {/* ★ Big standout headline — immediate "I am this rank" read */}
+      {home && home.overallRank != null && (
+        <div className="territory-rank__headline">
+          <span className="territory-rank__headline-lead">You&apos;re</span>
+          <span className="territory-rank__headline-num">#{home.overallRank}</span>
+          <span className="territory-rank__headline-in">in {home.jurisdictionName}</span>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <div className="territory-rank__empty">
