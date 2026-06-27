@@ -1036,6 +1036,17 @@ const ArtistDashboard = () => {
     return interval?.name ? `${interval.name} ${subject} Award` : `${subject} Award`;
   };
 
+  const intervalBadge = (interval) => {
+    const name = (interval?.name || '').toLowerCase();
+    if (name.includes('day')) return 'Day';
+    if (name.includes('week')) return 'Week';
+    if (name.includes('month')) return 'Month';
+    if (name.includes('quarter')) return 'Quarter';
+    if (name.includes('midterm') || name.includes('semi')) return 'Midterm';
+    if (name.includes('year') || name.includes('annual')) return 'Year';
+    return interval?.name || 'Award';
+  };
+
   const formatIsrc = (isrc) => {
     if (!isrc || isrc.length !== 12) return isrc || '';
     return `${isrc.slice(0, 2)}-${isrc.slice(2, 5)}-${isrc.slice(5, 7)}-${isrc.slice(7)}`;
@@ -1433,18 +1444,18 @@ const ArtistDashboard = () => {
                     <div
                       className="artist-awards-card__ambient"
                       style={{
-                        backgroundImage: `url(${featuredArtwork || displayPhoto})`,
+                        backgroundImage: `url(${displayPhoto})`,
                       }}
                       aria-hidden="true"
                     />
                     <div className="artist-awards-card__artwork">
                       <img
-                        src={featuredArtwork || displayPhoto}
+                        src={displayPhoto}
                         alt={`${displayName} artist award`}
                         onError={(e) => { e.currentTarget.src = displayPhoto; }}
                       />
                       <div className="artist-awards-card__interval-badge">
-                        {recentAward?.interval?.name || 'Award'}
+                        {intervalBadge(recentAward?.interval)}
                       </div>
                     </div>
                     <div className="artist-awards-card__info">
@@ -1471,11 +1482,11 @@ const ArtistDashboard = () => {
                         <div key={index} className="artist-award-row">
                           <div
                             className="artist-award-row__ambient"
-                            style={{ backgroundImage: `url(${featuredArtwork || displayPhoto})` }}
+                            style={{ backgroundImage: `url(${displayPhoto})` }}
                             aria-hidden="true"
                           />
                           <img
-                            src={featuredArtwork || displayPhoto}
+                            src={displayPhoto}
                             alt={getAwardTitle(award.interval, 'artist')}
                             className="artist-award-row__img"
                             onError={(e) => { e.currentTarget.src = displayPhoto; }}
@@ -1537,7 +1548,7 @@ const ArtistDashboard = () => {
                             onError={(e) => { e.currentTarget.src = displayPhoto; }}
                           />
                           <div className="artist-awards-card__interval-badge">
-                            {recentSong?.interval?.name || 'Award'}
+                            {intervalBadge(recentSong?.interval)}
                           </div>
                         </div>
                         <div className="artist-awards-card__info">
@@ -1979,6 +1990,8 @@ const ArtistDashboard = () => {
           onClose={() => setShowArtistPicker(false)}
           userId={user.userId}
           currentArtistId={supportedArtist?.userId || null}
+          userJurisdictionId={userProfile?.jurisdiction?.jurisdictionId}
+          userJurisdictionName={userProfile?.jurisdiction?.name}
           onSuccess={() => {
             setShowArtistPicker(false);
             handleProfileUpdate();
