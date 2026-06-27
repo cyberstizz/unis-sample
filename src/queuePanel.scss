@@ -27,9 +27,9 @@
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(440px 260px at 30% 0%, var(--unis-primary-soft), transparent 64%),
-    linear-gradient(180deg, var(--unis-panel-hi), var(--unis-panel)),
-    rgba(7, 9, 15, 0.94);
+    radial-gradient(520px 300px at 26% -4%, var(--unis-primary-soft), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)),
+    var(--unis-bg);
   border-left: 1px solid var(--unis-border-hi);
   box-shadow:
     -28px 0 80px rgba(0, 0, 0, 0.55),
@@ -47,7 +47,7 @@
     background:
       linear-gradient(90deg, rgba(255, 255, 255, 0.075), transparent 34%),
       radial-gradient(500px 240px at 82% 12%, var(--unis-glow-1), transparent 64%);
-    opacity: 0.82;
+    opacity: 0.55;
   }
 
   // ★ neutralize the global Vite focus outline inside the panel; use a token ring
@@ -170,17 +170,10 @@
 }
 
 // ───────── NOW PLAYING COCKPIT ─────────
+// Open on the dark panel (no card) so the theme glow reads clean — matches mockup.
 .qp-now {
-  margin: 14px 14px 2px;
-  padding: 16px 16px 14px;
-  border-radius: var(--unis-radius-lg);
-  background:
-    radial-gradient(360px 180px at 18% -10%, var(--unis-primary-soft), transparent 70%),
-    linear-gradient(180deg, var(--unis-panel-hi), var(--unis-panel));
-  border: 1px solid var(--unis-border);
-  box-shadow:
-    0 18px 40px -26px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  margin: 4px 4px 0;
+  padding: 14px 14px 4px;
 }
 
 .qp-now-top { display: flex; gap: 14px; align-items: center; }
@@ -354,7 +347,8 @@
   background:
     radial-gradient(circle at 50% 22%, var(--unis-primary-2), var(--unis-primary));
   box-shadow:
-    0 18px 34px -12px var(--unis-primary-glow),
+    0 16px 30px -8px color-mix(in srgb, var(--unis-primary) 55%, transparent),
+    0 4px 14px -6px var(--unis-primary-glow),
     0 0 0 1px rgba(255, 255, 255, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.34);
   transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease;
@@ -363,7 +357,8 @@
     transform: translateY(-2px) scale(1.03);
     filter: brightness(1.07);
     box-shadow:
-      0 22px 40px -12px var(--unis-primary-glow),
+      0 20px 38px -8px color-mix(in srgb, var(--unis-primary) 62%, transparent),
+      0 6px 16px -6px var(--unis-primary-glow),
       0 0 0 1px rgba(255, 255, 255, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.34);
   }
@@ -377,7 +372,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 18px 8px;
+  margin: 12px 14px 0;
+  padding: 14px 4px 8px;
+  border-top: 1px solid var(--unis-border); // subtle divider under the controls
 }
 
 .qp-section-l { display: flex; align-items: center; gap: 9px; }
@@ -553,14 +550,13 @@
   }
 
   &.qp-current {
-    border-color: color-mix(in srgb, var(--unis-primary) 56%, var(--unis-border-hi));
+    border-color: color-mix(in srgb, var(--unis-primary) 45%, transparent);
     background:
-      radial-gradient(260px 90px at 12% 50%, var(--unis-primary-soft), transparent 66%),
-      color-mix(in srgb, var(--unis-primary) 13%, var(--unis-panel-2));
+      radial-gradient(220px 80px at 10% 50%, var(--unis-primary-soft), transparent 70%),
+      var(--unis-panel);
     box-shadow:
-      0 16px 38px rgba(0, 0, 0, 0.26),
-      0 0 34px -24px var(--unis-primary),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      0 0 24px -20px var(--unis-primary-glow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
 
     .qp-title { color: var(--unis-text); }
     .qp-artist { color: var(--unis-primary-2); }
