@@ -1,12 +1,15 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { PlayerContext } from './context/playercontext';
+import { useAuth } from './context/AuthContext';   // ★ real signed-in user
+import { buildUrl } from './utils/buildUrl';        // ★ R2-aware URL builder
 import {
   ChevronDown, GripVertical, Trash2, Bookmark, ListX, Shuffle,
   SkipBack, SkipForward, Play, Pause, Repeat, Repeat1, MoreHorizontal, User,
 } from 'lucide-react'; // ★ expanded icon set for the transport + header
 import './queuePanel.scss';
 
-const QueuePanel = ({ open, onClose, user = null }) => { // ★ optional `user` for the header avatar
+const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth, not a prop
+  const { user } = useAuth(); // ★ signed-in user (same source as the header avatar)
   const {
     queue, currentIndex, queueSource, currentMedia,
     removeFromQueue, reorderQueue, clearQueue, saveQueueAsPlaylist,
@@ -165,9 +168,9 @@ const QueuePanel = ({ open, onClose, user = null }) => { // ★ optional `user` 
   const nowPlaying = currentMedia || queue[currentIndex] || null; // ★
   const remaining = duration ? duration - elapsed : 0;
 
-  // ★ avatar fallback chain: photo → initial → icon
-  const avatarUrl = user?.avatarUrl || user?.photoUrl || null;
-  const initial = (user?.name || user?.displayName || '').trim().charAt(0).toUpperCase();
+  // ★ avatar fallback chain: R2 photo → username initial → icon (mirrors header.jsx)
+  const avatarUrl = buildUrl(user?.photoUrl);
+  const initial = user?.username ? user.username.charAt(0).toUpperCase() : '';
 
   const repeatTitle =
     repeatMode === 'one' ? 'Repeat one' : repeatMode === 'all' ? 'Repeat all' : 'Repeat off';
@@ -193,7 +196,7 @@ const QueuePanel = ({ open, onClose, user = null }) => { // ★ optional `user` 
             </p>
           </div>
 
-          <div className="qp-avatar" title={user?.name || 'You'}>
+          <div className="qp-avatar" title={user?.username || 'You'}>
             {avatarUrl
               ? <img src={avatarUrl} alt="" />
               : initial
@@ -208,7 +211,7 @@ const QueuePanel = ({ open, onClose, user = null }) => { // ★ optional `user` 
             <div className="qp-now-top">
               <img
                 className="qp-now-art"
-                src={nowPlaying.artworkUrl || nowPlaying.artwork || '/assets/placeholder.jpg'}
+                src={buildUrl(nowPlaying.artworkUrl || nowPlaying.artwork) || '/assets/placeholder.jpg'}
                 alt=""
               />
               <div className="qp-now-meta">
@@ -351,7 +354,7 @@ const QueuePanel = ({ open, onClose, user = null }) => { // ★ optional `user` 
                         <GripVertical className="qp-grip" size={16} />
                       )}
                       <img
-                        src={track.artworkUrl || track.artwork || '/assets/placeholder.jpg'}
+                        src={buildUrl(track.artworkUrl || track.artwork) || '/assets/placeholder.jpg'}
                         alt=""
                         className="qp-art"
                       />

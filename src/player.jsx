@@ -83,6 +83,7 @@ const Player = () => {
     currentMedia,
     next,
     prev,
+    repeatMode,        // ★ REPEAT: read loop mode so `ended` can honor it
     audioRef,
     playlists,
     openPlaylistManager,
@@ -339,7 +340,12 @@ const Player = () => {
       setIsPlaying(false);
       lastPercentRef.current = 100;   // ★ PLAY-FLOW: finished = 100%
       completeCurrentPlay();          // ★ PLAY-FLOW: record completion
-      next();
+      if (repeatMode === 'one' && media) { // ★ REPEAT: loop-one replays this track
+        media.currentTime = 0;
+        media.play().catch(() => {});
+        return;                       // ★ REPEAT: do NOT advance
+      }
+      next();                          // ★ REPEAT: 'all' loop is handled inside next()
     };
 
     media.addEventListener('play', handlePlay);
@@ -355,7 +361,7 @@ const Player = () => {
       media.removeEventListener('loadedmetadata', handleLoadedMetadata);
       media.removeEventListener('ended', handleEnded);
     };
-  }, [next, audioRef]);
+  }, [next, audioRef, repeatMode]);
 
   useEffect(() => {
     if (audioRef.current) {
