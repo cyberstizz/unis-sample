@@ -67,7 +67,7 @@ import ArtistPhotosManager from './artistPhotosManager';
 // Small inline loader shown per-section while data is in flight
 // ---------------------------------------------------------------------------
 const SectionLoader = ({ label = 'Loading...' }) => (
-  <div style={{ padding: '20px', textAlign: 'center', color: '#aaa' }}>
+  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--unis-text-muted, #aaa)' }}>
     <div
       className="spinner"
       style={{
@@ -89,7 +89,7 @@ const SectionLoader = ({ label = 'Loading...' }) => (
 // Inline error shown per-section when a fetch fails
 // ---------------------------------------------------------------------------
 const SectionError = ({ message = 'Failed to load.', onRetry }) => (
-  <div style={{ padding: '20px', textAlign: 'center', color: '#ff6b6b' }}>
+  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--unis-danger, #ff6b6b)' }}>
     <p style={{ margin: '0 0 8px' }}>{message}</p>
     {onRetry && (
       <button onClick={onRetry} className="btn btn-secondary btn-small" type="button">
@@ -131,10 +131,11 @@ const ArtistCollapsibleSection = ({
           className="artist-collapsible__trigger"
           onClick={() => setOpen((prev) => !prev)}
           aria-expanded={open}
+          aria-controls={id ? `${id}-panel` : undefined}
         >
           <div>
             {eyebrow && <span className="artist-section__eyebrow">{eyebrow}</span>}
-            <h2>{title}</h2>
+            <h2 id={id ? `${id}-title` : undefined}>{title}</h2>
           </div>
 
           <span className="artist-collapsible__chevron" aria-hidden="true">
@@ -142,7 +143,16 @@ const ArtistCollapsibleSection = ({
           </span>
         </button>
 
-        {open && <div className="artist-collapsible__body">{children}</div>}
+        {open && (
+          <div
+            className="artist-collapsible__body"
+            id={id ? `${id}-panel` : undefined}
+            role="region"
+            aria-labelledby={id ? `${id}-title` : undefined}
+          >
+            {children}
+          </div>
+        )}
       </section>
     );
   };
@@ -1696,9 +1706,10 @@ const ArtistDashboard = () => {
 
             <div className="social-links-edit">
               <div className="social-link-item">
-                <label>Instagram</label>
+                <label htmlFor="social-instagram">Instagram</label>
                 <input
                   type="text"
+                  id="social-instagram"
                   placeholder="https://instagram.com/yourprofile"
                   defaultValue={userProfile.instagramUrl || ''}
                   onBlur={(e) => handleSocialMediaUpdate('instagram', e.target.value)}
@@ -1707,9 +1718,10 @@ const ArtistDashboard = () => {
               </div>
 
               <div className="social-link-item">
-                <label>Twitter / X</label>
+                <label htmlFor="social-twitter">Twitter / X</label>
                 <input
                   type="text"
+                  id="social-twitter"
                   placeholder="https://twitter.com/yourprofile"
                   defaultValue={userProfile.twitterUrl || ''}
                   onBlur={(e) => handleSocialMediaUpdate('twitter', e.target.value)}
@@ -1718,9 +1730,10 @@ const ArtistDashboard = () => {
               </div>
 
               <div className="social-link-item">
-                <label>TikTok</label>
+                <label htmlFor="social-tiktok">TikTok</label>
                 <input
                   type="text"
+                  id="social-tiktok"
                   placeholder="https://tiktok.com/@yourprofile"
                   defaultValue={userProfile.tiktokUrl || ''}
                   onBlur={(e) => handleSocialMediaUpdate('tiktok', e.target.value)}
@@ -1730,9 +1743,10 @@ const ArtistDashboard = () => {
 
 
               <div className="social-link-item">
-                <label>YouTube</label>
+                <label htmlFor="social-youtube">YouTube</label>
                 <input
                   type="text"
+                  id="social-youtube"
                   placeholder="https://youtube.com/@yourchannel"
                   defaultValue={userProfile.youtubeUrl || ''}
                   onBlur={(e) => handleSocialMediaUpdate('youtube', e.target.value)}
@@ -1741,9 +1755,10 @@ const ArtistDashboard = () => {
               </div>
 
               <div className="social-link-item">
-                  <label>Contact email</label>
+                  <label htmlFor="social-contact">Contact email</label>
                   <input
                     type="email"
+                    id="social-contact"
                     placeholder="you@example.com"
                     defaultValue={userProfile.contactEmail || ''}
                     onBlur={(e) => handleSocialMediaUpdate('contactEmail', e.target.value)}
