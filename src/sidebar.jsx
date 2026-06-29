@@ -272,7 +272,7 @@ const Sidebar = () => {
               <span className="sidebar-juris__dot" />
               <span className="sidebar-juris__text">
                 <span className="sidebar-juris__name">{jName}</span>
-                <span className="sidebar-juris__sub">Your jurisdiction</span>
+                {/* <span className="sidebar-juris__sub">Your jurisdiction</span> */}
               </span>
             </button>
           )}
