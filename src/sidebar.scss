@@ -21,7 +21,7 @@ $header-height: 75px;
 }
 
 .sidebar-trigger {
-  display: none;
+  display: none !important;
   position: fixed;
   top: 50%;
   left: 0;
@@ -399,7 +399,7 @@ $header-height: 75px;
 }
 
 @media (max-width: 1024px) {
-  .sidebar-trigger { display: flex; }
+  .sidebar-trigger { display: none; }
   .sidebar {
     transform: translateX(-100%);
     &.open { transform: translateX(0); }
