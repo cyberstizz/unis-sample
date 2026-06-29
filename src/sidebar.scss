@@ -1,52 +1,23 @@
-// sidebar.scss — YouTube-style modern sidebar
+// sidebar.scss — premium drawer redesign
+// Theme-driven: every accent reads from --unis-primary (7 themes) via color-mix.
 
-$text-secondary: #AAAAAA;
-$text-primary: rgb(241, 241, 241);
-$unis-silver:#918f8f;
-$unis-blue-bright: #1d42a8;
-$bg-dark: linear-gradient(to bottom, #101016, #0a0a0f);
-$hover-bg: var(--unis-primary);
 $unis-blue: var(--unis-primary);
-
 $header-height: 75px;
 
+// ─────────────────────────────────────────────────────────────
+// Pill trigger (mobile / tablet) — unchanged behaviour, restyled
+// ─────────────────────────────────────────────────────────────
 @keyframes pill-pulse {
   0%, 40%, 100% {
     background: var(--unis-primary);
-    box-shadow: 0 0 6px rgba(29, 66, 168, 0.3);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--unis-primary), transparent 70%);
   }
   70% {
-    background: rgba(15, 35, 140, 1);
+    background: var(--unis-primary-hover, var(--unis-primary));
     box-shadow:
-      0 0 22px rgba(29, 66, 168, 0.9),
-      0 0 44px rgba(29, 66, 168, 0.4);
+      0 0 22px color-mix(in srgb, var(--unis-primary), transparent 10%),
+      0 0 44px color-mix(in srgb, var(--unis-primary), transparent 60%);
   }
-}
-
-.sidebar-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  margin-right: 24px;
-  color: #7a7a88;
-}
-
-.sidebar-text {
-  font-size: 14px;
-  font-weight: 400;
-  font-family: Roboto, Arial, sans-serif;
-  line-height: 20px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: rgb(241, 241, 241);
-}
-
-.home-sidebar {
-  color: $text-primary;
 }
 
 .sidebar-trigger {
@@ -57,28 +28,31 @@ $header-height: 75px;
   transform: translateY(-50%);
   width: 20px;
   height: 56px;
+  padding: 0;
+  border: none;
+  background: transparent;
   cursor: pointer;
   align-items: center;
   justify-content: center;
   z-index: 200;
   transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-.pill-handle {
-  width: 4px;
-  height: 36px;
-  background: var(--unis-primary);
-  border-radius: 999px;
-  transition: 
-    height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-    background 0.2s ease,
-    box-shadow 0.2s ease;
-    box-shadow: 0 0 8px rgba(29, 66, 168, 0.3);
+  .pill-handle {
+    width: 4px;
+    height: 36px;
+    background: var(--unis-primary);
+    border-radius: 999px;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--unis-primary), transparent 70%);
     animation: pill-pulse 3s ease-in-out infinite;
+    transition:
+      height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+      background 0.2s ease,
+      box-shadow 0.2s ease;
   }
+
   &:hover .pill-handle {
     height: 48px;
-    background: var(--unis-primary);
-    box-shadow: 0 0 16px rgba(var(--unis-primary-rgb, 29, 66, 168), 0.5);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--unis-primary), transparent 50%);
   }
 
   &.hidden {
@@ -88,139 +62,308 @@ $header-height: 75px;
   }
 }
 
-
+// ─────────────────────────────────────────────────────────────
+// Drawer shell
+// ─────────────────────────────────────────────────────────────
 .sidebar {
+  // Local, theme-aware accent vars. --sb-accent is lightened off
+  // --unis-primary so it reads cleanly on the near-black surface
+  // across every theme (incl. the dark dianna gold).
+  --sb-accent:     color-mix(in srgb, var(--unis-primary), white 32%);
+  --sb-soft:       color-mix(in srgb, var(--unis-primary), transparent 88%);
+  --sb-icon-fill:  color-mix(in srgb, var(--unis-primary), transparent 74%);
+  --sb-edge:       color-mix(in srgb, var(--unis-primary), transparent 84%);
+
   position: fixed;
   top: $header-height;
-  height: calc(100vh - #{$header-height});
   left: 0;
-  width: 224px;
-  background: $bg-dark;
-  padding: 12px 12px 0;
+  height: calc(100vh - #{$header-height});
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  background: #0b0b0e;                       // solid near-black material (no streaming flash)
+  border-right: 1px solid var(--sb-edge);    // the subtle highlighted brand edge
+  padding: 14px 12px 12px;
   z-index: 100;
-  transition: transform 0.3s ease-in-out;
-  border-right: none;
   overflow-y: auto;
   overflow-x: hidden;
-  font-family: "Roboto", "Arial", sans-serif;
+  transform: translateX(0);
+  transition: transform 0.3s ease-in-out;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
 
-  // Hide scrollbar but keep scrolling
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
-  &:hover {
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  &:hover { scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
+
+  // ── Brand + jurisdiction head ──────────────────────────────
+  .sidebar-head {
+    flex: 0 0 auto;
+    padding: 2px 6px 6px;
   }
 
-  transform: translateX(0);
+  .sidebar-brand {
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    padding: 4px 6px;
+    margin: 0 0 2px;
+    cursor: pointer;
+    border-radius: var(--unis-radius-sm, 10px);
+    transition: opacity 0.15s ease;
+    &:hover { opacity: 0.85; }
+  }
 
+  .sidebar-logo-img {
+    height: 26px;
+    width: auto;
+    display: block;
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+
+  .sidebar-juris {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px 11px;
+    border-radius: var(--unis-radius-sm, 10px);
+    background: var(--sb-soft);
+    border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 76%);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+      background: color-mix(in srgb, var(--unis-primary), transparent 82%);
+      border-color: color-mix(in srgb, var(--unis-primary), transparent 64%);
+    }
+
+    &__dot {
+      flex: 0 0 auto;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--sb-accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--unis-primary), transparent 78%);
+    }
+
+    &__text { display: flex; flex-direction: column; min-width: 0; }
+
+    &__name {
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+      color: var(--unis-text, #fff);
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &__sub {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+    }
+  }
+
+  // ── Nav list ───────────────────────────────────────────────
   ul {
+    flex: 0 0 auto;
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 6px 0 0;
+  }
 
-    li {
+  .sidebar-section {
+    padding: 14px 16px 7px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--unis-text-4, rgba(255, 255, 255, 0.32));
+    cursor: default;
+    user-select: none;
+  }
+
+  .sidebar-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    height: 46px;
+    padding: 0 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+    transition: background 0.16s ease, color 0.16s ease;
+
+    &:hover {
+      background: var(--unis-panel-hi, rgba(255, 255, 255, 0.07));
+      color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+    }
+
+    // Left accent bar (one thing lit)
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 11px;
+      bottom: 11px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--sb-accent);
+      opacity: 0;
+      transform: scaleY(0.4);
+      transform-origin: center;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    &.active {
+      background: var(--sb-soft);
+      color: var(--sb-accent);
+
+      &::before { opacity: 1; transform: scaleY(1); }
+
+      .sidebar-text { font-weight: 600; color: var(--unis-text, #fff); }
+      .sidebar-icon { color: var(--sb-accent); }
+      .sidebar-icon svg .fs  { fill: var(--sb-icon-fill); }
+      .sidebar-icon svg .fs2 { fill: var(--sb-accent); stroke: var(--sb-accent); }
+    }
+  }
+
+  .sidebar-text {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: -0.1px;
+    line-height: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // ── Account footer ─────────────────────────────────────────
+  .sidebar-foot {
+    flex: 0 0 auto;
+    margin-top: auto;
+    padding-top: 12px;
+  }
+
+  .sidebar-account {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    padding: 11px;
+    border-radius: 14px;
+    background: var(--unis-panel-2, rgba(255, 255, 255, 0.045));
+    border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+      background: var(--unis-panel-hi, rgba(255, 255, 255, 0.07));
+      border-color: var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+    }
+
+    &__av {
+      flex: 0 0 auto;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      overflow: hidden;
       display: flex;
       align-items: center;
-      padding: 0 12px;
-      height: 40px;
-      cursor: pointer;
-      border-bottom: none;
-      border-radius: 10px;
-      color: $text-primary;
+      justify-content: center;
+      background: var(--unis-primary);
+      color: var(--unis-text, #fff);
+      font-weight: 700;
       font-size: 14px;
-      transition: background 0.15s;
 
-      &:hover {
-        background: $hover-bg;
+      img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    }
+
+    &__id { display: flex; flex-direction: column; min-width: 0; }
+
+    &__name {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--unis-text, #fff);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &__handle {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &__earn {
+      margin-left: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      text-align: right;
+
+      .e1 {
+        font-size: 9.5px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--unis-text-4, rgba(255, 255, 255, 0.32));
       }
-
-      .sidebar-icon {
-        color: $text-primary;
+      .e2 {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--sb-accent);
       }
+    }
 
-      &:first-child {
-        background: rgba(255, 255, 255, 0.15);
-        font-weight: 500;
-
-        .sidebar-icon,
-        .sidebar-text {
-          color: $text-primary;
-        }
-      }
+    &--guest .sidebar-account__av {
+      background: var(--sb-soft);
+      color: var(--sb-accent);
+      font-size: 16px;
     }
   }
 }
 
-.sidebar-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 90;
-  backdrop-filter: blur(4px);
-}
+// ─────────────────────────────────────────────────────────────
+// Icons — outline by default; CSS owns all stroke/fill
+// ─────────────────────────────────────────────────────────────
+.sidebar-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 23px;
+  height: 23px;
+  flex-shrink: 0;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
 
-.sidebar-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 10px 0;
-  list-style: none;
-  cursor: default;
-  border-radius: 0;
-  &:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
+  svg { width: 23px; height: 23px; display: block; }
+  svg * {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 }
-
-// Desktop: always visible
-@media (min-width: 1025px) {
-  .sidebar-trigger {
-    display: none !important;
-  }
-  .sidebar {
-    transform: translateX(0) !important;
-  }
-}
-
-// Tablet and below: slide-out
-@media (max-width: 1024px) {
-  .sidebar-trigger {
-    display: flex;
-  }
-  .sidebar {
-    transform: translateX(-100%);
-
-    &.open {
-      transform: translateX(0);
-    }
-  }
-}
-
-// Mobile
-@media (max-width: 768px) {
-  .sidebar {
-    top: 72px;
-    height: calc(100vh - 72px);
-    background: $bg-dark;
-
-    ul li {
-      border-bottom: none;
-    }
-  }
-}
-
-.banner {
-  z-index: 5;
-}
-
-.sidebar-icon { position: relative; }
 
 .sidebar-badge {
   position: absolute;
-  top: -4px;
-  right: -6px;
+  top: -5px;
+  right: -7px;
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
@@ -231,5 +374,43 @@ $header-height: 75px;
   font-weight: 700;
   line-height: 16px;
   text-align: center;
-  box-shadow: 0 0 0 2px var(--unis-bg, #07090f);
+  box-shadow: 0 0 0 2px #0b0b0e;
 }
+
+// ─────────────────────────────────────────────────────────────
+// Overlay (mobile)
+// ─────────────────────────────────────────────────────────────
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 90;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Responsive
+// ─────────────────────────────────────────────────────────────
+@media (min-width: 1025px) {
+  .sidebar-trigger { display: none !important; }
+  .sidebar { transform: translateX(0) !important; }
+}
+
+@media (max-width: 1024px) {
+  .sidebar-trigger { display: flex; }
+  .sidebar {
+    transform: translateX(-100%);
+    &.open { transform: translateX(0); }
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    top: 72px;
+    height: calc(100vh - 72px);
+  }
+}
+
+.banner { z-index: 5; }
