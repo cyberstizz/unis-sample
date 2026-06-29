@@ -83,6 +83,7 @@ $header-height: 75px;
   flex-direction: column;
   background: #0b0b0e;                       // solid near-black material (no streaming flash)
   border-right: 1px solid var(--sb-edge);    // the subtle highlighted brand edge
+  border-top: 1px solid var(--sb-edge);    // the subtle highlighted brand edge
   padding: 14px 12px 12px;
   z-index: 100;
   overflow-y: auto;
