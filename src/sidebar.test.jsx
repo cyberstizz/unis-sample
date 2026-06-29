@@ -22,7 +22,17 @@ import { PlayerContext } from './context/playercontext';
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
+  useLocation: () => ({ pathname: '/' }),
 }));
+
+// Themed logo assets imported by the sidebar (mirrors header.test.jsx).
+vi.mock('./assets/unisLogoThree.svg', () => ({ default: '/logo-blue.svg' }));
+vi.mock('./assets/logo-orange.png',   () => ({ default: '/logo-orange.png' }));
+vi.mock('./assets/logo-red.png',      () => ({ default: '/logo-red.png' }));
+vi.mock('./assets/logo-green.png',    () => ({ default: '/logo-green.png' }));
+vi.mock('./assets/logo-purple.png',   () => ({ default: '/logo-purple.png' }));
+vi.mock('./assets/logo-gold.png',     () => ({ default: '/logo-gold.png' }));
+vi.mock('./assets/logo-dianna.png',   () => ({ default: '/logo-dianna.png' }));
 
 const mockUseAuth = vi.fn();
 vi.mock('./context/AuthContext', () => ({
