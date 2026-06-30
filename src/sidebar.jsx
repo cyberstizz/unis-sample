@@ -6,6 +6,8 @@ import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
 import { buildUrl } from './utils/buildUrl';                        // ★ avatar photo
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
+import UnisLockup from './UnisLockup';
+
 
 // ★ Themed logo set — identical map to header.jsx so the drawer brand
 //   tracks the active theme exactly like the global header does.
@@ -264,7 +266,7 @@ const Sidebar = () => {
             onClick={() => handleNav('/')}
             aria-label="Unis home"
           >
-            <img className="sidebar-logo-img" src={activeLogo} alt="UNIS" draggable="false" />
+          <UnisLockup height={28} />
           </button>
 
           {jName && (
