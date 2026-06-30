@@ -182,17 +182,15 @@ $header-height: 75px;
     margin: 6px 0 0;
   }
 
-  .sidebar-section {
-    padding: 14px 16px 7px;
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 1.6px;
-    text-transform: uppercase;
-    color: var(--unis-text-4, rgba(255, 255, 255, 0.32));
-    cursor: default;
-    user-select: none;
-    border-bottom-color: $unis-blue;
-  }
+.sidebar-section {
+  position: relative;
+  padding: 16px 16px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--sb-accent);
+}
 
   .sidebar-link {
     position: relative;
@@ -239,6 +237,23 @@ $header-height: 75px;
       .sidebar-icon svg .fs2 { fill: var(--sb-accent); stroke: var(--sb-accent); }
     }
   }
+
+  .sidebar-section::after {
+  content: '';
+  display: block;
+
+  margin-top: 8px;
+
+  width: 100%;
+  height: 1px;
+
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--unis-primary), transparent 55%),
+      transparent
+    );
+}
 
   .sidebar-text {
     font-size: 15px;
