@@ -123,6 +123,16 @@ $header-height: 75px;
     display: block;
     -webkit-user-drag: none;
     user-select: none;
+
+    filter:
+    drop-shadow(
+      0 0 10px
+      color-mix(
+        in srgb,
+        var(--unis-primary),
+        transparent 75%
+      )
+    );
   }
 
   .sidebar-juris {
