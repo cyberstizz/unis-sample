@@ -30,7 +30,7 @@ export default function UnisLockup({
       {...rest}
     >
       <UnisMark size={height} />
-      <span
+      {/* <span
         style={{
           fontFamily: "var(--unis-font-sans, 'Inter', sans-serif)",
           fontWeight: 800,
@@ -50,7 +50,7 @@ export default function UnisLockup({
               )
             )
           : wordmark}
-      </span>
+      </span> */}
     </span>
   );
 }
