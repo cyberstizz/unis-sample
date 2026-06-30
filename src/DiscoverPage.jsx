@@ -14,10 +14,9 @@ const TYPES = [
   { key: "user", label: "Users" },
   { key: "playlist", label: "Playlists" },
   { key: "song", label: "Songs" },
-  { key: "video", label: "Videos" },
 ];
 // Order of rails in the "All" view, and the per-type fetch set.
-const RAIL_TYPES = ["user", "playlist", "song", "video"];
+const RAIL_TYPES = ["user", "playlist", "song"];
 const RAIL_LIMIT = 12;
 const GRID_LIMIT = 30;
 
@@ -25,7 +24,6 @@ const RAIL_TITLES = {
   user: "Users",
   playlist: "Playlists",
   song: "Songs",
-  video: "Videos",
 };
 
 // ----------------------------------------------------------------------------
