@@ -4,6 +4,8 @@ import { buildUrl } from "./utils/buildUrl";
 import { apiCall } from "./components/axiosInstance"; // ★ song-detail + jurisdiction fetches (matches songPage/findpage)
 import { PlayerContext } from "./context/playercontext"; // ★ requestPlay convention — Discover NEVER tracks plays
 import Layout from "./layout";
+import { JURISDICTION_IDS, JURISDICTION_NAMES } from "./utils/idMappings"; 
+
 import "./DiscoverPage.scss"; // ★ ported next from the mockup; tokens + #root::before gradient are already global
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
@@ -208,26 +210,38 @@ const DiscoverPage = () => {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [scopeOpen, setScopeOpen] = useState(false);
-  const [scopeOptions, setScopeOptions] = useState([]);
   const scopeRef = useRef(null);
 
   const scopeName = scope?.name || "Everywhere";
 
   // -- resolve default scope from the signed-in user's jurisdiction (if no URL scope) --
-  useEffect(() => {
-    if (scope) return;
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      apiCall({ method: "get", url: `/v1/users/profile/${payload.userId}` }) // ★ same source playlistManager uses
-        .then((res) => {
-          const j = res.data?.jurisdiction;
-          if (j?.jurisdictionId) setScope({ id: j.jurisdictionId, name: j.name || "your area" });
-        })
-        .catch(() => {});
-    } catch (e) { /* not a decodable token — browse Everywhere */ }
-  }, [scope]);
+useEffect(() => {
+  if (scope) return;
+  const token = localStorage.getItem("token");
+  const fallbackToHarlem = () =>
+    setScope({ id: JURISDICTION_IDS.harlem, name: JURISDICTION_NAMES[JURISDICTION_IDS.harlem] || "Harlem" });
+
+  if (!token) {
+    fallbackToHarlem();
+    return;
+  }
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    apiCall({ method: "get", url: `/v1/users/profile/${payload.userId}` })
+      .then((res) => {
+        const j = res.data?.jurisdiction;
+        if (j?.jurisdictionId) {
+          setScope({ id: j.jurisdictionId, name: j.name || "your area" });
+        } else {
+          fallbackToHarlem();
+        }
+      })
+      .catch(fallbackToHarlem);
+  } catch (e) {
+    fallbackToHarlem();
+  }
+}, [scope]);
+
 
   // -- debounce the input into the effective query, and reflect q/type/scope in the URL --
   useEffect(() => {
@@ -301,19 +315,18 @@ const DiscoverPage = () => {
       .finally(() => setLoadingMore(false));
   }, [activeType, query, scope, gridItems.length]);
 
-  // -- scope dropdown: ancestors (breadcrumb) + children of the current scope --
+// Static — these are the only jurisdictions live today. Add to this list as new ones launch.
+const SCOPE_OPTIONS = [
+  { id: null, name: "Everywhere", level: "All" }, // true global, no filter
+  { id: JURISDICTION_IDS.harlem, name: "Harlem", level: "All active" }, // parent — rolls up children today
+  { id: JURISDICTION_IDS["uptown-harlem"], name: "Uptown Harlem", level: "Neighborhood" },
+  { id: JURISDICTION_IDS["downtown-harlem"], name: "Downtown Harlem", level: "Neighborhood" },
+];
+
+  // scope dropdown is now static — no fetch, no scopeOptions state needed
   const openScope = useCallback(() => {
     setScopeOpen((o) => !o);
-    if (scopeOptions.length || !scope?.id) return;
-    Promise.all([
-      apiCall({ method: "get", url: `/v1/jurisdictions/${scope.id}/breadcrumb` }).then((r) => r.data || []).catch(() => []),
-      apiCall({ method: "get", url: `/v1/jurisdictions/${scope.id}/children` }).then((r) => r.data || []).catch(() => []),
-    ]).then(([ancestors, children]) => {
-      const norm = (j) => ({ id: j.jurisdictionId || j.id, name: j.name, level: j.depthLabel || j.type || "" });
-      const opts = [...ancestors.map(norm), ...children.map(norm)].filter((o) => o.id && o.name);
-      setScopeOptions(opts);
-    });
-  }, [scope, scopeOptions.length]);
+  }, []);
 
   useEffect(() => {
     const onDoc = (e) => { if (scopeRef.current && !scopeRef.current.contains(e.target)) setScopeOpen(false); };
@@ -413,16 +426,19 @@ const DiscoverPage = () => {
                 <span>{scopeName}</span>
                 <Chevron />
               </button>
-              <div className="dsc-scope-menu" role="listbox">
-                <button className="dsc-scope-item" aria-current={!scope} onClick={() => chooseScope(null)}>
-                  <span>Everywhere</span><span className="lvl">All</span>
-                </button>
-                {scopeOptions.map((o) => (
-                  <button key={o.id} className="dsc-scope-item" aria-current={scope?.id === o.id} onClick={() => chooseScope(o)}>
-                    <span>{o.name}</span>{o.level && <span className="lvl">{o.level}</span>}
-                  </button>
-                ))}
-              </div>
+          <div className="dsc-scope-menu" role="listbox">
+            {SCOPE_OPTIONS.map((o) => (
+              <button
+                key={o.id || "everywhere"}
+                className="dsc-scope-item"
+                aria-current={scope?.id === o.id || (!scope && !o.id)}
+                onClick={() => chooseScope(o.id ? o : null)}
+              >
+                <span>{o.name}</span>
+                {o.level && <span className="lvl">{o.level}</span>}
+              </button>
+            ))}
+          </div>
             </div>
 
             <div className="dsc-search">
