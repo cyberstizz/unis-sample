@@ -11,7 +11,7 @@
 // ★ Lives anywhere inside #root, where your [data-theme] sets --unis-primary.
 
 export default function UnisMark({
-  size = 52,
+  size = 72,
   color = "var(--unis-primary, #1E50EB)", // disc color; defaults to active theme
   bars = "#FFFFFF",                        // bar color; white in every theme
   title = "Unis",

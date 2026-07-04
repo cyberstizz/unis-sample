@@ -9,6 +9,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { JURISDICTION_IDS, GENRE_IDS } from './utils/idMappings';
+import useModalA11y from './hooks/useModalA11y'; // ★ a11y: Escape close, focus trap, focus restore
+import buildUrl from './utils/buildUrl';         // ★ canonical media URL builder (R2→CDN rewrite)
 import './createAccountWizard.scss';
 import UnisLogo from './assets/unisLogoThree.svg';
 
@@ -81,274 +83,10 @@ const SUBMIT_PHASE_MESSAGES = {
 
 
 // ============================================
-// SVG Illustrations (unchanged)
+// (Removed) Per-step SVG illustration components + STEP_ILLUSTRATIONS map.
+// They were never rendered — the wizard uses Lucide STEP_ICONS below via <StepIcon>.
+// ~253 lines of dead code removed in the secured/accessible pass.
 // ============================================
-
-    const WelcomeIllustration = () => (
-      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="welcomeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#163387" />
-            <stop offset="50%" stopColor="#4a90d9" />
-            <stop offset="100%" stopColor="#6bb3f0" />
-          </linearGradient>
-          <linearGradient id="welcomeAccent" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="100%" stopColor="#14b8a6" />
-          </linearGradient>
-        </defs>
-        <ellipse cx="100" cy="52" rx="24" ry="26" fill="url(#welcomeGradient)"/>
-        <path d="M70 75 Q65 95 70 130 Q75 160 90 175 L110 175 Q125 160 130 130 Q135 95 130 75 Q115 65 100 65 Q85 65 70 75Z" fill="url(#welcomeGradient)"/>
-        <path d="M70 80 Q45 70 25 85 Q20 90 25 95 Q30 100 40 95 Q55 88 68 95" fill="url(#welcomeGradient)"/>
-        <path d="M130 80 Q155 70 175 85 Q180 90 175 95 Q170 100 160 95 Q145 88 132 95" fill="url(#welcomeGradient)"/>
-        <rect x="85" y="110" width="30" height="20" rx="2" fill="url(#welcomeAccent)" opacity="0.9"/>
-        <path d="M85 112 L100 125 L115 112" stroke="white" strokeWidth="2" fill="none"/>
-        <circle cx="45" cy="55" r="4" fill="white" opacity="0.8"/>
-        <circle cx="155" cy="60" r="3" fill="white" opacity="0.7"/>
-        <circle cx="35" cy="130" r="3" fill="white" opacity="0.6"/>
-        <circle cx="165" cy="125" r="4" fill="white" opacity="0.7"/>
-        <path d="M50 40 L52 45 L57 45 L53 48 L55 53 L50 50 L45 53 L47 48 L43 45 L48 45Z" fill="white" opacity="0.6"/>
-        <path d="M160 40 L161 43 L164 43 L162 45 L163 48 L160 46 L157 48 L158 45 L156 43 L159 43Z" fill="white" opacity="0.5"/>
-      </svg>
-    );
-
-    const BasicInfoIllustration = () => (
-      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="basicGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#163387" />
-            <stop offset="100%" stopColor="#4a90d9" />
-          </linearGradient>
-          <linearGradient id="screenGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#1e3a5f" />
-            <stop offset="100%" stopColor="#0a1628" />
-          </linearGradient>
-        </defs>
-        <ellipse cx="85" cy="55" rx="22" ry="24" fill="url(#basicGradient)"/>
-        <path d="M60 75 Q55 90 58 115 L62 145 Q65 155 80 158 L95 158 Q100 155 100 145 L100 115 Q100 90 95 75 Q90 70 85 70 Q70 70 60 75Z" fill="url(#basicGradient)"/>
-        <path d="M95 90 Q110 95 125 100 Q130 102 130 108 Q128 112 122 110 Q108 105 95 102" fill="url(#basicGradient)"/>
-        <path d="M60 90 Q50 100 55 115 Q58 120 65 115 Q70 105 68 95" fill="url(#basicGradient)"/>
-        <rect x="110" y="85" width="55" height="40" rx="3" fill="url(#screenGradient)" stroke="#4a90d9" strokeWidth="2"/>
-        <rect x="118" y="93" width="40" height="6" rx="1" fill="#4a90d9" opacity="0.5"/>
-        <rect x="118" y="103" width="40" height="6" rx="1" fill="#4a90d9" opacity="0.5"/>
-        <rect x="118" y="113" width="25" height="6" rx="1" fill="#22c55e" opacity="0.7"/>
-        <rect x="110" y="128" width="55" height="8" rx="2" fill="#4a90d9" opacity="0.3"/>
-        <rect x="145" y="94" width="2" height="4" fill="white" opacity="0.8"/>
-      </svg>
-    );
-
-    const LocationIllustration = () => (
-      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="locationGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#163387" />
-            <stop offset="50%" stopColor="#4a90d9" />
-            <stop offset="100%" stopColor="#14b8a6" />
-          </linearGradient>
-          <linearGradient id="pinGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="100%" stopColor="#14b8a6" />
-          </linearGradient>
-        </defs>
-        <ellipse cx="70" cy="70" rx="22" ry="24" fill="url(#locationGradient)"/>
-        <path d="M48 90 Q42 110 48 140 Q52 165 65 175 L85 175 Q95 165 98 140 Q102 110 95 90 Q85 82 70 82 Q55 82 48 90Z" fill="url(#locationGradient)"/>
-        <path d="M95 100 Q115 90 135 85 Q142 83 145 88 Q145 93 140 95 Q120 100 100 108" fill="url(#locationGradient)"/>
-        <path d="M48 100 Q38 110 40 130 Q42 135 48 132 Q52 120 50 105" fill="url(#locationGradient)"/>
-        <path d="M155 50 C140 50 130 62 130 78 C130 100 155 130 155 130 C155 130 180 100 180 78 C180 62 170 50 155 50Z" fill="url(#pinGradient)"/>
-        <circle cx="155" cy="75" r="12" fill="white" opacity="0.9"/>
-        <circle cx="155" cy="75" r="6" fill="#14b8a6"/>
-        <circle cx="155" cy="90" r="30" stroke="#22c55e" strokeWidth="2" fill="none" opacity="0.3"/>
-        <circle cx="155" cy="90" r="45" stroke="#22c55e" strokeWidth="1" fill="none" opacity="0.2"/>
-        <path d="M20 160 Q60 155 100 160 Q140 165 180 160" stroke="white" strokeWidth="1" opacity="0.2"/>
-        <path d="M30 175 Q70 170 110 175 Q150 180 190 175" stroke="white" strokeWidth="1" opacity="0.15"/>
-      </svg>
-    );
-
-    const RoleSelectionIllustration = () => (
-      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="listenerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#163387" />
-            <stop offset="100%" stopColor="#4a90d9" />
-          </linearGradient>
-          <linearGradient id="artistGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#14b8a6" />
-            <stop offset="100%" stopColor="#22c55e" />
-          </linearGradient>
-          <linearGradient id="glowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#6bb3f0" />
-            <stop offset="100%" stopColor="#163387" />
-          </linearGradient>
-        </defs>
-        <ellipse cx="55" cy="55" rx="18" ry="20" fill="url(#listenerGradient)"/>
-        <path d="M37 72 Q32 90 35 120 Q38 145 50 155 L65 155 Q75 145 77 120 Q80 90 73 72 Q65 65 55 65 Q45 65 37 72Z" fill="url(#listenerGradient)"/>
-        <path d="M37 50 Q35 35 55 32 Q75 35 73 50" stroke="#4a90d9" strokeWidth="4" fill="none"/>
-        <ellipse cx="35" cy="52" rx="6" ry="8" fill="#4a90d9"/>
-        <ellipse cx="75" cy="52" rx="6" ry="8" fill="#4a90d9"/>
-        <path d="M37 85 Q25 75 20 60 Q18 55 22 52 Q28 52 30 58 Q35 72 40 80" fill="url(#listenerGradient)"/>
-        <ellipse cx="145" cy="55" rx="18" ry="20" fill="url(#artistGradient)"/>
-        <path d="M127 72 Q122 90 125 120 Q128 145 140 155 L155 155 Q165 145 167 120 Q170 90 163 72 Q155 65 145 65 Q135 65 127 72Z" fill="url(#artistGradient)"/>
-        <path d="M163 85 Q175 75 178 65 Q180 58 175 55 Q170 55 168 62 Q165 72 160 80" fill="url(#artistGradient)"/>
-        <ellipse cx="180" cy="50" rx="8" ry="10" fill="#22c55e"/>
-        <rect x="177" y="58" width="6" height="15" fill="#14b8a6"/>
-        <line x1="180" y1="73" x2="180" y2="80" stroke="#14b8a6" strokeWidth="2"/>
-        <path d="M165 45 Q172 45 175 40" stroke="white" strokeWidth="2" fill="none" opacity="0.6"/>
-        <path d="M168 42 Q177 42 182 35" stroke="white" strokeWidth="2" fill="none" opacity="0.4"/>
-        <text x="95" y="85" fontSize="20" fill="url(#glowGradient)" opacity="0.8">♪</text>
-        <text x="105" y="105" fontSize="16" fill="url(#glowGradient)" opacity="0.6">♫</text>
-        <text x="90" y="120" fontSize="14" fill="url(#glowGradient)" opacity="0.5">♪</text>
-        <line x1="100" y1="40" x2="100" y2="170" stroke="white" strokeWidth="1" opacity="0.2" strokeDasharray="5,5"/>
-      </svg>
-    );
-
-    const ArtistProfileIllustration = () => (
-      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="artistProfileGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#163387" />
-            <stop offset="50%" stopColor="#4a90d9" />
-            <stop offset="100%" stopColor="#6bb3f0" />
-          </linearGradient>
-          <linearGradient id="cameraGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="100%" stopColor="#14b8a6" />
-          </linearGradient>
-        </defs>
-        <ellipse cx="100" cy="50" rx="24" ry="26" fill="url(#artistProfileGradient)"/>
-        <path d="M72 72 Q65 95 68 130 Q72 160 88 175 L112 175 Q128 160 132 130 Q135 95 128 72 Q118 62 100 62 Q82 62 72 72Z" fill="url(#artistProfileGradient)"/>
-        <path d="M72 85 Q55 95 50 115 Q48 125 55 128 Q62 125 65 115 Q68 100 72 92" fill="url(#artistProfileGradient)"/>
-        <path d="M128 85 Q145 70 155 55 Q158 48 152 45 Q146 48 142 58 Q135 72 128 82" fill="url(#artistProfileGradient)"/>
-        <rect x="20" y="100" width="35" height="28" rx="4" fill="url(#cameraGradient)"/>
-        <circle cx="37" cy="112" r="8" fill="white" opacity="0.9"/>
-        <circle cx="37" cy="112" r="4" fill="#163387"/>
-        <rect x="45" y="105" width="6" height="4" rx="1" fill="white" opacity="0.7"/>
-        <circle cx="55" cy="90" r="15" fill="white" opacity="0.3"/>
-        <circle cx="55" cy="90" r="8" fill="white" opacity="0.5"/>
-        <path d="M160 80 L163 88 L171 88 L165 93 L167 101 L160 96 L153 101 L155 93 L149 88 L157 88Z" fill="white" opacity="0.7"/>
-        <circle cx="175" cy="60" r="3" fill="white" opacity="0.6"/>
-        <circle cx="25" cy="70" r="4" fill="white" opacity="0.5"/>
-      </svg>
-    );
-
-    const SongUploadIllustration = () => (
-      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="uploadGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#163387" />
-            <stop offset="50%" stopColor="#4a90d9" />
-            <stop offset="100%" stopColor="#22c55e" />
-          </linearGradient>
-          <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#14b8a6" />
-            <stop offset="50%" stopColor="#22c55e" />
-            <stop offset="100%" stopColor="#6bb3f0" />
-          </linearGradient>
-        </defs>
-        <ellipse cx="100" cy="45" rx="22" ry="24" fill="url(#uploadGradient)"/>
-        <path d="M75 65 Q68 85 72 115 Q76 150 92 170 L108 170 Q124 150 128 115 Q132 85 125 65 Q115 58 100 58 Q85 58 75 65Z" fill="url(#uploadGradient)"/>
-        <path d="M75 75 Q55 55 45 35 Q42 28 48 25 Q55 28 58 38 Q65 55 75 72" fill="url(#uploadGradient)"/>
-        <path d="M125 75 Q145 55 155 35 Q158 28 152 25 Q145 28 142 38 Q135 55 125 72" fill="url(#uploadGradient)"/>
-        <path d="M30 90 Q25 100 30 110 Q35 120 30 130" stroke="url(#waveGradient)" strokeWidth="3" fill="none" opacity="0.7"/>
-        <path d="M20 85 Q12 100 20 115 Q28 130 20 145" stroke="url(#waveGradient)" strokeWidth="3" fill="none" opacity="0.5"/>
-        <path d="M170 90 Q175 100 170 110 Q165 120 170 130" stroke="url(#waveGradient)" strokeWidth="3" fill="none" opacity="0.7"/>
-        <path d="M180 85 Q188 100 180 115 Q172 130 180 145" stroke="url(#waveGradient)" strokeWidth="3" fill="none" opacity="0.5"/>
-        <path d="M100 175 L100 155" stroke="#22c55e" strokeWidth="4" strokeLinecap="round"/>
-        <path d="M90 165 L100 152 L110 165" stroke="#22c55e" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-        <text x="55" y="55" fontSize="18" fill="white" opacity="0.8">♪</text>
-        <text x="140" y="50" fontSize="16" fill="white" opacity="0.7">♫</text>
-        <text x="45" y="35" fontSize="14" fill="white" opacity="0.5">♪</text>
-        <text x="150" y="30" fontSize="12" fill="white" opacity="0.4">♪</text>
-      </svg>
-    );
-
-    const SupportArtistIllustration = () => (
-      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="supportGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#163387" />
-            <stop offset="100%" stopColor="#4a90d9" />
-          </linearGradient>
-          <linearGradient id="starGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="100%" stopColor="#14b8a6" />
-          </linearGradient>
-          <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ec4899" />
-            <stop offset="100%" stopColor="#f97316" />
-          </linearGradient>
-        </defs>
-        <ellipse cx="100" cy="65" rx="20" ry="22" fill="url(#starGradient)"/>
-        <path d="M80 85 Q75 100 78 125 Q82 150 95 162 L105 162 Q118 150 122 125 Q125 100 120 85 Q112 78 100 78 Q88 78 80 85Z" fill="url(#starGradient)"/>
-        <path d="M100 28 L104 40 L117 40 L107 48 L111 60 L100 52 L89 60 L93 48 L83 40 L96 40Z" fill="white" opacity="0.9"/>
-        <ellipse cx="40" cy="90" rx="16" ry="18" fill="url(#supportGradient)"/>
-        <path d="M25 105 Q20 118 24 140 Q28 158 38 168 L48 168 Q58 158 60 140 Q63 118 58 105 Q52 98 40 98 Q30 98 25 105Z" fill="url(#supportGradient)"/>
-        <path d="M58 110 Q70 100 82 95" stroke="url(#supportGradient)" strokeWidth="8" strokeLinecap="round"/>
-        <ellipse cx="160" cy="90" rx="16" ry="18" fill="url(#supportGradient)"/>
-        <path d="M145 105 Q140 118 144 140 Q148 158 158 168 L168 168 Q178 158 180 140 Q183 118 178 105 Q172 98 160 98 Q150 98 145 105Z" fill="url(#supportGradient)"/>
-        <path d="M142 110 Q130 100 118 95" stroke="url(#supportGradient)" strokeWidth="8" strokeLinecap="round"/>
-        <path d="M70 70 C70 62 78 62 78 70 C78 62 86 62 86 70 C86 80 78 88 78 88 C78 88 70 80 70 70Z" fill="url(#heartGradient)" opacity="0.8"/>
-        <path d="M114 70 C114 64 120 64 120 70 C120 64 126 64 126 70 C126 78 120 84 120 84 C120 84 114 78 114 70Z" fill="url(#heartGradient)" opacity="0.8"/>
-        <path d="M55 130 Q100 115 145 130" stroke="white" strokeWidth="2" fill="none" opacity="0.3" strokeDasharray="5,5"/>
-      </svg>
-    );
-
-    const ReviewIllustration = () => (
-      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="celebrateGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#163387" />
-            <stop offset="30%" stopColor="#4a90d9" />
-            <stop offset="60%" stopColor="#14b8a6" />
-            <stop offset="100%" stopColor="#22c55e" />
-          </linearGradient>
-          <linearGradient id="checkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="100%" stopColor="#14b8a6" />
-          </linearGradient>
-        </defs>
-        <ellipse cx="100" cy="50" rx="22" ry="24" fill="url(#celebrateGradient)"/>
-        <path d="M78 70 Q72 88 76 110 Q80 135 92 148 L108 148 Q120 135 124 110 Q128 88 122 70 Q114 62 100 62 Q86 62 78 70Z" fill="url(#celebrateGradient)"/>
-        <path d="M78 80 Q55 55 40 40 Q35 35 40 30 Q48 32 52 40 Q65 58 78 75" fill="url(#celebrateGradient)"/>
-        <path d="M122 80 Q145 55 160 40 Q165 35 160 30 Q152 32 148 40 Q135 58 122 75" fill="url(#celebrateGradient)"/>
-        <path d="M88 148 Q75 165 70 180" stroke="url(#celebrateGradient)" strokeWidth="12" strokeLinecap="round"/>
-        <path d="M112 148 Q125 165 130 180" stroke="url(#celebrateGradient)" strokeWidth="12" strokeLinecap="round"/>
-        <circle cx="100" cy="105" r="20" fill="url(#checkGradient)" opacity="0.9"/>
-        <path d="M90 105 L97 112 L112 97" stroke="white" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-        <rect x="30" y="60" width="8" height="8" rx="1" fill="#22c55e" opacity="0.8" transform="rotate(30 34 64)"/>
-        <rect x="165" y="55" width="6" height="6" rx="1" fill="#4a90d9" opacity="0.8" transform="rotate(-20 168 58)"/>
-        <rect x="45" y="35" width="5" height="5" rx="1" fill="#14b8a6" opacity="0.7" transform="rotate(45 47 37)"/>
-        <rect x="150" y="30" width="7" height="7" rx="1" fill="#6bb3f0" opacity="0.7" transform="rotate(-30 153 33)"/>
-        <circle cx="25" cy="80" r="4" fill="#ec4899" opacity="0.7"/>
-        <circle cx="178" cy="75" r="3" fill="#f97316" opacity="0.7"/>
-        <circle cx="55" cy="25" r="3" fill="#22c55e" opacity="0.6"/>
-        <circle cx="140" cy="20" r="4" fill="#4a90d9" opacity="0.6"/>
-        <path d="M35 45 L37 50 L42 50 L38 53 L40 58 L35 55 L30 58 L32 53 L28 50 L33 50Z" fill="white" opacity="0.8"/>
-        <path d="M170 45 L172 49 L176 49 L173 52 L174 56 L170 53 L166 56 L167 52 L164 49 L168 49Z" fill="white" opacity="0.7"/>
-      </svg>
-    );
-
-    const ListenerProfileIllustration = () => (
-      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-      </svg>
-    );
-
-    const ListenerBioIllustration = () => (
-      <svg className="illustration-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-      </svg>
-    );
-
-    const STEP_ILLUSTRATIONS = {
-      welcome: WelcomeIllustration,
-      basicInfo: BasicInfoIllustration,
-      location: LocationIllustration,
-      role: RoleSelectionIllustration,
-      listenerProfile: ListenerProfileIllustration,
-      listenerBio: ListenerBioIllustration, 
-      artistProfile: ArtistProfileIllustration,
-      songUpload: SongUploadIllustration,
-      supportArtist: SupportArtistIllustration,
-      review: ReviewIllustration,
-    };
 
     // ★ Premium step icons — replace the per-step gradient-blob illustrations
 const STEP_ICONS = {
@@ -486,7 +224,13 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
 
   const [verificationSent, setVerificationSent] = useState(false);  
   const [verificationEmail, setVerificationEmail] = useState(''); 
-  
+
+  // ★ a11y: modal shell ref + Escape/focus-trap/focus-restore hook.
+  // Guarded by `show` so the trap is only active while the wizard is open.
+  const modalRef = useRef(null);
+  useModalA11y({ active: show, onClose, modalRef });
+  const titleId = 'create-account-wizard-title'; // ★ aria-labelledby target
+
   // Step configuration
   const getSteps = () => {
     const baseSteps = [
@@ -823,9 +567,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         const response = await apiCall({ url: `/v1/users/${artist.userId}/default-song` });
         
         if (response.data?.fileUrl && audioRef.current) {
-          const audioUrl = response.data.fileUrl.startsWith('http') 
-            ? response.data.fileUrl 
-            : `http://localhost:8080${response.data.fileUrl}`;
+          const audioUrl = buildUrl(response.data.fileUrl); // ★ canonical URL builder (R2 rewrite + safe-encode)
           
           audioRef.current.src = audioUrl;
           audioRef.current.play().catch(err => {
@@ -1178,9 +920,10 @@ const handleSubmit = async () => {
       </div>
             
             <div className="form-group">
-              <label>Referral Code</label>
+              <label htmlFor="wizard-referral">Referral Code</label>{/* ★ a11y: label association */}
               <div className="input-wrapper">
                 <input
+                  id="wizard-referral"
                   type="text"
                   placeholder="e.g. HARLEM-JOHN-X7K2"
                   value={formData.referralCode}
@@ -1189,6 +932,8 @@ const handleSubmit = async () => {
                     updateForm('referralCode', value);
                     validateReferralCode(value);
                   }}
+                  aria-invalid={validation.referralCode.valid === false}
+                  aria-describedby={validation.referralCode.message ? 'wizard-referral-msg' : undefined}
                   className={
                     validation.referralCode.valid === true ? 'has-success' :
                     validation.referralCode.valid === false ? 'has-error' : ''
@@ -1200,7 +945,7 @@ const handleSubmit = async () => {
                 {validation.referralCode.valid === false && <XCircle className="validation-icon invalid" size={20} />}
               </div>
               {validation.referralCode.message && (
-                <div className={`helper-text ${validation.referralCode.valid ? 'success' : 'error'}`}>
+                <div id="wizard-referral-msg" className={`helper-text ${validation.referralCode.valid ? 'success' : 'error'}`}>
                   {validation.referralCode.message}
                 </div>
               )}
@@ -1216,24 +961,28 @@ const handleSubmit = async () => {
               </div>
             </div>
             <div 
+              role="button"
+              tabIndex={0}
+              aria-label="Join the national waitlist"
               style={{
                 marginTop: '16px',
                 padding: '14px 18px',
-                background: 'rgba(22,51,135,0.1)',
-                border: '1px solid rgba(22,51,135,0.25)',
+                background: 'var(--unis-primary-subtle)',
+                border: '1px solid color-mix(in srgb, var(--unis-primary) 25%, transparent)',
                 borderRadius: '12px',
                 textAlign: 'center',
                 cursor: 'pointer',
               }}
               onClick={() => { onClose(); navigate('/waitlist'); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClose(); navigate('/waitlist'); } }}
             >
-              <span style={{ color: '#A9A9A9', fontSize: '14px' }}>
+              <span style={{ color: 'var(--unis-text-2)', fontSize: '14px' }}>
                 Not from Harlem?{' '}
               </span>
-              <span style={{ color: '#6B8AFF', fontSize: '14px', fontWeight: '600' }}>
+              <span style={{ color: 'var(--unis-primary-2)', fontSize: '14px', fontWeight: '600' }}>
                 Join the national waitlist
               </span>
-              <span style={{ color: '#A9A9A9', fontSize: '14px' }}>
+              <span style={{ color: 'var(--unis-text-2)', fontSize: '14px' }}>
                 {' '}and help unlock Unis in your area.
               </span>
             </div>
@@ -1249,9 +998,10 @@ const handleSubmit = async () => {
             </div>
             
             <div className="form-group">
-              <label>Username</label>
+              <label htmlFor="wizard-username">Username</label>{/* ★ a11y */}
               <div className="input-wrapper">
                 <input
+                  id="wizard-username"
                   type="text"
                   placeholder="Your unique username"
                   value={formData.username}
@@ -1260,6 +1010,8 @@ const handleSubmit = async () => {
                     updateForm('username', value);
                     validateUsername(value);
                   }}
+                  aria-invalid={validation.username.valid === false}
+                  aria-describedby={validation.username.message ? 'wizard-username-msg' : undefined}
                   className={validation.username.valid === true ? 'has-success' : validation.username.valid === false ? 'has-error' : ''}
                 />
                 <User className="input-icon" size={20} />
@@ -1267,13 +1019,14 @@ const handleSubmit = async () => {
                 {validation.username.valid === true && <CheckCircle2 className="validation-icon valid" size={20} />}
                 {validation.username.valid === false && <XCircle className="validation-icon invalid" size={20} />}
               </div>
-              {validation.username.message && <div className="helper-text">{validation.username.message}</div>}
+              {validation.username.message && <div id="wizard-username-msg" className="helper-text">{validation.username.message}</div>}
             </div>
             
             <div className="form-group">
-              <label>Email</label>
+              <label htmlFor="wizard-email">Email</label>{/* ★ a11y */}
               <div className="input-wrapper">
                 <input
+                  id="wizard-email"
                   type="email"
                   placeholder="your@email.com"
                   value={formData.email}
@@ -1281,6 +1034,8 @@ const handleSubmit = async () => {
                     updateForm('email', e.target.value);
                     validateEmail(e.target.value);
                   }}
+                  aria-invalid={validation.email.valid === false}
+                  aria-describedby={validation.email.message ? 'wizard-email-msg' : undefined}
                   className={validation.email.valid === true ? 'has-success' : validation.email.valid === false ? 'has-error' : ''}
                 />
                 <Mail className="input-icon" size={20} />
@@ -1288,13 +1043,14 @@ const handleSubmit = async () => {
                 {validation.email.valid === true && <CheckCircle2 className="validation-icon valid" size={20} />}
                 {validation.email.valid === false && <XCircle className="validation-icon invalid" size={20} />}
               </div>
-              {validation.email.message && <div className="error-message"><AlertCircle size={14} />{validation.email.message}</div>}
+              {validation.email.message && <div id="wizard-email-msg" className="error-message"><AlertCircle size={14} />{validation.email.message}</div>}
             </div>
             
             <div className="form-group">
-              <label>Password</label>
+              <label htmlFor="wizard-password">Password</label>{/* ★ a11y */}
               <div className="input-wrapper">
                 <input
+                  id="wizard-password"
                   type="password"
                   placeholder="At least 8 characters"
                   value={formData.password}
@@ -1302,16 +1058,18 @@ const handleSubmit = async () => {
                     updateForm('password', e.target.value);
                     validatePassword(e.target.value);
                   }}
+                  aria-describedby={validation.password.message ? 'wizard-password-msg' : undefined}
                 />
                 <Lock className="input-icon" size={20} />
               </div>
-              {validation.password.message && <div className="helper-text">{validation.password.message}</div>}
+              {validation.password.message && <div id="wizard-password-msg" className="helper-text">{validation.password.message}</div>}
             </div>
             
             <div className="form-group">
-              <label>Confirm Password</label>
+              <label htmlFor="wizard-password-confirm">Confirm Password</label>{/* ★ a11y */}
               <div className="input-wrapper">
                 <input
+                  id="wizard-password-confirm"
                   type="password"
                   placeholder="Re-enter password"
                   value={formData.passwordConfirm}
@@ -1319,19 +1077,22 @@ const handleSubmit = async () => {
                     updateForm('passwordConfirm', e.target.value);
                     validatePasswordConfirm(e.target.value);
                   }}
+                  aria-invalid={validation.passwordConfirm.valid === false}
+                  aria-describedby={validation.passwordConfirm.message ? 'wizard-password-confirm-msg' : undefined}
                   className={validation.passwordConfirm.valid === true ? 'has-success' : validation.passwordConfirm.valid === false ? 'has-error' : ''}
                 />
                 <Lock className="input-icon" size={20} />
                 {validation.passwordConfirm.valid === true && <CheckCircle2 className="validation-icon valid" size={20} />}
                 {validation.passwordConfirm.valid === false && <XCircle className="validation-icon invalid" size={20} />}
               </div>
-              {validation.passwordConfirm.message && <div className={validation.passwordConfirm.valid ? 'helper-text' : 'error-message'}>{validation.passwordConfirm.message}</div>}
+              {validation.passwordConfirm.message && <div id="wizard-password-confirm-msg" className={validation.passwordConfirm.valid ? 'helper-text' : 'error-message'}>{validation.passwordConfirm.message}</div>}
             </div>
 
              <div className="form-group">
-              <label>Date of Birth</label>
+              <label htmlFor="wizard-dob">Date of Birth</label>
               <div className="input-wrapper">
                 <input
+                  id="wizard-dob"
                   type="date"
                   value={formData.dateOfBirth}
                   onChange={(e) => {
@@ -1373,7 +1134,7 @@ const handleSubmit = async () => {
                 }
                 if (age < 18) {
                   return (
-                    <div className="helper-text" style={{ color: '#f59e0b' }}>
+                    <div className="helper-text" style={{ color: '#f59e0b' /* amber: no warning/status token in design system */ }}>
                       Under 18: Explicit content will be disabled on your account.
                     </div>
                   );
@@ -1387,8 +1148,8 @@ const handleSubmit = async () => {
 
             {/* ★ Gender — feeds the artist demographics filter */}
             <div className="form-group">
-              <label>Gender (optional)</label>
-              <select value={formData.gender} onChange={(e) => updateForm('gender', e.target.value)}>
+              <label htmlFor="wizard-gender">Gender (optional)</label>
+              <select id="wizard-gender" value={formData.gender} onChange={(e) => updateForm('gender', e.target.value)}>
                 <option value="">Prefer not to say</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
@@ -1408,9 +1169,10 @@ const handleSubmit = async () => {
             </div>
             
             <div className="form-group">
-              <label>Your Address</label>
+              <label htmlFor="wizard-address">Your Address</label>
               <div className="input-wrapper">
                 <input
+                  id="wizard-address"
                   type="text"
                   placeholder="123 W 125th St, New York, NY"
                   value={formData.address || ''}
@@ -1491,23 +1253,23 @@ const handleSubmit = async () => {
 
             {formData.showWaitlistPrompt && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(22,51,135,0.15), rgba(22,51,135,0.05))',
+                background: 'linear-gradient(135deg, color-mix(in srgb, var(--unis-primary) 15%, transparent), color-mix(in srgb, var(--unis-primary) 5%, transparent))',
                 borderRadius: '14px',
                 padding: '24px',
-                border: '1px solid rgba(22,51,135,0.3)',
+                border: '1px solid var(--unis-primary-glow)',
                 marginBottom: '20px',
                 textAlign: 'center',
               }}>
                 <div style={{ marginBottom: '12px' }}>
                   <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                    <circle cx="24" cy="24" r="22" stroke="#163387" strokeWidth="2" fill="rgba(22,51,135,0.15)" />
-                    <path d="M24 14v10l6 3" stroke="#163387" strokeWidth="2.5" strokeLinecap="round" />
+                    <circle cx="24" cy="24" r="22" stroke="var(--unis-primary)" strokeWidth="2" fill="color-mix(in srgb, var(--unis-primary) 15%, transparent)" />
+                    <path d="M24 14v10l6 3" stroke="var(--unis-primary)" strokeWidth="2.5" strokeLinecap="round" />
                   </svg>
                 </div>
-                <h3 style={{ color: '#fff', fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>
+                <h3 style={{ color: 'var(--unis-text)', fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>
                   Unis isn't in your area yet
                 </h3>
-                <p style={{ color: '#A9A9A9', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
+                <p style={{ color: 'var(--unis-text-2)', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
                   But it can be. Join the national waitlist, get your referral code, 
                   and help unlock Unis in your region. When enough people sign up 
                   from your area, it activates.
@@ -1517,8 +1279,8 @@ const handleSubmit = async () => {
                   style={{
                     width: '100%',
                     padding: '14px',
-                    background: '#163387',
-                    color: '#fff',
+                    background: 'var(--unis-primary)',
+                    color: 'var(--unis-text)',
                     border: 'none',
                     borderRadius: '10px',
                     fontSize: '15px',
@@ -1537,8 +1299,8 @@ const handleSubmit = async () => {
                     width: '100%',
                     padding: '10px',
                     background: 'transparent',
-                    color: '#A9A9A9',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'var(--unis-text-2)',
+                    border: '1px solid var(--unis-border-hi)',
                     borderRadius: '10px',
                     fontSize: '13px',
                     cursor: 'pointer',
@@ -1565,8 +1327,9 @@ const handleSubmit = async () => {
             )}
             
             <div className="form-group" style={{ marginTop: 20 }}>
-              <label>Or Select Manually</label>
+              <label htmlFor="wizard-jurisdiction">Or Select Manually</label>
               <select
+                id="wizard-jurisdiction"
                 value={formData.jurisdictionId}
                 onChange={(e) => {
                   updateForm('jurisdictionId', e.target.value);
@@ -1589,14 +1352,28 @@ const handleSubmit = async () => {
               <p>Choose your path. You can upgrade later.</p>
             </div>
             
-            <div className="role-selection">
-              <div className={`role-card ${formData.role === 'listener' ? 'selected' : ''}`} onClick={() => updateForm('role', 'listener')}>
+            <div className="role-selection" role="radiogroup" aria-label="How will you use Unis?">{/* ★ a11y */}
+              <div
+                className={`role-card ${formData.role === 'listener' ? 'selected' : ''}`}
+                role="radio"
+                aria-checked={formData.role === 'listener'}
+                tabIndex={0}
+                onClick={() => updateForm('role', 'listener')}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); updateForm('role', 'listener'); } }}
+              >
                 <Headphones className="role-icon" size={48} />
                 <div className="role-title">Listener</div>
                 <div className="role-description">Discover music, vote daily, earn from referrals</div>
               </div>
               
-              <div className={`role-card ${formData.role === 'artist' ? 'selected' : ''}`} onClick={() => updateForm('role', 'artist')}>
+              <div
+                className={`role-card ${formData.role === 'artist' ? 'selected' : ''}`}
+                role="radio"
+                aria-checked={formData.role === 'artist'}
+                tabIndex={0}
+                onClick={() => updateForm('role', 'artist')}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); updateForm('role', 'artist'); } }}
+              >
                 <Mic2 className="role-icon" size={48} />
                 <div className="role-title">Artist</div>
                 <div className="role-description">Upload music, compete for awards, earn 50% revenue</div>
@@ -1620,8 +1397,8 @@ const handleSubmit = async () => {
 
                         {/* ★ Theme picker — sets the user's palette from signup */}
             <div className="form-group">
-              <label>Pick your theme</label>
-              <div className="theme-swatches">
+              <label id="wizard-theme-label">Pick your theme</label>
+              <div className="theme-swatches" role="group" aria-labelledby="wizard-theme-label">{/* ★ a11y */}
                 {THEME_OPTIONS.map((t) => (
                   <button
                     key={t.id}
@@ -1650,9 +1427,9 @@ const handleSubmit = async () => {
             </div>
             
             <div className="file-upload">
-              <label>Profile Photo</label>
+              <label htmlFor="wizard-artist-photo">Profile Photo</label>
               <div className={`upload-zone ${formData.artistPhotoFile ? 'has-file' : ''} ${fileErrors.artistPhoto ? 'has-error' : ''}`}>
-                <input type="file" accept="image/*" onChange={handleArtistPhotoChange} />
+                <input id="wizard-artist-photo" type="file" accept="image/*" onChange={handleArtistPhotoChange} />
                 {formData.artistPhotoPreview ? (
                   <div className="file-preview">
                     <img src={formData.artistPhotoPreview} alt="Preview" style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover' }} />
@@ -1676,8 +1453,8 @@ const handleSubmit = async () => {
             </div>
             
             <div className="form-group">
-              <label>Primary Genre</label>
-              <select value={formData.genreId} onChange={(e) => updateForm('genreId', e.target.value)}>
+              <label htmlFor="wizard-genre">Primary Genre</label>
+              <select id="wizard-genre" value={formData.genreId} onChange={(e) => updateForm('genreId', e.target.value)}>
                 <option value="">Select genre...</option>
                 {Object.entries(GENRE_IDS).map(([key, id]) => (
                   <option key={id} value={id}>{key.charAt(0).toUpperCase() + key.slice(1)}</option>
@@ -1686,8 +1463,8 @@ const handleSubmit = async () => {
             </div>
             
             <div className="form-group">
-              <label>Bio (Optional)</label>
-              <textarea placeholder="Tell fans about yourself..." value={formData.bio} onChange={(e) => updateForm('bio', e.target.value)} maxLength={500} />
+              <label htmlFor="wizard-bio">Bio (Optional)</label>
+              <textarea id="wizard-bio" placeholder="Tell fans about yourself..." value={formData.bio} onChange={(e) => updateForm('bio', e.target.value)} maxLength={500} />
               <div className="helper-text">{formData.bio.length}/500</div>
             </div>
           </>
@@ -1702,16 +1479,17 @@ const handleSubmit = async () => {
             </div>
             
             <div className="form-group">
-              <label>Song Title</label>
+              <label htmlFor="wizard-song-title">Song Title</label>
               <div className="input-wrapper">
-                <input type="text" placeholder="Track name" value={formData.songTitle} onChange={(e) => updateForm('songTitle', e.target.value)} />
+                <input id="wizard-song-title" type="text" placeholder="Track name" value={formData.songTitle} onChange={(e) => updateForm('songTitle', e.target.value)} />
                 <Music className="input-icon" size={20} />
               </div>
             </div>
 
             <div className="form-group">
-              <label>ISRC (Optional)</label>
+              <label htmlFor="wizard-isrc">ISRC (Optional)</label>
               <input
+                id="wizard-isrc"
                 type="text"
                 value={songIsrc}
                 onChange={(e) => setSongIsrc(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
@@ -1722,9 +1500,9 @@ const handleSubmit = async () => {
             </div>
             
             <div className="file-upload">
-              <label>Audio File</label>
+              <label htmlFor="wizard-song-file">Audio File</label>
               <div className={`upload-zone ${formData.songFile ? 'has-file' : ''} ${fileErrors.songFile ? 'has-error' : ''}`}>
-                <input type="file" accept="audio/*" onChange={handleSongFileChange} />
+                <input id="wizard-song-file" type="file" accept="audio/*" onChange={handleSongFileChange} />
                 {formData.songFile ? (
                   <div className="file-preview">
                     <FileAudio className="file-icon" size={40} />
@@ -1748,9 +1526,9 @@ const handleSubmit = async () => {
             </div>
             
             <div className="file-upload">
-              <label>Song Artwork</label>
+              <label htmlFor="wizard-song-artwork">Song Artwork</label>
               <div className={`upload-zone ${formData.songArtworkFile ? 'has-file' : ''} ${fileErrors.songArtwork ? 'has-error' : ''}`}>
-                <input type="file" accept="image/*" onChange={handleSongArtworkChange} />
+                <input id="wizard-song-artwork" type="file" accept="image/*" onChange={handleSongArtworkChange} />
                 {formData.songArtworkPreview ? (
                   <div className="file-preview">
                     <img src={formData.songArtworkPreview} alt="Artwork" style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover' }} />
@@ -1784,9 +1562,9 @@ const handleSubmit = async () => {
           </div>
           
           <div className="file-upload">
-            <label>Profile Photo</label>
+            <label htmlFor="wizard-listener-photo">Profile Photo</label>
             <div className={`upload-zone ${formData.listenerPhotoFile ? 'has-file' : ''} ${fileErrors.listenerPhoto ? 'has-error' : ''}`}>
-              <input type="file" accept="image/*" onChange={handleListenerPhotoChange} />
+              <input id="wizard-listener-photo" type="file" accept="image/*" onChange={handleListenerPhotoChange} />
               {formData.listenerPhotoPreview ? (
                 <div className="file-preview">
                   <img 
@@ -1843,8 +1621,9 @@ const handleSubmit = async () => {
           </div>
           
           <div className="form-group">
-            <label>Your Bio</label>
+            <label htmlFor="wizard-listener-bio">Your Bio</label>
             <textarea 
+              id="wizard-listener-bio"
               placeholder="I'm a Harlem native who loves discovering new talent. Hip-hop runs through my veins, but I'm always open to vibes..."
               value={formData.bio} 
               onChange={(e) => updateForm('bio', e.target.value)} 
@@ -1900,11 +1679,16 @@ const handleSubmit = async () => {
                     <div
                       key={artist.userId}
                       className={`artist-card ${formData.supportedArtistId === artist.userId ? 'selected' : ''} ${playingArtistId === artist.userId ? 'playing' : ''}`}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={formData.supportedArtistId === artist.userId}
+                      aria-label={`Support ${artist.username}`}
                       onClick={() => { updateForm('supportedArtistId', artist.userId); updateForm('supportedArtistName', artist.username); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); updateForm('supportedArtistId', artist.userId); updateForm('supportedArtistName', artist.username); } }}
                     >
                       {artist.photoUrl ? (
                         <img 
-                          src={artist.photoUrl.startsWith('http') ? artist.photoUrl : `http://localhost:8080${artist.photoUrl}`} 
+                          src={buildUrl(artist.photoUrl)}
                           alt={artist.username} 
                           className="artist-photo" 
                         />
@@ -2006,7 +1790,7 @@ const handleSubmit = async () => {
           return (
             <div className="review-section">
               <div className="success-animation">
-                <div className="checkmark-circle" style={{ background: '#f59e0b' }}><Check size={40} /></div>
+                <div className="checkmark-circle" style={{ background: '#f59e0b' /* amber: no warning/status token */ }}><Check size={40} /></div>
                 <h3>Account Created!</h3>
                 <p style={{ marginBottom: 12 }}>You're in — but there was a hiccup with your song upload.</p>
                 {error && (
@@ -2077,7 +1861,7 @@ const handleSubmit = async () => {
                 <div className="review-item">
                   <span className="item-label">Artist</span>
                   <span className="item-value">
-                    <Music size={16} style={{ color: '#22c55e' }} />
+                    <Music size={16} style={{ color: '#22c55e' /* success green: no positive/status token */ }} />
                     {formData.supportedArtistName}
                   </span>
                 </div>
@@ -2094,7 +1878,14 @@ const handleSubmit = async () => {
               </ol>
             </div>
             
-            <div className="checkbox-group" onClick={() => updateForm('agreedToTerms', !formData.agreedToTerms)}>
+            <div
+              className="checkbox-group"
+              role="checkbox"
+              aria-checked={formData.agreedToTerms}
+              tabIndex={0}
+              onClick={() => updateForm('agreedToTerms', !formData.agreedToTerms)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); updateForm('agreedToTerms', !formData.agreedToTerms); } }}
+            >
               <div className={`checkbox-custom ${formData.agreedToTerms ? 'checked' : ''}`}>{formData.agreedToTerms && <Check size={14} />}</div>
               <span className="checkbox-label">I agree to the Terms of Service and Privacy Policy</span>
             </div>
@@ -2111,7 +1902,14 @@ const handleSubmit = async () => {
                   </ol>
                 </div>
                 
-                <div className="checkbox-group" onClick={() => updateForm('agreedToArtistTerms', !formData.agreedToArtistTerms)}>
+                <div
+                  className="checkbox-group"
+                  role="checkbox"
+                  aria-checked={formData.agreedToArtistTerms}
+                  tabIndex={0}
+                  onClick={() => updateForm('agreedToArtistTerms', !formData.agreedToArtistTerms)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); updateForm('agreedToArtistTerms', !formData.agreedToArtistTerms); } }}
+                >
                   <div className={`checkbox-custom ${formData.agreedToArtistTerms ? 'checked' : ''}`}>{formData.agreedToArtistTerms && <Check size={14} />}</div>
                   <span className="checkbox-label">I agree to the Artist Upload Agreement</span>
                 </div>
@@ -2132,7 +1930,21 @@ const handleSubmit = async () => {
 
   return (
     <div className="wizard-overlay">
-      <div className="wizard-container">
+      <div
+        className="wizard-container"
+        ref={modalRef}                 /* ★ a11y: focus trap / restore target */
+        role="dialog"                  /* ★ a11y: announce as a dialog */
+        aria-modal="true"              /* ★ a11y: content behind is inert */
+        aria-labelledby={titleId}      /* ★ a11y: names the dialog */
+        tabIndex={-1}                  /* ★ a11y: container can receive focus as a fallback */
+      >
+      {/* ★ a11y: visually-hidden accessible name; updates with the active step */}
+      <h2
+        id={titleId}
+        style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
+      >
+        Account sign-up wizard — {currentStepData?.title || 'Welcome'} step
+      </h2>
       <button className="wizard-close" onClick={onClose} aria-label="Close">{/* ★ uses existing .wizard-close + Lucide X */}
         <X size={10} />
       </button>
@@ -2143,7 +1955,14 @@ const handleSubmit = async () => {
           </div>
         </div>        
         <div className="wizard-content" ref={contentRef} onScroll={updateScrollCue}>
-          <div className="wizard-progress">
+          <div
+            className="wizard-progress"
+            role="progressbar"               /* ★ a11y */
+            aria-valuenow={currentStep}
+            aria-valuemin={1}
+            aria-valuemax={totalSteps}
+            aria-label={`Step ${currentStep} of ${totalSteps}: ${currentStepData?.title || ''}`}
+          >
             {steps.map((step, index) => (
               <div key={step.id} className={`progress-step ${index + 1 < currentStep ? 'completed' : index + 1 === currentStep ? 'active' : ''}`} />
             ))}
@@ -2151,7 +1970,7 @@ const handleSubmit = async () => {
           </div>
           
           {error && !partialSuccess && (
-            <div className="wizard-alert alert-error">
+            <div className="wizard-alert alert-error" role="alert">{/* ★ a11y: announce errors */}
               <AlertCircle size={20} />
               <div className="alert-content">
                 <div className="alert-title">Oops!</div>
