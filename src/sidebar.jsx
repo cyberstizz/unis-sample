@@ -266,7 +266,7 @@ const Sidebar = () => {
             onClick={() => handleNav('/')}
             aria-label="Unis home"
           >
-          <UnisLockup height={28} />
+          {/* <UnisLockup height={28} /> */}
           </button>
 
           {jName && (

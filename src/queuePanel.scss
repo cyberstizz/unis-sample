@@ -175,8 +175,8 @@
   position: relative;
   overflow: hidden;
 
-  margin: 4px 4px 0;
-  padding: 14px 14px 8px;
+  margin: 0;
+  padding: 14px 14px 12px;
 
   &::before {
     content: '';
@@ -851,7 +851,7 @@
 @media (max-width: 480px) {
   .qp-container { width: 100vw; border-left: 0; }
   .qp-header { padding: 6px 14px 12px; }
-  .qp-now { margin: 12px 12px 2px; }
+  .qp-now { margin: 0; }
   .qp-body { padding: 4px 10px 96px; }
 
   .qp-transport { padding: 0; }
