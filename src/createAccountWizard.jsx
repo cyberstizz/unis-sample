@@ -369,6 +369,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         const response = await apiCall({
           url: `/v1/users/validate-referral/${encodeURIComponent(code)}`,
           method: 'get',
+          useCache: false, // ★ availability is liveness-sensitive — never serve a stale result
         });
         
         if (response.data?.valid) {
@@ -387,6 +388,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         }
       } catch (err) {
         if (code === 'UNIS-LAUNCH-2024') {
+          console.warn('[wizard] referral endpoint failed; applied launch-code fallback', err);
           updateValidation('referralCode', {
             checking: false,
             valid: true,
@@ -394,6 +396,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
           });
           updateForm('referrerUsername', 'Unis');
         } else {
+          console.error('[wizard] referral validation failed:', err);
           updateValidation('referralCode', {
             checking: false,
             valid: false,
@@ -431,6 +434,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         const response = await apiCall({
           url: `/v1/users/check-username?username=${encodeURIComponent(username)}`,
           method: 'get',
+          useCache: false, // ★ availability is liveness-sensitive
         });
         
         updateValidation('username', {
@@ -439,6 +443,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
           message: response.data?.available === false ? 'Username taken' : 'Username available!',
         });
       } catch (err) {
+        // Fail open (don't block signup on a check outage); register 409 is the backstop.
+        console.error('[wizard] username availability check failed:', err);
         updateValidation('username', { checking: false, valid: true, message: '' });
       }
     }, 500),
@@ -469,6 +475,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
         const response = await apiCall({
           url: `/v1/users/check-email?email=${encodeURIComponent(email)}`,
           method: 'get',
+          useCache: false, // ★ availability is liveness-sensitive
         });
         
         updateValidation('email', {
@@ -477,6 +484,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
           message: response.data?.available === false ? 'Email already registered' : '',
         });
       } catch (err) {
+        // Fail open; register 409 is the backstop.
+        console.error('[wizard] email availability check failed:', err);
         updateValidation('email', { checking: false, valid: true, message: '' });
       }
     }, 500),
@@ -535,6 +544,7 @@ const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
       const response = await apiCall({ url: '/v1/users/artists/active' });
       setArtists(response.data || []);
     } catch (err) {
+      console.error('[wizard] failed to load active artists:', err);
       setError('Could not load artists');
     } finally {
       setArtistsLoading(false);
@@ -725,6 +735,7 @@ const handleSubmit = async () => {
         } catch (photoErr) {
           const status = photoErr.response?.status;
           const serverMsg = photoErr.response?.data?.message || '';
+          console.error('[wizard] photo upload failed:', { status, serverMsg, err: photoErr });
           let userMessage;
           if (status === 413 || serverMsg.toLowerCase().includes('size') || serverMsg.toLowerCase().includes('large')) {
             userMessage = `Your photo couldn't be uploaded — it's too large. Please go back to the photo step and choose a file under ${FILE_LIMITS.photo.sizeLabel}.`;
@@ -772,6 +783,7 @@ const handleSubmit = async () => {
       } catch (regErr) {
         const serverMsg = regErr.response?.data?.message || '';
         const status = regErr.response?.status;
+        console.error('[wizard] registration failed:', { status, serverMsg, err: regErr });
         let userMessage;
         if (status === 409 || serverMsg.toLowerCase().includes('already') || serverMsg.toLowerCase().includes('taken') || serverMsg.toLowerCase().includes('exists')) {
           userMessage = 'An account with this email or username already exists. Please go back and use different credentials.';
@@ -789,6 +801,7 @@ const handleSubmit = async () => {
       // ---- Phase 3: Artist debut song (token-authorized, NO login) ----
       if (formData.role === 'artist' && formData.songFile) {
         if (!reg.signupToken) {
+          console.warn('[wizard] account created but no signupToken returned; deferring debut-song upload to dashboard', { userId: reg.userId });
           setPartialSuccess(true);
           setVerificationEmail(formData.email);
           setError("Your account was created, but we couldn't prepare the song upload. You can add your debut track from your dashboard after verifying your email.");
@@ -818,10 +831,11 @@ const handleSubmit = async () => {
             data: songFormData,
           });
         } catch (songErr) {
-          setPartialSuccess(true);
-          setVerificationEmail(formData.email);
           const serverMsg = songErr.response?.data?.message || '';
           const status = songErr.response?.status;
+          console.error('[wizard] debut-song upload failed (account already created):', { status, serverMsg, err: songErr });
+          setPartialSuccess(true);
+          setVerificationEmail(formData.email);
           let detail;
           if (status === 413 || serverMsg.toLowerCase().includes('size') || serverMsg.toLowerCase().includes('large')) {
             detail = 'The audio file was too large.';
@@ -838,12 +852,14 @@ const handleSubmit = async () => {
       }
 
       // ---- All phases succeeded — account created, verification email sent ----
+      console.info('[wizard] account created (unverified); verification email sent', { role: reg.role, userId: reg.userId, songUploaded: formData.role === 'artist' && !!formData.songFile });
       setVerificationEmail(formData.email);   // ★
       setVerificationSent(true);              // ★
       setSubmitPhase(null);
       setSuccess(true);
       // No auto-login: the user must verify before they can sign in.
     } catch (err) {
+      console.error('[wizard] unexpected submit failure:', err);
       setSubmitPhase(null);
       setError(err.response?.data?.message || 'Something unexpected went wrong. Please try again.');
     } finally {
@@ -1237,6 +1253,7 @@ const handleSubmit = async () => {
                       updateForm('detectedCoords', { lat, lon });
                       
                     } catch (err) {
+                      console.error('[wizard] geocode/jurisdiction lookup failed:', err);
                       setError('Could not verify location. Please try again.');
                     } finally {
                       updateForm('detectingLocation', false);
@@ -1720,9 +1737,9 @@ const handleSubmit = async () => {
                         disabled={!artist.defaultSongId}
                       >
                         {playingArtistId === artist.userId ? (
-                            <Pause size={20} color="blue" style={{ display: 'block' }} />
+                            <Pause size={20} color="var(--unis-primary)" style={{ display: 'block' }} />
                           ) : (
-                            <Play size={20} color="white" style={{ display: 'block' }} />
+                            <Play size={20} color="var(--unis-text)" style={{ display: 'block' }} />
                           )}
                         </button>
                       
