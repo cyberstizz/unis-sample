@@ -435,6 +435,42 @@ Note: `amount - platformFee` is the artist's take. Verify the `amount` field rep
 
 ---
 
+## Finding 10 — CreateAccountWizard: Test / A11y / Security / Logging Pass
+
+**Severity:** 🟡 MEDIUM (one HIGH data bug in a shared util) — most items resolved in this pass
+**Scope:** `src/createAccountWizard.jsx` brought to the same bar as the artist dashboard.
+
+### Summary
+Comprehensive Vitest suite plus a secured-and-accessible pass. Suite runs **58 passing + 1 todo (green as one file)**; component line coverage **~96%** (measured, not excluded). Remaining uncovered lines are defensive/unreachable branches (pre-stripped username regex), rare network-error `catch` blocks, and the latent audio-effect listeners (see 10c). This is intentionally **not 100%**.
+
+### Resolved in this pass
+- **Dead code removed** — 10 per-step `*Illustration` SVG components + the never-read `STEP_ILLUSTRATIONS` map (~253 lines). The wizard renders Lucide `STEP_ICONS` via `<StepIcon>`; the illustrations were defined once and never referenced. Removing them is what makes the ~96% coverage real rather than gamed with an `exclude`.
+- **Accessibility** — `useModalA11y` (Escape close, focus trap, focus restore) + `role="dialog"`/`aria-modal`/`aria-labelledby` on the container; `role="progressbar"` on the step indicator; `role="alert"` on the error banner; `htmlFor`/`id` on all 14 labels; `aria-invalid`/`aria-describedby` on validated fields; keyboard operability (Enter/Space, `role`+`aria-checked`/`aria-pressed`, `tabIndex`) on the role cards, both terms checkboxes, the artist selection cards, and the waitlist prompt.
+- **Logging** — every async path now logs. Submit phases (photo / register / debut-song / outer catch) log with HTTP status; validators, artist-list load, and geocode log on failure; a single `console.info` records account-created success. Prefixed `[wizard]`.
+- **Cache** — the three availability GETs (`check-username`, `check-email`, `validate-referral`) now pass `useCache: false`. Availability is liveness-sensitive; default GET caching could otherwise serve a stale "available" within a session.
+- **buildUrl** — the two hand-rolled `localhost:8080` URLs (artist photo, audio preview) now use `buildUrl`. Remaining `src=` are a static asset import, `createObjectURL` blob previews, and the external Nominatim endpoint — none should use `buildUrl`.
+- **Theme** — inline-style hex replaced with `--unis-*` tokens (`color-mix` for brand-blue alpha variants); preview play/pause icon colors moved off literal `"blue"`/`"white"`.
+
+### 10a — `GENRE_IDS` has duplicate ids (shared util) 🟠 HIGH
+`src/utils/idMappings.js` maps four keys — `rap`, `rap-hiphop`, `hip-hop`, `Hip-Hip` — to the **same** id `…101`. The genre `<select>` renders `<option key={id}>`, so four options share a React key (console warning) and the dropdown shows four near-duplicate choices that all resolve to one genre. Not fixed here because it's a shared util with likely backend coordination. **Fix:** dedupe `GENRE_IDS` to one id per genre; confirm backend genre ids.
+
+### 10b — Dead `onSuccess` prop 🟢 LOW
+`onSuccess` is destructured but never called (success shows the verify-email screen; no auto-login/navigate). Either wire it or drop it from the prop signature.
+
+### 10c — Latent audio-effect listeners never attach 🟡 MEDIUM
+The `timeupdate`/`ended` `useEffect` has `[]` deps and runs once at mount on the welcome step, before `<audio>` is rendered, so it early-returns and the listeners never attach. The preview progress bar and auto-reset-on-end silently don't work. **Fix:** depend on `playingArtistId` (or attach when the audio element mounts).
+
+### 10d — No `--unis-warning` / `--unis-success` tokens 🟢 LOW
+The under-18 warning + success checkmark (`#f59e0b`) and the review music icon (`#22c55e`) remain literal because the design system has no status-color tokens (only the `--unis-primary*` family + white-based `--unis-text-N`). Annotated inline. **Fix:** add `--unis-warning`/`--unis-success` to `unis-design-tokens.scss`, then tokenize.
+
+### 10e — playChoiceModal intentionally not used here ✅ WORKING AS DESIGNED
+The support-artist step plays a raw `<audio>` preview via `playArtistPreview` — **no** `playChoiceModal` and **no** play-count attribution. This is the one place in the app where that rule does not apply: it's a pre-signup preview, so no user account exists yet to attribute points to, and counting unregistered listens would inflate artist stats. Consistent with Finding 3 (Player is the sole play-tracking source). **Do not "fix" this.**
+
+### Scalability notes (already tracked in FRONTEND_ARCHITECTURE.md)
+Hardcoded Harlem geofence + public Nominatim geocoding are frontend-scale limits, not component bugs — see the architecture doc's scale table.
+
+---
+
 ## Summary Table
 
 | # | Concern | Finding | Severity | Test Coverage |
@@ -448,6 +484,7 @@ Note: `amount - platformFee` is the artist's take. Verify the `amount` field rep
 | 7 | Deletion cascade | Song + user delete will throw FK violations | 🔴 BLOCKER | `MediaServiceDeleteSongTest.java` |
 | 8 | Leaderboards | Cartesian product inflates scores | 🔴 BLOCKER | `VoteServiceLeaderboardTest.java` |
 | 9 | Paid downloads | Revenue orphaned from payout flow | 🔴 BLOCKER | `PurchaseEarningsTest.java` |
+| 10 | CreateAccountWizard pass | A11y/logging/cache/buildUrl/theme resolved; `GENRE_IDS` dup ids (10a) HIGH; audio-effect (10c) MEDIUM; playChoiceModal exception (10e) by design | 🟡 MEDIUM | `createAccountWizard.test.jsx` |
 
 **Total blockers:** 6. **Recommended launch-readiness order:**
 1. Fix 3 (play tracker) — breaks everything downstream.
