@@ -207,7 +207,15 @@ const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth
 
         {/* ★ Now Playing cockpit — hero + scrubber + transport */}
         {nowPlaying && (
-          <div className="qp-now">
+          <div
+            className="qp-now"
+            style={{
+              '--qp-art-bg': `url("${
+                buildUrl(nowPlaying.artworkUrl || nowPlaying.artwork) ||
+                '/assets/placeholder.jpg'
+              }")`
+            }}
+          >
             <div className="qp-now-top">
               <img
                 className="qp-now-art"

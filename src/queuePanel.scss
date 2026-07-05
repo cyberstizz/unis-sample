@@ -172,10 +172,52 @@
 // ───────── NOW PLAYING COCKPIT ─────────
 // Open on the dark panel (no card) so the theme glow reads clean — matches mockup.
 .qp-now {
-  margin: 4px 4px 0;
-  padding: 14px 14px 4px;
-}
+  position: relative;
+  overflow: hidden;
 
+  margin: 4px 4px 0;
+  padding: 14px 14px 8px;
+
+  &::before {
+    content: '';
+    position: absolute;
+
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+
+    background-image: var(--qp-art-bg);
+    background-size: cover;
+    background-position: center;
+
+    filter: blur(60px) saturate(180%);
+    opacity: 0.35;
+
+    pointer-events: none;
+    z-index: 0;
+
+    transition:
+      opacity 0.4s ease,
+      transform 0.4s ease;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+
+    background:
+      linear-gradient(
+        180deg,
+        rgba(0,0,0,0.15),
+        rgba(0,0,0,0.45)
+      );
+
+    pointer-events: none;
+    z-index: 1;
+  }
+}
 .qp-now-top { display: flex; gap: 14px; align-items: center; }
 
 .qp-now-art {
@@ -374,7 +416,13 @@
   justify-content: space-between;
   margin: 12px 14px 0;
   padding: 14px 4px 8px;
-  border-top: 1px solid var(--unis-border); // subtle divider under the controls
+  border-top: 1px solid var(--unis-border);
+  background:
+  linear-gradient(
+    180deg,
+    rgba(0,0,0,0.08),
+    transparent
+  );
 }
 
 .qp-section-l { display: flex; align-items: center; gap: 9px; }
@@ -813,4 +861,11 @@
   .qp-item { min-height: 66px; padding: 9px 8px; }
   .qp-left { gap: 8px; .qp-art { width: 46px; height: 46px; } }
   .qp-right .qp-remove { opacity: 1; transform: scale(1); }
+}
+
+.qp-now-top,
+.qp-seek,
+.qp-transport {
+  position: relative;
+  z-index: 2;
 }
