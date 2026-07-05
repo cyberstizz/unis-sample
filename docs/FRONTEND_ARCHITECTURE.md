@@ -526,18 +526,28 @@ On `unis:logout`: clears all playlist, queue, and media state.
 
 ### `CreateAccountWizard.jsx`
 
-**Steps (Listener):** Basic Info → Location → Role → Photo → Bio → Support Artist → Review
+**Steps (Listener):** Welcome (referral) → Basic Info → Location → Role → Photo → Bio → Support Artist → Review
 
-**Steps (Artist):** ...same + Artist Profile → Song Upload → Support Artist → Review
+**Steps (Artist):** Welcome (referral) → Basic Info → Location → Role → Artist Profile → Song Upload → Support Artist → Review
 
 **Key Logic:**
 
 | Function | Logic |
 |----------|-------|
-| `validateReferralCode` | GET `/v1/users/validate-referral/{code}` |
-| `validateUsername` / `validateEmail` | Debounced API availability checks |
-| Geolocation (Nominatim) | Address → OpenStreetMap API → checks lat/lon against Harlem bounds → assigns jurisdictionId. `DIVIDING_LINE` lat `40.8095` (~130th St) splits Uptown vs Downtown. |
-| `handleSubmit` | 1) Upload photo → get URL. 2) POST `/v1/users/register`. 3) (Artist only) Upload song with returned `userId`. |
+| `validateReferralCode` | GET `/v1/users/validate-referral/{code}` (`useCache:false`). Fallback: `UNIS-LAUNCH-2024` → "Welcome early adopter!" on endpoint failure. |
+| `validateUsername` / `validateEmail` | Debounced (500ms) availability checks, `useCache:false`. Fail-open on outage; register 409 is the backstop. |
+| Geolocation (Nominatim) | Address → OpenStreetMap API → checks lat/lon against Harlem bounds → assigns jurisdictionId. `DIVIDING_LINE` lat `40.8095` (~130th St) splits Uptown vs Downtown. Off-bounds → national-waitlist prompt. |
+| `handleSubmit` | Phased: 1) PATCH `/v1/users/profile/photo` (FormData) → `photoUrl`. 2) POST `/v1/users/register` → `{ userId, role, signupToken, emailVerificationSent }`. 3) (Artist + song only) POST `/v1/media/signup-song?signupToken=…` (token-authorized, **no login**). Missing token or song failure → **partial success** (account created, song deferred to dashboard). Success → verify-email screen; **no auto-login/navigate**. |
+
+**Media URLs:** all server URLs go through `buildUrl` (R2→CDN rewrite + safe-encode). Blob previews use `createObjectURL` and must not.
+
+**Accessibility:** `useModalA11y` (Escape/focus-trap/focus-restore) + `role="dialog"`/`aria-modal`/`aria-labelledby`; `role="progressbar"` step indicator; `role="alert"` errors; all labels associated (`htmlFor`/`id`); `aria-invalid`/`aria-describedby` on validated fields; role cards, terms checkboxes, artist cards, and waitlist prompt are keyboard-operable.
+
+**Logging:** every async path logs (`[wizard]` prefix); submit phases include HTTP status; one `console.info` on account-created success.
+
+**Known issues:** see `QA_FINDINGS.md` Finding 10 — `GENRE_IDS` duplicate ids (10a, HIGH), latent audio-effect listeners (10c), dead `onSuccess` prop (10b), missing status-color tokens (10d). The support-artist preview intentionally does **not** use `playChoiceModal` or count plays (10e — pre-signup preview, by design).
+
+**Tests:** `createAccountWizard.test.jsx` — 58 pass + 1 todo; ~96% line coverage (dead illustration code removed, not excluded).
 
 ---
 
@@ -1235,7 +1245,7 @@ if (!user) { triggerGate('vote'); return; }
 |----------------|--------|
 | Missing routes for `/privacy`, `/terms`, `/cookie`, `/report` | ✅ Resolved — all routes present in App.jsx |
 | Guest login state: Header shows only "Logout" when user is null | ✅ Resolved — guest mode now uses AuthGateSheet instead of hard redirects |
-| Hardcoded referral bypass `UNIS-LAUNCH-2024` | ⚠️ Verify — check if still present in CreateAccountWizard |
+| Hardcoded referral bypass `UNIS-LAUNCH-2024` | ✅ Confirmed present — intentional launch fallback in `validateReferralCode` catch (endpoint-down path). Remove post-launch. |
 | `PrivateRoute` only checks token existence, not validity | ✅ Resolved — now uses `authLoaded` from AuthContext, no longer checks token directly |
 | Play tracking fires immediately on click | ✅ Resolved — `playTracker.js` implements 30-second delay |
 | `buildUrl` was inline in multiple files | ✅ Resolved — extracted to `/src/utils/buildUrl.js` |
@@ -1302,7 +1312,7 @@ if (!user) { triggerGate('vote'); return; }
 | `changePasswordWizard.jsx` | 6.5K | Change password wizard |
 | `commentSection.jsx` | 15K | Threaded comment system |
 | `cookiePolicy.jsx` | 10K | Cookie policy legal page |
-| `createAccountWizard.jsx` | 91K | Multi-step registration wizard |
+| `createAccountWizard.jsx` | 84K | Multi-step registration wizard (dead illustration code removed) |
 | `deleteAccountWizard.jsx` | 5.5K | Account deletion wizard |
 | `deleteSongModal.jsx` | 1.5K | Song deletion confirmation |
 | `earnings.jsx` | 25K | Full earnings dashboard |
