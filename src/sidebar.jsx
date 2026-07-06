@@ -6,28 +6,6 @@ import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
 import { buildUrl } from './utils/buildUrl';                        // ★ avatar photo
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
-import UnisLockup from './UnisLockup';
-
-
-// ★ Themed logo set — identical map to header.jsx so the drawer brand
-//   tracks the active theme exactly like the global header does.
-import logoblue   from './assets/unisLogoThree.svg';
-import logoorange from './assets/logo-orange.png';
-import logored    from './assets/logo-red.png';
-import logogreen  from './assets/logo-green.png';
-import logopurple from './assets/logo-purple.png';
-import logoyellow from './assets/logo-gold.png';
-import logodianna from './assets/logo-dianna.png';
-
-const LOGO_MAP = {                                                  // ★
-  blue: logoblue,
-  orange: logoorange,
-  red: logored,
-  green: logogreen,
-  purple: logopurple,
-  yellow: logoyellow,
-  dianna: logodianna,
-};
 
 // ★ Custom inline-SVG icon set (outline by default, duotone when active).
 //   Inline SVGs are required here — Lucide does not render reliably inside
@@ -230,7 +208,6 @@ const Sidebar = () => {
     },
   ];
 
-  const activeLogo = LOGO_MAP[theme] || logoblue;                  // ★
   const jName = user?.jurisdiction?.name || null;                 // ★
   const jId = user?.jurisdiction?.jurisdictionId || null;         // ★
   const goJurisdiction = () => handleNav(jId ? `/jurisdiction/${jId}` : '/discover'); // ★
@@ -257,28 +234,22 @@ const Sidebar = () => {
         <span className="pill-handle" />
       </button>
 
-      <nav className={`sidebar ${isOpen ? 'open' : ''}`} ref={sidebarRef}>
-        {/* ★ Brand + jurisdiction identity */}
-        <div className="sidebar-head">
-          <button
-            type="button"
-            className="sidebar-brand"
-            onClick={() => handleNav('/')}
-            aria-label="Unis home"
-          >
-          {/* <UnisLockup height={28} /> */}
+      <nav
+        className={`sidebar ${isOpen ? 'open' : ''} ${isGuest ? 'sidebar--guest' : ''}`}
+        ref={sidebarRef}
+      >
+        {/* ★ Jurisdiction identity — pinned to the very top of the drawer.
+            The empty brand button that used to sit above this was the source
+            of the bad top spacing, so it's gone entirely. */}
+        {jName && (
+          <button type="button" className="sidebar-juris" onClick={goJurisdiction}>
+            <span className="sidebar-juris__dot" />
+            <span className="sidebar-juris__text">
+              <span className="sidebar-juris__name">{jName}</span>
+              {/* <span className="sidebar-juris__sub">Your jurisdiction</span> */}
+            </span>
           </button>
-
-          {jName && (
-            <button type="button" className="sidebar-juris" onClick={goJurisdiction}>
-              <span className="sidebar-juris__dot" />
-              <span className="sidebar-juris__text">
-                <span className="sidebar-juris__name">{jName}</span>
-                {/* <span className="sidebar-juris__sub">Your jurisdiction</span> */}
-              </span>
-            </button>
-          )}
-        </div>
+        )}
 
         <ul>
           {sections.map((sec) => (
@@ -303,7 +274,9 @@ const Sidebar = () => {
           ))}
         </ul>
 
-        {/* ★ Account footer — lifetime earnings for members, sign-in for guests */}
+        {/* ★ Account footer — lifetime earnings for members, sign-in for guests.
+            Now flows directly beneath the nav (no longer pinned to the very
+            bottom) so the player can't cover it. */}
         <div className="sidebar-foot">
           {user && !isGuest ? (
             <button type="button" className="sidebar-account" onClick={handleProfile}>

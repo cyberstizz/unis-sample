@@ -84,7 +84,7 @@ $header-height: 75px;
   background: #0b0b0e;                       // solid near-black material (no streaming flash)
   border-right: 1px solid var(--sb-edge);    // the subtle highlighted brand edge
   border-top: 1px solid var(--sb-edge);    // the subtle highlighted brand edge
-  padding: 14px 12px 12px;
+  padding: 10px 12px 12px;                    // tightened top so jurisdiction sits high
   z-index: 100;
   overflow-y: auto;
   overflow-x: hidden;
@@ -96,52 +96,14 @@ $header-height: 75px;
   scrollbar-color: transparent transparent;
   &:hover { scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
 
-  // ── Brand + jurisdiction head ──────────────────────────────
-  .sidebar-head {
-    padding: 4px 8px 14px;
-    margin-bottom: 8px;
-    border-bottom: 1px solid
-    color-mix(in srgb, var(--unis-primary), transparent 88%);
-  }
-
-  .sidebar-brand {
-    display: inline-flex;
-    align-items: center;
-    background: transparent;
-    border: none;
-    padding: 4px 6px;
-    margin: 0 0 2px;
-    cursor: pointer;
-    border-radius: var(--unis-radius-sm, 10px);
-    transition: opacity 0.15s ease;
-    &:hover { opacity: 0.85; }
-  }
-
-  .sidebar-logo-img {
-    height: 52px;
-    width: 52px;
-    display: block;
-    -webkit-user-drag: none;
-    user-select: none;
-
-    filter:
-    drop-shadow(
-      0 0 10px
-      color-mix(
-        in srgb,
-        var(--unis-primary),
-        transparent 75%
-      )
-    );
-  }
-
+  // ── Jurisdiction (now pinned to the very top; no brand block above) ──
   .sidebar-juris {
     display: inline-flex;
     align-items: center;
     gap: 9px;
     width: 100%;
-    margin-top: 6px;
-    margin-bottom: 14px;
+    margin-top: 0;
+    margin-bottom: 10px;
     padding: 8px 11px;
     border-radius: var(--unis-radius-sm, 10px);
     background: var(--sb-soft);
@@ -190,12 +152,12 @@ $header-height: 75px;
     flex: 0 0 auto;
     list-style: none;
     padding: 0;
-    margin: 6px 0 0;
+    margin: 4px 0 0;
   }
 
 .sidebar-section {
   position: relative;
-  padding: 16px 16px 8px;
+  padding: 14px 16px 8px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1.8px;
@@ -277,9 +239,12 @@ $header-height: 75px;
   }
 
   // ── Account footer ─────────────────────────────────────────
+  // Flows directly after the nav list (margin-top is a small fixed gap, NOT
+  // `auto`) so it rises to sit just below the nav instead of being pinned to
+  // the bottom of the scroll area where the audio player covers it.
   .sidebar-foot {
     flex: 0 0 auto;
-    margin-top: auto;
+    margin-top: 8px;
     padding-top: 12px;
   }
 
@@ -315,7 +280,16 @@ $header-height: 75px;
       font-weight: 700;
       font-size: 14px;
 
-      img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      // Same flex min-content guard as the header avatar so a large photo
+      // can never stretch into an oval.
+      img {
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+        min-height: 0;
+        object-fit: cover;
+        display: block;
+      }
     }
 
     &__id { display: flex; flex-direction: column; min-width: 0; }
@@ -365,6 +339,20 @@ $header-height: 75px;
       font-size: 16px;
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Guest theme reset — mirror of the header. When logged out, the global
+// --unis-primary* tokens can still hold the last user's theme, tinting the
+// jurisdiction pill, section labels, active accent bar, etc. Redefine them
+// to the default blue on the drawer so a guest always sees blue.
+// ─────────────────────────────────────────────────────────────
+.sidebar.sidebar--guest {
+  --unis-primary:       #1d42a8;
+  --unis-primary-2:     #4a9eff;
+  --unis-primary-hover: #163387;
+  --unis-primary-soft:  #{color-mix(in srgb, #1d42a8, transparent 88%)};
+  --unis-primary-glow:  #{color-mix(in srgb, #1d42a8, transparent 60%)};
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -445,6 +433,10 @@ $header-height: 75px;
 
 .banner { z-index: 5; }
 
+// The old 90px bottom padding only existed to push the (bottom-pinned) footer
+// up clear of the player. The footer no longer pins to the bottom, so this
+// gap is removed — it was what pushed the account tag off-screen / behind the
+// player in the first place.
 .sidebar ul {
-  padding-bottom: 90px;
+  padding-bottom: 0;
 }
