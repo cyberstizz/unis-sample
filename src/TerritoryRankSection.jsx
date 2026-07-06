@@ -3,9 +3,11 @@ import { MapPin, Clock, Sparkles, RefreshCw } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import './territoryRankSection.scss';
 
-// ★ Dashboard shows only Week / Month / Year. All-time lives on the Discover page.
-const PERIOD_ORDER = ['week', 'month', 'year'];
-const PERIOD_LABELS = { week: 'Week', month: 'Month', year: 'Year' };
+// ★ Dashboard shows Day / Week / Month / Year. All-time lives on the Discover page.
+// ★ item 5: 'today' is computed nightly against the last COMPLETE day, so the
+//   Day tab shows yesterday's standing — exactly what the backend already stages.
+const PERIOD_ORDER = ['today', 'week', 'month', 'year'];
+const PERIOD_LABELS = { today: 'Day', week: 'Week', month: 'Month', year: 'Year' };
 
 const formatUpdated = (iso) => {
   if (!iso) return null;
@@ -100,12 +102,17 @@ const TerritoryRankSection = ({ artistId }) => {
   return (
     <div className="territory-rank">
       <div className="territory-rank__head">
-        <p className="territory-rank__caption">
-          Your standing where you&apos;re from, ranked by points.
+        <p className="territory-rank__caption"> {/* ★ item 4: restyled caption */}
+          <span className="territory-rank__caption-lead">Territory rank</span>
+          <span className="territory-rank__caption-sub">
+            {period === 'today'
+              ? "Yesterday's standing where you're from, ranked by points." /* ★ item 5 */
+              : "Your standing where you're from, ranked by points."}
+          </span>
         </p>
-        {updated && (
+        {updated && ( /* ★ item 6: small themed date timestamp */
           <span className="territory-rank__updated">
-            <Clock size={12} /> Updated {updated}
+            <Clock size={11} /> {updated}
           </span>
         )}
       </div>
