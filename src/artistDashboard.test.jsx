@@ -10,8 +10,13 @@ import { renderWithProviders } from './test/utils';
 
 // jsPDF uses canvas APIs unavailable in jsdom
 vi.mock('jspdf', () => {
-  const mockPdf = { setTextColor: vi.fn(), setFontSize: vi.fn(), setFont: vi.fn(), text: vi.fn(), save: vi.fn() };
-  return { jsPDF: vi.fn(() => mockPdf), default: vi.fn(() => mockPdf) };
+  const mockPdf = { // ★ mock now covers every method downloadOwnershipContract calls
+    setTextColor: vi.fn(), setFontSize: vi.fn(), setFont: vi.fn(), text: vi.fn(), save: vi.fn(),
+    addPage: vi.fn(), line: vi.fn(), rect: vi.fn(), setDrawColor: vi.fn(), setFillColor: vi.fn(), // ★
+    splitTextToSize: vi.fn((txt) => (Array.isArray(txt) ? txt : String(txt).split('\n'))), // ★ returns array like real jsPDF
+    internal: { pageSize: { getWidth: vi.fn(() => 595.28), getHeight: vi.fn(() => 841.89) } }, // ★ A4 in pt
+  };
+  return { jsPDF: vi.fn(() => mockPdf), default: vi.fn(() => mockPdf), __mockPdf: mockPdf }; // ★ export for assertions
 });
 
 // Wizards / modals — tested independently (inline factories: vi.mock is hoisted)
@@ -357,11 +362,13 @@ describe('ArtistDashboard', () => {
   });
 
   describe('Ownership contract', () => {
-    it('triggers the PDF without crashing', async () => {
+    it('generates and saves the PDF', async () => { // ★ was vacuous: passed even while the handler threw
+      const { __mockPdf } = await import('jspdf'); // ★
       await loadDashboard();
       const user = userEvent.setup();
       await dismissWelcome(user);
       await user.click(screen.getByRole('button', { name: /agreement/i }));
+      expect(__mockPdf.save).toHaveBeenCalledTimes(1); // ★ proves the full handler ran to completion
       expect(screen.getByRole('heading', { name: /testartist/i })).toBeInTheDocument();
     });
   });
