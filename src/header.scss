@@ -49,6 +49,24 @@ $header-height: 75px;
   }
 }
 
+// ─── GUEST THEME RESET ───────────────────────────────────────────
+// When the user is logged out, the global theme custom-properties may still
+// hold the *last logged-in user's* theme (stale tokens). Rather than trust
+// them, we locally redefine the entire --unis-primary* set to the default
+// blue on the header itself. Because these are inherited CSS variables, every
+// descendant that reads them (search icon, nav active state, mobile search
+// trigger, top glow line, etc.) is forced back to blue with zero JS.
+//
+// If you have canonical values for the blue theme, swap the two hex literals
+// below (primary #1d42a8, accent #4a9eff); everything else derives from them.
+.app-header.app-header--guest {
+  --unis-primary:       #1d42a8;
+  --unis-primary-2:     #4a9eff;
+  --unis-primary-hover: #163387;
+  --unis-primary-soft:  #{color-mix(in srgb, #1d42a8, transparent 88%)};
+  --unis-primary-glow:  #{color-mix(in srgb, #1d42a8, transparent 60%)};
+}
+
 // ─── SINGLE-ROW LAYOUT ──────────────────────────────────────────
 .header-inner {
   display: flex;
@@ -150,7 +168,11 @@ $header-height: 75px;
   gap: 6px;
   padding: 7px 16px;
   border-radius: 100px;
-  background: linear-gradient(135deg, #1d42a8 0%, #163387 100%);
+  // Valid, hardcoded blue gradient. The previous value had a malformed stop
+  // ("0%, $x, 6% 100%") which invalidated the whole declaration, leaving the
+  // button with no background — so it showed the header surface / stale theme
+  // glow behind it and read as grey/tinted.
+  background: linear-gradient(135deg, $unis-blue-bright 0%, #163387 100%);
   border: 1px solid rgba($unis-silver, 0.25);
   color: #fff;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -205,10 +227,17 @@ $header-height: 75px;
   }
 }
 
+// ─── AVATAR (LOGGED-IN) ─────────────────────────────────────────
+// The oval bug: .user-avatar is a flex container and .avatar-image is a flex
+// child. A flex child's default `min-width: auto` resolves to the image's
+// INTRINSIC width. When an uploaded photo is wider than 36px, that min-width
+// overrides `width: 100%` and stretches the image horizontally inside the
+// 36px-tall box → oval. `min-width/height: 0` kills that; aspect-ratio +
+// overflow keep it perfectly circular regardless of the source image.
 .avatar-image {
   width: 100%;
   height: 100%;
-  min-width: 0;          
+  min-width: 0;
   min-height: 0;
   object-fit: cover;
   display: block;
@@ -331,8 +360,8 @@ $header-height: 75px;
 .user-avatar {
   width: 36px;
   height: 36px;
-  aspect-ratio: 1 / 1;   // guarantee a square box regardless of anything else
-  overflow: hidden;      // clip the photo to the circle
+  aspect-ratio: 1 / 1;          // guarantee a square box no matter what
+  overflow: hidden;            // clip the photo to the circle
   border-radius: 50%;
   border: 1.5px solid rgba($unis-silver, 0.25);
   background: $unis-blue;

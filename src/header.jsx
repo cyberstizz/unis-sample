@@ -81,7 +81,9 @@ const Header = () => {
     dianna: logodianna,
   };
 
-  const activeLogo = LOGO_MAP[theme] || logoblue;
+  // When the user is a guest, force the brand logo back to the default blue
+  // mark so the header never shows the last logged-in user's themed logo.
+  const activeLogo = isGuest ? logoblue : (LOGO_MAP[theme] || logoblue);
 
 
   const FAVICON_MAP = {
@@ -106,8 +108,10 @@ const Header = () => {
 
 
   useEffect(() => {
+    // Guests always resolve to the blue theme so favicon + browser chrome
+    // never carry over a previous user's color.
     const fallbackTheme = "blue";
-    const safeTheme = theme || fallbackTheme;
+    const safeTheme = isGuest ? fallbackTheme : (theme || fallbackTheme);
 
     // 1. Update favicon
     const faviconHref = FAVICON_MAP[safeTheme] || FAVICON_MAP[fallbackTheme];
@@ -127,10 +131,13 @@ const Header = () => {
     // 2. Update browser top theme color
     const rootStyles = getComputedStyle(document.documentElement);
 
-    const cssThemeColor =
-      rootStyles.getPropertyValue("--unis-primary").trim() ||
-      THEME_COLOR_FALLBACKS[safeTheme] ||
-      THEME_COLOR_FALLBACKS[fallbackTheme];
+    // For guests, prefer the hardcoded blue fallback over the (possibly stale)
+    // --unis-primary custom property.
+    const cssThemeColor = isGuest
+      ? THEME_COLOR_FALLBACKS[fallbackTheme]
+      : (rootStyles.getPropertyValue("--unis-primary").trim() ||
+         THEME_COLOR_FALLBACKS[safeTheme] ||
+         THEME_COLOR_FALLBACKS[fallbackTheme]);
 
     let themeColorMeta = document.querySelector("meta[name='theme-color']");
     if (!themeColorMeta) {
@@ -150,7 +157,7 @@ const Header = () => {
     }
 
     tileColorMeta.setAttribute("content", cssThemeColor);
-  }, [theme]);
+  }, [theme, isGuest]);
 
   const navItems = [
     { label: "Vote", path: "/voteawards", handler: handleClick, icon: "vote" },
@@ -189,7 +196,7 @@ const Header = () => {
   };
 
   return (
-    <header className="app-header">
+    <header className={`app-header ${isGuest ? 'app-header--guest' : ''}`}>
       <div className="header-inner">
         {/* Left: Hamburger + Logo */}
         <div className="header-left">
