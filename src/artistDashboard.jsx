@@ -1324,12 +1324,10 @@ const ArtistDashboard = () => {
                           <span>
                             <Vote size={12} /> {song.votes || song.voteCount || 0} votes
                           </span>
-                          {song.isrc ? (
+                          {song.isrc && ( // ★ item 8: no-ISRC badge removed; absence is simply unlabeled
                             <span>
                               <ShieldCheck size={12} /> ISRC {formatIsrc(song.isrc)}
                             </span>
-                          ) : (
-                            <span className="artist-song-card__warn">No ISRC</span>
                           )}
                         </div>
                       </div>
@@ -1474,7 +1472,9 @@ const ArtistDashboard = () => {
                       <p>
                         {recentAward?.jurisdiction?.name || 'Location'}
                         {recentAward?.genre?.name && ` · ${recentAward.genre.name}`}
-                        {recentAward?.awardDate && ` · ${formatAwardDate(recentAward.awardDate)}`}
+                        {recentAward?.awardDate && ( // ★ item 10: date in theme color
+                          <span className="artist-award-date"> · {formatAwardDate(recentAward.awardDate)}</span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1567,7 +1567,9 @@ const ArtistDashboard = () => {
                           <p>
                             {recentSong?.song?.title && `"${recentSong.song.title}"`}
                             {recentSong?.jurisdiction?.name && ` · ${recentSong.jurisdiction.name}`}
-                            {recentSong?.awardDate && ` · ${formatAwardDate(recentSong.awardDate)}`}
+                            {recentSong?.awardDate && ( // ★ item 10: date in theme color
+                              <span className="artist-award-date"> · {formatAwardDate(recentSong.awardDate)}</span>
+                            )}
                           </p>
                         </div>
                       </div>
