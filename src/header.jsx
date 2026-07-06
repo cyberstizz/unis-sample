@@ -300,8 +300,14 @@ const Header = () => {
                   <div className="dropdown-user-info">
                     <span className="dropdown-username">{user.username}</span>
                   </div>
-                  <button className="dropdown-item" onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}>
-                    Profile
+                  <button
+                    className="dropdown-item"
+                    onClick={() => {
+                      navigate(user?.role === 'artist' ? '/artistDashboard' : '/profile');
+                      setUserMenuOpen(false);
+                    }}
+                  >
+                    {user?.role === 'artist' ? 'Dashboard' : 'Profile'}
                   </button>
                   <div className="dropdown-divider" />
                   <button className="dropdown-item logout" onClick={handleLogout}>
