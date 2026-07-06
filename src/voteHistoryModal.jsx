@@ -22,7 +22,11 @@ const VoteHistoryModal = ({ show, onClose, votes = [] }) => {
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
+    const str = String(dateString);
+    // ★ item 11: bare YYYY-MM-DD parses as UTC midnight and shifts a day back
+    // in timezones west of UTC (e.g. New York) — anchor to local noon.
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(`${str}T12:00:00`) : new Date(str);
+    if (Number.isNaN(date.getTime())) return '';
     const month = date.getMonth() + 1;
     const day = String(date.getDate()).padStart(2, '0');
     const year = String(date.getFullYear()).slice(-2);
@@ -64,10 +68,7 @@ const VoteHistoryModal = ({ show, onClose, votes = [] }) => {
           <p className="modal-subtitle">
             <span className="modal-subtitle__count">{count}</span>
             <span className="modal-subtitle__label">{countLabel}</span>
-            {count > 0 && (
-              <span className="modal-subtitle__voted-for">You voted for</span>
-            )}
-          </p>
+          </p> {/* ★ item 11: removed the dangling "You voted for" line — the rows speak for themselves */}
         </div>
 
         <div className="votes-container">

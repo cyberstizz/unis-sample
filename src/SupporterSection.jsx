@@ -15,6 +15,17 @@ const formatSince = (value) => {
   return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 };
 
+// ★ item 2: short axis label for the growth chart (e.g. "Jun 7").
+// Date-only strings (YYYY-MM-DD) parse as UTC midnight, which renders as the
+// PREVIOUS day in negative-offset timezones like New York — anchor to local noon.
+const formatChartDay = (value) => {
+  if (!value) return '';
+  const str = String(value);
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(`${str}T12:00:00`) : new Date(str);
+  if (Number.isNaN(d.getTime())) return str;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
 // ── Broadcast composer ───────────────────────────────────────
 const BroadcastComposer = ({ supporterCount, onClose }) => {
   const [text, setText] = useState('');
@@ -240,24 +251,40 @@ const SupportersSection = ({ artistId }) => {
               <div className="sup__growth-head">
                 <span className="artist-section__eyebrow">Last 30 days</span>
                 <h3>New supporters</h3>
+                <span className="sup__growth-total"> {/* ★ item 2: period total at a glance */}
+                  +{formatNumber(growth.reduce((sum, g) => sum + Number(g.count || 0), 0))}
+                </span>
               </div>
-              <div
-                className="sup__sparkline"
-                role="img"
-                aria-label="New supporters over the last 30 days"
-              >
-                {growth.map((g, i) => {
-                  const c = Number(g.count || 0);
-                  const h = maxGrowth > 0 ? Math.max(6, (c / maxGrowth) * 100) : 6;
-                  return (
-                    <span
-                      key={i}
-                      className="sup__bar"
-                      style={{ height: `${h}%` }}
-                      title={`${g.day}: ${c} new`}
-                    />
-                  );
-                })}
+              {/* ★ item 2: an actual chart — y-axis peak label, gridline, baseline,
+                  true zero heights, and first/last date labels on the x-axis */}
+              <div className="sup__chart" role="img" aria-label={`New supporters per day over the last 30 days, peaking at ${maxGrowth}`}>
+                <div className="sup__chart-y">
+                  <span>{formatNumber(maxGrowth)}</span>
+                  <span>0</span>
+                </div>
+                <div className="sup__chart-plot">
+                  <span className="sup__chart-gridline" aria-hidden="true" />
+                  <div className="sup__chart-bars">
+                    {growth.map((g, i) => {
+                      const c = Number(g.count || 0);
+                      const h = maxGrowth > 0 ? (c / maxGrowth) * 100 : 0; // ★ item 2: zeros stay zero
+                      return (
+                        <span
+                          key={i}
+                          className={`sup__bar ${c === 0 ? 'sup__bar--zero' : ''}`}
+                          style={{ height: `${h}%` }}
+                          title={`${formatChartDay(g.day)}: ${c} new`}
+                        >
+                          <span className="sup__bar-value" aria-hidden="true">{c}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div className="sup__chart-x" aria-hidden="true">
+                    <span>{formatChartDay(growth[0]?.day)}</span>
+                    <span>{formatChartDay(growth[growth.length - 1]?.day)}</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}

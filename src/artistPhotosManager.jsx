@@ -13,6 +13,7 @@ const ArtistPhotosManager = ({ artistId }) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [confirmId, setConfirmId] = useState(null); // ★ item 9: photo awaiting delete confirmation
   const inputRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -69,12 +70,15 @@ const ArtistPhotosManager = ({ artistId }) => {
   };
 
   const handleDelete = async (photoId) => {
+    setConfirmId(null); // ★ item 9: confirmation accepted — proceed
     setDeletingId(photoId);
     setError(null);
     try {
       await apiCall({ method: 'delete', url: `/v1/users/${artistId}/photos/${photoId}` });
+      console.log('Artist photo deleted:', photoId); // ★ checklist: success logging
       setPhotos((prev) => prev.filter((p) => p.photoId !== photoId));
     } catch (err) {
+      console.error('Artist photo delete failed:', photoId, err); // ★ checklist: failure logging
       setError(err.response?.data?.error || 'Could not remove that photo.');
     } finally {
       setDeletingId(null);
@@ -104,18 +108,41 @@ const ArtistPhotosManager = ({ artistId }) => {
         <div className="apm__grid">
           {photos.map((photo) => {
             const url = buildUrl(photo.photoUrl);
+            const isConfirming = confirmId === photo.photoId; // ★ item 9
             return (
               <div className="apm__tile" key={photo.photoId}>
                 <img src={url} alt="" loading="lazy" />
-                <button
-                  type="button"
-                  className="apm__del"
-                  onClick={() => handleDelete(photo.photoId)}
-                  disabled={deletingId === photo.photoId}
-                  aria-label="Remove photo"
-                >
-                  {deletingId === photo.photoId ? '…' : <Trash2 size={15} />}
-                </button>
+                {isConfirming ? ( // ★ item 9: explicit warning before anything is deleted
+                  <div className="apm__confirm" role="alertdialog" aria-label="Confirm photo removal">
+                    <p>Remove this photo?</p>
+                    <div className="apm__confirm-actions">
+                      <button
+                        type="button"
+                        className="apm__confirm-yes"
+                        onClick={() => handleDelete(photo.photoId)}
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        className="apm__confirm-no"
+                        onClick={() => setConfirmId(null)}
+                      >
+                        Keep
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="apm__del"
+                    onClick={() => setConfirmId(photo.photoId)} // ★ item 9: arm, don't delete
+                    disabled={deletingId === photo.photoId}
+                    aria-label="Remove photo"
+                  >
+                    {deletingId === photo.photoId ? '…' : <Trash2 size={15} />}
+                  </button>
+                )}
               </div>
             );
           })}

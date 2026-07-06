@@ -358,3 +358,53 @@
   padding: 4px 2px 10px;
   &:hover { color: var(--unis-text); }
 }
+
+// ★ item 12: artist search within a picked area
+.sap-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 0 12px;
+  border-radius: var(--unis-radius-sm, 10px);
+  border: 1px solid var(--unis-border-hi);
+  background: rgba(0, 0, 0, 0.32);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+
+  > svg { flex: none; color: var(--unis-text-3); }
+
+  &:focus-within {
+    border-color: var(--unis-primary);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft);
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 10px 0;
+    color: var(--unis-text);
+    font-family: var(--unis-font-sans);
+    font-size: 13.5px;
+
+    &::placeholder { color: var(--unis-text-4, var(--unis-text-3)); }
+  }
+
+  &__clear {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.07);
+    border: none;
+    color: var(--unis-text-3);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover { background: rgba(255, 255, 255, 0.14); color: var(--unis-text); }
+  }
+}

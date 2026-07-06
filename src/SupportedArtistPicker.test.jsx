@@ -1,195 +1,410 @@
-// src/SupportedArtistPicker.test.jsx
-import React from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor, cleanup } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
-import { server } from './test/mocks/server';
-import { renderWithProviders } from './test/utils';
-import cacheService from './services/cacheService';
-import SupportedArtistPicker from './SupportedArtistPicker';
+// SupportedArtistPicker.scss -- premium glassmorphic, theme-aware (unis tokens)
 
-const API = 'http://localhost:8080/api';
-
-const DEFAULT_BREADCRUMB = [
-  { jurisdictionId: 'jur-unis', name: 'Unis' },
-  { jurisdictionId: 'jur-ny', name: 'New York' },
-  { jurisdictionId: 'jur-harlem', name: 'Harlem' },
-];
-const DEFAULT_TRENDING = [
-  ['art-1', 'Nyla Reign', 120, '/uploads/n.jpg'],
-  ['art-2', 'Kojin', 90, null],
-  ['self-user', 'Me Myself', 80, null], // should be filtered out (== userId)
-];
-
-function installPicker({ breadcrumb, trending, roots, putResponse, putStatus } = {}) {
-  server.use(
-    http.get(`${API}/v1/jurisdictions/:id/breadcrumb`, () =>
-      HttpResponse.json(breadcrumb ?? DEFAULT_BREADCRUMB)),
-    http.get(`${API}/v1/jurisdictions/roots`, () =>
-      HttpResponse.json(roots ?? [{ jurisdictionId: 'jur-unis', name: 'Unis' }])),
-    http.get(`${API}/v1/jurisdictions/:id/trending`, () =>
-      HttpResponse.json(trending ?? DEFAULT_TRENDING)),
-    http.put(`${API}/v1/users/:id/supported-artist`, () =>
-      HttpResponse.json(putResponse ?? { status: putStatus ?? 'immediate' })),
-  );
+.sap-overlay {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 18%, var(--unis-primary-soft), transparent 44%),
+    rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  font-family: var(--unis-font-sans);
+  backdrop-filter: blur(8px);
+  animation: sapFade 0.2s ease;
 }
 
-const baseProps = () => ({
-  show: true,
-  onClose: vi.fn(),
-  userId: 'self-user',
-  currentArtistId: null,
-  userJurisdictionId: 'jur-harlem',
-  userJurisdictionName: 'Harlem',
-  onSuccess: vi.fn(),
-});
+.sap-modal {
+  position: relative;
+  width: 90%;
+  max-width: 480px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.01) 42%, transparent),
+    var(--unis-panel);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-lg);
+  overflow: hidden;
+  animation: sapSlide 0.28s ease;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.035),
+    0 0 38px -20px var(--unis-primary-glow);
 
-const renderPicker = (props = {}) =>
-  renderWithProviders(<SupportedArtistPicker {...baseProps()} {...props} />, { as: 'artist' });
-
-// pick the area, then wait for its artists to load
-async function openHarlem(user) {
-  await screen.findByRole('button', { name: /Harlem/i });
-  await user.click(screen.getByRole('button', { name: /Harlem/i }));
-  await screen.findByText('Nyla Reign');
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(460px 240px at 50% 0%, var(--unis-primary-soft), transparent 68%);
+    pointer-events: none;
+    z-index: 0;
+  }
 }
 
-describe('SupportedArtistPicker', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    localStorage.clear();
-    sessionStorage.clear();
-    cacheService.clearAll();
-    server.resetHandlers();
-    installPicker();
-  });
-  afterEach(() => {
-    cleanup();
-    cacheService.clearAll();
-  });
+.sap-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  display: flex;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-sm);
+  color: var(--unis-text-3);
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
 
-  it('renders nothing when show is false', () => {
-    renderPicker({ show: false });
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
+  &:hover { background: var(--unis-primary-soft); color: var(--unis-text); transform: scale(1.04); }
+  &:focus-visible { outline: 2px solid var(--unis-primary-glow); outline-offset: 3px; }
+}
 
-  it('lists the areas from the breadcrumb, most-local first', async () => {
-    renderPicker();
-    expect(await screen.findByRole('button', { name: /Harlem/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /New York/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Unis/i })).toBeInTheDocument();
-  });
+.sap-header {
+  position: relative;
+  z-index: 1;
+  padding: 1.75rem 1.75rem 1rem;
+  border-bottom: 1px solid var(--unis-border);
 
-  it('shows first-pick header copy', async () => {
-    renderPicker();
-    expect(await screen.findByRole('heading', { name: /Choose your artist/i })).toBeInTheDocument();
-    expect(screen.getByText(/Pick an area, then back one of its top artists/i)).toBeInTheDocument();
-  });
+  &__title {
+    margin: 0 0 0.35rem;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--unis-text);
+  }
+  &__sub {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--unis-text-3);
+    max-width: 90%;
+  }
+}
 
-  it('shows change-mode header copy when an artist is already supported', async () => {
-    renderPicker({ currentArtistId: 'art-2' });
-    expect(await screen.findByRole('heading', { name: /Change who you support/i })).toBeInTheDocument();
-  });
+.sap-search {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 1.25rem 0.5rem;
+  padding: 0.7rem 0.9rem;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-sm);
+  color: var(--unis-text-3);
 
-  it('loads an area\u2019s top artists and excludes the current user', async () => {
-    renderPicker();
-    const user = userEvent.setup();
-    await openHarlem(user);
-    expect(screen.getByText('Nyla Reign')).toBeInTheDocument();
-    expect(screen.getByText('Kojin')).toBeInTheDocument();
-    expect(screen.queryByText('Me Myself')).not.toBeInTheDocument();
-    expect(screen.getByText(/Top artists in Harlem/i)).toBeInTheDocument();
-  });
+  &:focus-within {
+    border-color: var(--unis-primary-glow);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft);
+  }
 
-  it('marks the current artist with a Current tag', async () => {
-    renderPicker({ currentArtistId: 'art-2' });
-    const user = userEvent.setup();
-    await openHarlem(user);
-    expect(screen.getByText('Current')).toBeInTheDocument();
-  });
+  input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--unis-text);
+    font-size: 0.92rem;
+    font-family: inherit;
 
-  it('submits a first pick and shows the immediate success state', async () => {
-    let payload = null;
-    server.use(
-      http.put(`${API}/v1/users/:id/supported-artist`, async ({ request }) => {
-        payload = await request.json();
-        return HttpResponse.json({ status: 'immediate' });
-      }),
-    );
-    const props = baseProps();
-    renderWithProviders(<SupportedArtistPicker {...props} />, { as: 'artist' });
-    const user = userEvent.setup();
-    await openHarlem(user);
-    await user.click(screen.getByRole('option', { name: /Nyla Reign/i }));
-    await user.click(screen.getByRole('button', { name: /Support this artist/i }));
-    await waitFor(() => expect(payload).toEqual({ artistId: 'art-1' }));
-    expect(await screen.findByText(/now supporting them/i)).toBeInTheDocument();
-    expect(props.onSuccess).toHaveBeenCalled();
-  });
+    &::placeholder { color: var(--unis-text-3); }
+  }
+}
 
-  it('queues a change and shows the pending success state', async () => {
-    server.use(
-      http.put(`${API}/v1/users/:id/supported-artist`, () =>
-        HttpResponse.json({ status: 'pending' })),
-    );
-    renderPicker({ currentArtistId: 'art-2' });
-    const user = userEvent.setup();
-    await openHarlem(user);
-    await user.click(screen.getByRole('option', { name: /Nyla Reign/i }));
-    await user.click(screen.getByRole('button', { name: /Queue change/i }));
-    expect(await screen.findByText(/Change queued/i)).toBeInTheDocument();
-  });
+.sap-list {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  height: 320px;
+  overflow-y: auto;
+  padding: 0.5rem 1.25rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 
-  it('disables submit when the selected artist is the current one', async () => {
-    renderPicker({ currentArtistId: 'art-1' });
-    const user = userEvent.setup();
-    await openHarlem(user);
-    await user.click(screen.getByRole('option', { name: /Nyla Reign/i }));
-    expect(screen.getByRole('button', { name: /Already supported/i })).toBeDisabled();
-  });
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: var(--unis-border-hi); border-radius: 999px; }
+}
 
-  it('goes back to the area list from the artist list', async () => {
-    renderPicker();
-    const user = userEvent.setup();
-    await openHarlem(user);
-    await user.click(screen.getByRole('button', { name: /All areas/i }));
-    expect(await screen.findByRole('button', { name: /Harlem/i })).toBeInTheDocument();
-    expect(screen.queryByText('Nyla Reign')).not.toBeInTheDocument();
-  });
+.sap-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  text-align: left;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
+    rgba(0, 0, 0, 0.14);
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-sm);
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
 
-  it('shows an empty state when an area has no artists', async () => {
-    server.use(http.get(`${API}/v1/jurisdictions/:id/trending`, () => HttpResponse.json([])));
-    renderPicker();
-    const user = userEvent.setup();
-    await screen.findByRole('button', { name: /Harlem/i });
-    await user.click(screen.getByRole('button', { name: /Harlem/i }));
-    expect(await screen.findByText(/No artists here yet/i)).toBeInTheDocument();
-  });
+  &:hover {
+    border-color: var(--unis-border-hi);
+    transform: translateX(3px);
+  }
+  &.is-selected {
+    border-color: var(--unis-primary-glow);
+    background:
+      linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.03)),
+      rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 26px -18px var(--unis-primary-glow);
+  }
+  &:focus-visible { outline: 2px solid var(--unis-primary-glow); outline-offset: 2px; }
 
-  it('shows an error when the area list fails to load', async () => {
-    server.use(http.get(`${API}/v1/jurisdictions/:id/breadcrumb`, () =>
-      HttpResponse.json({ error: 'boom' }, { status: 500 })));
-    renderPicker();
-    expect(await screen.findByText(/Could not load your areas/i)).toBeInTheDocument();
-  });
+  &__avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--unis-primary);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft);
 
-  it('shows an error when the top artists fail to load', async () => {
-    server.use(http.get(`${API}/v1/jurisdictions/:id/trending`, () =>
-      HttpResponse.json({ error: 'boom' }, { status: 500 })));
-    renderPicker();
-    const user = userEvent.setup();
-    await screen.findByRole('button', { name: /Harlem/i });
-    await user.click(screen.getByRole('button', { name: /Harlem/i }));
-    expect(await screen.findByText(/Could not load top artists/i)).toBeInTheDocument();
-  });
+    &--ph {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--unis-text);
+      background: linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.04));
+    }
+  }
 
-  it('calls onClose from the close button', async () => {
-    const props = baseProps();
-    renderWithProviders(<SupportedArtistPicker {...props} />, { as: 'artist' });
-    await screen.findByRole('button', { name: /Harlem/i });
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /Close/i }));
-    expect(props.onClose).toHaveBeenCalled();
-  });
-});
+  &__info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  &__name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--unis-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2px;
+    font-size: 0.74rem;
+    color: var(--unis-text-3);
+    font-weight: 600;
+  }
+  &__current-tag {
+    padding: 1px 7px;
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--unis-primary-2);
+    background: var(--unis-primary-soft);
+    border: 1px solid var(--unis-primary-glow);
+    border-radius: 999px;
+  }
+  &__check {
+    display: flex;
+    flex-shrink: 0;
+    color: var(--unis-primary-2);
+  }
+}
+
+.sap-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  color: var(--unis-text-3);
+  text-align: center;
+
+  &--error { color: #f87171; }
+}
+
+.sap-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--unis-border);
+  border-top-color: var(--unis-primary);
+  animation: sapSpin 0.8s linear infinite;
+}
+
+.sap-inline-error {
+  position: relative;
+  z-index: 1;
+  margin: 0 1.25rem;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.82rem;
+  color: #fca5a5;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: var(--unis-radius-sm);
+}
+
+.sap-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--unis-border);
+}
+
+.sap-btn {
+  flex: 1;
+  padding: 0.8rem 1rem;
+  border-radius: var(--unis-radius-sm);
+  font-size: 0.92rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.16s ease, opacity 0.16s ease;
+  border: 1px solid transparent;
+
+  &--ghost {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--unis-border);
+    color: var(--unis-text-2);
+    &:hover { background: rgba(255, 255, 255, 0.09); color: var(--unis-text); }
+  }
+  &--primary {
+    background: linear-gradient(135deg, var(--unis-primary), var(--unis-primary-2));
+    color: #fff;
+    box-shadow: 0 12px 28px -14px var(--unis-primary-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    &:hover:not(:disabled) { transform: translateY(-1px); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+  &:focus-visible { outline: 2px solid var(--unis-primary-glow); outline-offset: 2px; }
+}
+
+.sap-success {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.5rem 2rem 2rem;
+  gap: 0.5rem;
+
+  &__icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+    border-radius: 18px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--unis-primary), var(--unis-primary-2));
+    box-shadow: 0 14px 30px -12px var(--unis-primary-glow), 0 0 0 4px var(--unis-primary-soft);
+  }
+  &__title {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--unis-text);
+  }
+  &__body {
+    margin: 0 0 1.25rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--unis-text-3);
+    max-width: 30ch;
+  }
+  .sap-btn { flex: none; min-width: 140px; }
+}
+
+@keyframes sapFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sapSlide {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes sapSpin { to { transform: rotate(360deg); } }
+
+@media (max-width: 480px) {
+  .sap-modal { width: 95%; max-height: 88vh; }
+  .sap-header { padding: 1.4rem 1.4rem 0.9rem; }
+  .sap-header__title { font-size: 1.2rem; }
+}
+
+.sap-jur-list {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 320px; overflow-y: auto; padding: 4px 0;
+}
+.sap-jur {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; width: 100%;
+  background: var(--unis-panel-2); border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius); cursor: pointer; text-align: left;
+  color: var(--unis-text); font-family: var(--unis-font-sans);
+  transition: border-color .15s ease, background .15s ease;
+  &:hover { background: var(--unis-panel-hi); border-color: var(--unis-primary-border); }
+  svg { color: var(--unis-primary-2); flex-shrink: 0; }
+  &__name { flex: 1; font-size: 15px; font-weight: 600; }
+  &__go { font-size: 12px; color: var(--unis-text-3); }
+}
+.sap-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: none; cursor: pointer;
+  color: var(--unis-text-3); font-family: var(--unis-font-sans); font-size: 13px; font-weight: 600;
+  padding: 4px 2px 10px;
+  &:hover { color: var(--unis-text); }
+}
+
+// ★ item 12: artist search within a picked area
+.sap-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 0 12px;
+  border-radius: var(--unis-radius-sm, 10px);
+  border: 1px solid var(--unis-border-hi);
+  background: rgba(0, 0, 0, 0.32);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+
+  > svg { flex: none; color: var(--unis-text-3); }
+
+  &:focus-within {
+    border-color: var(--unis-primary);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft);
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 10px 0;
+    color: var(--unis-text);
+    font-family: var(--unis-font-sans);
+    font-size: 13.5px;
+
+    &::placeholder { color: var(--unis-text-4, var(--unis-text-3)); }
+  }
+
+  &__clear {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.07);
+    border: none;
+    color: var(--unis-text-3);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover { background: rgba(255, 255, 255, 0.14); color: var(--unis-text); }
+  }
+}

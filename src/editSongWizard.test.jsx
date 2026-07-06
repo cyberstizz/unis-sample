@@ -132,12 +132,12 @@ describe('EditSongWizard — visibility', () => {
 
   it('renders the overlay when show=true and song is provided', () => {
     renderWizard();
-    expect(document.querySelector('.upload-wizard-overlay')).not.toBeNull();
+    expect(document.querySelector('.esw-overlay')).not.toBeNull();
   });
 
   it('renders the wizard panel inside the overlay', () => {
     renderWizard();
-    expect(document.querySelector('.upload-wizard')).not.toBeNull();
+    expect(document.querySelector('.esw')).not.toBeNull();
   });
 });
 
@@ -181,20 +181,21 @@ describe('EditSongWizard — initial state pre-population', () => {
     renderWizard({ song: BLANK_SONG });
     expect(document.querySelector('img[alt="Song artwork"]')).toBeNull();
     // Lucide Music icon renders an svg inside the placeholder div
-    expect(document.querySelector('.upload-wizard svg')).not.toBeNull();
+    expect(document.querySelector('.esw__artwork-placeholder svg')).not.toBeNull();
   });
 
   it('defaults download policy toggle to "free" for a free song', () => {
     renderWizard();
     const freeBtn = screen.getByRole('button', { name: /free download/i });
-    // Active button has 2px solid border
-    expect(freeBtn.style.border).toContain('2px solid');
+    expect(freeBtn).toHaveAttribute('aria-pressed', 'true'); // ★ item 7: semantic active state, not inline style
+    expect(freeBtn.className).toContain('is-active'); // ★
   });
 
   it('defaults download policy toggle to "paid" for a paid song', () => {
     renderWizard({ song: PAID_SONG });
     const paidBtn = screen.getByRole('button', { name: /paid download/i });
-    expect(paidBtn.style.border).toContain('2px solid');
+    expect(paidBtn).toHaveAttribute('aria-pressed', 'true'); // ★ item 7
+    expect(paidBtn.className).toContain('is-active'); // ★
   });
 
   it('pre-fills the price input in dollars for a paid song', () => {
@@ -425,7 +426,7 @@ describe('EditSongWizard — cancel', () => {
   it('Close (×) button calls onClose', async () => {
     const { onClose } = renderWizard();
     const user = userEvent.setup();
-    await user.click(document.querySelector('.close-button'));
+    await user.click(screen.getByRole('button', { name: /^close$/i })); // ★ item 7: accessible selector
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -447,9 +448,7 @@ describe('EditSongWizard — cancel', () => {
 // SUBMIT — VALIDATION ERRORS
 // ===========================================================================
 describe('EditSongWizard — submit validation', () => {
-  it('alerts and blocks submission when paid policy has no price', async () => {
-    // Use window.alert spy since the component uses alert()
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('shows an inline error and blocks submission when paid policy has no price', async () => { // ★ item 7: alert() → inline
     const apiSpy = vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
 
     renderWizard();
@@ -458,12 +457,11 @@ describe('EditSongWizard — submit validation', () => {
     // policy changed → button enabled, but no price set
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
-    expect(alertSpy).toHaveBeenCalledWith(expect.stringMatching(/minimum download price is \$1\.99/i));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/minimum download price is \$1\.99/i); // ★
     expect(apiSpy).not.toHaveBeenCalled();
   });
 
-  it('alerts when paid price is below $1.99', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('shows an inline error when paid price is below $1.99', async () => { // ★ item 7
     vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
 
     renderWizard();
@@ -472,11 +470,10 @@ describe('EditSongWizard — submit validation', () => {
     await user.type(screen.getByPlaceholderText('1.99'), '0.99');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
-    expect(alertSpy).toHaveBeenCalledWith(expect.stringMatching(/minimum download price is \$1\.99/i));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/minimum download price is \$1\.99/i); // ★
   });
 
-  it('does NOT alert when paid price is exactly $1.99', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('does NOT show a validation error when paid price is exactly $1.99', async () => { // ★ item 7
     vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
 
     renderWizard();
@@ -485,7 +482,7 @@ describe('EditSongWizard — submit validation', () => {
     await user.type(screen.getByPlaceholderText('1.99'), '1.99');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
-    expect(alertSpy).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument(); // ★
   });
 });
 
@@ -784,8 +781,7 @@ describe('EditSongWizard — submit success', () => {
 // SUBMIT — ERROR HANDLING
 // ===========================================================================
 describe('EditSongWizard — submit errors', () => {
-  it('alerts the backend error message when the API returns one', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('shows an inline error when the API fails', async () => { // ★ item 7: alert() → inline
     vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
       const err = new Error('Request failed');
       err.response = { data: { message: 'Storage quota exceeded' } };
@@ -797,9 +793,7 @@ describe('EditSongWizard — submit errors', () => {
     await user.click(screen.getByRole('button', { name: /no download/i }));
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
-    await waitFor(() =>
-      expect(alertSpy).toHaveBeenCalledWith(expect.stringMatching(/failed to update song/i))
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(/failed to update the song/i); // ★
   });
 
   it('does not call onSuccess on failure', async () => {

@@ -1,168 +1,394 @@
-$unis-blue: var(--unis-primary);
+// =============================================================================
+// EditSongWizard — UNIS design system (esw- namespace)
+// ★ item 7: full revamp. Previously reused another wizard's generic classes
+//   (.upload-wizard-overlay) plus a wall of inline styles with hardcoded
+//   light-mode grays. Now mirrors UploadWizard's design language with
+//   --unis-* tokens throughout — theme-aware in all seven palettes.
+// =============================================================================
 
-
-.upload-wizard-overlay {
+.esw-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.4);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  font-family: 'Poppins', sans-serif;
+  padding: 16px;
+  animation: esw-fade-in 0.2s ease both;
+}
 
-  .upload-wizard {
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-    width: 95%;
-    max-width: 520px;
-    padding: 2rem 2.5rem;
-    max-height: 85vh;
-    overflow-y: auto;
-    position: relative;
-    animation: fadeIn 0.3s ease-in-out;
+.esw {
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--unis-radius-lg);
+  background: rgba(12, 14, 20, 0.9);
+  border: 1px solid var(--unis-border-hi);
+  box-shadow:
+    0 36px 90px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  font-family: var(--unis-font-sans);
+  color: var(--unis-text);
+  animation: esw-rise 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  overflow: hidden;
+}
 
-    .close-button {
-      position: absolute;
-      top: 12px;
-      right: 15px;
-      background: none;
-      border: none;
-      font-size: 1.6rem;
-      cursor: pointer;
-      color: #888;
-      transition: color 0.2s ease;
-      &:hover { color: #000; }
+// -----------------------------------------------------------------------------
+// Header
+// -----------------------------------------------------------------------------
+.esw__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--unis-border);
+}
+
+.esw__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--unis-radius-sm);
+  background: var(--unis-primary-soft);
+  border: 1px solid var(--unis-primary);
+  color: var(--unis-primary-2);
+}
+
+.esw__titles {
+  flex: 1;
+  min-width: 0;
+
+  h2 {
+    margin: 2px 0 0;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--unis-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.esw__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--unis-radius-sm);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid var(--unis-border);
+  color: var(--unis-text-3);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+
+  &:hover {
+    background: var(--unis-primary-soft);
+    color: var(--unis-text);
+  }
+  &:focus-visible { outline: 2px solid var(--unis-primary-glow); outline-offset: 2px; }
+}
+
+// -----------------------------------------------------------------------------
+// Body
+// -----------------------------------------------------------------------------
+.esw__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 22px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 999px; }
+}
+
+.esw__field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 18px;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.esw__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--unis-text-3);
+
+  svg { color: var(--unis-primary-2); }
+}
+
+// Artwork
+.esw__artwork {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0;
+}
+
+.esw__artwork-img {
+  width: 148px;
+  height: 148px;
+  object-fit: cover;
+  border-radius: var(--unis-radius-sm);
+  border: 2px solid var(--unis-primary);
+  box-shadow: 0 0 16px var(--unis-primary-glow);
+}
+
+.esw__artwork-placeholder {
+  width: 148px;
+  height: 148px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--unis-radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px dashed var(--unis-border-hi);
+  color: var(--unis-text-4, var(--unis-text-3));
+}
+
+.esw__file-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--unis-radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--unis-border-hi);
+  color: var(--unis-text-2);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--unis-primary);
+  }
+
+  svg { color: var(--unis-primary-2); }
+}
+
+.esw__file-preview {
+  margin: 0;
+  font-size: 12px;
+  color: var(--unis-text-3);
+  word-break: break-word;
+  padding: 8px 12px;
+  border-radius: var(--unis-radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+// Inputs
+.esw__input,
+.esw__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border-radius: var(--unis-radius-sm);
+  border: 1px solid var(--unis-border-hi);
+  background: rgba(0, 0, 0, 0.38);
+  color: var(--unis-text);
+  font-family: var(--unis-font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  backdrop-filter: blur(4px);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+
+  &::placeholder { color: var(--unis-text-4, var(--unis-text-3)); }
+
+  &:focus {
+    outline: none;
+    border-color: var(--unis-primary);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft);
+  }
+}
+
+.esw__textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.esw__counter {
+  margin: 0;
+  text-align: right;
+  font-size: 11px;
+  color: var(--unis-text-4, var(--unis-text-3));
+  font-variant-numeric: tabular-nums;
+}
+
+.esw__hint {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--unis-text-4, var(--unis-text-3));
+  line-height: 1.5;
+}
+
+// Download policy pills — mirrors uploadWizard's uw__policy-btn
+.esw__policy-row {
+  display: flex;
+  gap: 8px;
+}
+
+.esw__policy-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: var(--unis-radius-sm);
+  border: 1px solid var(--unis-border-hi);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--unis-text-3);
+  font-family: var(--unis-font-sans);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+
+  &:hover { border-color: var(--unis-primary); }
+
+  &.is-active {
+    background: var(--unis-primary-soft);
+    border-color: var(--unis-primary);
+    color: var(--unis-primary-2);
+  }
+}
+
+.esw__price-row {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 0 12px;
+  border-radius: var(--unis-radius-sm);
+  border: 1px solid var(--unis-border-hi);
+  background: rgba(0, 0, 0, 0.38);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+
+  &:focus-within {
+    border-color: var(--unis-primary);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft);
+  }
+}
+
+.esw__price-symbol {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--unis-text-4, var(--unis-text-3));
+}
+
+.esw__price-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--unis-text);
+  font-family: var(--unis-font-sans);
+  font-size: 16px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  padding: 10px 8px;
+
+  &::placeholder { color: var(--unis-text-4, var(--unis-text-3)); }
+}
+
+// Error
+.esw__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 11px 14px;
+  border-radius: var(--unis-radius-sm);
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  color: #fca5a5;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+// -----------------------------------------------------------------------------
+// Footer
+// -----------------------------------------------------------------------------
+.esw__footer {
+  display: flex;
+  gap: 10px;
+  padding: 14px 22px 20px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--unis-border);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.esw__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 18px;
+  border-radius: var(--unis-radius-sm);
+  font-family: var(--unis-font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, filter 0.16s ease, opacity 0.16s ease;
+
+  &--back {
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--unis-border-hi);
+    color: var(--unis-text-3);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--unis-text-2);
     }
+  }
 
-    h2 {
-      text-align: center;
-      font-size: 1.6rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      color: #004aad;
-    }
+  &--save {
+    flex: 1;
+    background: var(--unis-primary);
+    border: 1px solid transparent;
+    color: #fff;
 
-    .wizard-intro {
-      text-align: center;
-      color: #666;
-      margin-bottom: 1.5rem;
-      font-size: 0.95rem;
+    &:hover:not(:disabled) { filter: brightness(1.12); }
 
-      strong {
-        color: #333;
-      }
-    }
-
-    .step-content {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-
-      .upload-section-header {
-        font-weight: 600;
-        color: #004aad;
-        text-align: left;
-        font-size: 1.1rem;
-        margin-top: 0.5rem;
-        margin-bottom: 0.5rem;
-        border-left: 3px solid #004aad;
-        padding-left: 0.5rem;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-
-        textarea {
-          width: 100%;
-          padding: 0.8rem;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          font-size: 0.95rem;
-          box-sizing: border-box;
-          resize: vertical;
-          min-height: 100px;
-          font-family: inherit;
-          &:focus {
-            outline: none;
-            border-color: #004aad;
-          }
-        }
-
-        .input-field {
-          padding: 0.8rem 1rem;
-          background: #f9f9f9;
-          border: 1px dashed #bbb;
-          border-radius: 6px;
-          text-align: center;
-          transition: all 0.2s;
-          cursor: pointer;
-          &:hover { border-color: #004aad; }
-        }
-
-        .file-preview {
-          font-size: 0.9rem;
-          color: #666;
-          margin-top: 0.4rem;
-          word-break: break-word;
-          text-align: center;
-        }
-      }
-    }
-
-    .button-group {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 2rem;
-      gap: 1rem;
-
-      button {
-        flex: 1;
-        padding: 0.85rem 1.2rem;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .back-button {
-        background: #6c757d;
-        color: #fff;
-        &:hover { background: #5a6268; }
-      }
-
-      .submit-upload-button {
-        background: #004aad;
-        color: white;
-        &:hover:not(:disabled) { background: #00367d; }
-        &:disabled {
-          background: #6c757d;
-          cursor: not-allowed;
-        }
-      }
+    &:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
     }
   }
 }
 
-@media (max-width: 768px) {
-  .upload-wizard {
-    width: 95%;
-    padding: 1.5rem;
-  }
+// -----------------------------------------------------------------------------
+// Animations & responsive
+// -----------------------------------------------------------------------------
+@keyframes esw-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes esw-rise {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+@media (max-width: 560px) {
+  .esw__header { padding: 15px 16px 12px; }
+  .esw__body   { padding: 16px; }
+  .esw__footer { padding: 12px 16px 16px; }
+  .esw__policy-row { flex-direction: column; }
 }

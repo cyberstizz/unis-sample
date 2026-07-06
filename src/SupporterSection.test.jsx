@@ -134,4 +134,34 @@ describe('SupporterSection', () => {
     expect(screen.getByText(/50 plays/i)).toBeInTheDocument();
   });
 
+  // ★ item 2: growth block is a real chart, not a uniform block
+  it('growth chart has axis labels, a period total, and true-zero days', async () => {
+    installSupporters({
+      ...SUPPORTERS,
+      supporterGrowth: [
+        { day: '2025-03-01', count: 0 },
+        { day: '2025-03-02', count: 3 },
+        { day: '2025-03-03', count: 6 },
+      ],
+    });
+    const { container } = renderSection();
+    await screen.findByText('BigFan');
+    // period total (+9) in the header
+    expect(screen.getByText('+9')).toBeInTheDocument();
+    // y-axis: peak and zero labels
+    const yAxis = container.querySelector('.sup__chart-y');
+    expect(yAxis.textContent).toContain('6');
+    expect(yAxis.textContent).toContain('0');
+    // x-axis: first and last day labels
+    const xAxis = container.querySelector('.sup__chart-x');
+    expect(xAxis.textContent).toContain('Mar 1');
+    expect(xAxis.textContent).toContain('Mar 3');
+    // zero-count day renders as a zero-class stub, not a padded fake bar
+    const bars = container.querySelectorAll('.sup__bar');
+    expect(bars).toHaveLength(3);
+    expect(bars[0].className).toContain('sup__bar--zero');
+    expect(bars[0].style.height).toBe('0%');
+    expect(bars[2].style.height).toBe('100%');
+  });
+
 });

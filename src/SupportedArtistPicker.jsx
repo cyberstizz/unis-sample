@@ -1,9 +1,19 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Check, Clock, Sparkles, MapPin, ChevronLeft } from 'lucide-react';
+import { X, Check, Clock, Sparkles, MapPin, ChevronLeft, Search } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import './SupportedArtistPicker.scss';
 import useModalA11y from './hooks/useModalA11y';
+
+// ★ item 12: same debounce the main SearchBar uses (250ms)
+function useDebounce(value, delay) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
 
 // =============================================================================
 // SupportedArtistPicker  (jurisdiction-first)
@@ -13,6 +23,11 @@ import useModalA11y from './hooks/useModalA11y';
 // endpoint), then sees only the top 4 artists in that area (the cached
 // /trending?type=artist endpoint). This scales: a handful of areas, a handful
 // of artists each — never the full roster.
+//
+// ★ item 12: after an area is picked, a search bar (same debounced
+// /v1/search/suggestions mechanism as the main SearchBar) lets the user find
+// ANY specific artist by name — top-4 keeps the list small, search keeps it
+// complete, and no full roster is ever loaded.
 //
 // Submit semantics are unchanged: first-ever pick is immediate; changing an
 // existing pick queues to month-end (backend returns status immediate|pending).
@@ -42,6 +57,12 @@ const SupportedArtistPicker = ({
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  // ★ item 12: artist search within the picker
+  const [query, setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const debouncedQuery = useDebounce(query, 250);
+  const searching = debouncedQuery.trim().length >= 2;
 
   const isFirstPick = !currentArtistId;
   const modalRef = useRef(null);
@@ -57,6 +78,8 @@ const SupportedArtistPicker = ({
     setSelectedId(null);
     setResult(null);
     setError(null);
+    setQuery(''); // ★ item 12
+    setSearchResults([]); // ★
     setJLoading(true);
 
     const url = userJurisdictionId
@@ -90,6 +113,8 @@ const SupportedArtistPicker = ({
     setSelectedId(null);
     setArtists([]);
     setError(null);
+    setQuery(''); // ★ item 12: fresh area, fresh search
+    setSearchResults([]); // ★
     setALoading(true);
     try {
       const res = await apiCall({ url: `/v1/jurisdictions/${jur.id}/trending?type=artist&limit=4` });
@@ -105,9 +130,58 @@ const SupportedArtistPicker = ({
     }
   };
 
+  // ★ item 12: debounced artist search — the exact mechanism the main SearchBar
+  // uses (/v1/search/suggestions), filtered to artists and excluding the user.
+  useEffect(() => {
+    if (!selectedJur || !searching) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setSearchLoading(true);
+    apiCall({
+      url: `/v1/search/suggestions?q=${encodeURIComponent(debouncedQuery.trim())}&limit=10`,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        const data = res.data || {};
+        const pool = [
+          ...(data.topResult ? [data.topResult] : []),
+          ...(data.artists || []),
+        ];
+        const seen = new Set();
+        const list = pool
+          .filter((item) => item && item.type === 'artist')
+          .map((item) => ({
+            userId: item.id,
+            username: item.name,
+            score: item.score ?? null,
+            photoUrl: item.artworkUrl || item.photoUrl || null,
+          }))
+          .filter((a) => {
+            if (!a.userId || a.userId === userId || seen.has(a.userId)) return false;
+            seen.add(a.userId);
+            return true;
+          });
+        setSearchResults(list);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('Artist search failed:', err); // ★ checklist: failure logging
+        setSearchResults([]);
+      })
+      .finally(() => !cancelled && setSearchLoading(false));
+
+    return () => { cancelled = true; };
+  }, [debouncedQuery, searching, selectedJur, userId]);
+
   const selectedArtist = useMemo(
-    () => artists.find((a) => a.userId === selectedId) || null,
-    [artists, selectedId],
+    () =>
+      artists.find((a) => a.userId === selectedId)
+      || searchResults.find((a) => a.userId === selectedId) // ★ item 12
+      || null,
+    [artists, searchResults, selectedId],
   );
 
   const handleSubmit = async () => {
@@ -214,20 +288,46 @@ const SupportedArtistPicker = ({
                 <button
                   type="button"
                   className="sap-back"
-                  onClick={() => { setSelectedJur(null); setArtists([]); setSelectedId(null); setError(null); }}
+                  onClick={() => { setSelectedJur(null); setArtists([]); setSelectedId(null); setError(null); setQuery(''); setSearchResults([]); }}
                 >
                   <ChevronLeft size={16} aria-hidden="true" /> All areas
                 </button>
 
+                {/* ★ item 12: find any artist by name — same debounced
+                    suggestions mechanism as the main search bar */}
+                <div className="sap-search">
+                  <Search size={14} aria-hidden="true" />
+                  <input
+                    type="text"
+                    className="sap-search__input"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search for a specific artist…"
+                    aria-label="Search for a specific artist"
+                  />
+                  {query && (
+                    <button
+                      type="button"
+                      className="sap-search__clear"
+                      onClick={() => setQuery('')}
+                      aria-label="Clear search"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
                 <div className="sap-list" role="listbox" aria-label="Artists">
-                  {aLoading ? (
-                    <div className="sap-state"><div className="sap-spinner" aria-hidden="true" /><p>Loading top artists…</p></div>
-                  ) : error ? (
+                  {(searching ? searchLoading : aLoading) ? ( // ★ item 12
+                    <div className="sap-state"><div className="sap-spinner" aria-hidden="true" /><p>{searching ? 'Searching…' : 'Loading top artists…'}</p></div>
+                  ) : error && !searching ? (
                     <div className="sap-state sap-state--error" role="alert"><p>{error}</p></div>
-                  ) : artists.length === 0 ? (
-                    <div className="sap-state"><p>No artists here yet. Try a broader area.</p></div>
+                  ) : (searching ? searchResults : artists).length === 0 ? (
+                    <div className="sap-state">
+                      <p>{searching ? `No artists match “${debouncedQuery.trim()}”.` : 'No artists here yet. Try a broader area.'}</p>
+                    </div>
                   ) : (
-                    artists.map((artist) => {
+                    (searching ? searchResults : artists).map((artist) => { // ★ item 12
                       const isCurrent = artist.userId === currentArtistId;
                       const isSelected = artist.userId === selectedId;
                       const photo = buildUrl(artist.photoUrl);
@@ -249,7 +349,7 @@ const SupportedArtistPicker = ({
                           <div className="sap-row__info">
                             <span className="sap-row__name">{artist.username}</span>
                             <span className="sap-row__meta">
-                              {artist.score ?? 0} pts
+                              {artist.score != null ? `${artist.score} pts` : 'Artist'} {/* ★ item 12: no fake 0 pts on search rows */}
                               {isCurrent && <span className="sap-row__current-tag">Current</span>}
                             </span>
                           </div>

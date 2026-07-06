@@ -99,6 +99,19 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
     gap: 14px;
+    // ★ item 3: list no longer grows unbounded — capped and scrollable
+    max-height: 264px;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--unis-border-hi) transparent;
+
+    &::-webkit-scrollbar { width: 5px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb {
+      background: var(--unis-border-hi);
+      border-radius: 999px;
+    }
   }
 
   &__empty {
@@ -120,7 +133,13 @@
     border: 1px solid var(--unis-border);
 
     &-head {
+      display: flex; // ★ item 2: total sits on the same line
+      align-items: baseline;
+      flex-wrap: wrap;
+      column-gap: 10px;
       margin-bottom: 14px;
+
+      .artist-section__eyebrow { flex-basis: 100%; }
 
       h3 {
         margin: 0;
@@ -130,16 +149,78 @@
         letter-spacing: -0.02em;
       }
     }
+
+    // ★ item 2: period total
+    &-total {
+      color: var(--unis-primary-2);
+      font-size: 15px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
   }
 
-  &__sparkline {
+  // ★ item 2: proper mini chart (replaces the old __sparkline block)
+  &__chart {
+    display: flex;
+    gap: 8px;
+  }
+
+  &__chart-y {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-bottom: 18px; // clears the x-axis row
+    text-align: right;
+
+    span {
+      color: var(--unis-text-4, var(--unis-text-3));
+      font-size: 10px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+  }
+
+  &__chart-plot {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__chart-gridline {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    border-top: 1px dashed var(--unis-border-hi); // peak reference line
+    pointer-events: none;
+  }
+
+  &__chart-bars {
     display: flex;
     align-items: flex-end;
-    gap: 4px;
-    height: 72px;
+    gap: 3px;
+    height: 88px;
+    border-bottom: 1px solid var(--unis-border-hi); // ★ item 2: baseline
+  }
+
+  &__chart-x {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 5px;
+
+    span {
+      color: var(--unis-text-4, var(--unis-text-3));
+      font-size: 10px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
   }
 
   &__bar {
+    position: relative;
     flex: 1 1 auto;
     min-width: 3px;
     border-radius: 3px 3px 0 0;
@@ -147,7 +228,40 @@
     opacity: 0.85;
     transition: opacity 0.16s ease;
 
-    &:hover { opacity: 1; }
+    &:hover {
+      opacity: 1;
+
+      .sup__bar-value { opacity: 1; } // ★ item 2: value on hover
+    }
+
+    // ★ item 2: zero days are visibly zero — a faint tick, not a fake block
+    &--zero {
+      height: 2px !important;
+      background: var(--unis-border-hi);
+      opacity: 0.6;
+    }
+  }
+
+  // ★ item 2: hover value bubble
+  &__bar-value {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.78);
+    border: 1px solid var(--unis-border-hi);
+    color: var(--unis-text);
+    font-size: 10px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.14s ease;
+    z-index: 2;
+    white-space: nowrap;
   }
 }
 

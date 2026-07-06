@@ -89,9 +89,8 @@ describe('LyricsWizard — visibility and render', () => {
       song: songWithLyrics,
     });
 
-    expect(
-      screen.getByRole('heading', { name: /edit lyrics — test song/i })
-    ).toBeInTheDocument();
+    expect(screen.getByText(/edit lyrics/i)).toBeInTheDocument(); // ★ item 1: mode moved to the eyebrow
+    expect(screen.getByRole('heading', { name: /test song/i })).toBeInTheDocument(); // ★
 
     expect(screen.getByDisplayValue('Old lyrics')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save lyrics/i })).toBeInTheDocument();
@@ -103,9 +102,8 @@ describe('LyricsWizard — visibility and render', () => {
       song: songWithoutLyrics,
     });
 
-    expect(
-      screen.getByRole('heading', { name: /add lyrics — instrumental maybe/i })
-    ).toBeInTheDocument();
+    expect(screen.getByText(/add lyrics/i)).toBeInTheDocument(); // ★ item 1: mode moved to the eyebrow
+    expect(screen.getByRole('heading', { name: /instrumental maybe/i })).toBeInTheDocument(); // ★
 
     expect(screen.getByPlaceholderText(/enter lyrics here/i)).toHaveValue('');
   });
@@ -222,7 +220,7 @@ describe('LyricsWizard — save success', () => {
 // ===========================================================================
 
 describe('LyricsWizard — save failure', () => {
-  it('shows an alert and does not close when saving fails', async () => {
+  it('shows an inline error and does not close when saving fails', async () => { // ★ item 1: alert() → inline error
     const user = userEvent.setup();
 
     apiCall.mockRejectedValueOnce(new Error('Network error'));
@@ -231,11 +229,7 @@ describe('LyricsWizard — save failure', () => {
 
     await user.click(screen.getByRole('button', { name: /save lyrics/i }));
 
-    await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith(
-        'Failed to save lyrics – check console/network tab for details.'
-      );
-    });
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Could not save the lyrics/i); // ★
 
     expect(props.onSuccess).not.toHaveBeenCalled();
     expect(props.onClose).not.toHaveBeenCalled();
@@ -294,7 +288,7 @@ describe('LyricsWizard — close behavior', () => {
 
     const { container } = renderLyricsWizard({ onClose });
 
-    const closeButton = container.querySelector('.close-button');
+    const closeButton = container.querySelector('.lw__close');
 
     await user.click(closeButton);
 
@@ -307,7 +301,7 @@ describe('LyricsWizard — close behavior', () => {
 
     const { container } = renderLyricsWizard({ onClose });
 
-    const backdrop = container.querySelector('.wizard-overlay');
+    const backdrop = container.querySelector('.lw-overlay');
 
     await user.click(backdrop);
 
@@ -320,7 +314,7 @@ describe('LyricsWizard — close behavior', () => {
 
     const { container } = renderLyricsWizard({ onClose });
 
-    const modal = container.querySelector('.wizard-content');
+    const modal = container.querySelector('.lw');
 
     await user.click(modal);
 

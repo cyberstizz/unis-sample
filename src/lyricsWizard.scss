@@ -1,86 +1,243 @@
-// Unis theme variables
-$bg-black: #000000;
-$text-silver: #C0C0C0;
-$text-gray: #A9A9A9;
-$accent-white: #FFFFFF;
-$border-silver: #C0C0C0;
-$button-hover: #D3D3D3;
-$unis-blue: var(--unis-primary);
-$unis-silver: #918f8f;
- 
+// =============================================================================
+// LyricsWizard — UNIS design system (lw- namespace)
+// ★ item 1: full restyle. Previously used unnamespaced generic classes
+//   (.wizard-overlay / .wizard-header …) with hardcoded #111/#333 grays —
+//   neither theme-aware nor collision-safe. Now mirrors UploadWizard's
+//   ambient-glass language with --unis-* tokens throughout.
+// =============================================================================
 
-.wizard-overlay {
+.lw-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 16px;
+  animation: lw-fade-in 0.2s ease both;
 }
 
-.lyrics-wizard {
-  background: #111;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 700px;
+.lw {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
   max-height: 90vh;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border-radius: var(--unis-radius-lg);
+  background: rgba(12, 14, 20, 0.9);
+  border: 1px solid var(--unis-border-hi);
+  box-shadow:
+    0 36px 90px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  font-family: var(--unis-font-sans);
+  color: var(--unis-text);
+  animation: lw-rise 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  overflow: hidden;
 }
 
-.wizard-header {
-  padding: 1.5rem;
-  border-bottom: 1px solid #333;
+// -----------------------------------------------------------------------------
+// Header
+// -----------------------------------------------------------------------------
+.lw__header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  color: white;
+  gap: 12px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--unis-border);
 }
 
-.wizard-header h2 {
-  margin: 0;
-  font-size: 1.5rem;
+.lw__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--unis-radius-sm);
+  background: var(--unis-primary-soft);
+  border: 1px solid var(--unis-primary);
+  color: var(--unis-primary-2);
 }
 
-.wizard-body {
-  padding: 1.5rem;
+.lw__titles {
+  flex: 1;
+  min-width: 0;
+
+  h2 {
+    margin: 2px 0 0;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--unis-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.lw__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--unis-radius-sm);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid var(--unis-border);
+  color: var(--unis-text-3);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+
+  &:hover {
+    background: var(--unis-primary-soft);
+    color: var(--unis-text);
+  }
+  &:focus-visible { outline: 2px solid var(--unis-primary-glow); outline-offset: 2px; }
+}
+
+// -----------------------------------------------------------------------------
+// Body
+// -----------------------------------------------------------------------------
+.lw__body {
   flex: 1;
   overflow-y: auto;
-}
-
-.lyrics-textarea {
-  width: 100%;
-  background: #222;
-  color: white;
-  border: 1px solid #444;
-  border-radius: 8px;
-  padding: 1rem;
-  font-family: monospace;
-  font-size: 1rem;
-  resize: none;
-}
-
-.wizard-actions {
-  padding: 1.5rem;
-  border-top: 1px solid #333;
+  padding: 20px 22px;
   display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 999px; }
 }
 
-.close-button {
-  background: none;
-  border: none;
-  color: #aaa;
+.lw__label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--unis-text-3);
+}
+
+.lw__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 260px;
+  padding: 12px 14px;
+  border-radius: var(--unis-radius-sm);
+  border: 1px solid var(--unis-border-hi);
+  background: rgba(0, 0, 0, 0.38);
+  color: var(--unis-text);
+  font-family: var(--unis-font-mono, ui-monospace, monospace);
+  font-size: 13.5px;
+  line-height: 1.7;
+  resize: vertical;
+  backdrop-filter: blur(4px);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+
+  &::placeholder { color: var(--unis-text-4, var(--unis-text-3)); }
+
+  &:focus {
+    outline: none;
+    border-color: var(--unis-primary);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft);
+  }
+}
+
+.lw__hint {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--unis-text-4, var(--unis-text-3));
+  font-variant-numeric: tabular-nums;
+}
+
+.lw__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: var(--unis-radius-sm);
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  color: #fca5a5;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+// -----------------------------------------------------------------------------
+// Footer
+// -----------------------------------------------------------------------------
+.lw__footer {
+  display: flex;
+  gap: 10px;
+  padding: 14px 22px 20px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--unis-border);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.lw__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 18px;
+  border-radius: var(--unis-radius-sm);
+  font-family: var(--unis-font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, filter 0.16s ease, opacity 0.16s ease;
+
+  &--back {
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--unis-border-hi);
+    color: var(--unis-text-3);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--unis-text-2);
+    }
+  }
+
+  &--save {
+    flex: 1;
+    background: var(--unis-primary);
+    border: 1px solid transparent;
+    color: #fff;
+
+    &:hover:not(:disabled) { filter: brightness(1.12); }
+
+    &:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
+    }
+  }
 }
 
-.close-button:hover {
-  color: white;
+// -----------------------------------------------------------------------------
+// Animations & responsive
+// -----------------------------------------------------------------------------
+@keyframes lw-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes lw-rise {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+@media (max-width: 560px) {
+  .lw__header { padding: 15px 16px 12px; }
+  .lw__body   { padding: 16px; }
+  .lw__footer { padding: 12px 16px 16px; }
+  .lw__textarea { min-height: 200px; }
 }
