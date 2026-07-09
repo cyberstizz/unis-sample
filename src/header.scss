@@ -61,7 +61,7 @@ $header-height: 75px;
 // below (primary #1d42a8, accent #4a9eff); everything else derives from them.
 .app-header.app-header--guest {
   --unis-primary:       #1d42a8;
-  --unis-primary-2:     #4a9eff;
+  --unis-primary-2:     #1d42a8;
   --unis-primary-hover: #163387;
   --unis-primary-soft:  #{color-mix(in srgb, #1d42a8, transparent 88%)};
   --unis-primary-glow:  #{color-mix(in srgb, #1d42a8, transparent 60%)};
