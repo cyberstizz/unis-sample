@@ -36,6 +36,60 @@ const CardPlayIcon = () => (
   </svg>
 );
 
+// ─── Lens bar icons (inline, stroke-based) ───
+const LensIcon = ({ type }) => {
+  const common = {
+    width: 15,
+    height: 15,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+  };
+  switch (type) {
+    case 'all':
+      return (
+        <svg {...common}>
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+      );
+    case 'charts':
+      return (
+        <svg {...common}>
+          <path d="M8 21h8" />
+          <path d="M12 17v4" />
+          <path d="M7 4h10v6a5 5 0 0 1-10 0V4z" />
+          <path d="M7 6H4a1 1 0 0 0-1 1c0 2 1.5 3.5 4 4" />
+          <path d="M17 6h3a1 1 0 0 1 1 1c0 2-1.5 3.5-4 4" />
+        </svg>
+      );
+    case 'playlists':
+      return (
+        <svg {...common}>
+          <path d="M3 6h13" />
+          <path d="M3 12h13" />
+          <path d="M3 18h8" />
+          <circle cx="18" cy="17" r="3" />
+          <path d="M21 17V9" />
+        </svg>
+      );
+    case 'fresh':
+      return (
+        <svg {...common}>
+          <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" />
+          <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+};
+
 // ─── Active jurisdictions (matches backend hardcoded list) ───
 const ACTIVE_JURISDICTIONS = [
   { id: '1cf6ceb1-aae6-4113-98c0-d9fe8ad8b5e3', name: 'Harlem' },
@@ -45,6 +99,14 @@ const ACTIVE_JURISDICTIONS = [
 
 // Default jurisdiction for guests (Harlem — launch market)
 const DEFAULT_JURISDICTION_ID = '1cf6ceb1-aae6-4113-98c0-d9fe8ad8b5e3';
+
+// ─── Feed lenses ───
+const LENSES = [
+  { key: 'all', label: 'All' },
+  { key: 'charts', label: 'Charts' },
+  { key: 'playlists', label: 'Playlists' },
+  { key: 'fresh', label: 'Fresh' },
+];
 
 const Feed = () => {
   const { requestPlay } = useContext(PlayerContext);
@@ -60,7 +122,26 @@ const Feed = () => {
   const [popularArtists, setPopularArtists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [lastWinner, setLastWinner] = useState(null);
+
+  // ─── Lens state ───
+  const [activeLens, setActiveLens] = useState('all');
+
+  // ─── Awards-derived: timeline + artist of the week ───
+  const [weeklyWinners, setWeeklyWinners] = useState([]); // up to 3, newest first
+  const [artistOfWeek, setArtistOfWeek] = useState(null);
+  const lastWinner = weeklyWinners.length ? weeklyWinners[0] : null;
+
+  // ─── Charts lens ───
+  const [chart, setChart] = useState(null); // { totalVotesThisMonth, entries: [] }
+  const [chartLoading, setChartLoading] = useState(false);
+
+  // ─── Playlists lens ───
+  const [featuredPlaylist, setFeaturedPlaylist] = useState(null);
+  const [communityPlaylists, setCommunityPlaylists] = useState([]);
+  const [playlistsLoading, setPlaylistsLoading] = useState(false);
+
+  // ─── Fresh lens: upcoming (hidden until scheduling exists on backend) ───
+  const [upcoming, setUpcoming] = useState([]);
 
   const userId = user?.userId;
   const userJurisdictionId = user?.jurisdiction?.jurisdictionId || DEFAULT_JURISDICTION_ID;
@@ -136,6 +217,35 @@ const Feed = () => {
     return `${value}`;
   };
 
+  // "JUL 5" style label for timeline nodes
+  const formatAwardDate = (dateString) => {
+    if (!dateString) return '';
+    const d = new Date(`${dateString}T12:00:00`);
+    return d
+      .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      .toUpperCase();
+  };
+
+  const isWithinDays = (dateString, days) => {
+    if (!dateString) return false;
+    const diff = Date.now() - new Date(dateString).getTime();
+    return diff >= 0 && diff <= days * 24 * 60 * 60 * 1000;
+  };
+
+  const pickPhoto = (obj) => {
+    if (!obj) return null;
+    const candidate = obj.photoUrl
+      || obj.imageUrl
+      || obj.profilePhotoUrl
+      || obj.avatarUrl
+      || obj.pictureUrl
+      || obj.photo
+      || obj.profilePhoto
+      || obj.avatar
+      || obj.picture;
+    return candidate ? buildUrl(candidate) : null;
+  };
+
   const normalizeMedia = useCallback((items) => (items || []).map(item => ({
     id: item.songId || item.videoId,
     title: item.title,
@@ -155,69 +265,84 @@ const Feed = () => {
     playCount: item.playCount || 0
   })), []);
 
-  // Fetch last week's winner for the hero banner
-  // Fetch last week's Song of the Week winner for the hero banner
+  // ─── Shared date helpers for award fetches ───
+  const toApiDate = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const todayInEst = () =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+
+  // ─── Fetch last 3 Song of the Week winners (timeline + hero) ───
+  // ─── plus Artist of the Week — fires on jurisdiction change ───
   useEffect(() => {
     if (!selectedJurisdictionId) return;
 
-    const fetchLastWinner = async () => {
+    const fetchAwardsData = async () => {
       const today = new Date();
-      const thirtyDaysAgo = new Date(today);
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const sixtyDaysAgo = new Date(today);
+      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-      const toApiDate = (date) => {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-      };
+      const baseParams = `startDate=${toApiDate(sixtyDaysAgo)}&endDate=${toApiDate(today)}&jurisdictionId=${selectedJurisdictionId}&intervalId=${INTERVAL_IDS['weekly']}`;
 
-      const todayInEst = () =>
-        new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+      // Same defensive filter LastWonNotification uses — reject future-dated
+      // awards that leak through from the UTC-midnight cron.
+      const cutoff = todayInEst();
 
       try {
-        const res = await apiCall({
-          method: 'get',
-          url: `/v1/awards/past?type=song&startDate=${toApiDate(thirtyDaysAgo)}&endDate=${toApiDate(today)}&jurisdictionId=${selectedJurisdictionId}&intervalId=${INTERVAL_IDS['weekly']}`,
-        });
+        const [songAwardsRes, artistAwardsRes] = await Promise.all([
+          apiCall({ method: 'get', url: `/v1/awards/past?type=song&${baseParams}` }),
+          apiCall({ method: 'get', url: `/v1/awards/past?type=artist&${baseParams}` }),
+        ]);
 
-        // Same defensive filter LastWonNotification uses — reject future-dated
-        // awards that leak through from the UTC-midnight cron.
-        const cutoff = todayInEst();
-        const awards = (res.data || []).filter(
-          (a) => !a?.awardDate || a.awardDate <= cutoff
+        // ── Songs of the week timeline (up to 3, newest first) ──
+        const songAwards = (songAwardsRes.data || [])
+          .filter((a) => !a?.awardDate || a.awardDate <= cutoff)
+          .filter((a) => a?.song);
+
+        setWeeklyWinners(
+          songAwards.slice(0, 3).map((award) => ({
+            awardId: award.awardId,
+            awardDate: award.awardDate,
+            songId: award.song.songId || award.targetId,
+            title: award.song.title || 'Unknown',
+            artworkUrl: buildUrl(award.song.artworkUrl),
+            artistName: award.song.artist?.username || 'Unknown',
+            artistId: award.song.artist?.userId,
+          }))
         );
 
-        if (awards.length === 0) {
-          setLastWinner(null);
-          return;
+        // ── Artist of the week (most recent artist award) ──
+        const artistAwards = (artistAwardsRes.data || [])
+          .filter((a) => !a?.awardDate || a.awardDate <= cutoff)
+          .filter((a) => a?.user);
+
+        if (artistAwards.length) {
+          const award = artistAwards[0];
+          setArtistOfWeek({
+            userId: award.user.userId || award.targetId,
+            username: award.user.username || 'Unknown',
+            photoUrl: pickPhoto(award.user),
+            votesCount: award.votesCount || 0,
+            awardDate: award.awardDate,
+          });
+        } else {
+          setArtistOfWeek(null);
         }
-
-        // Most recent award (endpoint returns sorted by date desc, but be safe)
-        const award = awards[0];
-
-        if (!award?.song) {
-          setLastWinner(null);
-          return;
-        }
-
-        setLastWinner({
-          songId: award.song.songId || award.targetId,
-          title: award.song.title || 'Unknown',
-          artworkUrl: buildUrl(award.song.artworkUrl),
-          artistName: award.song.artist?.username || 'Unknown',
-          artistId: award.song.artist?.userId,
-        });
       } catch (err) {
-        // Silent — banner falls back to particles
-        setLastWinner(null);
+        // Silent — hero falls back to particles, sections hide
+        setWeeklyWinners([]);
+        setArtistOfWeek(null);
       }
     };
 
-    fetchLastWinner();
+    fetchAwardsData();
   }, [selectedJurisdictionId]);
 
-  // Fetch feed data — fires on mount AND when jurisdiction changes
+  // ─── Fetch main feed data — fires on mount AND when jurisdiction changes ───
   // No longer requires userId — guests get feed with default jurisdiction
   useEffect(() => {
     setAnimate(true);
@@ -245,22 +370,10 @@ const Feed = () => {
         const combinedAwards = [...(songAwardsRes.data || []), ...(artistAwardsRes.data || [])].slice(0, 5);
         setAwards(combinedAwards);
 
-        const normalizedArtists = (popularRes.data || []).map(artist => {
-          const photoProperty = artist.photoUrl 
-            || artist.imageUrl 
-            || artist.profilePhotoUrl 
-            || artist.avatarUrl 
-            || artist.pictureUrl
-            || artist.photo
-            || artist.profilePhoto
-            || artist.avatar
-            || artist.picture;
-          
-          return {
-            ...artist,
-            photoUrl: photoProperty ? buildUrl(photoProperty) : null
-          };
-        });
+        const normalizedArtists = (popularRes.data || []).map(artist => ({
+          ...artist,
+          photoUrl: pickPhoto(artist)
+        }));
 
         setPopularArtists(normalizedArtists);
       } catch (err) {
@@ -274,8 +387,85 @@ const Feed = () => {
     fetchMediaData();
   }, [selectedJurisdictionId, normalizeMedia]);
 
+  // ─── Fetch monthly chart — lazy, when Charts lens is active ───
+  useEffect(() => {
+    if (activeLens !== 'charts' || !selectedJurisdictionId) return;
+
+    const fetchChart = async () => {
+      setChartLoading(true);
+      try {
+        const res = await apiCall({
+          method: 'get',
+          url: `/v1/charts?jurisdictionId=${selectedJurisdictionId}&limit=10`,
+        });
+        setChart(res.data || null);
+      } catch (err) {
+        // Endpoint not deployed yet, or empty month — fall back to demo
+        setChart(null);
+      } finally {
+        setChartLoading(false);
+      }
+    };
+
+    fetchChart();
+  }, [activeLens, selectedJurisdictionId]);
+
+  // ─── Fetch playlists — lazy, when Playlists lens is active ───
+  useEffect(() => {
+    if (activeLens !== 'playlists' || !selectedJurisdictionId) return;
+
+    const fetchPlaylists = async () => {
+      setPlaylistsLoading(true);
+      try {
+        const [officialRes, communityRes] = await Promise.all([
+          apiCall({ method: 'get', url: `/v1/playlists/official` }),
+          apiCall({ method: 'get', url: `/v1/playlists/community/${selectedJurisdictionId}` }),
+        ]);
+
+        const official = officialRes.data || [];
+        const community = (communityRes.data || [])
+          .slice()
+          .sort((a, b) => (b.followerCount || 0) - (a.followerCount || 0));
+
+        // Featured = latest official (curated) playlist, else top community
+        setFeaturedPlaylist(official.length ? official[0] : (community.length ? community[0] : null));
+        setCommunityPlaylists(
+          official.length ? community : community.slice(1)
+        );
+      } catch (err) {
+        setFeaturedPlaylist(null);
+        setCommunityPlaylists([]);
+      } finally {
+        setPlaylistsLoading(false);
+      }
+    };
+
+    fetchPlaylists();
+  }, [activeLens, selectedJurisdictionId]);
+
+  // ─── Fetch upcoming releases — lazy, when Fresh lens is active ───
+  // Backend endpoint doesn't exist yet; section stays hidden until it does.
+  useEffect(() => {
+    if (activeLens !== 'fresh' || !selectedJurisdictionId) return;
+
+    const fetchUpcoming = async () => {
+      try {
+        const res = await apiCall({
+          method: 'get',
+          url: `/v1/media/upcoming?jurisdictionId=${selectedJurisdictionId}&limit=5`,
+        });
+        setUpcoming(res.data || []);
+      } catch (err) {
+        setUpcoming([]);
+      }
+    };
+
+    fetchUpcoming();
+  }, [activeLens, selectedJurisdictionId]);
+
   const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
   const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
+  const handlePlaylistNav = (playlistId) => navigate(`/playlist/${playlistId}`);
 
   const handlePlayMedia = async (e, media) => {
     e.stopPropagation();
@@ -327,6 +517,26 @@ const Feed = () => {
     }
 
     requestPlay(playMediaObj);
+  };
+
+  // Play a chart entry (ChartsDto shape → player shape)
+  const handlePlayChartEntry = (e, entry) => {
+    e.stopPropagation();
+    if (isGuest) {
+      incrementGateSongCount();
+    }
+    requestPlay({
+      type: 'song',
+      id: entry.songId,
+      songId: entry.songId,
+      url: buildUrl(entry.fileUrl),
+      fileUrl: buildUrl(entry.fileUrl),
+      title: entry.title,
+      artist: entry.artistName,
+      artistId: entry.artistId,
+      artwork: buildUrl(entry.artworkUrl),
+      artworkUrl: buildUrl(entry.artworkUrl),
+    });
   };
 
   const handleJurisdictionChange = (e) => {
@@ -394,17 +604,134 @@ const Feed = () => {
     { userId: 'art5', username: 'Artist Five', photoUrl: songArtFive, score: 40 }
   ].slice(0, 5);
 
+  const getDummyChart = () => ({
+    totalVotesThisMonth: 0,
+    entries: getDummyTrending().slice(0, 5).map((d, i) => ({
+      rank: i + 1,
+      movement: i === 0 ? 2 : i === 1 ? -1 : i === 2 ? 0 : null,
+      votes: [124, 88, 76, 61, 44][i],
+      songId: d.id,
+      title: d.title,
+      artworkUrl: d.artworkUrl,
+      fileUrl: d.mediaUrl,
+      artistId: d.artistData.userId,
+      artistName: d.artistData.username,
+    })),
+    isDemo: true,
+  });
+
   const trendingTodayList = trendingToday.length ? trendingToday.slice(0, 10) : getDummyTrending();
   const topRatedList = topRated.length ? topRated.slice(0, 5) : getDummyTrending();
   const newMediaList = newMedia.length ? newMedia.slice(0, 5) : getDummyNew();
   const awardsList = awards.length ? awards.slice(0, 5) : getDummyAwards();
   const artistsList = popularArtists.length ? popularArtists.slice(0, 5) : getDummyArtists();
+  const chartData = (chart && chart.entries && chart.entries.length) ? chart : getDummyChart();
 
   const getJurisdictionDisplayName = (id) => {
     const key = JURISDICTION_NAMES[id];
     if (!key) return 'Your Area';
     return key.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
+
+  // ─── Rank movement badge for chart rows ───
+  const MovementBadge = ({ movement }) => {
+    if (movement === null || movement === undefined) {
+      return <span className="chart-movement chart-movement--new">NEW</span>;
+    }
+    if (movement > 0) {
+      return <span className="chart-movement chart-movement--up">&#9650; {movement}</span>;
+    }
+    if (movement < 0) {
+      return <span className="chart-movement chart-movement--down">&#9660; {Math.abs(movement)}</span>;
+    }
+    return <span className="chart-movement chart-movement--flat">&mdash;</span>;
+  };
+
+  // ─── Playlist cover (image or mosaic fallback) ───
+  const PlaylistCover = ({ playlist, className }) => {
+    const cover = playlist.coverImageUrl ? buildUrl(playlist.coverImageUrl) : null;
+    const mosaic = (playlist.firstFourArtworks || []).filter(Boolean).slice(0, 4);
+
+    if (cover) {
+      return (
+        <div className={className}>
+          <img src={cover} alt={playlist.name} onError={(e) => { e.target.src = randomRapper; }} />
+        </div>
+      );
+    }
+    if (mosaic.length) {
+      return (
+        <div className={`${className} playlist-cover--mosaic`}>
+          {mosaic.map((art, i) => (
+            <img key={i} src={buildUrl(art)} alt="" onError={(e) => { e.target.src = randomRapper; }} />
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className={className}>
+        <img src={randomRapper} alt={playlist.name} />
+      </div>
+    );
+  };
+
+  // ─── Reusable song card (Trending / New releases rows) ───
+  const SongCard = ({ item, index }) => (
+    <div 
+      className="song-card"
+      style={{ animationDelay: `${0.05 * (index + 1)}s` }}
+      onClick={() => handleSongNav(item.id, item.type)}
+    >
+      <div className="card-artwork">
+        <img 
+          src={item.artworkUrl || item.artwork || randomRapper} 
+          alt={item.title}
+          onError={(e) => { e.target.src = randomRapper; }}
+        />
+        {item.duration && (
+          <span className="card-duration">{formatDuration(item.duration)}</span>
+        )}
+        {item.explicit && (
+          <span className="card-explicit">E</span>
+        )}
+        <button className="card-play" onClick={(e) => handlePlayMedia(e, item)}>
+          <CardPlayIcon />
+        </button>
+      </div>
+      <div className="card-info">
+        <div className="card-title">{item.title}</div>
+
+        <div className="card-subrow">
+          <div
+            className="card-artist"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown');
+            }}
+          >
+            {item.artistData?.username || item.artist || 'Unknown'}
+          </div>
+
+          <div className="card-play-count" title={`${item.playCount || 0} total plays`}>
+            <svg
+              viewBox="0 0 24 24"
+              width="11"
+              height="11"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            <span>{formatPlayCount(item.playCount)}</span>
+          </div>
+        </div>
+
+        {item.createdAt && (
+          <div className="card-meta">{formatTimeAgo(item.createdAt)}</div>
+        )}
+      </div>
+    </div>
+  );
 
   if (loading) return (
     <Layout backgroundImage={randomRapper}>
@@ -421,7 +748,7 @@ const Feed = () => {
         {error && <div className="feed-error">{error}</div>}
         <main className="feed">
 
-          {/* ═══════ HERO BANNER ═══════ */}
+          {/* ═══════ HERO BANNER (static across all lenses) ═══════ */}
           <div className="hero-banner" onClick={handleVoteClick}>
             <div className="hero-gradient" />
         {lastWinner ? (
@@ -467,185 +794,394 @@ const Feed = () => {
             </div>
           </div>
 
-          {/* ═══════ TRENDING TODAY ═══════ */}
-          <section className={`feed-section ${animate ? 'animate' : ''}`}>
-            <div className="section-header">
-              <h2 className="section-title">
-                Trending Today in <JurisdictionSelect />
-              </h2>
-            </div>
-            <div className="card-row">
-              {trendingTodayList.map((item, index) => (
-                <div 
-                  key={item.id} 
-                  className="song-card"
-                  style={{ animationDelay: `${0.05 * (index + 1)}s` }}
-                  onClick={() => handleSongNav(item.id, item.type)}
-                >
-                  <div className="card-artwork">
-                    <img 
-                      src={item.artworkUrl || item.artwork || randomRapper} 
-                      alt={item.title}
-                      onError={(e) => { e.target.src = randomRapper; }}
-                    />
-                    {item.duration && (
-                      <span className="card-duration">{formatDuration(item.duration)}</span>
-                    )}
-                    {item.explicit && (
-                      <span className="card-explicit">E</span>
-                    )}
-                    <button className="card-play" onClick={(e) => handlePlayMedia(e, item)}>
-                      <CardPlayIcon />
-                    </button>
+          {/* ═══════ LENS BAR ═══════ */}
+          <div className="lens-bar" role="tablist" aria-label="Feed views">
+            {LENSES.map((lens) => (
+              <button
+                key={lens.key}
+                role="tab"
+                aria-selected={activeLens === lens.key}
+                className={`lens-button ${activeLens === lens.key ? 'lens-button--active' : ''}`}
+                onClick={() => setActiveLens(lens.key)}
+              >
+                <LensIcon type={lens.key} />
+                <span>{lens.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* ═══════════════════════════════════════ */}
+          {/* ═══════ LENS: ALL ═══════ */}
+          {/* ═══════════════════════════════════════ */}
+          {activeLens === 'all' && (
+            <>
+              {/* ═══════ TRENDING TODAY ═══════ */}
+              <section className={`feed-section ${animate ? 'animate' : ''}`}>
+                <div className="section-header">
+                  <h2 className="section-title">
+                    Trending Today in <JurisdictionSelect />
+                  </h2>
+                </div>
+                <div className="card-row">
+                  {trendingTodayList.map((item, index) => (
+                    <SongCard key={item.id} item={item} index={index} />
+                  ))}
+                </div>
+              </section>
+
+              {/* ═══════ NEW RELEASES ═══════ */}
+              <section className={`feed-section ${animate ? 'animate' : ''}`}>
+                <div className="section-header">
+                  <h2 className="section-title">
+                    New Releases
+                  </h2>
+                </div>
+                <div className="card-row">
+                  {newMediaList.map((item, index) => (
+                    <SongCard key={item.id} item={item} index={index} />
+                  ))}
+                </div>
+              </section>
+
+              {/* ═══════ SONGS OF THE WEEK TIMELINE ═══════ */}
+              {weeklyWinners.length > 0 && (
+                <section className={`feed-section ${animate ? 'animate' : ''}`}>
+                  <div className="section-header">
+                    <h2 className="section-title">Songs of the Week</h2>
                   </div>
-                  <div className="card-info">
-                    <div className="card-title">{item.title}</div>
-
-                    <div className="card-subrow">
+                  <div className="winners-timeline">
+                    <div className="winners-timeline-rail" />
+                    {weeklyWinners.map((winner, i) => (
                       <div
-                        className="card-artist"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown');
-                        }}
+                        key={winner.awardId || winner.songId}
+                        className={`winners-timeline-node ${i === 0 ? 'winners-timeline-node--current' : ''}`}
+                        onClick={() => handleSongNav(winner.songId, 'song')}
                       >
-                        {item.artistData?.username || item.artist || 'Unknown'}
-                      </div>
-
-                      <div className="card-play-count" title={`${item.playCount || 0} total plays`}>
-                        <svg
-                          viewBox="0 0 24 24"
-                          width="11"
-                          height="11"
-                          aria-hidden="true"
-                          focusable="false"
+                        <div className="winners-timeline-thumb">
+                          <img
+                            src={winner.artworkUrl || randomRapper}
+                            alt={winner.title}
+                            onError={(e) => { e.target.src = randomRapper; }}
+                          />
+                        </div>
+                        <div className="winners-timeline-date">{formatAwardDate(winner.awardDate)}</div>
+                        <div className="winners-timeline-song">{winner.title}</div>
+                        <div
+                          className="winners-timeline-artist"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (winner.artistId) handleArtistNav(winner.artistId);
+                          }}
                         >
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                        <span>{formatPlayCount(item.playCount)}</span>
+                          {winner.artistName}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* ═══════ ARTIST OF THE WEEK ═══════ */}
+              {artistOfWeek && (
+                <section className={`feed-section ${animate ? 'animate' : ''}`}>
+                  <div
+                    className="artist-of-week"
+                    onClick={() => handleArtistNav(artistOfWeek.userId)}
+                  >
+                    <div className="artist-of-week-photo-wrap">
+                      <svg className="artist-of-week-crown" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                        <path d="M3 18h18l-1.5-9-4.5 4-3-7-3 7-4.5-4L3 18z" fill="#eab308" />
+                      </svg>
+                      <div className="artist-of-week-photo">
+                        <img
+                          src={artistOfWeek.photoUrl || randomRapper}
+                          alt={artistOfWeek.username}
+                          onError={(e) => { e.target.src = randomRapper; }}
+                        />
                       </div>
                     </div>
-
-                    {item.createdAt && (
-                      <div className="card-meta">{formatTimeAgo(item.createdAt)}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* ═══════ NEW RELEASES ═══════ */}
-          <section className={`feed-section ${animate ? 'animate' : ''}`}>
-            <div className="section-header">
-              <h2 className="section-title">
-                New Releases
-              </h2>
-            </div>
-            <div className="card-row">
-              {newMediaList.map((item, index) => (
-                <div 
-                  key={item.id} 
-                  className="song-card"
-                  style={{ animationDelay: `${0.05 * (index + 1)}s` }}
-                  onClick={() => handleSongNav(item.id, item.type)}
-                >
-                  <div className="card-artwork">
-                    <img 
-                      src={item.artworkUrl || item.artwork || randomRapper} 
-                      alt={item.title}
-                      onError={(e) => { e.target.src = randomRapper; }}
-                    />
-                    {item.duration && (
-                      <span className="card-duration">{formatDuration(item.duration)}</span>
-                    )}
-                    {item.explicit && (
-                      <span className="card-explicit">E</span>
-                    )}
-                    <button className="card-play" onClick={(e) => handlePlayMedia(e, item)}>
-                      <CardPlayIcon />
-                    </button>
-                  </div>
-                  <div className="card-info">
-                    <div className="card-title">{item.title}</div>
-
-                    <div className="card-subrow">
-                      <div
-                        className="card-artist"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleArtistNav(item.artistData?.userId || item.artist?.userId || 'unknown');
-                        }}
-                      >
-                        {item.artistData?.username || item.artist || 'Unknown'}
+                    <div className="artist-of-week-info">
+                      <div className="artist-of-week-label">
+                        Artist of the Week &middot; {selectedJurisdictionName}
                       </div>
-
-                      <div className="card-play-count" title={`${item.playCount || 0} total plays`}>
-                        <svg
-                          viewBox="0 0 24 24"
-                          width="11"
-                          height="11"
-                          aria-hidden="true"
-                          focusable="false"
-                        >
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                        <span>{formatPlayCount(item.playCount)}</span>
-                      </div>
+                      <div className="artist-of-week-name">{artistOfWeek.username}</div>
+                      {artistOfWeek.votesCount > 0 && (
+                        <div className="artist-of-week-meta">
+                          {artistOfWeek.votesCount} vote{artistOfWeek.votesCount !== 1 ? 's' : ''} this week
+                        </div>
+                      )}
                     </div>
-
-                    {item.createdAt && (
-                      <div className="card-meta">{formatTimeAgo(item.createdAt)}</div>
-                    )}
+                    <span className="artist-of-week-chevron">&#8250;</span>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                </section>
+              )}
 
-          {/* ═══════ POPULAR ARTISTS ═══════ */}
-          <section className={`feed-section artist-cards ${animate ? "animate" : ""}`}>
-            <div className="section-header">
-              <h2 className="section-title">
-                Popular Artists 
-              </h2>
-            </div>
-            <div className="artist-cards-grid">
-              {(() => {
-                const artistMap = new Map();
-                const allMedia = [...trendingToday, ...topRated, ...newMedia];
-                
-                allMedia.forEach(media => {
-                  if (media.artistData && !artistMap.has(media.artistData.userId)) {
-                    artistMap.set(media.artistData.userId, {
-                      userId: media.artistData.userId,
-                      username: media.artistData.username,
-                      photoUrl: encodeURI(media.artistData.photoUrl),
-                      jurisdictionId: media.artistData.jurisdiction?.jurisdictionId,
-                      jurisdictionName: getJurisdictionDisplayName(
-                        media.artistData.jurisdiction?.jurisdictionId || selectedJurisdictionId
-                      ),
-                      score: media.artistData.score || 0
+              {/* ═══════ POPULAR ARTISTS ═══════ */}
+              <section className={`feed-section artist-cards ${animate ? "animate" : ""}`}>
+                <div className="section-header">
+                  <h2 className="section-title">
+                    Popular Artists 
+                  </h2>
+                </div>
+                <div className="artist-cards-grid">
+                  {(() => {
+                    const artistMap = new Map();
+                    const allMedia = [...trendingToday, ...topRated, ...newMedia];
+                    
+                    allMedia.forEach(media => {
+                      if (media.artistData && !artistMap.has(media.artistData.userId)) {
+                        artistMap.set(media.artistData.userId, {
+                          userId: media.artistData.userId,
+                          username: media.artistData.username,
+                          photoUrl: encodeURI(media.artistData.photoUrl),
+                          jurisdictionId: media.artistData.jurisdiction?.jurisdictionId,
+                          jurisdictionName: getJurisdictionDisplayName(
+                            media.artistData.jurisdiction?.jurisdictionId || selectedJurisdictionId
+                          ),
+                          score: media.artistData.score || 0
+                        });
+                      }
                     });
-                  }
-                });
-                
-                const artists = Array.from(artistMap.values())
-                  .sort((a, b) => b.score - a.score)
-                  .slice(0, 5);
-                
-                return artists.map((artist, i) => (
-                  <ArtistCard
-                    key={artist.userId}
-                    artist={artist}
-                    index={i}
-                    onPress={() => handleArtistNav(artist.userId)}
-                    onViewPress={() => handleArtistNav(artist.userId)}
-                  />
-                ));
-              })()}
-            </div>
-          </section>
+                    
+                    const artists = Array.from(artistMap.values())
+                      .sort((a, b) => b.score - a.score)
+                      .slice(0, 5);
+                    
+                    return artists.map((artist, i) => (
+                      <ArtistCard
+                        key={artist.userId}
+                        artist={artist}
+                        index={i}
+                        onPress={() => handleArtistNav(artist.userId)}
+                        onViewPress={() => handleArtistNav(artist.userId)}
+                      />
+                    ));
+                  })()}
+                </div>
+              </section>
+            </>
+          )}
+
+          {/* ═══════════════════════════════════════ */}
+          {/* ═══════ LENS: CHARTS ═══════ */}
+          {/* ═══════════════════════════════════════ */}
+          {activeLens === 'charts' && (
+            <section className={`feed-section ${animate ? 'animate' : ''}`}>
+              <div className="section-header section-header--stacked">
+                <h2 className="section-title">This Month's Top Voted</h2>
+                <div className="chart-caption">
+                  Voting closes Sunday 11:59 PM
+                  {!chartData.isDemo && (
+                    <> &middot; {chartData.totalVotesThisMonth} vote{chartData.totalVotesThisMonth !== 1 ? 's' : ''} cast this month</>
+                  )}
+                </div>
+              </div>
+
+              {chartLoading ? (
+                <div className="lens-loading">
+                  <div className="feed-loading-spinner" />
+                </div>
+              ) : (
+                <div className="chart-list">
+                  {chartData.entries.map((entry) => (
+                    <div
+                      key={entry.songId}
+                      className={`chart-row ${entry.rank === 1 ? 'chart-row--first' : ''}`}
+                      onClick={() => handleSongNav(entry.songId, 'song')}
+                    >
+                      <span className="chart-rank">{entry.rank}</span>
+                      <div className="chart-artwork">
+                        <img
+                          src={buildUrl(entry.artworkUrl) || entry.artworkUrl || randomRapper}
+                          alt={entry.title}
+                          onError={(e) => { e.target.src = randomRapper; }}
+                        />
+                      </div>
+                      <div className="chart-info">
+                        <div className="chart-song-title">{entry.title}</div>
+                        <div
+                          className="chart-song-artist"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (entry.artistId) handleArtistNav(entry.artistId);
+                          }}
+                        >
+                          {entry.artistName} &middot; {entry.votes} vote{entry.votes !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <MovementBadge movement={entry.movement} />
+                      <button className="chart-play" onClick={(e) => handlePlayChartEntry(e, entry)}>
+                        <CardPlayIcon />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {lastWinner && (
+                <div
+                  className="chart-last-winner"
+                  onClick={() => handleSongNav(lastWinner.songId, 'song')}
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <path d="M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4z" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span>
+                    Last week's winner:&nbsp;
+                    <strong>{lastWinner.title} &mdash; {lastWinner.artistName}</strong>
+                  </span>
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ═══════════════════════════════════════ */}
+          {/* ═══════ LENS: PLAYLISTS ═══════ */}
+          {/* ═══════════════════════════════════════ */}
+          {activeLens === 'playlists' && (
+            <section className={`feed-section ${animate ? 'animate' : ''}`}>
+              <div className="section-header">
+                <h2 className="section-title">Playlists Rising in {selectedJurisdictionName}</h2>
+              </div>
+
+              {playlistsLoading ? (
+                <div className="lens-loading">
+                  <div className="feed-loading-spinner" />
+                </div>
+              ) : (
+                <>
+                  {featuredPlaylist && (
+                    <div
+                      className="featured-playlist"
+                      onClick={() => handlePlaylistNav(featuredPlaylist.playlistId)}
+                    >
+                      <PlaylistCover playlist={featuredPlaylist} className="featured-playlist-cover" />
+                      <div className="featured-playlist-body">
+                        <span className="featured-playlist-badge">
+                          {featuredPlaylist.type === 'official' ? 'Curated by Unis' : 'Community Favorite'}
+                        </span>
+                        <div className="featured-playlist-name">{featuredPlaylist.name}</div>
+                        <div className="featured-playlist-meta">
+                          {featuredPlaylist.songCount || 0} track{(featuredPlaylist.songCount || 0) !== 1 ? 's' : ''}
+                          {featuredPlaylist.creatorName ? <> &middot; by {featuredPlaylist.creatorName}</> : null}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {communityPlaylists.length > 0 ? (
+                    <div className="playlist-grid">
+                      {communityPlaylists.slice(0, 8).map((playlist) => (
+                        <div
+                          key={playlist.playlistId}
+                          className="playlist-tile"
+                          onClick={() => handlePlaylistNav(playlist.playlistId)}
+                        >
+                          <div className="playlist-tile-cover-wrap">
+                            <PlaylistCover playlist={playlist} className="playlist-tile-cover" />
+                            <span className="playlist-tile-count">
+                              {playlist.songCount || 0} track{(playlist.songCount || 0) !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <div className="playlist-tile-name">{playlist.name}</div>
+                          <div className="playlist-tile-meta">
+                            {playlist.creatorName ? `by ${playlist.creatorName}` : ''}
+                            {playlist.followerCount ? ` · ${formatPlayCount(playlist.followerCount)} followers` : ''}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    !featuredPlaylist && (
+                      <div className="lens-empty">
+                        No public playlists in {selectedJurisdictionName} yet. Be the first to make one.
+                      </div>
+                    )
+                  )}
+                </>
+              )}
+            </section>
+          )}
+
+          {/* ═══════════════════════════════════════ */}
+          {/* ═══════ LENS: FRESH ═══════ */}
+          {/* ═══════════════════════════════════════ */}
+          {activeLens === 'fresh' && (
+            <section className={`feed-section ${animate ? 'animate' : ''}`}>
+              <div className="section-header">
+                <h2 className="section-title">Dropped Recently</h2>
+              </div>
+              <div className="fresh-list">
+                {newMediaList.map((item) => (
+                  <div
+                    key={item.id}
+                    className="fresh-row"
+                    onClick={() => handleSongNav(item.id, item.type)}
+                  >
+                    <div className="fresh-artwork">
+                      <img
+                        src={item.artworkUrl || item.artwork || randomRapper}
+                        alt={item.title}
+                        onError={(e) => { e.target.src = randomRapper; }}
+                      />
+                    </div>
+                    <div className="fresh-info">
+                      <div className="fresh-title">{item.title}</div>
+                      <div
+                        className="fresh-artist"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArtistNav(item.artistData?.userId || 'unknown');
+                        }}
+                      >
+                        {item.artistData?.username || item.artist || 'Unknown'}
+                        {item.createdAt ? <> &middot; {formatTimeAgo(item.createdAt)}</> : null}
+                      </div>
+                    </div>
+                    {isWithinDays(item.createdAt, 7) && (
+                      <span className="fresh-badge">NEW</span>
+                    )}
+                    <button className="chart-play" onClick={(e) => handlePlayMedia(e, item)}>
+                      <CardPlayIcon />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Dropping soon — renders only once /v1/media/upcoming exists and returns data */}
+              {upcoming.length > 0 && (
+                <>
+                  <div className="section-header fresh-upcoming-header">
+                    <h2 className="section-title">Dropping Soon</h2>
+                  </div>
+                  <div className="fresh-list">
+                    {upcoming.map((item) => (
+                      <div key={item.songId} className="fresh-row fresh-row--upcoming">
+                        <div className="fresh-artwork">
+                          <img
+                            src={buildUrl(item.artworkUrl) || randomRapper}
+                            alt={item.title}
+                            onError={(e) => { e.target.src = randomRapper; }}
+                          />
+                        </div>
+                        <div className="fresh-info">
+                          <div className="fresh-title">{item.title}</div>
+                          <div className="fresh-artist">
+                            {item.artist?.username || 'Unknown'}
+                          </div>
+                        </div>
+                        <span className="fresh-date">
+                          {item.scheduledReleaseAt
+                            ? new Date(item.scheduledReleaseAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                            : 'Soon'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </section>
+          )}
 
         </main>
       </div>
