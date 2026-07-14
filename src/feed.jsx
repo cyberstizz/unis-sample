@@ -22,6 +22,8 @@ import songArtTen from './assets/albumartten.jpeg';
 import songArtEleven from './assets/rapperphotoOne.jpg';
 import { JURISDICTION_NAMES, INTERVAL_IDS } from './utils/idMappings';
 import LastWonNotification from './LastWonNotification';
+import PlaylistViewer from './playlistViewer'; // ★ feed #7
+import unisLogo from './assets/unisLogo.png'; // ★ feed #4: artwork fallback
 import './feed.scss';
 
 // ─── Inline-styled play icon ───
@@ -134,6 +136,7 @@ const Feed = () => {
   // ─── Charts lens ───
   const [chart, setChart] = useState(null); // { totalVotesThisMonth, entries: [] }
   const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState(false); // ★ feed #6
 
   // ─── Playlists lens ───
   const [featuredPlaylist, setFeaturedPlaylist] = useState(null);
@@ -142,6 +145,9 @@ const Feed = () => {
 
   // ─── Fresh lens: upcoming (hidden until scheduling exists on backend) ───
   const [upcoming, setUpcoming] = useState([]);
+
+  // ★ feed #7: playlist opened as an overlay (no /playlist/:id route exists)
+  const [viewingPlaylistId, setViewingPlaylistId] = useState(null);
 
   const userId = user?.userId;
   const userJurisdictionId = user?.jurisdiction?.jurisdictionId || DEFAULT_JURISDICTION_ID;
@@ -393,6 +399,7 @@ const Feed = () => {
 
     const fetchChart = async () => {
       setChartLoading(true);
+      setChartError(false);
       try {
         const res = await apiCall({
           method: 'get',
@@ -400,8 +407,10 @@ const Feed = () => {
         });
         setChart(res.data || null);
       } catch (err) {
-        // Endpoint not deployed yet, or empty month — fall back to demo
+        // ★ feed #6: a failure is a failure — say so, don't fabricate a chart.
+        console.error('Charts load error:', err);
         setChart(null);
+        setChartError(true);
       } finally {
         setChartLoading(false);
       }
@@ -417,13 +426,23 @@ const Feed = () => {
     const fetchPlaylists = async () => {
       setPlaylistsLoading(true);
       try {
+        // ★ FIX (feed #7 — "only admin playlists show, not public ones"):
+        //   We were calling /v1/playlists/community/{id}. That backend query is
+        //   `WHERE p.type = 'community' AND p.visibility = 'public'` — so a normal
+        //   user's PUBLIC playlist (type 'user') is excluded, and only curated
+        //   community playlists come back. /v1/playlists/discover?jurisdictionId=
+        //   returns every public playlist in the jurisdiction regardless of type,
+        //   which is what "Playlists Rising" actually means.
         const [officialRes, communityRes] = await Promise.all([
           apiCall({ method: 'get', url: `/v1/playlists/official` }),
-          apiCall({ method: 'get', url: `/v1/playlists/community/${selectedJurisdictionId}` }),
+          apiCall({ method: 'get', url: `/v1/playlists/discover?jurisdictionId=${selectedJurisdictionId}` }),
         ]);
 
         const official = officialRes.data || [];
+        const officialIds = new Set(official.map((p) => p.playlistId));
+
         const community = (communityRes.data || [])
+          .filter((p) => !officialIds.has(p.playlistId))
           .slice()
           .sort((a, b) => (b.followerCount || 0) - (a.followerCount || 0));
 
@@ -465,7 +484,13 @@ const Feed = () => {
 
   const handleSongNav = (mediaId, type = 'song') => navigate(`/${type}/${mediaId}`);
   const handleArtistNav = (artistId) => navigate(`/artist/${artistId}`);
-  const handlePlaylistNav = (playlistId) => navigate(`/playlist/${playlistId}`);
+  // ★ FIX (feed #7 — "the screen just breaks when a playlist is clicked"):
+  //   navigate('/playlist/:id') pointed at a route that DOES NOT EXIST in
+  //   App.jsx (the only playlist route is /admin/playlists). React Router fell
+  //   through to the catch-all and the page went blank. PlaylistViewer is an
+  //   overlay component (playlistId + onClose), not a page — so open it in
+  //   place, exactly like playlistManager/playlistPanel do.
+  const handlePlaylistNav = (playlistId) => setViewingPlaylistId(playlistId);
 
   const handlePlayMedia = async (e, media) => {
     e.stopPropagation();
@@ -604,34 +629,53 @@ const Feed = () => {
     { userId: 'art5', username: 'Artist Five', photoUrl: songArtFive, score: 40 }
   ].slice(0, 5);
 
-  const getDummyChart = () => ({
-    totalVotesThisMonth: 0,
-    entries: getDummyTrending().slice(0, 5).map((d, i) => ({
-      rank: i + 1,
-      movement: i === 0 ? 2 : i === 1 ? -1 : i === 2 ? 0 : null,
-      votes: [124, 88, 76, 61, 44][i],
-      songId: d.id,
-      title: d.title,
-      artworkUrl: d.artworkUrl,
-      fileUrl: d.mediaUrl,
-      artistId: d.artistData.userId,
-      artistName: d.artistData.username,
-    })),
-    isDemo: true,
-  });
-
   const trendingTodayList = trendingToday.length ? trendingToday.slice(0, 10) : getDummyTrending();
   const topRatedList = topRated.length ? topRated.slice(0, 5) : getDummyTrending();
   const newMediaList = newMedia.length ? newMedia.slice(0, 5) : getDummyNew();
   const awardsList = awards.length ? awards.slice(0, 5) : getDummyAwards();
   const artistsList = popularArtists.length ? popularArtists.slice(0, 5) : getDummyArtists();
-  const chartData = (chart && chart.entries && chart.entries.length) ? chart : getDummyChart();
-
   const getJurisdictionDisplayName = (id) => {
     const key = JURISDICTION_NAMES[id];
     if (!key) return 'Your Area';
     return key.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
+
+  // ★ FIX (feed #4 — "popular artists aren't using buildUrl / images don't show"):
+  //   The old code built this list with `photoUrl: encodeURI(media.artistData.photoUrl)`.
+  //   Two bugs:
+  //     1. No buildUrl — a relative R2/CDN path was never resolved to an absolute URL.
+  //     2. When photoUrl was undefined, encodeURI(undefined) returns the STRING
+  //        "undefined", producing <img src="undefined"> — which is exactly the
+  //        blank dark box you've been seeing. It was never a "legacy artist with
+  //        no image"; it was a broken src for EVERY artist lacking a photo.
+  //   pickPhoto() already applies buildUrl and checks every photo field variant.
+  //   Artists with genuinely no photo now fall back to the Unis mark.
+  //
+  //   NOTE: the source list is unchanged (still derived from the media you've
+  //   already loaded). See the note below about the unused /users/artist/top fetch.
+  const popularArtistsList = (() => {
+    const artistMap = new Map();
+
+    [...trendingToday, ...topRated, ...newMedia].forEach((media) => {
+      const a = media.artistData;
+      if (a?.userId && !artistMap.has(a.userId)) {
+        artistMap.set(a.userId, {
+          userId: a.userId,
+          username: a.username,
+          photoUrl: pickPhoto(a) || unisLogo, // ★ buildUrl + real fallback
+          jurisdictionId: a.jurisdiction?.jurisdictionId,
+          jurisdictionName: getJurisdictionDisplayName(
+            a.jurisdiction?.jurisdictionId || selectedJurisdictionId
+          ),
+          score: a.score || 0,
+        });
+      }
+    });
+
+    return Array.from(artistMap.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  })();
 
   // ─── Rank movement badge for chart rows ───
   const MovementBadge = ({ movement }) => {
@@ -694,7 +738,7 @@ const Feed = () => {
         {item.explicit && (
           <span className="card-explicit">E</span>
         )}
-        <button className="card-play" onClick={(e) => handlePlayMedia(e, item)}>
+        <button type="button" className="card-play" onClick={(e) => handlePlayMedia(e, item)}>
           <CardPlayIcon />
         </button>
       </div>
@@ -785,7 +829,7 @@ const Feed = () => {
               <p className="hero-subtitle">
                 Your vote decides who tops the neighborhood leaderboard. Listen, discover, and support local artists.
               </p>
-              <button className="hero-cta" onClick={handleVoteClick}>
+              <button type="button" className="hero-cta" onClick={handleVoteClick}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
@@ -884,23 +928,28 @@ const Feed = () => {
               {/* ═══════ ARTIST OF THE WEEK ═══════ */}
               {artistOfWeek && (
                 <section className={`feed-section ${animate ? 'animate' : ''}`}>
+                  {/* ★ FIX (feed #3): was a side-by-side row where the text block ate
+                      ~2/3 of the card and the portrait was a small circle. Now the
+                      portrait IS the card — large, centred, filling the space — with a
+                      styled caption sitting beneath it. */}
                   <div
                     className="artist-of-week"
                     onClick={() => handleArtistNav(artistOfWeek.userId)}
                   >
                     <div className="artist-of-week-photo-wrap">
-                      <svg className="artist-of-week-crown" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                      <svg className="artist-of-week-crown" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
                         <path d="M3 18h18l-1.5-9-4.5 4-3-7-3 7-4.5-4L3 18z" fill="#eab308" />
                       </svg>
                       <div className="artist-of-week-photo">
                         <img
-                          src={artistOfWeek.photoUrl || randomRapper}
+                          src={artistOfWeek.photoUrl || unisLogo}
                           alt={artistOfWeek.username}
-                          onError={(e) => { e.target.src = randomRapper; }}
+                          onError={(e) => { e.target.src = unisLogo; }}
                         />
                       </div>
                     </div>
-                    <div className="artist-of-week-info">
+
+                    <div className="artist-of-week-caption">
                       <div className="artist-of-week-label">
                         Artist of the Week &middot; {selectedJurisdictionName}
                       </div>
@@ -911,7 +960,6 @@ const Feed = () => {
                         </div>
                       )}
                     </div>
-                    <span className="artist-of-week-chevron">&#8250;</span>
                   </div>
                 </section>
               )}
@@ -924,39 +972,15 @@ const Feed = () => {
                   </h2>
                 </div>
                 <div className="artist-cards-grid">
-                  {(() => {
-                    const artistMap = new Map();
-                    const allMedia = [...trendingToday, ...topRated, ...newMedia];
-                    
-                    allMedia.forEach(media => {
-                      if (media.artistData && !artistMap.has(media.artistData.userId)) {
-                        artistMap.set(media.artistData.userId, {
-                          userId: media.artistData.userId,
-                          username: media.artistData.username,
-                          photoUrl: encodeURI(media.artistData.photoUrl),
-                          jurisdictionId: media.artistData.jurisdiction?.jurisdictionId,
-                          jurisdictionName: getJurisdictionDisplayName(
-                            media.artistData.jurisdiction?.jurisdictionId || selectedJurisdictionId
-                          ),
-                          score: media.artistData.score || 0
-                        });
-                      }
-                    });
-                    
-                    const artists = Array.from(artistMap.values())
-                      .sort((a, b) => b.score - a.score)
-                      .slice(0, 5);
-                    
-                    return artists.map((artist, i) => (
-                      <ArtistCard
-                        key={artist.userId}
-                        artist={artist}
-                        index={i}
-                        onPress={() => handleArtistNav(artist.userId)}
-                        onViewPress={() => handleArtistNav(artist.userId)}
-                      />
-                    ));
-                  })()}
+                  {popularArtistsList.map((artist, i) => (
+                    <ArtistCard
+                      key={artist.userId}
+                      artist={artist}
+                      index={i}
+                      onPress={() => handleArtistNav(artist.userId)}
+                      onViewPress={() => handleArtistNav(artist.userId)}
+                    />
+                  ))}
                 </div>
               </section>
             </>
@@ -971,8 +995,8 @@ const Feed = () => {
                 <h2 className="section-title">This Month's Top Voted</h2>
                 <div className="chart-caption">
                   Voting closes Sunday 11:59 PM
-                  {!chartData.isDemo && (
-                    <> &middot; {chartData.totalVotesThisMonth} vote{chartData.totalVotesThisMonth !== 1 ? 's' : ''} cast this month</>
+                  {chart && (
+                    <> &middot; {chart.totalVotesThisMonth} vote{chart.totalVotesThisMonth !== 1 ? 's' : ''} cast this month</>
                   )}
                 </div>
               </div>
@@ -981,9 +1005,27 @@ const Feed = () => {
                 <div className="lens-loading">
                   <div className="feed-loading-spinner" />
                 </div>
+              ) : chartError ? (
+                /* ★ feed #6: real failure, stated plainly */
+                <div className="lens-empty">
+                  Couldn&apos;t load this month&apos;s chart. Try again in a moment.
+                </div>
+              ) : chartEntries.length === 0 ? (
+                /* ★ feed #6: an empty month is an empty month — not stock artwork
+                   and invented vote counts. This is the honest zero state. */
+                <div className="lens-empty lens-empty--chart">
+                  <strong>No votes counted yet this month</strong>
+                  <p>
+                    The chart fills up as {selectedJurisdictionName} votes. Cast the
+                    first one and watch a track climb.
+                  </p>
+                  <button type="button" className="hero-cta" onClick={handleVoteClick}>
+                    Vote now
+                  </button>
+                </div>
               ) : (
                 <div className="chart-list">
-                  {chartData.entries.map((entry) => (
+                  {chartEntries.map((entry) => (
                     <div
                       key={entry.songId}
                       className={`chart-row ${entry.rank === 1 ? 'chart-row--first' : ''}`}
@@ -1010,7 +1052,7 @@ const Feed = () => {
                         </div>
                       </div>
                       <MovementBadge movement={entry.movement} />
-                      <button className="chart-play" onClick={(e) => handlePlayChartEntry(e, entry)}>
+                      <button type="button" className="chart-play" onClick={(e) => handlePlayChartEntry(e, entry)}>
                         <CardPlayIcon />
                       </button>
                     </div>
@@ -1141,7 +1183,7 @@ const Feed = () => {
                     {isWithinDays(item.createdAt, 7) && (
                       <span className="fresh-badge">NEW</span>
                     )}
-                    <button className="chart-play" onClick={(e) => handlePlayMedia(e, item)}>
+                    <button type="button" className="chart-play" onClick={(e) => handlePlayMedia(e, item)}>
                       <CardPlayIcon />
                     </button>
                   </div>
@@ -1188,6 +1230,14 @@ const Feed = () => {
 
       {/* Only show LastWonNotification for logged-in users */}
       {!isGuest && <LastWonNotification />}
+
+      {/* ★ feed #7: playlist overlay (replaces the dead /playlist/:id route) */}
+      {viewingPlaylistId && (
+        <PlaylistViewer
+          playlistId={viewingPlaylistId}
+          onClose={() => setViewingPlaylistId(null)}
+        />
+      )}
 
       {/* Auth gate bottom sheet — triggered when guest taps Vote */}
       <AuthGateSheet {...gateProps} />
