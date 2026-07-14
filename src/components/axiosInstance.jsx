@@ -77,9 +77,24 @@ axiosInstance.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      cacheService.clearAll();
-      window.location.href = '/login';
+      // ★ FIX (feed #1 — "the page reloads after almost any action"):
+      //   This used to hard-redirect on EVERY 401. A guest browsing the Feed
+      //   hits protected endpoints constantly (play tracking, queue add,
+      //   default-song, track-view). Each 401 fired
+      //   `window.location.href = '/login'` — a FULL PAGE RELOAD. That is the
+      //   "refresh" the user sees when clicking a song or queueing a track.
+      //
+      //   A 401 only means "your session died" if you actually had a session.
+      //   Guests simply have no token, so we swallow it and let the caller
+      //   (e.g. AuthGateSheet) handle the gating. No token, no redirect.
+      const hadSession = !!localStorage.getItem('token');
+
+      if (hadSession) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('unis-theme'); // ★ feed #2: don't leak the old user's theme
+        cacheService.clearAll();
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

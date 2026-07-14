@@ -51,10 +51,24 @@ export const AuthProvider = ({ children }) => {
   // On mount, apply cached theme immediately (before profile loads)
   // This prevents the blue flash on page reload/login
   useEffect(() => {
+    // ★ FIX (feed #2 — "the last user's theme colour persists after sign-out"):
+    //   This used to re-apply the cached theme unconditionally on every mount.
+    //   Since logout never cleared `unis-theme`, a signed-out visitor kept the
+    //   previous user's --unis-primary. The header papered over it (it forces
+    //   the blue logo for guests) but the page body stayed themed — exactly the
+    //   mismatch the user describes. Only restore a cached theme if there is
+    //   actually a session to restore it for.
+    const hasSession = !!localStorage.getItem('token');
     const cached = localStorage.getItem('unis-theme');
-    if (cached && VALID_THEMES.includes(cached)) {
+
+    if (hasSession && cached && VALID_THEMES.includes(cached)) {
       document.getElementById('root')?.setAttribute('data-theme', cached);
       setThemeState(cached);
+    } else {
+      // Guest: hard-reset to the default brand theme.
+      localStorage.removeItem('unis-theme');
+      document.getElementById('root')?.setAttribute('data-theme', 'blue');
+      setThemeState('blue');
     }
   }, []);
 
@@ -161,6 +175,9 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('unis-theme');            // ★ feed #2
+    document.getElementById('root')?.setAttribute('data-theme', 'blue'); // ★ feed #2
+    setThemeState('blue');                            // ★ feed #2
     setUser(null);
 
     // Notify other contexts to clear their state on logout
