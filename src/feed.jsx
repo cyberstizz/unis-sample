@@ -634,6 +634,8 @@ const Feed = () => {
   const newMediaList = newMedia.length ? newMedia.slice(0, 5) : getDummyNew();
   const awardsList = awards.length ? awards.slice(0, 5) : getDummyAwards();
   const artistsList = popularArtists.length ? popularArtists.slice(0, 5) : getDummyArtists();
+  const chartEntries = chart?.entries || []; // ★ feed #6: real chart data only, no demo fallback
+
   const getJurisdictionDisplayName = (id) => {
     const key = JURISDICTION_NAMES[id];
     if (!key) return 'Your Area';
@@ -843,6 +845,7 @@ const Feed = () => {
             {LENSES.map((lens) => (
               <button
                 key={lens.key}
+                type="button"
                 role="tab"
                 aria-selected={activeLens === lens.key}
                 className={`lens-button ${activeLens === lens.key ? 'lens-button--active' : ''}`}
