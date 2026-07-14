@@ -1,4 +1,3 @@
-// src/feed.test.jsx
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor, fireEvent, act } from '@testing-library/react';
@@ -444,7 +443,11 @@ describe('Feed — play media (song card)', () => {
     await waitFor(() => expect(requestPlaySpy).toHaveBeenCalled());
   });
 
-  it('fires /play tracking endpoint when authenticated user plays a song', async () => {
+  // ★ Feed no longer POSTs /play itself. Play counting moved into Player.jsx,
+  //   which fires it once the listener crosses the 15s / 25% threshold. Feed
+  //   only hands the media to requestPlay with a `source` tag. These two tests
+  //   asserted the OLD behaviour and have been failing since that change.
+  it('does NOT fire /play from the feed (Player owns play counting now)', async () => {
     const { container } = renderWithProviders(<Feed />, { as: 'listener' });
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
     await waitFor(() => expect(screen.getByText('Trending Track')).toBeInTheDocument());
@@ -455,13 +458,11 @@ describe('Feed — play media (song card)', () => {
     const user = userEvent.setup();
     await user.click(playButtons[0]);
 
-    await waitFor(() => {
-      const playCalls = callsMatching(/\/media\/song\/.+\/play/, 'post');
-      expect(playCalls.length).toBeGreaterThan(0);
-    });
+    await waitFor(() => expect(requestPlaySpy).toHaveBeenCalled());
+    expect(callsMatching(/\/media\/song\/.+\/play/, 'post').length).toBe(0);
   });
 
-  it('fires /play without userId query param for guests', async () => {
+  it('hands the media to requestPlay for guests without any tracking POST', async () => {
     const { container } = renderWithProviders(<Feed />, { as: 'guest' });
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
     await waitFor(() => expect(screen.getByText('Trending Track')).toBeInTheDocument());
@@ -470,12 +471,8 @@ describe('Feed — play media (song card)', () => {
     const user = userEvent.setup();
     await user.click(playButtons[0]);
 
-    await waitFor(() => {
-      const playCalls = callsMatching(/\/media\/song\/.+\/play/, 'post');
-      expect(playCalls.length).toBeGreaterThan(0);
-      // Guest URL should NOT have userId param
-      expect(playCalls[0].url).not.toContain('userId=');
-    });
+    await waitFor(() => expect(requestPlaySpy).toHaveBeenCalled());
+    expect(callsMatching(/\/media\/song\/.+\/play/, 'post').length).toBe(0);
   });
 
   it('calls incrementGateSongCount for guest plays', async () => {
@@ -537,15 +534,13 @@ describe('Feed — navigation clicks', () => {
     expect(navigateSpy).toHaveBeenCalledWith('/artist/artist-1');
   });
 
-  it('navigates to /findpage when "Show all" link is clicked', async () => {
+  // ★ The "Show all" links were removed from the feed when the lens bar landed.
+  //   This asserted markup that no longer exists.
+  it('no longer renders "Show all" links (replaced by the lens bar)', async () => {
     renderWithProviders(<Feed />, { as: 'guest' });
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
-
-    const user = userEvent.setup();
-    const showAllLinks = screen.getAllByText(/Show all/i);
-    await user.click(showAllLinks[0]);
-
-    expect(navigateSpy).toHaveBeenCalledWith('/findpage');
+    expect(screen.queryByText(/Show all/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: /feed views/i })).toBeInTheDocument();
   });
 });
 
