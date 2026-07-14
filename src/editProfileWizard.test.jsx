@@ -3,33 +3,31 @@
 // Test suite for EditProfileWizard — a two-tab modal (Photo / Bio) for
 // updating the user's profile photo and bio, each saved independently.
 //
-// Covers:
-//   • show=false renders nothing
-//   • Default tab is "photo"
-//   • Tab switching between Photo and Bio
-//   • Photo tab: preview, file picker, "Choose New Photo" label as input trigger
-//   • Photo preview: builds API URL from relative photoUrl, passes through absolute,
-//     falls back to /default-avatar.jpg when no photo
-//   • Bio tab: textarea pre-filled from userProfile.bio, char counter, 500 max
-//   • Save Photo button:
-//       - disabled when no new file selected
-//       - PATCH to /v1/users/profile with FormData containing 'photo'
-//       - calls onSuccess + onClose on success, alert on error
-//       - early-close when no photoFile (no API call)
-//   • Save Bio button:
-//       - disabled when bio matches userProfile.bio (no changes)
-//       - PUT to /v1/users/profile/:userId/bio with JSON { bio: trimmed }
-//       - calls onSuccess + onClose on success, alert on error
-//       - early-close when bio unchanged (no API call)
-//   • Loading state: button shows "Saving..." and disables during request
-//   • Cancel button calls onClose
-//   • Close (×) button calls onClose
-//   • cacheService invalidation after successful save
+// ---------------------------------------------------------------------------
+// ★ REWRITTEN against the redesigned (dark glass card / `epw-*`) component.
+//   The previous suite was written against the pre-redesign markup and was
+//   asserting on DOM that no longer exists. Every failure traced to one of
+//   these eight renames — the component's BEHAVIOUR never regressed:
+//
+//     old test expected            →  component now renders
+//     ─────────────────────────────────────────────────────────────────────
+//     .upload-wizard-overlay       →  .epw-overlay
+//     .close-button                →  .epw__close
+//     tabs as role="button"        →  <button role="tab">  (role is OVERRIDDEN,
+//                                     so getByRole('button', …) matched nothing —
+//                                     this alone caused most of the 21 failures)
+//     class "active"               →  class "is-active" (+ aria-selected)
+//     "Saving..." (3 dots)         →  "Saving…"  (U+2026 ellipsis)
+//     "5/500"                      →  "5 / 500"  (spaces around the slash)
+//     "Selected: file.jpg"         →  bare "file.jpg"
+//     /default-avatar.jpg fallback →  initial-letter fallback element
+//
+//   Behavioural coverage below is unchanged from the original suite.
+// ---------------------------------------------------------------------------
 //
 // Pattern notes:
-//   • Photo save uses FormData → use the apiCall spy bypass (gotcha #1).
-//   • Bio save uses plain JSON → could go through MSW, but using the same
-//     spy pattern for consistency and to inspect payload.
+//   • Photo save uses FormData → use the apiCall spy bypass.
+//   • Bio save uses plain JSON → same spy pattern, to inspect payload.
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -103,9 +101,16 @@ function renderWizard({
   };
 }
 
-// Helper to grab the file input (it's hidden but reachable via DOM)
 function getPhotoFileInput() {
   return document.querySelector('input[type="file"]');
+}
+
+// ★ tabs expose role="tab", NOT role="button"
+const photoTab = () => screen.getByRole('tab', { name: /photo/i });
+const bioTab = () => screen.getByRole('tab', { name: /bio/i });
+
+async function switchToBio(user) {
+  await user.click(bioTab());
 }
 
 // ===========================================================================
@@ -119,12 +124,17 @@ describe('EditProfileWizard — visibility', () => {
 
   it('renders the modal overlay when show=true', () => {
     renderWizard();
-    expect(document.querySelector('.upload-wizard-overlay')).not.toBeNull();
+    expect(document.querySelector('.epw-overlay')).not.toBeNull();
   });
 
-  it('renders the "Edit Profile" heading', () => {
+  it('renders the "Edit profile" heading', () => {
     renderWizard();
     expect(screen.getByRole('heading', { name: /edit profile/i })).toBeInTheDocument();
+  });
+
+  it('exposes the modal as a dialog', () => {
+    renderWizard();
+    expect(screen.getByRole('dialog', { name: /edit profile/i })).toBeInTheDocument();
   });
 });
 
@@ -139,32 +149,32 @@ describe('EditProfileWizard — tab navigation', () => {
 
   it('Photo tab is marked active by default', () => {
     renderWizard();
-    const photoTab = screen.getByRole('button', { name: /^photo$/i });
-    expect(photoTab.classList.contains('active')).toBe(true);
+    expect(photoTab()).toHaveAttribute('aria-selected', 'true');
+    expect(photoTab().classList.contains('is-active')).toBe(true);
   });
 
   it('clicking the Bio tab switches to the bio editor', async () => {
     renderWizard();
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /bio/i }));
-    // The bio tab content shows "Tell the world about your sound..."
+    await switchToBio(user);
     expect(screen.getByText(/tell the world about your sound/i)).toBeInTheDocument();
   });
 
   it('clicking back to Photo tab restores the photo editor', async () => {
     renderWizard();
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /bio/i }));
-    await user.click(screen.getByRole('button', { name: /photo/i }));
+    await switchToBio(user);
+    await user.click(photoTab());
     expect(screen.getByText(/profile photo/i)).toBeInTheDocument();
   });
 
-  it('Bio tab has active class after switching', async () => {
+  it('Bio tab is marked active after switching', async () => {
     renderWizard();
     const user = userEvent.setup();
-    const bioTab = screen.getByRole('button', { name: /bio/i });
-    await user.click(bioTab);
-    expect(bioTab.classList.contains('active')).toBe(true);
+    await switchToBio(user);
+    expect(bioTab()).toHaveAttribute('aria-selected', 'true');
+    expect(bioTab().classList.contains('is-active')).toBe(true);
+    expect(photoTab()).toHaveAttribute('aria-selected', 'false');
   });
 });
 
@@ -174,8 +184,7 @@ describe('EditProfileWizard — tab navigation', () => {
 describe('EditProfileWizard — photo tab initial render', () => {
   it('renders the profile preview image', () => {
     renderWizard();
-    const img = screen.getByAltText(/profile preview/i);
-    expect(img).toBeInTheDocument();
+    expect(screen.getByAltText(/profile preview/i)).toBeInTheDocument();
   });
 
   it('builds preview URL from relative photoUrl with API base', () => {
@@ -190,59 +199,57 @@ describe('EditProfileWizard — photo tab initial render', () => {
     expect(img.src).toBe('https://cdn.test/me.jpg');
   });
 
-  it('falls back to /default-avatar.jpg when no photoUrl', () => {
-    renderWizard({ userProfile: baseProfile({ photoUrl: null }) });
-    const img = screen.getByAltText(/profile preview/i);
-    expect(img.src).toMatch(/default-avatar\.jpg$/);
+  // ★ the /default-avatar.jpg fallback was replaced by an initial-letter element
+  it('falls back to the initial-letter avatar when there is no photoUrl', () => {
+    renderWizard({ userProfile: baseProfile({ photoUrl: null, username: 'testlistener' }) });
+    expect(screen.queryByAltText(/profile preview/i)).not.toBeInTheDocument();
+    expect(document.querySelector('.epw__photo-fallback')).not.toBeNull();
+    expect(document.querySelector('.epw__photo-fallback').textContent).toBe('T');
   });
 
-  it('renders the "Choose New Photo" label', () => {
+  it('renders the "Choose new photo" label', () => {
     renderWizard();
     expect(screen.getByText(/choose new photo/i)).toBeInTheDocument();
   });
 
-  it('does not show "Selected: filename" line until a file is picked', () => {
+  it('does not show a filename line until a file is picked', () => {
     renderWizard();
-    expect(screen.queryByText(/^Selected:/i)).not.toBeInTheDocument();
+    expect(document.querySelector('.epw__file-name')).toBeNull();
   });
 
   it('shows the selected filename after picking a file', async () => {
     renderWizard();
-    const file = fakeFile({ name: 'my-new-pic.jpg' });
-    await selectFile(getPhotoFileInput(), file);
-    expect(screen.getByText(/Selected: my-new-pic\.jpg/)).toBeInTheDocument();
+    await selectFile(getPhotoFileInput(), fakeFile({ name: 'my-new-pic.jpg' }));
+    expect(screen.getByText('my-new-pic.jpg')).toBeInTheDocument();
   });
 
   it('updates the preview src to the blob URL after picking a file', async () => {
     renderWizard();
     await selectFile(getPhotoFileInput(), fakeFile());
-    const img = screen.getByAltText(/profile preview/i);
-    expect(img.src).toBe('blob:mock-photo-preview');
+    expect(screen.getByAltText(/profile preview/i).src).toBe('blob:mock-photo-preview');
   });
 });
 
 // ===========================================================================
 // PHOTO TAB — SAVE BUTTON STATE
 // ===========================================================================
-describe('EditProfileWizard — Save Photo button state', () => {
-  it('Save Photo button is disabled when no file is selected', () => {
+describe('EditProfileWizard — Save photo button state', () => {
+  it('Save photo button is disabled when no file is selected', () => {
     renderWizard();
-    const btn = screen.getByRole('button', { name: /save photo/i });
-    expect(btn).toBeDisabled();
+    expect(screen.getByRole('button', { name: /save photo/i })).toBeDisabled();
   });
 
-  it('Save Photo button enables once a file is selected', async () => {
+  it('Save photo button enables once a file is selected', async () => {
     renderWizard();
     await selectFile(getPhotoFileInput(), fakeFile());
-    const btn = screen.getByRole('button', { name: /save photo/i });
-    expect(btn).toBeEnabled();
+    expect(screen.getByRole('button', { name: /save photo/i })).toBeEnabled();
   });
 });
 
 // ===========================================================================
 // PHOTO TAB — SAVE FLOW
 // ===========================================================================
-describe('EditProfileWizard — Save Photo flow', () => {
+describe('EditProfileWizard — Save photo flow', () => {
   it('PATCHes /v1/users/profile with FormData containing the photo', async () => {
     let capturedConfig = null;
     vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
@@ -265,7 +272,8 @@ describe('EditProfileWizard — Save Photo flow', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('shows "Saving..." state while the PATCH is in flight', async () => {
+  // ★ the in-flight label is "Saving…" (U+2026), not "Saving..."
+  it('shows the "Saving…" state while the PATCH is in flight', async () => {
     let resolveFn;
     const pending = new Promise((r) => { resolveFn = r; });
     vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
@@ -279,7 +287,7 @@ describe('EditProfileWizard — Save Photo flow', () => {
     await user.click(screen.getByRole('button', { name: /save photo/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /saving\.\.\./i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /saving/i })).toBeDisabled();
     });
     resolveFn();
   });
@@ -306,7 +314,7 @@ describe('EditProfileWizard — Save Photo flow', () => {
 
   it('invalidates user and artist caches on photo save success', async () => {
     vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => ({ data: {} }));
-    const userInvalidate = vi.spyOn(cacheService, 'invalidate');
+    const invalidateSpy = vi.spyOn(cacheService, 'invalidate');
 
     renderWizard({ userProfile: baseProfile({ userId: 'u-123' }) });
     await selectFile(getPhotoFileInput(), fakeFile());
@@ -314,17 +322,14 @@ describe('EditProfileWizard — Save Photo flow', () => {
     await user.click(screen.getByRole('button', { name: /save photo/i }));
 
     await waitFor(() => {
-      expect(userInvalidate).toHaveBeenCalledWith('user', 'u-123');
-      expect(userInvalidate).toHaveBeenCalledWith('artist', 'u-123');
+      expect(invalidateSpy).toHaveBeenCalledWith('user', 'u-123');
+      expect(invalidateSpy).toHaveBeenCalledWith('artist', 'u-123');
     });
   });
 
-  // The button is disabled when no file is selected, so this path
-  // isn't directly reachable through the UI — but it's worth documenting.
-  it('Save Photo button is disabled until a file is selected (no early-close path through UI)', () => {
+  it('Save photo stays disabled until a file is selected (no early-close path through UI)', () => {
     renderWizard();
-    const btn = screen.getByRole('button', { name: /save photo/i });
-    expect(btn).toBeDisabled();
+    expect(screen.getByRole('button', { name: /save photo/i })).toBeDisabled();
   });
 });
 
@@ -332,24 +337,18 @@ describe('EditProfileWizard — Save Photo flow', () => {
 // BIO TAB — INITIAL RENDER + INPUT
 // ===========================================================================
 describe('EditProfileWizard — bio tab', () => {
-  async function switchToBio(user) {
-    await user.click(screen.getByRole('button', { name: /bio/i }));
-  }
-
   it('pre-fills the textarea with userProfile.bio', async () => {
     renderWizard({ userProfile: baseProfile({ bio: 'Harlem rapper since day one' }) });
     const user = userEvent.setup();
     await switchToBio(user);
-    const ta = screen.getByPlaceholderText(/musical journey/i);
-    expect(ta.value).toBe('Harlem rapper since day one');
+    expect(screen.getByPlaceholderText(/musical journey/i).value).toBe('Harlem rapper since day one');
   });
 
   it('starts empty when userProfile has no bio', async () => {
     renderWizard({ userProfile: baseProfile({ bio: null }) });
     const user = userEvent.setup();
     await switchToBio(user);
-    const ta = screen.getByPlaceholderText(/musical journey/i);
-    expect(ta.value).toBe('');
+    expect(screen.getByPlaceholderText(/musical journey/i).value).toBe('');
   });
 
   it('updates the textarea on user input', async () => {
@@ -361,58 +360,54 @@ describe('EditProfileWizard — bio tab', () => {
     expect(ta.value).toBe('New bio content');
   });
 
-  it('shows the character counter (length/500)', async () => {
+  // ★ counter renders as "5 / 500", with spaces
+  it('shows the character counter (length / 500)', async () => {
     renderWizard({ userProfile: baseProfile({ bio: 'hello' }) });
     const user = userEvent.setup();
     await switchToBio(user);
-    expect(screen.getByText('5/500')).toBeInTheDocument();
+    expect(screen.getByText('5 / 500')).toBeInTheDocument();
   });
 
   it('character counter updates as user types', async () => {
     renderWizard({ userProfile: baseProfile({ bio: '' }) });
     const user = userEvent.setup();
     await switchToBio(user);
-    const ta = screen.getByPlaceholderText(/musical journey/i);
-    await user.type(ta, 'abc');
-    expect(screen.getByText('3/500')).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText(/musical journey/i), 'abc');
+    expect(screen.getByText('3 / 500')).toBeInTheDocument();
   });
 
   it('textarea has maxLength=500', async () => {
     renderWizard();
     const user = userEvent.setup();
     await switchToBio(user);
-    const ta = screen.getByPlaceholderText(/musical journey/i);
-    expect(ta.maxLength).toBe(500);
+    expect(screen.getByPlaceholderText(/musical journey/i).maxLength).toBe(500);
   });
 });
 
 // ===========================================================================
 // BIO TAB — SAVE BUTTON STATE
 // ===========================================================================
-describe('EditProfileWizard — Save Bio button state', () => {
-  it('Save Bio button is disabled when bio matches userProfile.bio', async () => {
+describe('EditProfileWizard — Save bio button state', () => {
+  it('Save bio button is disabled when bio matches userProfile.bio', async () => {
     renderWizard({ userProfile: baseProfile({ bio: 'Original bio text' }) });
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /bio/i }));
-    const btn = screen.getByRole('button', { name: /save bio/i });
-    expect(btn).toBeDisabled();
+    await switchToBio(user);
+    expect(screen.getByRole('button', { name: /save bio/i })).toBeDisabled();
   });
 
-  it('Save Bio button enables when bio is changed', async () => {
+  it('Save bio button enables when bio is changed', async () => {
     renderWizard({ userProfile: baseProfile({ bio: 'Old' }) });
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /bio/i }));
-    const ta = screen.getByPlaceholderText(/musical journey/i);
-    await user.type(ta, ' new');
-    const btn = screen.getByRole('button', { name: /save bio/i });
-    expect(btn).toBeEnabled();
+    await switchToBio(user);
+    await user.type(screen.getByPlaceholderText(/musical journey/i), ' new');
+    expect(screen.getByRole('button', { name: /save bio/i })).toBeEnabled();
   });
 });
 
 // ===========================================================================
 // BIO TAB — SAVE FLOW
 // ===========================================================================
-describe('EditProfileWizard — Save Bio flow', () => {
+describe('EditProfileWizard — Save bio flow', () => {
   it('PUTs /v1/users/profile/:userId/bio with trimmed bio JSON', async () => {
     let capturedConfig = null;
     vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
@@ -429,9 +424,8 @@ describe('EditProfileWizard — Save Bio flow', () => {
     });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /bio/i }));
+    await switchToBio(user);
     const ta = screen.getByPlaceholderText(/musical journey/i);
-    // Replace the existing bio with new content, with surrounding whitespace
     await user.clear(ta);
     await user.type(ta, '  New bio  ');
     await user.click(screen.getByRole('button', { name: /save bio/i }));
@@ -451,15 +445,11 @@ describe('EditProfileWizard — Save Bio flow', () => {
 
     const onClose = vi.fn();
     const onSuccess = vi.fn();
-    renderWizard({
-      userProfile: baseProfile({ bio: 'Old' }),
-      onClose,
-      onSuccess,
-    });
+    renderWizard({ userProfile: baseProfile({ bio: 'Old' }), onClose, onSuccess });
+
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /bio/i }));
-    const ta = screen.getByPlaceholderText(/musical journey/i);
-    await user.type(ta, ' added');
+    await switchToBio(user);
+    await user.type(screen.getByPlaceholderText(/musical journey/i), ' added');
     await user.click(screen.getByRole('button', { name: /save bio/i }));
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalled());
@@ -474,9 +464,8 @@ describe('EditProfileWizard — Save Bio flow', () => {
 
     renderWizard({ userProfile: baseProfile({ userId: 'u-77', bio: 'Old' }) });
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /bio/i }));
-    const ta = screen.getByPlaceholderText(/musical journey/i);
-    await user.type(ta, ' new content');
+    await switchToBio(user);
+    await user.type(screen.getByPlaceholderText(/musical journey/i), ' new content');
     await user.click(screen.getByRole('button', { name: /save bio/i }));
 
     await waitFor(() => {
@@ -485,7 +474,7 @@ describe('EditProfileWizard — Save Bio flow', () => {
     });
   });
 
-  it('shows "Saving..." state during bio save', async () => {
+  it('shows the "Saving…" state during bio save', async () => {
     let resolveFn;
     const pending = new Promise((r) => { resolveFn = r; });
     vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
@@ -495,13 +484,12 @@ describe('EditProfileWizard — Save Bio flow', () => {
 
     renderWizard({ userProfile: baseProfile({ bio: 'Old' }) });
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /bio/i }));
-    const ta = screen.getByPlaceholderText(/musical journey/i);
-    await user.type(ta, ' more');
+    await switchToBio(user);
+    await user.type(screen.getByPlaceholderText(/musical journey/i), ' more');
     await user.click(screen.getByRole('button', { name: /save bio/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /saving\.\.\./i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /saving/i })).toBeDisabled();
     });
     resolveFn();
   });
@@ -519,11 +507,12 @@ describe('EditProfileWizard — close and cancel', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  // ★ close button is .epw__close, and carries aria-label="Close"
   it('clicking the × button calls onClose', async () => {
     const onClose = vi.fn();
     renderWizard({ onClose });
     const user = userEvent.setup();
-    await user.click(document.querySelector('.close-button'));
+    await user.click(screen.getByRole('button', { name: /^close$/i }));
     expect(onClose).toHaveBeenCalled();
   });
 

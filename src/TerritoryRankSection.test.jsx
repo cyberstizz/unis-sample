@@ -105,7 +105,8 @@ describe('TerritoryRankSection', () => {
     await screen.findByText('#1');
     await user.click(screen.getByRole('tab', { name: 'Day' }));
     expect(screen.getByText('#3')).toBeInTheDocument(); // today-period Harlem rank
-    expect(screen.getByText(/Yesterday's standing/i)).toBeInTheDocument();
+    // ★ caption subline is period-driven now
+    expect(screen.getByText(/Where you placed yesterday/i)).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Day' })).toHaveAttribute('aria-selected', 'true');
   });
 
@@ -142,7 +143,8 @@ describe('TerritoryRankSection', () => {
   it('shows the empty state when a period has no rows', async () => {
     install(payload({ periods: { today: [], week: [], month: [], quarter: [], year: [], all: [] } }));
     renderSection();
-    expect(await screen.findByText(/No ranking yet for this period/i)).toBeInTheDocument();
+    // ★ empty state now names the actual period window
+    expect(await screen.findByText(/No ranking yet for/i)).toBeInTheDocument();
   });
 
   it('renders nothing without an artistId', () => {

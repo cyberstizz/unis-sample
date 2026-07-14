@@ -14,6 +14,10 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
 
   if (!show) return null;
 
+  // ★ FIX: profile payloads carry `username` (see profile-summary / artistDashboard),
+  //   not `displayName`. Reading only displayName meant every initial-letter
+  //   fallback rendered "?". Fall back through both.
+  const displayName = userProfile?.displayName || userProfile?.username || '';
   const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
   const ambient = userProfile?.photoUrl ? buildUrl(userProfile.photoUrl) : null;
 
@@ -89,12 +93,12 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
             {preview ? (
               <img
                 src={preview}
-                alt={userProfile?.displayName || 'Artist'}
+                alt={displayName || 'Artist'}
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
             ) : (
               <span className="epw__avatar-fallback">
-                {initialOf(userProfile?.displayName)}
+                {initialOf(displayName)}
               </span>
             )}
           </div>
@@ -154,7 +158,7 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
                     />
                   ) : (
                     <div className="epw__photo-fallback">
-                      {initialOf(userProfile?.displayName)}
+                      {initialOf(displayName)}
                     </div>
                   )}
                 </div>

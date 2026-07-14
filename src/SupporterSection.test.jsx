@@ -121,7 +121,7 @@ describe('SupporterSection', () => {
     expect(await screen.findByText(/Could not send the broadcast/i)).toBeInTheDocument();
   });
 
-  it('renders the growth sparkline and supporter photos and plays', async () => {
+  it('renders the 30-day trend chip, supporter photos, and plays', async () => {
     installSupporters({
       supportersCount: 5,
       topSupporter: { userId: 'fan-1', username: 'BigFan', photoUrl: '/uploads/f.jpg', plays: 50, since: '2025-01-01' },
@@ -130,12 +130,16 @@ describe('SupporterSection', () => {
     });
     renderSection();
     expect(await screen.findByText('BigFan')).toBeInTheDocument();
-    expect(screen.getByText(/New supporters/i)).toBeInTheDocument();
+    // ★ chart removed — the 30-day delta is now a single trend chip
+    expect(screen.getByText('+7')).toBeInTheDocument();
+    expect(screen.getByText(/last 30 days/i)).toBeInTheDocument();
     expect(screen.getByText(/50 plays/i)).toBeInTheDocument();
   });
 
-  // ★ item 2: growth block is a real chart, not a uniform block
-  it('growth chart has axis labels, a period total, and true-zero days', async () => {
+  // ★ The growth bar chart was REMOVED. The backend returns only days that had
+  //   activity (not a padded 30-day series), so the "chart" was really N flex-1
+  //   bars splitting the full width — unreadable. The same fact is now a chip.
+  it('renders no chart, and sums the period into the trend chip', async () => {
     installSupporters({
       ...SUPPORTERS,
       supporterGrowth: [
@@ -146,22 +150,21 @@ describe('SupporterSection', () => {
     });
     const { container } = renderSection();
     await screen.findByText('BigFan');
-    // period total (+9) in the header
+
+    // period total surfaced on the count line
     expect(screen.getByText('+9')).toBeInTheDocument();
-    // y-axis: peak and zero labels
-    const yAxis = container.querySelector('.sup__chart-y');
-    expect(yAxis.textContent).toContain('6');
-    expect(yAxis.textContent).toContain('0');
-    // x-axis: first and last day labels
-    const xAxis = container.querySelector('.sup__chart-x');
-    expect(xAxis.textContent).toContain('Mar 1');
-    expect(xAxis.textContent).toContain('Mar 3');
-    // zero-count day renders as a zero-class stub, not a padded fake bar
-    const bars = container.querySelectorAll('.sup__bar');
-    expect(bars).toHaveLength(3);
-    expect(bars[0].className).toContain('sup__bar--zero');
-    expect(bars[0].style.height).toBe('0%');
-    expect(bars[2].style.height).toBe('100%');
+
+    // every trace of the old chart is gone
+    expect(container.querySelector('.sup__chart')).toBeNull();
+    expect(container.querySelector('.sup__chart-y')).toBeNull();
+    expect(container.querySelector('.sup__chart-x')).toBeNull();
+    expect(container.querySelectorAll('.sup__bar')).toHaveLength(0);
   });
 
+  it('hides the trend chip entirely when there is no 30-day growth', async () => {
+    installSupporters({ ...SUPPORTERS, supporterGrowth: [] });
+    const { container } = renderSection();
+    await screen.findByText('BigFan');
+    expect(container.querySelector('.sup__trend')).toBeNull();
+  });
 });
