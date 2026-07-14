@@ -1048,6 +1048,7 @@ const ArtistDashboard = () => {
 
   const intervalBadge = (interval) => {
     const name = (interval?.name || '').toLowerCase();
+    if (name.includes('daily')) return 'Day';
     if (name.includes('day')) return 'Day';
     if (name.includes('week')) return 'Week';
     if (name.includes('month')) return 'Month';
