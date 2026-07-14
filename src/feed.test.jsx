@@ -1,3 +1,4 @@
+// src/feed.test.jsx
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor, fireEvent, act } from '@testing-library/react';
@@ -666,5 +667,100 @@ describe('Feed — data fetch with correct params', () => {
       const newCalls = callsMatching(/\/media\/new/);
       expect(newCalls[0].url).toContain('limit=5');
     });
+  });
+});
+// ===========================================================================
+// LENS SWITCHING — every lens must render without throwing.
+// (Added after a ReferenceError in the Charts lens crashed the page but the
+//  suite stayed green because no test ever left the default "All" lens.)
+// ===========================================================================
+describe('Feed — lens switching does not crash', () => {
+  async function loadFeed(as = 'guest') {
+    renderWithProviders(<Feed />, { as });
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument()
+    );
+  }
+
+  it('renders the four lens tabs', async () => {
+    await loadFeed();
+    expect(screen.getByRole('tab', { name: /All/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Charts/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Playlists/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Fresh/i })).toBeInTheDocument();
+  });
+
+  it('switches to the Charts lens without throwing', async () => {
+    server.use(
+      http.get(`${API}/v1/charts`, () =>
+        HttpResponse.json({
+          totalVotesThisMonth: 12,
+          entries: [
+            {
+              rank: 1, movement: 2, votes: 8, songId: 'c1', title: 'Charted Song',
+              artworkUrl: '/cdn/c1.jpg', fileUrl: '/cdn/c1.mp3',
+              artistId: 'artist-1', artistName: 'testartist',
+            },
+          ],
+        })
+      )
+    );
+    await loadFeed();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /Charts/i }));
+    // Real data path renders the entry; crucially, no render crash.
+    await waitFor(() =>
+      expect(screen.getByText(/This Month's Top Voted/i)).toBeInTheDocument()
+    );
+    await waitFor(() => expect(screen.getByText('Charted Song')).toBeInTheDocument());
+  });
+
+  it('shows the honest empty state when the chart has no entries (no fake data)', async () => {
+    server.use(
+      http.get(`${API}/v1/charts`, () =>
+        HttpResponse.json({ totalVotesThisMonth: 0, entries: [] })
+      )
+    );
+    await loadFeed();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /Charts/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/No votes counted yet this month/i)).toBeInTheDocument()
+    );
+    // The old demo rows must NOT appear.
+    expect(screen.queryByText('124')).not.toBeInTheDocument();
+  });
+
+  it('switches to the Playlists lens without throwing', async () => {
+    server.use(
+      http.get(`${API}/v1/playlists/official`, () => HttpResponse.json([])),
+      http.get(`${API}/v1/playlists/discover`, () => HttpResponse.json([]))
+    );
+    await loadFeed();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /Playlists/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/Playlists Rising in/i)).toBeInTheDocument()
+    );
+  });
+
+  it('switches to the Fresh lens without throwing', async () => {
+    await loadFeed();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /Fresh/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/Dropped Recently/i)).toBeInTheDocument()
+    );
+  });
+
+  it('every feed button is type="button" (never submits / reloads)', async () => {
+    const { container } = renderWithProviders(<Feed />, { as: 'guest' });
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument()
+    );
+    const untyped = Array.from(container.querySelectorAll('button')).filter(
+      (b) => b.getAttribute('type') !== 'button'
+    );
+    expect(untyped).toHaveLength(0);
   });
 });
