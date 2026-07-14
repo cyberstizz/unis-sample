@@ -258,6 +258,21 @@ const LastWonNotification = () => {
         if (valid.length === 0) return;
 
         const picked = valid[Math.floor(Math.random() * valid.length)];
+
+        // ★ FIX (feed #5 — "should only appear once, not on every visit"):
+        //   During development this fired on every Feed mount. It now shows a
+        //   given award ONCE. The key is per-award (category + date + title), so
+        //   the user still gets the notification when a NEW award lands — it just
+        //   won't re-announce the same win every time they open the Feed.
+        const seenKey = `unis-lwn-seen:${picked.dateLabel || 'award'}:${picked.date || ''}:${picked.title || ''}`;
+
+        try {
+          if (localStorage.getItem(seenKey)) return; // already announced
+          localStorage.setItem(seenKey, '1');
+        } catch (_) {
+          // Private mode / storage disabled — fall through and show it.
+        }
+
         setNotification(picked);
 
         // Staggered reveal sequence
