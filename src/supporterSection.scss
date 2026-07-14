@@ -1,5 +1,10 @@
 // =============================================================================
 // SupportersSection — supporters pulled out of the funnel into their own card.
+//
+// ★ The 30-day bar chart has been removed (see SupporterSection.jsx). The
+//   backend returns only days that had activity, so the "chart" was really 2
+//   flex-1 bars splitting the full width — an unreadable block. The same fact
+//   now reads as a single trend chip on the count line.
 // =============================================================================
 
 .sup {
@@ -22,6 +27,8 @@
   @media (max-width: 680px) { padding: 20px 18px; }
 
   &__head {
+    position: relative;
+
     h2 {
       margin: 0;
       color: var(--unis-text);
@@ -77,6 +84,7 @@
   &__count {
     display: flex;
     align-items: baseline;
+    flex-wrap: wrap;
     gap: 10px;
 
     strong {
@@ -86,7 +94,7 @@
       letter-spacing: -0.05em;
     }
 
-    span {
+    > span:first-of-type {
       color: var(--unis-text-3);
       font-size: 11px;
       font-weight: 800;
@@ -95,11 +103,44 @@
     }
   }
 
+  // ★ replaces the chart: the 30-day delta, stated once, unmistakably
+  &__trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--unis-primary-soft);
+    border: 1px solid var(--unis-primary-glow);
+    color: var(--unis-primary-2);
+    font-size: 14px;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    align-self: center;
+
+    svg { flex: none; }
+
+    small {
+      color: var(--unis-text-3);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 560px) {
+      margin-left: 0;
+      flex-basis: 100%;
+      justify-content: flex-start;
+    }
+  }
+
   &__grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
     gap: 14px;
-    // ★ item 3: list no longer grows unbounded — capped and scrollable
     max-height: 264px;
     overflow-y: auto;
     padding-right: 6px;
@@ -124,144 +165,6 @@
 
     svg { color: var(--unis-primary-2); margin-bottom: 8px; }
     p { max-width: 440px; margin: 0 auto; font-size: 13px; line-height: 1.55; }
-  }
-
-  &__growth {
-    padding: 20px 22px;
-    border-radius: var(--unis-radius);
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--unis-border);
-
-    &-head {
-      display: flex; // ★ item 2: total sits on the same line
-      align-items: baseline;
-      flex-wrap: wrap;
-      column-gap: 10px;
-      margin-bottom: 14px;
-
-      .artist-section__eyebrow { flex-basis: 100%; }
-
-      h3 {
-        margin: 0;
-        color: var(--unis-text);
-        font-size: 18px;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-      }
-    }
-
-    // ★ item 2: period total
-    &-total {
-      color: var(--unis-primary-2);
-      font-size: 15px;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-    }
-  }
-
-  // ★ item 2: proper mini chart (replaces the old __sparkline block)
-  &__chart {
-    display: flex;
-    gap: 8px;
-  }
-
-  &__chart-y {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding-bottom: 18px; // clears the x-axis row
-    text-align: right;
-
-    span {
-      color: var(--unis-text-4, var(--unis-text-3));
-      font-size: 10px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      line-height: 1;
-    }
-  }
-
-  &__chart-plot {
-    flex: 1;
-    min-width: 0;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-  }
-
-  &__chart-gridline {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    border-top: 1px dashed var(--unis-border-hi); // peak reference line
-    pointer-events: none;
-  }
-
-  &__chart-bars {
-    display: flex;
-    align-items: flex-end;
-    gap: 3px;
-    height: 88px;
-    border-bottom: 1px solid var(--unis-border-hi); // ★ item 2: baseline
-  }
-
-  &__chart-x {
-    display: flex;
-    justify-content: space-between;
-    padding-top: 5px;
-
-    span {
-      color: var(--unis-text-4, var(--unis-text-3));
-      font-size: 10px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-    }
-  }
-
-  &__bar {
-    position: relative;
-    flex: 1 1 auto;
-    min-width: 3px;
-    border-radius: 3px 3px 0 0;
-    background: linear-gradient(180deg, var(--unis-primary-2), var(--unis-primary));
-    opacity: 0.85;
-    transition: opacity 0.16s ease;
-
-    &:hover {
-      opacity: 1;
-
-      .sup__bar-value { opacity: 1; } // ★ item 2: value on hover
-    }
-
-    // ★ item 2: zero days are visibly zero — a faint tick, not a fake block
-    &--zero {
-      height: 2px !important;
-      background: var(--unis-border-hi);
-      opacity: 0.6;
-    }
-  }
-
-  // ★ item 2: hover value bubble
-  &__bar-value {
-    position: absolute;
-    bottom: calc(100% + 4px);
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 2px 6px;
-    border-radius: 6px;
-    background: rgba(0, 0, 0, 0.78);
-    border: 1px solid var(--unis-border-hi);
-    color: var(--unis-text);
-    font-size: 10px;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.2;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.14s ease;
-    z-index: 2;
-    white-space: nowrap;
   }
 }
 
@@ -377,41 +280,167 @@
     color: var(--unis-text-3);
     font-size: 10px;
     letter-spacing: 0.04em;
+    min-height: 12px; // ★ keeps the grid even when `since` is missing
   }
 }
 
-.sup__head { position: relative; }
 .sup__broadcast-btn {
-  position: absolute; top: 0; right: 0;
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 14px; font-size: 13px; font-weight: 600; font-family: var(--unis-font-sans);
-  color: #fff; background: var(--unis-primary); border: none; border-radius: 999px; cursor: pointer;
-  transition: background .15s ease;
-  &:hover { background: var(--unis-primary-hover, var(--unis-primary)); }
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--unis-font-sans);
+  color: #fff;
+  background: var(--unis-primary);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover { background: var(--unis-primary-hover, var(--unis-primary-2)); }
 }
-.sup-person, .sup__topfan { position: relative; }
+
+.sup-person,
+.sup__topfan { position: relative; }
+
 .sup-msg-btn {
-  position: absolute; top: 6px; right: 6px;
-  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-  background: var(--unis-primary-subtle); color: var(--unis-primary-2);
-  border: 1px solid var(--unis-primary-border); border-radius: 50%; cursor: pointer;
-  transition: background .15s ease, color .15s ease;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--unis-primary-subtle, var(--unis-primary-soft));
+  color: var(--unis-primary-2);
+  border: 1px solid var(--unis-primary-border, var(--unis-border-hi));
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
   &:hover { background: var(--unis-primary); color: #fff; }
 }
+
 .sup__topfan .sup-msg-btn { top: 10px; right: 10px; }
 
-.scb { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(3,5,10,0.66); backdrop-filter: blur(6px); }
-.scb__shell { position: relative; width: 100%; max-width: 440px; padding: 26px 24px 22px; border-radius: var(--unis-radius-lg); background: #0d1119; border: 1px solid var(--unis-border-hi); box-shadow: 0 30px 80px rgba(0,0,0,0.55); color: var(--unis-text); font-family: var(--unis-font-sans); }
-.scb__close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: var(--unis-panel-hi); border: none; cursor: pointer; color: var(--unis-text-2); border-radius: 50%; }
+// =============================================================================
+// Broadcast composer — portaled to <body> (see SupporterSection.jsx)
+// =============================================================================
+.scb {
+  position: fixed;
+  inset: 0;
+  z-index: 12000; // ★ above welcome popup + player + header
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 5, 10, 0.72);
+  backdrop-filter: blur(8px);
+  overscroll-behavior: contain;
+}
+
+.scb__shell {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 26px 24px 22px;
+  border-radius: var(--unis-radius-lg);
+  background: #0d1119;
+  border: 1px solid var(--unis-border-hi);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  color: var(--unis-text);
+  font-family: var(--unis-font-sans);
+}
+
+.scb__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--unis-panel-hi, rgba(255, 255, 255, 0.06));
+  border: none;
+  cursor: pointer;
+  color: var(--unis-text-2);
+  border-radius: 50%;
+}
+
 .scb__head { text-align: center; margin-bottom: 16px; }
-.scb__icon { width: 48px; height: 48px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--unis-primary-subtle); color: var(--unis-primary-2); border: 1px solid var(--unis-primary-border); }
+
+.scb__icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--unis-primary-subtle, var(--unis-primary-soft));
+  color: var(--unis-primary-2);
+  border: 1px solid var(--unis-primary-border, var(--unis-border-hi));
+}
+
 .scb__head h3 { font-size: 19px; font-weight: 700; margin: 0; }
 .scb__head p { font-size: 13px; color: var(--unis-text-3); margin: 5px 0 0; }
-.scb__input { width: 100%; padding: 12px 14px; background: var(--unis-panel-2); border: 1px solid var(--unis-border); border-radius: var(--unis-radius-sm); color: var(--unis-text); font-size: 14px; font-family: inherit; resize: vertical; outline: none; margin-bottom: 12px;
-  &:focus { border-color: var(--unis-primary-border); } &::placeholder { color: var(--unis-text-4); } }
-.scb__btn { width: 100%; height: 46px; font-size: 15px; font-weight: 600; font-family: inherit; border: none; border-radius: var(--unis-radius); cursor: pointer;
-  &--primary { background: var(--unis-primary); color: #fff; } &:disabled { opacity: .5; cursor: default; } }
-.scb__error { font-size: 13px; color: #f0a5a5; background: rgba(229,75,74,0.10); border: 1px solid rgba(229,75,74,0.35); padding: 8px 12px; border-radius: var(--unis-radius-sm); margin-bottom: 12px; }
-.scb__done { text-align: center; padding: 8px 0; svg { color: var(--unis-primary-2); } }
+
+.scb__input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--unis-panel-2, rgba(0, 0, 0, 0.3));
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-sm);
+  color: var(--unis-text);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  margin-bottom: 12px;
+
+  &:focus { border-color: var(--unis-primary-border, var(--unis-primary)); }
+  &::placeholder { color: var(--unis-text-4, var(--unis-text-3)); }
+}
+
+.scb__btn {
+  width: 100%;
+  height: 46px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: var(--unis-radius);
+  cursor: pointer;
+
+  &--primary { background: var(--unis-primary); color: #fff; }
+  &:disabled { opacity: 0.5; cursor: default; }
+}
+
+.scb__error {
+  font-size: 13px;
+  color: #f0a5a5;
+  background: rgba(229, 75, 74, 0.1);
+  border: 1px solid rgba(229, 75, 74, 0.35);
+  padding: 8px 12px;
+  border-radius: var(--unis-radius-sm);
+  margin-bottom: 12px;
+}
+
+.scb__done {
+  text-align: center;
+  padding: 8px 0;
+
+  svg { color: var(--unis-primary-2); }
+}
+
 .scb__done-title { font-size: 17px; font-weight: 700; margin: 10px 0 0; }
 .scb__done-sub { font-size: 13px; color: var(--unis-text-3); margin: 5px 0 14px; }

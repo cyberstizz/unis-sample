@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Crown, Heart, MessageCircle, Megaphone, Send, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Crown, Heart, MessageCircle, Megaphone, Send, X, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
@@ -15,23 +16,35 @@ const formatSince = (value) => {
   return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 };
 
-// ★ item 2: short axis label for the growth chart (e.g. "Jun 7").
-// Date-only strings (YYYY-MM-DD) parse as UTC midnight, which renders as the
-// PREVIOUS day in negative-offset timezones like New York — anchor to local noon.
-const formatChartDay = (value) => {
-  if (!value) return '';
-  const str = String(value);
-  const d = /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(`${str}T12:00:00`) : new Date(str);
-  if (Number.isNaN(d.getTime())) return str;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
-
 // ── Broadcast composer ───────────────────────────────────────
+// ★ FIX (containment): .sup carries `animation: artist-rise ... both`, whose
+//   final keyframe leaves a resolved `transform` on the section. A transformed
+//   ancestor becomes the containing block for `position: fixed` descendants —
+//   so this overlay was never viewport-fixed, it was a box trapped inside the
+//   supporters card. Portaled to <body> so it can't happen.
 const BroadcastComposer = ({ supporterCount, onClose }) => {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+
+  // ★ lock background scroll while open
+  useEffect(() => {
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, []);
+
+  // ★ escape to close
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const send = async () => {
     const body = text.trim();
@@ -48,15 +61,26 @@ const BroadcastComposer = ({ supporterCount, onClose }) => {
     }
   };
 
-  return (
+  const shell = (
     <div className="scb" onMouseDown={onClose} role="presentation">
-      <div className="scb__shell" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button className="scb__close" onClick={onClose} aria-label="Close"><X size={18} /></button>
+      <div
+        className="scb__shell"
+        onMouseDown={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        <button className="scb__close" onClick={onClose} aria-label="Close">
+          <X size={18} />
+        </button>
 
         <div className="scb__head">
           <div className="scb__icon"><Megaphone size={20} /></div>
           <h3>Message your supporters</h3>
-          <p>Each of your {formatNumber(supporterCount)} {supporterCount === 1 ? 'supporter' : 'supporters'} gets this as a direct message they can reply to.</p>
+          <p>
+            Each of your {formatNumber(supporterCount)}{' '}
+            {supporterCount === 1 ? 'supporter' : 'supporters'} gets this as a direct message
+            they can reply to.
+          </p>
         </div>
 
         {result ? (
@@ -66,7 +90,9 @@ const BroadcastComposer = ({ supporterCount, onClose }) => {
               Sent to {formatNumber(result.sent)} {result.sent === 1 ? 'supporter' : 'supporters'}
             </p>
             {result.skipped > 0 && (
-              <p className="scb__done-sub">{formatNumber(result.skipped)} skipped (blocked or unavailable)</p>
+              <p className="scb__done-sub">
+                {formatNumber(result.skipped)} skipped (blocked or unavailable)
+              </p>
             )}
             <button className="scb__btn scb__btn--primary" onClick={onClose}>Done</button>
           </div>
@@ -81,7 +107,11 @@ const BroadcastComposer = ({ supporterCount, onClose }) => {
               onChange={(e) => setText(e.target.value)}
             />
             {error && <div className="scb__error">{error}</div>}
-            <button className="scb__btn scb__btn--primary" onClick={send} disabled={!text.trim() || busy}>
+            <button
+              className="scb__btn scb__btn--primary"
+              onClick={send}
+              disabled={!text.trim() || busy}
+            >
               {busy ? 'Sending…' : 'Send to all supporters'}
             </button>
           </>
@@ -89,9 +119,10 @@ const BroadcastComposer = ({ supporterCount, onClose }) => {
       </div>
     </div>
   );
+
+  return createPortal(shell, document.body);
 };
 
-// ★ item 5: supporters pulled out of the funnel into their own section.
 const SupportersSection = ({ artistId }) => {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -122,8 +153,6 @@ const SupportersSection = ({ artistId }) => {
     fetchSupporters(artistId);
   }, [artistId, fetchSupporters]);
 
-  // Open a direct thread with this supporter. Passes name + photo so the thread
-  // opens with the right person even before any message exists.
   const messageSupporter = (sup) => {
     if (!sup?.userId) return;
     navigate('/messages', {
@@ -134,8 +163,14 @@ const SupportersSection = ({ artistId }) => {
   const count = Number(data?.supportersCount || 0);
   const topSupporter = data?.topSupporter || null;
   const recentSupporters = data?.recentSupporters || [];
+
+  // ★ CHART REMOVED. The old bar chart plotted `supporterGrowth`, which the
+  //   backend returns as *only the days that had activity* — not a padded
+  //   30-day series. With 2 new supporters that produced 2 flex-1 bars that
+  //   ate the entire width: the "weird block". Rather than fake a 30-day axis
+  //   client-side, the same fact is now stated plainly in one line.
   const growth = data?.supporterGrowth || [];
-  const maxGrowth = growth.reduce((m, g) => Math.max(m, Number(g.count || 0)), 0);
+  const newLast30 = growth.reduce((sum, g) => sum + Number(g.count || 0), 0);
 
   return (
     <section className="sup" aria-labelledby="sup-title">
@@ -145,7 +180,11 @@ const SupportersSection = ({ artistId }) => {
           Your <em>supporters</em>
         </h2>
         {count > 0 && (
-          <button type="button" className="sup__broadcast-btn" onClick={() => setBroadcastOpen(true)}>
+          <button
+            type="button"
+            className="sup__broadcast-btn"
+            onClick={() => setBroadcastOpen(true)}
+          >
             <Megaphone size={15} aria-hidden="true" /> Broadcast
           </button>
         )}
@@ -203,9 +242,18 @@ const SupportersSection = ({ artistId }) => {
             </div>
           )}
 
+          {/* ★ headline count + the 30-day delta, on one legible line */}
           <div className="sup__count">
             <strong>{formatNumber(count)}</strong>
             <span>{count === 1 ? 'supporter' : 'supporters'} backing you</span>
+
+            {newLast30 > 0 && (
+              <span className="sup__trend">
+                <TrendingUp size={13} aria-hidden="true" />
+                +{formatNumber(newLast30)}
+                <small>last 30 days</small>
+              </span>
+            )}
           </div>
 
           {recentSupporters.length > 0 ? (
@@ -224,7 +272,7 @@ const SupportersSection = ({ artistId }) => {
                     <div className="sup-person__placeholder">{initialOf(s.username)}</div>
                   )}
                   <strong>{s.username || 'Supporter'}</strong>
-                  <small>since {formatSince(s.since)}</small>
+                  <small>{s.since ? `since ${formatSince(s.since)}` : ''}</small>
                   <button
                     type="button"
                     className="sup-msg-btn"
@@ -243,49 +291,6 @@ const SupportersSection = ({ artistId }) => {
                 No supporters yet. When a listener chooses to support you, they'll appear
                 here by name — the start of your real community.
               </p>
-            </div>
-          )}
-
-          {growth.length > 0 && (
-            <div className="sup__growth">
-              <div className="sup__growth-head">
-                <span className="artist-section__eyebrow">Last 30 days</span>
-                <h3>New supporters</h3>
-                <span className="sup__growth-total"> {/* ★ item 2: period total at a glance */}
-                  +{formatNumber(growth.reduce((sum, g) => sum + Number(g.count || 0), 0))}
-                </span>
-              </div>
-              {/* ★ item 2: an actual chart — y-axis peak label, gridline, baseline,
-                  true zero heights, and first/last date labels on the x-axis */}
-              <div className="sup__chart" role="img" aria-label={`New supporters per day over the last 30 days, peaking at ${maxGrowth}`}>
-                <div className="sup__chart-y">
-                  <span>{formatNumber(maxGrowth)}</span>
-                  <span>0</span>
-                </div>
-                <div className="sup__chart-plot">
-                  <span className="sup__chart-gridline" aria-hidden="true" />
-                  <div className="sup__chart-bars">
-                    {growth.map((g, i) => {
-                      const c = Number(g.count || 0);
-                      const h = maxGrowth > 0 ? (c / maxGrowth) * 100 : 0; // ★ item 2: zeros stay zero
-                      return (
-                        <span
-                          key={i}
-                          className={`sup__bar ${c === 0 ? 'sup__bar--zero' : ''}`}
-                          style={{ height: `${h}%` }}
-                          title={`${formatChartDay(g.day)}: ${c} new`}
-                        >
-                          <span className="sup__bar-value" aria-hidden="true">{c}</span>
-                        </span>
-                      );
-                    })}
-                  </div>
-                  <div className="sup__chart-x" aria-hidden="true">
-                    <span>{formatChartDay(growth[0]?.day)}</span>
-                    <span>{formatChartDay(growth[growth.length - 1]?.day)}</span>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
         </>
