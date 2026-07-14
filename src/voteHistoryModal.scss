@@ -1,64 +1,136 @@
 // =============================================================================
-// VoteHistoryModal.scss -- rebuilt to mirror SupportedArtistPicker's design
-// language. Same overlay, same modal frame, same row rhythm. The two modals
-// now read as one family.
+// VoteHistoryModal.scss
+//
+// ★ Rebuilt as a true overlay:
+//    - portaled to <body> (see voteHistoryModal.jsx), so no ancestor transform
+//      or overflow:hidden can trap or clip it.
+//    - full-screen sheet on mobile (100dvh) with a sticky header close button
+//      and a sticky footer "Done" button — you can always get out.
+//    - centered glass dialog on desktop.
+//    - z-index sits above the welcome popup (9000) and the persistent player.
 // =============================================================================
 
 .vote-history-modal-overlay {
   position: fixed;
   inset: 0;
-  background:
-    radial-gradient(circle at 50% 18%, var(--unis-primary-soft), transparent 74%),
-    rgba(0, 0, 0, 0.72);
+  z-index: 12000; // ★ above welcome popup + player + header
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1100;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 18%, var(--unis-primary-soft), transparent 74%),
+    rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(10px);
   font-family: var(--unis-font-sans);
-  backdrop-filter: blur(8px);
   animation: vhmFade 0.2s ease;
+  overscroll-behavior: contain;
 }
 
 .vote-history-modal {
   position: relative;
-  width: 90%;
-  max-width: 520px;
-  max-height: 82vh;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 540px;
+  max-height: min(78vh, 720px);
+  overflow: hidden;
+  border: 1px solid var(--unis-border);
+  border-radius: var(--unis-radius-lg);
   background:
     linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.01) 42%, transparent 68%),
     var(--unis-panel);
-  border: 1px solid var(--unis-border);
-  border-radius: var(--unis-radius-lg);
-  overflow: hidden;
-  animation: vhmSlide 0.28s ease;
   box-shadow:
-    0 24px 70px rgba(0, 0, 0, 0.55),
+    0 30px 90px rgba(0, 0, 0, 0.62),
     0 0 0 1px rgba(255, 255, 255, 0.035),
-    0 0 38px -20px var(--unis-primary-glow);
+    0 0 44px -20px var(--unis-primary-glow);
+  animation: vhmSlide 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(460px 240px at 50% 0%, var(--unis-primary-soft), transparent 68%);
-    pointer-events: none;
-    z-index: 0;
+  // ---- grab handle (mobile only) --------------------------------------
+  &__grabber {
+    display: none;
+    flex: none;
+    width: 44px;
+    height: 4px;
+    margin: 10px auto 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.28);
   }
 
-  .close-button {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    z-index: 10;
+  // ---- HEADER (sticky — close is always reachable) ----------------------
+  .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    flex: none;
     display: flex;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.055);
-    border: 1px solid var(--unis-border);
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 1.5rem 1.5rem 1.15rem;
+    border-bottom: 1px solid var(--unis-border);
+    background: linear-gradient(180deg, var(--unis-panel), rgba(0, 0, 0, 0.35));
+    backdrop-filter: blur(12px);
+    text-align: left;
+  }
+
+  .modal-header__text {
+    min-width: 0;
+  }
+
+  .header-icon {
+    display: none;
+  }
+
+  h2 {
+    margin: 0 0 0.45rem;
+    font-family: var(--unis-font-sans);
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--unis-text);
+  }
+
+  .modal-subtitle {
+    margin: 0;
+    font-size: 0.85rem;
     color: var(--unis-text-3);
-    cursor: pointer;
+    line-height: 1.4;
+
+    .modal-subtitle__count {
+      margin-right: 0.4rem;
+      vertical-align: -2px;
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, var(--unis-primary), var(--unis-primary-2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .modal-subtitle__label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--unis-text-3);
+    }
+  }
+
+  // Close button now lives IN the sticky header flow (not absolutely
+  // positioned against a container that may be off-screen).
+  .close-button {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
     border-radius: var(--unis-radius-sm);
+    border: 1px solid var(--unis-border-hi);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--unis-text-2);
+    cursor: pointer;
     transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
 
     &:hover {
@@ -66,74 +138,36 @@
       color: var(--unis-text);
       transform: scale(1.04);
     }
-    &:focus-visible { outline: 2px solid var(--unis-primary-glow); outline-offset: 3px; }
-  }
 
-  // ---- HEADER ---------------------------------------------------------
-  // Left-aligned, no boxy icon -- matches SupportedArtistPicker's pattern.
-  // The faded count treatment lives here.
-  .modal-header {
-    position: relative;
-    z-index: 1;
-    padding: 1.75rem 1.75rem 1.25rem;
-    border-bottom: 1px solid var(--unis-border);
-    text-align: left;
-  }
-
-  .header-icon { display: none; }
-
-  h2 {
-    font-family: var(--unis-font-sans);
-    font-size: 1.4rem;
-    font-weight: 800;
-    letter-spacing: -0.025em;
-    color: var(--unis-text);
-    margin: 0 0 0.5rem;
-  }
-
-  // Faded count -- numeric in a gradient, label muted next to it.
-  // This replaces the old centered subtitle that said "N votes cast \n You voted for".
-  .modal-subtitle {
-    margin: 0;
-    font-size: 0.85rem;
-    color: var(--unis-text-3);
-    line-height: 1.5;
-
-    .modal-subtitle__count {
-      font-size: 1.6rem;
-      font-weight: 800;
-      letter-spacing: -0.025em;
-      background: linear-gradient(135deg, var(--unis-primary), var(--unis-primary-2));
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-right: 0.4rem;
-      vertical-align: -2px;
+    &:focus-visible {
+      outline: 2px solid var(--unis-primary);
+      outline-offset: 2px;
     }
-
-    .modal-subtitle__label {
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--unis-text-3);
-    }
-    // ★ item 11: __voted-for styles removed with their markup
   }
 
-  // ---- LIST ----------------------------------------------------------
+  // ---- LIST -------------------------------------------------------------
   .votes-container {
     position: relative;
     z-index: 1;
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    padding: 0.75rem 1.25rem 1rem;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
     gap: 0.55rem;
+    padding: 0.9rem 1.25rem 1rem;
+
+    scrollbar-width: thin;
+    scrollbar-color: var(--unis-border-hi) transparent;
 
     &::-webkit-scrollbar { width: 6px; }
-    &::-webkit-scrollbar-thumb { background: var(--unis-border-hi); border-radius: 999px; }
+    &::-webkit-scrollbar-thumb {
+      background: var(--unis-border-hi);
+      border-radius: 999px;
+    }
+    &::-webkit-scrollbar-track { background: transparent; }
   }
 
   .vote-row {
@@ -142,12 +176,11 @@
     justify-content: space-between;
     gap: 0.85rem;
     padding: 0.7rem 0.8rem;
-    margin-bottom: 0;
+    border: 1px solid var(--unis-border);
+    border-radius: var(--unis-radius-sm);
     background:
       linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
       rgba(0, 0, 0, 0.14);
-    border: 1px solid var(--unis-border);
-    border-radius: var(--unis-radius-sm);
     transition: border-color 0.16s ease, transform 0.16s ease;
 
     &:hover {
@@ -176,14 +209,14 @@
   }
 
   .nominee-placeholder {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.04));
-    border: 1px solid var(--unis-border);
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--unis-border);
+    background: linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.04));
     color: var(--unis-text-3);
   }
 
@@ -196,20 +229,20 @@
   .nominee-name {
     font-size: 0.95rem;
     font-weight: 700;
+    letter-spacing: -0.01em;
     color: var(--unis-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    letter-spacing: -0.01em;
   }
 
   .nominee-type {
     margin-top: 2px;
     font-size: 0.7rem;
-    color: var(--unis-text-3);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
     font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--unis-text-3);
   }
 
   .vote-right {
@@ -221,25 +254,24 @@
 
   .vote-date {
     font-size: 0.82rem;
-    color: var(--unis-text-2);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+    color: var(--unis-text-2);
   }
 
-  // Interval chip -- same style as SupportedArtistPicker's "Current" tag.
   .vote-interval {
     padding: 2px 8px;
-    font-size: 0.62rem;
-    color: var(--unis-primary-2);
-    background: var(--unis-primary-soft);
-    border: 1px solid var(--unis-primary-glow);
     border-radius: 999px;
+    border: 1px solid var(--unis-primary-glow);
+    background: var(--unis-primary-soft);
+    color: var(--unis-primary-2);
+    font-size: 0.62rem;
     font-weight: 800;
-    text-transform: uppercase;
     letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
-  // ---- EMPTY ---------------------------------------------------------
+  // ---- EMPTY ------------------------------------------------------------
   .empty-state {
     position: relative;
     z-index: 1;
@@ -248,8 +280,8 @@
     align-items: center;
     justify-content: center;
     padding: 3rem 2rem;
-    color: var(--unis-text-3);
     text-align: center;
+    color: var(--unis-text-3);
 
     svg {
       margin-bottom: 0.85rem;
@@ -259,10 +291,10 @@
     }
 
     p {
+      margin: 0 0 0.4rem;
       font-size: 1rem;
       font-weight: 700;
       color: var(--unis-text-2);
-      margin: 0 0 0.4rem;
     }
 
     span {
@@ -270,31 +302,92 @@
       color: var(--unis-text-3);
     }
   }
+
+  // ---- FOOTER (second exit, always visible) ------------------------------
+  .modal-footer {
+    flex: none;
+    padding: 0.9rem 1.25rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--unis-border);
+    background: linear-gradient(0deg, var(--unis-panel), rgba(0, 0, 0, 0.28));
+    backdrop-filter: blur(12px);
+  }
+
+  &__done {
+    width: 100%;
+    min-height: 46px;
+    border: 0;
+    border-radius: var(--unis-radius-sm);
+    background: var(--unis-primary);
+    color: #fff;
+    font-family: var(--unis-font-sans);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 12px 30px -14px var(--unis-primary-glow);
+    transition: background 0.18s ease, transform 0.14s ease;
+
+    &:hover { background: var(--unis-primary-2); }
+    &:active { transform: translateY(1px); }
+    &:focus-visible {
+      outline: 2px solid var(--unis-primary-2);
+      outline-offset: 2px;
+    }
+  }
 }
 
-@keyframes vhmFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vhmFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @keyframes vhmSlide {
   from { opacity: 0; transform: translateY(18px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 1; transform: none; }
 }
 
-@media (max-width: 480px) {
+// =============================================================================
+// ★ Mobile: true full-screen sheet. No padding gutters, no rounded gap at the
+//    bottom, header + footer pinned. There is no state in which the user can
+//    scroll the close affordance out of view.
+// =============================================================================
+@media (max-width: 640px) {
+  .vote-history-modal-overlay {
+    padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
   .vote-history-modal {
-    width: 95%;
-    max-height: 88vh;
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    animation: vhmSheet 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 
-    .modal-header { padding: 1.4rem 1.4rem 1rem; }
+    &__grabber { display: block; }
+
+    .modal-header {
+      padding: 0.9rem 1.1rem 1rem;
+      // clears notches / status bars when the sheet is truly full-bleed
+      padding-top: calc(0.9rem + env(safe-area-inset-top, 0px));
+    }
+
     h2 { font-size: 1.2rem; }
-
     .modal-subtitle__count { font-size: 1.4rem; }
 
-    .votes-container { padding: 0.6rem 1rem 0.85rem; }
+    .votes-container { padding: 0.75rem 1rem 1rem; }
 
     .vote-row {
       flex-wrap: wrap;
       gap: 0.6rem;
     }
+
     .vote-left { flex: 1 1 100%; }
+
     .vote-right {
       flex: 1 1 100%;
       justify-content: space-between;
@@ -307,4 +400,9 @@
       height: 40px;
     }
   }
+}
+
+@keyframes vhmSheet {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: none; }
 }
