@@ -28,7 +28,7 @@ $header-height: 75px;
   height: $header-height;
   z-index: 1000;
   background: linear-gradient(to bottom, #101016, $bg-surface);
-  border-bottom: 0.5px solid $border-silver;
+  border-bottom: 2px solid var(--unis-primary);
 
   &::before {
     content: '';
