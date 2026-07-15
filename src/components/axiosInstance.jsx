@@ -90,10 +90,17 @@ axiosInstance.interceptors.response.use(
       const hadSession = !!localStorage.getItem('token');
 
       if (hadSession) {
+        // ★ ROOT-CAUSE FIX (stale-session bug): a 401 with a token in hand means
+        //   the session is dead — almost always an expired JWT (24h TTL). Tear it
+        //   down IN-APP rather than only hard-redirecting: clear the token, drop
+        //   the stale theme, wipe caches, and tell AuthContext to null out `user`.
+        //   That makes the avatar disappear and lets the AuthGateSheet appear,
+        //   which is the graceful behaviour the rest of the app expects — instead
+        //   of the "avatar still showing, Profile says sign in" limbo.
         localStorage.removeItem('token');
-        localStorage.removeItem('unis-theme'); // ★ feed #2: don't leak the old user's theme
+        localStorage.removeItem('unis-theme');
         cacheService.clearAll();
-        window.location.href = '/login';
+        window.dispatchEvent(new CustomEvent('unis:session-expired'));
       }
     }
     return Promise.reject(error);

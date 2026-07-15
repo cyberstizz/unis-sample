@@ -312,10 +312,12 @@ afterEach(() => {
 // AUTH GATING
 // ===========================================================================
 describe('Profile — auth gating', () => {
-  it('renders "Please log in" for guests', async () => {
+  it('shows the sign-in prompt for guests (expired/absent session)', async () => {
     renderWithProviders(<Profile />, { as: 'guest' });
     await waitFor(() => {
-      expect(screen.getByText(/please log in/i)).toBeInTheDocument();
+      // Copy changed from "Please log in." to a fuller prompt, now backed by
+      // the AuthGateSheet instead of a bare div.
+      expect(screen.getByText(/please sign in to view your profile/i)).toBeInTheDocument();
     });
   });
 

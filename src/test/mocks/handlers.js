@@ -47,10 +47,16 @@ export const fixtures = {
 };
 
 // ─── JWT helpers — tokens are opaque to the frontend except for the payload ───
-export function makeToken(userId) {
-  // Minimal JWT shape that AuthContext.decodeToken can parse
+export function makeToken(userId, { expSecondsFromNow = null } = {}) {
+  // Minimal JWT shape that AuthContext.decodeToken can parse.
+  // Pass expSecondsFromNow (e.g. -60 for already-expired) to test the 24h-TTL
+  // stale-session handling.
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = btoa(JSON.stringify({ userId, sub: userId, iat: Date.now() / 1000 }));
+  const claims = { userId, sub: userId, iat: Math.floor(Date.now() / 1000) };
+  if (expSecondsFromNow !== null) {
+    claims.exp = Math.floor(Date.now() / 1000) + expSecondsFromNow;
+  }
+  const payload = btoa(JSON.stringify(claims));
   return `${header}.${payload}.fake-signature`;
 }
 

@@ -16,6 +16,7 @@ import CollapsibleSection from './CollapsibleSection';
 import VoteHistorySection from './VoteHistorySection';
 import SupportedArtistPicker from './SupportedArtistPicker';
 import VerificationGate from './verificationGate';
+import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import './profile.scss';
 
 // ---------------------------------------------------------------------------
@@ -49,8 +50,17 @@ const SectionError = ({ message = 'Failed to load.', onRetry }) => (
 // URL building uses the shared buildUrl utility (R2/CDN aware).
 // ---------------------------------------------------------------------------
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, authLoaded, isGuest } = useAuth();
   const { requestPlay } = React.useContext(PlayerContext);
+  const { triggerGate, gateProps } = useAuthGate();
+
+  // ★ ROOT-CAUSE FIX (stale-session bug): when the session dies (expired JWT →
+  //   401 → AuthContext clears `user`), open the auth gate instead of stranding
+  //   the user on a bare "Please log in" page with no way forward. Waits for
+  //   authLoaded so we never flash the gate during the initial auth check.
+  useEffect(() => {
+    if (authLoaded && isGuest) triggerGate('profile');
+  }, [authLoaded, isGuest, triggerGate]);
 
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -123,7 +133,18 @@ const Profile = () => {
   // -----------------------------------------------------------------------
   // Early returns
   // -----------------------------------------------------------------------
-  if (!user) return <div className="profile-fullscreen-msg">Please log in.</div>;
+  // ★ Guest / expired-session view. The gate (opened by the effect above) is
+  //   the real call-to-action; this stays as a calm fallback behind it.
+  if (!user) {
+    return (
+      <Layout>
+        <div className="profile-fullscreen-msg">
+          Please sign in to view your profile.
+        </div>
+        <AuthGateSheet {...gateProps} />
+      </Layout>
+    );
+  }
 
   if (loading) {
     return (

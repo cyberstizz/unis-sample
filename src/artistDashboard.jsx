@@ -59,6 +59,7 @@ import { jsPDF } from 'jspdf';
 import ChangePasswordWizard from './changePasswordWizard';
 import RevenueSection from './revenueSection'; 
 import VerificationGate from './verificationGate';
+import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import ArtistPhotosManager from './artistPhotosManager';
 
 
@@ -158,7 +159,15 @@ const ArtistCollapsibleSection = ({
   };
 
 const ArtistDashboard = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, authLoaded, isGuest } = useAuth();
+  const { triggerGate, gateProps } = useAuthGate();
+
+  // ★ ROOT-CAUSE FIX (stale-session bug): open the auth gate when the session
+  //   has died (expired JWT → 401 → AuthContext clears `user`), instead of
+  //   leaving the artist on a bare "Please log in to view dashboard." string.
+  useEffect(() => {
+    if (authLoaded && isGuest) triggerGate('profile');
+  }, [authLoaded, isGuest, triggerGate]);
   const { requestPlay } = useContext(PlayerContext);
 
   // ★ item 3: quick-nav — collapsibles register an opener; nav opens then scrolls
@@ -458,7 +467,16 @@ const ArtistDashboard = () => {
   // Early returns
   // -----------------------------------------------------------------------
   if (authLoading) return <div>Loading...</div>;
-  if (!user) return <div>Please log in to view dashboard.</div>;
+  if (!user) {
+    return (
+      <Layout backgroundImage={backimage}>
+        <div className="artist-dashboard" style={{ padding: '48px 24px', textAlign: 'center' }}>
+          Please sign in to view your dashboard.
+        </div>
+        <AuthGateSheet {...gateProps} />
+      </Layout>
+    );
+  }
 
   if (coreLoading) {
     return (

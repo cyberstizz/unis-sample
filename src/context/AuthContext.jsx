@@ -27,6 +27,37 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ★ ROOT-CAUSE FIX (stale-session bug): the JWT has a 24h `exp` claim
+  //   (backend spring.jwt.expiration = 86400000ms). Nothing on the client ever
+  //   checked it. So a day after login the token was dead, but `user` stayed in
+  //   memory — the avatar kept showing "logged in" while Profile/Artist
+  //   Dashboard (the only pages that make a FRESH authenticated GET on entry)
+  //   got a 401 and showed "please sign in". This reads the `exp` claim and
+  //   reports whether the token is already expired, so an expired token is
+  //   treated as no session at all.
+  const isTokenExpired = (token) => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (!payload.exp) return false; // no exp claim → let the server decide
+      // exp is in seconds; Date.now() is ms. 10s skew guard.
+      return payload.exp * 1000 <= Date.now() + 10_000;
+    } catch (e) {
+      return true; // unparseable → treat as expired/invalid
+    }
+  };
+
+  // ★ Single place that tears down a dead session in-app (no hard redirect).
+  //   Clearing `user` flips `isGuest` true, which makes the avatar disappear
+  //   and lets the AuthGateSheet appear — exactly like a normal guest, instead
+  //   of the half-logged-in limbo the user was stuck in.
+  const clearSession = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('unis-theme');
+    document.getElementById('root')?.setAttribute('data-theme', 'blue');
+    setThemeState('blue');
+    setUser(null);
+  };
+
   // Apply theme to the DOM root
   const applyTheme = (themeName) => {
     const validated = VALID_THEMES.includes(themeName) ? themeName : 'blue';
@@ -75,6 +106,18 @@ export const AuthProvider = ({ children }) => {
   // On mount, check token + fetch profile OR enter guest mode
   useEffect(() => {
     const token = localStorage.getItem('token');
+
+    // ★ ROOT-CAUSE FIX: if the stored token is already past its `exp`, don't
+    //   even attempt the profile fetch — clear it and enter guest mode. This
+    //   is what prevents the "avatar shows but Profile 401s" limbo on the very
+    //   next load, and stops firing a request we know will 401.
+    if (token && isTokenExpired(token)) {
+      clearSession();
+      setLoading(false);
+      setAuthLoaded(true);
+      return;
+    }
+
     if (token) {
       const userId = decodeToken(token);
       if (userId) {
@@ -116,6 +159,31 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
       setAuthLoaded(true);
     }
+  }, []);
+
+  // ★ In-session expiry: while the user sits inside the SPA (no page reload),
+  //   the token can cross its `exp`. Two cheap triggers catch this without
+  //   polling:
+  //     1. a 401 from any authenticated request dispatches 'unis:session-expired'
+  //        (see axiosInstance) → we tear the session down in-app.
+  //     2. when the tab regains focus/visibility, re-check the stored token's
+  //        exp and clear if it lapsed while the tab was backgrounded.
+  //   Result: the avatar disappears and the AuthGate can appear the moment the
+  //   session is actually dead — not only after visiting Profile.
+  useEffect(() => {
+    const onExpired = () => clearSession();
+    const onFocus = () => {
+      const t = localStorage.getItem('token');
+      if (t && isTokenExpired(t)) clearSession();
+    };
+    window.addEventListener('unis:session-expired', onExpired);
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('unis:session-expired', onExpired);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
   }, []);
 
     const refreshUser = async () => {
