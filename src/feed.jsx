@@ -246,7 +246,12 @@ const SongCard = React.memo(({ item, index, onNav, onArtistNav, onPlay }) => (
       {item.explicit && (
         <span className="card-explicit">E</span>
       )}
-      <button type="button" className="card-play" onClick={(e) => onPlay(e, item)}>
+      <button
+        type="button"
+        className="card-play"
+        aria-label={`Play ${item.title}`}
+        onClick={(e) => onPlay(e, item)}
+      >
         <CardPlayIcon />
       </button>
     </div>
@@ -352,22 +357,6 @@ const getDummyArtists = () => [
   { userId: 'art4', username: 'Artist Four', photoUrl: songArtFour, score: 50 },
   { userId: 'art5', username: 'Artist Five', photoUrl: songArtFive, score: 40 }
 ].slice(0, 5);
-
-const getDummyChart = () => ({
-  totalPlaysThisWeek: 0,
-  entries: getDummyTrending().slice(0, 5).map((d, i) => ({
-    rank: i + 1,
-    movement: i === 0 ? 2 : i === 1 ? -1 : i === 2 ? 0 : null,
-    plays: [124, 88, 76, 61, 44][i],
-    songId: d.id,
-    title: d.title,
-    artworkUrl: d.artworkUrl,
-    fileUrl: d.mediaUrl,
-    artistId: d.artistData.userId,
-    artistName: d.artistData.username,
-  })),
-  isDemo: true,
-});
 
 const getJurisdictionDisplayName = (id, fallbackId) => {
   const key = JURISDICTION_NAMES[id || fallbackId];
@@ -520,7 +509,8 @@ const Feed = () => {
           setArtistOfWeek(null);
         }
       } catch (err) {
-        // Silent — hero falls back to particles, sections hide
+        // Hero falls back to particles, timeline/artist sections hide
+        console.error('[Feed] awards fetch failed (timeline + artist of week hidden):', err);
         setWeeklyWinners([]);
         setArtistOfWeek(null);
       }
@@ -575,8 +565,12 @@ const Feed = () => {
   }, [selectedJurisdictionId, normalizeMedia]);
 
   // ─── Fetch weekly most-played chart — lazy, when Charts lens is active ───
+  // chartFetchedFor caches per jurisdiction so toggling lenses back and
+  // forth never refires the request.
+  const chartFetchedFor = React.useRef(null);
   useEffect(() => {
     if (activeLens !== 'charts' || !selectedJurisdictionId) return;
+    if (chartFetchedFor.current === selectedJurisdictionId) return;
 
     const fetchChart = async () => {
       setChartLoading(true);
@@ -586,9 +580,12 @@ const Feed = () => {
           url: `/v1/charts?jurisdictionId=${selectedJurisdictionId}&limit=10`,
         });
         setChart(res.data || null);
+        chartFetchedFor.current = selectedJurisdictionId;
+        console.info(`[Feed] chart loaded: ${res.data?.entries?.length ?? 0} entries, ${res.data?.totalPlaysThisWeek ?? 0} plays this week`);
       } catch (err) {
-        // Endpoint not deployed yet — fall back to demo
+        console.error('[Feed] chart fetch failed (empty state shown):', err);
         setChart(null);
+        chartFetchedFor.current = selectedJurisdictionId; // don't hammer a failing endpoint
       } finally {
         setChartLoading(false);
       }
@@ -598,8 +595,10 @@ const Feed = () => {
   }, [activeLens, selectedJurisdictionId]);
 
   // ─── Fetch playlists — lazy, when Playlists lens is active ───
+  const playlistsFetchedFor = React.useRef(null);
   useEffect(() => {
     if (activeLens !== 'playlists' || !selectedJurisdictionId) return;
+    if (playlistsFetchedFor.current === selectedJurisdictionId) return;
 
     const fetchPlaylists = async () => {
       setPlaylistsLoading(true);
@@ -619,9 +618,13 @@ const Feed = () => {
         setCommunityPlaylists(
           official.length ? community : community.slice(1)
         );
+        playlistsFetchedFor.current = selectedJurisdictionId;
+        console.info(`[Feed] playlists loaded: ${official.length} official, ${community.length} community`);
       } catch (err) {
+        console.error('[Feed] playlists fetch failed (empty state shown):', err);
         setFeaturedPlaylist(null);
         setCommunityPlaylists([]);
+        playlistsFetchedFor.current = selectedJurisdictionId;
       } finally {
         setPlaylistsLoading(false);
       }
@@ -632,8 +635,10 @@ const Feed = () => {
 
   // ─── Fetch upcoming releases — lazy, when Fresh lens is active ───
   // Backend endpoint doesn't exist yet; section stays hidden until it does.
+  const upcomingFetchedFor = React.useRef(null);
   useEffect(() => {
     if (activeLens !== 'fresh' || !selectedJurisdictionId) return;
+    if (upcomingFetchedFor.current === selectedJurisdictionId) return;
 
     const fetchUpcoming = async () => {
       try {
@@ -643,7 +648,11 @@ const Feed = () => {
         });
         setUpcoming(res.data || []);
       } catch (err) {
+        // Expected until song scheduling ships on the backend
+        console.warn('[Feed] /v1/media/upcoming unavailable (Dropping Soon hidden)');
         setUpcoming([]);
+      } finally {
+        upcomingFetchedFor.current = selectedJurisdictionId;
       }
     };
 
@@ -751,7 +760,9 @@ const Feed = () => {
   const newMediaList = newMedia.length ? newMedia.slice(0, 5) : getDummyNew();
   const awardsList = awards.length ? awards.slice(0, 5) : getDummyAwards();
   const artistsList = popularArtists.length ? popularArtists.slice(0, 5) : getDummyArtists();
-  const chartData = (chart && chart.entries && chart.entries.length) ? chart : getDummyChart();
+  // Charts NEVER falls back to demo content — an honest empty state
+  // builds more trust at launch than fake rankings.
+  const chartData = (chart && chart.entries && chart.entries.length) ? chart : null;
 
   if (loading) return (
     <Layout backgroundImage={randomRapper}>
@@ -1013,7 +1024,7 @@ const Feed = () => {
                 <h2 className="section-title">Most Played This Week</h2>
                 <div className="chart-caption">
                   Voting closes Sunday 11:59 PM
-                  {!chartData.isDemo && (
+                  {chartData && (
                     <> &middot; {formatPlayCount(chartData.totalPlaysThisWeek)} play{chartData.totalPlaysThisWeek !== 1 ? 's' : ''} this week</>
                   )}
                 </div>
@@ -1022,6 +1033,11 @@ const Feed = () => {
               {chartLoading ? (
                 <div className="lens-loading">
                   <div className="feed-loading-spinner" />
+                </div>
+              ) : !chartData ? (
+                <div className="lens-empty">
+                  No plays counted yet this week in {selectedJurisdictionName}. Be the
+                  first &mdash; press play on any track.
                 </div>
               ) : (
                 <div className="chart-list">
@@ -1052,7 +1068,12 @@ const Feed = () => {
                         </div>
                       </div>
                       <MovementBadge movement={entry.movement} />
-                      <button type="button" className="chart-play" onClick={(e) => handlePlayChartEntry(e, entry)}>
+                      <button
+                        type="button"
+                        className="chart-play"
+                        aria-label={`Play ${entry.title}`}
+                        onClick={(e) => handlePlayChartEntry(e, entry)}
+                      >
                         <CardPlayIcon />
                       </button>
                     </div>
@@ -1183,7 +1204,12 @@ const Feed = () => {
                     {isWithinDays(item.createdAt, 7) && (
                       <span className="fresh-badge">NEW</span>
                     )}
-                    <button type="button" className="chart-play" onClick={(e) => handlePlayMedia(e, item)}>
+                    <button
+                      type="button"
+                      className="chart-play"
+                      aria-label={`Play ${item.title}`}
+                      onClick={(e) => handlePlayMedia(e, item)}
+                    >
                       <CardPlayIcon />
                     </button>
                   </div>

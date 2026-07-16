@@ -694,10 +694,10 @@ describe('Feed — lens switching does not crash', () => {
     server.use(
       http.get(`${API}/v1/charts`, () =>
         HttpResponse.json({
-          totalVotesThisMonth: 12,
+          totalPlaysThisWeek: 12,
           entries: [
             {
-              rank: 1, movement: 2, votes: 8, songId: 'c1', title: 'Charted Song',
+              rank: 1, movement: 2, plays: 8, songId: 'c1', title: 'Charted Song',
               artworkUrl: '/cdn/c1.jpg', fileUrl: '/cdn/c1.mp3',
               artistId: 'artist-1', artistName: 'testartist',
             },
@@ -710,24 +710,27 @@ describe('Feed — lens switching does not crash', () => {
     await user.click(screen.getByRole('tab', { name: /Charts/i }));
     // Real data path renders the entry; crucially, no render crash.
     await waitFor(() =>
-      expect(screen.getByText(/This Month's Top Voted/i)).toBeInTheDocument()
+      expect(screen.getByText(/Most Played This Week/i)).toBeInTheDocument()
     );
     await waitFor(() => expect(screen.getByText('Charted Song')).toBeInTheDocument());
+    // Plays count and total surface in the UI
+    expect(screen.getByText(/8 plays/i)).toBeInTheDocument();
+    expect(screen.getByText(/12 plays this week/i)).toBeInTheDocument();
   });
 
   it('shows the honest empty state when the chart has no entries (no fake data)', async () => {
     server.use(
       http.get(`${API}/v1/charts`, () =>
-        HttpResponse.json({ totalVotesThisMonth: 0, entries: [] })
+        HttpResponse.json({ totalPlaysThisWeek: 0, entries: [] })
       )
     );
     await loadFeed();
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: /Charts/i }));
     await waitFor(() =>
-      expect(screen.getByText(/No votes counted yet this month/i)).toBeInTheDocument()
+      expect(screen.getByText(/No plays counted yet this week/i)).toBeInTheDocument()
     );
-    // The old demo rows must NOT appear.
+    // Demo rows must NOT appear — Charts never shows fake data.
     expect(screen.queryByText('124')).not.toBeInTheDocument();
   });
 
