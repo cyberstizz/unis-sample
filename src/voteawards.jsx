@@ -173,78 +173,33 @@ const VoteAwards = () => {
     return new Date(nyString);
   };
 
-  const getLastCompletedAwardPeriod = (interval) => {
-    const now = getNewYorkNow();
-    const start = new Date(now);
-    const end = new Date(now);
-
-    if (interval === 'daily') {
-      start.setDate(now.getDate() - 1);
-      start.setHours(0, 0, 0, 0);
-
-      end.setDate(now.getDate() - 1);
-      end.setHours(0, 0, 0, 0);
-
-      return { startDate: start, endDate: end };
-    }
-
-    if (interval === 'weekly') {
-      const day = now.getDay();
-      const daysSinceMonday = day === 0 ? 6 : day - 1;
-
-      const currentWeekMonday = new Date(now);
-      currentWeekMonday.setDate(now.getDate() - daysSinceMonday);
-      currentWeekMonday.setHours(0, 0, 0, 0);
-
-      end.setTime(currentWeekMonday.getTime());
-      end.setDate(currentWeekMonday.getDate() - 1);
-      end.setHours(0, 0, 0, 0);
-
-      start.setTime(end.getTime());
-      start.setDate(end.getDate() - 6);
-      start.setHours(0, 0, 0, 0);
-
-      return { startDate: start, endDate: end };
-    }
-
-    if (interval === 'monthly') {
-      start.setFullYear(now.getFullYear(), now.getMonth() - 1, 1);
-      start.setHours(0, 0, 0, 0);
-
-      end.setFullYear(now.getFullYear(), now.getMonth(), 0);
-      end.setHours(0, 0, 0, 0);
-
-      return { startDate: start, endDate: end };
-    }
-
-    if (interval === 'quarterly') {
-      const currentQuarter = Math.floor(now.getMonth() / 3);
-      const previousQuarterStartMonth = currentQuarter === 0 ? 9 : (currentQuarter - 1) * 3;
-      const previousQuarterYear = currentQuarter === 0 ? now.getFullYear() - 1 : now.getFullYear();
-
-      start.setFullYear(previousQuarterYear, previousQuarterStartMonth, 1);
-      start.setHours(0, 0, 0, 0);
-
-      end.setFullYear(previousQuarterYear, previousQuarterStartMonth + 3, 0);
-      end.setHours(0, 0, 0, 0);
-
-      return { startDate: start, endDate: end };
-    }
-
-    if (interval === 'annual') {
-      start.setFullYear(now.getFullYear() - 1, 0, 1);
-      start.setHours(0, 0, 0, 0);
-
-      end.setFullYear(now.getFullYear() - 1, 11, 31);
-      end.setHours(0, 0, 0, 0);
-
-      return { startDate: start, endDate: end };
-    }
-
-    start.setDate(now.getDate() - 1);
-    start.setHours(0, 0, 0, 0);
-    end.setDate(now.getDate() - 1);
+  // ── Winner lookup window ──────────────────────────────────────────────
+  // We want the MOST RECENT winner for the selected interval, not an award
+  // dated one exact day. The old logic asked for exactly "yesterday", so any
+  // jurisdiction whose cron row landed on a slightly different date (a missed
+  // run, a backfill, a timezone edge) showed "pending" despite having awards.
+  //
+  // The backend filters by intervalId and returns newest-first
+  // (ORDER BY award_date DESC), and fetchLastWinner takes [0], so a wide
+  // lookback per cadence reliably surfaces the current winner while a single
+  // missed cron day can no longer blank the card. The displayed "Won <date>"
+  // still comes from the award's own awardDate, so it stays accurate.
+  const getWinnerLookbackWindow = (interval) => {
+    const end = getNewYorkNow();
     end.setHours(0, 0, 0, 0);
+
+    const lookbackDays = {
+      daily: 30,
+      weekly: 90,
+      monthly: 400,
+      quarterly: 500,
+      annual: 800,
+    }[interval] ?? 30;
+
+    const start = new Date(end);
+    start.setDate(start.getDate() - lookbackDays);
+    start.setHours(0, 0, 0, 0);
+
     return { startDate: start, endDate: end };
   };
 
@@ -254,11 +209,6 @@ const VoteAwards = () => {
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
   };
-
-  const todayInNewYork = () =>
-    new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/New_York',
-    }).format(new Date());
 
   const formatAwardDate = (dateString) => {
     if (!dateString) return '';
@@ -406,7 +356,7 @@ const VoteAwards = () => {
 
       setWinnerLoading(true);
 
-      const { startDate, endDate } = getLastCompletedAwardPeriod(selectedInterval);
+      const { startDate, endDate } = getWinnerLookbackWindow(selectedInterval);
 
       try {
         const res = await apiCall({
@@ -420,10 +370,11 @@ const VoteAwards = () => {
             `&genreId=${genreId}`,
         });
 
-        const cutoff = todayInNewYork();
-
+        // Keep any award with a resolvable target. We deliberately do NOT
+        // require award.awardId here: with the backend now pure-read, this is
+        // just defensive — a valid target is the real signal that a row is a
+        // usable winner.
         const awards = (res.data || [])
-          .filter((award) => award?.awardId)
           .filter((award) => getWinnerTargetId(award))
           .sort((a, b) => {
             const aTime = new Date(a.awardDate || 0).getTime();
@@ -577,6 +528,67 @@ const VoteAwards = () => {
     [selectedGenre, selectedType, selectedInterval, selectedJurisdiction]
   );
 
+  // Distinguish "no eligible content in this category/jurisdiction" from
+  // "content exists but no winner has been computed yet". When there are no
+  // nominees at all for the selected filters, telling the user to "vote to
+  // crown the first winner" is misleading — there is nothing to vote for here.
+  const hasNoEligibleContent = !loading && !error && filteredNominees.length === 0 && searchQuery.length === 0;
+
+  // Shared last-winner card. Rendered inside .va-hero-meta so it sits beside
+  // the countdown (same level on mobile, stacked beneath it on desktop).
+  const lastWinnerCard = (
+    <div
+      className={`va-last-winner ${lastWinner ? 'has-winner' : 'is-empty'}`}
+      onClick={lastWinner ? handleWinnerClick : undefined}
+      role={lastWinner ? 'button' : 'status'}
+      tabIndex={lastWinner ? 0 : -1}
+      onKeyDown={(e) => {
+        if (!lastWinner) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleWinnerClick();
+        }
+      }}
+    >
+      <div className="va-last-winner-copy">
+        <span className="va-last-winner-kicker">
+          <span className="va-last-winner-dot" />
+          {lastWinner ? `Current` : 'First winner pending'}
+        </span>
+
+        {lastWinner ? (
+          <>
+            <strong className="va-last-winner-name">{lastWinner.name}</strong>
+
+            {lastWinner.artistName && (
+              <span className="va-last-winner-artist">by {lastWinner.artistName}</span>
+            )}
+
+            {lastWinner.awardDate && (
+              <span className="va-last-winner-date">
+                Won {formatAwardDate(lastWinner.awardDate)}
+              </span>
+            )}
+          </>
+        ) : (
+          <span className="va-last-winner-empty">
+            {winnerLoading
+              ? 'Checking recent winners...'
+              : hasNoEligibleContent
+                ? `No ${genreLabel} ${selectedType}s in ${jurisdictionLabel} yet.`
+                : `Vote to crown the first ${typeLabel} of the ${intervalLabel}.`}
+          </span>
+        )}
+      </div>
+
+      {lastWinner?.imageUrl && (
+        <div className="va-last-winner-thumb">
+          <img src={lastWinner.imageUrl} alt={`${lastWinner.name} winner artwork`} />
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <Layout backgroundImage={backimage}>
       <div className="va-container">
@@ -648,7 +660,10 @@ const VoteAwards = () => {
           </div>
         )}
 
-        {/* ── Hero headline + countdown ── */}
+        {/* ── Hero: headline (left) + meta cluster (countdown + last winner) ──
+             On desktop .va-hero-meta is a column on the right (countdown over
+             winner). On mobile it flips to a row so the countdown and winner
+             sit on the same level. See voteawards.scss. */}
         <div className="va-hero">
           <div className="va-hero-text">
             <span className="va-active-poll">Active poll</span>
@@ -659,64 +674,20 @@ const VoteAwards = () => {
               in {jurisdictionLabel}
             </h1>
           </div>
-          <div className="va-countdown">
-            <span className="va-countdown-label"><span className="va-live-badge">LIVE</span>  Poll ends in</span>
-            <span className="va-countdown-time">
-              {countdown.days > 0 && (
-                <span className="va-countdown-days">{countdown.days}D&nbsp;</span>
-              )}
-              {pad(countdown.hours)}:{pad(countdown.minutes)}:{pad(countdown.seconds)}
-            </span>
-          </div>
-        </div>
 
-        <div
-          className={`va-last-winner ${lastWinner ? 'has-winner' : 'is-empty'}`}
-          onClick={lastWinner ? handleWinnerClick : undefined}
-          role={lastWinner ? 'button' : 'status'}
-          tabIndex={lastWinner ? 0 : -1}
-          onKeyDown={(e) => {
-            if (!lastWinner) return;
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              handleWinnerClick();
-            }
-          }}
-        >
-          <div className="va-last-winner-copy">
-            <span className="va-last-winner-kicker">
-              <span className="va-last-winner-dot" />
-              {lastWinner ? `Current` : 'First winner pending'}
-            </span>
-
-            {lastWinner ? (
-              <>
-                <strong className="va-last-winner-name">{lastWinner.name}</strong>
-
-                {lastWinner.artistName && (
-                  <span className="va-last-winner-artist">by {lastWinner.artistName}</span>
+          <div className="va-hero-meta">
+            <div className="va-countdown">
+              <span className="va-countdown-label"><span className="va-live-badge">LIVE</span>  Poll ends in</span>
+              <span className="va-countdown-time">
+                {countdown.days > 0 && (
+                  <span className="va-countdown-days">{countdown.days}D&nbsp;</span>
                 )}
-
-                {lastWinner.awardDate && (
-                  <span className="va-last-winner-date">
-                    Won {formatAwardDate(lastWinner.awardDate)}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="va-last-winner-empty">
-                {winnerLoading
-                  ? 'Checking recent winners...'
-                  : `Vote to crown the first ${typeLabel} of the ${intervalLabel}.`}
+                {pad(countdown.hours)}:{pad(countdown.minutes)}:{pad(countdown.seconds)}
               </span>
-            )}
-          </div>
-
-          {lastWinner?.imageUrl && (
-            <div className="va-last-winner-thumb">
-              <img src={lastWinner.imageUrl} alt={`${lastWinner.name} winner artwork`} />
             </div>
-          )}
+
+            {lastWinnerCard}
+          </div>
         </div>
 
         {/* ── Nominees grid ── */}
@@ -807,7 +778,9 @@ const VoteAwards = () => {
                 ))
               ) : (
                 <p className="va-no-nominees">
-                  {searchQuery ? 'No nominees match your search.' : 'No nominees found for this category yet.'}
+                  {searchQuery
+                    ? 'No nominees match your search.'
+                    : `No ${genreLabel} ${selectedType}s in ${jurisdictionLabel} yet.`}
                 </p>
               )}
             </div>
