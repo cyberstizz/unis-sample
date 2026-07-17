@@ -275,6 +275,7 @@ const Header = () => {
               alt="UNIS"
               className={`logo-img ${shouldBreathe ? 'logo-breathe' : ''}`}
               draggable="false"
+              onAnimationEnd={() => setShouldBreathe(false)}
             />
           </button>
         </div>
