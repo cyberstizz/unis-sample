@@ -150,11 +150,13 @@ $green-badge: #22c55e;
   }
 }
 
-// ── Hero: Headline + Countdown ───────────────────────────────
+// ── Hero: Headline + Meta (countdown + last winner) ──────────
 // Compact: ~110px total height so cards start well inside the fold.
+// align-items: flex-start so the headline top-aligns with the countdown
+// at the top of the meta column (desktop).
 .va-hero {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   width: 100%;
   max-width: 960px;
@@ -165,6 +167,18 @@ $green-badge: #22c55e;
 .va-hero-text {
   flex: 1;
   min-width: 0;
+}
+
+// Groups the countdown + last-winner card so they can change orientation
+// per breakpoint without moving DOM nodes:
+//   desktop → column (countdown on top, winner beneath, right-aligned)
+//   mobile  → row    (countdown and winner on the SAME level)
+.va-hero-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .va-active-poll {
@@ -253,13 +267,12 @@ $green-badge: #22c55e;
 .va-last-winner {
   width: fit-content;
   max-width: min(100%, 420px);
-  margin: -8px 0 26px auto;
+  margin: 0;
   padding: 10px 12px;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   gap: 12px;
-  align-self: center;
   border-radius: 12px;
   background:
     radial-gradient(circle at top right, rgba($unis-blue, 0.18), transparent 34%),
@@ -272,7 +285,6 @@ $green-badge: #22c55e;
   position: relative;
   overflow: hidden;
   animation: va-searchSlide 0.22s ease-out;
-  right: 0;
 
   &.has-winner {
     cursor: pointer;
@@ -967,11 +979,24 @@ $wizard-subtle-black: #1a1a1a;
     height: 32px;
   }
 
+  // Headline stacks full-width on top; the meta cluster (countdown + winner)
+  // becomes its own full-width row directly beneath it.
   .va-hero {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 12px;
     margin-bottom: 20px;
+  }
+
+  // KEY CHANGE: on mobile the countdown and last-winner sit on the SAME level.
+  // countdown holds its content width on the left; the winner card fills the
+  // rest on the right. No more stacked gap or empty left margin.
+  .va-hero-meta {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
   }
 
   .va-headline {
@@ -980,6 +1005,7 @@ $wizard-subtle-black: #1a1a1a;
 
   .va-countdown {
     align-items: flex-start;
+    flex-shrink: 0;
   }
 
   .va-countdown-time {
@@ -987,12 +1013,13 @@ $wizard-subtle-black: #1a1a1a;
   }
 
   .va-last-winner {
-    margin: -4px 0 20px auto;
+    margin: 0;
     padding: 9px 10px;
     gap: 9px;
     border-radius: 10px;
-    max-width: calc(100% - 24px);
-    right: 0;
+    flex: 1;
+    min-width: 0;
+    max-width: none;
   }
 
   .va-last-winner-kicker {
