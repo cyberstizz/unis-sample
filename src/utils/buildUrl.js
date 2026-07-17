@@ -1,4 +1,4 @@
-const PUBLIC_R2_BASE = 'https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev';
+const PUBLIC_R2_BASE = 'https://cdn.unismusic.com';
 
 const API_BASE_URL = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL
