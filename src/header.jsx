@@ -1,10 +1,12 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import "./header.scss";
 import { useNavigate, useLocation } from 'react-router-dom';
 import SearchBar from './components/SearchBar';
 import { useAuth } from './context/AuthContext';
+import { PlayerContext } from './context/playercontext';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
+import { attachMediaElement, subscribeBass, ensureRunning, isPulseEnabled } from './utils/bassReactor';
 import { DollarSign, House, Music, MapPin, Search, Menu, LogIn } from 'lucide-react';
 import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
@@ -19,11 +21,13 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, isGuest, theme } = useAuth();
+  const { audioRef, isPlaying } = useContext(PlayerContext) || {};
   const { triggerGate, gateProps } = useAuthGate();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [shouldBreathe, setShouldBreathe] = useState(false);
   const menuRef = useRef(null);
+  const logoImgRef = useRef(null);
 
   // Breath animation: only on first page load of session
   useEffect(() => {
@@ -37,6 +41,56 @@ const Header = () => {
       // sessionStorage may be unavailable (private mode, etc.) — skip silently
     }
   }, []);
+
+  // ─── BASS-REACTIVE LOGO ────────────────────────────────────────
+  // While a track is playing, the shared media element is routed through
+  // bassReactor's analyser and the logo pulses with the ~20–160 Hz band
+  // (kick/bass). We mutate the <img> style directly inside the rAF
+  // callback — no React state, no re-renders, 60fps for free.
+  //
+  // Requirements handled elsewhere:
+  //  • player.jsx renders <audio>/<video> with crossOrigin="anonymous"
+  //  • the R2 bucket must have a CORS policy allowing this origin,
+  //    otherwise attachMediaElement refuses / audio would go silent
+  //  • prefers-reduced-motion disables the effect entirely
+  //  • isPulseEnabled() is a localStorage kill switch ('unis-logo-pulse')
+  useEffect(() => {
+    const img = logoImgRef.current;
+    if (!img) return;
+
+    const reduced = typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const clear = () => {
+      img.style.transform = '';
+      img.style.filter = '';
+    };
+
+    if (reduced || !isPulseEnabled() || !isPlaying || !audioRef?.current) {
+      clear();
+      return;
+    }
+
+    const attached = attachMediaElement(audioRef.current);
+    if (!attached) {
+      clear();
+      return;
+    }
+
+    const unsubscribe = subscribeBass((level) => {
+      // Subtle by design: max +13% scale on the hardest hits.
+      img.style.transform = `scale(${(1 + level * 0.13).toFixed(4)})`;
+      img.style.filter = level > 0.03
+        ? `drop-shadow(0 0 ${(level * 15).toFixed(1)}px var(--unis-primary-glow))`
+        : '';
+    });
+    ensureRunning();
+
+    return () => {
+      unsubscribe();
+      clear();
+    };
+  }, [isPlaying, audioRef]);
 
   const handleHome = () => {
     if (location.pathname !== '/') {
@@ -216,6 +270,7 @@ const Header = () => {
             aria-label="Go to Unis home"
           >
             <img
+              ref={logoImgRef}
               src={activeLogo}
               alt="UNIS"
               className={`logo-img ${shouldBreathe ? 'logo-breathe' : ''}`}

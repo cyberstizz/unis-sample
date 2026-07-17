@@ -723,11 +723,11 @@ const Player = () => {
   return (
     <div className={`player ${isExpanded ? 'expanded' : ''}`} style={isExpanded ? { backgroundImage: `url(${currentMedia.artwork || '/assets/placeholder.jpg'})` } : {}}>
       {isVideo ? (
-        <video ref={audioRef} className={isExpanded ? "media-element" : "hidden-media"} style={isExpanded ? {} : { display: 'none' }}>
+        <video ref={audioRef} crossOrigin="anonymous" className={isExpanded ? "media-element" : "hidden-media"} style={isExpanded ? {} : { display: 'none' }}>
           <source src={currentMedia.url} type="video/mp4" />
         </video>
       ) : (
-        <audio ref={audioRef} className="hidden-media" style={{ display: 'none' }}>
+        <audio ref={audioRef} crossOrigin="anonymous" className="hidden-media" style={{ display: 'none' }}>
           <source src={currentMedia.url} type="audio/mpeg" />
         </audio>
       )}
