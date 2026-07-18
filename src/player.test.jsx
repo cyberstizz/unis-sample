@@ -28,6 +28,10 @@ vi.mock('./playlistManager', () => ({
     ) : null,
 }));
 
+vi.mock('./commentSection', () => ({ // ★ comments: stub the heavy comment section
+  default: ({ songId }) => <div data-testid="comment-section" data-song-id={songId} />,
+}));
+
 vi.mock('./QueuePanel', () => ({
   default: ({ open, onClose }) =>
     open ? (
@@ -96,17 +100,26 @@ vi.mock('./AuthGateSheet', () => {
 
 vi.mock('./player.scss', () => ({}));
 
-vi.mock('lucide-react', () => {
+vi.mock('lucide-react', async (importOriginal) => {
+  const actual = await importOriginal();
   const React = require('react');
-  const Stub = (name) => (props) => <span data-testid={`icon-${name}`} {...props} />;
-  return {
-    Heart: Stub('heart'),
-    Headphones: Stub('headphones'),
-    Vote: Stub('vote'),
-    ChevronUp: Stub('chevron-up'),
-    ChevronDown: Stub('chevron-down'),
-    ListMusic: Stub('list-music'),
+  // ★ QA: previous mock listed 6 icons by hand; the component gained more
+  //   (Lock, MessageCircle, X), which broke 36/42 tests on pristine HEAD.
+  //   Stubbing every real export means new icon imports can never break this
+  //   suite again.
+  const Stub = (name) => {
+    const kebab = name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+    const Icon = (props) => <span data-testid={`icon-${kebab}`} {...props} />;
+    Icon.displayName = name;
+    return Icon;
   };
+  const mocked = { __esModule: true };
+  for (const key of Object.keys(actual)) {
+    mocked[key] = typeof actual[key] === 'function' || typeof actual[key] === 'object'
+      ? Stub(key)
+      : actual[key];
+  }
+  return mocked;
 });
 
 import Player from './player';
@@ -622,21 +635,49 @@ describe('Player — mobile actions tray', () => {
     expect(tray).toHaveClass('open');
   });
 
-  it('closes the queue panel via tray Queue button and opens QueuePanel', async () => {
+  it('opens QueuePanel from the player queue button', async () => {
+    // ★ QA: the old test clicked a tray "Queue" button that no longer exists —
+    //   the queue moved to the player bar in the queue-panel overhaul, so the
+    //   test could never pass against the current component.
     const user = userEvent.setup();
     const { container } = renderPlayerWith(
       { currentMedia: sampleSong, queue: [sampleSong] },
       'listener'
     );
-    const toggle = container.querySelector('.mobile-actions-toggle');
-    await user.click(toggle);
-    const trayQueueBtn = within(container.querySelector('.mobile-actions-tray'))
-      .getByText(/queue/i)
-      .closest('button');
-    await user.click(trayQueueBtn);
+    await user.click(container.querySelector('.player-queue-btn'));
     expect(screen.getByTestId('queue-panel')).toBeInTheDocument();
-    const tray = container.querySelector('.mobile-actions-tray');
-    expect(tray).not.toHaveClass('open');
+  });
+
+  it('shows a Comments button beside the in-queue pill', async () => { // ★ comments
+    const user = userEvent.setup();
+    const { container } = renderPlayerWith(
+      { currentMedia: sampleSong, queue: [sampleSong] },
+      'listener'
+    );
+    await user.click(container.querySelector('.mobile-actions-toggle'));
+    const side = container.querySelector('.tray-header-side');
+    expect(within(side).getByText(/1 in queue/i)).toBeInTheDocument();
+    expect(within(side).getByRole('button', { name: /comments/i })).toBeInTheDocument();
+  });
+
+  it('Comments button closes the tray and opens the comment sheet for the current song', async () => { // ★ comments
+    const user = userEvent.setup();
+    const { container } = renderPlayerWith(
+      { currentMedia: sampleSong, queue: [sampleSong] },
+      'listener'
+    );
+    await user.click(container.querySelector('.mobile-actions-toggle'));
+    await user.click(screen.getByRole('button', { name: /open comments/i }));
+    expect(container.querySelector('.mobile-actions-tray')).not.toHaveClass('open');
+    const sheet = screen.getByRole('dialog', { name: /comments/i });
+    expect(sheet).toBeInTheDocument();
+    expect(screen.getByTestId('comment-section')).toHaveAttribute(
+      'data-song-id',
+      String(sampleSong.id || sampleSong.songId)
+    );
+    // close button dismisses the sheet
+    await user.click(within(sheet).getByRole('button', { name: /close comments/i }));
+    expect(screen.queryByRole('dialog', { name: /comments/i })).not.toBeInTheDocument();
   });
 });
 
