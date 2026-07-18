@@ -466,6 +466,8 @@ const Player = () => {
           name: safeTitle,
           type: 'song',
           jurisdiction: jurisdictionName,
+          jurisdictionId: songData.jurisdiction?.jurisdictionId || null, // ★ ironclad: real UUID, no slug re-mapping
+          genreId: songData.genre?.genreId || null, // ★ ironclad
           genreKey: songData.genre?.name || 'rap-hiphop',
           artist: safeArtist,
           artwork: currentMedia.artwork,

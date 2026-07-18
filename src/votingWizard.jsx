@@ -140,8 +140,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     selectedGenre: 'rap-hiphop',
     selectedType: 'artist',
     selectedInterval: 'daily',
-    selectedJurisdiction: 'harlem',
-  });
+  }); // ★ ironclad: jurisdiction moved to selectedJurisdictionId (real UUID)
   const { showReward } = useReward();
   const { theme, user } = useAuth();
   const activeLogo = LOGO_MAP[theme] || logoblue;
@@ -149,7 +148,11 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   const [artistNameForward, setArtistNameForward] = useState('');
   const [artistNameBackward, setArtistNameBackward] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [eligibleJurisdictionIds, setEligibleJurisdictionIds] = useState([]);
+  // ★ ironclad: the dropdown is built from real API jurisdiction objects
+  //   ({jurisdictionId, name}) instead of a hardcoded 3-slug map, and the
+  //   selection is the UUID itself — no slug→UUID re-mapping at submit time.
+  const [jurisdictionOptions, setJurisdictionOptions] = useState([]);
+  const [selectedJurisdictionId, setSelectedJurisdictionId] = useState('');
   const [isFetchingJurisdictions, setIsFetchingJurisdictions] = useState(false);
   const [voteResult, setVoteResult] = useState({ status: 'idle', message: '', details: '' });
 
@@ -172,8 +175,6 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     [selectedNominee]
   );
 
-  const getKeyFromId = (id) =>
-    Object.keys(JURISDICTION_IDS).find((k) => JURISDICTION_IDS[k] === id);
 
   // --- DIAGNOSTIC ---------------------------------------------------------
   // If the wizard is open with a nominee but we couldn't resolve any
@@ -198,7 +199,9 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   useEffect(() => {
     if (show && !prevShowRef.current) {
       const { nominee: n, filters: f } = latestRef.current;
-      const homeKey = getKeyFromId(n?.jurisdiction?.jurisdictionId);
+      const homeKey = n?.jurisdiction && typeof n.jurisdiction === 'string'
+        ? n.jurisdiction.toLowerCase().replace(/\s+/g, '-')
+        : null; // ★ ironclad: slug only used as a bootstrap map key below
 
       setStep(1);
       setDirection(1);
@@ -206,12 +209,20 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       setArtistNameForward('');
       setArtistNameBackward('');
       setSubmitting(false);
-      setEligibleJurisdictionIds([]);
+      setJurisdictionOptions([]); // ★ ironclad
+      // ★ ironclad: prefer the nominee's REAL jurisdiction UUID; hardcoded map
+      //   only as a bootstrap fallback until the breadcrumb fetch resolves.
+      setSelectedJurisdictionId(
+        n?.jurisdictionId
+          || n?.jurisdiction?.jurisdictionId
+          || JURISDICTION_IDS[homeKey]
+          || JURISDICTION_IDS[f?.selectedJurisdiction]
+          || ''
+      );
       setCurrentFilters({
         selectedGenre: n?.genreKey || f?.selectedGenre || 'rap-hiphop',
         selectedType: n?.type || f?.selectedType || 'artist',
         selectedInterval: f?.selectedInterval || 'daily',
-        selectedJurisdiction: homeKey || f?.selectedJurisdiction || 'harlem',
       });
     }
     prevShowRef.current = show;
@@ -307,7 +318,10 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
       let nomineeJurisdictionId = null;
 
-      if (nominee.jurisdiction) {
+      // ★ ironclad: real UUID from the nominee first
+      if (nominee.jurisdictionId) {
+        nomineeJurisdictionId = nominee.jurisdictionId;
+      } else if (nominee.jurisdiction) {
         if (typeof nominee.jurisdiction === 'object' && nominee.jurisdiction.jurisdictionId) {
           nomineeJurisdictionId = nominee.jurisdiction.jurisdictionId;
         } else if (typeof nominee.jurisdiction === 'string') {
@@ -334,8 +348,17 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
       if (cancelled) return;
 
+      // ★ ironclad: shared fallback — options come from the bootstrap map,
+      //   with real names via formatText, so the select is never empty.
+      const mapFallbackOptions = Object.entries(JURISDICTION_IDS).map(([slug, id]) => ({
+        jurisdictionId: id,
+        name: formatText(slug),
+      }));
+
       if (!nomineeJurisdictionId) {
-        setEligibleJurisdictionIds(Object.values(JURISDICTION_IDS));
+        console.warn('[VotingWizard] Could not resolve nominee jurisdiction; using bootstrap options.'); // ★ checklist: logging
+        setJurisdictionOptions(mapFallbackOptions);
+        setSelectedJurisdictionId((prev) => prev || mapFallbackOptions[0]?.jurisdictionId || '');
         setIsFetchingJurisdictions(false);
         return;
       }
@@ -347,34 +370,36 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         });
         if (cancelled) return;
 
-        const eligibleIds = response.data
+        // ★ ironclad: the option list IS the API's voting-enabled breadcrumb —
+        //   any jurisdiction the backend deems eligible is selectable, with its
+        //   real name and real UUID. Nothing outside it ever reaches submit.
+        const options = (response.data || [])
           .filter((j) => j.votingEnabled !== false)
-          .map((j) => j.jurisdictionId);
+          .map((j) => ({ jurisdictionId: j.jurisdictionId, name: j.name }));
 
-        setEligibleJurisdictionIds(eligibleIds);
+        if (options.length === 0) {
+          console.warn('[VotingWizard] Breadcrumb returned no voting-enabled jurisdictions.'); // ★
+          setJurisdictionOptions(mapFallbackOptions);
+          setSelectedJurisdictionId((prev) => prev || mapFallbackOptions[0]?.jurisdictionId || '');
+          return;
+        }
 
-        setCurrentFilters((prev) => {
-          const currentId = JURISDICTION_IDS[prev.selectedJurisdiction];
-          if (currentId && !eligibleIds.includes(currentId)) {
-            const homeKey = getKeyFromId(nomineeJurisdictionId);
-            if (homeKey) return { ...prev, selectedJurisdiction: homeKey };
-          }
-          return prev;
-        });
+        setJurisdictionOptions(options);
+        setSelectedJurisdictionId((prev) =>
+          options.some((o) => o.jurisdictionId === prev)
+            ? prev
+            : (options.find((o) => o.jurisdictionId === nomineeJurisdictionId)?.jurisdictionId
+              || options[0].jurisdictionId)
+        );
       } catch (err) {
         if (cancelled) return;
         console.error('Failed to fetch eligible jurisdictions:', err);
-
-        const homeKey = getKeyFromId(nomineeJurisdictionId);
-        let fallback = [];
-        if (homeKey === 'downtown-harlem' || homeKey === 'uptown-harlem') {
-          fallback = [JURISDICTION_IDS[homeKey], JURISDICTION_IDS['harlem']];
-        } else if (homeKey === 'harlem') {
-          fallback = [JURISDICTION_IDS['harlem']];
-        } else {
-          fallback = Object.values(JURISDICTION_IDS);
-        }
-        setEligibleJurisdictionIds(fallback);
+        setJurisdictionOptions(mapFallbackOptions);
+        setSelectedJurisdictionId((prev) =>
+          mapFallbackOptions.some((o) => o.jurisdictionId === prev)
+            ? prev
+            : mapFallbackOptions[0]?.jurisdictionId || ''
+        );
       } finally {
         if (!cancelled) setIsFetchingJurisdictions(false);
       }
@@ -386,11 +411,8 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     };
   }, [show, nominee?.id]);
 
-  const isJurisdictionEligible = (optionKey) => {
-    if (isFetchingJurisdictions) return false;
-    if (eligibleJurisdictionIds.length === 0) return true;
-    return eligibleJurisdictionIds.includes(JURISDICTION_IDS[optionKey]);
-  };
+  // ★ ironclad: isJurisdictionEligible removed — jurisdictionOptions IS the
+  //   pre-filtered eligible set straight from the API.
 
   // --- CONFETTI ON SUCCESS ------------------------------------------------
   useEffect(() => {
@@ -461,20 +483,51 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
     setSubmitting(true);
 
+    // ★ ironclad: resolve every ID up front — real UUIDs first, bootstrap map
+    //   as fallback — and refuse to send a doomed request. Each missing piece
+    //   gets its own named message instead of a mystery failure downstream.
+    const genreId =
+      selectedNominee.genreId
+      || GENRE_IDS[currentFilters.selectedGenre]
+      || GENRE_IDS[(currentFilters.selectedGenre || '').toLowerCase()];
+    const jurisdictionId = selectedJurisdictionId;
+    const intervalId = INTERVAL_IDS[currentFilters.selectedInterval];
+
+    const missing =
+      (!genreId && 'genre') || (!jurisdictionId && 'jurisdiction') || (!intervalId && 'interval');
+    if (missing) {
+      console.error(`[VotingWizard] Vote blocked — unresolved ${missing}:`, { // ★ checklist: logging
+        genreId, jurisdictionId, intervalId, filters: currentFilters, nominee: selectedNominee,
+      });
+      setVoteResult({
+        status: 'error',
+        message: 'Vote Not Sent',
+        details: `We couldn't identify this vote's ${missing}. Please close and reopen the wizard — if it keeps happening, contact support.`,
+      });
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const voteData = {
         userId,
         targetType: currentFilters.selectedType,
         targetId: selectedNominee.id,
-        genreId: GENRE_IDS[currentFilters.selectedGenre],
-        jurisdictionId: JURISDICTION_IDS[currentFilters.selectedJurisdiction],
-        intervalId: INTERVAL_IDS[currentFilters.selectedInterval],
-        voteDate: new Date().toISOString().split('T')[0],
+        genreId,
+        jurisdictionId,
+        intervalId,
+        // ★ ironclad: voteDate removed — the server now stamps the date in the
+        //   platform timezone. The old client-side UTC date rolled to
+        //   "tomorrow" after ~8pm New York time, causing phantom duplicate
+        //   rejections and window mismatches.
       };
 
-      // …in the submit handler, before the apiCall:
       if (!user?.phoneVerified) {
-        setVoteResult({ status: 'error', message: 'Verify your phone number to vote.' });
+        setVoteResult({
+          status: 'ineligible',
+          message: 'Phone Not Verified',
+          details: 'Verify your phone number to vote.',
+        });
         return;
       }
 
@@ -489,25 +542,50 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         anchor: 'center',
       });
     } catch (err) {
-      console.error('Vote submission failed:', err);
-      const status = err.response?.status;
-      if (status === 409) {
+      const resp = err.response;
+      const status = resp?.status;
+      const data = resp?.data;
+      // ★ ironclad: the backend now always sends {code, message} JSON, but we
+      //   also accept legacy plain-string bodies so no message is ever lost.
+      const serverMsg =
+        (data && typeof data === 'object' && (data.message || data.error))
+        || (typeof data === 'string' && data.trim() ? data.trim() : '');
+
+      console.error('Vote submission failed:', { status, serverMsg, data, err }); // ★ checklist: logging
+
+      if (!resp) {
+        // ★ ironclad: ONLY a request that never reached the server is called a
+        //   connection problem. Every server response shows the server's words.
+        setVoteResult({
+          status: 'network',
+          message: 'Connection Failed',
+          details: 'We could not reach the server. Check your connection and try again — your vote was not counted.',
+        });
+      } else if (status === 409) {
         setVoteResult({
           status: 'duplicate',
           message: 'Already Voted',
-          details: 'You have already cast a vote in this category for this interval.',
+          details: serverMsg || 'You have already cast a vote in this category for this interval.',
         });
       } else if (status === 403) {
         setVoteResult({
           status: 'ineligible',
           message: 'Vote Rejected',
-          details: 'You are not eligible to vote in this jurisdiction.',
+          details: serverMsg || 'You are not eligible to cast this vote.',
+        });
+      } else if (status >= 400 && status < 500) {
+        setVoteResult({
+          status: 'error',
+          message: 'Vote Rejected',
+          details: serverMsg || `The server rejected this vote (code ${status}). Please close the wizard and try again.`,
         });
       } else {
         setVoteResult({
-          status: 'network',
-          message: 'Connection Failed',
-          details: 'We could not reach the server. Please try again.',
+          status: 'error',
+          message: 'Server Error',
+          details: serverMsg
+            ? `${serverMsg} — your vote was not counted.`
+            : `Something went wrong on our end (code ${status}). Your vote was not counted — please try again.`,
         });
       }
     } finally {
@@ -517,6 +595,10 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
   const formatText = (str) =>
     str ? str.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '';
+
+  // ★ ironclad: display name comes from the selected option itself
+  const selectedJurisdictionName =
+    jurisdictionOptions.find((o) => o.jurisdictionId === selectedJurisdictionId)?.name || '…';
 
   const forwardMatches =
     artistNameForward.length > 0 &&
@@ -628,7 +710,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
               </div>
               <div>
                 <span>Jurisdiction</span>
-                <strong>{formatText(currentFilters.selectedJurisdiction)}</strong>
+                <strong>{selectedJurisdictionName}</strong>
               </div>
             </div>
           </div>
@@ -708,22 +790,18 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
                 <label>Jurisdiction</label>
                 <select
                   className="vw-select"
-                  value={currentFilters.selectedJurisdiction}
-                  onChange={(e) =>
-                    setCurrentFilters({ ...currentFilters, selectedJurisdiction: e.target.value })
-                  }
+                  value={selectedJurisdictionId}
+                  onChange={(e) => setSelectedJurisdictionId(e.target.value)}
                   disabled={isFetchingJurisdictions}
                 >
                   {isFetchingJurisdictions ? (
                     <option>Loading…</option>
                   ) : (
-                    Object.keys(JURISDICTION_IDS)
-                      .filter(isJurisdictionEligible)
-                      .map((key) => (
-                        <option key={key} value={key}>
-                          {formatText(key)}
-                        </option>
-                      ))
+                    jurisdictionOptions.map((o) => ( // ★ ironclad: real names + UUIDs from the API
+                      <option key={o.jurisdictionId} value={o.jurisdictionId}>
+                        {o.name}
+                      </option>
+                    ))
                   )}
                 </select>
               </div>
@@ -750,7 +828,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
               </div>
               <div className="vw-summary__row">
                 <span>In</span>
-                <strong>{formatText(currentFilters.selectedJurisdiction)}</strong>
+                <strong>{selectedJurisdictionName}</strong>
               </div>
               <div className="vw-summary__row">
                 <span>Genre</span>

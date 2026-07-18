@@ -344,7 +344,11 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   backdrop-filter: blur(2px);
 
   &--locked {
-    color: $vw-text-mute;
+    // ★ theme: fixed selections (genre, category) show in the user's theme
+    //   color to distinguish them from the toggleable fields below
+    color: var(--unis-primary-2);
+    font-weight: 650;
+    border-color: var(--unis-primary-soft, rgba(255, 255, 255, 0.08));
   }
 }
 
