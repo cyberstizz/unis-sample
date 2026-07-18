@@ -32,6 +32,9 @@ export const fixtures = {
     { id: 'song-001', songId: 'song-001', title: 'Track One', artist: 'testartist', artistId: 'user-artist-001', mediaUrl: 'https://cdn.test/song-001.mp3', artworkUrl: 'https://cdn.test/song-001.jpg', score: 100, playsToday: 10 },
     { id: 'song-002', songId: 'song-002', title: 'Track Two', artist: 'testartist', artistId: 'user-artist-001', mediaUrl: 'https://cdn.test/song-002.mp3', artworkUrl: 'https://cdn.test/song-002.jpg', score: 85, playsToday: 5 },
   ],
+  videos: [
+    { id: 'video-001', videoId: 'video-001', title: 'Video One', artist: 'testartist', artistId: 'user-artist-001', mediaUrl: 'https://cdn.test/video-001.mp4', artworkUrl: 'https://cdn.test/video-001.jpg', score: 60, playsToday: 4 },
+  ],
   earnings: {
     referralEarnings: { lifetime: 12.5, thisMonth: 5.0, level1: { lifetime: 8.0, thisMonth: 3.0 }, level2: { lifetime: 3.0, thisMonth: 1.5 }, level3: { lifetime: 1.5, thisMonth: 0.5 } },
     supporterEarnings: { lifetime: 10.0, thisMonth: 4.0 },
@@ -140,7 +143,46 @@ export const handlers = [
     callTracker.track(`unlike:${params.songId}`);
     return HttpResponse.json({ success: true });
   }),
-  http.post(`${API}/v1/media/video/:videoId/play`, () => HttpResponse.json({ tracked: true })),
+  // ─── Video endpoints (VideoPage) ───
+  http.get(`${API}/v1/media/video/:videoId`, ({ params }) => {
+    const video = fixtures.videos.find((v) => v.id === params.videoId);
+    if (!video) return new HttpResponse(null, { status: 404 });
+    // Full shape (what VideoPage expects from GET /v1/media/video/{id})
+    return HttpResponse.json({
+      videoId: video.id,
+      title: video.title,
+      artist: { userId: video.artistId, username: video.artist, photoUrl: null },
+      jurisdiction: { jurisdictionId: fixtures.users.listener.jurisdiction.jurisdictionId, name: 'Harlem' },
+      genre: { genreId: '00000000-0000-0000-0000-000000000101', name: 'Rap' },
+      videoUrl: video.mediaUrl,
+      artworkUrl: video.artworkUrl,
+      score: video.score,
+      playCount: video.playsToday * 10,
+      playsToday: video.playsToday,
+      description: 'Test video description',
+      duration: 120000, // ms
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      likes: 0,
+    });
+  }),
+  http.post(`${API}/v1/media/video/:videoId/play`, ({ params }) => {
+    callTracker.track(`video-play:${params.videoId}`);
+    return HttpResponse.json({ tracked: true });
+  }),
+  http.get(`${API}/v1/media/video/:videoId/is-liked`, () =>
+    HttpResponse.json({ isLiked: false })
+  ),
+  http.get(`${API}/v1/media/video/:videoId/likes/count`, () =>
+    HttpResponse.json({ count: 0 })
+  ),
+  http.post(`${API}/v1/media/video/:videoId/like`, ({ params }) => {
+    callTracker.track(`video-like:${params.videoId}`);
+    return HttpResponse.json({ success: true });
+  }),
+  http.delete(`${API}/v1/media/video/:videoId/like`, ({ params }) => {
+    callTracker.track(`video-unlike:${params.videoId}`);
+    return HttpResponse.json({ success: true });
+  }),
 
   // ─── Ad tracking ───
   http.post(`${API}/v1/earnings/track-view`, () => {
@@ -180,6 +222,13 @@ export const handlers = [
     HttpResponse.json({ totalCount: 0, topLevelCount: 0 })
   ),
   http.get(`${API}/v1/comments/song/:songId/user-count`, () =>
+    HttpResponse.json({ count: 0, limit: 3, remaining: 3, limitReached: false })
+  ),
+  http.get(`${API}/v1/comments/video/:videoId`, () => HttpResponse.json([])),
+  http.get(`${API}/v1/comments/video/:videoId/count`, () =>
+    HttpResponse.json({ totalCount: 0, topLevelCount: 0 })
+  ),
+  http.get(`${API}/v1/comments/video/:videoId/user-count`, () =>
     HttpResponse.json({ count: 0, limit: 3, remaining: 3, limitReached: false })
   ),
 
