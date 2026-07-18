@@ -1415,3 +1415,155 @@ $radius-sm: 6px;
     border-radius: 26px;
   }
 }
+// ═══════════════════════════════════════
+//  ★ QA PASS ADDITIONS
+// ═══════════════════════════════════════
+
+// ★ no-outline: per product decision, no focus/click outline anywhere in the
+//   player surfaces (bar, tray, queue, comments). Also kills the mobile tap
+//   highlight. NOTE: this removes the keyboard focus ring inside the player;
+//   flagged in the QA summary.
+.player,
+.mobile-actions-tray,
+.player-comments-sheet {
+  -webkit-tap-highlight-color: transparent;
+
+  button,
+  a,
+  input,
+  [role='button'],
+  [tabindex] {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent;
+
+    &:focus,
+    &:focus-visible,
+    &:active {
+      outline: none !important;
+    }
+  }
+}
+
+// ★ sidebar-fit: on desktop the sidebar occupies the left column
+//   (--sidebar-width, same token layout.scss uses); the player previously
+//   spanned left:0 and covered it. Breakpoint mirrors sidebar.scss (1025px).
+@media (min-width: 1025px) {
+  .player {
+    left: var(--sidebar-width, 0px);
+    width: calc(100% - var(--sidebar-width, 0px));
+    right: 0;
+  }
+}
+
+// ★ comments: button beside the in-queue pill
+.tray-header-side {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.tray-comments-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--unis-primary);
+  background: var(--unis-primary-soft);
+  color: var(--unis-primary-2);
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: filter 0.15s ease, background 0.15s ease;
+
+  &:hover { filter: brightness(1.15); }
+
+  svg { flex: none; }
+}
+
+// ★ comments: slide-up sheet hosting the songPage CommentSection
+.player-comments-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3000; // above the player bar and tray
+  display: flex;
+  flex-direction: column;
+  max-height: 72vh;
+  border-radius: 18px 18px 0 0;
+  background: rgba(12, 14, 20, 0.97);
+  border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.12));
+  border-bottom: none;
+  box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.6);
+  animation: player-comments-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  @media (min-width: 1025px) {
+    left: calc(var(--sidebar-width, 0px) + 24px);
+    right: auto;
+    width: 430px;
+    max-height: 64vh;
+    border-radius: 18px;
+    bottom: calc(#{$player-height} + 16px);
+    border-bottom: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.12));
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--unis-border, rgba(255, 255, 255, 0.08));
+  }
+
+  &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--unis-text, #fff);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+
+    svg { color: var(--unis-primary-2); }
+  }
+
+  &__close {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.08));
+    color: var(--unis-text-3, #a1a1aa);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      background: var(--unis-primary-soft);
+      color: var(--unis-text, #fff);
+    }
+  }
+
+  &__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 16px 16px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 999px; }
+  }
+}
+
+@keyframes player-comments-rise {
+  from { opacity: 0; transform: translateY(26px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

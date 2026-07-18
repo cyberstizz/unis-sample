@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
-import { Heart, Headphones, Vote, ChevronUp, ChevronDown, ListMusic, Lock } from 'lucide-react';
+import { Heart, Headphones, Vote, ChevronUp, ChevronDown, ListMusic, Lock, MessageCircle, X } from 'lucide-react'; // ★ comments: icons for the new button/sheet
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
 import VotingWizard from './votingWizard';
+import CommentSection from './commentSection'; // ★ comments: reuse the songPage comment section
 import { apiCall } from './components/axiosInstance';
 import { useReward } from './context/RewardContext';
 import QueuePanel from './QueuePanel';
@@ -112,6 +113,7 @@ const Player = () => {
   const [showVoteWizard, setShowVoteWizard] = useState(false);
 
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const [showComments, setShowComments] = useState(false); // ★ comments: slide-up comment sheet
   const [userId, setUserId] = useState(null);
 
   // Pocket Lock — visual scaffold only for step 1.
@@ -710,6 +712,36 @@ const Player = () => {
       </div>
     </div>
   )}
+      {/* ★ comments: slide-up sheet reusing the songPage CommentSection */}
+      {showComments && currentMedia && (
+        <div
+          className="player-comments-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Comments"
+        >
+          <div className="player-comments-sheet__head">
+            <span className="player-comments-sheet__title">
+              <MessageCircle size={15} aria-hidden="true" /> Comments
+            </span>
+            <button
+              type="button"
+              className="player-comments-sheet__close"
+              onClick={() => setShowComments(false)}
+              aria-label="Close comments"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="player-comments-sheet__body">
+            <CommentSection
+              songId={currentMedia.id || currentMedia.songId}
+              userId={userId}
+              songArtistId={currentMedia.artistId}
+            />
+          </div>
+        </div>
+      )}
       <AuthGateSheet {...gateProps} />
     </>
   );
@@ -780,9 +812,19 @@ const Player = () => {
               <strong>Control the moment</strong>
             </div>
 
-            <span className="tray-status-pill">
-              {queue.length > 0 ? `${queue.length} in queue` : 'Live session'}
-            </span>
+            <div className="tray-header-side"> {/* ★ comments: pill + comments button side by side */}
+              <span className="tray-status-pill">
+                {queue.length > 0 ? `${queue.length} in queue` : 'Live session'}
+              </span>
+              <button
+                type="button"
+                className="tray-comments-btn"
+                onClick={() => { setShowMobileActions(false); setShowComments(true); }}
+                aria-label="Open comments"
+              >
+                <MessageCircle size={13} aria-hidden="true" /> Comments
+              </button>
+            </div>
           </div>
 
           <div className="tray-content">
