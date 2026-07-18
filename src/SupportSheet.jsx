@@ -18,7 +18,23 @@ import { Zap, X, Check } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import './support.scss';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+// ★ boot-safety: loadStripe(undefined) at module scope crashed the ENTIRE app
+//   when VITE_STRIPE_PUBLISHABLE_KEY was absent from the build environment
+//   (SupportSheet loads eagerly via artistpage/MessagePage). Stripe is now
+//   initialized lazily and only when the key exists — a missing key disables
+//   payments with a clear console error instead of killing the feed.
+const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+let stripePromise = null;
+const getStripe = () => {
+  if (!STRIPE_KEY) {
+    console.error(
+      'SupportSheet: VITE_STRIPE_PUBLISHABLE_KEY is not set in this build — supporter payments are disabled.'
+    );
+    return null;
+  }
+  if (!stripePromise) stripePromise = loadStripe(STRIPE_KEY);
+  return stripePromise;
+};
 
 const PRESETS = [3, 5, 10, 25]; // dollars
 
@@ -217,7 +233,7 @@ export default function SupportSheet({
 
         {step === 'pay' && clientSecret && (
           <div className="usp__body">
-            <Elements stripe={stripePromise} options={{ clientSecret, appearance: themeAppearance() }}>
+            <Elements stripe={getStripe()} options={{ clientSecret, appearance: themeAppearance() }}>
               <PaymentStep
                 artistId={artistId}
                 amountCents={amountCents}
