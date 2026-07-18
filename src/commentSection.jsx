@@ -16,7 +16,15 @@ import './commentSection.scss';
 import VerificationGate from './verificationGate';
 
 
-const CommentSection = ({ songId, userId, songArtistId }) => {
+// Supports both songs and videos. Pass either `songId` (+ optional
+// `songArtistId`) or `videoId` (+ optional `artistId`). All existing
+// call sites that pass songId continue to work unchanged.
+const CommentSection = ({ songId, videoId, userId, songArtistId, artistId }) => {
+  // ── Media identity: exactly one of songId / videoId is expected ──
+  const mediaType = videoId ? 'video' : 'song';
+  const mediaId = videoId || songId;
+  const mediaArtistId = songArtistId ?? artistId ?? null;
+
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
@@ -44,12 +52,12 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   useEffect(() => {
-    if (songId) {
+    if (mediaId) {
       fetchComments();
       fetchCommentCount();
       if (userId) fetchUserCommentCount();
     }
-  }, [songId, userId]);
+  }, [mediaId, userId]);
 
   useEffect(() => {
     if (replyingTo && replyInputRef.current) {
@@ -100,7 +108,7 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
     try {
       const response = await apiCall({
         method: 'get',
-        url: `/v1/comments/song/${songId}/user-count`,
+        url: `/v1/comments/${mediaType}/${mediaId}/user-count`,
       });
       setCommentLimit(response.data);
     } catch (error) {
@@ -114,7 +122,7 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
       setLoading(true);
       const response = await apiCall({
         method: 'get',
-        url: `/v1/comments/song/${songId}`,
+        url: `/v1/comments/${mediaType}/${mediaId}`,
       });
       setComments(response.data || []);
     } catch (error) {
@@ -128,7 +136,7 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
     try {
       const response = await apiCall({
         method: 'get',
-        url: `/v1/comments/song/${songId}/count`,
+        url: `/v1/comments/${mediaType}/${mediaId}/count`,
       });
       setCommentCount(response.data);
     } catch (error) {
@@ -168,7 +176,7 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
         method: 'post',
         url: '/v1/comments',
         data: {
-          songId,
+          ...(videoId ? { videoId } : { songId }),
           userId,
           content: newComment.trim(),
         },
@@ -206,7 +214,7 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
         method: 'post',
         url: '/v1/comments',
         data: {
-          songId,
+          ...(videoId ? { videoId } : { songId }),
           userId,
           parentCommentId,
           content: replyContent.trim(),
@@ -306,7 +314,7 @@ const CommentSection = ({ songId, userId, songArtistId }) => {
   };
 
   const canDelete = (comment) => {
-    return userId && (comment.userId === userId || songArtistId === userId);
+    return userId && (comment.userId === userId || mediaArtistId === userId);
   };
 
   const getAvatarUrl = (photoUrl) => {
