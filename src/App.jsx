@@ -7,6 +7,7 @@ import Sidebar from './sidebar';
 import Feed from './feed';
 import ArtistPage from './artistpage';
 import SongPage from './songPage';
+import VideoPage from './videoPage';
 import VoteAwards from './voteawards';
 import Profile from './profile';
 import MilestonesPage from './milestonesPage';
@@ -98,6 +99,7 @@ const AppLayout = () => {
           <Route path="/" element={<Feed />} />
           <Route path="/artist/:artistId" element={<ArtistPage />} />
           <Route path="/song/:songId" element={<SongPage />} />
+          <Route path="/video/:videoId" element={<VideoPage />} />
           <Route path="/jurisdiction/:jurisdiction" element={<JurisdictionPage />} />
           <Route path="/milestones" element={<MilestonesPage />} />
           <Route path="/leaderboards" element={<Leaderboards />} />
