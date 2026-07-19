@@ -5,6 +5,10 @@ import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import './uploadWizard.scss';
 
+// Media uploads can be up to 50 MB; the shared axios instance times out at
+// 10s, which aborts video uploads mid-transfer.
+const UPLOAD_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
 const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
   const [step, setStep] = useState(1);
   const [mediaType, setMediaType] = useState('song');
@@ -128,11 +132,21 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
 
     try {
       const formData = new FormData();
-      const metadata = {
-        title, description, genreId, artistId, jurisdictionId,
-        explicit, isrc: isrc || null, downloadPolicy,
-        downloadPrice: downloadPolicy === 'paid' ? parseInt(downloadPrice) : null,
-      };
+
+      // Song-only fields (explicit / isrc / downloadPolicy / downloadPrice)
+      // must NOT be sent on a video upload — VideoUploadRequest has no such
+      // fields and the UI hides those controls for videos anyway.
+      const baseMetadata = { title, description, genreId, artistId, jurisdictionId };
+      const metadata = mediaType === 'song'
+        ? {
+            ...baseMetadata,
+            explicit,
+            isrc: isrc || null,
+            downloadPolicy,
+            downloadPrice: downloadPolicy === 'paid' ? parseInt(downloadPrice) : null,
+          }
+        : baseMetadata;
+
       formData.append(mediaType, JSON.stringify(metadata));
       formData.append('file', file);
       if (artwork) formData.append('artwork', artwork);
@@ -142,6 +156,10 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
         method: 'post',
         data: formData,
         headers: { 'Content-Type': 'multipart/form-data' },
+        // The global axios timeout is 10s — fine for a 4 MB song, far too
+        // short for a 50 MB video, which aborts mid-transfer on any normal
+        // connection. Uploads get their own generous ceiling.
+        timeout: UPLOAD_TIMEOUT_MS,
       });
 
       if (explicit && mediaType === 'song') {
@@ -180,6 +198,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
         method: 'post',
         data: cleanFormData,
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: UPLOAD_TIMEOUT_MS,
       });
 
       const cleanSongId = cleanResponse.data?.songId;
