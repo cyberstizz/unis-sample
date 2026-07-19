@@ -53,9 +53,14 @@ export function buildUrl(url) {
   // ── Already a full URL (public R2 or any other CDN) → encode and pass through ──
   if (cleaned.startsWith('http')) return safeEncode(cleaned);
 
-  // ── Relative path → prepend API base ──
+  // ── Relative path → prepend API origin ──
+  // The API base may end in /api (axios sends its request paths under it),
+  // but static media is served at the server root (/uploads/...), NOT under
+  // /api. Stripping a trailing /api here prevents 404s on every relative
+  // media path in production, where VITE_API_BASE_URL includes it.
+  const mediaBase = API_BASE_URL.replace(/\/api\/?$/, '');
   const separator = cleaned.startsWith('/') ? '' : '/';
-  return safeEncode(`${API_BASE_URL}${separator}${cleaned}`);
+  return safeEncode(`${mediaBase}${separator}${cleaned}`);
 }
 
 export default buildUrl;

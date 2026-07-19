@@ -38,6 +38,8 @@ const VideoPage = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [descExpanded, setDescExpanded] = useState(false);
   const [ambientRGB, setAmbientRGB] = useState({ r: 80, g: 60, b: 40 });
+  const [mediaError, setMediaError] = useState(null);   // { code, label, hint }
+  const [probe, setProbe] = useState(null);             // { status, contentType, acceptRanges, error }
 
   const videoRef = useRef(null);
   const hasTrackedPlayRef = useRef(false);
@@ -112,6 +114,7 @@ const VideoPage = () => {
           artistPhoto: buildUrl(videoData.artist?.photoUrl) || null,
           jurisdiction: videoData.jurisdiction?.name || 'Unknown',
           url: buildUrl(videoData.videoUrl) || null,
+          rawUrl: videoData.videoUrl || null,   // pre-buildUrl, for diagnostics
           poster: buildUrl(videoData.artworkUrl) || null,
           description: videoData.description || '',
           score: videoData.score,
@@ -140,6 +143,8 @@ const VideoPage = () => {
   useEffect(() => {
     hasTrackedPlayRef.current = false;
     setDescExpanded(false);
+    setMediaError(null);
+    setProbe(null);
   }, [videoId]);
 
   // ── Mutual exclusion: global player started → pause the inline video ──
@@ -179,6 +184,51 @@ const VideoPage = () => {
         } : prev);
       });
   }, [isPlaying, togglePlayPause, video?.id, userId]);
+
+  // ────────────────────────────────────────────────────────────────────
+  // PLAYBACK DIAGNOSTICS
+  // A <video> that can't load fails silently by default. This surfaces the
+  // browser's actual MediaError plus a HEAD probe of the resolved URL, so a
+  // dead link, a wrong Content-Type, a missing Range header, or an
+  // undecodable container each report themselves distinctly.
+  // ────────────────────────────────────────────────────────────────────
+  const MEDIA_ERROR_LABELS = {
+    1: ['MEDIA_ERR_ABORTED', 'Playback was aborted by the browser or user.'],
+    2: ['MEDIA_ERR_NETWORK', 'The file started loading then the connection failed. Usually CORS, a redirect, or the server dropping the request.'],
+    3: ['MEDIA_ERR_DECODE', 'The file was reachable but the browser could not decode it. The container or codec is unsupported (e.g. AVI, or MOV with a non-H.264 codec).'],
+    4: ['MEDIA_ERR_SRC_NOT_SUPPORTED', 'The URL could not be loaded at all — most often a 404/403, or a Content-Type the browser refuses as video.'],
+  };
+
+  const probeUrl = useCallback(async (url) => {
+    if (!url) return;
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+      setProbe({
+        status: res.status,
+        contentType: res.headers.get('content-type'),
+        acceptRanges: res.headers.get('accept-ranges'),
+      });
+    } catch (err) {
+      // A thrown fetch on a cross-origin HEAD is usually CORS, not a dead link
+      setProbe({ error: err?.message || 'Request failed (likely CORS or unreachable host)' });
+    }
+  }, []);
+
+  const handleVideoError = useCallback(() => {
+    const el = videoRef.current;
+    const code = el?.error?.code ?? 0;
+    const [label, hint] = MEDIA_ERROR_LABELS[code] || ['UNKNOWN', 'No MediaError was reported.'];
+    setMediaError({ code, label, hint });
+    console.error('[VideoPage] playback failed', {
+      code,
+      label,
+      rawUrl: video?.rawUrl,
+      resolvedUrl: video?.url,
+      message: el?.error?.message,
+    });
+    probeUrl(video?.url);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [video?.url, video?.rawUrl, probeUrl]);
 
   // ── Handlers ──
   const handleLike = async () => {
@@ -258,6 +308,7 @@ const VideoPage = () => {
                   playsInline
                   preload="metadata"
                   onPlay={handleVideoPlay}
+                  onError={handleVideoError}
                   data-testid="vp-video"
                 />
               ) : (
@@ -265,6 +316,29 @@ const VideoPage = () => {
               )}
             </div>
           </div>
+
+          {/* ━━━ PLAYBACK DIAGNOSTIC — only renders when the media fails ━━━ */}
+          {mediaError && (
+            <div className="vp-diagnostic" role="alert" data-testid="vp-diagnostic">
+              <div className="vp-diagnostic-title">This video didn't load</div>
+              <p className="vp-diagnostic-hint">{mediaError.hint}</p>
+              <dl className="vp-diagnostic-grid">
+                <div><dt>Error</dt><dd>{mediaError.label} ({mediaError.code})</dd></div>
+                <div><dt>Stored URL</dt><dd className="vp-mono">{video.rawUrl || '(null)'}</dd></div>
+                <div><dt>Resolved URL</dt><dd className="vp-mono">{video.url || '(null)'}</dd></div>
+                {probe && !probe.error && (
+                  <>
+                    <div><dt>HTTP status</dt><dd>{probe.status}</dd></div>
+                    <div><dt>Content-Type</dt><dd className="vp-mono">{probe.contentType || '(none)'}</dd></div>
+                    <div><dt>Accept-Ranges</dt><dd className="vp-mono">{probe.acceptRanges || '(none — seeking and Safari playback will fail)'}</dd></div>
+                  </>
+                )}
+                {probe?.error && (
+                  <div><dt>Probe</dt><dd className="vp-mono">{probe.error}</dd></div>
+                )}
+              </dl>
+            </div>
+          )}
 
           {/* ━━━ METADATA PANEL ━━━ */}
           <div className="vp-meta-panel">

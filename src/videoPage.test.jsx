@@ -255,6 +255,38 @@ describe('VideoPage', () => {
   });
 
   // ========================================================================
+  // Playback diagnostics
+  // ========================================================================
+  describe('playback diagnostics', () => {
+    it('surfaces the MediaError and both URLs when the video fails to load', async () => {
+      renderWithProviders(<VideoPage />, { as: 'listener' });
+
+      await screen.findByRole('heading', { name: /Video One/i });
+
+      const videoEl = screen.getByTestId('vp-video');
+      // jsdom never loads media, so simulate the browser's error state
+      Object.defineProperty(videoEl, 'error', {
+        value: { code: 4, message: 'not supported' },
+        configurable: true,
+      });
+      fireEvent.error(videoEl);
+
+      const panel = await screen.findByTestId('vp-diagnostic');
+      expect(panel).toHaveTextContent(/MEDIA_ERR_SRC_NOT_SUPPORTED/);
+      // Shows the stored value and the resolved value so URL rewriting is visible
+      expect(panel).toHaveTextContent(/video-001\.mp4/);
+    });
+
+    it('renders no diagnostic panel when playback is fine', async () => {
+      renderWithProviders(<VideoPage />, { as: 'listener' });
+
+      await screen.findByRole('heading', { name: /Video One/i });
+
+      expect(screen.queryByTestId('vp-diagnostic')).not.toBeInTheDocument();
+    });
+  });
+
+  // ========================================================================
   // Mutual exclusion with the global player
   // ========================================================================
   describe('mutual exclusion', () => {

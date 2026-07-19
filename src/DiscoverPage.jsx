@@ -16,9 +16,10 @@ const TYPES = [
   { key: "user", label: "Users" },
   { key: "playlist", label: "Playlists" },
   { key: "song", label: "Songs" },
+  { key: "video", label: "Videos" },
 ];
 // Order of rails in the "All" view, and the per-type fetch set.
-const RAIL_TYPES = ["user", "playlist", "song"];
+const RAIL_TYPES = ["user", "playlist", "song", "video"];
 const RAIL_LIMIT = 12;
 const GRID_LIMIT = 30;
 
@@ -26,6 +27,7 @@ const RAIL_TITLES = {
   user: "Users",
   playlist: "Playlists",
   song: "Songs",
+  video: "Videos",
 };
 
 // ----------------------------------------------------------------------------
@@ -62,6 +64,47 @@ const fetchResults = async (opts) => {
   const data = await res.json();
   return data.results || [];
 };
+
+// Videos are not indexed by the search_all SQL function, so they can't come
+// from /v1/search like every other type. They're pulled from the media
+// endpoints instead and normalized into the same Result shape the cards read.
+const normalizeVideo = (v) => ({
+  id: v.videoId,
+  name: v.title,
+  subtitle: v.artist?.username || "Unknown artist",
+  type: "video",
+  artworkUrl: v.artworkUrl || null,
+  score: v.playCount ?? v.score ?? 0,
+  extra: {
+    duration: v.duration ? Math.round(v.duration / 1000) : null,
+    jurisdiction: v.jurisdiction?.name || null,
+  },
+});
+
+const fetchVideos = async ({ q, jurisdictionId, limit }) => {
+  const url = jurisdictionId
+    ? `${API_BASE_URL}/v1/media/videos/jurisdiction/${jurisdictionId}?limit=${limit}`
+    : `${API_BASE_URL}/v1/media/videos/recent?limit=${limit}`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`videos ${res.status}`);
+  const data = await res.json();
+  const items = (Array.isArray(data) ? data : []).map(normalizeVideo);
+
+  // The video endpoints don't take a text query — filter client-side so the
+  // Videos rail still responds to the search box.
+  const needle = (q || "").trim().toLowerCase();
+  if (!needle) return items;
+  return items.filter(
+    (v) =>
+      v.name?.toLowerCase().includes(needle) ||
+      v.subtitle?.toLowerCase().includes(needle)
+  );
+};
+
+// Single entry point so the rails/grid don't care where a type comes from.
+const fetchByType = (opts) =>
+  opts.type === "video" ? fetchVideos(opts) : fetchResults(opts);
 
 // ----------------------------------------------------------------------------
 // inline icons (kept local so the page is self-contained, like SearchResultsPage)
@@ -275,7 +318,7 @@ useEffect(() => {
     if (activeType === "all") {
       Promise.all(
         RAIL_TYPES.map((type) =>
-          fetchResults({ q: query, type, jurisdictionId, limit: RAIL_LIMIT, offset: 0 })
+          fetchByType({ q: query, type, jurisdictionId, limit: RAIL_LIMIT, offset: 0 })
             .then((items) => [type, items])
             .catch(() => [type, []])
         )
@@ -288,11 +331,11 @@ useEffect(() => {
       });
     } else {
       setGridOffset(0);
-      fetchResults({ q: query, type: activeType, jurisdictionId, limit: GRID_LIMIT, offset: 0 })
+      fetchByType({ q: query, type: activeType, jurisdictionId, limit: GRID_LIMIT, offset: 0 })
         .then((items) => {
           if (cancelled) return;
           setGridItems(items);
-          setGridHasMore(items.length === GRID_LIMIT);
+          setGridHasMore(activeType !== "video" && items.length === GRID_LIMIT);
           setLoading(false);
         })
         .catch(() => { if (!cancelled) { setGridItems([]); setGridHasMore(false); setLoading(false); } });
@@ -302,6 +345,10 @@ useEffect(() => {
   }, [activeType, query, scope]);
 
   const loadMore = useCallback(() => {
+    // The video endpoints return a fixed top-N with no offset support, so the
+    // Videos grid is single-page. Bail rather than re-appending page one.
+    if (activeType === "video") { setGridHasMore(false); return; }
+
     const jurisdictionId = scope?.id || null;
     const nextOffset = gridItems.length;
     setLoadingMore(true);
@@ -447,7 +494,7 @@ const SCOPE_OPTIONS = [
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Search people, playlists, songs…"
+                placeholder="Search people, playlists, songs, videos…"
                 autoComplete="off"
                 spellCheck="false"
                 aria-label="Search Discover"
