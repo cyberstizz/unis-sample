@@ -1,12 +1,30 @@
+// ═══════════════════════════════════════════════════════════════════════
+//  UNIS — ID Mappings
+//  CANON: exactly 3 votable genres. Subgenres (R&B → Pop, Metal → Rock,
+//  Hip-Hop → Rap) are a future categorization layer and must NEVER be
+//  added here or as rows in the genres table — the award cron and the
+//  UI toggles both key off that set.
+// ═══════════════════════════════════════════════════════════════════════
+
+// The single source of truth for what users can vote on / filter by.
+// Every genre dropdown in the app should iterate THIS, never
+// Object.entries(GENRE_IDS) (which includes legacy aliases and produced
+// the duplicate options in createAccountWizard).
+export const CANONICAL_GENRES = ['rap', 'rock', 'pop'];
+
 export const GENRE_IDS = {
+  // ── canonical ──
   'rap': '00000000-0000-0000-0000-000000000101',
-  'rap-hiphop': '00000000-0000-0000-0000-000000000101',  
-  'hip-hop': '00000000-0000-0000-0000-000000000101',     
   'rock': '00000000-0000-0000-0000-000000000102',
   'pop': '00000000-0000-0000-0000-000000000103',
+
+  // ── legacy aliases (lookup-only; do NOT add new ones) ──
+  // Kept so existing hardcoded fallbacks ('rap-hiphop' in votingWizard and
+  // player) keep resolving. Nothing should iterate these.
+  'rap-hiphop': '00000000-0000-0000-0000-000000000101',
+  'hip-hop': '00000000-0000-0000-0000-000000000101',
   'Hip-Hip': '00000000-0000-0000-0000-000000000101',
 };
-
 
 export const JURISDICTION_IDS = {
   'uptown-harlem': '52740de0-e4e9-4c9e-b68e-1e170f6788c4',
@@ -14,21 +32,24 @@ export const JURISDICTION_IDS = {
   'harlem': '1cf6ceb1-aae6-4113-98c0-d9fe8ad8b5e3',
 };
 
-
 export const INTERVAL_IDS = {
   'daily': '00000000-0000-0000-0000-000000000201',
   'weekly': '00000000-0000-0000-0000-000000000202',
   'monthly': '00000000-0000-0000-0000-000000000203',
   'quarterly': '00000000-0000-0000-0000-000000000204',
   'annual': '00000000-0000-0000-0000-000000000205',
-  'midterm': '00000000-0000-0000-0000-000000000206',  
+  'midterm': '00000000-0000-0000-0000-000000000206',
 };
 
-// REVERSE MAPPINGS (UUID to string)
-// for displaying human-readable names from API responses
-export const GENRE_NAMES = Object.fromEntries(
-  Object.entries(GENRE_IDS).map(([k, v]) => [v, k])
-);
+// REVERSE MAPPINGS (UUID → canonical string)
+// GENRE_NAMES is now EXPLICIT. The old version was built by inverting
+// GENRE_IDS, where "last alias wins" — so …101 reverse-mapped to the
+// 'Hip-Hip' typo instead of 'rap'. Explicit entries are alias-proof.
+export const GENRE_NAMES = {
+  '00000000-0000-0000-0000-000000000101': 'rap',
+  '00000000-0000-0000-0000-000000000102': 'rock',
+  '00000000-0000-0000-0000-000000000103': 'pop',
+};
 
 export const JURISDICTION_NAMES = Object.fromEntries(
   Object.entries(JURISDICTION_IDS).map(([k, v]) => [v, k])
@@ -51,10 +72,14 @@ export const getJurisdictionId = (key) => {
 };
 
 /**
- * Get genre ID from key, with fallback
+ * Get genre ID from key, with fallback.
+ * Case-insensitive and slash-tolerant so DB-derived names
+ * ("Rap", "Rock", "Pop") resolve without callers pre-normalizing.
  */
 export const getGenreId = (key) => {
-  const id = GENRE_IDS[key];
+  const id =
+    GENRE_IDS[key] ||
+    GENRE_IDS[String(key || '').toLowerCase().replace('/', '-')];
   if (!id) {
     console.warn(`Unknown genre key: ${key}`);
   }
