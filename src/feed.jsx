@@ -985,7 +985,11 @@ const Feed = () => {
                         artistMap.set(media.artistData.userId, {
                           userId: media.artistData.userId,
                           username: media.artistData.username,
-                          photoUrl: encodeURI(media.artistData.photoUrl),
+                          // Raw path or null — ArtistCard applies buildUrl and
+                          // falls back to a placeholder. encodeURI(undefined)
+                          // produced the literal string "undefined", which
+                          // defeated the fallback and rendered a blank card.
+                          photoUrl: media.artistData.photoUrl || null,
                           jurisdictionId: media.artistData.jurisdiction?.jurisdictionId,
                           jurisdictionName: getJurisdictionDisplayName(
                             media.artistData.jurisdiction?.jurisdictionId,
@@ -1047,6 +1051,9 @@ const Feed = () => {
                       className={`chart-row ${entry.rank === 1 ? 'chart-row--first' : ''}`}
                       onClick={() => handleSongNav(entry.songId, 'song')}
                     >
+                      <div className="chart-row-ambient" aria-hidden="true">
+                        <img src={buildUrl(entry.artworkUrl) || randomRapper} alt="" />
+                      </div>
                       <span className="chart-rank">{entry.rank}</span>
                       <div className="chart-artwork">
                         <img
