@@ -811,7 +811,6 @@ const Player = () => {
           <div className="tray-header">
             <div>
               <span className="tray-kicker">Now playing tools</span>
-              <strong>Control the moment</strong>
             </div>
 
             <div className="tray-header-side"> {/* ★ comments: comments button (left) + pill (right), side by side */}
