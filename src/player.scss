@@ -1471,6 +1471,8 @@ $radius-sm: 6px;
   align-items: center;
   justify-content: center;
   gap: 5px;
+  flex: 0 0 auto;
+  width: auto;
   border: 1px solid var(--unis-primary);
   background: var(--unis-primary-soft);
   color: var(--unis-primary-2);
