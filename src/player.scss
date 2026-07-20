@@ -1458,9 +1458,12 @@ $radius-sm: 6px;
 // ★ comments: button beside the in-queue pill
 .tray-header-side {
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-end;
   gap: 7px;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .tray-comments-btn {
