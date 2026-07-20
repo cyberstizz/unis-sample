@@ -1469,10 +1469,8 @@ $radius-sm: 6px;
 .tray-comments-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  flex-shrink: 0;
-  padding: 5px 9px;
-  border-radius: 999px;
   border: 1px solid var(--unis-primary);
   background: var(--unis-primary-soft);
   color: var(--unis-primary-2);
