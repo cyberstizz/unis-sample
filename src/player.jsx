@@ -814,10 +814,7 @@ const Player = () => {
               <strong>Control the moment</strong>
             </div>
 
-            <div className="tray-header-side"> {/* ★ comments: pill + comments button side by side */}
-              <span className="tray-status-pill">
-                {queue.length > 0 ? `${queue.length} in queue` : 'Live session'}
-              </span>
+            <div className="tray-header-side"> {/* ★ comments: comments button (left) + pill (right), side by side */}
               <button
                 type="button"
                 className="tray-comments-btn"
@@ -826,6 +823,9 @@ const Player = () => {
               >
                 <MessageCircle size={13} aria-hidden="true" /> Comments
               </button>
+              <span className="tray-status-pill">
+                {queue.length > 0 ? `${queue.length} in queue` : 'Live session'}
+              </span>
             </div>
           </div>
 
