@@ -14,7 +14,9 @@ import { buildUrl } from './utils/buildUrl';
 
 const SongPage = () => {
   const { songId } = useParams();
-  const { requestPlay, currentMedia } = useContext(PlayerContext);
+  // ── Player sync: we now also read isPlaying + togglePlayPause so the hero
+  //    button can mirror the player's true state for THIS exact song.
+  const { requestPlay, currentMedia, isPlaying, togglePlayPause } = useContext(PlayerContext);
   const { user } = useAuth();
   const navigate = useNavigate();
   const userId = user?.userId;
@@ -115,6 +117,7 @@ const SongPage = () => {
           duration: songData.duration ? Math.round(songData.duration / 1000) : null,
           createdAt: songData.createdAt,
           genre: songData.genre?.name || 'Unknown',
+          genreId: songData.genre?.genreId || null, // ★ carry the real UUID so votes never depend on name lookup
           credits: { producer: 'N/A', writer: 'N/A', mix: 'N/A' },
           photos: [],
           videos: [],
@@ -185,6 +188,15 @@ const SongPage = () => {
     </svg>
   );
 
+  // Pause glyph drawn to match HeroPlayIcon's optical weight (no marginLeft —
+  // the play triangle needs the 2px nudge for optical centering, bars don't).
+  const HeroPauseIcon = () => (
+    <svg viewBox="0 0 24 24" width="22" height="22"
+      style={{ width: 22, height: 22, display: 'block', fill: '#FFFFFF' }}>
+      <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+    </svg>
+  );
+
   const fetchSongData = async () => {
     try {
       const response = await apiCall({ method: 'get', url: `/v1/media/song/${songId}`, useCache: false });
@@ -197,20 +209,42 @@ const SongPage = () => {
   const handleVoteSuccess = () => setShowVotingWizard(false);
 
   const handleVote = () => {
-    setSelectedNominee({ 
+    setSelectedNominee({
       id: song.id,
-      name: song.title, 
-      type: 'song', 
-      jurisdiction: song.jurisdiction, 
-      artwork: song.artwork,          
+      name: song.title,
+      type: 'song',
+      jurisdiction: song.jurisdiction,
+      genreId: song.genreId, // ★ real UUID beats name-derived lookup in the wizard
+      artwork: song.artwork,
       artworkUrl: song.artwork,
    });
     setShowVotingWizard(true);
   };
 
   const handlePlay = async () => {
-    const track = { id: song.id, songId: song.id, type: 'song', url: song.url, title: song.title, artist: song.artist, artwork: song.artwork, jurisdiction: song.jurisdiction };
+    const track = { id: song.id, songId: song.id, type: 'song', url: song.url, title: song.title, artist: song.artist, artistId: song.artistId, artwork: song.artwork, jurisdiction: song.jurisdiction };
     requestPlay(track);
+  };
+
+  // ── Player sync for THIS song ─────────────────────────────────────────
+  // isThisSongLoaded: the player's current track IS this page's song
+  //   (playing or paused). Clicking then toggles play/pause directly —
+  //   no re-request, no restart, no queue-choice modal.
+  // isThisSongPlaying: loaded AND audibly playing → show Pause.
+  // Any other case (different song playing, or nothing loaded) → show Play,
+  // and clicking routes through requestPlay like before. This mirrors the
+  // player tray's own state logic, so the two can never disagree.
+  const isThisSongLoaded =
+    !!currentMedia && !!song &&
+    (currentMedia.id === song.id || currentMedia.songId === song.id);
+  const isThisSongPlaying = isThisSongLoaded && isPlaying;
+
+  const handleHeroPlayClick = () => {
+    if (isThisSongLoaded) {
+      togglePlayPause();
+    } else {
+      handlePlay();
+    }
   };
 
   const handleLike = async () => {
@@ -315,8 +349,12 @@ const SongPage = () => {
 
             {/* ── PRIMARY ACTIONS — text buttons like original ── */}
             <div className="sp-primary-actions">
-              <button onClick={handlePlay} className="sp-btn-play-circle" aria-label="Play">
-                <HeroPlayIcon />
+              <button
+                onClick={handleHeroPlayClick}
+                className="sp-btn-play-circle"
+                aria-label={isThisSongPlaying ? 'Pause' : 'Play'}
+              >
+                {isThisSongPlaying ? <HeroPauseIcon /> : <HeroPlayIcon />}
               </button>
               <button onClick={handleVote} className="sp-btn-vote">Vote</button>
               <button
