@@ -1,3 +1,5 @@
+// src/components/SongNotification.js
+
 import React, { useContext, useEffect, useState } from 'react';
 import { PlayerContext } from './context/playercontext';
 import './songNotification.scss';
