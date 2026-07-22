@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
+import { MapContainer, GeoJSON, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useNavigate } from 'react-router-dom';
 import Layout from './layout';
@@ -33,20 +33,10 @@ const ACTIVE_STATES = ['New York'];
 const US_BOUNDS = [[24.4, -125.0], [49.5, -66.9]];
 
 // ---------------------------------------------------------------------------
-// TILE SERVICE — MapTiler Cloud (replaces CARTO basemaps, whose hosted tiles
-// are restricted to CARTO enterprise customers for commercial use).
-// Key lives in VITE_MAPTILER_KEY (.env locally, Netlify env var in prod) and
-// must be origin-restricted in the MapTiler dashboard.
+// TILELESS MAP — no basemap provider at all. The jurisdiction polygons render
+// directly over a styled "atlas" panel (see .map-container in findpage.scss).
+// Zero cost, zero TOS obligations, zero API keys, no attribution required.
 // ---------------------------------------------------------------------------
-const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY;
-const TILE_URL = `https://api.maptiler.com/maps/dataviz-dark/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`;
-const TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">MapTiler</a> ' +
-  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
-
-if (!MAPTILER_KEY && import.meta.env.DEV) {
-  console.warn('[findpage] VITE_MAPTILER_KEY is not set — map tiles will not load.');
-}
 const HARLEM_PARENT_CHAIN = [
   'Unis', 'New York', 'New York City Metro', 'New York City',
   'Manhattan', 'Upper Manhattan', 'Harlem', 'Uptown Harlem', 'Downtown Harlem',
@@ -618,16 +608,9 @@ const handleStateClick = async (feature, layer) => {
               doubleClickZoom={false}
               dragging={false}
               zoomControl={false}
-              attributionControl={true}
+              attributionControl={false}
             >
               <MapController viewState={viewState} isMobile={isMobile} />
-              <TileLayer
-                url={TILE_URL}
-                attribution={TILE_ATTRIBUTION}
-                tileSize={512}
-                zoomOffset={-1}
-                crossOrigin
-              />
 
               {isAtUSLevel() && usGeoData && (
                 <GeoJSON
