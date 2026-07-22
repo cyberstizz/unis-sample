@@ -124,6 +124,16 @@ const FindPage = () => {
   const [error, setError] = useState(null);
   const [hasSelectedJurisdiction, setHasSelectedJurisdiction] = useState(false);
   const [genre, setGenre] = useState('rap-hiphop');
+  const [toast, setToast] = useState(null); // { name } | null
+  const toastTimer = useRef(null);
+
+  const showComingSoonToast = useCallback((name) => {
+    setToast({ name });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 4500);
+  }, []);
+
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -330,7 +340,7 @@ const handleStateClick = async (feature, layer) => {
 
     // Inactive states short-circuit client-side — no network call needed.
     if (!ACTIVE_STATES.includes(stateName)) {
-      alert(`${stateName} coming to Unis soon!`);
+      showComingSoonToast(stateName);
       return;
     }
 
@@ -346,7 +356,7 @@ const handleStateClick = async (feature, layer) => {
       if (!jurisdiction) {
         setLoading(false);
         setHasSelectedJurisdiction(false);
-        alert(`${stateName} coming to Unis soon!`);
+        showComingSoonToast(stateName);
         return;
       }
 
@@ -472,7 +482,7 @@ const handleStateClick = async (feature, layer) => {
             { getBounds: () => [[40, -80], [45, -70]] }
           );
         } else {
-          alert(`${finalState.name} coming to Unis soon!`);
+          showComingSoonToast(finalState.name);
         }
       }
     }, 500);
@@ -481,6 +491,39 @@ const handleStateClick = async (feature, layer) => {
   const handleJurisdictionNavigate = () => {
     const name = selectedJurisdiction?.name || 'Harlem';
     navigate(`/jurisdiction/${encodeURIComponent(name)}`);
+  };
+
+  // Breadcrumb click — walk back up the stack by repeatedly reusing handleBack's
+  // logic until we're at the clicked level. Clicking the root returns to US.
+  const handleCrumbClick = async (targetIndex) => {
+    if (targetIndex >= navigationStack.length - 1) return; // already here
+    const target = navigationStack[targetIndex];
+
+    if (target.tier === 0) {
+      setNavigationStack([{ name: 'United States', jurisdictionId: null, tier: 0 }]);
+      setCurrentJurisdictions([]);
+      setSelectedJurisdiction(null);
+      setViewState({ mode: 'US', bounds: null, center: null, zoom: null });
+      setHasSelectedJurisdiction(false);
+      setTopResults({ artists: [], songs: [] });
+      setHoveredState(null);
+      return;
+    }
+
+    setNavigationStack(navigationStack.slice(0, targetIndex + 1));
+    const [children] = await Promise.all([
+      fetchChildren(target.jurisdictionId),
+      fetchTopResultsByName(target.name),
+    ]);
+    setCurrentJurisdictions(children);
+    try {
+      const res = await apiCall({ method: 'get', url: `/v1/jurisdictions/${target.jurisdictionId}` });
+      setSelectedJurisdiction(res.data);
+      const bounds = getBoundsFromPolygon(res.data.polygon);
+      if (bounds) setViewState({ mode: 'JURISDICTION', bounds, center: null, zoom: null });
+    } catch (err) {
+      console.error('[findpage] crumb navigate failed:', err?.message || err);
+    }
   };
 
   const handleArtistView = (id) => navigate(`/artist/${id}`);
@@ -576,23 +619,80 @@ const handleStateClick = async (feature, layer) => {
     <Layout backgroundImage={backimage}>
       <div className="find-page-container">
         <div className="findFilters">
-          <select value={genre} onChange={e => setGenre(e.target.value)} className="findfilter-select" aria-label="Genre">
-            <option value="rap-hiphop">Rap</option>
-            <option value="rock">Rock</option>
-            <option value="pop">Pop</option>
-          </select>
-          <button onClick={handleRandom} disabled={isAnimating || loading} className="random-button">
-            {isAnimating ? 'Spinning...' : 'Random'}
+          <div className="genre-seg" role="group" aria-label="Genre">
+            <select
+              value={genre}
+              onChange={e => setGenre(e.target.value)}
+              className="genre-seg-native"
+              aria-label="Genre"
+            >
+              <option value="rap-hiphop">Rap</option>
+              <option value="rock">Rock</option>
+              <option value="pop">Pop</option>
+            </select>
+            {[
+              { value: 'rap-hiphop', label: 'Rap' },
+              { value: 'rock', label: 'Rock' },
+              { value: 'pop', label: 'Pop' },
+            ].map(g => (
+              <button
+                key={g.value}
+                type="button"
+                className={`genre-pill ${genre === g.value ? 'active' : ''}`}
+                aria-pressed={genre === g.value}
+                onClick={() => setGenre(g.value)}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={handleRandom} disabled={isAnimating || loading} className="random-button" aria-label="Random">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="random-icon">
+              <rect x="3" y="3" width="18" height="18" rx="4" />
+              <circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none" />
+              <circle cx="15.5" cy="15.5" r="1.3" fill="currentColor" stroke="none" />
+              <circle cx="15.5" cy="8.5" r="1.3" fill="currentColor" stroke="none" />
+              <circle cx="8.5" cy="15.5" r="1.3" fill="currentColor" stroke="none" />
+            </svg>
+            {isAnimating ? 'Spinning...' : 'Surprise me'}
           </button>
         </div>
 
         <div className="mapEverything">
-          <p className="territory-name">{displayTerritory}</p>
+          <nav className="crumbs" aria-label="Territory path">
+            {navigationStack.map((level, i) => {
+              const isLast = i === navigationStack.length - 1;
+              return (
+                <span key={`${level.name}-${i}`} className="crumb-group">
+                  {isLast ? (
+                    <span className="here">{level.name}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="crumb"
+                      onClick={() => handleCrumbClick(i)}
+                    >
+                      {level.name}
+                    </button>
+                  )}
+                  {!isLast && <span className="sep" aria-hidden="true">›</span>}
+                </span>
+              );
+            })}
+          </nav>
 
+          <div className="hero">
+            <p className="territory-name">{displayTerritory}</p>
+            <div className="eq" aria-hidden="true">
+              <span /><span /><span /><span /><span />
+            </div>
+          </div>
+
+          {/* Back button kept for keyboard users; breadcrumbs are the primary nav */}
           <button
             onClick={handleBack}
             className="back-button"
-            style={{ visibility: isAtUSLevel() ? 'hidden' : 'visible', color: 'white' }}
+            style={{ visibility: isAtUSLevel() ? 'hidden' : 'visible' }}
           >
             ← Back
           </button>
@@ -727,6 +827,21 @@ const handleStateClick = async (feature, layer) => {
                 <span className="legend-swatch legend-swatch--inactive" aria-hidden="true" />
                 Coming soon
               </span>
+            </div>
+
+            <div className={`map-toast ${toast ? 'show' : ''}`} role="status" aria-live="polite">
+              {toast && (
+                <>
+                  <span className="map-toast-text">{toast.name} is coming soon</span>
+                  <button
+                    type="button"
+                    className="map-toast-cta"
+                    onClick={() => navigate('/waitlist')}
+                  >
+                    Join the waitlist
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
