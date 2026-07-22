@@ -99,7 +99,7 @@ $subtle-black: #1a1a1a;
 
   &:hover, &:focus {
     border-color: $unis-blue;
-    background-color: rgba($unis-blue, 0.1);
+    background-color: color-mix(in srgb, var(--unis-primary), transparent 90%);
     color: $accent-white;
     outline: none;
   }
@@ -124,7 +124,7 @@ $subtle-black: #1a1a1a;
 
   &:hover:not(:disabled) {
     border-color: $unis-blue;
-    background-color: rgba($unis-blue, 0.1);
+    background-color: color-mix(in srgb, var(--unis-primary), transparent 90%);
     color: $accent-white;
   }
 
@@ -184,7 +184,7 @@ $subtle-black: #1a1a1a;
   flex-shrink: 0;
 
   &:hover {
-    background: rgba($unis-blue, 0.2);
+    background: color-mix(in srgb, var(--unis-primary), transparent 80%);
   }
 }
 
@@ -225,8 +225,21 @@ $subtle-black: #1a1a1a;
   bottom: 0 !important;
 }
 
-.leaflet-control-container {
+// Attribution MUST stay visible — it's a license requirement of the tile
+// provider (MapTiler + OpenStreetMap). Hide only the zoom buttons.
+.leaflet-control-zoom {
   display: none;
+}
+
+.leaflet-control-attribution {
+  background: rgba(0, 0, 0, 0.6) !important;
+  color: #777 !important;
+  font-size: 9px !important;
+  padding: 1px 5px !important;
+
+  a {
+    color: #999 !important;
+  }
 }
 
 // =============================================================================
@@ -459,6 +472,50 @@ $subtle-black: #1a1a1a;
 }
 
 // =============================================================================
+// MAP LEGEND (key: theme-colored = active, white = coming soon)
+// =============================================================================
+
+.map-legend {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 1000; // above leaflet panes, below nothing interactive
+  display: flex;
+  gap: 12px;
+  padding: 5px 10px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: $text-silver;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .legend-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+
+  .legend-swatch--active {
+    background: var(--unis-primary);
+  }
+
+  .legend-swatch--inactive {
+    background: #EAEAEC;
+  }
+}
+
+// =============================================================================
 // MOBILE RESPONSIVE STYLES
 // =============================================================================
 
@@ -522,12 +579,26 @@ $subtle-black: #1a1a1a;
   }
 
   .map-container {
-    width: 90%;
-    max-width: 94vw;
-    height: 300px;
-    min-height: 300px;
-    max-height: 300px;
+    // Aspect-ratio sizing + flyToBounds(US_BOUNDS) in the JSX means the full
+    // US always fits — no more cropped/forced look at narrow widths.
+    width: calc(100% - 24px);
+    max-width: none;
+    aspect-ratio: 4 / 3;
+    height: auto;
+    min-height: 0;
+    max-height: none;
     margin: 5px auto;
+  }
+
+  .map-legend {
+    bottom: 8px;
+    left: 8px;
+    gap: 8px;
+    padding: 4px 8px;
+
+    .legend-item {
+      font-size: 10px;
+    }
   }
 
   .results-section {
@@ -571,7 +642,7 @@ $subtle-black: #1a1a1a;
           .item-artist { font-size: 11px; }
         }
 
-        .play-button, .view-button {
+        .findpage-play-button, .findpage-view-button {
           padding: 6px 10px;
           font-size: 11px;
         }

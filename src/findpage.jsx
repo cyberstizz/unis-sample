@@ -23,6 +23,30 @@ const US_STATES_GEOJSON_URL =
   'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json';
 
 const ACTIVE_JURISDICTIONS = ['Harlem', 'Uptown Harlem', 'Downtown Harlem'];
+
+// States that are live on Unis. Clicking any other state short-circuits
+// client-side (alert, no network) and renders white on the map.
+const ACTIVE_STATES = ['New York'];
+
+// Continental US bounding box — used with flyToBounds so the whole map
+// always fits the container at any viewport width (fixes the mobile crop).
+const US_BOUNDS = [[24.4, -125.0], [49.5, -66.9]];
+
+// ---------------------------------------------------------------------------
+// TILE SERVICE — MapTiler Cloud (replaces CARTO basemaps, whose hosted tiles
+// are restricted to CARTO enterprise customers for commercial use).
+// Key lives in VITE_MAPTILER_KEY (.env locally, Netlify env var in prod) and
+// must be origin-restricted in the MapTiler dashboard.
+// ---------------------------------------------------------------------------
+const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY;
+const TILE_URL = `https://api.maptiler.com/maps/dataviz-dark/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`;
+const TILE_ATTRIBUTION =
+  '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">MapTiler</a> ' +
+  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+
+if (!MAPTILER_KEY && import.meta.env.DEV) {
+  console.warn('[findpage] VITE_MAPTILER_KEY is not set — map tiles will not load.');
+}
 const HARLEM_PARENT_CHAIN = [
   'Unis', 'New York', 'New York City Metro', 'New York City',
   'Manhattan', 'Upper Manhattan', 'Harlem', 'Uptown Harlem', 'Downtown Harlem',
@@ -52,7 +76,7 @@ const MapController = ({ viewState, isMobile }) => {
         try {
           await apiCall({ url: '/v1/earnings/track-view', method: 'post' });
         } catch (err) {
-          // Silent
+          console.warn('[findpage] track-view failed:', err?.message || err);
         }
       };
       trackAdView();
@@ -67,7 +91,9 @@ const MapController = ({ viewState, isMobile }) => {
 
   useEffect(() => {
     if (viewState.mode === 'US') {
-      map.flyTo([37.8, -96], isMobile ? 3.2 : 4, { duration: 1.5 });
+      // fitBounds instead of a fixed zoom — guarantees the full US fits the
+      // container at any width (fixed zoom 3.2 cropped the map on mobile).
+      map.flyToBounds(US_BOUNDS, { padding: [10, 10], duration: 1.5 });
     } else if (viewState.mode === 'STATE' && viewState.bounds) {
       map.flyToBounds(viewState.bounds, { padding: [50, 50], duration: 1.5 });
     } else if (viewState.mode === 'JURISDICTION' && viewState.bounds) {
@@ -212,7 +238,8 @@ const FindPage = () => {
         url: `/v1/jurisdictions/${jurisdictionId}/children/detailed`,
       });
       return res.data || [];
-    } catch {
+    } catch (err) {
+      console.warn(`[findpage] children/detailed failed for ${jurisdictionId}, falling back:`, err?.message || err);
       try {
         const fallback = await apiCall({
           method: 'get',
@@ -223,7 +250,8 @@ const FindPage = () => {
           hasChildren: true,
           isActive: isActiveJurisdiction(j.name),
         }));
-      } catch {
+      } catch (fallbackErr) {
+        console.error(`[findpage] children fetch failed for ${jurisdictionId}:`, fallbackErr?.message || fallbackErr);
         return [];
       }
     }
@@ -309,6 +337,12 @@ const FindPage = () => {
 const handleStateClick = async (feature, layer) => {
     const stateName = feature.properties.name;
     setHoveredState(stateName);
+
+    // Inactive states short-circuit client-side — no network call needed.
+    if (!ACTIVE_STATES.includes(stateName)) {
+      alert(`${stateName} coming to Unis soon!`);
+      return;
+    }
 
     setLoading(true);
     setHasSelectedJurisdiction(true);
@@ -552,7 +586,7 @@ const handleStateClick = async (feature, layer) => {
     <Layout backgroundImage={backimage}>
       <div className="find-page-container">
         <div className="findFilters">
-          <select value={genre} onChange={e => setGenre(e.target.value)} className="findfilter-select">
+          <select value={genre} onChange={e => setGenre(e.target.value)} className="findfilter-select" aria-label="Genre">
             <option value="rap-hiphop">Rap</option>
             <option value="rock">Rock</option>
             <option value="pop">Pop</option>
@@ -575,8 +609,9 @@ const handleStateClick = async (feature, layer) => {
 
           <div className="map-container">
             <MapContainer
-              center={[37.8, -96]}
-              zoom={isMobile ? 3.2 : 4}
+              bounds={US_BOUNDS}
+              boundsOptions={{ padding: [10, 10] }}
+              zoomSnap={0.25}
               ref={mapRef}
               style={{ width: '100%', height: '100%' }}
               scrollWheelZoom={false}
@@ -586,7 +621,13 @@ const handleStateClick = async (feature, layer) => {
               attributionControl={true}
             >
               <MapController viewState={viewState} isMobile={isMobile} />
-              <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+              <TileLayer
+                url={TILE_URL}
+                attribution={TILE_ATTRIBUTION}
+                tileSize={512}
+                zoomOffset={-1}
+                crossOrigin
+              />
 
               {isAtUSLevel() && usGeoData && (
                 <GeoJSON
@@ -594,13 +635,17 @@ const handleStateClick = async (feature, layer) => {
                   data={usGeoData}
                   style={feature => {
                     const primary = readThemeVar('--unis-primary', '#163387');
-                    const isSelected = feature.properties.name === selectedJurisdiction?.name;
-                    const isHovered = feature.properties.name === hoveredState;
+                    const name = feature.properties.name;
+                    const isActive = ACTIVE_STATES.includes(name);
+                    const isSelected = name === selectedJurisdiction?.name;
+                    const isHovered = name === hoveredState;
                     return {
-                      fillColor: isSelected || isHovered ? primary : '#EAEAEC',
+                      // Active states wear the user's theme color; inactive
+                      // states stay white (still clickable — they alert).
+                      fillColor: isSelected || isHovered || isActive ? primary : '#EAEAEC',
                       fillOpacity: 1,
-                      color: isSelected || isHovered ? '#FFFFFF' : '#999',
-                      weight: isSelected || isHovered ? 2 : 1,
+                      color: isSelected || isHovered || isActive ? '#FFFFFF' : '#999',
+                      weight: isSelected || isHovered ? 2 : isActive ? 1.5 : 1,
                     };
                   }}
                   onEachFeature={(feature, layer) => {
@@ -614,7 +659,13 @@ const handleStateClick = async (feature, layer) => {
                       },
                       mouseout: e => {
                         setHoveredState(null);
-                        e.target.setStyle({ fillColor: '#EAEAEC', color: '#999', weight: 1 });
+                        const primary = readThemeVar('--unis-primary', '#163387');
+                        const isActive = ACTIVE_STATES.includes(feature.properties.name);
+                        e.target.setStyle({
+                          fillColor: isActive ? primary : '#EAEAEC',
+                          color: isActive ? '#FFFFFF' : '#999',
+                          weight: isActive ? 1.5 : 1,
+                        });
                       },
                     });
                   }}
@@ -683,6 +734,17 @@ const handleStateClick = async (feature, layer) => {
                 />
               )}
             </MapContainer>
+
+            <div className="map-legend" role="note" aria-label="Map key">
+              <span className="legend-item">
+                <span className="legend-swatch legend-swatch--active" aria-hidden="true" />
+                Active
+              </span>
+              <span className="legend-item">
+                <span className="legend-swatch legend-swatch--inactive" aria-hidden="true" />
+                Coming soon
+              </span>
+            </div>
           </div>
 
           {isMobile && !isAtUSLevel() && currentJurisdictions.length > 0 && (
