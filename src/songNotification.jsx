@@ -1,11 +1,21 @@
-// src/components/SongNotification.js
-
 import React, { useContext, useEffect, useState } from 'react';
 import { PlayerContext } from './context/playercontext';
 import './songNotification.scss';
 
+
+// Deterministic bar pattern for the equalizer animation — heights in %,
+// delays in seconds. 24 bars fill the notification width.
+const EQ_BARS = [
+  { h: 42, d: 0.00 }, { h: 88, d: 0.13 }, { h: 60, d: 0.26 }, { h: 100, d: 0.39 },
+  { h: 50, d: 0.52 }, { h: 76, d: 0.09 }, { h: 36, d: 0.22 }, { h: 94, d: 0.35 },
+  { h: 64, d: 0.48 }, { h: 82, d: 0.05 }, { h: 46, d: 0.18 }, { h: 70, d: 0.31 },
+  { h: 90, d: 0.44 }, { h: 54, d: 0.01 }, { h: 98, d: 0.14 }, { h: 40, d: 0.27 },
+  { h: 74, d: 0.40 }, { h: 58, d: 0.53 }, { h: 86, d: 0.10 }, { h: 48, d: 0.23 },
+  { h: 68, d: 0.36 }, { h: 96, d: 0.49 }, { h: 44, d: 0.06 }, { h: 78, d: 0.19 },
+];
+
 const SongNotification = () => {
-  const { currentMedia } = useContext(PlayerContext);
+  const { currentMedia, isPlaying } = useContext(PlayerContext);
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -43,124 +53,17 @@ const SongNotification = () => {
               {currentMedia.artist || 'Unknown Artist'}
             </p>
 
-            <div className="notification-waveform">
-              <div className="wave-scroll">
-
-                <svg
-                  className="wave-svg"
-                  viewBox="0 0 600 40"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d="
-                      M0 20
-                      L20 20
-                      L30 8
-                      L40 32
-                      L50 20
-                      L70 20
-                      L80 10
-                      L90 30
-                      L100 20
-                      L120 20
-                      L130 5
-                      L140 35
-                      L150 20
-                      L170 20
-                      L180 12
-                      L190 28
-                      L200 20
-                      L220 20
-                      L230 7
-                      L240 33
-                      L250 20
-                      L270 20
-                      L280 10
-                      L290 30
-                      L300 20
-                      L320 20
-                      L330 6
-                      L340 34
-                      L350 20
-                      L370 20
-                      L380 11
-                      L390 29
-                      L400 20
-                      L420 20
-                      L430 8
-                      L440 32
-                      L450 20
-                      L470 20
-                      L480 10
-                      L490 30
-                      L500 20
-                      L520 20
-                      L530 6
-                      L540 34
-                      L550 20
-                      L600 20
-                    "
-                  />
-                </svg>
-
-                <svg
-                  className="wave-svg"
-                  viewBox="0 0 600 40"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d="
-                      M0 20
-                      L20 20
-                      L30 8
-                      L40 32
-                      L50 20
-                      L70 20
-                      L80 10
-                      L90 30
-                      L100 20
-                      L120 20
-                      L130 5
-                      L140 35
-                      L150 20
-                      L170 20
-                      L180 12
-                      L190 28
-                      L200 20
-                      L220 20
-                      L230 7
-                      L240 33
-                      L250 20
-                      L270 20
-                      L280 10
-                      L290 30
-                      L300 20
-                      L320 20
-                      L330 6
-                      L340 34
-                      L350 20
-                      L370 20
-                      L380 11
-                      L390 29
-                      L400 20
-                      L420 20
-                      L430 8
-                      L440 32
-                      L450 20
-                      L470 20
-                      L480 10
-                      L490 30
-                      L500 20
-                      L520 20
-                      L530 6
-                      L540 34
-                      L550 20
-                      L600 20
-                    "
-                  />
-                </svg>
-
-              </div>
+            <div
+              className={`notification-waveform ${isPlaying ? 'is-playing' : ''}`}
+              aria-hidden="true"
+            >
+              {EQ_BARS.map((bar, i) => (
+                <span
+                  key={i}
+                  className="eq-bar"
+                  style={{ '--h': `${bar.h}%`, '--d': `${bar.d}s` }}
+                />
+              ))}
             </div>
           </div>
 
