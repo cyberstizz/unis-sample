@@ -10,7 +10,7 @@ import { useAuth } from './context/AuthContext';
 import { incrementGateSongCount } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
 import MessageButton from './MessageButton';
-import SupportButton from './SupportButton'
+import useModalA11y from './hooks/useModalA11y';
 
 // ─── Award rail definitions ────────────────────────────────────
 // 12 fixed slots (Song + Artist across 6 intervals). A medal only
@@ -63,6 +63,12 @@ const AwardGlyph = ({ entity }) =>
     </svg>
   );
 
+const ZapGlyph = ({ size = 15 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" />
+  </svg>
+);
+
 // Average-color sampler for the "Popular" ambient row backgrounds.
 // Draws the artwork into a 1x1 canvas and reads the resulting pixel.
 // Requires CORS-enabled artwork (R2 already configured for this).
@@ -87,10 +93,228 @@ const extractAverageColor = (url) =>
     img.src = url;
   });
 
+const formatEffective = (iso) => {
+  if (!iso) return 'the start of next month';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'the start of next month';
+  return d.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+};
+
+// =============================================================================
+// SupporterSheet — direct "make this artist my supported artist" confirm.
+//
+// The jurisdiction-first SupportedArtistPicker (profile page) is for browsing;
+// here the fan is ALREADY on the artist's page, so the flow is a single
+// confirm. Same endpoint + semantics as the picker:
+//   PUT /v1/users/{userId}/supported-artist  { artistId }
+//   → { status: 'immediate' | 'pending' | 'cancelled', effectiveDate? }
+// First-ever pick lands immediately; changing an existing pick queues to
+// month-end; re-picking your current artist cancels any queued change.
+// =============================================================================
+const SupporterSheet = ({
+  show,
+  onClose,
+  artistName,
+  artistPhoto,
+  isFirstPick,
+  alreadySupporting,
+  busy,
+  error,
+  result,
+  onConfirm,
+}) => {
+  const modalRef = useRef(null);
+  useModalA11y({ active: show, onClose, modalRef });
+
+  if (!show) return null;
+
+  const renderBody = () => {
+    if (result) {
+      const status = result.status;
+      if (status === 'immediate') {
+        return (
+          <div className="ap2-supsheet__state">
+            <span className="ap2-supsheet__stateicon ap2-supsheet__stateicon--ok">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+            </span>
+            <h3 className="ap2-supsheet__statetitle">You&rsquo;re now supporting {artistName}</h3>
+            <p className="ap2-supsheet__statesub">Your listening backs them from this moment on.</p>
+            <button className="ap2-supsheet__btn ap2-supsheet__btn--primary" onClick={onClose}>Done</button>
+          </div>
+        );
+      }
+      if (status === 'pending') {
+        return (
+          <div className="ap2-supsheet__state">
+            <span className="ap2-supsheet__stateicon ap2-supsheet__stateicon--clock">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
+            </span>
+            <h3 className="ap2-supsheet__statetitle">Locked in</h3>
+            <p className="ap2-supsheet__statesub">
+              You&rsquo;ll switch to {artistName} on {formatEffective(result.effectiveDate)}. Until then your current pick keeps your backing.
+            </p>
+            <button className="ap2-supsheet__btn ap2-supsheet__btn--primary" onClick={onClose}>Done</button>
+          </div>
+        );
+      }
+      if (status === 'cancelled') {
+        return (
+          <div className="ap2-supsheet__state">
+            <span className="ap2-supsheet__stateicon ap2-supsheet__stateicon--ok">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+            </span>
+            <h3 className="ap2-supsheet__statetitle">Queued switch cancelled</h3>
+            <p className="ap2-supsheet__statesub">You&rsquo;re staying with {artistName}.</p>
+            <button className="ap2-supsheet__btn ap2-supsheet__btn--primary" onClick={onClose}>Done</button>
+          </div>
+        );
+      }
+    }
+
+    if (alreadySupporting) {
+      return (
+        <div className="ap2-supsheet__state">
+          <span className="ap2-supsheet__stateicon ap2-supsheet__stateicon--ok"><ZapGlyph size={24} /></span>
+          <h3 className="ap2-supsheet__statetitle">{artistName} is your supported artist</h3>
+          <p className="ap2-supsheet__statesub">Every stream you play on Unis puts weight behind them.</p>
+          <button className="ap2-supsheet__btn ap2-supsheet__btn--primary" onClick={onClose}>Done</button>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <img src={artistPhoto} alt="" className="ap2-supsheet__photo" />
+        <h3 className="ap2-supsheet__title">Make {artistName} your supported artist?</h3>
+        <p className="ap2-supsheet__copy">
+          {isFirstPick
+            ? 'Your first pick takes effect right away — your listening on Unis backs them directly.'
+            : `You already support another artist. Switches take effect at the start of next month, so ${artistName} becomes your pick on the 1st.`}
+        </p>
+        {error && <p className="ap2-supsheet__error" role="alert">{error}</p>}
+        <div className="ap2-supsheet__actions">
+          <button className="ap2-supsheet__btn ap2-supsheet__btn--primary" onClick={onConfirm} disabled={busy}>
+            <ZapGlyph size={14} />
+            {busy ? 'Saving…' : (isFirstPick ? 'Support them' : 'Switch to them')}
+          </button>
+          <button className="ap2-supsheet__btn ap2-supsheet__btn--ghost" onClick={onClose} disabled={busy}>
+            Not now
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  return (
+    <div className="ap2-supsheet" role="presentation" onClick={onClose}>
+      <div
+        className="ap2-supsheet__card"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Support ${artistName}`}
+        ref={modalRef}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="ap2-supsheet__close" onClick={onClose} aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+        {renderBody()}
+      </div>
+    </div>
+  );
+};
+
+// =============================================================================
+// PhotoLightbox — Instagram-style full-screen viewer for the gallery grid.
+// Arrow keys + on-screen chevrons + touch swipe; Esc / backdrop / × to close
+// (Esc + focus trap come from useModalA11y).
+// =============================================================================
+const PhotoLightbox = ({ photos, index, artistName, onClose, onPrev, onNext }) => {
+  const modalRef = useRef(null);
+  const touchStartX = useRef(null);
+  const active = index != null;
+  useModalA11y({ active, onClose, modalRef });
+
+  useEffect(() => {
+    if (!active) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'ArrowLeft') onPrev();
+      if (e.key === 'ArrowRight') onNext();
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [active, onPrev, onNext]);
+
+  if (!active) return null;
+
+  const photo = photos[index];
+  if (!photo) return null;
+  const multiple = photos.length > 1;
+
+  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current == null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(delta) < 48) return;
+    if (delta > 0) onPrev(); else onNext();
+  };
+
+  return (
+    <div
+      className="ap2-lightbox"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${artistName} photos, ${index + 1} of ${photos.length}`}
+      ref={modalRef}
+      onClick={onClose}
+    >
+      <button className="ap2-lightbox__close" onClick={onClose} aria-label="Close photo viewer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+      </button>
+
+      {multiple && (
+        <button
+          className="ap2-lightbox__nav ap2-lightbox__nav--prev"
+          onClick={(e) => { e.stopPropagation(); onPrev(); }}
+          aria-label="Previous photo"
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+      )}
+
+      <figure
+        className="ap2-lightbox__stage"
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <img src={buildUrl(photo.photoUrl)} alt={`${artistName} photo ${index + 1}`} className="ap2-lightbox__img" />
+        <figcaption className="ap2-lightbox__counter">{index + 1} / {photos.length}</figcaption>
+      </figure>
+
+      {multiple && (
+        <button
+          className="ap2-lightbox__nav ap2-lightbox__nav--next"
+          onClick={(e) => { e.stopPropagation(); onNext(); }}
+          aria-label="Next photo"
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+        </button>
+      )}
+    </div>
+  );
+};
+
 const ArtistPage = ({ isOwnProfile = false }) => {
   const { artistId } = useParams();
   const { requestPlay } = useContext(PlayerContext);
-  const { user, isGuest } = useAuth();
+  const { user, isGuest, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const userId = user?.userId;
@@ -108,6 +332,22 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const [awards, setAwards] = useState({});       // normalized award counts
   const [standing, setStanding] = useState(null);  // jurisdiction ranking
   const [songColors, setSongColors] = useState({}); // songId -> ambient rgb
+  const [photos, setPhotos] = useState([]);        // artist gallery photos
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+
+  // ---- Supporter (switch-supported-artist) state ------------------------
+  const [isSupporting, setIsSupporting] = useState(false);
+  const [showSupporterSheet, setShowSupporterSheet] = useState(false);
+  const [supporterBusy, setSupporterBusy] = useState(false);
+  const [supporterError, setSupporterError] = useState(null);
+  const [supporterResult, setSupporterResult] = useState(null);
+  const [pendingSwitch, setPendingSwitch] = useState(null); // { effectiveDate }
+
+  // AuthContext's user (UserDto) carries supportedArtistId, so the live
+  // "Supporting" state costs zero extra API calls.
+  useEffect(() => {
+    setIsSupporting(Boolean(userId && user?.supportedArtistId === artistId));
+  }, [userId, user?.supportedArtistId, artistId]);
 
   // Sticky header scroll detection
   const heroRef = useRef(null);
@@ -116,7 +356,8 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const handleScroll = useCallback(() => {
     if (!heroRef.current) return;
     const heroBottom = heroRef.current.getBoundingClientRect().bottom;
-    setShowStickyHeader(heroBottom < 60);
+    // App header is a fixed 75px — reveal the bar once the hero passes under it.
+    setShowStickyHeader(heroBottom < 90);
   }, []);
 
   useEffect(() => {
@@ -143,6 +384,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
           followStatusRes,
           awardsRes,
           standingRes,
+          photosRes,
         ] = await Promise.all([
           apiCall({ method: 'get', url: `/v1/users/profile/${artistId}` }),
           apiCall({ method: 'get', url: `/v1/users/${artistId}/followers/count` }).catch(() => ({ data: { count: 0 } })),
@@ -153,6 +395,11 @@ const ArtistPage = ({ isOwnProfile = false }) => {
             : Promise.resolve({ data: { isFollowing: false } }),
           apiCall({ method: 'get', url: `/v1/users/${artistId}/awards` }).catch(() => ({ data: [] })),
           apiCall({ method: 'get', url: `/v1/users/${artistId}/standing` }).catch(() => ({ data: null })),
+          // Public gallery endpoint returns { photos: [...], max } — see ArtistPhotoController.
+          apiCall({ method: 'get', url: `/v1/users/${artistId}/photos` }).catch((err) => {
+            console.error('Artist photos load failed:', artistId, err);
+            return { data: { photos: [] } };
+          }),
         ]);
 
         const artistData = artistRes.data;
@@ -164,6 +411,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         setIsFollowing(followStatusRes.data.isFollowing || false);
         setAwards(normalizeAwards(awardsRes.data));
         setStanding(standingRes.data || null);
+        setPhotos(Array.isArray(photosRes.data?.photos) ? photosRes.data.photos : []);
 
       } catch (err) {
         console.error('Failed to load artist:', err);
@@ -226,13 +474,55 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     }
   };
 
-  // Design-only stubs — wired to real flows in a later pass.
-  const handleSupport = () => {
-    // TODO: open support / tip flow
+  // ---- Supporter switch (the real Support mechanism) --------------------
+  const openSupporterSheet = () => {
+    if (isGuest) { navigate('/login'); return; }
+    setSupporterResult(null);
+    setSupporterError(null);
+    setShowSupporterSheet(true);
   };
+
+  const confirmSupporter = async () => {
+    if (!userId) return;
+    setSupporterBusy(true);
+    setSupporterError(null);
+    try {
+      const res = await apiCall({
+        method: 'put',
+        url: `/v1/users/${userId}/supported-artist`,
+        data: { artistId },
+      });
+      const data = res.data || {};
+      console.log('[Support] supported-artist update ok:', { artistId, status: data.status });
+      setSupporterResult(data);
+      if (data.status === 'immediate' || data.status === 'cancelled') {
+        setIsSupporting(true);
+        setPendingSwitch(null);
+      }
+      if (data.status === 'pending') {
+        setPendingSwitch({ effectiveDate: data.effectiveDate || null });
+      }
+      refreshUser?.(); // sync user.supportedArtistId app-wide
+    } catch (err) {
+      console.error('[Support] supported-artist update failed:', { artistId, err });
+      setSupporterError(err.response?.data?.error || 'Could not update your supported artist. Please try again.');
+    } finally {
+      setSupporterBusy(false);
+    }
+  };
+
   const handleShop = () => {
     // TODO: open artist storefront / buy-music flow
   };
+
+  // ---- Gallery lightbox --------------------------------------------------
+  const showPrevPhoto = useCallback(() => {
+    setLightboxIndex((i) => (i == null ? i : (i - 1 + photos.length) % photos.length));
+  }, [photos.length]);
+
+  const showNextPhoto = useCallback(() => {
+    setLightboxIndex((i) => (i == null ? i : (i + 1) % photos.length));
+  }, [photos.length]);
 
   const handleBioChange = (e) => setBio(e.target.value);
 
@@ -320,6 +610,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
   const isCurrentUser = userId === artistId;
   const showActionButtons = !isOwnProfile && !isCurrentUser;
+  const isFirstPick = !user?.supportedArtistId;
 
   const fmt = (n) => (n || 0).toLocaleString();
 
@@ -332,9 +623,15 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const standingPlace = standing?.genreName || artist.genre?.name || '';
   const standingArea = standing?.jurisdictionName || artist.jurisdiction?.name || 'your area';
 
+  const supportSub = isSupporting
+    ? 'They\u2019re your supported artist \u2014 your listening backs them.'
+    : pendingSwitch
+      ? `Switch locked in for ${formatEffective(pendingSwitch.effectiveDate)}.`
+      : `Make ${artist.username} your supported artist.`;
+
   return (
     <Layout backgroundImage={artistPhoto}>
-      {/* ===== STICKY HEADER ===== */}
+      {/* ===== STICKY HEADER — slides in under the app header (Spotify-style) ===== */}
       <div className={`ap2-sticky ${showStickyHeader ? 'ap2-sticky--visible' : ''}`}>
         <div className="ap2-sticky__inner">
           <div className="ap2-sticky__left">
@@ -439,7 +736,13 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                     Play Discography
                   </button>
                   <MessageButton recipientId={artistId} />
-                  <SupportButton artistId={artistId} artistName={artist.username} />
+                  <button
+                    onClick={openSupporterSheet}
+                    className={`ap2-hero__btn-support ${isSupporting ? 'ap2-hero__btn-support--active' : ''}`}
+                  >
+                    <ZapGlyph size={15} />
+                    {isSupporting ? 'Supporting' : 'Support'}
+                  </button>
                   <button onClick={handleFollow} className={`ap2-hero__btn-follow ${isFollowing ? 'ap2-hero__btn-follow--active' : ''}`}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
@@ -452,7 +755,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                   </button>
                 </div>
                 <p className="ap2-hero__votehint">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" /></svg>
+                  <ZapGlyph size={13} />
                   Your vote moves them up the {standingArea} rankings
                 </p>
               </>
@@ -509,8 +812,8 @@ const ArtistPage = ({ isOwnProfile = false }) => {
               </div>
             )}
 
-            {/* Row 1: Featured Song + Support */}
-            <div className="ap2-grid ap2-grid--featured">
+            {/* Row 1: Featured Song + Support (support card hidden on your own page) */}
+            <div className={`ap2-grid ap2-grid--featured ${!showActionButtons ? 'ap2-grid--single' : ''}`}>
               {topSong && (
                 <div className="ap2-card ap2-featured">
                   <div className="ap2-featured__layout">
@@ -541,37 +844,42 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                 </div>
               )}
 
-              {/* Support card — image avatar + Support / Follow / Shop (design only) */}
-              <div className="ap2-card ap2-support">
-                <div className="ap2-support__head">
-                  <img src={artistPhoto} alt={artist.username} className="ap2-support__avatar" />
-                  <div className="ap2-support__copy">
-                    <h3 className="ap2-support__title">Support {artist.username}</h3>
-                    <p className="ap2-support__sub">Back the artist directly</p>
+              {/* Support card — wired to the real supporter-switch mechanism */}
+              {showActionButtons && (
+                <div className="ap2-card ap2-support">
+                  <div className="ap2-support__head">
+                    <img src={artistPhoto} alt={artist.username} className="ap2-support__avatar" />
+                    <div className="ap2-support__copy">
+                      <h3 className="ap2-support__title">Support {artist.username}</h3>
+                      <p className="ap2-support__sub">{supportSub}</p>
+                    </div>
+                  </div>
+                  <div className="ap2-support__actions">
+                    <button
+                      className={`ap2-support__btn ap2-support__btn--support ${isSupporting ? 'ap2-support__btn--supporting' : ''}`}
+                      onClick={openSupporterSheet}
+                    >
+                      <ZapGlyph size={16} />
+                      {isSupporting ? 'Supporting' : 'Support'}
+                    </button>
+                    <button
+                      className={`ap2-support__btn ap2-support__btn--follow ${isFollowing ? 'ap2-support__btn--following' : ''}`}
+                      onClick={handleFollow}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+                      </svg>
+                      {isFollowing ? 'Following' : 'Follow'}
+                    </button>
+                    <button className="ap2-support__btn ap2-support__btn--shop" onClick={handleShop}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M6 2L3 6v13a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
+                      </svg>
+                      Shop
+                    </button>
                   </div>
                 </div>
-                <div className="ap2-support__actions">
-                  <button className="ap2-support__btn ap2-support__btn--support" onClick={handleSupport}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7-4.5-9.3-8.4C1 9.6 2.4 6 5.8 6c2 0 3.3 1.2 4.2 2.5C10.9 7.2 12.2 6 14.2 6c3.4 0 4.8 3.6 3.1 6.6C19 16.5 12 21 12 21z" /></svg>
-                    Support
-                  </button>
-                  <button
-                    className={`ap2-support__btn ap2-support__btn--follow ${isFollowing ? 'ap2-support__btn--following' : ''}`}
-                    onClick={handleFollow}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
-                    </svg>
-                    {isFollowing ? 'Following' : 'Follow'}
-                  </button>
-                  <button className="ap2-support__btn ap2-support__btn--shop" onClick={handleShop}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M6 2L3 6v13a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
-                    </svg>
-                    Shop
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Row 2: Popular (theme-tinted, ambient rows) + Connect / About aside */}
@@ -668,6 +976,33 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                 </div>
               </div>
             </div>
+
+            {/* ===== PHOTOS — Instagram-style gallery (renders only when the
+                 artist has uploaded photos via the dashboard) ===== */}
+            {photos.length > 0 && (
+              <div className="ap2-card ap2-gallery">
+                <div className="ap2-gallery__header">
+                  <h3>Photos</h3>
+                  <span className="ap2-gallery__count">{photos.length}</span>
+                </div>
+                <div className="ap2-gallery__grid">
+                  {photos.map((photo, idx) => (
+                    <button
+                      key={photo.photoId}
+                      type="button"
+                      className="ap2-gallery__tile"
+                      onClick={() => setLightboxIndex(idx)}
+                      aria-label={`Open photo ${idx + 1} of ${photos.length}`}
+                    >
+                      <img src={buildUrl(photo.photoUrl)} alt="" loading="lazy" />
+                      <span className="ap2-gallery__tile-glow" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /><path d="M11 8v6M8 11h6" /></svg>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -684,6 +1019,28 @@ const ArtistPage = ({ isOwnProfile = false }) => {
           selectedInterval: 'daily',
           selectedJurisdiction: artist.jurisdiction?.name?.toLowerCase().replace(' ', '-') || 'unknown',
         }}
+      />
+
+      <SupporterSheet
+        show={showSupporterSheet}
+        onClose={() => setShowSupporterSheet(false)}
+        artistName={artist.username}
+        artistPhoto={artistPhoto}
+        isFirstPick={isFirstPick}
+        alreadySupporting={isSupporting && !supporterResult}
+        busy={supporterBusy}
+        error={supporterError}
+        result={supporterResult}
+        onConfirm={confirmSupporter}
+      />
+
+      <PhotoLightbox
+        photos={photos}
+        index={lightboxIndex}
+        artistName={artist.username}
+        onClose={() => setLightboxIndex(null)}
+        onPrev={showPrevPhoto}
+        onNext={showNextPhoto}
       />
     </Layout>
   );

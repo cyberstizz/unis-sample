@@ -1,7 +1,19 @@
-// artistpage.scss — v2 "Stitch Mockup" implementation
+// artistpage.scss — v3 "Premium" pass
 // ALL classes prefixed ap2- to avoid collisions with feed, song, or any other page.
 // Fonts: Playfair Display italic (hero name), Bitcount Grid Double (jurisdiction),
 //        DM Sans (body). Colors: #111114 base, theme accent via --unis-primary.
+//
+// v3 changes:
+//   • Header-gap fix: layout clears the fixed header with padding-top: 11vh,
+//     but the header is a fixed 75px — on tall viewports that leaves a dead
+//     band above the hero. Scoped :has() override sets exact clearance and
+//     removes the side gutters so the portrait runs edge-to-edge.
+//   • Sticky artist bar now actually shows: it used to sit at top:0 with
+//     z-index 200 — BEHIND the fixed app header (z-index 1000). It now pins
+//     at top:75px (under the header) and respects the sidebar.
+//   • Support button is theme-colored and gains a "Supporting" active state.
+//   • New: Instagram-style photo gallery grid + full-screen lightbox.
+//   • New: SupporterSheet confirm dialog (switch-supported-artist mechanism).
 
 // ─── Tokens (scoped, no globals) ───────────────────────────────
 $ap2-base: #111114;
@@ -15,6 +27,7 @@ $ap2-blue-raw: #163387;
 $ap2-border: rgba(255, 255, 255, 0.08);
 $ap2-border-hover: rgba(255, 255, 255, 0.14);
 $ap2-glow: rgba(22, 51, 135, 0.4);
+$ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 
 // ─── Keyframes (prefixed) ──────────────────────────────────────
 @keyframes ap2-fadeUp {
@@ -28,6 +41,28 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
 @keyframes ap2-slideDown {
   from { transform: translateY(-100%); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
+}
+@keyframes ap2-zoomIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// LAYOUT FIX — kill the dead band above the hero + go full-bleed
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// layout.scss clears the fixed header with padding-top: 11vh, but the header
+// is exactly $ap2-header-h tall. 11vh > 75px on any viewport taller than
+// ~682px, which produced the visible gap in QA screenshots. Scoped to this
+// page only via :has() — every other page keeps its current behavior.
+.layout-container:has(.ap2-page) {
+  padding-top: $ap2-header-h;
+}
+
+// layout-content adds 20px side gutters (16px mobile). The cinematic hero
+// wants edge-to-edge; the card body re-introduces its own gutters below.
+.layout-container:has(.ap2-page) .layout-content {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 // ─── Utility states ────────────────────────────────────────────
@@ -50,15 +85,15 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// STICKY HEADER
+// STICKY HEADER — the Spotify-style name-follows-you bar
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 .ap2-sticky {
   position: fixed;
-  top: 0;
-  left: 0;
+  top: $ap2-header-h;               // sits just under the fixed app header
+  left: var(--sidebar-width, 0px);  // clears the desktop sidebar
   right: 0;
-  z-index: 200;
-  transform: translateY(-100%);
+  z-index: 900;                      // below the app header (1000), above page
+  transform: translateY(-110%);      // tucks up behind the opaque header
   opacity: 0;
   pointer-events: none;
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
@@ -109,8 +144,9 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   }
 
   &__name {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 16px;
     font-weight: 700;
     color: $ap2-text-1;
     white-space: nowrap;
@@ -523,6 +559,50 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   }
 }
 
+// Support — theme-colored (replaces the old hard-coded green usp-trigger)
+.ap2-hero__btn-support {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 50px;
+  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 20%, rgba(255, 255, 255, 0.04));
+  border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 55%, transparent);
+  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, #ffffff);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+
+  svg { flex-shrink: 0; }
+
+  &:hover {
+    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, rgba(255, 255, 255, 0.04));
+    border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 75%, transparent);
+    transform: translateY(-1px);
+  }
+
+  &--active {
+    background: $ap2-blue;
+    border-color: $ap2-blue;
+    color: #fff;
+    box-shadow: 0 4px 18px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, transparent);
+
+    &:hover {
+      filter: brightness(1.15);
+      background: $ap2-blue;
+      border-color: $ap2-blue;
+    }
+  }
+
+  @media (max-width: 600px) {
+    padding: 12px 22px;
+    font-size: 13px;
+  }
+}
+
 .ap2-hero__btn-follow {
   display: inline-flex;
   align-items: center;
@@ -683,6 +763,11 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }
+}
+
+// Own-profile view hides the Support card — collapse to one column.
+.ap2-grid--single {
+  grid-template-columns: 1fr;
 }
 
 .ap2-grid--lower {
@@ -1044,6 +1129,16 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
       box-shadow: 0 4px 18px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, transparent);
 
       &:hover { filter: brightness(1.15); transform: translateY(-1px); }
+    }
+
+    // Live "Supporting" state — quieter, confirmed
+    &--supporting {
+      background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 22%, transparent);
+      border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 60%, transparent);
+      color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, #ffffff);
+      box-shadow: none;
+
+      &:hover { filter: none; background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 32%, transparent); }
     }
 
     &--follow {
@@ -1429,6 +1524,406 @@ $ap2-glow: rgba(22, 51, 135, 0.4);
     text-transform: uppercase;
     letter-spacing: 1.2px;
     margin-top: 4px;
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PHOTO GALLERY — Instagram-style grid
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-gallery__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+
+  h3 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: $ap2-text-1;
+    margin: 0;
+  }
+}
+
+.ap2-gallery__count {
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, transparent);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff);
+}
+
+.ap2-gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px; // Instagram-tight gutters
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ap2-gallery__tile {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  overflow: hidden;
+  display: block;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.35s ease, filter 0.35s ease;
+  }
+
+  .ap2-gallery__tile-glow {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 30%, rgba(0, 0, 0, 0.35));
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  &:hover img,
+  &:focus-visible img {
+    transform: scale(1.06);
+    filter: brightness(0.85);
+  }
+
+  &:hover .ap2-gallery__tile-glow,
+  &:focus-visible .ap2-gallery__tile-glow {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 70%, #ffffff);
+    outline-offset: -2px;
+    z-index: 1;
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PHOTO LIGHTBOX — full-screen viewer
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 3000; // above app header (1000) and sticky bar (900)
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 4, 6, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: ap2-fadeIn 0.2s ease-out both;
+  padding: 24px;
+  box-sizing: border-box;
+
+  @media (max-width: 600px) { padding: 12px; }
+}
+
+.ap2-lightbox__stage {
+  margin: 0;
+  max-width: min(92vw, 1000px);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: ap2-zoomIn 0.25s ease-out both;
+}
+
+.ap2-lightbox__img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.ap2-lightbox__counter {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: $ap2-text-2;
+}
+
+.ap2-lightbox__close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: $ap2-text-1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+  z-index: 2;
+
+  &:hover { background: rgba(255, 255, 255, 0.14); transform: scale(1.06); }
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 70%, #ffffff);
+    outline-offset: 2px;
+  }
+}
+
+.ap2-lightbox__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: $ap2-text-1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+  z-index: 2;
+
+  &--prev { left: 20px; }
+  &--next { right: 20px; }
+
+  &:hover {
+    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, rgba(255, 255, 255, 0.06));
+    transform: translateY(-50%) scale(1.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 70%, #ffffff);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 600px) {
+    width: 40px;
+    height: 40px;
+    &--prev { left: 8px; }
+    &--next { right: 8px; }
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SUPPORTER SHEET — switch-supported-artist confirm dialog
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-supsheet {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 4, 6, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: ap2-fadeIn 0.2s ease-out both;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.ap2-supsheet__card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  border-radius: 20px;
+  padding: 28px 24px 24px;
+  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 8%, $ap2-surface-solid);
+  border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 30%, $ap2-border);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+  text-align: center;
+  animation: ap2-zoomIn 0.25s ease-out both;
+  box-sizing: border-box;
+}
+
+.ap2-supsheet__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: $ap2-text-2;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover { background: rgba(255, 255, 255, 0.12); color: $ap2-text-1; }
+}
+
+.ap2-supsheet__photo {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 14px;
+  display: block;
+  border: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 65%, transparent);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, transparent);
+}
+
+.ap2-supsheet__title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 21px;
+  font-weight: 700;
+  color: $ap2-text-1;
+  margin: 0 0 10px;
+  line-height: 1.25;
+}
+
+.ap2-supsheet__copy {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: $ap2-text-2;
+  margin: 0 0 18px;
+}
+
+.ap2-supsheet__error {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  color: #f08c8c;
+  margin: 0 0 12px;
+}
+
+.ap2-supsheet__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ap2-supsheet__btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.2s;
+  box-sizing: border-box;
+
+  svg { flex-shrink: 0; }
+
+  &--primary {
+    background: $ap2-blue;
+    border: 1px solid $ap2-blue;
+    color: #fff;
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, transparent);
+
+    &:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  &--ghost {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: $ap2-text-2;
+
+    &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.07); color: $ap2-text-1; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+}
+
+// Result / status states inside the sheet
+.ap2-supsheet__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.ap2-supsheet__stateicon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+
+  &--ok {
+    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 26%, transparent);
+    border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 55%, transparent);
+    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, #ffffff);
+  }
+
+  &--clock {
+    background: rgba(245, 217, 144, 0.12);
+    border: 1px solid rgba(245, 217, 144, 0.45);
+    color: #f5d990;
+  }
+}
+
+.ap2-supsheet__statetitle {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 20px;
+  font-weight: 700;
+  color: $ap2-text-1;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.ap2-supsheet__statesub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  color: $ap2-text-2;
+  margin: 0 0 8px;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// REDUCED MOTION — quality floor
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@media (prefers-reduced-motion: reduce) {
+  .ap2-card,
+  .ap2-award,
+  .ap2-hero__content,
+  .ap2-hero__meta,
+  .ap2-hero__actions,
+  .ap2-hero__votehint,
+  .ap2-lightbox,
+  .ap2-lightbox__stage,
+  .ap2-supsheet,
+  .ap2-supsheet__card {
+    animation: none;
+  }
+
+  .ap2-sticky {
+    transition: none;
+  }
+
+  .ap2-gallery__tile img {
+    transition: none;
   }
 }
 
