@@ -1,4 +1,50 @@
+// src/earnings.scss
+//
+// QA PASS NOTES:
+//   • Theme awareness — the file previously declared `$unis-blue: var(--unis-primary)`
+//     and then never used it: every brand surface was a hardcoded #163387, which
+//     is the *blue* theme's primary. On orange/red/green/purple/yellow/dianna the
+//     Earnings page was the only page in the app still rendering blue. All six
+//     of those literals now resolve through the theme variable.
+//   • Contrast — #4b5563 and #6b7280 body text sat at roughly 3.5–4.1:1 on the
+//     page background, under the 4.5:1 WCAG AA minimum for small text. The muted
+//     ramp is lifted one step.
+//   • Focus — every interactive element now has a visible :focus-visible ring.
+//     There was no keyboard focus indicator anywhere on this page.
+//   • Motion — the refresh spinner respects prefers-reduced-motion.
+
 $unis-blue: var(--unis-primary);
+$unis-blue-hover: var(--unis-primary-hover);
+$unis-blue-glow: var(--unis-primary-glow);
+$unis-blue-subtle: var(--unis-primary-subtle);
+$unis-blue-border: var(--unis-primary-border);
+
+// Contrast-corrected muted ramp (was #6b7280 / #4b5563)
+$text-muted: #8b93a1;
+$text-dim: #6f7887;
+
+// Level / stream accent tones. These are semantic (they identify referral
+// depth, not brand), so they stay fixed across themes — but they live here as
+// classes instead of inline style objects in the JSX.
+$tone-blue: #3b82f6;
+$tone-violet: #8b5cf6;
+$tone-cyan: #06b6d4;
+$tone-purple: #a855f7;
+$tone-green: #22c55e;
+$tone-gold: #f59e0b;
+
+// Screen-reader-only utility (used for "opens in a new tab")
+.earnings-page .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 .earnings-page {
   max-width: 900px;
@@ -6,6 +52,14 @@ $unis-blue: var(--unis-primary);
   padding: 2rem 1.5rem;
   min-height: 80vh;
   margin-left: 2%;
+
+  // Global focus treatment for this page — keyboard users previously had no
+  // visible indication of where they were.
+  :focus-visible {
+    outline: 2px solid $unis-blue;
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
 }
 
 .earnings-loading {
@@ -15,7 +69,7 @@ $unis-blue: var(--unis-primary);
   justify-content: center;
   gap: 16px;
   min-height: 60vh;
-  color: #9ca3af;
+  color: $text-muted;
   font-size: 1rem;
   .spin { animation: spinAnim 1.2s linear infinite; }
 }
@@ -23,6 +77,12 @@ $unis-blue: var(--unis-primary);
 @keyframes spinAnim {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .earnings-page .spin,
+  .earnings-loading .spin { animation: none; }
+  .earnings-page * { transition-duration: 0.01ms !important; }
 }
 
 // ── Header ──
@@ -34,22 +94,33 @@ $unis-blue: var(--unis-primary);
 
   .earnings-header-text {
     h1 { color: #fff; font-size: 1.8rem; font-weight: 700; margin: 0 0 6px; }
-    p { color: #9ca3af; font-size: 0.95rem; margin: 0; }
+    p { color: $text-muted; font-size: 0.95rem; margin: 0; }
   }
 
   .refresh-btn {
     display: flex; align-items: center; gap: 6px;
     background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px; color: #9ca3af; padding: 8px 14px; cursor: pointer;
+    border-radius: 8px; color: $text-muted; padding: 8px 14px; cursor: pointer;
     font-size: 0.85rem; transition: all 0.2s;
-    &:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+    &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); color: #fff; }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+    .spin { animation: spinAnim 1.2s linear infinite; }
   }
 }
 
 .earnings-error {
   display: flex; align-items: center; gap: 8px;
   background: rgba(220, 53, 69, 0.12); border: 1px solid rgba(220, 53, 69, 0.3);
-  border-radius: 10px; padding: 12px 16px; color: #ff6b7a; font-size: 0.9rem; margin-bottom: 1.5rem;
+  border-radius: 10px; padding: 12px 16px; color: #ff8a95; font-size: 0.9rem; margin-bottom: 1.5rem;
+
+  .earnings-error-text { flex: 1; }
+
+  .earnings-error-dismiss {
+    background: none; border: none; color: inherit; cursor: pointer;
+    display: flex; align-items: center; padding: 4px; border-radius: 6px;
+    opacity: 0.7; transition: opacity 0.2s;
+    &:hover { opacity: 1; }
+  }
 }
 
 // ── Summary Cards ──
@@ -70,21 +141,27 @@ $unis-blue: var(--unis-primary);
 .card-icon-wrap {
   width: 48px; height: 48px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  &.card-icon-green { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
-  &.card-icon-blue { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-  &.card-icon-purple { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
-  &.card-icon-gold { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+  &.card-icon-green { background: rgba(34, 197, 94, 0.15); color: $tone-green; }
+  &.card-icon-blue { background: rgba(59, 130, 246, 0.15); color: $tone-blue; }
+  &.card-icon-purple { background: rgba(168, 85, 247, 0.15); color: $tone-purple; }
+  &.card-icon-gold { background: rgba(245, 158, 11, 0.15); color: $tone-gold; }
 }
 
 .card-body { flex: 1; min-width: 0; }
-.card-label { color: #9ca3af; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px; }
+.card-label { color: $text-muted; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px; }
 .card-value { color: #fff; font-size: 1.6rem; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.02em; }
-.card-sub { color: #6b7280; font-size: 0.8rem; margin: 0; }
+.card-sub { color: $text-dim; font-size: 0.8rem; margin: 0; }
 
 .payout-progress { margin-top: 8px; }
 .progress-bar { width: 100%; height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 3px; overflow: hidden; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, #163387, #3b82f6); border-radius: 3px; transition: width 0.5s ease; }
-.progress-text { color: #6b7280; font-size: 0.75rem; margin: 6px 0 0; }
+// ★ theme: was a hardcoded #163387 → #3b82f6 gradient
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #{$unis-blue}, #{$unis-blue-hover});
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.progress-text { color: $text-dim; font-size: 0.75rem; margin: 6px 0 0; }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // STRIPE CONNECT BANNER
@@ -96,7 +173,7 @@ $unis-blue: var(--unis-primary);
 
 .stripe-banner-content {
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid $unis-blue-border;
   border-radius: 14px;
   padding: 24px;
   display: flex;
@@ -119,10 +196,10 @@ $unis-blue: var(--unis-primary);
   align-items: flex-start;
   gap: 16px;
   flex: 1;
-  color: #9ca3af;
+  color: $text-muted;
 
   h3 { color: #fff; font-size: 1rem; font-weight: 600; margin: 0 0 4px; }
-  p { color: #6b7280; font-size: 0.85rem; margin: 0; line-height: 1.5; }
+  p { color: $text-muted; font-size: 0.85rem; margin: 0; line-height: 1.5; }
 }
 
 .stripe-actions {
@@ -131,11 +208,12 @@ $unis-blue: var(--unis-primary);
   flex-shrink: 0;
 }
 
+// ★ theme: was background #163387 / hover #1e44a8
 .stripe-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #163387;
+  background: $unis-blue;
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -146,12 +224,12 @@ $unis-blue: var(--unis-primary);
   transition: all 0.2s;
   white-space: nowrap;
 
-  &:hover:not(:disabled) { background: #1e44a8; transform: translateY(-1px); }
+  &:hover:not(:disabled) { background: $unis-blue-hover; transform: translateY(-1px); }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
 .stripe-btn-payout {
-  background: #22c55e;
+  background: $tone-green;
   &:hover:not(:disabled) { background: #16a34a; }
 }
 
@@ -163,7 +241,7 @@ $unis-blue: var(--unis-primary);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   padding: 10px 16px;
-  color: #9ca3af;
+  color: $text-muted;
   font-size: 0.82rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -179,8 +257,8 @@ $unis-blue: var(--unis-primary);
   font-size: 0.88rem;
   font-weight: 500;
 
-  &.success { background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; }
-  &.error { background: rgba(220, 53, 69, 0.12); border: 1px solid rgba(220, 53, 69, 0.3); color: #ff6b7a; }
+  &.success { background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); color: #4ade80; }
+  &.error { background: rgba(220, 53, 69, 0.12); border: 1px solid rgba(220, 53, 69, 0.3); color: #ff8a95; }
 }
 
 // ── Tabs ──
@@ -190,11 +268,12 @@ $unis-blue: var(--unis-primary);
   margin-bottom: 1.5rem;
 
   .tab {
-    background: none; border: none; color: #6b7280;
+    background: none; border: none; color: $text-dim;
     padding: 12px 20px; font-size: 0.9rem; font-weight: 500;
     cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
-    &:hover { color: #9ca3af; }
-    &.active { color: #fff; border-bottom-color: #163387; }
+    &:hover { color: $text-muted; }
+    // ★ theme: active underline was hardcoded #163387
+    &.active { color: #fff; border-bottom-color: $unis-blue; }
   }
 }
 
@@ -208,10 +287,16 @@ $unis-blue: var(--unis-primary);
   border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05);
 }
 .level-label { display: flex; align-items: center; gap: 10px; flex: 1; }
-.level-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.level-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  // ★ moved out of inline style objects in the JSX
+  &.level-dot-1 { background: $tone-blue; }
+  &.level-dot-2 { background: $tone-violet; }
+  &.level-dot-3 { background: $tone-cyan; }
+}
 .level-name { color: #d1d5db; font-size: 0.88rem; font-weight: 500; }
-.level-pct { color: #6b7280; font-size: 0.75rem; background: rgba(255, 255, 255, 0.06); padding: 2px 8px; border-radius: 4px; }
-.level-amount { color: #22c55e; font-weight: 700; font-size: 0.95rem; }
+.level-pct { color: $text-muted; font-size: 0.75rem; background: rgba(255, 255, 255, 0.06); padding: 2px 8px; border-radius: 4px; }
+.level-amount { color: #4ade80; font-weight: 700; font-size: 0.95rem; }
 
 .chart-card {
   background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
@@ -223,12 +308,13 @@ $unis-blue: var(--unis-primary);
 .chart-bar-wrap {
   flex: 1; height: 100%; display: flex; flex-direction: column;
   align-items: center; justify-content: flex-end; cursor: pointer;
-  &:hover .chart-bar { background: #3b82f6; }
+  &:hover .chart-bar { background: $unis-blue-hover; }
 }
-.chart-bar { width: 100%; min-height: 4px; background: #163387; border-radius: 2px 2px 0 0; transition: all 0.2s; }
-.chart-date { color: #4b5563; font-size: 0.55rem; text-align: center; margin-top: 4px; display: none; }
+// ★ theme: bars were hardcoded #163387
+.chart-bar { width: 100%; min-height: 4px; background: $unis-blue; border-radius: 2px 2px 0 0; transition: all 0.2s; }
+.chart-date { color: $text-dim; font-size: 0.62rem; text-align: center; margin-top: 4px; display: none; }
 .chart-bar-wrap:nth-child(5n) .chart-date { display: block; }
-.empty-chart { text-align: center; padding: 40px 20px; color: #6b7280; font-size: 0.9rem; }
+.empty-chart { text-align: center; padding: 40px 20px; color: $text-muted; font-size: 0.9rem; }
 
 .split-card {
   background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
@@ -237,14 +323,22 @@ $unis-blue: var(--unis-primary);
 }
 .split-items { display: flex; flex-direction: column; gap: 16px; }
 .split-item { display: flex; gap: 14px; align-items: flex-start; }
-.split-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.split-dot {
+  width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
+  &.split-dot-blue { background: $tone-blue; }
+  &.split-dot-purple { background: $tone-purple; }
+  &.split-dot-gold { background: $tone-gold; }
+}
 .split-info {
   strong { color: #d1d5db; font-size: 0.9rem; display: block; margin-bottom: 2px; }
-  p { color: #6b7280; font-size: 0.82rem; margin: 0; line-height: 1.5; }
+  p { color: $text-muted; font-size: 0.82rem; margin: 0; line-height: 1.5; }
 }
 
 // ── Referrals ──
-.referral-list { display: flex; flex-direction: column; gap: 8px; }
+.referral-list {
+  display: flex; flex-direction: column; gap: 8px;
+  list-style: none; padding: 0; margin: 0;
+}
 .referral-item {
   display: flex; align-items: center; gap: 14px;
   background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
@@ -254,15 +348,33 @@ $unis-blue: var(--unis-primary);
 .referral-photo { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.1); }
 .referral-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .referral-name { color: #fff; font-weight: 600; font-size: 0.9rem; }
-.referral-views { color: #6b7280; font-size: 0.78rem; }
+.referral-views { color: $text-muted; font-size: 0.78rem; }
 .referral-earnings { display: flex; align-items: center; gap: 4px; }
-.referral-amount { color: #22c55e; font-weight: 700; font-size: 0.9rem; }
-.referral-arrow { color: #22c55e; }
+.referral-amount { color: #4ade80; font-weight: 700; font-size: 0.9rem; }
+.referral-arrow { color: #4ade80; }
 .empty-referrals {
-  text-align: center; padding: 60px 20px; color: #6b7280;
+  text-align: center; padding: 60px 20px; color: $text-muted;
   svg { margin-bottom: 16px; opacity: 0.4; }
-  h3 { color: #9ca3af; font-size: 1.1rem; margin: 0 0 8px; }
+  h3 { color: #d1d5db; font-size: 1.1rem; margin: 0 0 8px; }
   p { font-size: 0.9rem; max-width: 360px; margin: 0 auto; line-height: 1.5; }
+}
+
+// Shared "show more" control for the capped referral / payout lists
+.load-more-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $unis-blue-border;
+  border-radius: 10px;
+  color: $text-muted;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover { background: $unis-blue-subtle; color: #fff; }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -279,16 +391,24 @@ $unis-blue: var(--unis-primary);
   text-align: center;
   padding: 48px 24px;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(59, 130, 246, 0.15);
+  border: 1px solid $unis-blue-border;
   border-radius: 14px;
 
-  svg { color: #3b82f6; margin-bottom: 16px; opacity: 0.6; }
+  svg { color: $unis-blue; margin-bottom: 16px; opacity: 0.85; }
   h3 { color: #fff; font-size: 1.1rem; margin: 0 0 8px; }
-  p { color: #6b7280; font-size: 0.9rem; max-width: 380px; margin: 0 auto 20px; line-height: 1.5; }
+  p { color: $text-muted; font-size: 0.9rem; max-width: 380px; margin: 0 auto 20px; line-height: 1.5; }
+
+  .stripe-btn { margin: 0 auto; }
 }
 
 .payout-list {
   h3 { color: #fff; font-size: 1rem; margin: 0 0 16px; }
+}
+
+.payout-list-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .payout-item {
@@ -314,9 +434,9 @@ $unis-blue: var(--unis-primary);
   border-radius: 50%;
   flex-shrink: 0;
 
-  &.completed { background: #22c55e; }
-  &.processing { background: #f59e0b; }
-  &.pending { background: #6b7280; }
+  &.completed { background: $tone-green; }
+  &.processing { background: $tone-gold; }
+  &.pending { background: $text-muted; }
   &.failed { background: #ef4444; }
 }
 
@@ -333,7 +453,7 @@ $unis-blue: var(--unis-primary);
 }
 
 .payout-item-period {
-  color: #6b7280;
+  color: $text-muted;
   font-size: 0.78rem;
 }
 
@@ -351,24 +471,24 @@ $unis-blue: var(--unis-primary);
   padding: 2px 10px;
   border-radius: 4px;
 
-  &.completed { color: #22c55e; background: rgba(34, 197, 94, 0.12); }
-  &.processing { color: #f59e0b; background: rgba(245, 158, 11, 0.12); }
-  &.pending { color: #6b7280; background: rgba(107, 114, 128, 0.12); }
-  &.failed { color: #ef4444; background: rgba(239, 68, 68, 0.12); }
+  &.completed { color: #4ade80; background: rgba(34, 197, 94, 0.12); }
+  &.processing { color: #fbbf24; background: rgba(245, 158, 11, 0.12); }
+  &.pending { color: #cbd5e1; background: rgba(148, 163, 184, 0.14); }
+  &.failed { color: #f87171; background: rgba(239, 68, 68, 0.12); }
 }
 
 .payout-item-date {
-  color: #4b5563;
-  font-size: 0.72rem;
+  color: $text-dim;
+  font-size: 0.75rem;
 }
 
 .empty-payouts {
   text-align: center;
   padding: 60px 20px;
-  color: #6b7280;
+  color: $text-muted;
 
   svg { margin-bottom: 16px; opacity: 0.4; }
-  h3 { color: #9ca3af; font-size: 1.1rem; margin: 0 0 8px; }
+  h3 { color: #d1d5db; font-size: 1.1rem; margin: 0 0 8px; }
   p { font-size: 0.9rem; max-width: 360px; margin: 0 auto; line-height: 1.5; }
 }
 
@@ -385,18 +505,36 @@ $unis-blue: var(--unis-primary);
   display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;
   span { color: #fff; font-size: 0.7rem; font-weight: 600; white-space: nowrap; padding: 0 4px; }
   &:hover { opacity: 0.85; }
+
+  // ★ moved out of inline style objects. `brand` is the only theme-driven tone;
+  //   the rest identify referral level and stay constant across themes.
+  &.how-segment-brand { background: $unis-blue; }
+  &.how-segment-purple { background: $tone-purple; }
+  &.how-segment-blue { background: $tone-blue; }
+  &.how-segment-violet { background: $tone-violet; }
+  &.how-segment-cyan { background: $tone-cyan; }
+  &.how-segment-green { background: $tone-green; }
 }
 .how-legend {
   display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;
-  > span { display: flex; align-items: center; gap: 6px; color: #9ca3af; font-size: 0.75rem; }
+  > span { display: flex; align-items: center; gap: 6px; color: $text-muted; font-size: 0.78rem; }
 }
-.legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.how-note { color: #6b7280; font-size: 0.85rem; line-height: 1.6; margin: 0; }
+.legend-dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  &.legend-dot-brand { background: $unis-blue; }
+  &.legend-dot-purple { background: $tone-purple; }
+  &.legend-dot-blue { background: $tone-blue; }
+  &.legend-dot-violet { background: $tone-violet; }
+  &.legend-dot-cyan { background: $tone-cyan; }
+  &.legend-dot-green { background: $tone-green; }
+}
+.how-note { color: $text-muted; font-size: 0.85rem; line-height: 1.6; margin: 0; }
 .how-rules {
   list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;
   li {
-    color: #9ca3af; font-size: 0.88rem; padding-left: 16px; position: relative;
-    &::before { content: '→'; position: absolute; left: 0; color: #163387; }
+    color: $text-muted; font-size: 0.88rem; padding-left: 16px; position: relative;
+    // ★ theme: marker was hardcoded #163387
+    &::before { content: '→'; position: absolute; left: 0; color: $unis-blue; }
     strong { color: #d1d5db; }
   }
 }
@@ -405,13 +543,14 @@ $unis-blue: var(--unis-primary);
 .chain-node {
   padding: 12px 24px; border-radius: 10px; font-weight: 600;
   font-size: 0.88rem; text-align: center; min-width: 200px;
-  &.chain-you { background: rgba(22, 51, 135, 0.3); border: 2px solid #163387; color: #fff; font-size: 1rem; }
+  // ★ theme: the "YOU" node was hardcoded rgba(22,51,135,.3) / #163387
+  &.chain-you { background: $unis-blue-glow; border: 2px solid $unis-blue; color: #fff; font-size: 1rem; }
   &.chain-l1 { background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.3); color: #d1d5db; }
   &.chain-l2 { background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.3); color: #d1d5db; }
   &.chain-l3 { background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.3); color: #d1d5db; }
 }
-.chain-tag { display: block; font-size: 0.72rem; font-weight: 400; color: #22c55e; margin-top: 2px; }
-.chain-arrow { color: #4b5563; font-size: 0.8rem; padding: 2px 0; }
+.chain-tag { display: block; font-size: 0.72rem; font-weight: 400; color: #4ade80; margin-top: 2px; }
+.chain-arrow { color: $text-dim; font-size: 0.8rem; padding: 2px 0; }
 
 // ── Mobile ──
 @media (max-width: 768px) {

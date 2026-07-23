@@ -414,14 +414,14 @@ describe('Earnings — Stripe banner (no account)', () => {
   it('clicking "Get Started" navigates to the returned onboarding URL', async () => {
     server.use(
       http.post(`${API}/v1/stripe/onboard`, () =>
-        HttpResponse.json({ url: 'https://stripe.test/onboarding-flow' })
+        HttpResponse.json({ url: 'https://connect.stripe.com/setup/e/acct_test' })
       )
     );
     const user = userEvent.setup();
     await renderEarnings({ config: { stripeStatus: stripeNoAccount } });
     await user.click(screen.getByRole('button', { name: /get started/i }));
     await waitFor(() => {
-      expect(window.location.href).toBe('https://stripe.test/onboarding-flow');
+      expect(window.location.href).toBe('https://connect.stripe.com/setup/e/acct_test');
     });
   });
 
@@ -431,7 +431,7 @@ describe('Earnings — Stripe banner (no account)', () => {
     server.use(
       http.post(`${API}/v1/stripe/onboard`, async () => {
         await pending;
-        return HttpResponse.json({ url: 'https://stripe.test/x' });
+        return HttpResponse.json({ url: 'https://connect.stripe.com/setup/e/acct_x' });
       })
     );
     const user = userEvent.setup();
@@ -440,6 +440,10 @@ describe('Earnings — Stripe banner (no account)', () => {
     await user.click(btn);
     await waitFor(() => expect(screen.getByRole('button', { name: /setting up/i })).toBeDisabled());
     resolveFn();
+    // Let the redirect land BEFORE afterEach restores window.location. Without
+    // this the deferred href assignment fired against the real jsdom location
+    // and logged "Not implemented: navigation" noise on every run.
+    await waitFor(() => expect(window.location.href).toContain('connect.stripe.com'));
   });
 
   it('shows generic error when onboarding call fails', async () => {
@@ -592,7 +596,7 @@ describe('Earnings — Stripe dashboard link', () => {
     await renderEarnings({ config: { stripeStatus: stripeReadyFull } });
     await user.click(screen.getByRole('button', { name: /stripe dashboard/i }));
     await waitFor(() => {
-      expect(windowOpenSpy).toHaveBeenCalledWith('https://dashboard.stripe.com/acct_test', '_blank');
+      expect(windowOpenSpy).toHaveBeenCalledWith('https://dashboard.stripe.com/acct_test', '_blank', 'noopener,noreferrer');
     });
   });
 
@@ -627,28 +631,28 @@ describe('Earnings — tab switching', () => {
   it('switches to Referrals tab', async () => {
     const user = userEvent.setup();
     await renderEarnings({ config: { referrals: refFixtures } });
-    await user.click(screen.getByRole('button', { name: /my referrals/i }));
+    await user.click(screen.getByRole('tab', { name: /my referrals/i }));
     expect(await screen.findByText('referredOne')).toBeInTheDocument();
   });
 
   it('switches to Payouts tab', async () => {
     const user = userEvent.setup();
     await renderEarnings({ config: { payouts: payoutFixtures, stripeStatus: stripeReadyFull } });
-    await user.click(screen.getByRole('button', { name: /^payouts/i }));
+    await user.click(screen.getByRole('tab', { name: /^payouts/i }));
     expect(await screen.findByRole('heading', { name: /payout history/i })).toBeInTheDocument();
   });
 
   it('switches to How It Works tab', async () => {
     const user = userEvent.setup();
     await renderEarnings();
-    await user.click(screen.getByRole('button', { name: /how it works/i }));
+    await user.click(screen.getByRole('tab', { name: /how it works/i }));
     expect(await screen.findByRole('heading', { name: /display ad revenue split/i })).toBeInTheDocument();
   });
 
   it('tab buttons show counts in parentheses', async () => {
     await renderEarnings({ config: { referrals: refFixtures, payouts: payoutFixtures } });
-    expect(screen.getByRole('button', { name: /my referrals \(3\)/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^payouts \(2\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /my referrals \(3\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^payouts \(2\)/i })).toBeInTheDocument();
   });
 });
 
@@ -704,7 +708,7 @@ describe('Earnings — Referrals tab', () => {
   it('renders one row per referral', async () => {
     const user = userEvent.setup();
     await renderEarnings({ config: { referrals: refFixtures } });
-    await user.click(screen.getByRole('button', { name: /my referrals/i }));
+    await user.click(screen.getByRole('tab', { name: /my referrals/i }));
     expect(await screen.findByText('referredOne')).toBeInTheDocument();
     expect(screen.getByText('referredTwo')).toBeInTheDocument();
     expect(screen.getByText('referredThree')).toBeInTheDocument();
@@ -713,7 +717,7 @@ describe('Earnings — Referrals tab', () => {
   it('renders ad view counts', async () => {
     const user = userEvent.setup();
     await renderEarnings({ config: { referrals: refFixtures } });
-    await user.click(screen.getByRole('button', { name: /my referrals/i }));
+    await user.click(screen.getByRole('tab', { name: /my referrals/i }));
     expect(await screen.findByText(/120 ad views/i)).toBeInTheDocument();
     expect(screen.getByText(/40 ad views/i)).toBeInTheDocument();
     expect(screen.getByText(/10 ad views/i)).toBeInTheDocument();
@@ -722,7 +726,7 @@ describe('Earnings — Referrals tab', () => {
   it('falls back to backimage when referral photoUrl is null', async () => {
     const user = userEvent.setup();
     await renderEarnings({ config: { referrals: refFixtures } });
-    await user.click(screen.getByRole('button', { name: /my referrals/i }));
+    await user.click(screen.getByRole('tab', { name: /my referrals/i }));
     await screen.findByText('referredTwo');
     const secondImg = screen.getByAltText('referredTwo');
     expect(secondImg.src).toContain('randomrapper.jpeg');
@@ -731,7 +735,7 @@ describe('Earnings — Referrals tab', () => {
   it('prefixes API base for relative photo URLs', async () => {
     const user = userEvent.setup();
     await renderEarnings({ config: { referrals: refFixtures } });
-    await user.click(screen.getByRole('button', { name: /my referrals/i }));
+    await user.click(screen.getByRole('tab', { name: /my referrals/i }));
     const firstImg = await screen.findByAltText('referredOne');
     expect(firstImg.src).toBe('http://localhost:8080/uploads/r1.jpg');
   });
@@ -739,7 +743,7 @@ describe('Earnings — Referrals tab', () => {
   it('shows empty state when there are no referrals', async () => {
     const user = userEvent.setup();
     await renderEarnings({ config: { referrals: [] } });
-    await user.click(screen.getByRole('button', { name: /my referrals/i }));
+    await user.click(screen.getByRole('tab', { name: /my referrals/i }));
     expect(await screen.findByRole('heading', { name: /no referrals yet/i })).toBeInTheDocument();
     expect(screen.getByText(/share your referral code/i)).toBeInTheDocument();
   });
@@ -754,7 +758,7 @@ describe('Earnings — Payouts tab', () => {
     await renderEarnings({
       config: { payouts: payoutFixtures, stripeStatus: stripeReadyFull },
     });
-    await user.click(screen.getByRole('button', { name: /^payouts/i }));
+    await user.click(screen.getByRole('tab', { name: /^payouts/i }));
     expect(await screen.findByText('$52.00')).toBeInTheDocument();
     expect(screen.getByText('$50.00')).toBeInTheDocument();
     // Status labels (completed, pending) — each appears as status span
@@ -769,7 +773,7 @@ describe('Earnings — Payouts tab', () => {
     await renderEarnings({
       config: { payouts: payoutFixtures, stripeStatus: stripeReadyFull },
     });
-    await user.click(screen.getByRole('button', { name: /^payouts/i }));
+    await user.click(screen.getByRole('tab', { name: /^payouts/i }));
     await screen.findByText('$52.00');
     expect(screen.queryByRole('heading', { name: /set up stripe to receive payouts/i })).not.toBeInTheDocument();
   });
@@ -779,7 +783,7 @@ describe('Earnings — Payouts tab', () => {
     await renderEarnings({
       config: { payouts: [], stripeStatus: stripeNoAccount },
     });
-    await user.click(screen.getByRole('button', { name: /^payouts/i }));
+    await user.click(screen.getByRole('tab', { name: /^payouts/i }));
     expect(await screen.findByRole('heading', { name: /set up stripe to receive payouts/i })).toBeInTheDocument();
   });
 
@@ -788,7 +792,7 @@ describe('Earnings — Payouts tab', () => {
     await renderEarnings({
       config: { payouts: [], stripeStatus: stripeReadyFull },
     });
-    await user.click(screen.getByRole('button', { name: /^payouts/i }));
+    await user.click(screen.getByRole('tab', { name: /^payouts/i }));
     expect(await screen.findByRole('heading', { name: /no payouts yet/i })).toBeInTheDocument();
   });
 });
@@ -800,7 +804,7 @@ describe('Earnings — How It Works tab', () => {
   it('renders the Display Ad Revenue split (68/15/10/5/2)', async () => {
     const user = userEvent.setup();
     await renderEarnings();
-    await user.click(screen.getByRole('button', { name: /how it works/i }));
+    await user.click(screen.getByRole('tab', { name: /how it works/i }));
     // Display Ad + Audio Ad both contain "L1 10%", so scope to the Display
     // Ad Revenue Split section specifically.
     const displayHeading = await screen.findByRole('heading', { name: /display ad revenue split/i });
@@ -813,7 +817,7 @@ describe('Earnings — How It Works tab', () => {
   it('renders the Audio Ad split (coming soon — 60/23/10/5/2)', async () => {
     const user = userEvent.setup();
     await renderEarnings();
-    await user.click(screen.getByRole('button', { name: /how it works/i }));
+    await user.click(screen.getByRole('tab', { name: /how it works/i }));
     expect(await screen.findByRole('heading', { name: /audio ad revenue split/i })).toBeInTheDocument();
     expect(screen.getByText(/artist 60%/i)).toBeInTheDocument();
     expect(screen.getByText(/unis 23%/i)).toBeInTheDocument();
@@ -822,7 +826,7 @@ describe('Earnings — How It Works tab', () => {
   it('renders the 3-level referral chain visualization', async () => {
     const user = userEvent.setup();
     await renderEarnings();
-    await user.click(screen.getByRole('button', { name: /how it works/i }));
+    await user.click(screen.getByRole('tab', { name: /how it works/i }));
     expect(await screen.findByText(/^you$/i)).toBeInTheDocument();
     expect(screen.getByText(/you earn 10%/i)).toBeInTheDocument();
     expect(screen.getByText(/you earn 5%/i)).toBeInTheDocument();
@@ -832,13 +836,13 @@ describe('Earnings — How It Works tab', () => {
   it('renders payout rules with the $50 minimum', async () => {
     const user = userEvent.setup();
     await renderEarnings();
-    await user.click(screen.getByRole('button', { name: /how it works/i }));
+    await user.click(screen.getByRole('tab', { name: /how it works/i }));
     // "$50.00" also appears in the payout progress text (x / $50.00), so
     // scope to the how-rules list.
     expect(await screen.findByText(/minimum payout:/i)).toBeInTheDocument();
     const rulesList = document.querySelector('.how-rules');
     expect(rulesList).not.toBeNull();
-    expect(within(rulesList).getByText(/\$50\.00/)).toBeInTheDocument();
+    expect(within(rulesList).getByText('$50.00')).toBeInTheDocument();
   });
 });
 
@@ -946,7 +950,319 @@ describe('Earnings — partial endpoint failures (Promise.allSettled resilience)
     renderWithProviders(<Earnings />, { as: 'artist' });
     await waitFor(() => expect(screen.queryByText(/loading your earnings/i)).not.toBeInTheDocument());
     // Switch to referrals tab and verify we still rendered that data
-    await user.click(screen.getByRole('button', { name: /my referrals/i }));
+    await user.click(screen.getByRole('tab', { name: /my referrals/i }));
     expect(await screen.findByText('referredOne')).toBeInTheDocument();
+  });
+});
+// ===========================================================================
+// QA PASS — REGRESSION COVERAGE FOR THE HARDENING FIXES
+// ===========================================================================
+
+describe('Earnings — open-redirect protection on Stripe URLs', () => {
+  it('refuses to navigate when the onboarding URL is not on stripe.com', async () => {
+    server.use(
+      http.post(`${API}/v1/stripe/onboard`, () =>
+        HttpResponse.json({ url: 'https://evil.example.com/harvest' })
+      )
+    );
+    const user = userEvent.setup();
+    await renderEarnings({ config: { stripeStatus: stripeNoAccount } });
+    const hrefBefore = window.location.href;
+    await user.click(screen.getByRole('button', { name: /get started/i }));
+    expect(await screen.findByText(/failed to start stripe setup/i)).toBeInTheDocument();
+    expect(window.location.href).toBe(hrefBefore);
+  });
+
+  it('refuses to navigate when the onboarding URL is plain http', async () => {
+    server.use(
+      http.post(`${API}/v1/stripe/onboard`, () =>
+        HttpResponse.json({ url: 'http://connect.stripe.com/setup/e/acct_test' })
+      )
+    );
+    const user = userEvent.setup();
+    await renderEarnings({ config: { stripeStatus: stripeNoAccount } });
+    const hrefBefore = window.location.href;
+    await user.click(screen.getByRole('button', { name: /get started/i }));
+    expect(await screen.findByText(/failed to start stripe setup/i)).toBeInTheDocument();
+    expect(window.location.href).toBe(hrefBefore);
+  });
+
+  it('surfaces an error when the onboarding response has no URL at all', async () => {
+    server.use(
+      http.post(`${API}/v1/stripe/onboard`, () => HttpResponse.json({ ok: true }))
+    );
+    const user = userEvent.setup();
+    await renderEarnings({ config: { stripeStatus: stripeNoAccount } });
+    await user.click(screen.getByRole('button', { name: /get started/i }));
+    expect(await screen.findByText(/failed to start stripe setup/i)).toBeInTheDocument();
+  });
+
+  it('does not open a tab when the dashboard link is not a Stripe URL', async () => {
+    server.use(
+      http.get(`${API}/v1/stripe/dashboard-link`, () =>
+        HttpResponse.json({ url: 'https://evil.example.com/dash' })
+      )
+    );
+    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const user = userEvent.setup();
+    await renderEarnings({ config: { stripeStatus: stripeReadyFull } });
+    await user.click(screen.getByRole('button', { name: /stripe dashboard/i }));
+    expect(await screen.findByText(/failed to open stripe dashboard/i)).toBeInTheDocument();
+    expect(windowOpenSpy).not.toHaveBeenCalled();
+  });
+
+  it('surfaces an error when the dashboard-link request itself fails', async () => {
+    // Regression: apiCall no longer falls back to mock data on GET errors,
+    // so the .catch branch is reachable and the error must render.
+    server.use(
+      http.get(`${API}/v1/stripe/dashboard-link`, () => HttpResponse.error())
+    );
+    const user = userEvent.setup();
+    await renderEarnings({ config: { stripeStatus: stripeReadyFull } });
+    await user.click(screen.getByRole('button', { name: /stripe dashboard/i }));
+    expect(await screen.findByText(/failed to open stripe dashboard/i)).toBeInTheDocument();
+  });
+});
+
+describe('Earnings — payout threshold comes from the API, not a constant', () => {
+  it('hides Withdraw when the balance is under the API threshold even though it is over $50', async () => {
+    await renderEarnings({
+      config: {
+        summary: { ...richSummary, currentBalance: 75.0, payoutThreshold: 100.0 },
+        stripeStatus: stripeReadyFull,
+      },
+    });
+    expect(screen.queryByRole('button', { name: /withdraw/i })).not.toBeInTheDocument();
+  });
+
+  it('shows Withdraw when the balance clears a threshold lower than $50', async () => {
+    await renderEarnings({
+      config: {
+        summary: { ...richSummary, currentBalance: 42.5, payoutThreshold: 25.0 },
+        stripeStatus: stripeReadyFull,
+      },
+    });
+    expect(screen.getByRole('button', { name: /withdraw \$42\.50/i })).toBeInTheDocument();
+  });
+
+  it('renders the API threshold in the payout rules copy', async () => {
+    const user = userEvent.setup();
+    await renderEarnings({
+      config: { summary: { ...richSummary, payoutThreshold: 25.0 } },
+    });
+    await user.click(screen.getByRole('tab', { name: /how it works/i }));
+    const rulesList = document.querySelector('.how-rules');
+    expect(within(rulesList).getByText('$25.00')).toBeInTheDocument();
+  });
+});
+
+describe('Earnings — progress bar math guards', () => {
+  it('falls back to the default threshold (never NaN%) when payoutThreshold is zero', async () => {
+    // A zero threshold from the API is nonsense data. The old code divided by
+    // it and emitted style="width: NaN%", which the browser drops entirely --
+    // leaving the bar rendering at full width. We fall back to the documented
+    // $50 default instead, so 42.50 / 50 = 85%.
+    await renderEarnings({
+      config: { summary: { ...richSummary, payoutThreshold: 0 } },
+    });
+    const fill = document.querySelector('.progress-fill');
+    expect(fill.style.width).toBe('85%');
+    expect(fill.style.width).not.toContain('NaN');
+  });
+
+  it('renders 0% (not NaN%) when payoutThreshold is missing', async () => {
+    const { payoutThreshold, ...noThreshold } = richSummary;
+    await renderEarnings({ config: { summary: noThreshold } });
+    const fill = document.querySelector('.progress-fill');
+    // Falls back to the $50 default, so 42.5 / 50 = 85%
+    expect(fill.style.width).toBe('85%');
+    expect(fill.style.width).not.toContain('NaN');
+  });
+});
+
+describe('Earnings — payout response handling', () => {
+  it('shows an error message when the API returns 200 with success:false', async () => {
+    server.use(
+      http.post(`${API}/v1/stripe/payout`, () =>
+        HttpResponse.json({ success: false, error: 'Payout already pending for this period' })
+      )
+    );
+    const user = userEvent.setup();
+    await renderEarnings({
+      config: { summary: readyForPayoutSummary, stripeStatus: stripeReadyFull },
+    });
+    await user.click(screen.getByRole('button', { name: /withdraw/i }));
+    expect(await screen.findByText(/payout already pending for this period/i)).toBeInTheDocument();
+  });
+
+  it('styles a failed payout as an error even when the message contains the word "success"', async () => {
+    server.use(
+      http.post(`${API}/v1/stripe/payout`, () =>
+        HttpResponse.json({ error: 'Could not successfully reach your bank' }, { status: 400 })
+      )
+    );
+    const user = userEvent.setup();
+    await renderEarnings({
+      config: { summary: readyForPayoutSummary, stripeStatus: stripeReadyFull },
+    });
+    await user.click(screen.getByRole('button', { name: /withdraw/i }));
+    await screen.findByText(/could not successfully reach your bank/i);
+    const msg = document.querySelector('.payout-message');
+    expect(msg.className).toContain('error');
+    expect(msg.className).not.toContain('success');
+  });
+
+  it('refreshes only the financial endpoints after a payout (not referrals or history)', async () => {
+    server.use(
+      http.post(`${API}/v1/stripe/payout`, () =>
+        HttpResponse.json({ success: true, amount: 75.0 })
+      )
+    );
+    const user = userEvent.setup();
+    await renderEarnings({
+      config: { summary: readyForPayoutSummary, stripeStatus: stripeReadyFull },
+    });
+    const before = {
+      summary: callsMatching('/v1/earnings/my-summary').length,
+      referrals: callsMatching('/v1/earnings/my-referrals').length,
+      history: callsMatching('/v1/earnings/my-history').length,
+    };
+    await user.click(screen.getByRole('button', { name: /withdraw/i }));
+    await waitFor(() => {
+      expect(callsMatching('/v1/earnings/my-summary').length).toBe(before.summary + 1);
+    });
+    expect(callsMatching('/v1/earnings/my-referrals').length).toBe(before.referrals);
+    expect(callsMatching('/v1/earnings/my-history').length).toBe(before.history);
+  });
+});
+
+describe('Earnings — accessibility semantics', () => {
+  it('exposes the tab strip as a tablist with four tabs', async () => {
+    await renderEarnings();
+    const tablist = screen.getByRole('tablist', { name: /earnings sections/i });
+    expect(tablist).toBeInTheDocument();
+    expect(screen.getAllByRole('tab')).toHaveLength(4);
+  });
+
+  it('marks only the active tab as aria-selected', async () => {
+    const user = userEvent.setup();
+    await renderEarnings({ config: { referrals: refFixtures } });
+    expect(screen.getByRole('tab', { name: /overview/i })).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('tab', { name: /my referrals/i }));
+    expect(screen.getByRole('tab', { name: /my referrals/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /overview/i })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('moves between tabs with arrow keys', async () => {
+    await renderEarnings();
+    const tablist = screen.getByRole('tablist', { name: /earnings sections/i });
+    fireEvent.keyDown(tablist, { key: 'ArrowRight' });
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /my referrals/i })).toHaveAttribute('aria-selected', 'true');
+    });
+    fireEvent.keyDown(tablist, { key: 'End' });
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /how it works/i })).toHaveAttribute('aria-selected', 'true');
+    });
+    fireEvent.keyDown(tablist, { key: 'Home' });
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /overview/i })).toHaveAttribute('aria-selected', 'true');
+    });
+  });
+
+  it('links each panel back to its tab', async () => {
+    await renderEarnings();
+    const panel = screen.getByRole('tabpanel');
+    expect(panel).toHaveAttribute('aria-labelledby', 'earnings-tab-overview');
+  });
+
+  it('exposes the payout meter as a progressbar with a value', async () => {
+    await renderEarnings({ config: { summary: richSummary } });
+    const meter = screen.getByRole('progressbar');
+    expect(meter).toHaveAttribute('aria-valuenow', '85');
+    expect(meter).toHaveAttribute('aria-valuemax', '100');
+  });
+
+  it('announces load errors through an alert region', async () => {
+    restoreLocation();
+    stubLocation('?stripe=refresh');
+    await renderEarnings();
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toMatch(/stripe onboarding was not completed/i);
+  });
+
+  it('lets the user dismiss the error banner', async () => {
+    restoreLocation();
+    stubLocation('?stripe=refresh');
+    const user = userEvent.setup();
+    await renderEarnings();
+    await screen.findByRole('alert');
+    await user.click(screen.getByRole('button', { name: /dismiss message/i }));
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+  });
+
+  it('gives the audio-ad split a text legend, not colour alone', async () => {
+    const user = userEvent.setup();
+    await renderEarnings();
+    await user.click(screen.getByRole('tab', { name: /how it works/i }));
+    const audioHeading = await screen.findByRole('heading', { name: /audio ad revenue split/i });
+    const audioSection = audioHeading.closest('.how-section');
+    expect(within(audioSection).getByText(/artist \(60%\)/i)).toBeInTheDocument();
+    expect(within(audioSection).getByText(/level 3 referrer \(2%\)/i)).toBeInTheDocument();
+  });
+});
+
+describe('Earnings — list scalability caps', () => {
+  const manyReferrals = Array.from({ length: 60 }, (_, i) => ({
+    userId: `ref-${i}`,
+    username: `referred${i}`,
+    photoUrl: null,
+    adViews: i,
+    earnings: i / 10,
+  }));
+
+  it('renders at most 25 referrals before requiring "Show more"', async () => {
+    const user = userEvent.setup();
+    await renderEarnings({ config: { referrals: manyReferrals } });
+    await user.click(screen.getByRole('tab', { name: /my referrals/i }));
+    await screen.findByText('referred0');
+    expect(document.querySelectorAll('.referral-item')).toHaveLength(25);
+    expect(screen.getByRole('button', { name: /show more referrals/i })).toBeInTheDocument();
+  });
+
+  it('reveals the next page of referrals on click', async () => {
+    const user = userEvent.setup();
+    await renderEarnings({ config: { referrals: manyReferrals } });
+    await user.click(screen.getByRole('tab', { name: /my referrals/i }));
+    await screen.findByText('referred0');
+    await user.click(screen.getByRole('button', { name: /show more referrals/i }));
+    await waitFor(() => {
+      expect(document.querySelectorAll('.referral-item')).toHaveLength(50);
+    });
+  });
+});
+
+describe('Earnings — refresh de-duplication', () => {
+  it('disables the Refresh button while a refresh is in flight', async () => {
+    let resolveFn;
+    const pending = new Promise((r) => { resolveFn = r; });
+    const user = userEvent.setup();
+    await renderEarnings();
+    server.use(
+      http.get(`${API}/v1/earnings/my-summary`, async () => {
+        await pending;
+        return HttpResponse.json(richSummary);
+      })
+    );
+    await user.click(screen.getByRole('button', { name: /refresh/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /refreshing/i })).toBeDisabled();
+    });
+    resolveFn();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^refresh earnings$/i })).not.toBeDisabled();
+    });
   });
 });
