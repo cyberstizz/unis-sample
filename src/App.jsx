@@ -39,6 +39,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import DiscoverPage from './DiscoverPage';   
 import ListenerPage from './ListenerPage';   
 import MessagesPage from './MessagePage';
+import ScrollToTop from './components/ScrollToTop';
 
 // Theme
 import './theme.scss';
@@ -81,6 +82,7 @@ const AppLayout = () => {
 
   return (
     <div className="app-wrapper">
+      <ScrollToTop />           
       {!isAuthPage && <Sidebar />}
 
       <Routes>
