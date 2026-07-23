@@ -800,13 +800,37 @@ These files exist in the repo but are not actively used in the live application.
 ---
 
 ### `Earnings.jsx`
-**Purpose:** Placeholder page for the future artist earnings dashboard. Currently displays a "Coming Soon" message.
+**Purpose:** The earnings dashboard for every signed-in user — listeners see referral income, artists additionally see supporter income. Handles Stripe Connect onboarding and payout requests.
 
-**Status:** UI shell only. No API calls, no data. Stripe Connect and AdSense integration not yet implemented.
+**Status:** Production. Stripe Connect is live; audio-ad revenue is the one stream still marked "Coming Soon" in the UI.
 
-**When complete, this page will show:** Ad play earnings, referred artist revenue share percentages, payout controls.
+**Route:** `/earnings`, behind `AuthRequiredRoute` — guests are redirected to `/login`.
 
-**Dependencies:** `Layout`, `earnings.scss`, `randomrapper.jpeg`
+**Tabs:** `overview` | `referrals` | `payouts` | `how`
+
+**What it shows:**
+- Summary cards — current balance, referral earnings, supporter earnings (artists only), payout progress against the API-supplied threshold
+- Overview — per-level referral breakdown (L1 10% / L2 5% / L3 2%), a 30-day earnings sparkline, and a plain-language list of the user's revenue streams
+- Referrals — the user's downline with avatars, ad-view counts, and per-referral earnings (capped at 25 rows with a "Show more" control)
+- Payouts — Stripe payout history with status badges (capped at 12 rows)
+- How It Works — display-ad and audio-ad revenue splits, the 3-level referral chain, and payout rules
+
+**Stripe Connect flow:**
+- Three banner states driven by `/v1/stripe/status`: no account → onboarding incomplete → payouts enabled
+- "Get Started" / "Continue Setup" POST for an Account Link, then redirect
+- On return, `?stripe=complete` opens the Payouts tab and `?stripe=refresh` surfaces a retry message; both clean the query string via `history.replaceState`
+- Withdraw is offered only when Stripe is ready **and** the balance clears `summary.payoutThreshold`
+- All Stripe-supplied URLs are validated (https + a stripe.com host) before navigation; the dashboard link opens with `noopener,noreferrer`
+
+**Data loading:** five endpoints in parallel via `Promise.allSettled`, so one failing section degrades rather than blanking the page. Each result is logged individually under the `[Earnings]` prefix. A successful payout refreshes only the three financial endpoints, not all five.
+
+**Caching:** every request sets `useCache: false` deliberately. `cacheService` persists to `localStorage`, and account balances must not outlive the session on a shared device.
+
+**Accessibility:** WAI-ARIA tabs (`tablist`/`tab`/`tabpanel`, roving tabindex, arrow/Home/End navigation), `role="progressbar"` on the payout meter, live regions for errors and payout status, and text legends beside every colour-coded revenue bar.
+
+**Dependencies:** `Layout`, `useAuth`, `apiCall`, `utils/buildUrl`, `earnings.scss`, `randomrapper.jpeg`
+
+**Not applicable:** `PlayChoiceModal`. This page has no play surface — no audio is started here, so there is nothing to attribute to artist or user points.
 
 ---
 

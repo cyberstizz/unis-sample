@@ -835,23 +835,32 @@ No internal state or API logic — fully controlled by parent (`ArtistDashboard`
 
 ### `Earnings.jsx`
 
-**Role:** Full earnings dashboard for both listeners and artists. Previously a placeholder — now fully implemented.
+**Role:** Full earnings dashboard for both listeners and artists.
 
-**Tabs:** `overview` | `referrals` | `history` | `payouts`
+**Tabs:** `overview` | `referrals` | `payouts` | `how`
 
 **Key Features:**
-- Earnings summary: total, pending, available balance
-- Referral tracking: list of referred users and earned amounts
-- Earning history: timeline of all earning events
-- Stripe Connect integration: onboarding, payout requests
+- Summary cards: current balance, referral earnings, supporter earnings (artists only), payout progress
+- Referral tracking: downline list with avatars, ad-view counts, per-referral earnings
+- 30-day earnings sparkline and per-level referral breakdown (L1 10% / L2 5% / L3 2%)
+- Stripe Connect integration: onboarding, payout requests, Express dashboard link
+- Payout history with status badges
+- "How It Works" — revenue-split visuals and payout rules
 - Artist-specific vs listener-specific earnings views
 
 **Stripe Connect flow:**
-- Checks URL params for `?stripe=complete` (post-onboarding redirect) or `?stripe=refresh` (incomplete onboarding)
-- Connect Stripe button → POST to get onboarding URL → redirect
-- Request Payout → POST with amount validation
+- Checks URL params for `?stripe=complete` (post-onboarding redirect) or `?stripe=refresh` (incomplete onboarding), then cleans the query string with `history.replaceState`
+- Connect Stripe button → POST to get an Account Link → redirect
+- Request Payout → POST with **no client-supplied amount**; the server determines the payable balance. The client only gates the button on `summary.payoutThreshold`.
+- Every Stripe-supplied URL is validated (https + a stripe.com host) before navigation. `window.open` uses `noopener,noreferrer`.
 
-**Init (parallel calls):** earnings summary, referrals, history, Stripe status, payouts
+**Init (parallel calls):** earnings summary, referrals, history, Stripe status, payouts — via `Promise.allSettled`, each result logged individually under `[Earnings]`. A successful payout refreshes only summary / Stripe status / payouts.
+
+**Caching:** all requests set `useCache: false` deliberately — `cacheService` persists to `localStorage` and balances must not outlive the session.
+
+**Thresholds:** the payout minimum is read from `summary.payoutThreshold` (fallback `$50`), never hardcoded in copy or gating logic.
+
+**PlayChoiceModal:** not applicable — the page has no play surface.
 
 ---
 
@@ -1199,15 +1208,19 @@ if (!user) { triggerGate('vote'); return; }
 | DELETE | `/v1/playlists/{id}/block/{songId}` | PlayerContext (unblockSong) |
 
 ### Earnings
+Identity is derived from the JWT server-side — these endpoints take no `userId`
+path parameter, so a client cannot request another user's financials.
+
 | Method | Endpoint | Used By |
 |--------|----------|---------|
-| GET | `/v1/earnings/{userId}/summary` | Earnings |
-| GET | `/v1/earnings/{userId}/referrals` | Earnings |
-| GET | `/v1/earnings/{userId}/history` | Earnings |
-| GET | `/v1/earnings/{userId}/stripe-status` | Earnings |
-| POST | `/v1/earnings/{userId}/stripe-onboard` | Earnings |
-| GET | `/v1/earnings/{userId}/payouts` | Earnings |
-| POST | `/v1/earnings/{userId}/payout` | Earnings, CashoutPanel |
+| GET | `/v1/earnings/my-summary` | Earnings |
+| GET | `/v1/earnings/my-referrals` | Earnings |
+| GET | `/v1/earnings/my-history?days=30` | Earnings |
+| GET | `/v1/stripe/status` | Earnings |
+| POST | `/v1/stripe/onboard` | Earnings |
+| GET | `/v1/stripe/payouts` | Earnings |
+| POST | `/v1/stripe/payout` | Earnings, CashoutPanel |
+| GET | `/v1/stripe/dashboard-link` | Earnings |
 
 ### Supporters & Followers
 | Method | Endpoint | Used By |
