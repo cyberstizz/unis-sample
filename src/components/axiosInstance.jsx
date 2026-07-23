@@ -2,6 +2,7 @@
 
 import axios from 'axios';
 import cacheService from '../services/cacheService';
+import { clearAllQueueState } from '../utils/queuePersistence';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true';
@@ -100,6 +101,10 @@ axiosInstance.interceptors.response.use(
         localStorage.removeItem('token');
         localStorage.removeItem('unis-theme');
         cacheService.clearAll();
+        // Drop the persisted play queue too. It is per-user data; leaving it
+        // behind means the next account to sign in on this device inherits the
+        // previous user's queue.
+        clearAllQueueState();
         window.dispatchEvent(new CustomEvent('unis:session-expired'));
       }
     }
@@ -318,6 +323,7 @@ export const logoutUser = async () => {
   } finally {
     localStorage.removeItem('token');
     cacheService.clearAll();
+    clearAllQueueState();
     window.location.href = '/login';
   }
 };

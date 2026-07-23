@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import ScrollToTop from './components/ScrollToTop';
 import { PlayerProvider } from './context/playercontext';
 import { RewardProvider } from './context/RewardContext';
 import Player from './player';
@@ -39,7 +40,6 @@ import VerifyEmail from './pages/VerifyEmail';
 import DiscoverPage from './DiscoverPage';   
 import ListenerPage from './ListenerPage';   
 import MessagesPage from './MessagePage';
-import ScrollToTop from './components/ScrollToTop';
 
 // Theme
 import './theme.scss';
@@ -82,7 +82,9 @@ const AppLayout = () => {
 
   return (
     <div className="app-wrapper">
-      <ScrollToTop />           
+      {/* Resets scroll on navigation. Must be inside <Router> to read location,
+          and outside <Routes> so it survives route changes. */}
+      <ScrollToTop />
       {!isAuthPage && <Sidebar />}
 
       <Routes>

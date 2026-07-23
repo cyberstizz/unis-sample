@@ -459,3 +459,162 @@ describe('PlayerContext', () => {
     });
   });
 });
+
+// ===========================================================================
+// QUEUE PERSISTENCE — survives a page refresh
+// ===========================================================================
+//
+// Unmounting and remounting PlayerProvider is the closest faithful analogue of
+// a browser refresh available in jsdom: all React state is destroyed and the
+// provider boots from scratch, reading whatever localStorage holds.
+
+describe('PlayerContext — queue persistence across refresh', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    latestCtx = null;
+  });
+
+  const buildQueue = async () => {
+    const { unmount } = renderProvider();
+    await act(async () => {
+      latestCtx.requestPlay(makeSong('a'));
+    });
+    await act(async () => {
+      latestCtx.playLater(makeSong('b'));
+      latestCtx.playLater(makeSong('c'));
+    });
+    // Let the 500ms debounced writer fire.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 600));
+    });
+    return unmount;
+  };
+
+  it('writes the queue to localStorage after a debounce', async () => {
+    await buildQueue();
+    const raw = localStorage.getItem('unis.queue.guest');
+    expect(raw).toBeTruthy();
+    expect(JSON.parse(raw).queue).toHaveLength(3);
+  });
+
+  it('restores the queue on remount (the refresh case)', async () => {
+    const unmount = await buildQueue();
+    expect(screen.getByTestId('queue-length').textContent).toBe('3');
+    unmount();
+
+    renderProvider();
+    expect(screen.getByTestId('queue-length').textContent).toBe('3');
+    expect(screen.getByTestId('queue-ids').textContent).toBe('a,b,c');
+  });
+
+  it('restores the current track and index', async () => {
+    const unmount = await buildQueue();
+    await act(async () => {
+      latestCtx.next(); // move to 'b'
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 600));
+    });
+    unmount();
+
+    renderProvider();
+    expect(screen.getByTestId('current-index').textContent).toBe('1');
+    expect(screen.getByTestId('current-id').textContent).toBe('b');
+  });
+
+  it('restores paused, never playing (browsers block non-gesture autoplay)', async () => {
+    const unmount = await buildQueue();
+    unmount();
+    renderProvider();
+    expect(screen.getByTestId('is-playing').textContent).toBe('false');
+  });
+
+  it('restores repeat mode and shuffle state', async () => {
+    const unmount = await buildQueue();
+    await act(async () => {
+      latestCtx.cycleRepeat();  // off -> all
+      latestCtx.toggleShuffle();
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 600));
+    });
+    unmount();
+
+    renderProvider();
+    expect(screen.getByTestId('is-shuffled').textContent).toBe('true');
+    expect(latestCtx.repeatMode).toBe('all');
+  });
+
+  it('hands player.jsx a resume offset exactly once', async () => {
+    const unmount = await buildQueue();
+    // The harness renders no <audio> element, so stand one in. PlayerContext
+    // reads the offset straight off audioRef.current at save time.
+    // jsdom's HTMLMediaElement ignores currentTime assignment, so define it.
+    const stubAudio = document.createElement('audio');
+    Object.defineProperty(stubAudio, 'currentTime', { value: 42.5, writable: true });
+    latestCtx.audioRef.current = stubAudio;
+
+    // The mutation and the debounce wait must be in SEPARATE act() calls.
+    // State updates flush at the end of act, so the 500ms save timer is only
+    // registered once the first act closes — waiting inside the same act means
+    // the timer starts after the wait has already elapsed.
+    await act(async () => {
+      latestCtx.playLater(makeSong('d')); // triggers a save that reads currentTime
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 600));
+    });
+    unmount();
+
+    renderProvider();
+    const first = latestCtx.consumePendingResume();
+    const second = latestCtx.consumePendingResume();
+    expect(first?.currentTime).toBeCloseTo(42.5, 1);
+    expect(second).toBeNull(); // consumed — later track changes must not seek
+  });
+
+  it('starts empty when there is nothing persisted', async () => {
+    renderProvider();
+    expect(screen.getByTestId('queue-length').textContent).toBe('0');
+    expect(screen.getByTestId('current-id').textContent).toBe('null');
+  });
+
+  it('does not restore a queue after logout', async () => {
+    const unmount = await buildQueue();
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('unis:logout'));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 600));
+    });
+    unmount();
+
+    renderProvider();
+    expect(screen.getByTestId('queue-length').textContent).toBe('0');
+  });
+
+  it('does not restore a queue after a session-expired 401', async () => {
+    const unmount = await buildQueue();
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('unis:session-expired'));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 600));
+    });
+    unmount();
+
+    renderProvider();
+    expect(screen.getByTestId('queue-length').textContent).toBe('0');
+  });
+
+  it('survives a corrupt persisted payload without breaking the player', async () => {
+    localStorage.setItem('unis.queue.guest', '{{{ not json');
+    renderProvider();
+    expect(screen.getByTestId('queue-length').textContent).toBe('0');
+    // Player still fully functional afterwards.
+    await act(async () => {
+      latestCtx.requestPlay(makeSong('z'));
+    });
+    expect(screen.getByTestId('current-id').textContent).toBe('z');
+  });
+});

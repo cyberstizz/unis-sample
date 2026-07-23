@@ -1,6 +1,26 @@
 // src/context/PlayerContext.js
 import React, { createContext, useState, useRef, useEffect, useCallback } from 'react';
 import axiosInstance from '../components/axiosInstance';
+import { saveQueueState, loadQueueState, clearAllQueueState } from '../utils/queuePersistence';
+
+// ============================================================================
+// CURRENT USER ID
+// ============================================================================
+// Decoded from the JWT rather than pulled from AuthContext on purpose.
+// PlayerProvider is deliberately independent of AuthProvider — it already reads
+// the token directly for playlist loading, and its test suite renders it
+// standalone. Calling useAuth() here would make the provider throw outside an
+// AuthProvider and couple playback to auth for nothing more than a storage-key
+// namespace. Same decode logic AuthContext uses.
+const getCurrentUserId = () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    return JSON.parse(atob(token.split('.')[1])).userId ?? null;
+  } catch {
+    return null;
+  }
+};
 
 export const PlayerContext = createContext();
 
@@ -24,21 +44,50 @@ const buildUrl = (url) => {
 };
 
 export const PlayerProvider = ({ children }) => {
+  // ========================================================================
+  // QUEUE PERSISTENCE — restore
+  // ========================================================================
+  //
+  // Read localStorage synchronously during the first render via a lazy ref,
+  // not in an effect. An effect runs after paint, so the player would flash
+  // empty for a frame and then pop in.
+  //
+  // `false` is used as the "already attempted, found nothing" marker so a
+  // genuine miss isn't retried on every render.
+  const restoredRef = useRef(null);
+  if (restoredRef.current === null) {
+    restoredRef.current = loadQueueState(getCurrentUserId()) ?? false;
+  }
+  const restored = restoredRef.current || null;
+
+  // Playback offset that player.jsx should seek to on the first load after a
+  // refresh. Consumed exactly once — otherwise every later track change would
+  // try to seek to a stale offset.
+  const pendingResumeRef = useRef(
+    restored && restored.currentTime > 0 ? { currentTime: restored.currentTime } : null
+  );
+
+  const consumePendingResume = useCallback(() => {
+    const pending = pendingResumeRef.current;
+    pendingResumeRef.current = null;
+    return pending;
+  }, []);
+
   // --- Player state ---
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentMedia, setCurrentMedia] = useState(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentMedia, setCurrentMedia] = useState(restored?.currentMedia ?? null);
+  const [currentIndex, setCurrentIndex] = useState(restored?.currentIndex ?? 0);
   const [playChoiceModal, setPlayChoiceModal] = useState({ open: false, pendingSong: null });
 
 
-  // --- Queue state (session-based, ephemeral) ---
-  const [queue, setQueue] = useState([]);
-  const [queueSource, setQueueSource] = useState(null);
-  const [isShuffled, setIsShuffled] = useState(false);
-  const [originalQueue, setOriginalQueue] = useState([]);
-  const [autoplay, setAutoplay] = useState(false);
-  const [repeatMode, setRepeatMode] = useState('off');
+  // --- Queue state (persisted across refreshes — see utils/queuePersistence.js) ---
+  const [queue, setQueue] = useState(restored?.queue ?? []);
+  const [queueSource, setQueueSource] = useState(restored?.queueSource ?? null);
+  const [isShuffled, setIsShuffled] = useState(restored?.isShuffled ?? false);
+  const [originalQueue, setOriginalQueue] = useState(restored?.originalQueue ?? []);
+  const [autoplay, setAutoplay] = useState(restored?.autoplay ?? false);
+  const [repeatMode, setRepeatMode] = useState(restored?.repeatMode ?? 'off');
   const cycleRepeat = useCallback(() => { // ★
     setRepeatMode(m => (m === 'off' ? 'all' : m === 'all' ? 'one' : 'off'));
   }, []);
@@ -50,6 +99,45 @@ export const PlayerProvider = ({ children }) => {
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
 
   const audioRef = useRef(null);
+
+  // ========================================================================
+  // QUEUE PERSISTENCE — save
+  // ========================================================================
+
+  // Everything the restore needs, gathered in one place so the debounced write
+  // and the tab-close flush can't drift apart.
+  const snapshotQueueState = useCallback(() => ({
+    queue,
+    originalQueue,
+    currentIndex,
+    currentMedia,
+    queueSource,
+    isShuffled,
+    repeatMode,
+    autoplay,
+    // Read straight off the media element. currentTime ticks ~4x a second and
+    // would cause a re-render storm if it were React state.
+    currentTime: audioRef.current?.currentTime ?? 0,
+  }), [queue, originalQueue, currentIndex, currentMedia, queueSource,
+       isShuffled, repeatMode, autoplay]);
+
+  // Debounced write. Queue mutations are user-paced, but drag-to-reorder fires
+  // continuously, so a 500ms trailing debounce stops it writing every frame.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      saveQueueState(getCurrentUserId(), snapshotQueueState());
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [snapshotQueueState]);
+
+  // Flush immediately on tab close, otherwise the last ~500ms of changes are
+  // lost. `pagehide` rather than `beforeunload` because it fires reliably on
+  // mobile Safari, where beforeunload frequently does not.
+  useEffect(() => {
+    const flush = () => saveQueueState(getCurrentUserId(), snapshotQueueState());
+    window.addEventListener('pagehide', flush);
+    return () => window.removeEventListener('pagehide', flush);
+  }, [snapshotQueueState]);
 
   // ========================================================================
   // PLAYLIST LOADING
@@ -156,14 +244,30 @@ export const PlayerProvider = ({ children }) => {
       setCurrentMedia(null);
       setCurrentIndex(0);
       setQueueSource(null);
+      setIsShuffled(false);
+
+      // Wipe the persisted copy too. Without this, clearing in-memory state
+      // achieves nothing — the debounced writer would just save the empty
+      // queue, or worse, the next account on this device would restore the
+      // previous user's queue on load.
+      clearAllQueueState();
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
     };
 
     window.addEventListener('unis:login', handleLogin);
     window.addEventListener('unis:logout', handleLogout);
+    // The 401 interceptor tears the session down in-app without a redirect,
+    // so it needs the same treatment as an explicit logout.
+    window.addEventListener('unis:session-expired', handleLogout);
 
     return () => {
       window.removeEventListener('unis:login', handleLogin);
       window.removeEventListener('unis:logout', handleLogout);
+      window.removeEventListener('unis:session-expired', handleLogout);
     };
   }, [loadUserPlaylists, loadFollowedPlaylists]);
 
@@ -806,6 +910,10 @@ export const PlayerProvider = ({ children }) => {
       confirmAddToQueue,
       cancelPlayChoice,
       audioRef,
+
+      // Queue persistence — player.jsx calls this once on the first load after
+      // a refresh so it can seek to the saved offset instead of restarting.
+      consumePendingResume,
 
       // Playback
       playMedia,

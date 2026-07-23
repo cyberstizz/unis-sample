@@ -91,6 +91,7 @@ const Player = () => {
     showPlaylistManager,
     closePlaylistManager,
     queue,
+    consumePendingResume,
   } = useContext(PlayerContext);
 
   const { isGuest } = useAuth();
@@ -301,12 +302,52 @@ const Player = () => {
   useEffect(() => {
     if (currentMedia && audioRef.current) {
       const media = audioRef.current;
-      media.currentTime = 0;
-      setCurrentTime(0);
-      lastPercentRef.current = 0; // ★ PLAY-FLOW: reset progress for the new track
 
       const mediaUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
       if (!mediaUrl) return;
+
+      // ★ QUEUE PERSISTENCE: on the first load after a page refresh the queue
+      //   was restored from localStorage, and this effect fires as if a brand
+      //   new track had been selected. Two things must NOT happen in that case:
+      //
+      //     1. Resetting currentTime to 0 — it would discard the saved offset.
+      //     2. Autoplaying — playback that isn't tied to a user gesture is
+      //        blocked by every modern browser, so play() rejects, and the old
+      //        code called setIsPlaying(true) regardless. The UI would show a
+      //        playing state over silence.
+      //
+      //   consumePendingResume() returns the saved offset exactly once, so
+      //   every subsequent track change falls through to normal behaviour.
+      const pendingResume = consumePendingResume?.() ?? null;
+
+      if (pendingResume) {
+        const resumeAt = pendingResume.currentTime || 0;
+        lastPercentRef.current = 0;
+        media.src = mediaUrl;
+
+        const handleResumeReady = () => {
+          // Guard the offset against a track whose duration shrank (re-encode,
+          // replaced upload). Seeking past the end leaves the element stalled.
+          const safeOffset =
+            Number.isFinite(media.duration) && media.duration > 0
+              ? Math.min(resumeAt, Math.max(0, media.duration - 1))
+              : resumeAt;
+          media.currentTime = safeOffset;
+          setCurrentTime(safeOffset);
+          setIsPlaying(false); // restored paused — user presses play
+          media.removeEventListener('loadedmetadata', handleResumeReady);
+        };
+
+        media.addEventListener('loadedmetadata', handleResumeReady);
+        media.load();
+        console.log(`[Player] Restored playback position at ${resumeAt.toFixed(1)}s (paused)`);
+        return () => media.removeEventListener('loadedmetadata', handleResumeReady);
+      }
+
+      // --- Normal track change: start from the top and play ---
+      media.currentTime = 0;
+      setCurrentTime(0);
+      lastPercentRef.current = 0; // ★ PLAY-FLOW: reset progress for the new track
 
       media.src = mediaUrl;
       const handleCanPlay = () => {
