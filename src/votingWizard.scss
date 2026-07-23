@@ -28,7 +28,16 @@ $vw-success: #2fa86b;
 $vw-warn: #e0a93c;
 $vw-error: #d85a3b;
 
-$vw-display: "Bitcount Grid Double", "Bitcount Grid", system-ui, sans-serif;
+// ── DISPLAY FONT ────────────────────────────────────────────────────────
+// Was "Bitcount Grid Double". That declaration dated from May 11, but the
+// font was never actually loaded by any stylesheet, so it silently fell back
+// to system-ui and nobody saw it. On Jul 22 findpage.scss added
+//   @import url('...family=Bitcount+Grid+Double...')
+// and because CSS is global, the font suddenly resolved everywhere it was
+// declared — including here. The wizard "changed" without being touched.
+// Switched to the app's actual display face (Plus Jakarta Sans, 30 uses
+// across the codebase, same as .artist-of-week-name).
+$vw-display: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 $vw-body: system-ui, -apple-system, "Segoe UI", sans-serif;
 
 $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -303,10 +312,26 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   line-height: 1.1;
   word-break: break-word;
 
-  background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+  // Theme-aware. This was a flat white-to-grey gradient since it was written
+  // on May 11 — it has never picked up --unis-primary. Now it fades from white
+  // into the user's theme, so the nominee name reads as part of the app.
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    var(--unis-primary-2, #3a5fcf) 115%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+
+  // Safari/Firefox occasionally drop background-clip: text on reflow; without
+  // a fallback colour the name would render fully invisible rather than merely
+  // unstyled.
+  @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: $vw-text;
+  }
 }
 
 // -------------------------------------------------------------------------
