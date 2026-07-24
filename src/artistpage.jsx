@@ -13,23 +13,31 @@ import MessageButton from './MessageButton';
 import useModalA11y from './hooks/useModalA11y';
 
 // ─── Award rail definitions ────────────────────────────────────
-// 12 fixed slots (Song + Artist across 6 intervals). A medal only
-// renders when the artist has won that award at least once. Backend
-// is expected to return either an array of { key, count } / { entity,
-// interval, count } objects, or a plain { "artist-month": 3 } map.
+// 12 slots: 2 entities (artist, song) x 6 voting intervals. A medal only
+// renders when that award has actually been won at least once.
+//
+// Interval keys are the LIVE names from the voting_intervals table,
+// lowercased: Daily, Weekly, Midterm, Monthly, Quarterly, Annual.
+// (An earlier version of this file used day/week/month/quarter/year/alltime —
+// those never matched anything, and "alltime" isn't a real interval.)
+//
+// GET /v1/users/{artistId}/awards returns [{ entity, interval, count }].
+// normalizeAwards() also still accepts a plain { "artist-daily": 3 } map.
+//
+// `rank` drives rail order: most prestigious medal sits at the top.
 const AWARD_DEFS = [
-  { key: 'song-day',      entity: 'song',   label: 'Song of the Day',      short: 'DAY' },
-  { key: 'artist-day',    entity: 'artist', label: 'Artist of the Day',    short: 'DAY' },
-  { key: 'song-week',     entity: 'song',   label: 'Song of the Week',     short: 'WK'  },
-  { key: 'artist-week',   entity: 'artist', label: 'Artist of the Week',   short: 'WK'  },
-  { key: 'song-month',    entity: 'song',   label: 'Song of the Month',    short: 'MO'  },
-  { key: 'artist-month',  entity: 'artist', label: 'Artist of the Month',  short: 'MO'  },
-  { key: 'song-quarter',  entity: 'song',   label: 'Song of the Quarter',  short: 'QTR' },
-  { key: 'artist-quarter',entity: 'artist', label: 'Artist of the Quarter',short: 'QTR' },
-  { key: 'song-year',     entity: 'song',   label: 'Song of the Year',     short: 'YR'  },
-  { key: 'artist-year',   entity: 'artist', label: 'Artist of the Year',   short: 'YR'  },
-  { key: 'song-alltime',  entity: 'song',   label: 'Song of All Time',     short: 'ALL' },
-  { key: 'artist-alltime',entity: 'artist', label: 'Artist of All Time',   short: 'ALL' },
+  { key: 'artist-annual',    entity: 'artist', interval: 'annual',    rank: 0, label: 'Artist of the Year',      short: 'YR'  },
+  { key: 'artist-quarterly', entity: 'artist', interval: 'quarterly', rank: 1, label: 'Artist of the Quarter',   short: 'QTR' },
+  { key: 'artist-monthly',   entity: 'artist', interval: 'monthly',   rank: 2, label: 'Artist of the Month',     short: 'MO'  },
+  { key: 'artist-midterm',   entity: 'artist', interval: 'midterm',   rank: 3, label: 'Artist of the Midterm',   short: 'MID' },
+  { key: 'artist-weekly',    entity: 'artist', interval: 'weekly',    rank: 4, label: 'Artist of the Week',      short: 'WK'  },
+  { key: 'artist-daily',     entity: 'artist', interval: 'daily',     rank: 5, label: 'Artist of the Day',       short: 'DAY' },
+  { key: 'song-annual',      entity: 'song',   interval: 'annual',    rank: 0, label: 'Song of the Year',        short: 'YR'  },
+  { key: 'song-quarterly',   entity: 'song',   interval: 'quarterly', rank: 1, label: 'Song of the Quarter',     short: 'QTR' },
+  { key: 'song-monthly',     entity: 'song',   interval: 'monthly',   rank: 2, label: 'Song of the Month',       short: 'MO'  },
+  { key: 'song-midterm',     entity: 'song',   interval: 'midterm',   rank: 3, label: 'Song of the Midterm',     short: 'MID' },
+  { key: 'song-weekly',      entity: 'song',   interval: 'weekly',    rank: 4, label: 'Song of the Week',        short: 'WK'  },
+  { key: 'song-daily',       entity: 'song',   interval: 'daily',     rank: 5, label: 'Song of the Day',         short: 'DAY' },
 ];
 
 const normalizeAwards = (data) => {
@@ -50,18 +58,54 @@ const normalizeAwards = (data) => {
 };
 
 // Inline glyphs (project convention: inline SVG, never lucide inside buttons)
-const AwardGlyph = ({ entity }) =>
-  entity === 'artist' ? (
+//
+// One distinct symbol per voting interval, so a fan can read the rail at a
+// glance: sun = daily, arc = weekly, half-moon = midterm, full moon = monthly,
+// quarter-pie = quarterly, crown = annual. Entity is carried by COLOR, not
+// shape — artist medals take the user's theme accent, song medals stay gold.
+const INTERVAL_GLYPHS = {
+  daily: (
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none" />
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
+    </svg>
+  ),
+  weekly: (
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" aria-hidden="true">
+      <path d="M4 14a8 8 0 0 1 16 0" />
+      <circle cx="12" cy="14" r="1.6" fill="currentColor" stroke="none" />
+      <path d="M12 14l4.5-4" />
+    </svg>
+  ),
+  midterm: (
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  monthly: (
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="9.4" cy="9.6" r="1.5" fill="rgba(0,0,0,0.45)" />
+      <circle cx="14.6" cy="13.4" r="2" fill="rgba(0,0,0,0.35)" />
+      <circle cx="10" cy="15" r="1.1" fill="rgba(0,0,0,0.35)" />
+    </svg>
+  ),
+  quarterly: (
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 12V4a8 8 0 0 1 8 8z" fill="currentColor" stroke="none" />
+      <path d="M12 12V4M12 12h8" />
+    </svg>
+  ),
+  annual: (
     <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
       <path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 11H5L3 7z" />
     </svg>
-  ) : (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 18V5l11-2v11" />
-      <circle cx="6" cy="18" r="3" />
-      <circle cx="17" cy="16" r="3" />
-    </svg>
-  );
+  ),
+};
+
+const AwardGlyph = ({ interval }) => INTERVAL_GLYPHS[interval] || INTERVAL_GLYPHS.annual;
 
 const ZapGlyph = ({ size = 15 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -334,6 +378,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const [songColors, setSongColors] = useState({}); // songId -> ambient rgb
   const [photos, setPhotos] = useState([]);        // artist gallery photos
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [awardsRevealed, setAwardsRevealed] = useState(false); // medal rail entrance
 
   // ---- Supporter (switch-supported-artist) state ------------------------
   const [isSupporting, setIsSupporting] = useState(false);
@@ -454,6 +499,15 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     if (songs.length) run();
     return () => { cancelled = true; };
   }, [songs]);
+
+  // Medal rails slide in AFTER the hero portrait has landed, so the artist's
+  // face reads first and the prestige arrives as a second beat. Base delay
+  // plus the per-medal stagger in SCSS finishes comfortably under 2s.
+  useEffect(() => {
+    if (loading) return undefined;
+    const timer = setTimeout(() => setAwardsRevealed(true), 650);
+    return () => clearTimeout(timer);
+  }, [loading, artistId]);
 
   const handleFollow = async () => {
     const previousState = isFollowing;
@@ -616,7 +670,12 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
   const earnedAwards = AWARD_DEFS
     .map((def) => ({ ...def, count: awards[def.key] || 0 }))
-    .filter((a) => a.count > 0);
+    .filter((a) => a.count > 0)
+    .sort((a, b) => a.rank - b.rank); // most prestigious at the top of each rail
+
+  // Left rail = who they are. Right rail = what they made.
+  const artistAwards = earnedAwards.filter((a) => a.entity === 'artist');
+  const songAwards = earnedAwards.filter((a) => a.entity === 'song');
 
   const videoUrl = artist.featuredVideoUrl || artist.videoUrl || null;
 
@@ -664,26 +723,60 @@ const ArtistPage = ({ isOwnProfile = false }) => {
             <div className="ap2-hero__vignette" />
           </div>
 
-          {/* Award rail — only earned awards appear (max 12 slots) */}
-          {earnedAwards.length > 0 && (
-            <div className="ap2-awards" aria-label={`${artist.username} awards`}>
-              {earnedAwards.map((a) => (
+          {/* Award rails — the Unis prestige signal. Artist wins slide in from
+              the left edge, song wins from the right. Only awards actually won
+              render; each medal shows the interval and a ×N win tally. */}
+          {artistAwards.length > 0 && (
+            <div
+              className={`ap2-awards ap2-awards--left ${awardsRevealed ? 'ap2-awards--in' : ''}`}
+              role="list"
+              aria-label={`${artist.username} artist awards`}
+            >
+              {artistAwards.map((a, i) => (
                 <div
                   key={a.key}
-                  className={`ap2-award ap2-award--${a.entity}`}
+                  role="listitem"
+                  className="ap2-award ap2-award--artist"
+                  style={{ '--ap2-award-delay': `${i * 0.11}s` }}
                   title={`${a.label} — won ${a.count}×`}
+                  aria-label={`${a.label}, won ${a.count} ${a.count === 1 ? 'time' : 'times'}`}
                 >
-                  <span className="ap2-award__medal"><AwardGlyph entity={a.entity} /></span>
-                  <span className="ap2-award__caption">
+                  <span className="ap2-award__medal"><AwardGlyph interval={a.interval} /></span>
+                  <span className="ap2-award__caption" aria-hidden="true">
                     <span className="ap2-award__int">{a.short}</span>
-                    <span className="ap2-award__count">{a.count}×</span>
+                    <span className="ap2-award__count">×{a.count}</span>
                   </span>
                 </div>
               ))}
             </div>
           )}
 
-          <div className={`ap2-hero__content ${earnedAwards.length > 0 ? 'ap2-hero__content--inset' : ''}`}>
+          {songAwards.length > 0 && (
+            <div
+              className={`ap2-awards ap2-awards--right ${awardsRevealed ? 'ap2-awards--in' : ''}`}
+              role="list"
+              aria-label={`${artist.username} song awards`}
+            >
+              {songAwards.map((a, i) => (
+                <div
+                  key={a.key}
+                  role="listitem"
+                  className="ap2-award ap2-award--song"
+                  style={{ '--ap2-award-delay': `${i * 0.11}s` }}
+                  title={`${a.label} — won ${a.count}×`}
+                  aria-label={`${a.label}, won ${a.count} ${a.count === 1 ? 'time' : 'times'}`}
+                >
+                  <span className="ap2-award__medal"><AwardGlyph interval={a.interval} /></span>
+                  <span className="ap2-award__caption" aria-hidden="true">
+                    <span className="ap2-award__int">{a.short}</span>
+                    <span className="ap2-award__count">×{a.count}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className={`ap2-hero__content ${artistAwards.length > 0 ? 'ap2-hero__content--inset-l' : ''} ${songAwards.length > 0 ? 'ap2-hero__content--inset-r' : ''}`}>
             <div className="ap2-hero__tags">
               <span
                 className="ap2-hero__jurisdiction"

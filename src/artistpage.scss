@@ -272,13 +272,18 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   }
 }
 
-// ─── AWARD RAIL ────────────────────────────────────────────────
-// Vertical column on the left edge, upper-left → lower-left.
-// Only earned awards render (max 12). Count is theme-colored.
+// ─── AWARD RAILS ───────────────────────────────────────────────
+// The Unis prestige signal. Two mirrored columns pinned to the hero edges:
+// LEFT = artist awards (who they are), RIGHT = song awards (what they made).
+// Only awards actually won render, max 6 per side.
+//
+// Entrance: the hero portrait lands first, then the medals slide in from
+// their own edge, staggered top-to-bottom. JS flips --in ~650ms after load;
+// each medal adds --ap2-award-delay (0.11s apart), so the last of six starts
+// at ~1.2s and the sequence finishes under 2s.
 .ap2-awards {
   position: absolute;
   z-index: 3;
-  left: 16px;
   top: 84px;
   bottom: 150px;
   display: flex;
@@ -289,12 +294,14 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   pointer-events: none;
 
   @media (max-width: 600px) {
-    left: 10px;
     top: 70px;
     bottom: 130px;
     width: 44px;
     gap: 9px;
   }
+
+  &--left  { left: 16px;  @media (max-width: 600px) { left: 8px; } }
+  &--right { right: 16px; @media (max-width: 600px) { right: 8px; } }
 }
 
 .ap2-award {
@@ -304,7 +311,20 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   gap: 3px;
   pointer-events: auto;
   cursor: default;
-  animation: ap2-fadeUp 0.5s ease-out both;
+
+  // Off-stage until the rail is revealed. Direction comes from the parent.
+  opacity: 0;
+  transition:
+    opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1) var(--ap2-award-delay, 0s),
+    transform 0.55s cubic-bezier(0.16, 1, 0.3, 1) var(--ap2-award-delay, 0s);
+
+  .ap2-awards--left & { transform: translateX(-26px) scale(0.9); }
+  .ap2-awards--right & { transform: translateX(26px) scale(0.9); }
+
+  .ap2-awards--in & {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 
   &__medal {
     width: 30px;
@@ -373,11 +393,17 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   // Left-aligned like the Stitch mockup (not centered)
   animation: ap2-fadeUp 0.8s ease-out both;
 
-  // When the award rail is present, clear its column so nothing collides
-  &--inset {
+  // Clear whichever rails are present so nothing collides
+  &--inset-l {
     padding-left: 60px;
 
-    @media (max-width: 600px) { padding-left: 50px; }
+    @media (max-width: 600px) { padding-left: 48px; }
+  }
+
+  &--inset-r {
+    padding-right: 60px;
+
+    @media (max-width: 600px) { padding-right: 48px; }
   }
 }
 
@@ -1905,8 +1931,17 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 // REDUCED MOTION — quality floor
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @media (prefers-reduced-motion: reduce) {
+  // Medals appear in place — no slide, no stagger — but still appear.
+  .ap2-award {
+    transition: none;
+    opacity: 1;
+  }
+  .ap2-awards--left .ap2-award,
+  .ap2-awards--right .ap2-award {
+    transform: none;
+  }
+
   .ap2-card,
-  .ap2-award,
   .ap2-hero__content,
   .ap2-hero__meta,
   .ap2-hero__actions,
