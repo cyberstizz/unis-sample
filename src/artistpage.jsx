@@ -10,6 +10,7 @@ import { useAuth } from './context/AuthContext';
 import { incrementGateSongCount } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
 import MessageButton from './MessageButton';
+import DownloadModal from './DownloadModal';
 import useModalA11y from './hooks/useModalA11y';
 
 // ─── Award rail definitions ────────────────────────────────────
@@ -378,6 +379,81 @@ const PhotoLightbox = ({ photos, index, artistName, onClose, onPrev, onNext }) =
   );
 };
 
+// =============================================================================
+// ShopSheet — the Shop button's home. Lists this artist's downloadable songs
+// (policy 'free' or 'paid'); tapping one hands off to the shared DownloadModal
+// (same component + song shape the player uses). Empty state when the artist
+// has nothing for sale yet.
+// =============================================================================
+const formatSongPrice = (song) => {
+  if (song.downloadPolicy === 'paid' && song.downloadPrice) {
+    return `$${(Number(song.downloadPrice) / 100).toFixed(2)}`;
+  }
+  return 'Free';
+};
+
+const ShopSheet = ({ show, onClose, artistName, songs, onPick }) => {
+  const modalRef = useRef(null);
+  useModalA11y({ active: show, onClose, modalRef });
+
+  if (!show) return null;
+
+  const sellable = songs.filter((s) => s.downloadPolicy !== 'unavailable');
+
+  return (
+    <div className="ap2-supsheet" role="presentation" onClick={onClose}>
+      <div
+        className="ap2-supsheet__card ap2-shopsheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${artistName} shop`}
+        ref={modalRef}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="ap2-supsheet__close" onClick={onClose} aria-label="Close shop">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+
+        <h3 className="ap2-supsheet__title">{artistName}&rsquo;s Shop</h3>
+
+        {sellable.length === 0 ? (
+          <div className="ap2-shopsheet__empty">
+            <span className="ap2-supsheet__stateicon ap2-supsheet__stateicon--ok">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M6 2L3 6v13a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+            </span>
+            <p className="ap2-supsheet__statesub">
+              Nothing for sale yet — {artistName} hasn&rsquo;t put any songs up for download. Check back soon.
+            </p>
+            <button className="ap2-supsheet__btn ap2-supsheet__btn--primary" onClick={onClose}>Got it</button>
+          </div>
+        ) : (
+          <div className="ap2-shopsheet__list">
+            {sellable.map((song) => (
+              <button
+                key={song.songId}
+                type="button"
+                className="ap2-shopsheet__row"
+                onClick={() => onPick(song)}
+              >
+                <img src={buildUrl(song.artworkUrl) || undefined} alt="" className="ap2-shopsheet__art" />
+                <span className="ap2-shopsheet__info">
+                  <span className="ap2-shopsheet__songtitle">{song.title}</span>
+                  <span className="ap2-shopsheet__meta">{(song.plays || 0).toLocaleString()} plays</span>
+                </span>
+                <span className={`ap2-shopsheet__price ${song.downloadPolicy === 'paid' ? 'ap2-shopsheet__price--paid' : ''}`}>
+                  {formatSongPrice(song)}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ArtistPage = ({ isOwnProfile = false }) => {
   const { artistId } = useParams();
   const { requestPlay } = useContext(PlayerContext);
@@ -402,6 +478,9 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const [photos, setPhotos] = useState([]);        // artist gallery photos
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [awardsRevealed, setAwardsRevealed] = useState(false); // medal rail entrance
+  const [showShopSheet, setShowShopSheet] = useState(false);
+  const [shopSong, setShopSong] = useState(null); // song handed to DownloadModal
+  const [showAllSongs, setShowAllSongs] = useState(false);
 
   // ---- Supporter (switch-supported-artist) state ------------------------
   const [isSupporting, setIsSupporting] = useState(false);
@@ -589,7 +668,15 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   };
 
   const handleShop = () => {
-    // TODO: open artist storefront / buy-music flow
+    if (isGuest) { navigate('/login'); return; }
+    console.log('[Shop] open:', { artistId, sellableCount: songs.filter((s) => s.downloadPolicy !== 'unavailable').length });
+    setShowShopSheet(true);
+  };
+
+  const handleShopPick = (song) => {
+    console.log('[Shop] song picked:', { songId: song.songId, policy: song.downloadPolicy, price: song.downloadPrice });
+    setShowShopSheet(false);
+    setShopSong(song);
   };
 
   // ---- Gallery lightbox --------------------------------------------------
@@ -696,11 +783,10 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     .filter((a) => a.count > 0)
     .sort((a, b) => a.rank - b.rank); // most prestigious first
 
-  // One trophy shelf: artist medals (theme-colored) lead, song medals (gold)
-  // follow, each group ordered most prestigious → least.
+  // Side rails: LEFT = artist medals (theme-colored, who they are),
+  // RIGHT = song medals (gold, what they made). Most prestigious at the top.
   const artistAwards = earnedAwards.filter((a) => a.entity === 'artist');
   const songAwards = earnedAwards.filter((a) => a.entity === 'song');
-  const shelfAwards = [...artistAwards, ...songAwards];
 
   const videoUrl = artist.featuredVideoUrl || artist.videoUrl || null;
 
@@ -748,22 +834,49 @@ const ArtistPage = ({ isOwnProfile = false }) => {
             <div className="ap2-hero__vignette" />
           </div>
 
-          {/* Trophy shelf — the Unis prestige signal, in its own band across
-              the top of the hero. Only earned awards render. Each medal names
-              its award in full and carries a ×N win chip. Scrolls sideways
-              like a trophy case when a decorated artist overflows it. */}
-          {shelfAwards.length > 0 && (
+          {/* Medal rails — back on the hero's edges where they belong.
+              Absolutely positioned overlays: they never move any other
+              element. LEFT = artist medals, RIGHT = song medals, most
+              prestigious first. Each medal names its award in full and
+              carries a ×N win chip. Rails scroll quietly if a decorated
+              artist overflows the space above the hero text. */}
+          {artistAwards.length > 0 && (
             <div
-              className={`ap2-badges ${awardsRevealed ? 'ap2-badges--in' : ''}`}
+              className={`ap2-rail ap2-rail--left ${awardsRevealed ? 'ap2-rail--in' : ''}`}
               role="list"
-              aria-label={`${artist.username} awards`}
+              aria-label={`${artist.username} artist awards`}
             >
-              {shelfAwards.map((a, i) => (
+              {artistAwards.map((a, i) => (
                 <div
                   key={a.key}
                   role="listitem"
-                  className={`ap2-badge ap2-badge--${a.entity}`}
-                  style={{ '--ap2-badge-delay': `${i * 0.09}s` }}
+                  className="ap2-badge ap2-badge--artist"
+                  style={{ '--ap2-badge-delay': `${i * 0.1}s` }}
+                  aria-label={`${a.label}, won ${a.count} ${a.count === 1 ? 'time' : 'times'}`}
+                >
+                  <span className="ap2-badge__medal">
+                    <MedalBase />
+                    <span className="ap2-badge__glyph"><AwardGlyph interval={a.interval} /></span>
+                    <span className="ap2-badge__count" aria-hidden="true">×{a.count}</span>
+                  </span>
+                  <span className="ap2-badge__label" aria-hidden="true">{a.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {songAwards.length > 0 && (
+            <div
+              className={`ap2-rail ap2-rail--right ${awardsRevealed ? 'ap2-rail--in' : ''}`}
+              role="list"
+              aria-label={`${artist.username} song awards`}
+            >
+              {songAwards.map((a, i) => (
+                <div
+                  key={a.key}
+                  role="listitem"
+                  className="ap2-badge ap2-badge--song"
+                  style={{ '--ap2-badge-delay': `${i * 0.1}s` }}
                   aria-label={`${a.label}, won ${a.count} ${a.count === 1 ? 'time' : 'times'}`}
                 >
                   <span className="ap2-badge__medal">
@@ -829,7 +942,11 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
                     Play Discography
                   </button>
-                  <MessageButton recipientId={artistId} />
+                  <MessageButton
+                    recipientId={artistId}
+                    recipientName={artist.username}
+                    recipientPhotoUrl={artist.photoUrl ? buildUrl(artist.photoUrl) : null}
+                  />
                   <button
                     onClick={openSupporterSheet}
                     className={`ap2-hero__btn-support ${isSupporting ? 'ap2-hero__btn-support--active' : ''}`}
@@ -981,10 +1098,18 @@ const ArtistPage = ({ isOwnProfile = false }) => {
               <div className="ap2-card ap2-popular">
                 <div className="ap2-popular__header">
                   <h3>Popular</h3>
-                  {songs.length > 5 && <span className="ap2-popular__seeall">See all</span>}
+                  {songs.length > 5 && (
+                    <button
+                      type="button"
+                      className="ap2-popular__seeall"
+                      onClick={() => setShowAllSongs((v) => !v)}
+                    >
+                      {showAllSongs ? 'Show less' : 'See all'}
+                    </button>
+                  )}
                 </div>
                 <div className="ap2-popular__list">
-                  {songs.slice(0, 5).map((song, idx) => (
+                  {(showAllSongs ? songs : songs.slice(0, 5)).map((song, idx) => (
                     <div
                       key={song.songId}
                       className="ap2-track"
@@ -1135,6 +1260,30 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         onClose={() => setLightboxIndex(null)}
         onPrev={showPrevPhoto}
         onNext={showNextPhoto}
+      />
+
+      <ShopSheet
+        show={showShopSheet}
+        onClose={() => setShowShopSheet(false)}
+        artistName={artist.username}
+        songs={songs}
+        onPick={handleShopPick}
+      />
+
+      {/* Same component + song shape the player uses for its download flow */}
+      <DownloadModal
+        isOpen={Boolean(shopSong)}
+        onClose={() => setShopSong(null)}
+        song={shopSong ? {
+          id: shopSong.songId,
+          title: shopSong.title || 'Untitled',
+          artist: artist.username,
+          artworkUrl: buildUrl(shopSong.artworkUrl) || artistPhoto,
+          downloadUrl: buildUrl(shopSong.fileUrl),
+          downloadPolicy: shopSong.downloadPolicy || 'free',
+          downloadPrice: shopSong.downloadPrice || null,
+          fileName: `${artist.username} - ${shopSong.title || 'Track'}.mp3`,
+        } : {}}
       />
     </Layout>
   );
