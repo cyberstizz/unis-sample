@@ -275,41 +275,50 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   }
 }
 
-// ─── TROPHY SHELF ──────────────────────────────────────────────
-// The Unis prestige signal: a horizontal band of medal badges across the top
-// of the hero, in its own section so the hero buttons keep their original
-// layout untouched. Scrolls sideways like a trophy case when a decorated
-// artist has more medals than the screen fits (edge fade hints at more).
+// ─── MEDAL RAILS ───────────────────────────────────────────────
+// The Unis prestige signal, pinned to the hero's edges — LEFT = artist
+// medals (theme accent), RIGHT = song medals (gold). Pure overlays: they are
+// absolutely positioned and never move the hero content, which keeps its
+// original layout untouched.
 //
-// Entrance: the portrait lands first, then medals drop into the shelf
-// staggered left→right. JS flips --in ~650ms after load; each badge adds
-// --ap2-badge-delay (0.09s apart) so even a full case finishes under 2s.
+// Rails occupy the upper band of the hero (content is bottom-anchored, so
+// this space is free). If a heavily decorated artist overflows the band, the
+// rail scrolls quietly (no visible scrollbar, bottom fade hints at more).
 //
-// Theme awareness: the whole medal (ring, ribbon, glyph, count) inherits
-// `color` — artist medals take the user's theme accent, song medals gold.
-.ap2-badges {
+// Entrance: portrait lands first, then medals slide in from their own edge,
+// staggered top-to-bottom — JS flips --in ~650ms after load, each medal adds
+// --ap2-badge-delay (0.1s apart); six finish comfortably under 2s.
+.ap2-rail {
   position: absolute;
   z-index: 3;
-  top: 14px;
-  left: 0;
-  right: 0;
+  top: 88px;
+  bottom: 42%;
   display: flex;
-  justify-content: safe center;
-  gap: 4px;
-  padding: 12px 18px 16px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 78px;
+  overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
+  pointer-events: none;
+  .ap2-badge { pointer-events: auto; }
 
-  // Edge fade: hints that the trophy case continues off-screen
-  mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  // Bottom fade hints when medals continue past the band
+  mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 18px), transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 18px), transparent 100%);
+
+  &--left  { left: 8px; }
+  &--right { right: 8px; }
 
   @media (max-width: 600px) {
-    top: 8px;
-    padding: 10px 14px 12px;
+    top: 72px;
+    bottom: 40%;
+    width: 68px;
+    gap: 8px;
+    &--left  { left: 4px; }
+    &--right { right: 4px; }
   }
 }
 
@@ -318,19 +327,21 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   flex-direction: column;
   align-items: center;
   flex-shrink: 0;
-  width: 96px;
+  width: 100%;
   cursor: default;
 
-  // Off-stage until the shelf reveals; drops in with a slight overshoot
+  // Off-stage until the rail reveals; slides in from its own edge
   opacity: 0;
-  transform: translateY(-16px) scale(0.9);
   transition:
     opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1) var(--ap2-badge-delay, 0s),
-    transform 0.5s cubic-bezier(0.34, 1.4, 0.4, 1) var(--ap2-badge-delay, 0s);
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1) var(--ap2-badge-delay, 0s);
 
-  .ap2-badges--in & {
+  .ap2-rail--left & { transform: translateX(-24px) scale(0.92); }
+  .ap2-rail--right & { transform: translateX(24px) scale(0.92); }
+
+  .ap2-rail--in & {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateX(0) scale(1);
   }
 
   // Entity carried by COLOR: artist = user theme, song = gold
@@ -343,14 +354,19 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 
   &__medal {
     position: relative;
-    width: 64px;
-    height: 80px;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.55));
+    width: 50px;
+    height: 62px;
+    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.55));
     transition: transform 0.2s;
+
+    @media (max-width: 600px) {
+      width: 44px;
+      height: 55px;
+    }
   }
 
   &:hover &__medal {
-    transform: translateY(-2px) scale(1.05);
+    transform: translateY(-2px) scale(1.06);
   }
 
   &__base {
@@ -359,11 +375,12 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
     height: 100%;
   }
 
-  // Interval symbol, centered on the disc, ~double the old rail size
+  // Interval symbol, centered on the disc (svg viewBox is 64x80,
+  // disc center at 50%/36%)
   &__glyph {
     position: absolute;
-    top: 29px;
-    left: 32px;
+    top: 36%;
+    left: 50%;
     transform: translate(-50%, -50%);
     display: flex;
     align-items: center;
@@ -371,22 +388,27 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
     color: inherit;
 
     svg {
-      width: 24px;
-      height: 24px;
+      width: 19px;
+      height: 19px;
+
+      @media (max-width: 600px) {
+        width: 17px;
+        height: 17px;
+      }
     }
   }
 
   // ×N win chip pinned to the medal's shoulder
   &__count {
     position: absolute;
-    top: -3px;
-    right: -6px;
-    padding: 2px 7px;
+    top: -4px;
+    right: -8px;
+    padding: 1.5px 6px;
     border-radius: 20px;
     background: rgba(9, 9, 13, 0.88);
     border: 1px solid currentColor;
     font-family: 'DM Sans', sans-serif;
-    font-size: 10.5px;
+    font-size: 9.5px;
     font-weight: 800;
     line-height: 1.3;
     color: inherit;
@@ -396,27 +418,36 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 
   // Full award name, written on the badge itself
   &__label {
-    margin-top: 3px;
-    max-width: 94px;
+    margin-top: 2px;
+    max-width: 72px;
     text-align: center;
     font-family: 'DM Sans', sans-serif;
-    font-size: 9px;
+    font-size: 7.5px;
     font-weight: 700;
-    letter-spacing: 0.9px;
+    letter-spacing: 0.7px;
     line-height: 1.35;
     text-transform: uppercase;
     color: $ap2-text-1;
-    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.75);
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.8);
     text-wrap: balance;
+
+    @media (max-width: 600px) {
+      font-size: 7px;
+      max-width: 64px;
+    }
   }
 }
 
 .ap2-hero__content {
   position: relative;
   z-index: 1;
-  max-width: 900px;
+  // Shares the SAME centered column as .ap2-body__content (980px), so the
+  // hero name/buttons and the cards below line up on one left edge. On wide
+  // desktops this kills the "hero hugs the sidebar, cards float centered"
+  // mismatch that read as misalignment.
+  max-width: 980px;
   width: 100%;
-  // Left-aligned like the Stitch mockup (not centered)
+  margin: 0 auto;
   animation: ap2-fadeUp 0.8s ease-out both;
 }
 
@@ -1303,8 +1334,17 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   letter-spacing: 0.8px;
   cursor: pointer;
   transition: color 0.2s;
+  background: none;
+  border: none;
+  padding: 4px 2px;
 
   &:hover { color: $ap2-text-1; }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 70%, #ffffff);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
 .ap2-popular__list {
@@ -1938,6 +1978,117 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   line-height: 1.6;
   color: $ap2-text-2;
   margin: 0 0 8px;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SHOP SHEET — downloadable songs list (hands off to DownloadModal)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap2-shopsheet {
+  max-width: 420px;
+  text-align: left;
+
+  .ap2-supsheet__title {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+}
+
+.ap2-shopsheet__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+
+  .ap2-supsheet__statesub { margin-bottom: 4px; }
+  .ap2-supsheet__btn { max-width: 220px; }
+}
+
+.ap2-shopsheet__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: min(52vh, 380px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  padding-right: 2px;
+}
+
+.ap2-shopsheet__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $ap2-border;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, transparent);
+    transform: translateX(2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 70%, #ffffff);
+    outline-offset: 1px;
+  }
+}
+
+.ap2-shopsheet__art {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ap2-shopsheet__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ap2-shopsheet__songtitle {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: $ap2-text-1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ap2-shopsheet__meta {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  color: $ap2-text-3;
+}
+
+.ap2-shopsheet__price {
+  flex-shrink: 0;
+  padding: 4px 11px;
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: $ap2-text-2;
+
+  &--paid {
+    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 20%, transparent);
+    border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 50%, transparent);
+    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 38%, #ffffff);
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

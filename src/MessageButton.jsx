@@ -2,13 +2,22 @@
 //
 // Drop onto an artist profile. Opens a direct thread with the profile owner.
 // Hidden on your own profile.
+//
+// v2: forwards recipientName + recipientPhotoUrl into the compose state.
+// MessagePage falls back to "Member" / no avatar when these are missing, so
+// callers should always pass them (see artistpage.jsx).
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 
-export default function MessageButton({ recipientId, recipientName, className = '' }) {
+export default function MessageButton({
+  recipientId,
+  recipientName,
+  recipientPhotoUrl = null,
+  className = '',
+}) {
   const { user, isGuest } = useAuth();
   const navigate = useNavigate();
 
@@ -17,7 +26,13 @@ export default function MessageButton({ recipientId, recipientName, className = 
   const onClick = () => {
     if (isGuest) { navigate('/login'); return; }
     navigate('/messages', {
-      state: { compose: { userId: recipientId, username: recipientName } },
+      state: {
+        compose: {
+          userId: recipientId,
+          username: recipientName,
+          photoUrl: recipientPhotoUrl,
+        },
+      },
     });
   };
 
