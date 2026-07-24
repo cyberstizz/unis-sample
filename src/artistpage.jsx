@@ -107,6 +107,29 @@ const INTERVAL_GLYPHS = {
 
 const AwardGlyph = ({ interval }) => INTERVAL_GLYPHS[interval] || INTERVAL_GLYPHS.annual;
 
+// The medal chrome: ribbon tails + glass disc + double ring. Everything is
+// currentColor, so the ENTIRE medal re-tints from CSS — artist medals take
+// the user's theme accent, song medals take gold, and any future theme just
+// works. The interval glyph is layered on top separately (see ap2-badge).
+const MedalBase = () => (
+  <svg className="ap2-badge__base" viewBox="0 0 64 80" aria-hidden="true">
+    {/* Ribbon tails — splayed, notched, tucked behind the disc */}
+    <g fill="currentColor" opacity="0.88">
+      <g transform="translate(24.5 46) rotate(-16)">
+        <path d="M-5.5 -4 h11 v27 l-5.5 -6.5 l-5.5 6.5 z" />
+      </g>
+      <g transform="translate(39.5 46) rotate(16)">
+        <path d="M-5.5 -4 h11 v27 l-5.5 -6.5 l-5.5 6.5 z" />
+      </g>
+    </g>
+    {/* Glass disc */}
+    <circle cx="32" cy="29" r="26" fill="rgba(9, 9, 13, 0.78)" />
+    {/* Outer ring + inner engraving ring */}
+    <circle cx="32" cy="29" r="26" fill="none" stroke="currentColor" strokeWidth="2.2" />
+    <circle cx="32" cy="29" r="20.5" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.35" />
+  </svg>
+);
+
 const ZapGlyph = ({ size = 15 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" />
@@ -671,11 +694,13 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const earnedAwards = AWARD_DEFS
     .map((def) => ({ ...def, count: awards[def.key] || 0 }))
     .filter((a) => a.count > 0)
-    .sort((a, b) => a.rank - b.rank); // most prestigious at the top of each rail
+    .sort((a, b) => a.rank - b.rank); // most prestigious first
 
-  // Left rail = who they are. Right rail = what they made.
+  // One trophy shelf: artist medals (theme-colored) lead, song medals (gold)
+  // follow, each group ordered most prestigious → least.
   const artistAwards = earnedAwards.filter((a) => a.entity === 'artist');
   const songAwards = earnedAwards.filter((a) => a.entity === 'song');
+  const shelfAwards = [...artistAwards, ...songAwards];
 
   const videoUrl = artist.featuredVideoUrl || artist.videoUrl || null;
 
@@ -723,60 +748,36 @@ const ArtistPage = ({ isOwnProfile = false }) => {
             <div className="ap2-hero__vignette" />
           </div>
 
-          {/* Award rails — the Unis prestige signal. Artist wins slide in from
-              the left edge, song wins from the right. Only awards actually won
-              render; each medal shows the interval and a ×N win tally. */}
-          {artistAwards.length > 0 && (
+          {/* Trophy shelf — the Unis prestige signal, in its own band across
+              the top of the hero. Only earned awards render. Each medal names
+              its award in full and carries a ×N win chip. Scrolls sideways
+              like a trophy case when a decorated artist overflows it. */}
+          {shelfAwards.length > 0 && (
             <div
-              className={`ap2-awards ap2-awards--left ${awardsRevealed ? 'ap2-awards--in' : ''}`}
+              className={`ap2-badges ${awardsRevealed ? 'ap2-badges--in' : ''}`}
               role="list"
-              aria-label={`${artist.username} artist awards`}
+              aria-label={`${artist.username} awards`}
             >
-              {artistAwards.map((a, i) => (
+              {shelfAwards.map((a, i) => (
                 <div
                   key={a.key}
                   role="listitem"
-                  className="ap2-award ap2-award--artist"
-                  style={{ '--ap2-award-delay': `${i * 0.11}s` }}
-                  title={`${a.label} — won ${a.count}×`}
+                  className={`ap2-badge ap2-badge--${a.entity}`}
+                  style={{ '--ap2-badge-delay': `${i * 0.09}s` }}
                   aria-label={`${a.label}, won ${a.count} ${a.count === 1 ? 'time' : 'times'}`}
                 >
-                  <span className="ap2-award__medal"><AwardGlyph interval={a.interval} /></span>
-                  <span className="ap2-award__caption" aria-hidden="true">
-                    <span className="ap2-award__int">{a.short}</span>
-                    <span className="ap2-award__count">×{a.count}</span>
+                  <span className="ap2-badge__medal">
+                    <MedalBase />
+                    <span className="ap2-badge__glyph"><AwardGlyph interval={a.interval} /></span>
+                    <span className="ap2-badge__count" aria-hidden="true">×{a.count}</span>
                   </span>
+                  <span className="ap2-badge__label" aria-hidden="true">{a.label}</span>
                 </div>
               ))}
             </div>
           )}
 
-          {songAwards.length > 0 && (
-            <div
-              className={`ap2-awards ap2-awards--right ${awardsRevealed ? 'ap2-awards--in' : ''}`}
-              role="list"
-              aria-label={`${artist.username} song awards`}
-            >
-              {songAwards.map((a, i) => (
-                <div
-                  key={a.key}
-                  role="listitem"
-                  className="ap2-award ap2-award--song"
-                  style={{ '--ap2-award-delay': `${i * 0.11}s` }}
-                  title={`${a.label} — won ${a.count}×`}
-                  aria-label={`${a.label}, won ${a.count} ${a.count === 1 ? 'time' : 'times'}`}
-                >
-                  <span className="ap2-award__medal"><AwardGlyph interval={a.interval} /></span>
-                  <span className="ap2-award__caption" aria-hidden="true">
-                    <span className="ap2-award__int">{a.short}</span>
-                    <span className="ap2-award__count">×{a.count}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className={`ap2-hero__content ${artistAwards.length > 0 ? 'ap2-hero__content--inset-l' : ''} ${songAwards.length > 0 ? 'ap2-hero__content--inset-r' : ''}`}>
+          <div className="ap2-hero__content">
             <div className="ap2-hero__tags">
               <span
                 className="ap2-hero__jurisdiction"

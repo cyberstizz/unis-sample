@@ -245,18 +245,21 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
     filter: brightness(0.55) saturate(1.15);
   }
 
-  // Heavy bottom gradient so text is legible & cards emerge from darkness
+  // Heavy bottom gradient so text is legible & cards emerge from darkness,
+  // plus a gentle top band that seats the trophy shelf over bright portraits
   .ap2-hero__scrim {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      to top,
-      $ap2-base 0%,
-      rgba($ap2-base, 0.92) 12%,
-      rgba($ap2-base, 0.55) 40%,
-      rgba($ap2-base, 0.15) 65%,
-      transparent 85%
-    );
+    background:
+      linear-gradient(to bottom, rgba($ap2-base, 0.55) 0%, transparent 20%),
+      linear-gradient(
+        to top,
+        $ap2-base 0%,
+        rgba($ap2-base, 0.92) 12%,
+        rgba($ap2-base, 0.55) 40%,
+        rgba($ap2-base, 0.15) 65%,
+        transparent 85%
+      );
   }
 
   // Side vignette for cinematic feel
@@ -272,116 +275,139 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   }
 }
 
-// ─── AWARD RAILS ───────────────────────────────────────────────
-// The Unis prestige signal. Two mirrored columns pinned to the hero edges:
-// LEFT = artist awards (who they are), RIGHT = song awards (what they made).
-// Only awards actually won render, max 6 per side.
+// ─── TROPHY SHELF ──────────────────────────────────────────────
+// The Unis prestige signal: a horizontal band of medal badges across the top
+// of the hero, in its own section so the hero buttons keep their original
+// layout untouched. Scrolls sideways like a trophy case when a decorated
+// artist has more medals than the screen fits (edge fade hints at more).
 //
-// Entrance: the hero portrait lands first, then the medals slide in from
-// their own edge, staggered top-to-bottom. JS flips --in ~650ms after load;
-// each medal adds --ap2-award-delay (0.11s apart), so the last of six starts
-// at ~1.2s and the sequence finishes under 2s.
-.ap2-awards {
+// Entrance: the portrait lands first, then medals drop into the shelf
+// staggered left→right. JS flips --in ~650ms after load; each badge adds
+// --ap2-badge-delay (0.09s apart) so even a full case finishes under 2s.
+//
+// Theme awareness: the whole medal (ring, ribbon, glyph, count) inherits
+// `color` — artist medals take the user's theme accent, song medals gold.
+.ap2-badges {
   position: absolute;
   z-index: 3;
-  top: 84px;
-  bottom: 150px;
+  top: 14px;
+  left: 0;
+  right: 0;
   display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 12px;
-  width: 52px;
-  pointer-events: none;
+  justify-content: safe center;
+  gap: 4px;
+  padding: 12px 18px 16px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+
+  // Edge fade: hints that the trophy case continues off-screen
+  mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
 
   @media (max-width: 600px) {
-    top: 70px;
-    bottom: 130px;
-    width: 44px;
-    gap: 9px;
+    top: 8px;
+    padding: 10px 14px 12px;
   }
-
-  &--left  { left: 16px;  @media (max-width: 600px) { left: 8px; } }
-  &--right { right: 16px; @media (max-width: 600px) { right: 8px; } }
 }
 
-.ap2-award {
+.ap2-badge {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  pointer-events: auto;
+  flex-shrink: 0;
+  width: 96px;
   cursor: default;
 
-  // Off-stage until the rail is revealed. Direction comes from the parent.
+  // Off-stage until the shelf reveals; drops in with a slight overshoot
   opacity: 0;
+  transform: translateY(-16px) scale(0.9);
   transition:
-    opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1) var(--ap2-award-delay, 0s),
-    transform 0.55s cubic-bezier(0.16, 1, 0.3, 1) var(--ap2-award-delay, 0s);
+    opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1) var(--ap2-badge-delay, 0s),
+    transform 0.5s cubic-bezier(0.34, 1.4, 0.4, 1) var(--ap2-badge-delay, 0s);
 
-  .ap2-awards--left & { transform: translateX(-26px) scale(0.9); }
-  .ap2-awards--right & { transform: translateX(26px) scale(0.9); }
-
-  .ap2-awards--in & {
+  .ap2-badges--in & {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translateY(0) scale(1);
+  }
+
+  // Entity carried by COLOR: artist = user theme, song = gold
+  &--artist {
+    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 62%, #ffffff);
+  }
+  &--song {
+    color: #f5d990;
   }
 
   &__medal {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: $ap2-text-1;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 55%, rgba(255, 255, 255, 0.25));
-    backdrop-filter: blur(8px);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-    transition: transform 0.2s, border-color 0.2s;
-
-    @media (max-width: 600px) {
-      width: 26px;
-      height: 26px;
-    }
-  }
-
-  // Artist medals lean on the theme accent; song medals stay neutral-gold
-  &--artist &__medal {
-    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 32%, rgba(0, 0, 0, 0.45));
-    color: #fff;
-  }
-  &--song &__medal {
-    color: #f5d990;
-    border-color: rgba(245, 217, 144, 0.55);
+    position: relative;
+    width: 64px;
+    height: 80px;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.55));
+    transition: transform 0.2s;
   }
 
   &:hover &__medal {
-    transform: scale(1.12);
+    transform: translateY(-2px) scale(1.05);
   }
 
-  &__caption {
+  &__base {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  // Interval symbol, centered on the disc, ~double the old rail size
+  &__glyph {
+    position: absolute;
+    top: 29px;
+    left: 32px;
+    transform: translate(-50%, -50%);
     display: flex;
     align-items: center;
-    gap: 3px;
-    font-family: 'DM Sans', sans-serif;
-    line-height: 1;
-    white-space: nowrap;
+    justify-content: center;
+    color: inherit;
+
+    svg {
+      width: 24px;
+      height: 24px;
+    }
   }
 
-  &__int {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: $ap2-text-3;
-    text-transform: uppercase;
-  }
-
+  // ×N win chip pinned to the medal's shoulder
   &__count {
-    font-size: 9px;
+    position: absolute;
+    top: -3px;
+    right: -6px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: rgba(9, 9, 13, 0.88);
+    border: 1px solid currentColor;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10.5px;
     font-weight: 800;
-    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 75%, #ffffff);
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    line-height: 1.3;
+    color: inherit;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  // Full award name, written on the badge itself
+  &__label {
+    margin-top: 3px;
+    max-width: 94px;
+    text-align: center;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.9px;
+    line-height: 1.35;
+    text-transform: uppercase;
+    color: $ap2-text-1;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.75);
+    text-wrap: balance;
   }
 }
 
@@ -392,19 +418,6 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   width: 100%;
   // Left-aligned like the Stitch mockup (not centered)
   animation: ap2-fadeUp 0.8s ease-out both;
-
-  // Clear whichever rails are present so nothing collides
-  &--inset-l {
-    padding-left: 60px;
-
-    @media (max-width: 600px) { padding-left: 48px; }
-  }
-
-  &--inset-r {
-    padding-right: 60px;
-
-    @media (max-width: 600px) { padding-right: 48px; }
-  }
 }
 
 .ap2-hero__tags {
@@ -1931,13 +1944,10 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 // REDUCED MOTION — quality floor
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @media (prefers-reduced-motion: reduce) {
-  // Medals appear in place — no slide, no stagger — but still appear.
-  .ap2-award {
+  // Medals appear in place — no drop, no stagger — but still appear.
+  .ap2-badge {
     transition: none;
     opacity: 1;
-  }
-  .ap2-awards--left .ap2-award,
-  .ap2-awards--right .ap2-award {
     transform: none;
   }
 
