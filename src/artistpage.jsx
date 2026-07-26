@@ -11,7 +11,6 @@ import { incrementGateSongCount } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
 import MessageButton from './MessageButton';
 import DownloadModal from './DownloadModal';
-import TerritoryRankSection from './TerritoryRankSection';
 import useModalA11y from './hooks/useModalA11y';
 
 // ─── Award rail definitions ────────────────────────────────────
@@ -495,6 +494,134 @@ const ShopSheet = ({ show, onClose, artistName, songs, onPick }) => {
   );
 };
 
+// =============================================================================
+// ArtistTerritory — public territory standing for the artist page.
+//
+// Mirrors the dashboard's TerritoryRankSection (home headline, period toggle,
+// neighborhood→national chain) but reads the PUBLIC endpoint
+// GET /v1/users/{artistId}/territory-rank. The dashboard's own endpoint is
+// self-only (403 for anyone but the artist), which is why the dashboard
+// component cannot be reused here.
+//
+// Payload: { status?, genreName, computedAt, defaultPeriod,
+//            periods: { today|week|month|year: [ { jurisdictionId,
+//            jurisdictionName, overallRank, genreRank } ] } }
+// =============================================================================
+const TERRITORY_PERIODS = ['today', 'week', 'month', 'year'];
+const TERRITORY_LABELS = { today: 'Day', week: 'Week', month: 'Month', year: 'Year' };
+
+const ArtistTerritory = ({ artistId, artistName }) => {
+  const [data, setData] = useState(null);
+  const [period, setPeriod] = useState('year');
+  const [state, setState] = useState('loading'); // loading | ready | hidden
+
+  useEffect(() => {
+    if (!artistId) return undefined;
+    let cancelled = false;
+    setState('loading');
+
+    apiCall({ method: 'get', url: `/v1/users/${artistId}/territory-rank` })
+      .then((res) => {
+        if (cancelled) return;
+        const payload = res.data || null;
+        const hasRows = payload?.periods
+          && Object.values(payload.periods).some((rows) => Array.isArray(rows) && rows.length);
+        if (!payload || (!hasRows && payload.status !== 'calculating')) {
+          setState('hidden');
+          return;
+        }
+        setData(payload);
+        const dp = payload.defaultPeriod;
+        if (dp && TERRITORY_PERIODS.includes(dp)) setPeriod(dp);
+        setState('ready');
+        console.log('[TerritoryRank] loaded:', { artistId, status: payload.status });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // Never break the page over a ranking read — just hide the section.
+        console.error('[TerritoryRank] load failed:', { artistId, err });
+        setState('hidden');
+      });
+
+    return () => { cancelled = true; };
+  }, [artistId]);
+
+  if (state === 'hidden' || state === 'loading') return null;
+  if (!data) return null;
+
+  if (data.status === 'calculating') {
+    return (
+      <div className="ap2-card ap2-territory">
+        <h3 className="ap2-territory__heading">Territory rank</h3>
+        <p className="ap2-territory__calc">
+          Ranks are computed nightly — {artistName}&rsquo;s standing appears after tonight&rsquo;s update.
+        </p>
+      </div>
+    );
+  }
+
+  const rows = (data.periods && data.periods[period]) || [];
+  const home = rows[0] || null;
+  const genreName = data.genreName || null;
+
+  return (
+    <div className="ap2-card ap2-territory">
+      <div className="ap2-territory__head">
+        <h3 className="ap2-territory__heading">Territory rank</h3>
+        <div className="ap2-territory__toggle" role="tablist" aria-label="Rank period">
+          {TERRITORY_PERIODS.map((p) => (
+            <button
+              key={p}
+              type="button"
+              role="tab"
+              aria-selected={p === period}
+              className={`ap2-territory__tab ${p === period ? 'is-active' : ''}`}
+              onClick={() => setPeriod(p)}
+            >
+              {TERRITORY_LABELS[p]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {home && home.overallRank != null && (
+        <p className="ap2-territory__headline">
+          <span className="ap2-territory__headline-num">#{home.overallRank}</span>
+          <span className="ap2-territory__headline-in">in {home.jurisdictionName}</span>
+        </p>
+      )}
+
+      {rows.length === 0 ? (
+        <p className="ap2-empty">No ranking yet for this period.</p>
+      ) : (
+        <ol className="ap2-territory__list">
+          {rows.map((j, i) => (
+            <li
+              key={j.jurisdictionId || `${j.jurisdictionName}-${i}`}
+              className={`ap2-territory__row ${i === 0 ? 'is-home' : ''}`}
+            >
+              <span className="ap2-territory__pin" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 21s-7-6.4-7-11a7 7 0 0 1 14 0c0 4.6-7 11-7 11z" /><circle cx="12" cy="10" r="2.5" />
+                </svg>
+              </span>
+              <span className="ap2-territory__place">
+                <span className="ap2-territory__placename">{j.jurisdictionName}</span>
+                {j.genreRank != null && genreName && (
+                  <span className="ap2-territory__genre">#{j.genreRank} · {genreName}</span>
+                )}
+              </span>
+              <span className="ap2-territory__rank">
+                {j.overallRank != null ? `#${j.overallRank}` : '—'}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+};
+
 const ArtistPage = ({ isOwnProfile = false }) => {
   const { artistId } = useParams();
   const { requestPlay } = useContext(PlayerContext);
@@ -516,6 +643,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const [awards, setAwards] = useState({});       // normalized award counts
   const [standing, setStanding] = useState(null);  // jurisdiction ranking
   const [songColors, setSongColors] = useState({}); // songId -> ambient rgb
+  const [featuredAmbient, setFeaturedAmbient] = useState(null); // Fans Pick tint
   const [photos, setPhotos] = useState([]);        // artist gallery photos
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [awardsRevealed, setAwardsRevealed] = useState(false); // medal rail entrance
@@ -640,6 +768,33 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       setSongColors(map);
     };
     if (songs.length) run();
+    return () => { cancelled = true; };
+  }, [songs]);
+
+  // Ambient wash for the Fans Pick card, sampled from that song's artwork —
+  // the same treatment used on the Popular rows and elsewhere in the app.
+  useEffect(() => {
+    let cancelled = false;
+    if (!songs.length) { setFeaturedAmbient(null); return undefined; }
+
+    const top = songs.reduce(
+      (prev, cur) => ((cur.score || 0) > (prev.score || 0) ? cur : prev),
+      songs[0]
+    );
+    const url = buildUrl(top?.artworkUrl);
+    if (!url) { setFeaturedAmbient(null); return undefined; }
+
+    extractAverageColor(url)
+      .then(({ r, g, b }) => {
+        if (cancelled) return;
+        setFeaturedAmbient({
+          backgroundImage:
+            `radial-gradient(120% 140% at 0% 0%, rgba(${r}, ${g}, ${b}, 0.42) 0%, rgba(${r}, ${g}, ${b}, 0.16) 45%, transparent 78%)`,
+          borderColor: `rgba(${r}, ${g}, ${b}, 0.42)`,
+        });
+      })
+      .catch(() => { if (!cancelled) setFeaturedAmbient(null); });
+
     return () => { cancelled = true; };
   }, [songs]);
 
@@ -1051,16 +1206,9 @@ const ArtistPage = ({ isOwnProfile = false }) => {
               </div>
             )}
 
-            {/* Territory rank — same component the artist dashboard uses, so
-                fans see exactly the standing the artist sees. The
-                /v1/artist-analytics/** endpoints are authenticated(), so this
-                is gated to signed-in visitors; make that path permitAll if you
-                want guests to see it too. */}
-            {!isGuest && (
-              <div className="ap2-territory">
-                <TerritoryRankSection artistId={artistId} />
-              </div>
-            )}
+            {/* Territory rank — public standing, visible to guests too.
+                Hides itself entirely if ranks have not been computed. */}
+            <ArtistTerritory artistId={artistId} artistName={artist.username} />
 
             {/* Featured video — only when the artist has uploaded one */}
             {videoUrl && (
@@ -1082,7 +1230,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
             {/* Row 1: Featured Song + Support (support card hidden on your own page) */}
             <div className={`ap2-grid ap2-grid--featured ${!showActionButtons ? 'ap2-grid--single' : ''}`}>
               {topSong && (
-                <div className="ap2-card ap2-featured">
+                <div className="ap2-card ap2-featured" style={featuredAmbient || undefined}>
                   <div className="ap2-featured__layout">
                     <div className="ap2-featured__artwork-wrap" onClick={() => handleSongClick(topSong.songId)}>
                       <img src={topSongArtwork} alt={topSong.title} className="ap2-featured__artwork" />

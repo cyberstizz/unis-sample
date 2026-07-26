@@ -1005,6 +1005,16 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // FEATURED / FANS PICK CARD
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// The ambient wash is applied inline (background-image + border-color),
+// sampled from the song's own artwork. background-color stays on the card so
+// the tint layers over the dark glass instead of replacing it.
+.ap2-featured {
+  background-color: rgba(20, 20, 24, 0.78);
+  background-repeat: no-repeat;
+  background-size: cover;
+  transition: border-color 0.35s ease, background-image 0.35s ease;
+}
+
 .ap2-featured__layout {
   display: flex;
   gap: 20px;
@@ -1275,9 +1285,10 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.72);
+  // Brand marks wear the user's theme, not a generic grey.
+  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 62%, #ffffff);
   text-decoration: none;
-  transition: color 0.2s, transform 0.2s;
+  transition: color 0.2s, transform 0.2s, filter 0.2s;
   border-radius: 8px;
 
   svg {
@@ -1287,7 +1298,8 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   }
 
   &:hover {
-    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, #ffffff);
+    color: var(--unis-primary, #{$ap2-blue-raw});
+    filter: brightness(1.35);
     transform: translateY(-2px) scale(1.08);
   }
 
@@ -1298,6 +1310,163 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 
   @media (max-width: 600px) {
     svg { width: 24px; height: 24px; }
+  }
+}
+
+// ─── TERRITORY RANK (public, artist-page flavour) ──────────────
+.ap2-territory {
+  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 10%, $ap2-surface);
+  border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 24%, transparent);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  &__heading {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: $ap2-text-3;
+    margin: 0;
+  }
+
+  &__toggle {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 50px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid $ap2-border;
+  }
+
+  &__tab {
+    padding: 5px 12px;
+    border-radius: 50px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: $ap2-text-3;
+    transition: background 0.2s, color 0.2s;
+
+    &:hover { color: $ap2-text-1; }
+
+    &.is-active {
+      background: var(--unis-primary, #{$ap2-blue-raw});
+      color: #fff;
+    }
+
+    &:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 70%, #ffffff);
+      outline-offset: 1px;
+    }
+  }
+
+  &__headline {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 0 14px;
+  }
+
+  &__headline-num {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1;
+    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff);
+  }
+
+  &__headline-in {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: $ap2-text-2;
+  }
+
+  &__calc {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    color: $ap2-text-2;
+    margin: 0;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 9px 11px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid transparent;
+
+    &.is-home {
+      background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 16%, transparent);
+      border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 34%, transparent);
+    }
+  }
+
+  &__pin {
+    flex-shrink: 0;
+    display: flex;
+    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, #ffffff);
+  }
+
+  &__place {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__placename {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: $ap2-text-1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__genre {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    color: $ap2-text-3;
+  }
+
+  &__rank {
+    flex-shrink: 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: $ap2-text-1;
+  }
+
+  @media (max-width: 600px) {
+    &__headline-num { font-size: 28px; }
+    &__tab { padding: 5px 10px; font-size: 10.5px; }
   }
 }
 
