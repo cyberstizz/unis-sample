@@ -11,6 +11,7 @@ import { incrementGateSongCount } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
 import MessageButton from './MessageButton';
 import DownloadModal from './DownloadModal';
+import TerritoryRankSection from './TerritoryRankSection';
 import useModalA11y from './hooks/useModalA11y';
 
 // ─── Award rail definitions ────────────────────────────────────
@@ -161,8 +162,48 @@ const extractAverageColor = (url) =>
     img.src = url;
   });
 
-const formatEffective = (iso) => {
-  if (!iso) return 'the start of next month';
+// ─── Real social brand marks ───────────────────────────────────
+// Official glyphs (simple-icons paths), monochrome so they inherit color and
+// stay theme-aware. Rendered bare — no boxes, no labels: the logo IS the
+// affordance, exactly like every artist site does it.
+const SOCIAL_ICONS = {
+  instagram: (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.209 0-4-1.79-4-4 0-2.209 1.79-4 4-4 2.209 0 4 1.79 4 4 0 2.209-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z" />
+    </svg>
+  ),
+  twitter: (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+    </svg>
+  ),
+  tiktok: (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
+    </svg>
+  ),
+  youtube: (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+    </svg>
+  ),
+};
+
+const SOCIAL_DEFS = [
+  { key: 'instagram', name: 'Instagram', field: 'instagramUrl' },
+  { key: 'twitter',   name: 'X',         field: 'twitterUrl'   },
+  { key: 'tiktok',    name: 'TikTok',    field: 'tiktokUrl'    },
+  { key: 'youtube',   name: 'YouTube',   field: 'youtubeUrl'   },
+];
+
+// GET /v1/media/songs/artist/{id} returns raw Song entities, whose play
+// column is `playCount` (Long) — there is no `plays` field, which is why the
+// track rows and the Fans Pick card always read "0 plays". `plays` is kept as
+// a fallback for any endpoint that flattens it, matching the defensive
+// pattern in changeDefaultSongWizard.jsx.
+const playsOf = (song) => song?.playCount ?? song?.plays ?? 0;
+
+const formatEffective = (iso) => {  if (!iso) return 'the start of next month';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return 'the start of next month';
   return d.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
@@ -440,7 +481,7 @@ const ShopSheet = ({ show, onClose, artistName, songs, onPick }) => {
                 <img src={buildUrl(song.artworkUrl) || undefined} alt="" className="ap2-shopsheet__art" />
                 <span className="ap2-shopsheet__info">
                   <span className="ap2-shopsheet__songtitle">{song.title}</span>
-                  <span className="ap2-shopsheet__meta">{(song.plays || 0).toLocaleString()} plays</span>
+                  <span className="ap2-shopsheet__meta">{playsOf(song).toLocaleString()} plays</span>
                 </span>
                 <span className={`ap2-shopsheet__price ${song.downloadPolicy === 'paid' ? 'ap2-shopsheet__price--paid' : ''}`}>
                   {formatSongPrice(song)}
@@ -788,6 +829,10 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const artistAwards = earnedAwards.filter((a) => a.entity === 'artist');
   const songAwards = earnedAwards.filter((a) => a.entity === 'song');
 
+  const socialLinks = SOCIAL_DEFS
+    .map((d) => ({ ...d, url: artist[d.field] }))
+    .filter((d) => Boolean(d.url));
+
   const videoUrl = artist.featuredVideoUrl || artist.videoUrl || null;
 
   const standingPlace = standing?.genreName || artist.genre?.name || '';
@@ -940,7 +985,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                 <div className="ap2-hero__actions">
                   <button onClick={handlePlayDefault} className="ap2-hero__btn-play" disabled={!defaultSong}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
-                    Play Discography
+                    Play
                   </button>
                   <MessageButton
                     recipientId={artistId}
@@ -1006,6 +1051,17 @@ const ArtistPage = ({ isOwnProfile = false }) => {
               </div>
             )}
 
+            {/* Territory rank — same component the artist dashboard uses, so
+                fans see exactly the standing the artist sees. The
+                /v1/artist-analytics/** endpoints are authenticated(), so this
+                is gated to signed-in visitors; make that path permitAll if you
+                want guests to see it too. */}
+            {!isGuest && (
+              <div className="ap2-territory">
+                <TerritoryRankSection artistId={artistId} />
+              </div>
+            )}
+
             {/* Featured video — only when the artist has uploaded one */}
             {videoUrl && (
               <div className="ap2-card ap2-video">
@@ -1047,7 +1103,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                         {topSong.title}
                       </h3>
                       <p className="ap2-featured__desc">
-                        {fmt(topSong.plays)} plays · {fmt(topSong.score)} score
+                        {fmt(playsOf(topSong))} plays
                       </p>
                       <div className="ap2-featured__genre">{artist.genre?.name || 'Unknown Genre'}</div>
                     </div>
@@ -1121,7 +1177,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                         <span className="ap2-track__title" onClick={() => handleSongClick(song.songId)}>
                           {song.title}
                         </span>
-                        <span className="ap2-track__plays">{fmt(song.plays)} plays</span>
+                        <span className="ap2-track__plays">{fmt(playsOf(song))} plays</span>
                       </div>
                       <button
                         className="ap2-track__play"
@@ -1137,35 +1193,26 @@ const ArtistPage = ({ isOwnProfile = false }) => {
               </div>
 
               <div className="ap2-aside">
-                <div className="ap2-card ap2-connect">
-                  <h3 className="ap2-connect__title">Connect</h3>
-                  <div className="ap2-connect__links">
-                    {artist.instagramUrl && (
-                      <a href={artist.instagramUrl} target="_blank" rel="noreferrer" className="ap2-connect__link">
-                        <span className="ap2-connect__icon">📷</span>
-                        <span className="ap2-connect__label">Instagram</span>
-                        <svg className="ap2-connect__arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
-                      </a>
-                    )}
-                    {artist.twitterUrl && (
-                      <a href={artist.twitterUrl} target="_blank" rel="noreferrer" className="ap2-connect__link">
-                        <span className="ap2-connect__icon">𝕏</span>
-                        <span className="ap2-connect__label">Twitter</span>
-                        <svg className="ap2-connect__arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
-                      </a>
-                    )}
-                    {artist.tiktokUrl && (
-                      <a href={artist.tiktokUrl} target="_blank" rel="noreferrer" className="ap2-connect__link">
-                        <span className="ap2-connect__icon">🎵</span>
-                        <span className="ap2-connect__label">TikTok</span>
-                        <svg className="ap2-connect__arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
-                      </a>
-                    )}
-                    {!artist.instagramUrl && !artist.twitterUrl && !artist.tiktokUrl && (
-                      <p className="ap2-empty">No social links yet</p>
-                    )}
+                {socialLinks.length > 0 && (
+                  <div className="ap2-card ap2-connect">
+                    <h3 className="ap2-connect__title">Connect</h3>
+                    <div className="ap2-connect__logos">
+                      {socialLinks.map((sl) => (
+                        <a
+                          key={sl.key}
+                          href={sl.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className={`ap2-connect__logo ap2-connect__logo--${sl.key}`}
+                          aria-label={`${artist.username} on ${sl.name}`}
+                          title={sl.name}
+                        >
+                          {SOCIAL_ICONS[sl.key]}
+                        </a>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="ap2-card ap2-about">
                   <h3 className="ap2-about__heading">About</h3>

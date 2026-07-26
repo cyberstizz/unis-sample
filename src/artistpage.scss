@@ -120,11 +120,15 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
     display: flex;
     align-items: center;
     justify-content: space-between;
+    // Left-anchored on the same gutter as the hero/cards, so the artist name
+    // in the sticky bar sits directly above the column it belongs to.
     max-width: 1100px;
-    margin: 0 auto;
-    padding: 10px 24px;
+    margin: 0;
+    box-sizing: border-box;
+    padding: 10px 48px;
 
-    @media (max-width: 600px) { padding: 8px 8px; }
+    @media (max-width: 900px) { padding: 10px 28px; }
+    @media (max-width: 600px) { padding: 8px 20px; }
   }
 
   &__left {
@@ -291,34 +295,27 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 .ap2-rail {
   position: absolute;
   z-index: 3;
-  top: 88px;
-  bottom: 42%;
+  top: 82px;
+  // NO scrolling and no fixed bottom — the rail is free to run the full
+  // height of the hero for a completely decorated artist. Scrollbars on a
+  // trophy rail look broken, so the badges are sized to fit instead.
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  width: 78px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: none;
-  &::-webkit-scrollbar { display: none; }
+  gap: 7px;
+  width: 66px;
   pointer-events: none;
   .ap2-badge { pointer-events: auto; }
 
-  // Bottom fade hints when medals continue past the band
-  mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 18px), transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 18px), transparent 100%);
-
-  &--left  { left: 8px; }
-  &--right { right: 8px; }
+  &--left  { left: 6px; }
+  &--right { right: 6px; }
 
   @media (max-width: 600px) {
-    top: 72px;
-    bottom: 40%;
-    width: 68px;
-    gap: 8px;
-    &--left  { left: 4px; }
-    &--right { right: 4px; }
+    top: 64px;
+    width: 58px;
+    gap: 5px;
+    &--left  { left: 2px; }
+    &--right { right: 2px; }
   }
 }
 
@@ -354,14 +351,14 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 
   &__medal {
     position: relative;
-    width: 50px;
-    height: 62px;
+    width: 42px;
+    height: 52px;
     filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.55));
     transition: transform 0.2s;
 
     @media (max-width: 600px) {
-      width: 44px;
-      height: 55px;
+      width: 36px;
+      height: 45px;
     }
   }
 
@@ -388,12 +385,12 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
     color: inherit;
 
     svg {
-      width: 19px;
-      height: 19px;
+      width: 16px;
+      height: 16px;
 
       @media (max-width: 600px) {
-        width: 17px;
-        height: 17px;
+        width: 14px;
+        height: 14px;
       }
     }
   }
@@ -402,13 +399,13 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   &__count {
     position: absolute;
     top: -4px;
-    right: -8px;
-    padding: 1.5px 6px;
+    right: -7px;
+    padding: 1px 5px;
     border-radius: 20px;
     background: rgba(9, 9, 13, 0.88);
     border: 1px solid currentColor;
     font-family: 'DM Sans', sans-serif;
-    font-size: 9.5px;
+    font-size: 8.5px;
     font-weight: 800;
     line-height: 1.3;
     color: inherit;
@@ -418,22 +415,23 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 
   // Full award name, written on the badge itself
   &__label {
-    margin-top: 2px;
-    max-width: 72px;
+    margin-top: 1px;
+    max-width: 64px;
     text-align: center;
     font-family: 'DM Sans', sans-serif;
-    font-size: 7.5px;
+    font-size: 6.5px;
     font-weight: 700;
-    letter-spacing: 0.7px;
-    line-height: 1.35;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
     text-transform: uppercase;
     color: $ap2-text-1;
     text-shadow: 0 1px 5px rgba(0, 0, 0, 0.8);
     text-wrap: balance;
 
     @media (max-width: 600px) {
-      font-size: 7px;
-      max-width: 64px;
+      font-size: 6px;
+      max-width: 56px;
+      letter-spacing: 0.3px;
     }
   }
 }
@@ -441,13 +439,14 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 .ap2-hero__content {
   position: relative;
   z-index: 1;
-  // Shares the SAME centered column as .ap2-body__content (980px), so the
-  // hero name/buttons and the cards below line up on one left edge. On wide
-  // desktops this kills the "hero hugs the sidebar, cards float centered"
-  // mismatch that read as misalignment.
-  max-width: 980px;
+  // LEFT-ANCHORED, never auto-centered. `margin: 0 auto` here (and on
+  // .ap2-body__content) is what pushed everything toward the middle of a wide
+  // desktop, reading as a huge gap between the sidebar and the content. The
+  // column now starts at the hero's own gutter and grows rightward, so on a
+  // large monitor the page hugs the sidebar the way the portrait does.
+  max-width: 1100px;
   width: 100%;
-  margin: 0 auto;
+  margin: 0;
   animation: ap2-fadeUp 0.8s ease-out both;
 }
 
@@ -803,15 +802,24 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 .ap2-body__content {
   position: relative;
   z-index: 1;
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 32px 24px 0;
+  // Same left-anchored column as .ap2-hero__content, on the SAME gutter as
+  // .ap2-hero's padding (48 / 28 / 20px), so the artist name, the buttons and
+  // every card below share one left edge — and none of it drifts to the
+  // middle of a wide screen.
+  max-width: 1100px;
+  margin: 0;
+  box-sizing: border-box;
+  padding: 32px 48px 0;
   display: flex;
   flex-direction: column;
   gap: 24px;
 
+  @media (max-width: 900px) {
+    padding: 28px 28px 0;
+  }
+
   @media (max-width: 600px) {
-    padding: 20px 14px 0;
+    padding: 20px 20px 0;
     gap: 16px;
   }
 }
@@ -1253,52 +1261,44 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   margin: 0 0 18px;
 }
 
-.ap2-connect__links {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.ap2-connect__link {
+// Logo-only row: the real brand marks, no boxes, no labels, no arrows.
+// Marks sit in neutral white and warm to the user's theme on hover, so the
+// section reads as the artist's own links rather than a template.
+.ap2-connect__logos {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid $ap2-border;
-  color: $ap2-text-2;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.ap2-connect__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.72);
   text-decoration: none;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s;
+  transition: color 0.2s, transform 0.2s;
+  border-radius: 8px;
+
+  svg {
+    width: 26px;
+    height: 26px;
+    display: block;
+  }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: $ap2-border-hover;
-    color: $ap2-text-1;
-    transform: translateX(4px);
+    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, #ffffff);
+    transform: translateY(-2px) scale(1.08);
   }
-}
 
-.ap2-connect__icon {
-  font-size: 18px;
-  flex-shrink: 0;
-  width: 24px;
-  text-align: center;
-}
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 70%, #ffffff);
+    outline-offset: 4px;
+  }
 
-.ap2-connect__label {
-  flex: 1;
-}
-
-.ap2-connect__arrow {
-  flex-shrink: 0;
-  opacity: 0.4;
-  transition: opacity 0.2s;
-
-  .ap2-connect__link:hover & { opacity: 0.8; }
+  @media (max-width: 600px) {
+    svg { width: 24px; height: 24px; }
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
