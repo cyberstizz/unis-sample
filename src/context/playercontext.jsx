@@ -95,6 +95,14 @@ export const PlayerProvider = ({ children }) => {
   // --- Playlist library state ---
   const [playlists, setPlaylists] = useState([]);
   const [followedPlaylists, setFollowedPlaylists] = useState([]);
+
+  // ── "Don't Play" list ──────────────────────────────────────────────────
+  // songIds the user has blocked. Held as a Set for O(1) membership checks —
+  // next()/prev() consult it on every queue advance, so a linear scan of an
+  // array would be the wrong shape here. Loaded on login, cleared on logout,
+  // and refreshed live via the 'unis:blocked-songs-changed' event that
+  // songPage dispatches whenever the user toggles the button.
+  const [blockedSongIds, setBlockedSongIds] = useState(() => new Set());
   const [loading, setLoading] = useState(false);
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
 
@@ -175,6 +183,29 @@ export const PlayerProvider = ({ children }) => {
     }
   }, []);
 
+  /** Load the user's do-not-play list. Mirrors loadFollowedPlaylists' shape:
+   *  token-guarded, non-throwing, logs on failure. A failure here must never
+   *  break playback — worst case the user's blocks don't apply this session. */
+  const loadBlockedSongs = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const res = await axiosInstance.get('/v1/playlists/blocked-songs');
+      const data = res.data || [];
+      const ids = data
+        .map(b => b.songId || b.song?.songId || b.id)
+        .filter(Boolean);
+
+      setBlockedSongIds(new Set(ids));
+      console.log(`[player] loaded ${ids.length} blocked song(s)`);
+    } catch (error) {
+      console.error('Failed to load blocked songs:', error);
+      // Deliberately leave the existing Set alone rather than emptying it —
+      // a transient network blip shouldn't silently un-block a user's list.
+    }
+  }, []);
+
   const loadFollowedPlaylists = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -227,12 +258,14 @@ export const PlayerProvider = ({ children }) => {
     if (token) {
       loadUserPlaylists();
       loadFollowedPlaylists();
+      loadBlockedSongs();
     }
 
     // Strategy 2: listen for login/logout events
     const handleLogin = () => {
       loadUserPlaylists();
       loadFollowedPlaylists();
+      loadBlockedSongs();
     };
 
     const handleLogout = () => {
@@ -245,6 +278,9 @@ export const PlayerProvider = ({ children }) => {
       setCurrentIndex(0);
       setQueueSource(null);
       setIsShuffled(false);
+      // One user's do-not-play list must never leak into the next session
+      // on a shared device.
+      setBlockedSongIds(new Set());
 
       // Wipe the persisted copy too. Without this, clearing in-memory state
       // achieves nothing — the debounced writer would just save the empty
@@ -258,8 +294,13 @@ export const PlayerProvider = ({ children }) => {
       }
     };
 
+    // Fired by songPage the moment the user toggles "Don't Play". Without
+    // this, a block taken mid-playlist wouldn't apply until a page reload.
+    const handleBlockedChanged = () => loadBlockedSongs();
+
     window.addEventListener('unis:login', handleLogin);
     window.addEventListener('unis:logout', handleLogout);
+    window.addEventListener('unis:blocked-songs-changed', handleBlockedChanged);
     // The 401 interceptor tears the session down in-app without a redirect,
     // so it needs the same treatment as an explicit logout.
     window.addEventListener('unis:session-expired', handleLogout);
@@ -267,9 +308,10 @@ export const PlayerProvider = ({ children }) => {
     return () => {
       window.removeEventListener('unis:login', handleLogin);
       window.removeEventListener('unis:logout', handleLogout);
+      window.removeEventListener('unis:blocked-songs-changed', handleBlockedChanged);
       window.removeEventListener('unis:session-expired', handleLogout);
     };
-  }, [loadUserPlaylists, loadFollowedPlaylists]);
+  }, [loadUserPlaylists, loadFollowedPlaylists, loadBlockedSongs]);
 
   /** Load full playlist with tracks (on-demand when user opens a playlist) */
   const loadPlaylistDetails = async (playlistId) => {
@@ -309,30 +351,77 @@ export const PlayerProvider = ({ children }) => {
     }
   };
 
+  /** True if the user has this track on their do-not-play list. */
+  const isTrackBlocked = useCallback(
+    (track) => !!track && blockedSongIds.has(track.id || track.songId),
+    [blockedSongIds]
+  );
+
+  // ── next(): advance to the first track the user hasn't blocked ──────────
+  // Note this governs QUEUE ADVANCEMENT only (skip button, track-ended,
+  // autoplay). A song the user explicitly chooses still plays even if
+  // blocked — clicking play on a song's own page is an unambiguous request,
+  // and silently refusing it would read as a broken button. If you'd rather
+  // hard-block direct plays too, the guard belongs in requestPlay, not here.
   const next = useCallback(() => {
     if (queue.length === 0) return;
-    const nextIndex = currentIndex + 1;
 
-  if (nextIndex >= queue.length) {
-    if (repeatMode === 'all') {     
-    setCurrentIndex(0);
-    setCurrentMedia(queue[0]);
-    return;
+    // Walk forward past any blocked tracks.
+    let idx = currentIndex + 1;
+    while (idx < queue.length && isTrackBlocked(queue[idx])) idx++;
+
+    if (idx >= queue.length) {
+      if (repeatMode === 'all') {
+        // Wrap to the top and keep walking — but never past where we
+        // started, otherwise a fully-blocked queue would loop forever.
+        let wrapped = 0;
+        while (wrapped <= currentIndex && isTrackBlocked(queue[wrapped])) wrapped++;
+
+        if (wrapped > currentIndex || wrapped >= queue.length) {
+          console.log('[player] every track in the queue is blocked — stopping');
+          setIsPlaying(false);
+          return;
+        }
+
+        setCurrentIndex(wrapped);
+        setCurrentMedia(queue[wrapped]);
+        return;
+      }
+
+      setIsPlaying(false);
+      return;
     }
-    setIsPlaying(false);           
-    return;
-  }
 
-    setCurrentIndex(nextIndex);
-    setCurrentMedia(queue[nextIndex]);
-  }, [queue, currentIndex, repeatMode]);
+    if (idx !== currentIndex + 1) {
+      console.log(`[player] skipped ${idx - currentIndex - 1} blocked track(s)`);
+    }
 
+    setCurrentIndex(idx);
+    setCurrentMedia(queue[idx]);
+  }, [queue, currentIndex, repeatMode, isTrackBlocked]);
+
+  // ── prev(): walk backward with the same skip, wrapping at the top ───────
   const prev = useCallback(() => {
     if (queue.length === 0) return;
-    const prevIndex = (currentIndex - 1 + queue.length) % queue.length;
-    setCurrentIndex(prevIndex);
-    setCurrentMedia(queue[prevIndex]);
-  }, [queue, currentIndex]);
+
+    let idx = currentIndex;
+    let steps = 0;
+
+    do {
+      idx = (idx - 1 + queue.length) % queue.length;
+      steps++;
+    } while (isTrackBlocked(queue[idx]) && steps < queue.length);
+
+    // Bailed out because the entire queue is blocked — stay where we are
+    // rather than loading an unplayable track.
+    if (isTrackBlocked(queue[idx])) {
+      console.log('[player] every track in the queue is blocked — staying put');
+      return;
+    }
+
+    setCurrentIndex(idx);
+    setCurrentMedia(queue[idx]);
+  }, [queue, currentIndex, isTrackBlocked]);
 
   const togglePlayPause = useCallback(() => {
     if (audioRef.current && currentMedia) {
@@ -910,6 +999,12 @@ export const PlayerProvider = ({ children }) => {
       confirmAddToQueue,
       cancelPlayChoice,
       audioRef,
+
+      // Do-not-play list. Exposed for a future "manage blocked songs" settings
+      // screen and so any surface can reflect blocked state without refetching.
+      blockedSongIds,
+      isTrackBlocked,
+      loadBlockedSongs,
 
       // Queue persistence — player.jsx calls this once on the first load after
       // a refresh so it can seek to the saved offset instead of restarting.

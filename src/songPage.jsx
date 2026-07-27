@@ -316,6 +316,20 @@ const SongPage = () => {
 
   const handleArtistClick = () => { if (song?.artistId) navigate(`/artist/${song.artistId}`); };
 
+  // ── Keyboard activation for div-based controls ──────────────────────────
+  // The jurisdiction chip, hero artist row, and sidebar artist card are all
+  // <div onClick>. A mouse reaches them; a keyboard or screen reader never
+  // does — they aren't in the tab order and don't respond to Enter/Space.
+  // Rather than convert them to <button> (which would inherit UA button
+  // styling and risk visual regressions across three separate layouts), we
+  // give them the full button contract: role, tab stop, and key handling.
+  const onKeyActivate = (fn) => (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fn();
+    }
+  };
+
   const isOwner = userId && song?.artistId === userId;
 
   // ── Loading ──
@@ -361,14 +375,28 @@ const SongPage = () => {
                   <img src={song.artwork} alt={`${song.title} artwork`} />
                 </div>
                 <div className="sp-hero-info">
-                  <div className="sp-jurisdiction" onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)}>
+                  <div
+                    className="sp-jurisdiction"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View the ${song.jurisdiction} jurisdiction`}
+                    onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)}
+                    onKeyDown={onKeyActivate(() => navigate(`/jurisdiction/${song.jurisdiction}`))}
+                  >
                     {song.jurisdiction}
                   </div>
                   <h1 className="sp-title">
                     {song.title}
                     {song.explicit && <span className="sp-explicit">Explicit</span>}
                   </h1>
-                  <div className="sp-artist-row" onClick={handleArtistClick}>
+                  <div
+                    className="sp-artist-row"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View ${song.artist}'s artist page`}
+                    onClick={handleArtistClick}
+                    onKeyDown={onKeyActivate(handleArtistClick)}
+                  >
                     <div className={`sp-artist-avatar ${song.artistPhoto ? '' : 'placeholder'}`}>
                       {song.artistPhoto
                         ? <img src={song.artistPhoto} alt={song.artist} />
@@ -401,6 +429,7 @@ const SongPage = () => {
               <button
                 onClick={handleLike}
                 className={`sp-btn-like ${isLiked ? 'liked' : ''}`}
+                aria-pressed={isLiked}
               >
                 <Heart size={16} fill={isLiked ? 'white' : 'none'} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 6 }} />
                 {isLiked ? 'Liked' : 'Like'}
@@ -416,10 +445,21 @@ const SongPage = () => {
 
             {/* ── SECONDARY ACTIONS — text buttons like original ── */}
             <div className="sp-secondary-actions">
-              <button onClick={handleDontPlay} className="sp-action-btn">{isBlocked ? "Won't Play ✓" : "Don't Play"}</button>
+              <button
+                onClick={handleDontPlay}
+                className="sp-action-btn"
+                aria-pressed={isBlocked}
+                aria-label={isBlocked
+                  ? `Allow ${song.title} to play again`
+                  : `Never play ${song.title}`}
+              >
+                {isBlocked ? "Won't Play ✓" : "Don't Play"}
+              </button>
               <button onClick={handleReport} className="sp-action-btn">Report</button>
               <button onClick={handleCopyLink} className="sp-action-btn">
-                {copySuccess ? 'Copied!' : 'Copy Link'}
+                {/* aria-live so screen readers announce the confirmation —
+                    a purely visual "Copied!" is invisible to them. */}
+                <span aria-live="polite">{copySuccess ? 'Copied!' : 'Copy Link'}</span>
               </button>
             </div>
 
@@ -461,7 +501,14 @@ const SongPage = () => {
 
             <div className="sp-sidebar-section">
               <div className="sp-sidebar-title">Artist</div>
-              <div className="sp-artist-card" onClick={handleArtistClick}>
+              <div
+                className="sp-artist-card"
+                role="button"
+                tabIndex={0}
+                aria-label={`View ${song.artist}'s artist page`}
+                onClick={handleArtistClick}
+                onKeyDown={onKeyActivate(handleArtistClick)}
+              >
                 <div className={`sp-artist-card-avatar ${song.artistPhoto ? 'has-photo' : ''}`}>
                   {song.artistPhoto
                     ? <img src={song.artistPhoto} alt={song.artist} />

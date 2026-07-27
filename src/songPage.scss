@@ -16,7 +16,15 @@ $unis-blue-hover: var(--unis-primary);
 $unis-blue-dim: var(--unis-primary);
 $unis-blue-glow: var(--unis-primary);
 $accent-blue: var(--unis-primary);
-$accent-blue-dim: rgba(74, 143, 231, 0.15);
+// Canonical brand default, matching theme.scss's base --unis-primary and
+// artistpage.scss's $ap2-blue-raw. Used ONLY as a var() fallback for guests
+// and any state where the theme token hasn't been set yet.
+$unis-fallback: #163387;
+// Was `rgba(74, 143, 231, 0.15)` — a hardcoded blue tint that stayed blue no
+// matter which theme the user picked, so every avatar placeholder, Follow
+// button, and lyrics-edit chip on this page silently defied the theme.
+// color-mix derives the tint from the live token instead.
+$accent-blue-dim: color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 18%, transparent);
 $accent-red: #e24b4b;
 $accent-red-dim: rgba(226, 75, 75, 0.15);
 $accent-green: #4ecf7a;
@@ -56,6 +64,40 @@ $transition-ambient: 1.2s ease;
   color: $text-primary;
   font-family: $font-body;
   -webkit-font-smoothing: antialiased;
+
+  // ── Page-wide interactive-state hygiene ────────────────────────────────
+  // Mobile browsers paint a translucent grey/blue box over any tapped
+  // control, and Chrome adds its own blue focus ring on mouse clicks. Both
+  // read as "the button changed colour on click" and both fight the theme.
+  //
+  // We suppress the tap highlight and the MOUSE focus ring, but deliberately
+  // keep a visible ring for :focus-visible so keyboard users can still see
+  // where they are. Stripping focus styling wholesale is the common version
+  // of this fix and it is an accessibility regression — this is not that.
+  button {
+    -webkit-tap-highlight-color: transparent;
+
+    &:focus { outline: none; }
+
+    &:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 70%, #ffffff);
+      outline-offset: 2px;
+    }
+  }
+
+  // Same treatment for the div-based controls that are now keyboard-reachable
+  // (see the role="button" / tabIndex additions in songPage.jsx).
+  [role='button'] {
+    -webkit-tap-highlight-color: transparent;
+
+    &:focus { outline: none; }
+
+    &:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 70%, #ffffff);
+      outline-offset: 3px;
+      border-radius: $radius-sm;
+    }
+  }
 }
 
 .sp-grid {
@@ -226,7 +268,9 @@ $transition-ambient: 1.2s ease;
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background-color: $unis-blue;
+    // Fallback matters: a logged-out visitor has no --unis-primary set, and a
+    // bare var() with no fallback resolves to transparent — an invisible button.
+    background-color: var(--unis-primary, #{$unis-fallback});
     border: none;
     cursor: pointer;
     display: flex;
@@ -235,15 +279,42 @@ $transition-ambient: 1.2s ease;
     padding: 0;
     flex-shrink: 0;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
 
-    &:hover {
-      transform: scale(1.05);
-      background-color: #1c41ad;
-      box-shadow: 0 6px 20px $unis-blue-glow;
+    // Removes the grey/blue flash iOS and Android paint over tapped controls.
+    -webkit-tap-highlight-color: transparent;
+
+    // ── THE BUG THIS REPLACES ────────────────────────────────────────────
+    // The old rule was `&:hover { background-color: #1c41ad; }` — a hardcoded
+    // blue that ignored the user's theme entirely. Two failures came from it:
+    //   1. Theme violation: a user themed to red/green/purple saw their play
+    //      button turn Unis-blue the instant they hovered it.
+    //   2. Sticky hover on touch: phones and trackpad-tap devices latch :hover
+    //      after a tap and hold it until the next tap elsewhere — so the button
+    //      stayed blue after being clicked, which is exactly what you saw.
+    // Fix: brightness() derives the hover shade FROM the active theme colour,
+    // and @media (hover: hover) means touch devices never enter the state at
+    // all. Same pattern already used in artistpage.scss.
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        transform: scale(1.05);
+        filter: brightness(1.12);
+        box-shadow: 0 6px 20px color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 45%, transparent);
+      }
     }
 
     &:active { transform: scale(0.95); }
+
+    // Never show the UA's default focus ring (it renders as a blue box on
+    // Chrome and was compounding the "turns blue" symptom), but keep a real,
+    // theme-aware ring for keyboard users — removing focus styling outright
+    // would be an accessibility regression.
+    &:focus { outline: none; }
+
+    &:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 70%, #ffffff);
+      outline-offset: 3px;
+    }
 
     // Nuclear specificity — same approach as the player to survive any global SVG rules
     svg {
@@ -279,7 +350,9 @@ $transition-ambient: 1.2s ease;
 .sp-btn-like {
   padding: 10px 20px;
   background: transparent;
-  color: grey;
+  // Was `grey` (#808080) on a near-black surface: ~3.5:1, below the 4.5:1
+  // WCAG AA floor for body text. $text-primary clears it comfortably.
+  color: $text-primary;
   border: 2px solid $unis-blue;
   border-radius: $radius-sm;
   font-family: $font-body;
@@ -345,7 +418,9 @@ $transition-ambient: 1.2s ease;
 
   &.following {
     color: $accent-blue;
-    border-color: rgba($accent-blue, 0.3);
+    // Was rgba($accent-blue, 0.3) -> compiled to rgba(var(--unis-primary), 0.3),
+    // which is invalid CSS (rgba() cannot take a hex) so the browser dropped it.
+    border-color: color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 30%, transparent);
     background: $accent-blue-dim;
   }
 }
@@ -382,7 +457,8 @@ $transition-ambient: 1.2s ease;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  &:hover { background: rgba($accent-blue, 0.25); }
+  // Same invalid-rgba() problem as above — this hover was a no-op.
+  &:hover { background: color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 25%, transparent); }
 }
 
 .sp-lyrics-body {
@@ -540,7 +616,8 @@ $transition-ambient: 1.2s ease;
   border-radius: $radius-sm;
   cursor: pointer;
   flex-shrink: 0;
-  &:hover { background: rgba($accent-blue, 0.25); }
+  // Same invalid-rgba() problem as above — this hover was a no-op.
+  &:hover { background: color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 25%, transparent); }
   &.following { background: $accent-blue; color: white; }
 }
 

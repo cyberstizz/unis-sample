@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { apiCall } from './components/axiosInstance';
 import {
   MessageCircle,
@@ -655,11 +656,30 @@ const CommentSection = ({ songId, videoId, userId, songArtistId, artistId }) => 
         </div>
       </div>
 
-      {/* Mobile full-screen / bottom-sheet panel */}
-      <div
-        className={`comments-mobile-sheet ${isMobileSheetOpen ? 'is-open' : ''}`}
-        aria-hidden={!isMobileSheetOpen}
-      >
+      {/* Mobile full-screen / bottom-sheet panel.
+          ─────────────────────────────────────────────────────────────────
+          PORTALED TO document.body — this is load-bearing, not a style choice.
+
+          `.layout-container` sets `position: relative; z-index: 1`, which
+          creates a stacking context. <Player /> renders OUTSIDE Layout at
+          z-index 1000. Any element inside Layout is therefore painted below
+          the player no matter how high its own z-index climbs — this sheet's
+          `z-index: 9998 !important` was being compared against its siblings
+          inside a z-index:1 island, not against the player.
+
+          That is why comments opened from the player tray worked (that sheet
+          is a child of Player, at root level) while comments opened from the
+          song page were covered. Portaling to body puts this sheet in the
+          root stacking context, where 9998 genuinely beats 1000.
+
+          Fixes songPage and videoPage in one move — both render this same
+          component. Mirrors the portal pattern already used in
+          voteHistoryModal.jsx and SupporterSection.jsx. */}
+      {createPortal(
+        <div
+          className={`comments-mobile-sheet ${isMobileSheetOpen ? 'is-open' : ''}`}
+          aria-hidden={!isMobileSheetOpen}
+        >
         <div
           className="comments-mobile-sheet__scrim"
           onClick={() => setIsMobileSheetOpen(false)}
@@ -721,8 +741,10 @@ const CommentSection = ({ songId, videoId, userId, songArtistId, artistId }) => 
           <div className="comments-mobile-sheet__composer">
             {renderComposer({ variant: 'sheet' })}
           </div>
-        </div>
-      </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </section>
   );
 };
