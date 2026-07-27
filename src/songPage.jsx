@@ -31,6 +31,7 @@ const SongPage = () => {
   const [showLyricsWizard, setShowLyricsWizard] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [dominantColor, setDominantColor] = useState('rgba(255, 255, 255, 0.1)');
   const [ambientRGB, setAmbientRGB] = useState({ r: 80, g: 60, b: 40 });
 
@@ -181,6 +182,18 @@ const SongPage = () => {
   }, [currentMedia?.id, currentMedia?.songId, song?.id, userId]);
 
 
+  // ── Load whether this song is on the user's do-not-play list ──
+  useEffect(() => {
+    if (!song?.id || !userId) { setIsBlocked(false); return; }
+    let active = true;
+    apiCall({ method: 'get', url: '/v1/playlists/blocked-songs' })
+      .then(res => {
+        if (active) setIsBlocked((res.data || []).some(b => b.songId === song.id));
+      })
+      .catch(err => console.error('Failed to load do-not-play status:', err));
+    return () => { active = false; };
+  }, [song?.id, userId]);
+
   const HeroPlayIcon = () => (
     <svg viewBox="0 0 24 24" width="22" height="22"
       style={{ width: 22, height: 22, display: 'block', fill: '#FFFFFF', marginLeft: 2 }}>
@@ -270,8 +283,30 @@ const SongPage = () => {
     } catch (err) { console.error('Failed to toggle follow:', err); setIsFollowing(!newStatus); }
   };
 
-  const handleDontPlay = () => console.log('Added to do-not-play list');
-  const handleReport = () => console.log('Report song');
+  // ── "Don't Play" — persists to the existing blocked_songs backend.
+  //    PlayerContext listens for 'unis:blocked-songs-changed' and skips
+  //    blocked tracks during playlist playback.
+  const handleDontPlay = async () => {
+    if (!userId) { alert('Please log in to manage your do-not-play list.'); return; }
+    if (!song?.id) return;
+    try {
+      if (isBlocked) {
+        await apiCall({ method: 'delete', url: `/v1/playlists/blocked-songs/${song.id}` });
+        setIsBlocked(false);
+      } else {
+        await apiCall({ method: 'post', url: '/v1/playlists/blocked-songs', data: { songId: song.id } });
+        setIsBlocked(true);
+      }
+      window.dispatchEvent(new Event('unis:blocked-songs-changed'));
+    } catch (err) {
+      console.error('Failed to toggle do-not-play:', err);
+      alert('Failed to update your do-not-play list. Please try again.');
+    }
+  };
+
+  // ── Report — opens the infringement form with this page's URL pre-filled.
+  const handleReport = () =>
+    navigate(`/report?url=${encodeURIComponent(window.location.href)}`);
   const handleShare = () => console.log('Share song');
 
   const handleCopyLink = async () => {
@@ -306,7 +341,13 @@ const SongPage = () => {
 
   return (
     <Layout backgroundImage={song.artwork}>
-      <div className="song-page-container">
+      {/* When a track is loaded, the fixed player tray (80px) covers the
+          bottom of the page — on mobile that's the comment input. Padding
+          the container by the tray height keeps comments fully usable. */}
+      <div
+        className="song-page-container"
+        style={{ paddingBottom: currentMedia ? 100 : undefined }}
+      >
         <div className="sp-grid">
 
           {/* ━━━ LEFT / MAIN COLUMN ━━━ */}
@@ -375,7 +416,7 @@ const SongPage = () => {
 
             {/* ── SECONDARY ACTIONS — text buttons like original ── */}
             <div className="sp-secondary-actions">
-              <button onClick={handleDontPlay} className="sp-action-btn">Don't Play</button>
+              <button onClick={handleDontPlay} className="sp-action-btn">{isBlocked ? "Won't Play ✓" : "Don't Play"}</button>
               <button onClick={handleReport} className="sp-action-btn">Report</button>
               <button onClick={handleCopyLink} className="sp-action-btn">
                 {copySuccess ? 'Copied!' : 'Copy Link'}

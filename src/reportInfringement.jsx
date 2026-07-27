@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import './reportInfringement.scss'
 
 const ReportInfringement = () => {
+  // Pre-fill the infringing-content URL when arriving from a Report button
+  // (e.g. songPage sends /report?url=<current page>).
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -11,7 +15,7 @@ const ReportInfringement = () => {
     companyName: '',
     copyrightOwner: '',
     workDescription: '',
-    infringingUrl: '',
+    infringingUrl: searchParams.get('url') || '',
     originalWorkUrl: '',
     goodFaithStatement: false,
     accuracyStatement: false,
