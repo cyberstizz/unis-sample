@@ -1,622 +1,782 @@
 // ============================================================================
-// MilestonesPage.scss — modernized to match the Unis marketing aesthetic
+// milestonesPage.scss — the award archive.
+//
+// THEME RULE
+//   Every accent derives from --unis-primary through color-mix(), so all seven
+//   themes recolor the page. Do NOT wrap a CSS variable in rgba() —
+//   `rgba(var(--unis-primary), .3)` compiles to invalid CSS and the rule dies
+//   silently. That trap already cost three dead rules on songPage.
+//
+// DESIGN
+//   Restraint everywhere except one place: the tally rail, where bar width
+//   encodes each entry's share of the period's points so margin of victory is
+//   readable without parsing a single figure. The winner's name is the only
+//   serif on the page.
 // ============================================================================
 
-// ─── Theme tokens ──────────────────────────────────────────────────────────
-$bg-deep: #07080d;
-$surface-1: rgba(15, 18, 30, 0.6);
-$surface-2: rgba(20, 24, 40, 0.5);
-$surface-row: rgba(255, 255, 255, 0.025);
-$surface-row-hover: rgba(255, 255, 255, 0.045);
-$unis-blue: var(--unis-primary, #1b63d8);
+.ms-page {
+  // ─── Tokens ──────────────────────────────────────────────────────────────
+  --ms-void:        #08090e;
+  --ms-plate:       rgba(255, 255, 255, 0.028);
+  --ms-plate-lift:  rgba(255, 255, 255, 0.05);
+  --ms-etch:        rgba(255, 255, 255, 0.075);
+  --ms-etch-strong: rgba(255, 255, 255, 0.14);
 
+  --ms-ink:    #f6f7f9;
+  --ms-ink-2:  rgba(246, 247, 249, 0.62);
+  --ms-ink-3:  rgba(246, 247, 249, 0.38);
 
-$border-faint: rgba(255, 255, 255, 0.06);
-$border-soft: rgba(255, 255, 255, 0.10);
-$border-medium: rgba(255, 255, 255, 0.18);
+  --ms-accent:      color-mix(in srgb, var(--unis-primary, #163387), white 38%);
+  --ms-accent-fill: var(--unis-primary, #163387);
+  --ms-accent-dim:  color-mix(in srgb, var(--unis-primary, #163387), transparent 78%);
+  --ms-accent-edge: color-mix(in srgb, var(--unis-primary, #163387), transparent 58%);
+  --ms-accent-haze: color-mix(in srgb, var(--unis-primary, #163387), transparent 92%);
 
-$text-primary: #ffffff;
-$text-secondary: rgba(255, 255, 255, 0.72);
-$text-tertiary: rgba(255, 255, 255, 0.48);
-$text-quaternary: rgba(255, 255, 255, 0.32);
+  --ms-gutter: 22px;
+  --ms-radius: 14px;
 
-$accent-blue: #4facfe;
-$accent-blue-strong: #2c8eef;
-$accent-blue-glow: rgba(79, 172, 254, 0.4);
-
-// ─── Animations ────────────────────────────────────────────────────────────
-@keyframes prestigeFadeIn {
-  0%   { opacity: 0; transform: translateY(20px) scale(0.98); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  min-height: 100%;
+  color: var(--ms-ink);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-@keyframes artworkPop {
-  0%   { opacity: 0; transform: scale(0.92); filter: blur(8px); }
-  100% { opacity: 1; transform: scale(1); filter: blur(0); }
-}
-
-@keyframes textSlideUp {
-  0%   { opacity: 0; transform: translateY(12px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes shineEffect {
-  0%   { left: -100%; }
-  100% { left: 200%; }
-}
-
-@keyframes rowSlideIn {
-  0%   { opacity: 0; transform: translateX(-12px); }
-  100% { opacity: 1; transform: translateX(0); }
-}
-
-// ─── Page container ────────────────────────────────────────────────────────
-.milestones-page-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 0 80px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  color: $text-secondary;
-  background: transparent;
-  margin-left: 80px;
-}
-
-.content-wrapper {
-  width: 100%;
-  max-width: 1180px;
-  padding: 0 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
-
-// ─── Filter bar (frosted glass pill row) ───────────────────────────────────
-.filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 10px 10px 16px;
-  background: $surface-1;
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
-  border: 1px solid $border-soft;
-  border-radius: 999px;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 20px 40px -20px rgba(0, 0, 0, 0.6);
-
-  .filter-pills {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    flex-wrap: wrap;
-  }
-
-  .filter-select {
-    appearance: none;
-    -webkit-appearance: none;
-    background-color: rgba(255, 255, 255, 0.035);
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6"><path fill="%23A0A0A0" d="M5 6 0 0h10z"/></svg>');
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    border: 1px solid $border-soft;
-    color: $text-primary;
-    padding: 10px 32px 10px 16px;
-    border-radius: 999px;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-    cursor: pointer;
-    transition: background-color 0.18s ease, border-color 0.18s ease;
-
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.06);
-      border-color: $border-medium;
-    }
-
-    &:focus {
-      outline: none;
-      border-color: rgba(79, 172, 254, 0.55);
-      box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.12);
-    }
-
-    option {
-      background: $bg-deep;
-      color: $text-primary;
-    }
-  }
-
-  .view-button {
-    flex-shrink: 0;
-    padding: 11px 26px;
-    background: linear-gradient(135deg, $accent-blue 0%, $accent-blue-strong 100%);
-    border: none;
-    color: #fff;
-    background-color: $unis-blue;
-    width: fit-content;
-    border-radius: 999px;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-    box-shadow: 0 6px 20px -4px $accent-blue-glow;
-
-    &:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 26px -4px $accent-blue-glow;
-    }
-
-    &:active:not(:disabled) {
-      transform: translateY(0);
-    }
-
-    &:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-  }
-}
-
-// ─── Caption ───────────────────────────────────────────────────────────────
-.milestone-caption {
-  text-align: center;
-  padding: 12px 0 4px;
-
-  .caption-container {
-    animation: textSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-
-  .caption-top {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: $text-tertiary;
-    text-transform: uppercase;
-    letter-spacing: 0.32em;
-    margin-bottom: 12px;
-  }
-
-  .caption-headline {
-    font-size: clamp(2rem, 5vw, 3.25rem);
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: -0.02em;
-    background: linear-gradient(180deg, #ffffff 0%, #c0c8d4 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-transform: uppercase;
-    margin: 0;
-  }
-
-  .caption-date {
-    display: inline-block;
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: $accent-blue;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    margin-top: 14px;
-    padding: 4px 0;
-    border-bottom: 1px solid rgba(79, 172, 254, 0.25);
-    text-shadow: 0 0 16px rgba(79, 172, 254, 0.3);
-  }
-}
-
-// ─── Showcase grid ─────────────────────────────────────────────────────────
-.showcase {
-  display: grid;
-  gap: 20px;
-  align-items: stretch;
-  animation: prestigeFadeIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-
-  &.has-leaderboard {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-
-    @media (max-width: 960px) {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  &.winner-only {
-    grid-template-columns: minmax(0, 720px);
-    justify-content: center;
-  }
-}
-
-// ─── Winner card ───────────────────────────────────────────────────────────
-.winner-card {
-  position: relative;
-  border-radius: 20px;
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
   overflow: hidden;
-  border: 1px solid $border-soft;
-  background: $surface-1;
-  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
-  display: flex;
-  flex-direction: column;
-
-  .ambient-glow {
-    position: absolute;
-    inset: -40%;
-    background-size: cover;
-    background-position: center;
-    filter: blur(80px) saturate(180%);
-    opacity: 0.45;
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  .winner-content {
-    position: relative;
-    z-index: 1;
-    background: rgba(8, 10, 18, 0.62);
-    backdrop-filter: blur(24px) saturate(140%);
-    -webkit-backdrop-filter: blur(24px) saturate(140%);
-    padding: 28px 28px 26px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 22px;
-  }
-
-  .winner-artwork-wrapper {
-    position: relative;
-    width: 100%;
-    max-width: 320px;
-    aspect-ratio: 1 / 1;
-    border-radius: 14px;
-    overflow: hidden;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.08) inset,
-      0 24px 48px -16px rgba(0, 0, 0, 0.7);
-    animation: artworkPop 0.9s 0.1s cubic-bezier(0.34, 1.4, 0.64, 1) both;
-
-    .winner-artwork {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .artwork-shine {
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 50%;
-      height: 100%;
-      background: linear-gradient(
-        to right,
-        rgba(255,255,255,0) 0%,
-        rgba(255,255,255,0.28) 50%,
-        rgba(255,255,255,0) 100%
-      );
-      transform: skewX(-25deg);
-      animation: shineEffect 1.6s 1.0s ease-in-out;
-      pointer-events: none;
-    }
-  }
-
-  .winner-meta {
-    animation: textSlideUp 0.6s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-
-    .winner-eyebrow {
-      font-size: 0.6875rem;
-      font-weight: 700;
-      color: $accent-blue;
-      text-transform: uppercase;
-      letter-spacing: 0.24em;
-      margin-bottom: 4px;
-    }
-
-    .winner-title {
-      font-size: clamp(1.5rem, 3vw, 2rem);
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -0.015em;
-      color: $text-primary;
-      margin: 0;
-      text-transform: uppercase;
-    }
-
-    .winner-artist {
-      font-size: 1rem;
-      color: $text-secondary;
-      margin: 0;
-      font-weight: 500;
-    }
-  }
-
-  .winner-stats {
-    animation: textSlideUp 0.6s 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-    width: 100%;
-    display: flex;
-    align-items: stretch;
-    justify-content: space-between;
-    gap: 0;
-    padding: 14px 6px;
-    background: rgba(255, 255, 255, 0.025);
-    border: 1px solid $border-faint;
-    border-radius: 14px;
-
-    .stat {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      min-width: 0;
-
-      .stat-value {
-        font-size: 1.125rem;
-        font-weight: 700;
-        color: $text-primary;
-        letter-spacing: -0.01em;
-        line-height: 1;
-      }
-
-      .stat-label {
-        font-size: 0.625rem;
-        font-weight: 600;
-        color: $text-tertiary;
-        text-transform: uppercase;
-        letter-spacing: 0.14em;
-      }
-    }
-
-    .stat-divider {
-      width: 1px;
-      background: $border-faint;
-      margin: 4px 0;
-    }
-  }
-
-  .winner-caption {
-    font-size: 0.875rem;
-    font-style: italic;
-    color: $text-secondary;
-    margin-top: 4px;
-  }
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-// ─── Leaderboard card ──────────────────────────────────────────────────────
-.leaderboard-card {
-  position: relative;
-  background: $surface-1;
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
-  border: 1px solid $border-soft;
-  border-radius: 20px;
-  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-
-  .leaderboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 26px 28px 22px;
-    border-bottom: 1px solid $border-faint;
-  }
-
-  .leaderboard-label {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-
-    .label-eyebrow {
-      font-size: 0.6875rem;
-      font-weight: 700;
-      color: $accent-blue;
-      text-transform: uppercase;
-      letter-spacing: 0.22em;
-    }
-
-    .label-meta {
-      font-size: 1rem;
-      font-weight: 600;
-      color: $text-primary;
-      line-height: 1.3;
-      max-width: 280px;
-    }
-  }
-
-  .leaderboard-region {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    color: $text-tertiary;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    white-space: nowrap;
-    padding-top: 4px;
-  }
-
-  .leaderboard-list {
-    list-style: none;
-    margin: 0;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .leaderboard-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1px solid transparent;
-    background: transparent;
-    transition: background-color 0.18s ease, border-color 0.18s ease;
-    animation: rowSlideIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-
-    &:not(.is-winner):hover {
-      background: $surface-row-hover;
-    }
-
-    &.is-winner {
-      background: linear-gradient(
-        90deg,
-        rgba(79, 172, 254, 0.16) 0%,
-        rgba(79, 172, 254, 0.04) 100%
-      );
-      border-color: rgba(79, 172, 254, 0.32);
-      box-shadow: inset 0 0 24px rgba(79, 172, 254, 0.08);
-
-      .row-rank {
-        color: $accent-blue;
-      }
-    }
-  }
-
-  .row-rank {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: $text-quaternary;
-    min-width: 24px;
-    letter-spacing: -0.01em;
-    flex-shrink: 0;
-  }
-
-  .row-artwork {
-    display: block;
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-    border-radius: 8px;
-    object-fit: cover;
-    background: rgba(255, 255, 255, 0.04);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.06) inset,
-      0 4px 12px -4px rgba(0, 0, 0, 0.5);
-  }
-
-  .row-info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-
-    .row-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: $text-primary;
-      letter-spacing: -0.005em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .row-subtitle {
-      font-size: 0.8125rem;
-      color: $text-tertiary;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
+.ms-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 40px var(--ms-gutter) 96px;
 }
 
-// ─── Determination badges ──────────────────────────────────────────────────
-.badge {
-  display: inline-block;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 0.6875rem;
+// ─── Masthead ──────────────────────────────────────────────────────────────
+.ms-masthead {
+  margin-bottom: 34px;
+}
+
+.ms-eyebrow {
+  margin: 0 0 8px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-
-  &.tiebreaker {
-    background: rgba(255, 255, 255, 0.06);
-    color: $text-secondary;
-    border: 1px solid $border-soft;
-  }
-
-  &.tiebreaker.plays { color: #4facfe; border-color: rgba(79, 172, 254, 0.3); }
-  &.tiebreaker.likes { color: #fa709a; border-color: rgba(250, 112, 154, 0.3); }
-  &.tiebreaker.score { color: #a8edea; border-color: rgba(168, 237, 234, 0.3); }
-  &.tiebreaker.seniority { color: #d299c2; border-color: rgba(210, 153, 194, 0.3); }
-
-  &.fallback {
-    background: rgba(255, 255, 255, 0.06);
-    color: $text-tertiary;
-    border: 1px solid $border-soft;
-  }
+  color: var(--ms-accent);
 }
 
-// ─── State messages ────────────────────────────────────────────────────────
-.state-section {
-  min-height: 24px;
+.ms-wordmark {
+  margin: 0;
+  font-size: clamp(2.1rem, 5vw, 3.1rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ms-ink);
 }
 
-.loading-message,
-.error-message {
-  text-align: center;
-  font-size: 0.875rem;
-  letter-spacing: 0.04em;
-  padding: 14px 20px;
-  border-radius: 12px;
-  border: 1px solid $border-soft;
-  background: $surface-1;
+.ms-lede {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  color: var(--ms-ink-2);
 }
 
-.loading-message { color: $text-tertiary; }
-.error-message {
-  color: #ff8c8c;
-  border-color: rgba(255, 140, 140, 0.25);
-  background: rgba(255, 140, 140, 0.05);
+// ─── Controls ──────────────────────────────────────────────────────────────
+.ms-controls {
+  padding: 18px;
+  margin-bottom: 34px;
+  background: var(--ms-plate);
+  border: 1px solid var(--ms-etch);
+  border-radius: var(--ms-radius);
+  backdrop-filter: blur(18px);
 }
 
-// ─── Mobile ────────────────────────────────────────────────────────────────
-@media (max-width: 720px) {
-  .milestones-page-container {
-    margin-left: 0;
-    padding: 16px 0 60px;
-    width: 100%;
-  }
+.ms-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 
-  .content-wrapper { padding: 0 16px; gap: 20px; }
+  & + & { margin-top: 12px; }
+}
 
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-    border-radius: 20px;
-    padding: 14px;
+.ms-control-row--period {
+  padding-top: 14px;
+  border-top: 1px solid var(--ms-etch);
+}
 
-    .filter-pills {
-      flex-direction: column;
-      width: 100%;
+.ms-segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ms-etch);
+  border-radius: 9px;
+}
 
-      .filter-select { width: 100%; }
+.ms-seg {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 7px 13px;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--ms-ink-3);
+  cursor: pointer;
+  transition: color 0.16s ease, background 0.16s ease;
+  white-space: nowrap;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(.is-active) {
+      color: var(--ms-ink-2);
+      background: rgba(255, 255, 255, 0.035);
     }
-
-    .view-button { width: 100%; }
   }
 
-  .winner-card .winner-content { padding: 22px 18px; }
-
-  .winner-card .winner-stats {
-    .stat-value { font-size: 1rem; }
-    .stat-label { font-size: 0.5625rem; }
+  &:focus-visible {
+    outline: 2px solid var(--ms-accent);
+    outline-offset: 1px;
   }
 
-  .leaderboard-card {
-    .leaderboard-header { padding: 20px 18px 16px; flex-direction: column; gap: 8px; }
-    .leaderboard-list { padding: 8px; }
-    .leaderboard-row { padding: 10px; gap: 10px; }
-    .row-artwork { width: 40px; height: 40px; }
-    .row-info .row-title { font-size: 0.9375rem; }
+  &.is-active {
+    color: var(--ms-ink);
+    background: var(--ms-accent-fill);
+    box-shadow: 0 1px 10px -3px var(--ms-accent-edge);
   }
+}
+
+.ms-period-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ms-period-range {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ms-ink-3);
+  white-space: nowrap;
+}
+
+.ms-submit {
+  appearance: none;
+  margin-left: auto;
+  padding: 10px 20px;
+  border: 1px solid var(--ms-accent-edge);
+  border-radius: 9px;
+  background: var(--ms-accent-fill);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: filter 0.16s ease, opacity 0.16s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) { filter: brightness(1.14); }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ms-accent);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+  }
+}
+
+// ─── Open-period notice ────────────────────────────────────────────────────
+.ms-notice {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--ms-accent-haze);
+  border: 1px solid var(--ms-accent-dim);
+  border-radius: 10px;
+}
+
+.ms-notice-title {
+  margin: 0 0 4px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ms-ink);
+}
+
+.ms-notice-body {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ms-ink-2);
+}
+
+.ms-notice-action {
+  appearance: none;
+  margin-top: 10px;
+  padding: 7px 13px;
+  background: transparent;
+  border: 1px solid var(--ms-accent-edge);
+  border-radius: 7px;
+  color: var(--ms-accent);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.16s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { background: var(--ms-accent-dim); }
+  }
+
+  &:focus-visible { outline: 2px solid var(--ms-accent); outline-offset: 2px; }
+}
+
+// ─── Headline ──────────────────────────────────────────────────────────────
+.ms-headline {
+  margin-bottom: 18px;
+}
+
+.ms-headline-kicker {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ms-accent);
+  margin-bottom: 7px;
+}
+
+.ms-headline-title {
+  margin: 0;
+  font-size: clamp(1.3rem, 3vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ms-ink);
+}
+
+.ms-headline-period {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ms-ink-2);
+}
+
+// ─── Plate ─────────────────────────────────────────────────────────────────
+.ms-result {
+  animation: msRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes msRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.ms-plate {
+  position: relative;
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  gap: 28px;
+  padding: 26px;
+  overflow: hidden;
+  background: var(--ms-plate);
+  border: 1px solid var(--ms-etch-strong);
+  border-radius: var(--ms-radius);
+  backdrop-filter: blur(22px);
+}
+
+.ms-plate-glow {
+  position: absolute;
+  inset: -40%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(72px) saturate(1.5);
+  opacity: 0.3;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.ms-plate-art,
+.ms-plate-body { position: relative; z-index: 1; }
+
+.ms-plate-art {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--ms-etch-strong);
+  box-shadow: 0 22px 48px -22px rgba(0, 0, 0, 0.9);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.ms-plate-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.ms-plate-crown {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 4px 10px;
+  margin-bottom: 12px;
+  border-radius: 5px;
+  background: var(--ms-accent-fill);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+// The only serif on the page — the engraved name.
+.ms-plate-name {
+  margin: 0;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: clamp(1.9rem, 4.4vw, 3rem);
+  font-weight: 400;
+  line-height: 1.03;
+  letter-spacing: -0.015em;
+  color: var(--ms-ink);
+  overflow-wrap: anywhere;
+}
+
+.ms-plate-by {
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+  color: var(--ms-ink-2);
+}
+
+.ms-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 26px;
+  margin: 22px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--ms-etch);
+}
+
+.ms-figure {
+  margin: 0;
+
+  dt {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ms-ink-3);
+    margin-bottom: 4px;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--ms-ink-2);
+  }
+
+  &--lead dd {
+    font-size: 1.5rem;
+    color: var(--ms-accent);
+  }
+}
+
+.ms-plate-note {
+  margin: 14px 0 0;
+  font-size: 0.76rem;
+  color: var(--ms-ink-3);
+}
+
+.ms-plate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 20px;
+}
+
+.ms-action {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border: 1px solid var(--ms-etch-strong);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ms-ink);
+  font-family: inherit;
+  font-size: 0.79rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.16s ease, filter 0.16s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { background: rgba(255, 255, 255, 0.08); }
+  }
+
+  &:focus-visible { outline: 2px solid var(--ms-accent); outline-offset: 2px; }
+
+  &--primary {
+    background: var(--ms-accent-fill);
+    border-color: var(--ms-accent-edge);
+    color: #fff;
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover { background: var(--ms-accent-fill); filter: brightness(1.14); }
+    }
+  }
+}
+
+// ─── Tally (signature) ─────────────────────────────────────────────────────
+.ms-tally {
+  margin-top: 16px;
+  padding: 20px 22px 12px;
+  background: var(--ms-plate);
+  border: 1px solid var(--ms-etch);
+  border-radius: var(--ms-radius);
+  backdrop-filter: blur(18px);
+}
+
+.ms-tally-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ms-etch);
+}
+
+.ms-tally-heading {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ms-ink-2);
+}
+
+.ms-tally-meta {
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ms-ink-3);
+}
+
+.ms-tally-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ms-tally-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--ms-etch);
+  animation: msRowIn 0.44s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--row-delay, 0ms);
+
+  &:last-child { border-bottom: 0; }
+
+  &.is-winner .ms-tally-rank { color: var(--ms-accent); }
+  &.is-winner .ms-tally-title { color: var(--ms-ink); font-weight: 600; }
+  &.is-winner .ms-tally-fill { background: var(--ms-accent-fill); }
+  &.is-winner .ms-tally-points { color: var(--ms-accent); }
+}
+
+@keyframes msRowIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.ms-tally-rank {
+  width: 26px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ms-ink-3);
+}
+
+.ms-tally-main {
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 11px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.16s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { background: rgba(255, 255, 255, 0.035); }
+  }
+
+  &:focus-visible { outline: 2px solid var(--ms-accent); outline-offset: -2px; }
+}
+
+.ms-tally-art {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--ms-etch);
+}
+
+.ms-tally-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  width: 168px;
+  flex-shrink: 0;
+}
+
+.ms-tally-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ms-ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ms-tally-artist {
+  font-size: 0.72rem;
+  color: var(--ms-ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// The rail. Width is share of the period's points — the one place this page
+// spends any boldness.
+.ms-tally-bar {
+  flex: 1;
+  min-width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.ms-tally-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  transform-origin: left;
+  animation: msFill 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--row-delay, 0ms) + 120ms);
+}
+
+@keyframes msFill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.ms-tally-points {
+  width: 78px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 0.84rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ms-ink-2);
+}
+
+.ms-tally-unit {
+  margin-left: 4px;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ms-ink-3);
+}
+
+.ms-tally-play {
+  appearance: none;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  margin-left: 4px;
+  border: 1px solid var(--ms-etch);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ms-ink-2);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: var(--ms-accent-fill);
+      border-color: var(--ms-accent-edge);
+      color: #fff;
+    }
+  }
+
+  &:focus-visible { outline: 2px solid var(--ms-accent); outline-offset: 2px; }
+}
+
+.ms-tally-solo {
+  margin: 12px 0;
+  font-size: 0.76rem;
+  text-align: center;
+  color: var(--ms-ink-3);
+}
+
+// ─── States ────────────────────────────────────────────────────────────────
+.ms-message {
+  padding: 26px 22px;
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--ms-ink-2);
+  background: var(--ms-plate);
+  border: 1px solid var(--ms-etch);
+  border-radius: var(--ms-radius);
+
+  &--error {
+    color: #ffb4b4;
+    border-color: rgba(255, 120, 120, 0.28);
+    background: rgba(255, 90, 90, 0.06);
+  }
+}
+
+.ms-invite {
+  padding: 46px 22px;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--ms-ink-3);
+  border: 1px dashed var(--ms-etch-strong);
+  border-radius: var(--ms-radius);
+
+  p { margin: 0; }
+}
+
+.ms-skeleton-plate,
+.ms-skeleton-row {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(255, 255, 255, 0.07) 50%,
+    rgba(255, 255, 255, 0.03) 75%
+  );
+  background-size: 200% 100%;
+  animation: msShimmer 1.4s linear infinite;
+  border-radius: var(--ms-radius);
+}
+
+.ms-skeleton-plate { height: 284px; }
+
+.ms-skeleton-list {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ms-skeleton-row { height: 58px; border-radius: 8px; }
+
+@keyframes msShimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+// ─── Responsive ────────────────────────────────────────────────────────────
+@media (max-width: 900px) {
+  .ms-plate {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .ms-plate-art {
+    max-width: 190px;
+  }
+
+  .ms-tally-text { width: 128px; }
+}
+
+@media (max-width: 680px) {
+  .ms-shell { padding: 26px 16px 84px; }
+
+  .ms-controls { padding: 14px; }
+
+  .ms-control-row {
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  .ms-control-row--period {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .ms-segmented { flex-shrink: 0; }
+
+  .ms-period-picker {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .ms-submit {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .ms-figures { gap: 18px; }
+
+  // The rail loses its meaning at this width — drop it, keep the numbers.
+  .ms-tally-bar { display: none; }
+
+  .ms-tally-text {
+    width: auto;
+    flex: 1;
+  }
+
+  .ms-tally-main { gap: 10px; padding: 10px 6px; }
+
+  .ms-tally-art { width: 34px; height: 34px; }
+
+  .ms-tally-points { width: 62px; font-size: 0.78rem; }
+
+  .ms-tally-unit { display: none; }
+}
+
+// ─── Reduced motion ────────────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .ms-result,
+  .ms-tally-row,
+  .ms-tally-fill,
+  .ms-skeleton-plate,
+  .ms-skeleton-row {
+    animation: none !important;
+  }
+
+  .ms-tally-fill { transform: none; }
 }

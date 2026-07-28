@@ -1,445 +1,541 @@
-import React, { useState } from 'react';
+// ============================================================================
+// MilestonesPage.jsx — the Unis award archive.
+//
+// One job: pull up a closed award period and show who took it, with receipts.
+//
+// PERIOD SAFETY (see utils/periodBounds.js for the full rationale)
+//   The backend auto-populates a missing Award on read. Requesting an open
+//   period therefore PERSISTS a winner computed from partial data and locks
+//   the real cron out of ever recomputing it. Three layers stop that here:
+//     1. maxDate is the end of the last CLOSED period, per interval.
+//     2. Changing interval re-clamps the selected date (the old cross-interval
+//        leak: pick yesterday on Daily, switch to Annual, get the current year).
+//     3. handleView refuses to fire for an open period even if 1 and 2 are
+//        bypassed. The backend has its own guard as the real authority.
+//
+// COMPONENT SCOPE
+//   Every sub-component lives at module scope. Declaring them inside the page
+//   body gives them a fresh identity each render, so React unmounts and
+//   remounts whole subtrees on every keystroke — it looks like a page refresh.
+// ============================================================================
+
+import React, { useState, useMemo, useCallback, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
+import { PlayerContext } from './context/playercontext';
 import './milestonesPage.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import rapperOne from './assets/rapperphotoOne.jpg';
-import rapperTwo from './assets/rapperphototwo.jpg';
-import rapperThree from './assets/rapperphotothree.jpg';
-import rapperFree from './assets/rapperphotofour.jpg';
-import songArtOne from './assets/songartworkONe.jpeg';
-import songArtTwo from './assets/songartworktwo.jpeg';
-import songArtThree from './assets/songartworkthree.jpeg';
 import songArtFour from './assets/songartworkfour.jpeg';
 import { buildUrl } from './utils/buildUrl';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 import IntervalDatePicker from './intervalDatePicker';
 import './intervalDatePicker.scss';
+import {
+  getPeriodRange,
+  isPeriodComplete,
+  getLastCompletedPeriodEnd,
+  clampToCompletedPeriod,
+  formatPeriodLabel,
+  formatPeriodRange,
+  getPeriodCloseLabel,
+} from './utils/periodBounds';
 
+const LOG = '[Milestones]';
+const MIN_DATE = '2025-10-26';
+
+const JURISDICTIONS = [
+  { value: 'downtown-harlem', label: 'Downtown' },
+  { value: 'uptown-harlem', label: 'Uptown' },
+  { value: 'harlem', label: 'All Harlem' },
+];
+
+const GENRES = [
+  { value: 'rap', label: 'Rap' },
+  { value: 'rock', label: 'Rock' },
+  { value: 'pop', label: 'Pop' },
+];
+
+const CATEGORIES = [
+  { value: 'song', label: 'Songs' },
+  { value: 'artist', label: 'Artists' },
+];
+
+const INTERVAL_OPTIONS = [
+  { value: 'daily', label: 'Day' },
+  { value: 'weekly', label: 'Week' },
+  { value: 'monthly', label: 'Month' },
+  { value: 'quarterly', label: 'Quarter' },
+  { value: 'midterm', label: 'Half' },
+  { value: 'annual', label: 'Year' },
+];
+
+const INTERVAL_TITLE = {
+  daily: 'of the Day',
+  weekly: 'of the Week',
+  monthly: 'of the Month',
+  quarterly: 'of the Quarter',
+  midterm: 'of the Half',
+  annual: 'of the Year',
+};
+
+const JURISDICTION_LABEL = {
+  'downtown-harlem': 'Downtown Harlem',
+  'uptown-harlem': 'Uptown Harlem',
+  harlem: 'Harlem',
+};
+
+const TIEBREAKERS = {
+  PLAYS: (n) => `Tie broken on plays${n ? ` between ${n}` : ''}`,
+  LIKES: (n) => `Tie broken on likes${n ? ` between ${n}` : ''}`,
+  SCORE: (n) => `Tie broken on lifetime score${n ? ` between ${n}` : ''}`,
+  SENIORITY: (n) => `Tie broken on seniority${n ? ` between ${n}` : ''}`,
+  FALLBACK: () => 'Decided on engagement — no votes cast',
+};
+
+const formatNumber = (n) => (Number(n) || 0).toLocaleString('en-US');
+
+// ─── Segmented control ───────────────────────────────────────────────────────
+// Replaces the four native <select> elements. Small option counts read better
+// as visible choices than as collapsed dropdowns, and it kills the form feel.
+const Segmented = ({ label, options, value, onChange, name }) => (
+  <div className="ms-segmented" role="group" aria-label={label}>
+    {options.map((opt) => {
+      const active = opt.value === value;
+      return (
+        <button
+          key={opt.value}
+          type="button"
+          className={`ms-seg${active ? ' is-active' : ''}`}
+          aria-pressed={active}
+          onClick={() => onChange(opt.value)}
+          data-testid={`${name}-${opt.value}`}
+        >
+          {opt.label}
+        </button>
+      );
+    })}
+  </div>
+);
+
+// ─── One row of the tally ────────────────────────────────────────────────────
+// Bar width encodes share of the period's points, so margin of victory is
+// legible without reading a single number.
+const TallyRow = ({ entry, share, index, onOpen, onPlay, canPlay }) => (
+  <li
+    className={`ms-tally-row${entry.rank === 1 ? ' is-winner' : ''}`}
+    style={{ '--row-delay': `${index * 60}ms` }}
+  >
+    <span className="ms-tally-rank" aria-hidden="true">{entry.rank}</span>
+
+    <button
+      type="button"
+      className="ms-tally-main"
+      onClick={() => onOpen(entry)}
+      aria-label={`Open ${entry.title}${entry.targetType === 'song' ? ` by ${entry.artist}` : ''}, ranked ${entry.rank}`}
+    >
+      <img className="ms-tally-art" src={entry.artwork} alt="" loading="lazy" />
+      <span className="ms-tally-text">
+        <span className="ms-tally-title">{entry.title}</span>
+        {entry.targetType === 'song' && (
+          <span className="ms-tally-artist">{entry.artist}</span>
+        )}
+      </span>
+      <span className="ms-tally-bar" aria-hidden="true">
+        <span className="ms-tally-fill" style={{ width: `${share}%` }} />
+      </span>
+      <span className="ms-tally-points">
+        {formatNumber(entry.weightedPoints)}
+        <span className="ms-tally-unit">pts</span>
+      </span>
+    </button>
+
+    {canPlay && (
+      <button
+        type="button"
+        className="ms-tally-play"
+        onClick={() => onPlay(entry)}
+        aria-label={`Play ${entry.title}`}
+      >
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+          <path d="M8 5v14l11-7z" fill="currentColor" />
+        </svg>
+      </button>
+    )}
+  </li>
+);
+
+// ─── The page ────────────────────────────────────────────────────────────────
 const MilestonesPage = () => {
-  // ─── Input state (changes immediately on user toggle) ───────────────────
-  const [location, setLocation] = useState('downtown-harlem');
+  const navigate = useNavigate();
+  const { requestPlay } = useContext(PlayerContext) || {};
+
+  // Selection state — changes as the user browses.
+  const [jurisdiction, setJurisdiction] = useState('downtown-harlem');
   const [genre, setGenre] = useState('rap');
   const [category, setCategory] = useState('song');
-  const [selectedDate, setSelectedDate] = useState('');
-  const [interval, setInterval] = useState('daily');
+  const [interval, setIntervalState] = useState('daily');
+  const [selectedDate, setSelectedDate] = useState(() => getLastCompletedPeriodEnd('daily'));
 
-  // ─── Display state (only updates on successful "View") ──────────────────
-  const [displayedContext, setDisplayedContext] = useState(null);
-
+  // Result state — frozen at the moment of a successful fetch so the headline
+  // can never describe a period other than the one on screen.
+  const [shown, setShown] = useState(null);
+  const [entries, setEntries] = useState([]);
+  const [totalVotes, setTotalVotes] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [results, setResults] = useState([]);
-  const [totalVotes, setTotalVotes] = useState(0);
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-  // ─── Formatting helpers (unchanged from original) ───────────────────────
-  const formatLocation = (loc) =>
-    loc.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').toUpperCase();
+  const maxDate = useMemo(() => getLastCompletedPeriodEnd(interval), [interval]);
+  const periodOpen = selectedDate ? !isPeriodComplete(selectedDate, interval) : false;
 
-  const formatGenre = (g) => (g === 'rap' ? 'RAP' : g.toUpperCase());
-  const formatCategory = (cat) => cat.toUpperCase();
-
-  const getIntervalText = (int) => ({
-    daily: 'OF THE DAY',
-    weekly: 'OF THE WEEK',
-    monthly: 'OF THE MONTH',
-    quarterly: 'OF THE QUARTER',
-    midterm: 'OF THE MIDTERM',
-    annual: 'OF THE YEAR',
-  }[int] || 'OF THE DAY');
-
-  const formatDateDisplay = (dateString, intervalType) => {
-    if (!dateString) return '';
-    const [year, month, day] = dateString.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June',
-                    'July', 'August', 'September', 'October', 'November', 'December'];
-
-    switch (intervalType) {
-      case 'daily':
-        return `${days[date.getDay()]}, ${months[month - 1]} ${day}, ${year}`;
-      case 'weekly': {
-        const dow = date.getDay();
-        const daysToMonday = dow === 0 ? 6 : dow - 1;
-        const monday = new Date(year, month - 1, day - daysToMonday);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        return `Week of ${months[monday.getMonth()]} ${monday.getDate()} - ${sunday.getDate()}, ${monday.getFullYear()}`;
+  // Switching interval re-anchors the date. Without this the old selection
+  // carries across and silently resolves to an unfinished period.
+  const handleIntervalChange = useCallback((next) => {
+    setIntervalState(next);
+    setSelectedDate((prev) => {
+      const clamped = clampToCompletedPeriod(prev, next);
+      if (clamped !== prev) {
+        console.info(`${LOG} interval → ${next}: re-anchored date ${prev} → ${clamped} (previous selection fell in an open period)`);
       }
-      case 'monthly':
-        return `${months[month - 1]} ${year}`;
-      case 'quarterly': {
-        const q = Math.floor((month - 1) / 3) + 1;
-        return `Q${q} ${year}`;
-      }
-      case 'midterm': {
-        const h = month <= 6 ? 1 : 2;
-        return `${h === 1 ? 'First' : 'Second'} Half of ${year}`;
-      }
-      case 'annual':
-        return `Year ${year}`;
-      default:
-        return `${months[month - 1]} ${day}, ${year}`;
-    }
-  };
+      return clamped;
+    });
+  }, []);
 
-  const getDateRangeForInterval = (sel, intervalType) => {
-    if (!sel) return { startDate: null, endDate: null };
-    const [year, month, day] = sel.split('-').map(Number);
-    const endDate = new Date(year, month - 1, day);
-    const startDate = new Date(year, month - 1, day);
+  const handleDateChange = useCallback((next) => {
+    setSelectedDate(next);
+    if (next) setError(null);
+  }, []);
 
-    switch (intervalType) {
-      case 'daily': break;
-      case 'weekly': {
-        const dow = startDate.getDay();
-        const daysToMonday = dow === 0 ? 6 : dow - 1;
-        startDate.setDate(startDate.getDate() - daysToMonday);
-        endDate.setDate(startDate.getDate() + 6);
-        break;
-      }
-      case 'monthly':
-        startDate.setDate(1);
-        endDate.setDate(new Date(year, month, 0).getDate());
-        break;
-      case 'quarterly': {
-        const qStart = Math.floor((month - 1) / 3) * 3;
-        startDate.setMonth(qStart); startDate.setDate(1);
-        endDate.setMonth(qStart + 2);
-        endDate.setDate(new Date(year, qStart + 3, 0).getDate());
-        break;
-      }
-      case 'midterm':
-        if (month <= 6) {
-          startDate.setMonth(0); startDate.setDate(1);
-          endDate.setMonth(5); endDate.setDate(30);
-        } else {
-          startDate.setMonth(6); startDate.setDate(1);
-          endDate.setMonth(11); endDate.setDate(31);
-        }
-        break;
-      case 'annual':
-        startDate.setMonth(0); startDate.setDate(1);
-        endDate.setMonth(11); endDate.setDate(31);
-        break;
-      default: break;
-    }
+  const jumpToLastClosed = useCallback(() => {
+    const end = getLastCompletedPeriodEnd(interval);
+    setSelectedDate(end);
+    setError(null);
+    console.info(`${LOG} jumped to last closed ${interval} period: ${end}`);
+  }, [interval]);
 
-    const fmt = (d) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    return { startDate: fmt(startDate), endDate: fmt(endDate) };
-  };
-
-  // ─── Caption (uses frozen displayedContext, not live input) ─────────────
-  const generateCaption = () => {
-    if (!displayedContext || results.length === 0) return null;
-    const dc = displayedContext;
-    return (
-      <div className="caption-container">
-        <div className="caption-top">{formatLocation(dc.location)} {formatGenre(dc.genre)}</div>
-        <div className="caption-headline">{formatCategory(dc.category)} {getIntervalText(dc.interval)}</div>
-        <div className="caption-date">{formatDateDisplay(dc.selectedDate, dc.interval)}</div>
-      </div>
-    );
-  };
-
-  const generateWinnerCaption = (award) => {
-    const m = award.determinationMethod;
-    if (!m || m === 'WEIGHTED_VOTES') return `Winner with ${award.weightedPoints || 0} points`;
-    return 'Winner';
-  };
-
-  // ─── Fetch handler ──────────────────────────────────────────────────────
-  const handleView = async () => {
+  const handleView = useCallback(async () => {
     if (!selectedDate) {
-      setError('Select a date.');
+      setError('Pick a period first.');
       return;
     }
+
+    // Layer 3. The picker should never surface an open period, but a stale
+    // state or a future code path must not be allowed to trigger a write.
+    if (!isPeriodComplete(selectedDate, interval)) {
+      console.warn(`${LOG} blocked request for open period: ${interval} ${selectedDate}`);
+      setError(null);
+      return;
+    }
+
+    const jurId = JURISDICTION_IDS[jurisdiction];
+    const genreId = GENRE_IDS[genre];
+    const intervalId = INTERVAL_IDS[interval];
+
+    if (!jurId || !genreId || !intervalId) {
+      console.error(`${LOG} id mapping miss`, { jurisdiction, genre, interval, jurId, genreId, intervalId });
+      setError('That combination is not available yet.');
+      return;
+    }
+
+    const { startDate, endDate } = getPeriodRange(selectedDate, interval);
     setIsLoading(true);
     setError(null);
-    setResults([]);
-    setTotalVotes(0);
 
     try {
-      const jurId = JURISDICTION_IDS[location];
-      const genreId = GENRE_IDS[genre];
-      const intervalId = INTERVAL_IDS[interval];
-      const type = category;
-
-      if (!jurId) throw new Error('Invalid location');
-      if (!genreId) throw new Error('Invalid genre');
-      if (!intervalId) throw new Error('Invalid interval');
-
-      const { startDate, endDate } = getDateRangeForInterval(selectedDate, interval);
+      console.info(`${LOG} fetching ${category} ${interval} ${startDate}..${endDate} · ${jurisdiction}/${genre}`);
 
       const response = await apiCall({
         method: 'get',
-        url: `/v1/awards/period-leaderboard?type=${type}&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurId}&genreId=${genreId}&intervalId=${intervalId}&limit=5`,
+        url: `/v1/awards/period-leaderboard?type=${category}&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurId}&genreId=${genreId}&intervalId=${intervalId}&limit=5`,
       });
 
-      // Support BOTH response shapes:
-      //   1. Current backend: bare array of Award entities.
-      //   2. Future backend: { winner, leaderboard, totalVotes }
-      const payload = response.data;
-      const rawArray = Array.isArray(payload) ? payload : (payload.leaderboard || [payload.winner].filter(Boolean));
-      const apiTotalVotes = Array.isArray(payload) ? null : payload.totalVotes;
+      // Two shapes supported: the current { winner, leaderboard, totalVotes }
+      // and a bare Award array from the older /past contract.
+      const payload = response.data || {};
+      const rows = Array.isArray(payload)
+        ? payload
+        : payload.leaderboard?.length
+          ? payload.leaderboard
+          : [payload.winner].filter(Boolean);
 
-      if (!rawArray || rawArray.length === 0) {
-        setError('No awards found for this period. Try a different date.');
-        setResults([]);
+      if (!rows.length) {
+        console.info(`${LOG} no awards for ${interval} ${startDate}..${endDate}`);
+        setEntries([]);
+        setTotalVotes(0);
+        setShown({ jurisdiction, genre, category, interval, selectedDate, empty: true });
         return;
       }
 
-      const normalized = rawArray.map((award, i) => {
-        let title, artist, artwork;
-        if (award.targetType === 'artist') {
-          title = award.user?.username || award.title || 'Unknown Artist';
-          artist = award.user?.username || award.artist || 'Unknown Artist';
-          const rawArtwork = award.user?.photoUrl || award.artwork;
-          artwork = buildUrl(rawArtwork) || rapperOne;
-        } else {
-          title = award.song?.title || award.title || 'Unknown Song';
-          artist = award.song?.artist?.username || award.artist || 'Unknown Artist';
-          const rawArtwork = award.song?.artworkUrl || award.artwork;
-          artwork = buildUrl(rawArtwork) || songArtFour;
-        }
+      const normalized = rows.map((row, i) => {
+        const isArtist = (row.targetType || category) === 'artist';
+        const fallbackArt = isArtist ? rapperOne : songArtFour;
+        const rawArt = isArtist
+          ? (row.user?.photoUrl || row.artwork)
+          : (row.song?.artworkUrl || row.artwork);
 
         return {
-          rank: award.rank || i + 1,
-          id: award.targetId,
-          targetType: award.targetType,
-          title,
-          artist,
-          jurisdiction: award.jurisdiction?.name || location,
-          votes: award.votesCount || award.votes || 0,
-          weightedPoints: award.weightedPoints || 0,
-          playsCount: award.playsCount || 0,
-          likesCount: award.likesCount || 0,
-          artwork,
-          determinationMethod: award.determinationMethod,
-          tiedCandidatesCount: award.tiedCandidatesCount || 0,
-          caption: award.caption || (i === 0 ? generateWinnerCaption(award) : null),
+          rank: row.rank || i + 1,
+          id: row.targetId,
+          targetType: isArtist ? 'artist' : 'song',
+          title: isArtist
+            ? (row.user?.username || row.title || 'Unknown artist')
+            : (row.song?.title || row.title || 'Unknown song'),
+          artist: isArtist
+            ? (row.user?.username || row.artist || '')
+            : (row.song?.artist?.username || row.artist || 'Unknown artist'),
+          artistId: row.artistId || row.song?.artist?.userId || null,
+          fileUrl: buildUrl(row.fileUrl || row.song?.fileUrl) || null,
+          artwork: buildUrl(rawArt) || fallbackArt,
+          votes: Number(row.votes ?? row.votesCount ?? 0),
+          weightedPoints: Number(row.weightedPoints || 0),
+          playsCount: Number(row.playsCount || 0),
+          likesCount: Number(row.likesCount || 0),
+          determinationMethod: row.determinationMethod || null,
+          tiedCandidatesCount: row.tiedCandidatesCount || 0,
         };
       });
 
-      setResults(normalized);
+      setEntries(normalized);
       setTotalVotes(
-        apiTotalVotes != null
-          ? apiTotalVotes
-          : normalized.reduce((sum, item) => sum + (item.votes || 0), 0)
+        Array.isArray(payload)
+          ? normalized.reduce((sum, e) => sum + e.votes, 0)
+          : (payload.totalVotes ?? normalized.reduce((sum, e) => sum + e.votes, 0))
       );
-
-      // Freeze displayed context — caption stays in sync with what's shown.
-      setDisplayedContext({ location, genre, category, interval, selectedDate });
+      setShown({ jurisdiction, genre, category, interval, selectedDate, empty: false });
+      console.info(`${LOG} loaded ${normalized.length} ${category} entries · winner "${normalized[0].title}"`);
     } catch (err) {
-      console.error('Milestones fetch error:', err);
-      setError(err.message || 'Failed to load milestones.');
-      setResults([]);
+      const status = err?.response?.status;
+      console.error(`${LOG} fetch failed (${status || 'network'})`, err);
+      setEntries([]);
+      setShown(null);
+      setError(
+        status === 404
+          ? 'Nothing was awarded for that period.'
+          : 'The archive did not respond. Try again in a moment.'
+      );
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedDate, interval, jurisdiction, genre, category]);
 
-  // ─── Max date logic ─────────────────────────────────────────────────────
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  let currentMaxDate = yesterday.toISOString().split('T')[0];
-  if (interval === 'annual') {
-    const cy = new Date().getFullYear();
-    currentMaxDate = `${cy - 1}-12-31`;
-  }
-  const minDate = '2025-10-26';
+  const openEntry = useCallback((entry) => {
+    if (!entry?.id) return;
+    navigate(entry.targetType === 'artist' ? `/artist/${entry.id}` : `/song/${entry.id}`);
+  }, [navigate]);
 
-  const winner = results[0];
-  const caption = generateCaption();
-
-  const getDeterminationBadge = (method, tiedCount) => {
-    if (!method) return null;
-    switch (method) {
-      case 'WEIGHTED_VOTES':
-        return null; // no badge needed; points already shown prominently
-      case 'PLAYS':
-        return <span className="badge tiebreaker plays">Tie broken by {tiedCount} plays</span>;
-      case 'LIKES':
-        return <span className="badge tiebreaker likes">Tie broken by likes</span>;
-      case 'SCORE':
-        return <span className="badge tiebreaker score">Tie broken by score</span>;
-      case 'SENIORITY':
-        return <span className="badge tiebreaker seniority">Tie broken by seniority</span>;
-      case 'FALLBACK':
-        return <span className="badge fallback">No votes cast</span>;
-      default:
-        return null;
+  const playEntry = useCallback((entry) => {
+    if (!entry?.fileUrl || typeof requestPlay !== 'function') {
+      console.warn(`${LOG} play unavailable for "${entry?.title}" — no file url`);
+      return;
     }
-  };
+    console.info(`${LOG} play requested: "${entry.title}"`);
+    requestPlay({
+      id: entry.id,
+      songId: entry.id,
+      type: 'song',
+      url: entry.fileUrl,
+      fileUrl: entry.fileUrl,
+      title: entry.title,
+      artist: entry.artist,
+      artistId: entry.artistId,
+      artwork: entry.artwork,
+    });
+  }, [requestPlay]);
 
-  const formatNumber = (n) => (n || 0).toLocaleString('en-US');
-  // Always render the chart when we have a winner. With one row it shows just rank 1
-  // (highlighted); with more rows it fills out the top 5. No empty/hidden states.
-  const showLeaderboard = results.length > 0;
+  const winner = entries[0] || null;
+  const maxPoints = entries.reduce((m, e) => Math.max(m, e.weightedPoints), 0);
+  const tiebreak = winner?.determinationMethod && TIEBREAKERS[winner.determinationMethod]
+    ? TIEBREAKERS[winner.determinationMethod](winner.tiedCandidatesCount)
+    : null;
 
   return (
     <Layout backgroundImage={backimage}>
-      <div className="milestones-page-container">
-        <main className="content-wrapper">
+      <div className="ms-page">
+        <main className="ms-shell">
 
-          {/* ─── Filter bar ─────────────────────────────────────────── */}
-          <section className="filter-bar">
-            <div className="filter-pills">
-              <select value={location} onChange={(e) => setLocation(e.target.value)} className="filter-select">
-                <option value="downtown-harlem">Downtown Harlem</option>
-                <option value="uptown-harlem">Uptown Harlem</option>
-                <option value="harlem">Harlem (All)</option>
-              </select>
-              <select value={genre} onChange={(e) => setGenre(e.target.value)} className="filter-select">
-                <option value="rap">Rap</option>
-                <option value="rock">Rock</option>
-                <option value="pop">Pop</option>
-              </select>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className="filter-select">
-                <option value="artist">Artist</option>
-                <option value="song">Song</option>
-              </select>
-              <select value={interval} onChange={(e) => setInterval(e.target.value)} className="filter-select">
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="midterm">Midterm</option>
-                <option value="annual">Annual</option>
-              </select>
-              <IntervalDatePicker
-                interval={interval}
-                value={selectedDate}
-                onChange={setSelectedDate}
-                maxDate={currentMaxDate}
-                minDate={minDate}
-              />
+          <header className="ms-masthead">
+            <p className="ms-eyebrow">The record</p>
+            <h1 className="ms-wordmark">Milestones</h1>
+            <p className="ms-lede">Every closed period, and who took it.</p>
+          </header>
+
+          {/* ── Controls ───────────────────────────────────────────────── */}
+          <section className="ms-controls" aria-label="Choose an award period">
+            <div className="ms-control-row">
+              <Segmented name="jurisdiction" label="Jurisdiction" options={JURISDICTIONS} value={jurisdiction} onChange={setJurisdiction} />
+              <Segmented name="genre" label="Genre" options={GENRES} value={genre} onChange={setGenre} />
+              <Segmented name="category" label="Category" options={CATEGORIES} value={category} onChange={setCategory} />
             </div>
-            <button onClick={handleView} className="view-button" disabled={isLoading}>
-              {isLoading ? 'Loading…' : 'View'}
-            </button>
+
+            <div className="ms-control-row ms-control-row--period">
+              <Segmented name="interval" label="Interval" options={INTERVAL_OPTIONS} value={interval} onChange={handleIntervalChange} />
+
+              <div className="ms-period-picker">
+                <IntervalDatePicker
+                  interval={interval}
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  maxDate={maxDate}
+                  minDate={MIN_DATE}
+                />
+                {selectedDate && !periodOpen && (
+                  <span className="ms-period-range">{formatPeriodRange(selectedDate, interval)}</span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="ms-submit"
+                onClick={handleView}
+                disabled={isLoading || periodOpen || !selectedDate}
+              >
+                {isLoading ? 'Loading' : 'Show winner'}
+              </button>
+            </div>
+
+            {/* Open period: direction, not an error. */}
+            {periodOpen && (
+              <div className="ms-notice" role="status">
+                <p className="ms-notice-title">
+                  This {interval === 'daily' ? 'day' : INTERVAL_OPTIONS.find((o) => o.value === interval)?.label.toLowerCase()} is still running.
+                </p>
+                <p className="ms-notice-body">
+                  Results are final after {getPeriodCloseLabel(selectedDate, interval)}. Votes, plays and likes are still landing until then.
+                </p>
+                <button type="button" className="ms-notice-action" onClick={jumpToLastClosed}>
+                  Go to {formatPeriodLabel(getLastCompletedPeriodEnd(interval), interval)}
+                </button>
+              </div>
+            )}
           </section>
 
-          {/* ─── Caption ────────────────────────────────────────────── */}
-          {caption && (
-            <section className="milestone-caption">
-              {caption}
-            </section>
+          {/* ── Result ─────────────────────────────────────────────────── */}
+          {isLoading && (
+            <div className="ms-skeleton" role="status" aria-live="polite">
+              <span className="sr-only">Loading the archive</span>
+              <div className="ms-skeleton-plate" />
+              <div className="ms-skeleton-list">
+                {[0, 1, 2, 3, 4].map((i) => <div key={i} className="ms-skeleton-row" />)}
+              </div>
+            </div>
           )}
 
-          {/* ─── Showcase: winner + leaderboard ─────────────────────── */}
-          {winner && (
+          {!isLoading && error && (
+            <div className="ms-message ms-message--error" role="alert">{error}</div>
+          )}
+
+          {!isLoading && !error && shown?.empty && (
+            <div className="ms-message" role="status">
+              No award was recorded for {formatPeriodLabel(shown.selectedDate, shown.interval)} in {JURISDICTION_LABEL[shown.jurisdiction]}. Try another period or genre.
+            </div>
+          )}
+
+          {!isLoading && !error && winner && shown && !shown.empty && (
             <section
-              className={`showcase ${showLeaderboard ? 'has-leaderboard' : 'winner-only'}`}
-              key={`${winner.id}-${displayedContext?.selectedDate}`}
+              className="ms-result"
+              key={`${winner.id}-${shown.selectedDate}-${shown.category}`}
+              aria-label="Award result"
             >
-              {/* Winner card */}
-              <article className="winner-card prestige-animate">
-                <div
-                  className="ambient-glow"
-                  style={{ backgroundImage: `url(${winner.artwork})` }}
-                />
-                <div className="winner-content">
-                  <div className="winner-artwork-wrapper">
-                    <img
-                      src={winner.artwork}
-                      alt={`${winner.title} artwork`}
-                      className="winner-artwork"
-                    />
-                    <div className="artwork-shine" />
+              <div className="ms-headline">
+                <span className="ms-headline-kicker">
+                  {JURISDICTION_LABEL[shown.jurisdiction]} · {GENRES.find((g) => g.value === shown.genre)?.label}
+                </span>
+                <h2 className="ms-headline-title">
+                  {shown.category === 'artist' ? 'Artist' : 'Song'} {INTERVAL_TITLE[shown.interval]}
+                </h2>
+                <span className="ms-headline-period">{formatPeriodLabel(shown.selectedDate, shown.interval)}</span>
+              </div>
+
+              {/* Plate — the engraved record */}
+              <article className="ms-plate">
+                <div className="ms-plate-glow" style={{ backgroundImage: `url(${winner.artwork})` }} aria-hidden="true" />
+
+                <div className="ms-plate-art">
+                  <img src={winner.artwork} alt={`${winner.title} artwork`} />
+                </div>
+
+                <div className="ms-plate-body">
+                  <span className="ms-plate-crown">Winner</span>
+                  <h3 className="ms-plate-name">{winner.title}</h3>
+                  {shown.category === 'song' && <p className="ms-plate-by">{winner.artist}</p>}
+
+                  <dl className="ms-figures">
+                    <div className="ms-figure ms-figure--lead">
+                      <dt>Points</dt>
+                      <dd>{formatNumber(winner.weightedPoints)}</dd>
+                    </div>
+                    <div className="ms-figure">
+                      <dt>Votes</dt>
+                      <dd>{formatNumber(winner.votes)}</dd>
+                    </div>
+                    <div className="ms-figure">
+                      <dt>Plays</dt>
+                      <dd>{formatNumber(winner.playsCount)}</dd>
+                    </div>
+                    <div className="ms-figure">
+                      <dt>Likes</dt>
+                      <dd>{formatNumber(winner.likesCount)}</dd>
+                    </div>
+                  </dl>
+
+                  {tiebreak && <p className="ms-plate-note">{tiebreak}</p>}
+
+                  <div className="ms-plate-actions">
+                    {shown.category === 'song' && winner.fileUrl && (
+                      <button type="button" className="ms-action ms-action--primary" onClick={() => playEntry(winner)}>
+                        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                          <path d="M8 5v14l11-7z" fill="currentColor" />
+                        </svg>
+                        Play
+                      </button>
+                    )}
+                    <button type="button" className="ms-action" onClick={() => openEntry(winner)}>
+                      {shown.category === 'artist' ? 'View artist' : 'View song'}
+                    </button>
                   </div>
-
-                  <div className="winner-meta">
-                    <div className="winner-eyebrow">
-                      #1 · {displayedContext && formatLocation(displayedContext.location)}
-                    </div>
-                    <h3 className="winner-title">{winner.title}</h3>
-                    <p className="winner-artist">{winner.artist}</p>
-                  </div>
-
-                  <div className="winner-stats">
-                    <div className="stat">
-                      <span className="stat-value">{formatNumber(winner.weightedPoints)}</span>
-                      <span className="stat-label">Points</span>
-                    </div>
-                    <div className="stat-divider" />
-                    <div className="stat">
-                      <span className="stat-value">{formatNumber(winner.votes)}</span>
-                      <span className="stat-label">Votes</span>
-                    </div>
-                    <div className="stat-divider" />
-                    <div className="stat">
-                      <span className="stat-value">{formatNumber(winner.playsCount)}</span>
-                      <span className="stat-label">Plays</span>
-                    </div>
-                    <div className="stat-divider" />
-                    <div className="stat">
-                      <span className="stat-value">{formatNumber(winner.likesCount)}</span>
-                      <span className="stat-label">Likes</span>
-                    </div>
-                  </div>
-
-                  {getDeterminationBadge(winner.determinationMethod, winner.tiedCandidatesCount)}
-
-                  {winner.caption && winner.determinationMethod !== 'WEIGHTED_VOTES' && (
-                    <div className="winner-caption">{winner.caption}</div>
-                  )}
                 </div>
               </article>
 
-              {/* Leaderboard card */}
-              {showLeaderboard && (
-                <article className="leaderboard-card">
-                  <header className="leaderboard-header">
-                    <div className="leaderboard-label">
-                      <span className="label-eyebrow">
-                        {displayedContext && formatCategory(displayedContext.category)}{' '}
-                        {displayedContext && getIntervalText(displayedContext.interval)}
-                      </span>
-                      <span className="label-meta">
-                        {totalVotes > 0
-                          ? `Decided by ${formatNumber(totalVotes)} votes`
-                          : 'Top performers'}
-                      </span>
-                    </div>
-                    <span className="leaderboard-region">
-                      Live · {displayedContext && formatLocation(displayedContext.location).split(' ')[0]}
-                    </span>
-                  </header>
+              {/* Tally — the signature. Bar width = share of the period's points. */}
+              <article className="ms-tally">
+                <header className="ms-tally-head">
+                  <h4 className="ms-tally-heading">The tally</h4>
+                  <span className="ms-tally-meta">
+                    {totalVotes > 0
+                      ? `${formatNumber(totalVotes)} votes cast`
+                      : 'Decided on engagement'}
+                  </span>
+                </header>
 
-                  <ul className="leaderboard-list">
-                    {results.slice(0, 5).map((item, idx) => (
-                    <li
-                      key={item.id || item.rank}
-                      className={`leaderboard-row ${idx === 0 ? 'is-winner' : ''}`}
-                      style={{ animationDelay: `${idx * 0.08}s` }}
-                    >
-                      <span className="row-rank">{item.rank}</span>
-                      <img
-                        src={item.artwork}
-                        alt={item.title}
-                        className="row-artwork"
-                      />
-                      <div className="row-info">
-                        <span className="row-title">{item.title}</span>
-                        <span className="row-subtitle">{item.artist}</span>
-                      </div>
-                    </li>
+                <ol className="ms-tally-list">
+                  {entries.map((entry, i) => (
+                    <TallyRow
+                      key={entry.id || entry.rank}
+                      entry={entry}
+                      index={i}
+                      share={maxPoints > 0 ? Math.max(4, (entry.weightedPoints / maxPoints) * 100) : 4}
+                      onOpen={openEntry}
+                      onPlay={playEntry}
+                      canPlay={entry.targetType === 'song' && !!entry.fileUrl}
+                    />
                   ))}
-                  </ul>
-                </article>
-              )}
+                </ol>
+
+                {entries.length === 1 && (
+                  <p className="ms-tally-solo">
+                    One entry qualified in this category for this period.
+                  </p>
+                )}
+              </article>
             </section>
           )}
 
-          {/* ─── States ─────────────────────────────────────────────── */}
-          <section className="state-section">
-            {isLoading && <div className="loading-message">Loading milestones…</div>}
-            {!isLoading && error && <div className="error-message">{error}</div>}
-          </section>
+          {!isLoading && !error && !shown && !periodOpen && (
+            <div className="ms-invite">
+              <p>Pick a jurisdiction, genre and period, then show the winner.</p>
+            </div>
+          )}
 
         </main>
       </div>
