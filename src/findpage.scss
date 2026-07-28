@@ -721,7 +721,7 @@ $bg-black: #000000;
 
   .mapEverything { width: 100%; max-width: 100%; }
 
-  .territory-name { font-size: clamp(32px, 11vw, 46px); }
+  .territory-name { font-size: clamp(16px, 5.5vw, 23px); }
   .eq { height: 18px; }
 
   // Aspect-ratio sizing keeps the whole country in frame at any width. The
