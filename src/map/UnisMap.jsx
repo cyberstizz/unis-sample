@@ -60,6 +60,9 @@ const US_BOUNDS = padBounds(unionBounds(STATE_INDEX.map((s) => s.bounds)), 0.015
 /** Below this camera width, the country layer is culled — see cull note below. */
 const NATIONAL_CULL_WIDTH = 60;
 
+/** Above this many territories, only live/selected ones keep a label. */
+const LABEL_CAP = 40;
+
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
   window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
@@ -67,6 +70,7 @@ const prefersReducedMotion = () =>
 export default function UnisMap({
   mode = 'US',
   focusState = null,
+  spotlight = null,
   territories = [],
   selectedId = null,
   liveStates = [],
@@ -81,6 +85,7 @@ export default function UnisMap({
   const rafRef = useRef(0);
   const cameraRef = useRef(null);
   const labelRefs = useRef(new Map());
+  const anchorsRef = useRef(new Map());
 
   const [size, setSize] = useState({ w: 960, h: 560 });
   const [hovered, setHovered] = useState(null);
@@ -109,11 +114,18 @@ export default function UnisMap({
   }, []);
 
   /* ------------------------------------------------------- territory paths */
-  const territoryShapes = useMemo(() => {
+  // Single pass: shapes and the missing-geometry list come from one walk.
+  // These were two separate useMemos, which meant geometryToPath — the most
+  // expensive thing on this page — ran twice for every territory.
+  const [territoryShapes, missingGeometry] = useMemo(() => {
     const out = [];
+    const missing = [];
     for (const t of territories) {
       const d = geometryToPath(t.polygon);
-      if (!d) continue;
+      if (!d) {
+        missing.push(t.name);
+        continue;
+      }
       out.push({
         id: t.jurisdictionId,
         name: t.name,
@@ -124,14 +136,32 @@ export default function UnisMap({
         live: liveTerritorySet.has(t.name),
       });
     }
-    return out;
+    return [out, missing];
   }, [territories, liveTerritorySet]);
 
-  /** Territories the API returned with no usable polygon. Surfaced, not hidden. */
-  const missingGeometry = useMemo(
-    () => territories.filter((t) => !geometryToPath(t.polygon)).map((t) => t.name),
-    [territories]
-  );
+  /**
+   * SCALABILITY CAP. A jurisdiction level can have hundreds of children. Past
+   * roughly forty, labels stop being readable and become overlapping mush, and
+   * the per-frame overlay loop starts costing real time. Beyond the cap only
+   * live and selected territories keep a label; the shapes all still render
+   * and stay clickable, and the region rail below the map remains the complete
+   * list. Raise LABEL_CAP only with a real dataset in front of you.
+   */
+  const labelledShapes = useMemo(() => {
+    const withAnchor = territoryShapes.filter((t) => t.anchor);
+    if (withAnchor.length <= LABEL_CAP) return withAnchor;
+    return withAnchor.filter((t) => t.live || t.id === selectedId);
+  }, [territoryShapes, selectedId]);
+
+  // Anchors are keyed the same way as the DOM nodes, so the paint loop can look
+  // one up without reading anything off the element.
+  useLayoutEffect(() => {
+    const m = new Map();
+    for (const s of STATE_INDEX) if (s.anchor) m.set(`pulse-${s.name}`, s.anchor);
+    for (const t of labelledShapes) m.set(`label-${t.id}`, t.anchor);
+    anchorsRef.current = m;
+    if (cameraRef.current) paint(cameraRef.current);
+  }, [labelledShapes, paint]);
 
   /* ------------------------------------------------------------ target cam */
   const targetCamera = useMemo(() => {
@@ -163,9 +193,14 @@ export default function UnisMap({
       // Screen-space overlay: labels and live pulses are positioned in pixels
       // so they never inherit the camera's scale. A label at 3,600x zoom would
       // otherwise be the size of a building.
-      labelRefs.current.forEach((node) => {
-        if (!node) return;
-        const a = node.__anchor;
+      labelRefs.current.forEach((node, key) => {
+        // React does not tell a stable ref callback which node unmounted, so
+        // prune detached nodes here instead of leaking them.
+        if (!node || !node.isConnected) {
+          labelRefs.current.delete(key);
+          return;
+        }
+        const a = anchorsRef.current.get(key);
         if (!a) return;
         const x = a.x * k + tx;
         const y = a.y * k + ty;
@@ -253,15 +288,15 @@ export default function UnisMap({
   const showTerritories =
     (mode === 'STATE' || mode === 'TERRITORY') && territoryShapes.length > 0;
 
-  const registerLabel = (key, anchor) => (node) => {
-    if (node) {
-      node.__anchor = anchor;
-      labelRefs.current.set(key, node);
-      if (cameraRef.current) paint(cameraRef.current);
-    } else {
-      labelRefs.current.delete(key);
-    }
-  };
+  // A stable ref callback. The previous version built a new closure per label
+  // per render, so React detached and reattached every overlay node on every
+  // render and repainted once per label. Identity is carried on the element as
+  // a data attribute instead, and anchors live in a ref keyed by that id.
+  const registerLabel = useCallback((node) => {
+    if (!node) return;
+    const key = node.dataset.labelKey;
+    if (key) labelRefs.current.set(key, node);
+  }, []);
 
   const handleStateKey = (e, name) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -314,7 +349,7 @@ export default function UnisMap({
                     className="unis-map__state"
                     data-live={live || undefined}
                     data-focus={isFocus || undefined}
-                    data-hover={hovered === s.name || undefined}
+                    data-hover={hovered === s.name || spotlight === s.name || undefined}
                     vectorEffect="non-scaling-stroke"
                     filter={live ? 'url(#unis-map-bloom)' : undefined}
                     tabIndex={live ? 0 : -1}
@@ -372,7 +407,8 @@ export default function UnisMap({
             <span
               key={`pulse-${s.name}`}
               className="unis-map__signal"
-              ref={registerLabel(`pulse-${s.name}`, s.anchor)}
+              data-label-key={`pulse-${s.name}`}
+              ref={registerLabel}
             >
               <span className="unis-map__signal-ring" />
               <span className="unis-map__signal-core" />
@@ -380,19 +416,18 @@ export default function UnisMap({
           ))}
 
         {showTerritories &&
-          territoryShapes
-            .filter((t) => t.anchor)
-            .map((t) => (
-              <span
-                key={`label-${t.id}`}
-                className="unis-map__label"
-                data-live={t.live || undefined}
-                data-selected={selectedId === t.id || undefined}
-                ref={registerLabel(`label-${t.id}`, t.anchor)}
-              >
-                {t.name}
-              </span>
-            ))}
+          labelledShapes.map((t) => (
+            <span
+              key={`label-${t.id}`}
+              className="unis-map__label"
+              data-live={t.live || undefined}
+              data-selected={selectedId === t.id || undefined}
+              data-label-key={`label-${t.id}`}
+              ref={registerLabel}
+            >
+              {t.name}
+            </span>
+          ))}
       </div>
 
       {/* Territories the backend returned without geometry. Saying so beats
