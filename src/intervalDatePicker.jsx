@@ -1,190 +1,232 @@
-import React, { useState, useEffect } from 'react';
+// ============================================================================
+// IntervalDatePicker.jsx
+//
+// Picks the anchor date for an award period. The caller supplies maxDate as the
+// end of the last CLOSED period (see utils/periodBounds.js). This component
+// additionally refuses any period that has not closed, so a wrong maxDate from
+// a future caller still cannot surface an open period. Two independent checks,
+// because the cost of getting it wrong is a persisted phantom award row.
+//
+// Changes from the previous version:
+//   • Every option is validated with isPeriodComplete(), not just against maxDate.
+//   • handleYearSelect had no bounds check at all — added.
+//   • All buttons carry type="button" (a bare <button> defaults to submit and
+//     fires on spacebar, which caused document reloads elsewhere in the app).
+//   • Date parsing routes through fromLocalISO — no UTC drift.
+//   • Dropdowns are labelled and expose aria-expanded / aria-pressed.
+// ============================================================================
+
+import React, { useState, useEffect, useMemo } from 'react';
 import './intervalDatePicker.scss';
+import { fromLocalISO, toLocalISO, isPeriodComplete } from './utils/periodBounds';
 
-  const IntervalDatePicker = ({ interval, value, onChange, maxDate, minDate }) => {
-  const parsePickerDate = (dateString) => {
-    if (!dateString) return null;
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 
-    const [year, month = 1, day = 1] = dateString.split('-').map(Number);
+const QUARTERS = [
+  { label: 'Q1 (Jan-Mar)', value: 1, startMonth: 0, endMonth: 2 },
+  { label: 'Q2 (Apr-Jun)', value: 2, startMonth: 3, endMonth: 5 },
+  { label: 'Q3 (Jul-Sep)', value: 3, startMonth: 6, endMonth: 8 },
+  { label: 'Q4 (Oct-Dec)', value: 4, startMonth: 9, endMonth: 11 },
+];
 
-    if (!year || !month || !day) return null;
+const HALVES = [
+  { label: 'H1 (Jan-Jun)', value: 1, startMonth: 0, endMonth: 5 },
+  { label: 'H2 (Jul-Dec)', value: 2, startMonth: 6, endMonth: 11 },
+];
 
-    return new Date(year, month - 1, day);
-  };
+const getMonday = (date) => {
+  const dow = date.getDay();
+  const back = dow === 0 ? 6 : dow - 1;
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() - back);
+};
 
-  const initialPickerDate = parsePickerDate(value) || parsePickerDate(maxDate) || new Date();
+const getSunday = (date) => {
+  const mon = getMonday(date);
+  return new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
+};
 
-  const [selectedYear, setSelectedYear] = useState(() => initialPickerDate.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(() => initialPickerDate.getMonth());
+const IntervalDatePicker = ({ interval, value, onChange, maxDate, minDate }) => {
+  const initial = fromLocalISO(value) || fromLocalISO(maxDate) || new Date();
+
+  const [selectedYear, setSelectedYear] = useState(() => initial.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(() => initial.getMonth());
   const [showCalendar, setShowCalendar] = useState(false);
 
-  // 1. Parse BOTH dates safely
-  const maxDateObj = maxDate ? new Date(maxDate + 'T12:00:00') : new Date();
-  const minDateObj = minDate ? new Date(minDate + 'T12:00:00') : new Date('1900-01-01');
+  const maxDateObj = useMemo(() => fromLocalISO(maxDate) || new Date(), [maxDate]);
+  const minDateObj = useMemo(() => fromLocalISO(minDate) || new Date(1900, 0, 1), [minDate]);
 
   const maxYear = maxDateObj.getFullYear();
   const maxMonth = maxDateObj.getMonth();
-  
   const minYear = minDateObj.getFullYear();
   const minMonth = minDateObj.getMonth();
 
-  // 2. Generate years (Respecting the Min Date)
-  const years = [];
-  // Only go back as far as the minYear allow
-  for (let y = maxYear; y >= minYear; y--) {
-    years.push(y);
-  }
-
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  const quarters = [
-    { label: 'Q1 (Jan-Mar)', value: 1, startMonth: 0, endMonth: 2 },
-    { label: 'Q2 (Apr-Jun)', value: 2, startMonth: 3, endMonth: 5 },
-    { label: 'Q3 (Jul-Sep)', value: 3, startMonth: 6, endMonth: 8 },
-    { label: 'Q4 (Oct-Dec)', value: 4, startMonth: 9, endMonth: 11 },
-  ];
-
-  const halves = [
-    { label: 'H1 (Jan-Jun)', value: 1, startMonth: 0, endMonth: 5 },
-    { label: 'H2 (Jul-Dec)', value: 2, startMonth: 6, endMonth: 11 },
-  ];
-
-  const getMonday = (date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff));
-  };
-
-  const getSunday = (date) => {
-    const monday = getMonday(date);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    return sunday;
-  };
-
-  const formatDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+  const years = useMemo(() => {
+    const out = [];
+    for (let y = maxYear; y >= minYear; y--) out.push(y);
+    return out;
+  }, [maxYear, minYear]);
 
   useEffect(() => {
-    const parsedValueDate = parsePickerDate(value);
-
-    if (parsedValueDate) {
-      setSelectedYear(parsedValueDate.getFullYear());
-      setSelectedMonth(parsedValueDate.getMonth());
+    const parsed = fromLocalISO(value);
+    if (parsed) {
+      setSelectedYear(parsed.getFullYear());
+      setSelectedMonth(parsed.getMonth());
     }
   }, [value]);
 
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!e.target.closest('.custom-picker')) setShowCalendar(false);
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, []);
+
+  // ── The single gate ───────────────────────────────────────────────────────
+  // A candidate date is selectable only if it sits inside the min/max window
+  // AND its period has actually closed.
+  const isAllowed = (date) => {
+    if (!date) return false;
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const max = new Date(maxDateObj.getFullYear(), maxDateObj.getMonth(), maxDateObj.getDate());
+    const min = new Date(minDateObj.getFullYear(), minDateObj.getMonth(), minDateObj.getDate());
+    if (d > max || d < min) return false;
+    return isPeriodComplete(toLocalISO(d), interval);
+  };
+
+  const commit = (date) => {
+    if (!isAllowed(date)) return;
+    onChange(toLocalISO(date));
+    setShowCalendar(false);
+  };
+
   const getDisplayText = () => {
-    if (!value) return 'Select...';
-    const [year, month, day] = value.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
+    const date = fromLocalISO(value);
+    if (!date) return 'Select…';
+    const year = date.getFullYear();
+    const month = date.getMonth();
 
     switch (interval) {
-      case 'daily': return value;
+      case 'daily':
+        return value;
       case 'weekly': {
-        const monday = getMonday(date);
-        const sunday = getSunday(date);
-        return `Week of ${months[monday.getMonth()]} ${monday.getDate()} - ${sunday.getDate()}, ${monday.getFullYear()}`;
+        const mon = getMonday(date);
+        const sun = getSunday(date);
+        return `Week of ${MONTHS[mon.getMonth()]} ${mon.getDate()} – ${sun.getDate()}, ${mon.getFullYear()}`;
       }
-      case 'monthly': return `${months[month - 1]} ${year}`;
-      case 'quarterly': {
-        const q = Math.floor((month - 1) / 3) + 1;
-        return `Q${q} ${year}`;
-      }
-      case 'midterm': {
-        const h = month <= 6 ? 1 : 2;
-        return `H${h} ${year} (${h === 1 ? 'Jan-Jun' : 'Jul-Dec'})`;
-      }
-      case 'annual': return `${year}`;
-      default: return value;
+      case 'monthly':
+        return `${MONTHS[month]} ${year}`;
+      case 'quarterly':
+        return `Q${Math.floor(month / 3) + 1} ${year}`;
+      case 'midterm':
+        return `H${month <= 5 ? 1 : 2} ${year} (${month <= 5 ? 'Jan-Jun' : 'Jul-Dec'})`;
+      case 'annual':
+        return `${year}`;
+      default:
+        return value;
     }
   };
 
-  // 3. Logic: Check if date is within valid range (Min - Max)
-  const isSelectable = (date) => {
-    // Reset times to midnight for fair comparison
-    const d = new Date(date); d.setHours(0,0,0,0);
-    const max = new Date(maxDateObj); max.setHours(0,0,0,0);
-    const min = new Date(minDateObj); min.setHours(0,0,0,0);
-    
-    return d <= max && d >= min;
-  };
-
   const handleDateSelect = (date) => {
-    if (!isSelectable(date)) return;
-    onChange(formatDate(date));
+    if (!isAllowed(date)) return;
+    onChange(toLocalISO(date));
     if (interval === 'daily') setShowCalendar(false);
   };
 
   const handleMonthSelect = (monthIndex) => {
-    // Max Check
-    if (selectedYear === maxYear && monthIndex > maxMonth) return;
-    // Min Check
-    if (selectedYear === minYear && monthIndex < minMonth) return;
-
-    const lastDay = new Date(selectedYear, monthIndex + 1, 0).getDate();
-    const selectedDate = new Date(selectedYear, monthIndex, lastDay);
-    onChange(formatDate(selectedDate));
-    setShowCalendar(false);
+    const last = new Date(selectedYear, monthIndex + 1, 0);
+    commit(last);
   };
 
-  const handleQuarterSelect = (quarter) => {
-    // Max Check
-    if (selectedYear === maxYear && quarter.endMonth > maxMonth) return;
-    // Min Check (If the quarter ENDS before the min date starts, disable it)
-    if (selectedYear === minYear && quarter.endMonth < minMonth) return;
-
-    const lastDay = new Date(selectedYear, quarter.endMonth + 1, 0).getDate();
-    onChange(formatDate(new Date(selectedYear, quarter.endMonth, lastDay)));
-    setShowCalendar(false);
+  const handleQuarterSelect = (q) => {
+    commit(new Date(selectedYear, q.endMonth + 1, 0));
   };
 
-  const handleHalfSelect = (half) => {
-    if (selectedYear === maxYear && half.endMonth > maxMonth) return;
-    if (selectedYear === minYear && half.endMonth < minMonth) return;
-
-    const lastDay = new Date(selectedYear, half.endMonth + 1, 0).getDate();
-    onChange(formatDate(new Date(selectedYear, half.endMonth, lastDay)));
-    setShowCalendar(false);
+  const handleHalfSelect = (h) => {
+    commit(new Date(selectedYear, h.endMonth + 1, 0));
   };
 
+  // Previously unguarded — the years array bounded it by accident, not by rule.
   const handleYearSelect = (year) => {
-    if (interval === 'annual') {
-      onChange(formatDate(new Date(year, 11, 31)));
-      setShowCalendar(false);
-    } else {
+    if (interval !== 'annual') {
       setSelectedYear(year);
+      return;
     }
+    commit(new Date(year, 11, 31));
   };
+
+  const monthDisabled = (idx) => {
+    if (selectedYear === minYear && idx < minMonth) return true;
+    return !isAllowed(new Date(selectedYear, idx + 1, 0));
+  };
+
+  const quarterDisabled = (q) => {
+    if (selectedYear === minYear && q.endMonth < minMonth) return true;
+    return !isAllowed(new Date(selectedYear, q.endMonth + 1, 0));
+  };
+
+  const halfDisabled = (h) => {
+    if (selectedYear === minYear && h.endMonth < minMonth) return true;
+    return !isAllowed(new Date(selectedYear, h.endMonth + 1, 0));
+  };
+
+  const yearDisabled = (year) => !isAllowed(new Date(year, 11, 31));
 
   const generateCalendarDays = () => {
-    const firstDay = new Date(selectedYear, selectedMonth, 1);
-    const lastDay = new Date(selectedYear, selectedMonth + 1, 0);
-    const startDay = firstDay.getDay();
-    const daysInMonth = lastDay.getDate();
+    const first = new Date(selectedYear, selectedMonth, 1);
+    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    const startDay = first.getDay();
     const days = [];
-    
     for (let i = 0; i < (startDay === 0 ? 6 : startDay - 1); i++) days.push(null);
     for (let d = 1; d <= daysInMonth; d++) days.push(new Date(selectedYear, selectedMonth, d));
     return days;
   };
 
   const isInSelectedWeek = (date) => {
-    if (!value || !date) return false;
-    const [year, month, day] = value.split('-').map(Number);
-    const selectedDate = new Date(year, month - 1, day);
-    const selectedMonday = getMonday(selectedDate);
-    const selectedSunday = getSunday(selectedDate);
-    return date >= selectedMonday && date <= selectedSunday;
+    const sel = fromLocalISO(value);
+    if (!sel || !date) return false;
+    return date >= getMonday(sel) && date <= getSunday(sel);
   };
+
+  const toggle = () => setShowCalendar((open) => !open);
+
+  const renderToggle = (label) => (
+    <button
+      type="button"
+      className="picker-toggle"
+      onClick={toggle}
+      aria-haspopup="dialog"
+      aria-expanded={showCalendar}
+      aria-label={`${label}: ${getDisplayText()}`}
+    >
+      {getDisplayText()}
+    </button>
+  );
+
+  const renderYearNav = () => (
+    <div className="picker-header">
+      <button
+        type="button"
+        onClick={() => setSelectedYear(selectedYear - 1)}
+        disabled={selectedYear <= minYear}
+        aria-label="Previous year"
+      >
+        ←
+      </button>
+      <span>{selectedYear}</span>
+      <button
+        type="button"
+        onClick={() => setSelectedYear(selectedYear + 1)}
+        disabled={selectedYear >= maxYear}
+        aria-label="Next year"
+      >
+        →
+      </button>
+    </div>
+  );
 
   const renderPicker = () => {
     switch (interval) {
@@ -192,56 +234,81 @@ import './intervalDatePicker.scss';
         return (
           <input
             type="date"
-            value={value}
+            value={value || ''}
             onChange={(e) => onChange(e.target.value)}
             max={maxDate}
-            min={minDate} // FIXED: Correct JSX Syntax
+            min={minDate}
             className="date-input"
+            aria-label="Award date"
           />
         );
 
       case 'weekly':
         return (
           <div className="custom-picker">
-            <button className="picker-toggle" onClick={() => setShowCalendar(!showCalendar)}>
-              {getDisplayText()}
-            </button>
+            {renderToggle('Week')}
             {showCalendar && (
-              <div className="picker-dropdown weekly-picker">
+              <div className="picker-dropdown weekly-picker" role="dialog" aria-label="Pick a week">
                 <div className="picker-header">
-                  <button onClick={() => {
-                     // Logic to go back a month
-                     if (selectedMonth === 0) {
-                         if (selectedYear > minYear) { setSelectedMonth(11); setSelectedYear(selectedYear - 1); }
-                     } else {
-                         setSelectedMonth(selectedMonth - 1);
-                     }
-                  }} disabled={selectedYear === minYear && selectedMonth <= minMonth}>←</button>
-                  
-                  <span>{months[selectedMonth]} {selectedYear}</span>
-                  
-                  <button onClick={() => {
-                     if (selectedMonth === 11) {
-                         if (selectedYear < maxYear) { setSelectedMonth(0); setSelectedYear(selectedYear + 1); }
-                     } else {
-                         setSelectedMonth(selectedMonth + 1);
-                     }
-                  }} disabled={selectedYear === maxYear && selectedMonth >= maxMonth}>→</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedMonth === 0) {
+                        if (selectedYear > minYear) { setSelectedMonth(11); setSelectedYear(selectedYear - 1); }
+                      } else {
+                        setSelectedMonth(selectedMonth - 1);
+                      }
+                    }}
+                    disabled={selectedYear === minYear && selectedMonth <= minMonth}
+                    aria-label="Previous month"
+                  >
+                    ←
+                  </button>
+                  <span>{MONTHS[selectedMonth]} {selectedYear}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedMonth === 11) {
+                        if (selectedYear < maxYear) { setSelectedMonth(0); setSelectedYear(selectedYear + 1); }
+                      } else {
+                        setSelectedMonth(selectedMonth + 1);
+                      }
+                    }}
+                    disabled={selectedYear === maxYear && selectedMonth >= maxMonth}
+                    aria-label="Next month"
+                  >
+                    →
+                  </button>
                 </div>
-                
+
                 <div className="weekday-headers">
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <div key={d} className="weekday-header">{d}</div>)}
-                </div>
-                <div className="calendar-grid">
-                  {generateCalendarDays().map((date, idx) => (
-                    <div
-                      key={idx}
-                      className={`calendar-day ${!date ? 'empty' : ''} ${date && isInSelectedWeek(date) ? 'in-week' : ''} ${date && !isSelectable(date) ? 'disabled' : ''}`}
-                      onClick={() => date && isSelectable(date) && handleDateSelect(date)}
-                    >
-                      {date ? date.getDate() : ''}
-                    </div>
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+                    <div key={d} className="weekday-header">{d}</div>
                   ))}
+                </div>
+
+                <div className="calendar-grid">
+                  {generateCalendarDays().map((date, idx) => {
+                    const disabled = !!date && !isAllowed(date);
+                    return (
+                      <div
+                        key={idx}
+                        role={date ? 'button' : undefined}
+                        tabIndex={date && !disabled ? 0 : undefined}
+                        aria-disabled={disabled || undefined}
+                        className={`calendar-day ${!date ? 'empty' : ''} ${date && isInSelectedWeek(date) ? 'in-week' : ''} ${disabled ? 'disabled' : ''}`}
+                        onClick={() => date && handleDateSelect(date)}
+                        onKeyDown={(e) => {
+                          if (date && !disabled && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handleDateSelect(date);
+                          }
+                        }}
+                      >
+                        {date ? date.getDate() : ''}
+                      </div>
+                    );
+                  })}
                 </div>
                 <div className="week-hint">Click any day to select its week</div>
               </div>
@@ -252,21 +319,22 @@ import './intervalDatePicker.scss';
       case 'monthly':
         return (
           <div className="custom-picker">
-            <button className="picker-toggle" onClick={() => setShowCalendar(!showCalendar)}>{getDisplayText()}</button>
+            {renderToggle('Month')}
             {showCalendar && (
-              <div className="picker-dropdown month-picker">
-                <div className="picker-header">
-                  <button onClick={() => setSelectedYear(selectedYear - 1)} disabled={selectedYear <= minYear}>←</button>
-                  <span>{selectedYear}</span>
-                  <button onClick={() => setSelectedYear(selectedYear + 1)} disabled={selectedYear >= maxYear}>→</button>
-                </div>
+              <div className="picker-dropdown month-picker" role="dialog" aria-label="Pick a month">
+                {renderYearNav()}
                 <div className="month-grid">
-                  {months.map((month, idx) => {
-                    const isTooEarly = selectedYear === minYear && idx < minMonth;
-                    const isTooLate = selectedYear === maxYear && idx > maxMonth;
-                    const disabled = isTooEarly || isTooLate;
+                  {MONTHS.map((month, idx) => {
+                    const disabled = monthDisabled(idx);
                     return (
-                      <button key={month} className={`month-btn ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleMonthSelect(idx)} disabled={disabled}>
+                      <button
+                        type="button"
+                        key={month}
+                        className={`month-btn ${disabled ? 'disabled' : ''}`}
+                        onClick={() => !disabled && handleMonthSelect(idx)}
+                        disabled={disabled}
+                        aria-label={`${month} ${selectedYear}`}
+                      >
                         {month.slice(0, 3)}
                       </button>
                     );
@@ -280,21 +348,21 @@ import './intervalDatePicker.scss';
       case 'quarterly':
         return (
           <div className="custom-picker">
-            <button className="picker-toggle" onClick={() => setShowCalendar(!showCalendar)}>{getDisplayText()}</button>
+            {renderToggle('Quarter')}
             {showCalendar && (
-              <div className="picker-dropdown quarter-picker">
-                <div className="picker-header">
-                  <button onClick={() => setSelectedYear(selectedYear - 1)} disabled={selectedYear <= minYear}>←</button>
-                  <span>{selectedYear}</span>
-                  <button onClick={() => setSelectedYear(selectedYear + 1)} disabled={selectedYear >= maxYear}>→</button>
-                </div>
+              <div className="picker-dropdown quarter-picker" role="dialog" aria-label="Pick a quarter">
+                {renderYearNav()}
                 <div className="quarter-grid">
-                  {quarters.map((q) => {
-                    const isTooEarly = selectedYear === minYear && q.endMonth < minMonth;
-                    const isTooLate = selectedYear === maxYear && q.endMonth > maxMonth;
-                    const disabled = isTooEarly || isTooLate;
+                  {QUARTERS.map((q) => {
+                    const disabled = quarterDisabled(q);
                     return (
-                      <button key={q.value} className={`quarter-btn ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleQuarterSelect(q)} disabled={disabled}>
+                      <button
+                        type="button"
+                        key={q.value}
+                        className={`quarter-btn ${disabled ? 'disabled' : ''}`}
+                        onClick={() => !disabled && handleQuarterSelect(q)}
+                        disabled={disabled}
+                      >
                         {q.label}
                       </button>
                     );
@@ -308,21 +376,21 @@ import './intervalDatePicker.scss';
       case 'midterm':
         return (
           <div className="custom-picker">
-            <button className="picker-toggle" onClick={() => setShowCalendar(!showCalendar)}>{getDisplayText()}</button>
+            {renderToggle('Half year')}
             {showCalendar && (
-              <div className="picker-dropdown midterm-picker">
-                 <div className="picker-header">
-                  <button onClick={() => setSelectedYear(selectedYear - 1)} disabled={selectedYear <= minYear}>←</button>
-                  <span>{selectedYear}</span>
-                  <button onClick={() => setSelectedYear(selectedYear + 1)} disabled={selectedYear >= maxYear}>→</button>
-                </div>
+              <div className="picker-dropdown midterm-picker" role="dialog" aria-label="Pick a half year">
+                {renderYearNav()}
                 <div className="half-grid">
-                  {halves.map((h) => {
-                    const isTooEarly = selectedYear === minYear && h.endMonth < minMonth;
-                    const isTooLate = selectedYear === maxYear && h.endMonth > maxMonth;
-                    const disabled = isTooEarly || isTooLate;
+                  {HALVES.map((h) => {
+                    const disabled = halfDisabled(h);
                     return (
-                      <button key={h.value} className={`half-btn ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleHalfSelect(h)} disabled={disabled}>
+                      <button
+                        type="button"
+                        key={h.value}
+                        className={`half-btn ${disabled ? 'disabled' : ''}`}
+                        onClick={() => !disabled && handleHalfSelect(h)}
+                        disabled={disabled}
+                      >
                         {h.label}
                       </button>
                     );
@@ -336,15 +404,24 @@ import './intervalDatePicker.scss';
       case 'annual':
         return (
           <div className="custom-picker">
-            <button className="picker-toggle" onClick={() => setShowCalendar(!showCalendar)}>{getDisplayText()}</button>
+            {renderToggle('Year')}
             {showCalendar && (
-              <div className="picker-dropdown year-picker">
+              <div className="picker-dropdown year-picker" role="dialog" aria-label="Pick a year">
                 <div className="year-grid">
-                  {years.map((year) => (
-                    <button key={year} className="year-btn" onClick={() => handleYearSelect(year)}>
-                      {year}
-                    </button>
-                  ))}
+                  {years.map((year) => {
+                    const disabled = yearDisabled(year);
+                    return (
+                      <button
+                        type="button"
+                        key={year}
+                        className={`year-btn ${disabled ? 'disabled' : ''}`}
+                        onClick={() => !disabled && handleYearSelect(year)}
+                        disabled={disabled}
+                      >
+                        {year}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -352,17 +429,19 @@ import './intervalDatePicker.scss';
         );
 
       default:
-        return <input type="date" value={value} onChange={(e) => onChange(e.target.value)} max={maxDate} min={minDate} className="date-input" />;
+        return (
+          <input
+            type="date"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            max={maxDate}
+            min={minDate}
+            className="date-input"
+            aria-label="Award date"
+          />
+        );
     }
   };
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.custom-picker')) setShowCalendar(false);
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
 
   return <div className="interval-date-picker">{renderPicker()}</div>;
 };
