@@ -1,0 +1,290 @@
+/**
+ * unisMap.scss
+ *
+ * DESIGN NOTE
+ * -----------
+ * The previous map drew dormant states in near-white on a black field. That
+ * reads as a data infographic, and it also said the wrong thing: the states
+ * Unis has not launched in were the loudest objects on screen.
+ *
+ * This inverts it. The country is dark graphite — quiet, cold, unlit. A live
+ * territory is the only thing emitting light, and it emits it the way a
+ * transmitter does: a slow concentric ring pushing outward from the centroid.
+ * Dark means off the air. Lit means there is music here. As Unis opens new
+ * territories, the map literally lights up, one signal at a time.
+ *
+ * That ring is the one indulgence. Everything else is hairlines and restraint.
+ */
+
+.unis-map {
+  /* Atlas palette. Deliberately narrow — the only saturated color on the map
+     is the user's theme token, so a live territory can never be out-shouted. */
+  --map-void: #07080c;
+  --map-land: #151822;
+  --map-land-hi: #1f2431;
+  --map-edge: rgba(255, 255, 255, 0.07);
+  --map-edge-hi: rgba(255, 255, 255, 0.24);
+  --map-ink: #8b8f9e;
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--map-edge);
+  background:
+    radial-gradient(
+      ellipse 60% 55% at 68% 34%,
+      color-mix(in srgb, var(--unis-primary), transparent 90%),
+      transparent 62%
+    ),
+    radial-gradient(ellipse 100% 90% at 50% 50%, #0d0f16 0%, var(--map-void) 72%);
+  transition: border-color 0.35s ease;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--unis-primary), transparent 68%);
+  }
+}
+
+.unis-map__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The camera can reach ~3,600x. Let the browser know shapes will move. */
+  will-change: transform;
+}
+
+/* ---------------------------------------------------------------- country */
+
+.unis-map__state {
+  fill: var(--map-land);
+  stroke: var(--map-edge);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  cursor: pointer;
+  outline: none;
+  transition: fill 0.22s ease, stroke 0.22s ease;
+
+  &[data-hover] {
+    fill: var(--map-land-hi);
+    stroke: var(--map-edge-hi);
+  }
+
+  /* A live territory. The fill is the theme token at full strength — the only
+     place on the map where that happens. */
+  &[data-live] {
+    fill: var(--unis-primary);
+    stroke: color-mix(in srgb, #fff, transparent 55%);
+    stroke-width: 1.25;
+  }
+
+  &[data-live][data-hover],
+  &[data-focus] {
+    fill: var(--unis-primary-2, var(--unis-primary));
+    stroke: #fff;
+  }
+
+  &:focus-visible {
+    stroke: #fff;
+    stroke-width: 2.5;
+  }
+}
+
+/* The parent state's silhouette, kept at deep zoom so neighborhood polygons
+   have a horizon to sit against instead of floating in a void. */
+.unis-map__horizon {
+  fill: color-mix(in srgb, var(--unis-primary), transparent 94%);
+  stroke: color-mix(in srgb, var(--unis-primary), transparent 72%);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------ territories */
+
+.unis-map__territory {
+  fill: color-mix(in srgb, var(--unis-primary), transparent 86%);
+  stroke: color-mix(in srgb, var(--unis-primary), transparent 55%);
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+  cursor: pointer;
+  outline: none;
+  transition: fill 0.2s ease, stroke 0.2s ease;
+
+  &[data-live] {
+    fill: color-mix(in srgb, var(--unis-primary), transparent 62%);
+    stroke: color-mix(in srgb, var(--unis-primary), transparent 20%);
+  }
+
+  &[data-hover] {
+    fill: color-mix(in srgb, var(--unis-primary), transparent 40%);
+    stroke: #fff;
+  }
+
+  &[data-selected] {
+    fill: color-mix(in srgb, var(--unis-primary), transparent 28%);
+    stroke: #fff;
+    stroke-width: 2;
+  }
+
+  &:focus-visible {
+    stroke: #fff;
+    stroke-width: 2.5;
+  }
+}
+
+/* ------------------------------------------------- screen-space overlay --- */
+
+.unis-map__overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Children are positioned by transform from the rAF loop; top/left stay 0
+     so the transform is the single source of truth for placement. */
+  > * {
+    position: absolute;
+    top: 0;
+    left: 0;
+    will-change: transform;
+  }
+}
+
+/* --- THE SIGNATURE: a transmitter ping over every live territory --------- */
+
+.unis-map__signal {
+  display: block;
+  width: 0;
+  height: 0;
+}
+
+.unis-map__signal-core,
+.unis-map__signal-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.unis-map__signal-core {
+  width: 7px;
+  height: 7px;
+  background: #fff;
+  box-shadow: 0 0 12px 3px color-mix(in srgb, var(--unis-primary), transparent 25%);
+}
+
+.unis-map__signal-ring {
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid color-mix(in srgb, var(--unis-primary), transparent 15%);
+  animation: unis-map-broadcast 3.2s cubic-bezier(0.16, 0.8, 0.3, 1) infinite;
+}
+
+@keyframes unis-map-broadcast {
+  0% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  70% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(9);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(9);
+  }
+}
+
+/* --- territory labels --------------------------------------------------- */
+
+.unis-map__label {
+  display: block;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font: 500 11px/1 ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--map-ink);
+  background: rgba(6, 7, 11, 0.82);
+  border: 1px solid var(--map-edge);
+  backdrop-filter: blur(6px);
+  transition: color 0.2s ease, border-color 0.2s ease;
+
+  &[data-live] {
+    color: #e9ebf2;
+    border-color: color-mix(in srgb, var(--unis-primary), transparent 45%);
+  }
+
+  &[data-selected] {
+    color: #fff;
+    border-color: #fff;
+    background: color-mix(in srgb, var(--unis-primary), transparent 25%);
+  }
+}
+
+/* --- states -------------------------------------------------------------- */
+
+.unis-map__gap {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font: 400 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--map-ink);
+  background: rgba(6, 7, 11, 0.8);
+  border: 1px solid var(--map-edge);
+}
+
+/* A single sweep line while jurisdiction data is in flight. Reads as the map
+   listening for a signal rather than as a generic spinner. */
+.unis-map__scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 42%,
+    color-mix(in srgb, var(--unis-primary), transparent 82%) 50%,
+    transparent 58%
+  );
+  background-size: 260% 100%;
+  animation: unis-map-scan 1.4s linear infinite;
+}
+
+@keyframes unis-map-scan {
+  from { background-position: 130% 0; }
+  to   { background-position: -30% 0; }
+}
+
+/* --- accessibility ------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .unis-map__signal-ring,
+  .unis-map__scan {
+    animation: none;
+  }
+  .unis-map__signal-ring {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(3.5);
+  }
+  .unis-map__canvas,
+  .unis-map__overlay > * {
+    will-change: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .unis-map {
+    border-radius: 14px;
+  }
+  .unis-map__label {
+    font-size: 10px;
+    padding: 3px 7px;
+  }
+  .unis-map__signal-core {
+    width: 6px;
+    height: 6px;
+  }
+}

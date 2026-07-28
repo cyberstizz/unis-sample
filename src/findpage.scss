@@ -1,34 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,400;0,700;1,300;1,400;1,700&family=Delicious+Handrawn&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double&display=swap');
 
-$bg-black: #000000;
-$text-silver: #C0C0C0;
-$text-gray: #A9A9A9;
-$accent-white: #FFFFFF;
-$border-silver: #C0C0C0;
-$unis-blue: var(--unis-primary);
-$subtle-black: #1a1a1a;
+// Leaflet's stylesheet is gone from this page along with the library. The map
+// is src/map/UnisMap.jsx and brings its own scoped styles.
 
-// Local fallbacks for the atlas chrome — these resolve even if a theme hasn't
-// defined them. Real themes can override --panel / --line globally later.
+$text-silver: #c0c0c0;
+$text-gray: #a9a9a9;
+$accent-white: #ffffff;
+$bg-black: #000000;
+
 .find-page-container {
   --panel: #0b0c11;
   --line: rgba(255, 255, 255, 0.09);
-}
 
-// --- Keyframes for Ambient Animation ---
-@keyframes slideInBlur {
-  0% { opacity: 0; transform: translateX(-20px); filter: blur(5px); }
-  100% { opacity: 1; transform: translateX(0); filter: blur(0); }
-}
-
-@keyframes glowPulse {
-  0% { opacity: 0.3; }
-  50% { opacity: 0.5; }
-  100% { opacity: 0.3; }
-}
-
-.find-page-container {
   display: flex;
   flex-direction: column;
   width: calc(100vw - 260px);
@@ -38,38 +21,22 @@ $subtle-black: #1a1a1a;
   margin-right: 100px;
   overflow: hidden;
   padding-top: 0;
-}
 
-// Remove the blanket margin-left that was pushing everything right
-// and causing the right-side overflow. Each section controls its own width.
-.find-page-container > * {
-  margin-left: 0;
-  padding-top: 0;
-  align-self: center;
-  align-content: center;
-  justify-content: center;
-  justify-items: center;
-  margin-top: 0 !important;
-}
-
-.findpageheader {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-}
-
-.find-page-header {
-  margin: 0 auto;
-  text-align: center;
-  width: 50%;
-
-  h1 {
-    margin: 0 0 7px 0;
-    font-size: 28px;
-    line-height: 1.2;
+  > * {
+    margin-left: 0;
+    padding-top: 0;
+    align-self: center;
+    margin-top: 0 !important;
   }
 }
 
+@keyframes slideInBlur {
+  0%   { opacity: 0; transform: translateX(-18px); filter: blur(5px); }
+  100% { opacity: 1; transform: translateX(0);     filter: blur(0); }
+}
+
 // =============================================================================
-// FILTERS SECTION
+// FILTERS
 // =============================================================================
 
 .findFilters {
@@ -78,19 +45,16 @@ $subtle-black: #1a1a1a;
   justify-content: space-between;
   gap: 16px;
   width: 100%;
-  max-width: 900px;
+  max-width: 960px;
   flex-wrap: wrap;
-  padding: 0;
   margin-top: 16px !important;
 }
 
-// Segmented genre control. The native <select> is visually hidden but stays
-// in the DOM for accessibility and tests; the pills drive its value.
 .genre-seg {
   position: relative;
   display: flex;
-  background: var(--panel, #0b0c11);
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.09));
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 4px;
   gap: 2px;
@@ -137,7 +101,7 @@ $subtle-black: #1a1a1a;
   gap: 8px;
   padding: 10px 22px;
   background: transparent;
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.09));
+  border: 1px solid var(--line);
   border-radius: 999px;
   color: $text-silver;
   font: 500 13px 'Inter', system-ui, sans-serif;
@@ -152,10 +116,7 @@ $subtle-black: #1a1a1a;
     background: color-mix(in srgb, var(--unis-primary), transparent 88%);
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 
   &:focus-visible {
     outline: 2px solid var(--unis-primary-2, var(--unis-primary));
@@ -164,23 +125,20 @@ $subtle-black: #1a1a1a;
 }
 
 // =============================================================================
-// MAP SECTION
+// MAP BLOCK
 // =============================================================================
 
 .mapEverything {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 900px;
+  max-width: 960px;
   align-items: stretch;
-  padding: 0;
   margin-top: 22px !important;
-  overflow: visible;
   position: relative;
   box-sizing: border-box;
 }
 
-// ---------- breadcrumbs ----------
 .crumbs {
   display: flex;
   align-items: center;
@@ -204,16 +162,19 @@ $subtle-black: #1a1a1a;
   transition: color 0.15s, background 0.15s;
 
   &:hover { color: $text-silver; background: rgba(255, 255, 255, 0.05); }
-  &:focus-visible { outline: 2px solid var(--unis-primary-2, var(--unis-primary)); outline-offset: 1px; }
+  &:focus-visible {
+    outline: 2px solid var(--unis-primary-2, var(--unis-primary));
+    outline-offset: 1px;
+  }
 }
 
 .crumbs .sep { opacity: 0.4; }
+
 .crumbs .here {
   color: var(--unis-primary-2, var(--unis-primary));
   padding: 3px 8px;
 }
 
-// ---------- hero territory ----------
 .hero {
   display: flex;
   align-items: flex-end;
@@ -222,7 +183,7 @@ $subtle-black: #1a1a1a;
 }
 
 .territory-name {
-  font-family: "Bitcount Grid Double", system-ui;
+  font-family: 'Bitcount Grid Double', system-ui;
   font-size: clamp(40px, 7vw, 64px);
   line-height: 1;
   margin: 0;
@@ -231,10 +192,8 @@ $subtle-black: #1a1a1a;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  // White-to-theme gradient text. Fallback color set first for browsers that
-  // don't support background-clip: text.
   color: var(--unis-primary);
-  background: linear-gradient(100deg, #ffffff 20%, var(--unis-primary-2, var(--unis-primary)) 78%);
+  background: linear-gradient(100deg, #fff 20%, var(--unis-primary-2, var(--unis-primary)) 78%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -255,16 +214,16 @@ $subtle-black: #1a1a1a;
     animation: eqBounceFP 1.1s ease-in-out infinite;
   }
 
-  span:nth-child(1) { height: 40%; animation-delay: 0s; }
-  span:nth-child(2) { height: 90%; animation-delay: 0.15s; }
-  span:nth-child(3) { height: 60%; animation-delay: 0.3s; }
+  span:nth-child(1) { height: 40%;  animation-delay: 0s; }
+  span:nth-child(2) { height: 90%;  animation-delay: 0.15s; }
+  span:nth-child(3) { height: 60%;  animation-delay: 0.3s; }
   span:nth-child(4) { height: 100%; animation-delay: 0.45s; }
-  span:nth-child(5) { height: 50%; animation-delay: 0.6s; }
+  span:nth-child(5) { height: 50%;  animation-delay: 0.6s; }
 }
 
 @keyframes eqBounceFP {
   0%, 100% { transform: scaleY(0.5); }
-  50% { transform: scaleY(1); }
+  50%      { transform: scaleY(1); }
 }
 
 .back-button {
@@ -279,363 +238,75 @@ $subtle-black: #1a1a1a;
   margin-bottom: 10px;
   flex-shrink: 0;
 
-  &:hover {
-    background: color-mix(in srgb, var(--unis-primary), transparent 82%);
+  &:hover { background: color-mix(in srgb, var(--unis-primary), transparent 82%); }
+  &:focus-visible {
+    outline: 2px solid var(--unis-primary-2, var(--unis-primary));
+    outline-offset: 2px;
   }
 }
 
-.map-container {
-  width: 100%;
-  max-width: 900px;
-  height: 400px;
-  min-height: 400px;
-  max-height: 420px;
-  border-radius: 18px;
-  overflow: hidden;
-  margin-top: 1px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+// The map's own frame. UnisMap fills it completely and owns its own border,
+// background and radius — this element only reserves space and anchors the
+// absolutely positioned chrome below it.
+.map-frame {
   position: relative;
-  z-index: 1;
-  // The atlas: deep near-black ocean with a faint theme-colored aura rising
-  // behind the active state. This replaces basemap tiles entirely.
-  background:
-    radial-gradient(ellipse 70% 60% at 62% 30%, color-mix(in srgb, var(--unis-primary), transparent 86%), transparent 65%),
-    radial-gradient(ellipse 90% 80% at 50% 50%, #0e1017 0%, #07080d 70%, #050609 100%);
-  box-sizing: border-box;
-  display: flex;
-  justify-content: center;
-  transition: border-color 0.3s;
-
-  &:hover {
-    border-color: color-mix(in srgb, var(--unis-primary), transparent 55%);
-  }
-}
-
-// =============================================================================
-// LEAFLET CONTAINER STYLES
-// =============================================================================
-
-.leaflet-container {
-  width: 100% !important;
-  height: 100% !important;
-  // Transparent — the atlas gradient on .map-container is the ocean now.
-  background-color: transparent;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-}
-
-// No basemap tiles → no attribution obligation, no zoom buttons. Hide all.
-.leaflet-control-container {
-  display: none;
-}
-
-// =============================================================================
-// LOADING AND ERROR STATES
-// =============================================================================
-
-.loading {
-  color: $unis-blue;
-  text-align: center;
-  padding: 20px;
-  font-size: 16px;
-}
-
-.error {
-  color: #ff6b6b;
-  text-align: center;
-  padding: 20px;
-  font-size: 14px;
-}
-
-// =============================================================================
-// COMING SOON MESSAGE
-// =============================================================================
-
-.coming-soon-message {
   width: 100%;
-  text-align: center;
-  padding: 40px 20px;
-  background-color: color-mix(in srgb, var(--unis-primary), transparent 90%);
-  border-radius: 12px;
+  height: 440px;
   box-sizing: border-box;
 }
 
-.coming-soon-title {
-  color: var(--unis-primary);
-  font-size: 28px;
-  margin: 0 0 10px 0;
-  font-weight: bold;
-}
-
-.coming-soon-text {
-  color: #888;
-  margin: 0;
-  font-size: 16px;
-}
-
-// =============================================================================
-// RESULTS SECTION
-// =============================================================================
-
-.results-section {
-  display: flex;
-  gap: 20px;
-  // Fill the full available width of the container (which already accounts
-  // for the sidebar via calc on .find-page-container)
-  width: 100%;
-  max-width: 900px;
-  box-sizing: border-box;
-  height: auto;
-  min-height: 300px;
-  align-items: flex-start;
-  padding: 20px 0 40px;
-  margin-top: 0 !important;
-  overflow: visible;
-
-  .column {
-    // Each column takes exactly half the available space
-    flex: 1 1 0;
-    min-width: 0; // Prevents flex children from overflowing
-    margin-top: 0 !important;
-
-    h2 {
-      color: $text-gray;
-      font-size: 12px;
-      margin-bottom: 16px;
-      padding-top: 0 !important;
-      text-transform: uppercase;
-      letter-spacing: 2.5px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      &::after {
-        content: "";
-        flex: 1;
-        height: 1px;
-        background: var(--line, rgba(255, 255, 255, 0.09));
-      }
-    }
-
-    .results-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    // --- AMBIENT CARD STYLES ---
-    .result-item {
-      position: relative;
-      background: rgba(20, 20, 20, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 0;
-      display: flex;
-      align-items: stretch;
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-      overflow: hidden;
-      opacity: 0;
-      animation: slideInBlur 0.6s ease forwards;
-
-      &:hover {
-        transform: translateY(-4px) scale(1.01);
-        border-color: rgba(255, 255, 255, 0.3);
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-
-        .ambient-bg {
-          opacity: 0.6;
-          transform: scale(1.2);
-        }
-      }
-
-      .ambient-bg {
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background-size: cover;
-        background-position: center;
-        filter: blur(40px) saturate(180%);
-        opacity: 0.3;
-        z-index: 0;
-        transition: all 0.5s ease;
-        pointer-events: none;
-      }
-
-      .glass-content {
-        position: relative;
-        z-index: 1;
-        padding: 12px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 100%);
-        width: 100%;
-        box-sizing: border-box;
-      }
-
-      .rank {
-        font-family: "Bitcount Grid Double", system-ui;
-        font-size: 22px;
-        color: rgba(255,255,255,0.35);
-        flex-shrink: 0;
-        min-width: 34px;
-        text-align: center;
-      }
-
-      // The #1 result in each column gets a theme-tinted rank + border accent.
-      &:first-child {
-        border-color: color-mix(in srgb, var(--unis-primary), transparent 45%);
-
-        .rank { color: var(--unis-primary-2, var(--unis-primary)); }
-      }
-
-      .item-artwork {
-        width: 52px;
-        height: 52px;
-        border-radius: 8px;
-        object-fit: cover;
-        flex-shrink: 0;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-        border: 1px solid rgba(255,255,255,0.1);
-      }
-
-      .item-info {
-        flex: 1 1 0;
-        min-width: 0; // Critical — prevents text from pushing buttons off screen
-
-        .item-title {
-          color: white;
-          font-size: 14px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        }
-
-        .item-artist {
-          color: $text-silver;
-          font-size: 12px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-        }
-      }
-
-      .findpage-play-button {
-        padding: 8px 16px;
-        background: var(--unis-primary);
-        border: 1px solid transparent;
-        color: #fff;
-        border-radius: 50px;
-        cursor: pointer;
-        flex-shrink: 0;
-        transition: all 0.2s ease;
-        font-weight: 600;
-        font-size: 11px;
-        white-space: nowrap;
-
-        &:hover {
-          background: var(--unis-primary-2, var(--unis-primary));
-          color: #fff;
-          box-shadow: 0 0 14px color-mix(in srgb, var(--unis-primary-2, var(--unis-primary)), transparent 45%);
-        }
-      }
-
-      .findpage-view-button {
-        padding: 7px 14px;
-        background: black;
-        border: 1px solid rgba(255,255,255,0.2);
-        color: silver;
-        border-radius: 50px;
-        cursor: pointer;
-        flex-shrink: 0;
-        transition: all 0.2s ease;
-        font-weight: 600;
-        font-size: 11px;
-        backdrop-filter: blur(4px);
-        white-space: nowrap;
-
-        &:hover {
-          background: $accent-white;
-          color: $bg-black;
-          border-color: white;
-          box-shadow: 0 0 10px rgba(255,255,255,0.3);
-        }
-      }
-    }
-  }
-}
-
-// =============================================================================
-// MAP LEGEND (key: theme-colored = active, white = coming soon)
-// =============================================================================
-
-.map-legend {
+.map-key {
   position: absolute;
-  bottom: 10px;
-  left: 10px;
-  z-index: 1000; // above leaflet panes, below nothing interactive
+  bottom: 12px;
+  right: 12px;
+  z-index: 4;
   display: flex;
-  gap: 12px;
-  padding: 5px 10px;
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
+  gap: 14px;
+  padding: 6px 11px;
+  background: rgba(6, 7, 11, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 7px;
   pointer-events: none;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
 
-  .legend-item {
+  .key-item {
     display: flex;
     align-items: center;
-    gap: 5px;
-    color: $text-silver;
-    font-size: 11px;
+    gap: 6px;
+    color: #8b8f9e;
+    font: 400 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.04em;
     white-space: nowrap;
   }
 
-  .legend-swatch {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
+  .key-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
   }
 
-  .legend-swatch--active {
+  .key-dot--live {
     background: var(--unis-primary);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--unis-primary), transparent 35%);
   }
 
-  .legend-swatch--inactive {
-    background: #EAEAEC;
+  .key-dot--dark {
+    background: #151822;
+    border: 1px solid rgba(255, 255, 255, 0.18);
   }
 }
-
-// =============================================================================
-// MAP TOAST (coming-soon → waitlist CTA, replaces alert())
-// =============================================================================
 
 .map-toast {
   position: absolute;
   left: 50%;
   bottom: 18px;
   transform: translate(-50%, 20px);
-  z-index: 1200;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 12px 16px;
-  background: rgba(8, 9, 14, 0.92);
+  background: rgba(8, 9, 14, 0.94);
   border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 45%);
   border-radius: 12px;
   font-size: 13px;
@@ -667,163 +338,355 @@ $subtle-black: #1a1a1a;
   &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 }
 
+// =============================================================================
+// REGION RAIL
+// The keyboard route into territories, and the fallback when a jurisdiction
+// has no polygon. Always present, not mobile-only.
+// =============================================================================
+
+.region-rail {
+  width: 100%;
+  margin-top: 16px;
+  box-sizing: border-box;
+}
+
+.region-rail-title {
+  color: #7d818f;
+  font: 400 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+
+.region-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.region-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: color-mix(in srgb, var(--unis-primary), transparent 88%);
+  border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 62%);
+  border-radius: 999px;
+  padding: 8px 15px;
+  color: $text-silver;
+  font: 500 13px 'Inter', system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+
+  &:hover {
+    background: color-mix(in srgb, var(--unis-primary), transparent 70%);
+    border-color: var(--unis-primary);
+    color: #fff;
+  }
+
+  &.selected {
+    background: var(--unis-primary);
+    border-color: var(--unis-primary);
+    color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--unis-primary-2, var(--unis-primary));
+    outline-offset: 2px;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4caf50;
+    flex-shrink: 0;
+  }
+}
+
+.find-error {
+  width: 100%;
+  max-width: 960px;
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.28);
+  color: #ff9b9b;
+  font-size: 13px;
+}
+
+// =============================================================================
+// RESULTS
+// =============================================================================
+
+.coming-soon-message {
+  width: 100%;
+  text-align: center;
+  padding: 34px 20px;
+  background: color-mix(in srgb, var(--unis-primary), transparent 92%);
+  border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 72%);
+  border-radius: 14px;
+  box-sizing: border-box;
+}
+
+.coming-soon-title {
+  color: var(--unis-primary-2, var(--unis-primary));
+  font-size: 26px;
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.coming-soon-text {
+  color: #8b8f9e;
+  margin: 0 0 18px;
+  font-size: 14px;
+}
+
+.results-section {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  max-width: 960px;
+  box-sizing: border-box;
+  min-height: 300px;
+  align-items: flex-start;
+  padding: 24px 0 40px;
+  margin-top: 0 !important;
+
+  .column {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-top: 0 !important;
+
+    h2 {
+      margin: 0 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--line);
+      }
+    }
+
+    .column-link {
+      background: none;
+      border: none;
+      padding: 0;
+      color: $text-gray;
+      font: 500 12px/1 'Inter', system-ui, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      cursor: pointer;
+      transition: color 0.2s;
+
+      &:hover { color: var(--unis-primary-2, var(--unis-primary)); }
+      &:focus-visible {
+        outline: 2px solid var(--unis-primary-2, var(--unis-primary));
+        outline-offset: 3px;
+      }
+    }
+
+    .results-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .result-item {
+      position: relative;
+      background: rgba(20, 20, 20, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: stretch;
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+                  border-color 0.3s, box-shadow 0.3s;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      opacity: 0;
+      animation: slideInBlur 0.6s ease forwards;
+
+      &:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255, 255, 255, 0.3);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+
+        .ambient-bg { opacity: 0.6; transform: scale(1.2); }
+      }
+
+      &.is-skeleton {
+        min-height: 78px;
+        animation: none;
+        opacity: 1;
+        background: linear-gradient(
+          100deg,
+          rgba(255, 255, 255, 0.03) 30%,
+          rgba(255, 255, 255, 0.07) 50%,
+          rgba(255, 255, 255, 0.03) 70%
+        );
+        background-size: 250% 100%;
+        animation: findSkeleton 1.3s linear infinite;
+      }
+
+      &.is-empty {
+        animation: none;
+        opacity: 1;
+
+        p {
+          color: #7d818f;
+          font-size: 13px;
+          text-align: center;
+          width: 100%;
+          margin: 0;
+          padding: 14px 0;
+        }
+      }
+
+      .ambient-bg {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background-size: cover;
+        background-position: center;
+        filter: blur(40px) saturate(180%);
+        opacity: 0.3;
+        z-index: 0;
+        transition: opacity 0.5s ease, transform 0.5s ease;
+        pointer-events: none;
+      }
+
+      .glass-content {
+        position: relative;
+        z-index: 1;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(90deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.1) 100%);
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .rank {
+        font: 400 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: rgba(255, 255, 255, 0.32);
+        flex-shrink: 0;
+        min-width: 20px;
+        text-align: center;
+      }
+
+      &:first-child {
+        border-color: color-mix(in srgb, var(--unis-primary), transparent 45%);
+        .rank { color: var(--unis-primary-2, var(--unis-primary)); }
+      }
+
+      .item-artwork {
+        width: 52px;
+        height: 52px;
+        border-radius: 8px;
+        object-fit: cover;
+        flex-shrink: 0;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .item-info {
+        flex: 1 1 0;
+        min-width: 0;
+
+        .item-title {
+          color: #fff;
+          font-size: 14px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .item-artist {
+          color: $text-silver;
+          font-size: 12px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+      }
+
+      .findpage-play-button {
+        padding: 8px 16px;
+        background: var(--unis-primary);
+        border: 1px solid transparent;
+        color: #fff;
+        border-radius: 50px;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background 0.2s, box-shadow 0.2s;
+        font-weight: 600;
+        font-size: 11px;
+        white-space: nowrap;
+
+        &:hover {
+          background: var(--unis-primary-2, var(--unis-primary));
+          box-shadow: 0 0 14px color-mix(in srgb, var(--unis-primary-2, var(--unis-primary)), transparent 45%);
+        }
+
+        &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+      }
+
+      .findpage-view-button {
+        padding: 7px 14px;
+        background: #000;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: silver;
+        border-radius: 50px;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background 0.2s, color 0.2s, border-color 0.2s;
+        font-weight: 600;
+        font-size: 11px;
+        white-space: nowrap;
+
+        &:hover {
+          background: $accent-white;
+          color: $bg-black;
+          border-color: #fff;
+        }
+
+        &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+      }
+    }
+  }
+}
+
+@keyframes findSkeleton {
+  from { background-position: 130% 0; }
+  to   { background-position: -30% 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .eq span { animation: none; transform: scaleY(0.7); }
   .map-toast { transition: none; }
+  .result-item { animation: none; opacity: 1; }
+  .result-item.is-skeleton { animation: none; }
+  .result-item:hover { transform: none; }
 }
 
 // =============================================================================
-// MOBILE RESPONSIVE STYLES
-// =============================================================================
-
-@media (max-width: 600px) {
-  .find-page-container {
-    width: 100vw;
-    max-width: 100vw;
-    padding: 0;
-    margin: 0;
-    overflow-x: hidden;
-  }
-
-  .find-page-container > * {
-    margin-left: 0;
-    padding-top: 0;
-    margin-top: 0 !important;
-  }
-
-  .findFilters {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    margin-top: 20px !important;
-    margin-bottom: 10px;
-    width: 100%;
-  }
-
-  .genre-seg {
-    justify-content: center;
-  }
-
-  .genre-pill {
-    flex: 1;
-    padding: 8px 0;
-    text-align: center;
-  }
-
-  .random-button {
-    justify-content: center;
-  }
-
-  .mapEverything {
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-    box-sizing: border-box;
-  }
-
-  .hero {
-    align-items: flex-end;
-  }
-
-  .territory-name {
-    font-size: clamp(34px, 11vw, 46px);
-    padding: 0;
-  }
-
-  .eq { height: 18px; }
-
-  .back-button {
-    padding: 4px 14px;
-    margin-top: 5px;
-  }
-
-  .map-container {
-    // Aspect-ratio sizing + flyToBounds(US_BOUNDS) in the JSX means the full
-    // US always fits — no more cropped/forced look at narrow widths.
-    width: calc(100% - 24px);
-    max-width: none;
-    aspect-ratio: 4 / 3;
-    height: auto;
-    min-height: 0;
-    max-height: none;
-    margin: 5px auto;
-  }
-
-  .map-legend {
-    bottom: 8px;
-    left: 8px;
-    gap: 8px;
-    padding: 4px 8px;
-
-    .legend-item {
-      font-size: 10px;
-    }
-  }
-
-  .results-section {
-    flex-direction: column;
-    gap: 20px;
-    padding: 20px 5% 40px;
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    margin-top: 20px !important;
-
-    .column {
-      width: 100%;
-
-      h2 {
-        font-size: 18px;
-        margin-bottom: 12px;
-      }
-
-      .results-list {
-        gap: 10px;
-      }
-
-      .result-item {
-        .glass-content {
-          padding: 10px;
-          gap: 8px;
-        }
-
-        .rank {
-          display: none;
-        }
-
-        .item-artwork {
-          width: 45px;
-          height: 45px;
-        }
-
-        .item-info {
-          .item-title { font-size: 13px; }
-          .item-artist { font-size: 11px; }
-        }
-
-        .findpage-play-button, .findpage-view-button {
-          padding: 6px 10px;
-          font-size: 11px;
-        }
-      }
-    }
-  }
-
-  .coming-soon-message {
-    padding: 30px 15px;
-  }
-
-  .coming-soon-title {
-    font-size: 22px;
-  }
-
-  .coming-soon-text {
-    font-size: 14px;
-  }
-}
-
-// =============================================================================
-// TABLET RESPONSIVE STYLES (601px - 900px)
+// RESPONSIVE
 // =============================================================================
 
 @media (min-width: 601px) and (max-width: 900px) {
@@ -832,105 +695,82 @@ $subtle-black: #1a1a1a;
     max-width: calc(100vw - 200px);
   }
 
-  .map-container {
-    height: 380px;
-    min-height: 380px;
-    max-height: 380px;
-  }
+  .map-frame { height: 380px; }
 }
 
-// =============================================================================
-// LEAFLET LABEL STYLES
-// =============================================================================
-
-.jurisdiction-label {
-  background: rgba(0, 0, 0, 0.7) !important;
-  border: 1px solid var(--unis-primary) !important;
-  border-radius: 4px !important;
-  color: white !important;
-  font-size: 11px !important;
-  font-weight: 500 !important;
-  padding: 3px 8px !important;
-  white-space: nowrap !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
-}
-
-.jurisdiction-label::before {
-  display: none !important;
-}
-
-// =============================================================================
-// MOBILE JURISDICTION LIST
-// =============================================================================
-
-.jurisdiction-list-mobile {
-  width: 100%;
-  margin-top: 15px;
-  padding: 0 10px;
-  box-sizing: border-box;
-}
-
-.jurisdiction-list-title {
-  color: #888;
-  font-size: 12px;
-  margin: 0 0 8px 0;
-  text-align: center;
-}
-
-.jurisdiction-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-}
-
-.jurisdiction-list-item {
-  background: color-mix(in srgb, var(--unis-primary), transparent 80%);
-  border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 50%);
-  border-radius: 20px;
-  padding: 8px 16px;
-  color: #C0C0C0;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.jurisdiction-list-item:hover,
-.jurisdiction-list-item:active {
-  background: color-mix(in srgb, var(--unis-primary), transparent 60%);
-  border-color: var(--unis-primary);
-  color: white;
-}
-
-.jurisdiction-list-item.selected {
-  background: var(--unis-primary);
-  border-color: var(--unis-primary);
-  color: white;
-}
-
-.jurisdiction-list-item.in-chain {
-  border-color: color-mix(in srgb, var(--unis-primary-2, var(--unis-primary)), transparent 30%);
-}
-
-.jurisdiction-list-item .active-badge {
-  color: #4CAF50;
-  font-size: 10px;
-}
-
-@media (max-width: 400px) {
-  .jurisdiction-list-item {
-    padding: 6px 12px;
-    font-size: 12px;
+@media (max-width: 600px) {
+  .find-page-container {
+    width: 100vw;
+    max-width: 100vw;
+    padding: 0 14px;
+    margin: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
 
-  .jurisdiction-label {
-    font-size: 9px !important;
-    padding: 2px 6px !important;
+  .findFilters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-top: 20px !important;
+  }
+
+  .genre-seg { justify-content: center; }
+  .genre-pill { flex: 1; padding: 8px 0; text-align: center; }
+  .random-button { justify-content: center; }
+
+  .mapEverything { width: 100%; max-width: 100%; }
+
+  .territory-name { font-size: clamp(32px, 11vw, 46px); }
+  .eq { height: 18px; }
+
+  // Aspect-ratio sizing keeps the whole country in frame at any width. The
+  // camera fits bounds rather than using a fixed zoom, so nothing crops.
+  .map-frame {
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
+
+  .map-key {
+    bottom: 8px;
+    right: 8px;
+    gap: 10px;
+    padding: 5px 8px;
+
+    .key-item { font-size: 10px; }
+  }
+
+  .map-toast {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    transform: translateY(16px);
+    white-space: normal;
+    justify-content: space-between;
+
+    &.show { transform: translateY(0); }
+  }
+
+  .results-section {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px 0 40px;
+    max-width: 100%;
+
+    .column {
+      width: 100%;
+
+      .result-item {
+        .glass-content { padding: 10px; gap: 8px; }
+        .rank { display: none; }
+        .item-artwork { width: 45px; height: 45px; }
+        .item-info {
+          .item-title  { font-size: 13px; }
+          .item-artist { font-size: 11px; }
+        }
+        .findpage-play-button,
+        .findpage-view-button { padding: 6px 10px; font-size: 11px; }
+      }
+    }
   }
 }
