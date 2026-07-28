@@ -15,6 +15,7 @@ import songArtThree from './assets/songartworkthree.jpeg';
 import songArtFour from './assets/songartworkfour.jpeg';
 import { apiCall } from './components/axiosInstance';
 import UnisMap from './map/UnisMap';
+import { CANONICAL_GENRES, GENRE_NAMES } from './utils/idMappings';
 import './findpage.scss';
 
 /**
@@ -42,11 +43,20 @@ const HARLEM_PARENT_CHAIN = [
 
 const ROOT_CRUMB = { name: 'United States', jurisdictionId: null, tier: 0 };
 
-const GENRES = [
-  { value: 'rap-hiphop', label: 'Rap' },
-  { value: 'rock', label: 'Rock' },
-  { value: 'pop', label: 'Pop' },
-];
+// Iterate CANONICAL_GENRES, never GENRE_IDS — the latter carries legacy
+// aliases and is what produced the duplicate options in createAccountWizard.
+const GENRES = CANONICAL_GENRES.map((key) => ({
+  value: key,
+  label: GENRE_NAMES?.[key] || key.charAt(0).toUpperCase() + key.slice(1),
+}));
+
+// KNOWN GAP — the genre control is currently inert on this page.
+// /v1/jurisdictions/{id}/tops takes no genre parameter; both callers (here and
+// jurisdictionPage) hit it bare. Genre filtering exists on
+// /v1/vote/leaderboards, which does accept genreId. Until /tops grows the same
+// parameter, changing the genre pill updates local state and nothing else.
+// To wire it once the backend supports it: add `?genreId=${getGenreId(genre)}`
+// to the tops URL and add `genre` to fetchTopResultsById's dependency array.
 
 const FindPage = () => {
   const navigate = useNavigate();
@@ -64,9 +74,10 @@ const FindPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasSelectedJurisdiction, setHasSelectedJurisdiction] = useState(false);
-  const [genre, setGenre] = useState('rap-hiphop');
+  const [genre, setGenre] = useState(CANONICAL_GENRES[0]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [toast, setToast] = useState(null);
+  const [spotlight, setSpotlight] = useState(null); // state lit during a random spin
 
   const toastTimer = useRef(null);
   const spinTimer = useRef(null);
@@ -353,10 +364,15 @@ const FindPage = () => {
 
     spinTimer.current = setInterval(() => {
       count += 1;
+      // Light up a different state each tick so the map visibly spins. Without
+      // this the button said "Spinning" for 900ms while nothing moved.
+      setSpotlight(pool[count % pool.length]);
+
       if (count >= 8) {
         clearInterval(spinTimer.current);
         setIsAnimating(false);
         const landed = pool[Math.floor(Math.random() * pool.length)];
+        setSpotlight(null);
         if (landed === 'New York') handleStateSelect('New York');
         else showComingSoonToast(landed);
       }
@@ -630,6 +646,7 @@ const FindPage = () => {
             <UnisMap
               mode={mapMode}
               focusState={focusState}
+              spotlight={spotlight}
               territories={currentJurisdictions}
               selectedId={selectedJurisdiction?.jurisdictionId || null}
               liveStates={ACTIVE_STATES}
