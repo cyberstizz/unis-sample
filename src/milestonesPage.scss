@@ -10,8 +10,16 @@
 // DESIGN
 //   Restraint everywhere except one place: the tally rail, where bar width
 //   encodes each entry's share of the period's points so margin of victory is
-//   readable without parsing a single figure. The winner's name is the only
-//   serif on the page.
+//   readable without parsing a figure.
+//
+// MOBILE
+//   Nothing may exceed the viewport. The six-option interval control measures
+//   ~363px intrinsic against 313px of usable width at 375px, so below 680px
+//   every segmented control goes full width and its segments flex-fill — the
+//   interval group wraps to two rows of three instead of pushing the page
+//   sideways. The tally rail survives the breakpoint by moving beneath its row
+//   rather than being hidden; it is the signature and should not vanish on
+//   phones.
 // ============================================================================
 
 .ms-page {
@@ -36,8 +44,13 @@
   --ms-radius: 14px;
 
   min-height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;          // last line of defence — nothing escapes sideways
   color: var(--ms-ink);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  *, *::before, *::after { box-sizing: border-box; }
 }
 
 .sr-only {
@@ -57,9 +70,7 @@
 }
 
 // ─── Masthead ──────────────────────────────────────────────────────────────
-.ms-masthead {
-  margin-bottom: 34px;
-}
+.ms-masthead { margin-bottom: 34px; }
 
 .ms-eyebrow {
   margin: 0 0 8px;
@@ -72,7 +83,7 @@
 
 .ms-wordmark {
   margin: 0;
-  font-size: clamp(2.1rem, 5vw, 3.1rem);
+  font-size: clamp(1.85rem, 5vw, 3.1rem);
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -100,6 +111,7 @@
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+  min-width: 0;
 
   & + & { margin-top: 12px; }
 }
@@ -111,6 +123,7 @@
 
 .ms-segmented {
   display: inline-flex;
+  min-width: 0;
   padding: 3px;
   gap: 2px;
   background: rgba(255, 255, 255, 0.03);
@@ -156,6 +169,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .ms-period-range {
@@ -240,9 +254,7 @@
 }
 
 // ─── Headline ──────────────────────────────────────────────────────────────
-.ms-headline {
-  margin-bottom: 18px;
-}
+.ms-headline { margin-bottom: 18px; }
 
 .ms-headline-kicker {
   display: block;
@@ -256,7 +268,7 @@
 
 .ms-headline-title {
   margin: 0;
-  font-size: clamp(1.3rem, 3vw, 1.75rem);
+  font-size: clamp(1.22rem, 3vw, 1.75rem);
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--ms-ink);
@@ -271,9 +283,7 @@
 }
 
 // ─── Plate ─────────────────────────────────────────────────────────────────
-.ms-result {
-  animation: msRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
+.ms-result { animation: msRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 @keyframes msRise {
   from { opacity: 0; transform: translateY(14px); }
@@ -305,7 +315,7 @@
 }
 
 .ms-plate-art,
-.ms-plate-body { position: relative; z-index: 1; }
+.ms-plate-body { position: relative; z-index: 1; min-width: 0; }
 
 .ms-plate-art {
   aspect-ratio: 1;
@@ -326,7 +336,6 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-width: 0;
 }
 
 .ms-plate-crown {
@@ -347,9 +356,9 @@
 .ms-plate-name {
   margin: 0;
   font-family: 'Instrument Serif', Georgia, serif;
-  font-size: clamp(1.9rem, 4.4vw, 3rem);
+  font-size: clamp(1.65rem, 4.4vw, 3rem);
   font-weight: 400;
-  line-height: 1.03;
+  line-height: 1.04;
   letter-spacing: -0.015em;
   color: var(--ms-ink);
   overflow-wrap: anywhere;
@@ -359,6 +368,7 @@
   margin: 8px 0 0;
   font-size: 0.95rem;
   color: var(--ms-ink-2);
+  overflow-wrap: anywhere;
 }
 
 .ms-figures {
@@ -372,6 +382,7 @@
 
 .ms-figure {
   margin: 0;
+  min-width: 0;
 
   dt {
     font-size: 9px;
@@ -413,6 +424,7 @@
   appearance: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   padding: 9px 16px;
   border: 1px solid var(--ms-etch-strong);
@@ -474,6 +486,7 @@
   font-size: 0.74rem;
   font-variant-numeric: tabular-nums;
   color: var(--ms-ink-3);
+  white-space: nowrap;
 }
 
 .ms-tally-list {
@@ -486,6 +499,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
   border-bottom: 1px solid var(--ms-etch);
   animation: msRowIn 0.44s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: var(--row-delay, 0ms);
@@ -706,66 +720,203 @@
   to   { background-position: -200% 0; }
 }
 
-// ─── Responsive ────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// TABLET — 900px
+// ═══════════════════════════════════════════════════════════════════════════
 @media (max-width: 900px) {
   .ms-plate {
     grid-template-columns: 1fr;
     gap: 20px;
   }
 
-  .ms-plate-art {
-    max-width: 190px;
-  }
+  .ms-plate-art { max-width: 190px; }
 
   .ms-tally-text { width: 128px; }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PHONE — 680px
+// Everything below exists to keep the page inside the viewport.
+// ═══════════════════════════════════════════════════════════════════════════
 @media (max-width: 680px) {
-  .ms-shell { padding: 26px 16px 84px; }
+  .ms-shell { padding: 24px 14px 84px; }
 
-  .ms-controls { padding: 14px; }
+  .ms-masthead { margin-bottom: 22px; }
+  .ms-lede { font-size: 0.84rem; }
+
+  // ── Controls ─────────────────────────────────────────────────────────────
+  .ms-controls {
+    padding: 12px;
+    margin-bottom: 24px;
+  }
 
   .ms-control-row {
     gap: 8px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    &::-webkit-scrollbar { display: none; }
+    overflow-x: visible;      // no sideways scroll anywhere; everything wraps
+    & + & { margin-top: 10px; }
   }
 
-  .ms-control-row--period {
+  .ms-control-row--period { padding-top: 12px; }
+
+  // Segments fill the width they are given instead of dictating it.
+  // The first group on each row takes the whole line: jurisdiction on row one
+  // (longest labels), interval on row two (six options, wraps to 3 + 3).
+  // Genre and category then share row one's second line.
+  .ms-segmented {
+    flex: 1 1 calc(50% - 4px);
     flex-wrap: wrap;
-    overflow-x: visible;
+    justify-content: center;
+
+    &:first-child { flex-basis: 100%; }
   }
 
-  .ms-segmented { flex-shrink: 0; }
+  .ms-seg {
+    flex: 1 1 30%;
+    min-width: 0;
+    padding: 7px 6px;
+    font-size: 0.72rem;
+    text-align: center;
+  }
 
   .ms-period-picker {
-    width: 100%;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: 6px;
     justify-content: space-between;
   }
 
+  .ms-period-range {
+    flex: 1 1 100%;
+    text-align: center;
+    white-space: normal;
+  }
+
   .ms-submit {
+    flex: 1 1 100%;
     width: 100%;
     margin-left: 0;
+    padding: 11px 16px;
   }
 
-  .ms-figures { gap: 18px; }
-
-  // The rail loses its meaning at this width — drop it, keep the numbers.
-  .ms-tally-bar { display: none; }
-
-  .ms-tally-text {
-    width: auto;
-    flex: 1;
+  // ── Plate ────────────────────────────────────────────────────────────────
+  .ms-plate {
+    padding: 18px;
+    gap: 16px;
   }
 
-  .ms-tally-main { gap: 10px; padding: 10px 6px; }
+  .ms-plate-art { max-width: 148px; }
+
+  .ms-plate-name { line-height: 1.06; }
+
+  .ms-plate-by { font-size: 0.86rem; }
+
+  // Four figures in one tidy row rather than a wrapping flex mess.
+  .ms-figures {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 14px;
+  }
+
+  .ms-figure {
+    dt { font-size: 8px; letter-spacing: 0.1em; }
+    dd { font-size: 0.9rem; }
+    &--lead dd { font-size: 1.15rem; }
+  }
+
+  .ms-plate-actions {
+    margin-top: 16px;
+    gap: 8px;
+  }
+
+  .ms-action { flex: 1 1 0; }
+
+  // ── Tally ────────────────────────────────────────────────────────────────
+  .ms-tally { padding: 16px 14px 8px; }
+
+  .ms-tally-head {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .ms-tally-meta { white-space: normal; }
+
+  .ms-tally-main {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 4px;
+  }
 
   .ms-tally-art { width: 34px; height: 34px; }
 
-  .ms-tally-points { width: 62px; font-size: 0.78rem; }
+  .ms-tally-text {
+    width: auto;
+    flex: 1 1 auto;
+  }
+
+  // The rail keeps its meaning — it moves under the row instead of competing
+  // for horizontal space. The indent matches artwork + gap so it lines up
+  // beneath the title above it.
+  .ms-tally-bar {
+    order: 4;
+    flex: 0 0 100%;
+    min-width: 0;
+    width: calc(100% - 44px);
+    margin: 2px 0 2px 44px;
+    height: 4px;
+  }
+
+  .ms-tally-points {
+    order: 3;
+    width: auto;
+    min-width: 58px;
+    font-size: 0.8rem;
+  }
 
   .ms-tally-unit { display: none; }
+
+  .ms-tally-rank { width: 20px; font-size: 0.76rem; }
+
+  .ms-tally-play {
+    width: 28px;
+    height: 28px;
+    margin-left: 2px;
+  }
+
+  // ── States ───────────────────────────────────────────────────────────────
+  .ms-message { padding: 20px 16px; }
+  .ms-invite { padding: 34px 16px; }
+  .ms-skeleton-plate { height: 340px; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SMALL PHONE — 380px (iPhone SE and friends)
+// ═══════════════════════════════════════════════════════════════════════════
+@media (max-width: 380px) {
+  .ms-shell { padding: 20px 12px 84px; }
+
+  .ms-seg {
+    padding: 7px 4px;
+    font-size: 0.68rem;
+  }
+
+  .ms-figures { gap: 6px; }
+
+  .ms-figure {
+    dd { font-size: 0.82rem; }
+    &--lead dd { font-size: 1.02rem; }
+  }
+
+  .ms-plate { padding: 15px; }
+  .ms-plate-art { max-width: 128px; }
+
+  .ms-tally-main { gap: 8px; }
+
+  .ms-tally-bar {
+    width: calc(100% - 42px);
+    margin-left: 42px;
+  }
 }
 
 // ─── Reduced motion ────────────────────────────────────────────────────────
