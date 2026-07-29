@@ -153,16 +153,6 @@ export default function UnisMap({
     return withAnchor.filter((t) => t.live || t.id === selectedId);
   }, [territoryShapes, selectedId]);
 
-  // Anchors are keyed the same way as the DOM nodes, so the paint loop can look
-  // one up without reading anything off the element.
-  useLayoutEffect(() => {
-    const m = new Map();
-    for (const s of STATE_INDEX) if (s.anchor) m.set(`pulse-${s.name}`, s.anchor);
-    for (const t of labelledShapes) m.set(`label-${t.id}`, t.anchor);
-    anchorsRef.current = m;
-    if (cameraRef.current) paint(cameraRef.current);
-  }, [labelledShapes, paint]);
-
   /* ------------------------------------------------------------ target cam */
   const targetCamera = useMemo(() => {
     const { w, h } = size;
@@ -211,6 +201,18 @@ export default function UnisMap({
     },
     [size]
   );
+
+  // MUST stay below `const paint`. This effect names `paint` in its dependency
+  // array, and dependency arrays are evaluated during render — placing it above
+  // the declaration reads the binding inside its temporal dead zone and throws
+  // "Cannot access 'paint' before initialization", which blanks the page.
+  useLayoutEffect(() => {
+    const m = new Map();
+    for (const st of STATE_INDEX) if (st.anchor) m.set(`pulse-${st.name}`, st.anchor);
+    for (const t of labelledShapes) m.set(`label-${t.id}`, t.anchor);
+    anchorsRef.current = m;
+    if (cameraRef.current) paint(cameraRef.current);
+  }, [labelledShapes, paint]);
 
   useEffect(() => {
     if (!size.w || !size.h) return undefined;
