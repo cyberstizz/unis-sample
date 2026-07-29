@@ -187,6 +187,7 @@ const VoteAwards = () => {
   const getWinnerLookbackWindow = (interval) => {
     const end = getNewYorkNow();
     end.setHours(0, 0, 0, 0);
+    end.setDate(end.getDate() - 1);   
 
     const lookbackDays = {
       daily: 30,
