@@ -122,7 +122,12 @@ const FindPage = () => {
   );
 
   /* --------------------------------------------------------- ad tracking */
+  // SecurityConfig maps POST /api/v1/earnings/track-view to .authenticated(),
+  // so calling it as a guest is a guaranteed 403 in the console on every visit.
+  // An ad view cannot be credited to an anonymous user anyway — there is no
+  // account to attribute the earning to — so skip it when logged out.
   useEffect(() => {
+    if (!userId) return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -134,7 +139,7 @@ const FindPage = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userId]);
 
   /* ------------------------------------------------------------- the API */
 
