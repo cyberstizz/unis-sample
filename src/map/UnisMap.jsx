@@ -86,6 +86,8 @@ export default function UnisMap({
   const cameraRef = useRef(null);
   const labelRefs = useRef(new Map());
   const anchorsRef = useRef(new Map());
+  const hoverLabelRef = useRef(null);
+  const hoverAnchorRef = useRef(null);
 
   const [size, setSize] = useState({ w: 960, h: 560 });
   const [hovered, setHovered] = useState(null);
@@ -183,6 +185,21 @@ export default function UnisMap({
       // Screen-space overlay: labels and live pulses are positioned in pixels
       // so they never inherit the camera's scale. A label at 3,600x zoom would
       // otherwise be the size of a building.
+      // Hovered-state name chip. Kept out of labelRefs because it moves with
+      // the pointer rather than with the data, and repositioning it must not
+      // wait for a React render.
+      const hl = hoverLabelRef.current;
+      const ha = hoverAnchorRef.current;
+      if (hl) {
+        if (ha) {
+          hl.style.transform =
+            `translate3d(${Math.round(ha.x * k + tx)}px, ${Math.round(ha.y * k + ty)}px, 0) translate(-50%, -50%)`;
+          hl.style.visibility = 'visible';
+        } else {
+          hl.style.visibility = 'hidden';
+        }
+      }
+
       labelRefs.current.forEach((node, key) => {
         // React does not tell a stable ref callback which node unmounted, so
         // prune detached nodes here instead of leaking them.
@@ -270,6 +287,13 @@ export default function UnisMap({
     rafRef.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(rafRef.current);
   }, [targetCamera, size, paint]);
+
+  // Follows the anchors effect above, and for the same reason: it names
+  // `paint` in its dependency array, so it cannot sit above the declaration.
+  useEffect(() => {
+    hoverAnchorRef.current = hovered ? STATE_BY_NAME[hovered]?.anchor || null : null;
+    if (cameraRef.current) paint(cameraRef.current);
+  }, [hovered, paint]);
 
   // Repaint on resize without animating.
   useEffect(() => {
@@ -416,6 +440,12 @@ export default function UnisMap({
               <span className="unis-map__signal-core" />
             </span>
           ))}
+
+        {showNation && (
+          <span className="unis-map__hover-name" ref={hoverLabelRef}>
+            {hovered || ''}
+          </span>
+        )}
 
         {showTerritories &&
           labelledShapes.map((t) => (

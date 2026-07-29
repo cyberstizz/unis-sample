@@ -65,9 +65,14 @@
   outline: none;
   transition: fill 0.22s ease, stroke 0.22s ease;
 
+  /* Hover reads in the user's theme colour so it is obvious what a click will
+     select. Dormant states land at partial strength and live ones at full, so
+     highlighted never gets mistaken for launched — the broadcast ring and the
+     legend carry that distinction. */
   &[data-hover] {
-    fill: var(--map-land-hi);
-    stroke: var(--map-edge-hi);
+    fill: color-mix(in srgb, var(--unis-primary), transparent 42%);
+    stroke: color-mix(in srgb, var(--unis-primary), transparent 10%);
+    stroke-width: 1.5;
   }
 
   /* A live territory. The fill is the theme token at full strength — the only
@@ -191,6 +196,35 @@
   100% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(9);
+  }
+}
+
+/* --- hovered state name -------------------------------------------------- */
+
+.unis-map__hover-name {
+  display: block;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font: 500 11px/1 ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(6, 7, 11, 0.88);
+  border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 35%);
+  backdrop-filter: blur(6px);
+  visibility: hidden;
+}
+
+/* Pointer-driven affordances only exist where there is a pointer. On touch,
+   a tap fires mouseenter and the hover state sticks after the finger lifts,
+   leaving a state highlighted and a name chip stranded on screen. */
+@media (hover: none), (pointer: coarse) {
+  .unis-map__hover-name { display: none; }
+  .unis-map__state[data-hover]:not([data-live]) {
+    fill: var(--map-land);
+    stroke: var(--map-edge);
+    stroke-width: 1;
   }
 }
 

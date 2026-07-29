@@ -233,16 +233,28 @@ const FindPage = () => {
 
   /* -------------------------------------------------------- interactions */
 
+  /**
+   * Every state is enterable, live or not.
+   *
+   * Clicking California flies in and draws its regions exactly as New York
+   * does, then shows the waitlist panel instead of charts. The point is that a
+   * visitor sees their own state already mapped and subdivided — "this is
+   * coming" reads very differently when you can see your own neighbourhood
+   * outlined than when a click just produces a toast.
+   *
+   * The difference between live and dormant is depth, not access: a dormant
+   * state opens one level and stops there, because that is as far as the
+   * geometry goes. See handleTerritorySelect.
+   */
   const handleStateSelect = useCallback(
     async (stateName) => {
-      if (!ACTIVE_STATES.includes(stateName)) {
-        showComingSoonToast(stateName);
-        return;
-      }
       if (focusState === stateName) return;
+
+      const isLive = ACTIVE_STATES.includes(stateName);
 
       setLoading(true);
       setHasSelectedJurisdiction(true);
+      setError(null);
 
       try {
         const stateRes = await apiCall({
@@ -251,6 +263,7 @@ const FindPage = () => {
         });
         const jurisdiction = stateRes.data?.[0];
 
+        // No row at all — nothing to fly to, so say so and stay put.
         if (!jurisdiction) {
           setLoading(false);
           setHasSelectedJurisdiction(false);
@@ -258,10 +271,12 @@ const FindPage = () => {
           return;
         }
 
-        // One ID gets us both calls in parallel — no redundant byName lookup.
+        // Charts are only fetched for live states. A dormant state has no
+        // content to rank, so asking for its tops is a guaranteed empty
+        // round trip on every click.
         const [children] = await Promise.all([
           fetchChildren(jurisdiction.jurisdictionId),
-          fetchTopResultsById(jurisdiction.jurisdictionId),
+          isLive ? fetchTopResultsById(jurisdiction.jurisdictionId) : Promise.resolve(),
         ]);
 
         setFocusState(stateName);
@@ -271,6 +286,11 @@ const FindPage = () => {
         ]);
         setCurrentJurisdictions(children);
         setSelectedJurisdiction(jurisdiction);
+
+        if (!isLive) {
+          setTopResults({ artists: [], songs: [] });
+          setLoading(false);
+        }
       } catch (err) {
         console.error('[findpage] state select failed:', err?.message || err);
         setError(`${stateName} could not be loaded. Try again in a moment.`);
@@ -286,6 +306,14 @@ const FindPage = () => {
 
       // Select immediately so the camera starts moving before data lands.
       setSelectedJurisdiction(jurisdiction);
+
+      // Inside a dormant state there is only one level of geometry, so a click
+      // highlights the region and stops. Descending would fly the camera into
+      // an empty frame.
+      if (!ACTIVE_STATES.includes(focusState)) {
+        showComingSoonToast(name);
+        return;
+      }
 
       const resolvedName =
         !isActiveJurisdiction(name) && isInHarlemChain(name) ? 'Harlem' : name;
@@ -309,7 +337,7 @@ const FindPage = () => {
         setCurrentJurisdictions(children);
       }
     },
-    [fetchChildren, fetchTopResultsById, fetchTopResultsByName]
+    [fetchChildren, fetchTopResultsById, fetchTopResultsByName, focusState, showComingSoonToast]
   );
 
   const resetToNational = useCallback(() => {
