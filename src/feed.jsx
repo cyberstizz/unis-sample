@@ -462,6 +462,7 @@ const Feed = () => {
 
     const fetchAwardsData = async () => {
       const today = new Date();
+      today.setDate(today.getDate() - 1);
       const sixtyDaysAgo = new Date(today);
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
