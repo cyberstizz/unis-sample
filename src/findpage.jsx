@@ -514,6 +514,20 @@ const FindPage = () => {
 
   const { artists, songs } = topResults;
 
+  /**
+   * `buildUrl(x) || fallback` only fires when photoUrl is null. An artist whose
+   * photoUrl is a non-empty string pointing at a file that is not on the CDN
+   * sails straight past it and renders a broken image — the string is truthy,
+   * so the fallback never runs. onError is what actually catches that, and it
+   * is the case that shows up whenever the ranking surfaces artists who have
+   * not uploaded a photo yet.
+   */
+  const handleArtworkError = (e, index, kind) => {
+    const pool = kind === 'song' ? defaultArtwork.songs : defaultArtwork.artists;
+    const fallback = pool[index % pool.length];
+    if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+  };
+
   const renderRow = (item, index, kind) => (
     <li
       key={item.id || index}
@@ -523,7 +537,12 @@ const FindPage = () => {
       <div className="ambient-bg" style={{ backgroundImage: `url(${item.artwork})` }} />
       <div className="glass-content">
         <div className="rank">{index + 1}</div>
-        <img src={item.artwork} alt="" className="item-artwork" />
+        <img
+          src={item.artwork}
+          alt=""
+          className="item-artwork"
+          onError={(e) => handleArtworkError(e, index, kind)}
+        />
         <div className="item-info">
           <div className="item-title">{kind === 'song' ? item.title : item.name}</div>
           {kind === 'song' && <div className="item-artist">{item.artist}</div>}
