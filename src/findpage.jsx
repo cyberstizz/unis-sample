@@ -5,17 +5,10 @@ import backimage from './assets/randomrapper.jpeg';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';
 import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3';
-import rapperOne from './assets/rapperphotoOne.jpg';
-import rapperTwo from './assets/rapperphototwo.jpg';
-import rapperThree from './assets/rapperphotothree.jpg';
-import rapperFree from './assets/rapperphotofour.jpg';
-import songArtOne from './assets/songartworkONe.jpeg';
-import songArtTwo from './assets/songartworktwo.jpeg';
-import songArtThree from './assets/songartworkthree.jpeg';
-import songArtFour from './assets/songartworkfour.jpeg';
 import { apiCall } from './components/axiosInstance';
+import { buildUrl } from './utils/buildUrl';
 import UnisMap from './map/UnisMap';
-import { CANONICAL_GENRES, GENRE_NAMES } from './utils/idMappings';
+import { CANONICAL_GENRES, GENRE_NAMES, GENRE_IDS } from './utils/idMappings';
 import './findpage.scss';
 
 /**
@@ -70,7 +63,9 @@ const FindPage = () => {
   const [selectedJurisdiction, setSelectedJurisdiction] = useState(null);
   const [focusState, setFocusState] = useState(null);
 
-  const [topResults, setTopResults] = useState({ artists: [], songs: [] });
+  // The API returns up to 30 per jurisdiction. Hold all of them and derive the
+  // visible three below, so switching genre is free rather than a refetch.
+  const [rawTops, setRawTops] = useState({ artists: [], songs: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasSelectedJurisdiction, setHasSelectedJurisdiction] = useState(false);
@@ -82,27 +77,7 @@ const FindPage = () => {
   const toastTimer = useRef(null);
   const spinTimer = useRef(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
-  const defaultArtwork = useMemo(
-    () => ({
-      artists: [rapperOne, rapperTwo, rapperThree, rapperFree],
-      songs: [songArtOne, songArtTwo, songArtThree, songArtFour],
-    }),
-    []
-  );
-
   /* ------------------------------------------------------------- helpers */
-
-  const buildUrl = useCallback(
-    (url) => {
-      if (!url) return null;
-      return url.startsWith('http://') || url.startsWith('https://')
-        ? url
-        : `${API_BASE_URL}${url}`;
-    },
-    [API_BASE_URL]
-  );
 
   const isInHarlemChain = (name) => HARLEM_PARENT_CHAIN.includes(name);
   const isActiveJurisdiction = (name) => ACTIVE_JURISDICTIONS.includes(name);
@@ -178,32 +153,36 @@ const FindPage = () => {
         });
         const raw = res.data || {};
 
-        setTopResults({
-          artists: (raw.topArtists || []).slice(0, 3).map((a, i) => ({
+        // No slice here — filtering by genre happens downstream, and slicing
+        // first would throw away the very rows the selected genre needs.
+        setRawTops({
+          artists: (raw.topArtists || []).map((a, i) => ({
             id: a.userId || i,
             name: a.username,
             votes: a.score || 0,
-            artwork: buildUrl(a.photoUrl) || defaultArtwork.artists[i % 4],
+            genreId: a.genre?.genreId || null,
+            artwork: buildUrl(a.photoUrl),
           })),
-          songs: (raw.topSongs || []).slice(0, 3).map((s, i) => ({
+          songs: (raw.topSongs || []).map((s, i) => ({
             id: s.songId || i,
             title: s.title,
             artist: s.artist?.username || 'Unknown',
             artistId: s.artist?.userId,
             votes: s.score || 0,
+            genreId: s.genre?.genreId || null,
             fileUrl: buildUrl(s.fileUrl),
-            artwork: buildUrl(s.artworkUrl) || defaultArtwork.songs[i % 4],
+            artwork: buildUrl(s.artworkUrl),
           })),
         });
       } catch (err) {
         console.error('[findpage] tops fetch failed:', err?.message || err);
         setError('Top results are unavailable right now. Try again in a moment.');
-        setTopResults({ artists: [], songs: [] });
+        setRawTops({ artists: [], songs: [] });
       } finally {
         setLoading(false);
       }
     },
-    [buildUrl, defaultArtwork]
+    []
   );
 
   /** Name-based lookup, for paths where only a name survived (back, crumbs). */
@@ -288,7 +267,7 @@ const FindPage = () => {
         setSelectedJurisdiction(jurisdiction);
 
         if (!isLive) {
-          setTopResults({ artists: [], songs: [] });
+          setRawTops({ artists: [], songs: [] });
           setLoading(false);
         }
       } catch (err) {
@@ -346,7 +325,7 @@ const FindPage = () => {
     setSelectedJurisdiction(null);
     setFocusState(null);
     setHasSelectedJurisdiction(false);
-    setTopResults({ artists: [], songs: [] });
+    setRawTops({ artists: [], songs: [] });
     setError(null);
   }, []);
 
@@ -496,6 +475,28 @@ const FindPage = () => {
 
   /* ------------------------------------------------------------- derived */
 
+  /**
+   * The visible three, filtered by the selected genre.
+   *
+   * /tops takes no genre parameter, but it does return each item's genre
+   * relation, so the filter happens here — no extra request when the pill
+   * changes. Matching is on genreId rather than genre.name: the genres table
+   * has drifted from idMappings by name before, and a UUID cannot drift.
+   *
+   * An item with no genre set is excluded rather than shown under whichever
+   * pill happens to be active, which would be a quiet lie.
+   */
+  const topResults = useMemo(() => {
+    const wantedGenreId = GENRE_IDS[genre] || null;
+    const pick = (list) => {
+      if (!wantedGenreId) return list.slice(0, 3);
+      return list.filter((x) => x.genreId === wantedGenreId).slice(0, 3);
+    };
+    return { artists: pick(rawTops.artists), songs: pick(rawTops.songs) };
+  }, [rawTops, genre]);
+
+  const genreLabel = GENRE_NAMES?.[genre] || genre;
+
   const mapMode = useMemo(() => {
     if (navigationStack.length <= 1) return 'US';
     if (navigationStack.length === 2) return 'STATE';
@@ -515,17 +516,39 @@ const FindPage = () => {
   const { artists, songs } = topResults;
 
   /**
-   * `buildUrl(x) || fallback` only fires when photoUrl is null. An artist whose
-   * photoUrl is a non-empty string pointing at a file that is not on the CDN
-   * sails straight past it and renders a broken image — the string is truthy,
-   * so the fallback never runs. onError is what actually catches that, and it
-   * is the case that shows up whenever the ranking surfaces artists who have
-   * not uploaded a photo yet.
+   * Artwork that is missing or fails to load falls back to a monogram, not to
+   * stock photography. Showing a Midjourney rapper under a real artist's name
+   * misrepresents them to anyone browsing the charts, and it made a broken CDN
+   * path look like a working page — which is how a buildUrl bug went unnoticed.
+   *
+   * The failure is tracked in state rather than by swapping element.src so a
+   * retry after remount is still possible and there is no chance of an
+   * onError loop.
    */
-  const handleArtworkError = (e, index, kind) => {
-    const pool = kind === 'song' ? defaultArtwork.songs : defaultArtwork.artists;
-    const fallback = pool[index % pool.length];
-    if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+  const [brokenArt, setBrokenArt] = useState(() => new Set());
+  const markArtBroken = useCallback((key) => {
+    setBrokenArt((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
+  }, []);
+
+  const renderArtwork = (item, kind) => {
+    const key = `${kind}-${item.id}`;
+    const label = (kind === 'song' ? item.title : item.name) || '?';
+    if (!item.artwork || brokenArt.has(key)) {
+      return (
+        <div className="item-artwork item-artwork--none" aria-hidden="true">
+          {label.trim().charAt(0).toUpperCase()}
+        </div>
+      );
+    }
+    return (
+      <img
+        src={item.artwork}
+        alt=""
+        className="item-artwork"
+        loading="lazy"
+        onError={() => markArtBroken(key)}
+      />
+    );
   };
 
   const renderRow = (item, index, kind) => (
@@ -534,15 +557,12 @@ const FindPage = () => {
       className="result-item"
       style={{ animationDelay: `${index * 0.12 + (kind === 'artist' ? 0.18 : 0)}s` }}
     >
-      <div className="ambient-bg" style={{ backgroundImage: `url(${item.artwork})` }} />
+      {!!item.artwork && !brokenArt.has(`${kind}-${item.id}`) && (
+        <div className="ambient-bg" style={{ backgroundImage: `url(${item.artwork})` }} />
+      )}
       <div className="glass-content">
         <div className="rank">{index + 1}</div>
-        <img
-          src={item.artwork}
-          alt=""
-          className="item-artwork"
-          onError={(e) => handleArtworkError(e, index, kind)}
-        />
+        {renderArtwork(item, kind)}
         <div className="item-info">
           <div className="item-title">{kind === 'song' ? item.title : item.name}</div>
           {kind === 'song' && <div className="item-artist">{item.artist}</div>}
@@ -784,8 +804,8 @@ const FindPage = () => {
             </div>
           ) : (
             <>
-              {renderColumn('Top songs', songs, 'song', 'No songs charted here yet.')}
-              {renderColumn('Top artists', artists, 'artist', 'No artists charted here yet.')}
+              {renderColumn('Top songs', songs, 'song', `No ${genreLabel} songs charted here yet.`)}
+              {renderColumn('Top artists', artists, 'artist', `No ${genreLabel} artists charted here yet.`)}
             </>
           )}
         </div>

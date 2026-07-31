@@ -593,6 +593,19 @@ $bg-black: #000000;
         .rank { color: var(--unis-primary-2, var(--unis-primary)); }
       }
 
+      // Monogram shown when artwork is missing or fails to load. Deliberately
+      // not stock photography — see renderArtwork in findpage.jsx.
+      .item-artwork--none {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font: 600 18px/1 'Inter', system-ui, sans-serif;
+        color: color-mix(in srgb, var(--unis-primary-2, var(--unis-primary)), #fff 40%);
+        background: color-mix(in srgb, var(--unis-primary), transparent 78%);
+        border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 55%);
+        user-select: none;
+      }
+
       .item-artwork {
         width: 52px;
         height: 52px;
