@@ -8,7 +8,7 @@ import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import { apiCall } from './components/axiosInstance';
 import { buildUrl } from './utils/buildUrl';
 import UnisMap from './map/UnisMap';
-import { CANONICAL_GENRES, GENRE_NAMES, GENRE_IDS } from './utils/idMappings';
+import { CANONICAL_GENRES, GENRE_IDS } from './utils/idMappings';
 import './findpage.scss';
 
 /**
@@ -38,10 +38,11 @@ const ROOT_CRUMB = { name: 'United States', jurisdictionId: null, tier: 0 };
 
 // Iterate CANONICAL_GENRES, never GENRE_IDS — the latter carries legacy
 // aliases and is what produced the duplicate options in createAccountWizard.
-const GENRES = CANONICAL_GENRES.map((key) => ({
-  value: key,
-  label: GENRE_NAMES?.[key] || key.charAt(0).toUpperCase() + key.slice(1),
-}));
+const titleCase = (k) => k.charAt(0).toUpperCase() + k.slice(1);
+
+// GENRE_NAMES is keyed by genre UUID, not by canonical key — looking it up by
+// key returns undefined. The label comes from the key itself.
+const GENRES = CANONICAL_GENRES.map((key) => ({ value: key, label: titleCase(key) }));
 
 // KNOWN GAP — the genre control is currently inert on this page.
 // /v1/jurisdictions/{id}/tops takes no genre parameter; both callers (here and
@@ -495,7 +496,7 @@ const FindPage = () => {
     return { artists: pick(rawTops.artists), songs: pick(rawTops.songs) };
   }, [rawTops, genre]);
 
-  const genreLabel = GENRE_NAMES?.[genre] || genre;
+  const genreLabel = titleCase(genre);
 
   const mapMode = useMemo(() => {
     if (navigationStack.length <= 1) return 'US';
