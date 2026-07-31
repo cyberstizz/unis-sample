@@ -121,50 +121,66 @@ const Segmented = ({ label, options, value, onChange, name }) => (
 
 // ─── One row of the tally ────────────────────────────────────────────────────
 // Bar width encodes share of the period's points, so margin of victory is
-// legible without reading a single number.
-const TallyRow = ({ entry, share, index, onOpen, onPlay, canPlay }) => (
-  <li
-    className={`ms-tally-row${entry.rank === 1 ? ' is-winner' : ''}`}
-    style={{ '--row-delay': `${index * 60}ms` }}
-  >
-    <span className="ms-tally-rank" aria-hidden="true">{entry.rank}</span>
+// legible without reading a single number. An entry with no points shows an
+// empty points cell rather than a "0" — a blank reads as "nothing scored here",
+// where a zero reads as a figure worth comparing. The cell keeps its width so
+// rows stay aligned. When nothing in the period scored at all the rail is
+// dropped entirely; a row of empty grooves is just noise.
+const TallyRow = ({ entry, share, index, onOpen, onPlay, canPlay, showBar }) => {
+  const hasPoints = entry.weightedPoints > 0;
 
-    <button
-      type="button"
-      className="ms-tally-main"
-      onClick={() => onOpen(entry)}
-      aria-label={`Open ${entry.title}${entry.targetType === 'song' ? ` by ${entry.artist}` : ''}, ranked ${entry.rank}`}
+  return (
+    <li
+      className={`ms-tally-row${entry.rank === 1 ? ' is-winner' : ''}`}
+      style={{ '--row-delay': `${index * 60}ms` }}
     >
-      <img className="ms-tally-art" src={entry.artwork} alt="" loading="lazy" />
-      <span className="ms-tally-text">
-        <span className="ms-tally-title">{entry.title}</span>
-        {entry.targetType === 'song' && (
-          <span className="ms-tally-artist">{entry.artist}</span>
-        )}
-      </span>
-      <span className="ms-tally-bar" aria-hidden="true">
-        <span className="ms-tally-fill" style={{ width: `${share}%` }} />
-      </span>
-      <span className="ms-tally-points">
-        {formatNumber(entry.weightedPoints)}
-        <span className="ms-tally-unit">pts</span>
-      </span>
-    </button>
+      <span className="ms-tally-rank" aria-hidden="true">{entry.rank}</span>
 
-    {canPlay && (
       <button
         type="button"
-        className="ms-tally-play"
-        onClick={() => onPlay(entry)}
-        aria-label={`Play ${entry.title}`}
+        className="ms-tally-main"
+        onClick={() => onOpen(entry)}
+        aria-label={`Open ${entry.title}${entry.targetType === 'song' ? ` by ${entry.artist}` : ''}, ranked ${entry.rank}`}
       >
-        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-          <path d="M8 5v14l11-7z" fill="currentColor" />
-        </svg>
+        <img className="ms-tally-art" src={entry.artwork} alt="" loading="lazy" />
+        <span className="ms-tally-text">
+          <span className="ms-tally-title">{entry.title}</span>
+          {entry.targetType === 'song' && (
+            <span className="ms-tally-artist">{entry.artist}</span>
+          )}
+        </span>
+
+        {showBar && (
+          <span className="ms-tally-bar" aria-hidden="true">
+            {hasPoints && <span className="ms-tally-fill" style={{ width: `${share}%` }} />}
+          </span>
+        )}
+
+        <span className="ms-tally-points">
+          {hasPoints && (
+            <>
+              {formatNumber(entry.weightedPoints)}
+              <span className="ms-tally-unit">pts</span>
+            </>
+          )}
+        </span>
       </button>
-    )}
-  </li>
-);
+
+      {canPlay && (
+        <button
+          type="button"
+          className="ms-tally-play"
+          onClick={() => onPlay(entry)}
+          aria-label={`Play ${entry.title}`}
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <path d="M8 5v14l11-7z" fill="currentColor" />
+          </svg>
+        </button>
+      )}
+    </li>
+  );
+};
 
 // ─── The page ────────────────────────────────────────────────────────────────
 const MilestonesPage = () => {
@@ -349,6 +365,18 @@ const MilestonesPage = () => {
     ? TIEBREAKERS[winner.determinationMethod](winner.tiedCandidatesCount)
     : null;
 
+  // Only surface figures that actually happened. A column of zeroes invites the
+  // reader to compare nothing against nothing; showing three real numbers and
+  // omitting the fourth is more honest and reads cleaner.
+  const figures = winner
+    ? [
+        { key: 'points', label: 'Points', value: winner.weightedPoints, lead: true },
+        { key: 'votes', label: 'Votes', value: winner.votes },
+        { key: 'plays', label: 'Plays', value: winner.playsCount },
+        { key: 'likes', label: 'Likes', value: winner.likesCount },
+      ].filter((f) => f.value > 0)
+    : [];
+
   return (
     <Layout backgroundImage={backimage}>
       <div className="ms-page">
@@ -460,26 +488,28 @@ const MilestonesPage = () => {
                   <h3 className="ms-plate-name">{winner.title}</h3>
                   {shown.category === 'song' && <p className="ms-plate-by">{winner.artist}</p>}
 
-                  <dl className="ms-figures">
-                    <div className="ms-figure ms-figure--lead">
-                      <dt>Points</dt>
-                      <dd>{formatNumber(winner.weightedPoints)}</dd>
-                    </div>
-                    <div className="ms-figure">
-                      <dt>Votes</dt>
-                      <dd>{formatNumber(winner.votes)}</dd>
-                    </div>
-                    <div className="ms-figure">
-                      <dt>Plays</dt>
-                      <dd>{formatNumber(winner.playsCount)}</dd>
-                    </div>
-                    <div className="ms-figure">
-                      <dt>Likes</dt>
-                      <dd>{formatNumber(winner.likesCount)}</dd>
-                    </div>
-                  </dl>
+                  {figures.length > 0 ? (
+                    <dl className="ms-figures">
+                      {figures.map((f) => (
+                        <div
+                          key={f.key}
+                          className={`ms-figure${f.lead ? ' ms-figure--lead' : ''}`}
+                        >
+                          <dt>{f.label}</dt>
+                          <dd>{formatNumber(f.value)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
+                    // Nothing scored at all. The determination line takes the
+                    // figures' place rather than sitting in small print under an
+                    // empty row of zeroes.
+                    <p className="ms-figures-empty">
+                      {tiebreak || 'No engagement recorded for this period'}
+                    </p>
+                  )}
 
-                  {tiebreak && <p className="ms-plate-note">{tiebreak}</p>}
+                  {tiebreak && figures.length > 0 && <p className="ms-plate-note">{tiebreak}</p>}
 
                   <div className="ms-plate-actions">
                     {shown.category === 'song' && winner.fileUrl && (
@@ -514,7 +544,10 @@ const MilestonesPage = () => {
                       key={entry.id || entry.rank}
                       entry={entry}
                       index={i}
-                      share={maxPoints > 0 ? Math.max(4, (entry.weightedPoints / maxPoints) * 100) : 4}
+                      showBar={maxPoints > 0}
+                      share={maxPoints > 0 && entry.weightedPoints > 0
+                        ? Math.max(4, (entry.weightedPoints / maxPoints) * 100)
+                        : 0}
                       onOpen={openEntry}
                       onPlay={playEntry}
                       canPlay={entry.targetType === 'song' && !!entry.fileUrl}

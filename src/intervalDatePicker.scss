@@ -1,337 +1,408 @@
+// ============================================================================
+// intervalDatePicker.scss
+//
+// Rewritten to read from --unis-primary like the rest of the app. The previous
+// version carried ~40 hardcoded colours (#007bff, #2196f3, #e3f2fd, #f9f9f9,
+// #ccc, #ddd, #eee …) plus a `prefers-color-scheme: dark` block full of #2a2a2a
+// and #333. That block sat at the bottom of the file and won on specificity for
+// anyone on a dark OS, which is where the generic grey came from — the theme
+// never got a look in.
+//
+// The panel now sits on a deep tint of the user's theme colour. One number
+// controls how strongly it reads: the percentage in --dp-surface. 26% is
+// saturated enough to be unmistakably themed while keeping white text legible
+// across all seven themes, including the lighter ones. Raise it toward 40% for
+// more colour, drop it toward 15% for more restraint.
+//
+// Never wrap a CSS variable in rgba() — `rgba(var(--unis-primary), .3)` is
+// invalid and the declaration is dropped silently. color-mix() throughout.
+// ============================================================================
+
 .interval-date-picker {
+  --dp-primary:  var(--unis-primary, #163387);
+
+  // Panel and control surfaces — the theme colour, deepened until text sits on it.
+  --dp-surface:  color-mix(in srgb, var(--unis-primary, #163387) 26%, #08090e);
+  --dp-raised:   color-mix(in srgb, var(--unis-primary, #163387) 34%, #0b0c12);
+  --dp-field:    color-mix(in srgb, var(--unis-primary, #163387) 18%, #08090e);
+
+  --dp-edge:     color-mix(in srgb, var(--unis-primary, #163387) 46%, transparent);
+  --dp-edge-dim: color-mix(in srgb, var(--unis-primary, #163387) 24%, transparent);
+  --dp-wash:     color-mix(in srgb, var(--unis-primary, #163387) 42%, transparent);
+
+  --dp-ink:      #f6f7f9;
+  --dp-ink-2:    rgba(246, 247, 249, 0.66);
+  --dp-ink-3:    rgba(246, 247, 249, 0.30);
+
+  --dp-radius:   10px;
+
   position: relative;
-  
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color-scheme: dark;          // native date widget renders dark, not white
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  // ─── Native date input (daily) ───────────────────────────────────────────
   .date-input {
-    padding: 10px 15px;
-    border: 1px solid white;
-    border-radius: 8px;
-    font-size: 14px;
-    background: black !important;
+    padding: 9px 13px;
+    border: 1px solid var(--dp-edge-dim);
+    border-radius: var(--dp-radius);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    background: var(--dp-field);
+    color: var(--dp-ink);
     cursor: pointer;
-    min-width: 180px;
-    
-    &:focus {
-      outline: none;
-      border-color: #007bff;
-      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+    min-width: 156px;
+    max-width: 100%;
+    transition: border-color 0.16s ease, background 0.16s ease;
+
+    &::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      opacity: 0.6;
+      cursor: pointer;
+
+      &:hover { opacity: 1; }
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover { border-color: var(--dp-edge); }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--dp-primary);
+      outline-offset: 2px;
+      border-color: var(--dp-edge);
     }
   }
-  
+
+  // ─── Toggle button ───────────────────────────────────────────────────────
   .custom-picker {
     position: relative;
-    
+
     .picker-toggle {
-      padding: 10px 15px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 14px;
-      background: black;
+      appearance: none;
+      padding: 9px 13px;
+      border: 1px solid var(--dp-edge-dim);
+      border-radius: var(--dp-radius);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 500;
+      background: var(--dp-field);
+      color: var(--dp-ink);
       cursor: pointer;
-      min-width: 200px;
+      min-width: 180px;
+      max-width: 100%;
       text-align: left;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      
-      &:hover {
-        border-color: #999;
+      gap: 10px;
+      transition: border-color 0.16s ease, background 0.16s ease;
+
+      @media (hover: hover) and (pointer: fine) {
+        &:hover {
+          border-color: var(--dp-edge);
+          background: var(--dp-raised);
+        }
       }
-      
-      &:focus {
-        outline: none;
-        border-color: #007bff;
-        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+
+      &:focus-visible {
+        outline: 2px solid var(--dp-primary);
+        outline-offset: 2px;
       }
-      
+
       &::after {
-        content: '▼';
-        font-size: 10px;
-        margin-left: 10px;
-        color: #666;
+        content: '';
+        flex-shrink: 0;
+        width: 7px;
+        height: 7px;
+        margin-top: -3px;
+        border-right: 1.5px solid var(--dp-ink-2);
+        border-bottom: 1.5px solid var(--dp-ink-2);
+        transform: rotate(45deg);
       }
     }
-    
+
+    // ─── Dropdown panel ────────────────────────────────────────────────────
     .picker-dropdown {
       position: absolute;
-      top: calc(100% + 5px);
+      top: calc(100% + 6px);
       left: 0;
-      background: black;
-      border: 1px solid #ccc;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
       z-index: 1000;
-      padding: 15px;
+      padding: 14px;
       min-width: 280px;
-      
+      max-width: calc(100vw - 32px);
+      background: var(--dp-surface);
+      border: 1px solid var(--dp-edge);
+      border-radius: 14px;
+      box-shadow:
+        0 20px 44px -18px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+      backdrop-filter: blur(18px);
+      animation: dpDrop 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+
       .picker-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 15px;
+        gap: 10px;
+        margin-bottom: 13px;
         padding-bottom: 10px;
-        border-bottom: 1px solid #eee;
-        
+        border-bottom: 1px solid var(--dp-edge-dim);
+
         span {
           font-weight: 600;
-          font-size: 16px;
+          font-size: 0.88rem;
+          font-variant-numeric: tabular-nums;
+          color: var(--dp-ink);
         }
-        
+
         button {
-          background: none;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          padding: 5px 12px;
+          appearance: none;
+          flex-shrink: 0;
+          min-width: 30px;
+          padding: 4px 10px;
+          background: transparent;
+          border: 1px solid var(--dp-edge-dim);
+          border-radius: 7px;
+          color: var(--dp-ink-2);
+          font-family: inherit;
+          font-size: 0.82rem;
+          line-height: 1.2;
           cursor: pointer;
-          font-size: 14px;
-          
-          &:hover {
-            background: #f5f5f5;
+          transition: background 0.16s ease, color 0.16s ease;
+
+          @media (hover: hover) and (pointer: fine) {
+            &:hover:not(:disabled) {
+              background: var(--dp-wash);
+              color: var(--dp-ink);
+            }
+          }
+
+          &:focus-visible {
+            outline: 2px solid var(--dp-primary);
+            outline-offset: 1px;
+          }
+
+          &:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
           }
         }
       }
     }
   }
-  
-  // Weekly picker styles
+
+  @keyframes dpDrop {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  // ─── Shared option-button treatment ──────────────────────────────────────
+  // Every grid in every mode uses the same three states, so a disabled quarter
+  // and a disabled month look identical. The old file styled each separately
+  // and they drifted.
+  %dp-option {
+    appearance: none;
+    border: 1px solid var(--dp-edge-dim);
+    border-radius: 9px;
+    background: var(--dp-raised);
+    color: var(--dp-ink-2);
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(.disabled):not(:disabled) {
+        background: var(--dp-wash);
+        border-color: var(--dp-edge);
+        color: var(--dp-ink);
+      }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--dp-primary);
+      outline-offset: 1px;
+    }
+
+    // Dimmed, not bleached. The previous #f9f9f9 disabled state painted a
+    // near-white block onto a dark panel, which read as the enabled one.
+    &.disabled,
+    &:disabled {
+      background: transparent;
+      border-color: var(--dp-edge-dim);
+      color: var(--dp-ink-3);
+      cursor: not-allowed;
+    }
+  }
+
+  // ─── Weekly ──────────────────────────────────────────────────────────────
   .weekly-picker {
     .weekday-headers {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 2px;
-      margin-bottom: 5px;
-      
+      margin-bottom: 4px;
+
       .weekday-header {
         text-align: center;
-        font-size: 11px;
+        font-size: 9px;
         font-weight: 600;
-        color: #666;
-        padding: 5px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--dp-ink-3);
+        padding: 4px 0;
       }
     }
-    
+
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 2px;
-      
+
       .calendar-day {
         aspect-ratio: 1;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
+        font-size: 0.78rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--dp-ink-2);
         cursor: pointer;
-        border-radius: 6px;
-        transition: all 0.15s ease;
-        
-        &:hover:not(.empty):not(.disabled) {
-          background: #e3f2fd;
+        border-radius: 7px;
+        transition: background 0.15s ease, color 0.15s ease;
+
+        @media (hover: hover) and (pointer: fine) {
+          &:hover:not(.empty):not(.disabled) {
+            background: var(--dp-wash);
+            color: var(--dp-ink);
+          }
         }
-        
-        &.empty {
-          cursor: default;
+
+        &:focus-visible {
+          outline: 2px solid var(--dp-primary);
+          outline-offset: -1px;
         }
-        
+
+        &.empty { cursor: default; }
+
         &.disabled {
-          color: #ccc;
+          color: var(--dp-ink-3);
           cursor: not-allowed;
         }
-        
+
+        // The whole selected week lights up in the theme colour.
         &.in-week {
-          background: #2196f3;
-          color: white;
-          
-          &:hover {
-            background: #1976d2;
+          background: var(--dp-primary);
+          color: #fff;
+          font-weight: 600;
+
+          @media (hover: hover) and (pointer: fine) {
+            &:hover { background: var(--dp-primary); filter: brightness(1.15); }
           }
         }
       }
     }
-    
+
     .week-hint {
       margin-top: 10px;
-      font-size: 11px;
-      color: #888;
+      font-size: 0.68rem;
+      color: var(--dp-ink-3);
       text-align: center;
-      font-style: italic;
     }
   }
-  
-  // Month picker styles
+
+  // ─── Monthly ─────────────────────────────────────────────────────────────
   .month-picker {
     .month-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      background: black;
-      
+      gap: 7px;
+
       .month-btn {
-        padding: 12px 8px;
-        border: 1px solid black;
-        border-radius: 8px;
-        background: black;
-        cursor: pointer;
-        font-size: 13px;
-        transition: all 0.15s ease;
-        
-        &:hover:not(.disabled) {
-          background: black;
-          border-color: #2196f3;
-        }
-        
-        &.disabled {
-          color: #ccc;
-          cursor: not-allowed;
-          background: #f9f9f9;
-        }
+        @extend %dp-option;
+        padding: 11px 6px;
+        font-size: 0.78rem;
+        font-weight: 500;
       }
     }
   }
-  
-  // Quarter picker styles
+
+  // ─── Quarterly ───────────────────────────────────────────────────────────
   .quarter-picker {
     .quarter-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      
+      gap: 8px;
+
       .quarter-btn {
-        padding: 15px 10px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background: black;
-        cursor: pointer;
-        font-size: 13px;
-        transition: all 0.15s ease;
-        
-        &:hover:not(.disabled) {
-          background: #e3f2fd;
-          border-color: #2196f3;
-        }
-        
-        &.disabled {
-          color: #ccc;
-          cursor: not-allowed;
-          background: #f9f9f9;
-        }
+        @extend %dp-option;
+        padding: 14px 8px;
+        font-size: 0.76rem;
+        font-weight: 500;
       }
     }
   }
-  
-  // Midterm picker styles
+
+  // ─── Midterm ─────────────────────────────────────────────────────────────
   .midterm-picker {
     .half-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      
+      gap: 8px;
+
       .half-btn {
-        padding: 20px 15px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background: black;
-        cursor: pointer;
-        font-size: 14px;
-        transition: all 0.15s ease;
-        
-        &:hover:not(.disabled) {
-          background: #e3f2fd;
-          border-color: #2196f3;
-        }
-        
-        &.disabled {
-          color: #ccc;
-          cursor: not-allowed;
-          background: #f9f9f9;
-        }
+        @extend %dp-option;
+        padding: 18px 10px;
+        font-size: 0.8rem;
+        font-weight: 500;
       }
     }
   }
-  
-  // Year picker styles
+
+  // ─── Annual ──────────────────────────────────────────────────────────────
   .year-picker {
-    min-width: 200px;
-    
+    min-width: 208px;
+
     .year-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 8px;
-      
+
       .year-btn {
-        padding: 15px 20px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background: black;
-        cursor: pointer;
-        font-size: 15px;
-        font-weight: 500;
-        transition: all 0.15s ease;
-        
-        &:hover {
-          background: #e3f2fd;
-          border-color: #2196f3;
-        }
+        @extend %dp-option;
+        padding: 14px 16px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
       }
+    }
+  }
+
+  // ─── Small screens ───────────────────────────────────────────────────────
+  @media (max-width: 680px) {
+    .date-input,
+    .custom-picker .picker-toggle {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .custom-picker { width: 100%; }
+
+    .custom-picker .picker-dropdown {
+      min-width: 0;
+      width: 100%;
+      padding: 12px;
     }
   }
 }
 
-// Dark mode support (optional)
-@media (prefers-color-scheme: dark) {
-  .interval-date-picker {
-    .date-input,
-    .picker-toggle {
-      background: #2a2a2a;
-      border-color: #444;
-      color: #eee;
-    }
-    
-    .picker-dropdown {
-      background: #2a2a2a;
-      border-color: #444;
-      
-      .picker-header {
-        border-color: #444;
-        
-        span {
-          color: #eee;
-        }
-        
-        button {
-          border-color: #555;
-          color: #eee;
-          
-          &:hover {
-            background: #333;
-          }
-        }
-      }
-    }
-    
-    .month-btn,
-    .quarter-btn,
-    .half-btn,
-    .year-btn {
-      background: #333;
-      border-color: #444;
-      color: #eee;
-      
-      &:hover:not(.disabled) {
-        background: #3a3a3a;
-      }
-      
-      &.disabled {
-        background: #252525;
-        color: #555;
-      }
-    }
-    
-    .calendar-day {
-      color: #eee;
-      
-      &.disabled {
-        color: #555;
-      }
-    }
+// No prefers-color-scheme block. The app carries its own theme system and the
+// OS preference has no business overriding the user's chosen colour.
+
+@media (prefers-reduced-motion: reduce) {
+  .interval-date-picker .custom-picker .picker-dropdown {
+    animation: none;
   }
 }

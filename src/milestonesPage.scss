@@ -413,6 +413,18 @@
   color: var(--ms-ink-3);
 }
 
+// Shown in place of the figures when nothing scored. Occupies the same slot
+// with the same rule above it, so the plate keeps its proportions instead of
+// collapsing when a period had no engagement.
+.ms-figures-empty {
+  margin: 22px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--ms-etch);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ms-ink-3);
+}
+
 .ms-plate-actions {
   display: flex;
   flex-wrap: wrap;
@@ -810,13 +822,21 @@
 
   .ms-plate-by { font-size: 0.86rem; }
 
-  // Four figures in one tidy row rather than a wrapping flex mess.
+  // However many figures survive the zero-filter, they share the row evenly.
+  // auto-fit rather than a fixed 4 columns, so two figures read as two halves
+  // instead of two quarters with a hole beside them.
   .ms-figures {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
     gap: 10px;
     margin-top: 18px;
     padding-top: 14px;
+  }
+
+  .ms-figures-empty {
+    margin-top: 18px;
+    padding-top: 14px;
+    font-size: 0.8rem;
   }
 
   .ms-figure {
