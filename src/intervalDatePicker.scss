@@ -237,8 +237,9 @@
     }
   }
 
-  // ─── Weekly ──────────────────────────────────────────────────────────────
-  .weekly-picker {
+  // ─── Daily and weekly share the calendar grid ────────────────────────────
+  .weekly-picker,
+  .daily-picker {
     .weekday-headers {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
@@ -262,10 +263,15 @@
       gap: 2px;
 
       .calendar-day {
+        appearance: none;
         aspect-ratio: 1;
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-family: inherit;
         font-size: 0.78rem;
         font-variant-numeric: tabular-nums;
         color: var(--dp-ink-2);
@@ -274,7 +280,7 @@
         transition: background 0.15s ease, color 0.15s ease;
 
         @media (hover: hover) and (pointer: fine) {
-          &:hover:not(.empty):not(.disabled) {
+          &:hover:not(.empty):not(.disabled):not(:disabled) {
             background: var(--dp-wash);
             color: var(--dp-ink);
           }
@@ -285,14 +291,20 @@
           outline-offset: -1px;
         }
 
-        &.empty { cursor: default; }
+        &.empty {
+          cursor: default;
+          pointer-events: none;
+        }
 
-        &.disabled {
+        &.disabled,
+        &:disabled {
           color: var(--dp-ink-3);
           cursor: not-allowed;
         }
 
-        // The whole selected week lights up in the theme colour.
+        // Daily: the single chosen day. Weekly: the whole Mon–Sun week.
+        // Both in the user's theme colour.
+        &.is-selected,
         &.in-week {
           background: var(--dp-primary);
           color: #fff;
@@ -301,6 +313,10 @@
           @media (hover: hover) and (pointer: fine) {
             &:hover { background: var(--dp-primary); filter: brightness(1.15); }
           }
+        }
+
+        &.is-selected {
+          box-shadow: 0 0 0 1px var(--dp-edge);
         }
       }
     }

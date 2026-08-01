@@ -32,37 +32,84 @@ describe('IntervalDatePicker', () => {
   // ========================================================================
   // Daily interval
   // ========================================================================
+  // Daily no longer uses <input type="date">. The panel that opened from it was
+  // the browser's own widget — CSS cannot reach it, so it stayed grey while
+  // every other interval took the user's theme. It renders the same custom
+  // calendar weekly uses, in 'day' selection mode.
   describe('daily interval', () => {
-    it('renders a native date input', () => {
+    it('renders a themed toggle rather than a native date input', () => {
       renderWithProviders(<IntervalDatePicker {...defaultProps} interval="daily" />);
-      expect(screen.getByDisplayValue('')).toHaveAttribute('type', 'date');
+      expect(document.querySelector('input[type="date"]')).toBeNull();
+      expect(screen.getByRole('button', { name: /^Date: Select…$/i })).toBeInTheDocument();
     });
 
-    it('calls onChange with the selected date string', async () => {
-      const onChange = vi.fn();
-      renderWithProviders(<IntervalDatePicker {...defaultProps} interval="daily" onChange={onChange} />);
-
+    it('opens a calendar dialog when the toggle is clicked', async () => {
+      renderWithProviders(<IntervalDatePicker {...defaultProps} interval="daily" value="2024-06-15" />);
       const user = userEvent.setup();
-      const input = screen.getByDisplayValue('');
-      await user.type(input, '2024-06-15');
+      await user.click(screen.getByRole('button', { name: /^Date: 2024-06-15$/i }));
 
-      expect(onChange).toHaveBeenCalledWith('2024-06-15');
+      const dialog = screen.getByRole('dialog', { name: /pick a date/i });
+      expect(within(dialog).getByText('June 2024')).toBeInTheDocument();
+      expect(document.querySelector('.daily-picker')).not.toBeNull();
     });
 
-    it('respects max and min attributes on the date input', () => {
+    it('calls onChange with the clicked date', async () => {
+      const onChange = vi.fn();
       renderWithProviders(
-        <IntervalDatePicker {...defaultProps} interval="daily" maxDate="2024-06-30" minDate="2024-01-01" />
+        <IntervalDatePicker {...defaultProps} interval="daily" value="2024-06-15" onChange={onChange} />
       );
-      const input = screen.getByDisplayValue('');
-      expect(input).toHaveAttribute('max', '2024-06-30');
-      expect(input).toHaveAttribute('min', '2024-01-01');
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: /^Date: 2024-06-15$/i }));
+      await user.click(screen.getByRole('button', { name: /^June 20, 2024$/i }));
+
+      expect(onChange).toHaveBeenCalledWith('2024-06-20');
     });
 
-    it('shows display text from value prop when provided', () => {
+    it('marks only the chosen day as selected', async () => {
+      renderWithProviders(<IntervalDatePicker {...defaultProps} interval="daily" value="2024-06-15" />);
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: /^Date: 2024-06-15$/i }));
+
+      expect(document.querySelectorAll('.calendar-day.is-selected')).toHaveLength(1);
+      expect(screen.getByRole('button', { name: /^June 15, 2024$/i })).toHaveClass('is-selected');
+      // and never the weekly treatment
+      expect(document.querySelectorAll('.calendar-day.in-week')).toHaveLength(0);
+    });
+
+    it('disables days beyond maxDate', async () => {
+      renderWithProviders(
+        <IntervalDatePicker {...defaultProps} interval="daily" value="2024-06-15" maxDate="2024-06-20" />
+      );
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: /^Date: 2024-06-15$/i }));
+
+      expect(screen.getByRole('button', { name: /^June 20, 2024$/i })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: /^June 21, 2024$/i })).toBeDisabled();
+    });
+
+    it('does not call onChange for a disabled day', async () => {
+      const onChange = vi.fn();
+      renderWithProviders(
+        <IntervalDatePicker
+          {...defaultProps}
+          interval="daily"
+          value="2024-06-15"
+          maxDate="2024-06-20"
+          onChange={onChange}
+        />
+      );
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: /^Date: 2024-06-15$/i }));
+      await user.click(screen.getByRole('button', { name: /^June 25, 2024$/i }));
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('shows the value on the toggle when provided', () => {
       renderWithProviders(
         <IntervalDatePicker {...defaultProps} interval="daily" value="2024-06-15" />
       );
-      expect(screen.getByDisplayValue('2024-06-15')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Date: 2024-06-15$/i })).toBeInTheDocument();
     });
   });
 
@@ -392,9 +439,10 @@ describe('IntervalDatePicker', () => {
   // Default / fallback interval
   // ========================================================================
   describe('fallback for unknown interval', () => {
-    it('renders a native date input for unrecognized interval', () => {
+    it('falls back to the daily calendar for an unrecognized interval', () => {
       renderWithProviders(<IntervalDatePicker {...defaultProps} interval="unknown" />);
-      expect(screen.getByDisplayValue('')).toHaveAttribute('type', 'date');
+      expect(document.querySelector('input[type="date"]')).toBeNull();
+      expect(screen.getByRole('button', { name: /^Date: Select…$/i })).toBeInTheDocument();
     });
   });
 

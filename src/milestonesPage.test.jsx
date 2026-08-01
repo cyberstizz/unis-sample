@@ -102,7 +102,10 @@ describe('MilestonesPage', () => {
 
     it('defaults the date to yesterday, not today', () => {
       renderWithProviders(<MilestonesPage />, { as: 'listener' });
-      expect(document.querySelector('input[type="date"]').value).toBe('2026-07-27');
+      // Daily renders a themed calendar toggle, not <input type="date"> — the
+      // native panel could not be themed.
+      expect(document.querySelector('input[type="date"]')).toBeNull();
+      expect(screen.getByRole('button', { name: /^Date: 2026-07-27$/i })).toBeInTheDocument();
     });
 
     it('shows no result before Show winner is pressed', () => {

@@ -193,6 +193,81 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate, minDate }) => 
 
   const toggle = () => setShowCalendar((open) => !open);
 
+  const stepMonth = (delta) => {
+    const next = new Date(selectedYear, selectedMonth + delta, 1);
+    setSelectedMonth(next.getMonth());
+    setSelectedYear(next.getFullYear());
+  };
+
+  const atMinMonth = selectedYear === minYear && selectedMonth <= minMonth;
+  const atMaxMonth = selectedYear === maxYear && selectedMonth >= maxMonth;
+
+  const renderMonthNav = () => (
+    <div className="picker-header">
+      <button
+        type="button"
+        onClick={() => stepMonth(-1)}
+        disabled={atMinMonth}
+        aria-label="Previous month"
+      >
+        ←
+      </button>
+      <span>{MONTHS[selectedMonth]} {selectedYear}</span>
+      <button
+        type="button"
+        onClick={() => stepMonth(1)}
+        disabled={atMaxMonth}
+        aria-label="Next month"
+      >
+        →
+      </button>
+    </div>
+  );
+
+  /**
+   * Shared day grid. `mode` decides what a selected cell means:
+   *   'day'  — that single date is highlighted
+   *   'week' — the whole Mon–Sun week containing it is highlighted
+   */
+  const renderCalendar = (mode) => {
+    const selected = fromLocalISO(value);
+
+    return (
+      <>
+        <div className="weekday-headers">
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+            <div key={d} className="weekday-header">{d}</div>
+          ))}
+        </div>
+
+        <div className="calendar-grid">
+          {generateCalendarDays().map((date, idx) => {
+            if (!date) return <div key={idx} className="calendar-day empty" />;
+
+            const disabled = !isAllowed(date);
+            const active = mode === 'week'
+              ? isInSelectedWeek(date)
+              : !!selected && toLocalISO(date) === toLocalISO(selected);
+
+            return (
+              <button
+                type="button"
+                key={idx}
+                className={`calendar-day${active ? (mode === 'week' ? ' in-week' : ' is-selected') : ''}${disabled ? ' disabled' : ''}`}
+                disabled={disabled}
+                aria-pressed={active}
+                aria-label={`${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`}
+                onClick={() => handleDateSelect(date)}
+              >
+                {date.getDate()}
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+  };
+
   const renderToggle = (label) => (
     <button
       type="button"
@@ -230,17 +305,24 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate, minDate }) => 
 
   const renderPicker = () => {
     switch (interval) {
+      // Daily used to render <input type="date">. The panel that opens from it
+      // is the browser's own widget: CSS cannot reach it, so it stayed grey
+      // while every other interval picked up the user's theme. Only
+      // `color-scheme` had any effect, and that just chooses light or dark.
+      // The custom calendar below is the same grid weekly already used, so
+      // daily now themes like everything else — and gains disabled-day
+      // rendering the native control could not express either.
       case 'daily':
         return (
-          <input
-            type="date"
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            max={maxDate}
-            min={minDate}
-            className="date-input"
-            aria-label="Award date"
-          />
+          <div className="custom-picker">
+            {renderToggle('Date')}
+            {showCalendar && (
+              <div className="picker-dropdown daily-picker" role="dialog" aria-label="Pick a date">
+                {renderMonthNav()}
+                {renderCalendar('day')}
+              </div>
+            )}
+          </div>
         );
 
       case 'weekly':
@@ -249,67 +331,8 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate, minDate }) => 
             {renderToggle('Week')}
             {showCalendar && (
               <div className="picker-dropdown weekly-picker" role="dialog" aria-label="Pick a week">
-                <div className="picker-header">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedMonth === 0) {
-                        if (selectedYear > minYear) { setSelectedMonth(11); setSelectedYear(selectedYear - 1); }
-                      } else {
-                        setSelectedMonth(selectedMonth - 1);
-                      }
-                    }}
-                    disabled={selectedYear === minYear && selectedMonth <= minMonth}
-                    aria-label="Previous month"
-                  >
-                    ←
-                  </button>
-                  <span>{MONTHS[selectedMonth]} {selectedYear}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedMonth === 11) {
-                        if (selectedYear < maxYear) { setSelectedMonth(0); setSelectedYear(selectedYear + 1); }
-                      } else {
-                        setSelectedMonth(selectedMonth + 1);
-                      }
-                    }}
-                    disabled={selectedYear === maxYear && selectedMonth >= maxMonth}
-                    aria-label="Next month"
-                  >
-                    →
-                  </button>
-                </div>
-
-                <div className="weekday-headers">
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-                    <div key={d} className="weekday-header">{d}</div>
-                  ))}
-                </div>
-
-                <div className="calendar-grid">
-                  {generateCalendarDays().map((date, idx) => {
-                    const disabled = !!date && !isAllowed(date);
-                    return (
-                      <div
-                        key={idx}
-                        role={date ? 'button' : undefined}
-                        tabIndex={date && !disabled ? 0 : undefined}
-                        aria-disabled={disabled || undefined}
-                        className={`calendar-day ${!date ? 'empty' : ''} ${date && isInSelectedWeek(date) ? 'in-week' : ''} ${disabled ? 'disabled' : ''}`}
-                        onClick={() => date && handleDateSelect(date)}
-                        onKeyDown={(e) => {
-                          if (date && !disabled && (e.key === 'Enter' || e.key === ' ')) {
-                            e.preventDefault();
-                            handleDateSelect(date);
-                          }
-                        }}
-                      >
-                        {date ? date.getDate() : ''}
-                      </div>
-                    );
-                  })}
-                </div>
+                {renderMonthNav()}
+                {renderCalendar('week')}
                 <div className="week-hint">Click any day to select its week</div>
               </div>
             )}
@@ -430,15 +453,15 @@ const IntervalDatePicker = ({ interval, value, onChange, maxDate, minDate }) => 
 
       default:
         return (
-          <input
-            type="date"
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            max={maxDate}
-            min={minDate}
-            className="date-input"
-            aria-label="Award date"
-          />
+          <div className="custom-picker">
+            {renderToggle('Date')}
+            {showCalendar && (
+              <div className="picker-dropdown daily-picker" role="dialog" aria-label="Pick a date">
+                {renderMonthNav()}
+                {renderCalendar('day')}
+              </div>
+            )}
+          </div>
         );
     }
   };
