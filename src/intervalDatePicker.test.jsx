@@ -75,7 +75,7 @@ describe('IntervalDatePicker', () => {
     it('shows the week display text on the toggle button', () => {
       renderWithProviders(<IntervalDatePicker {...weeklyProps} />);
       // June 12 2024 is a Wednesday. Week of June 10 - June 16, 2024.
-      expect(screen.getByRole('button', { name: /Week of June 10 - 16, 2024/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Week of June 10 – 16, 2024/i })).toBeInTheDocument();
     });
 
     it('opens the calendar dropdown when toggle is clicked', async () => {
@@ -128,7 +128,7 @@ describe('IntervalDatePicker', () => {
       await user.click(screen.getByRole('button', { name: /Week of/i }));
 
       // Navigate to December 2024 — should be blocked at June
-      const nextBtn = screen.getAllByRole('button', { name: /→/i })[0];
+      const nextBtn = screen.getByRole('button', { name: /next month/i });
       expect(nextBtn).toBeDisabled();
     });
 
@@ -140,7 +140,7 @@ describe('IntervalDatePicker', () => {
       const user = userEvent.setup();
       await user.click(screen.getByRole('button', { name: /Week of/i }));
 
-      const prevBtn = screen.getAllByRole('button', { name: /←/i })[0];
+      const prevBtn = screen.getByRole('button', { name: /previous month/i });
       // At June 2024 with minDate June 1, going back to May should be disabled
       expect(prevBtn).toBeDisabled();
     });
@@ -221,7 +221,7 @@ describe('IntervalDatePicker', () => {
       const user = userEvent.setup();
       await user.click(screen.getByRole('button', { name: /June 2024/i }));
 
-      const prevYearBtn = screen.getAllByRole('button', { name: /←/i })[0];
+      const prevYearBtn = screen.getByRole('button', { name: /previous year/i });
       await user.click(prevYearBtn);
 
       expect(screen.getByText('2023')).toBeInTheDocument();
@@ -235,7 +235,7 @@ describe('IntervalDatePicker', () => {
       const user = userEvent.setup();
       await user.click(screen.getByRole('button', { name: /June 2024/i }));
 
-      const nextYearBtn = screen.getAllByRole('button', { name: /→/i })[0];
+      const nextYearBtn = screen.getByRole('button', { name: /next year/i });
       expect(nextYearBtn).toBeDisabled();
     });
   });
@@ -352,7 +352,7 @@ describe('IntervalDatePicker', () => {
     it('opens year grid when toggle is clicked', async () => {
       renderWithProviders(<IntervalDatePicker {...annualProps} />);
       const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /^2024$/i }));
+      await user.click(screen.getByRole('button', { name: /^Year: 2024$/i }));
 
       const yearGrid = document.querySelector('.year-grid');
 
@@ -404,7 +404,7 @@ describe('IntervalDatePicker', () => {
   describe('empty value state', () => {
     it('shows "Select..." placeholder when value is empty', () => {
       renderWithProviders(<IntervalDatePicker {...defaultProps} interval="monthly" value="" />);
-      expect(screen.getByRole('button', { name: /Select\.\.\./i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Select…/i })).toBeInTheDocument();
     });
   });
 
@@ -416,7 +416,7 @@ describe('IntervalDatePicker', () => {
       renderWithProviders(<IntervalDatePicker {...defaultProps} interval="annual" maxDate={undefined} />);
       const today = new Date();
       // The toggle should show current year since value is empty
-      expect(screen.getByRole('button', { name: /Select\.\.\./i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Select…/i })).toBeInTheDocument();
     });
 
     it('defaults minDate to 1900 when not provided', async () => {
@@ -432,7 +432,7 @@ describe('IntervalDatePicker', () => {
       );
 
       const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /Select\.\.\./i }));
+      await user.click(screen.getByRole('button', { name: /Select…/i }));
       // Should include 1900 in the year grid
       expect(screen.getByText('1900')).toBeInTheDocument();
     });

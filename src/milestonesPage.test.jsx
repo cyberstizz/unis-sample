@@ -27,6 +27,12 @@ let lastQuery = null;
 const pick = (testId) => screen.getByTestId(testId);
 const showWinner = () => screen.getByRole('button', { name: /show winner/i });
 
+/**
+ * The winner appears twice by design — once on the plate and again as rank 1 in
+ * the tally — so any query for winner text must say which one it means.
+ */
+const plate = () => within(document.querySelector('.ms-plate'));
+
 const entry = (over = {}) => ({
   rank: 1,
   targetId: 'song-001',
@@ -204,12 +210,22 @@ describe('MilestonesPage', () => {
       renderWithProviders(<MilestonesPage />, { as: 'listener' });
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       await user.click(showWinner());
-      await waitFor(() => expect(screen.getByText('Midnight on Lenox')).toBeInTheDocument());
-      expect(screen.getByText('Jay Prince')).toBeInTheDocument();
-      expect(screen.getByText('1,284')).toBeInTheDocument();
-      expect(screen.getByText('312')).toBeInTheDocument();
-      expect(screen.getByText('8,901')).toBeInTheDocument();
-      expect(screen.getByText('442')).toBeInTheDocument();
+      await waitFor(() => expect(document.querySelector('.ms-plate')).not.toBeNull());
+      expect(plate().getByText('Midnight on Lenox')).toBeInTheDocument();
+      expect(plate().getByText('Jay Prince')).toBeInTheDocument();
+      expect(plate().getByText('1,284')).toBeInTheDocument();
+      expect(plate().getByText('312')).toBeInTheDocument();
+      expect(plate().getByText('8,901')).toBeInTheDocument();
+      expect(plate().getByText('442')).toBeInTheDocument();
+    });
+
+    it('also lists the winner as rank 1 in the tally', async () => {
+      renderWithProviders(<MilestonesPage />, { as: 'listener' });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await user.click(showWinner());
+      await waitFor(() => expect(document.querySelector('.ms-tally-row')).not.toBeNull());
+      expect(screen.getAllByText('Midnight on Lenox')).toHaveLength(2);
+      expect(document.querySelector('.ms-tally-row')).toHaveClass('is-winner');
     });
 
     it('names the period and jurisdiction in the headline', async () => {
@@ -276,12 +292,14 @@ describe('MilestonesPage', () => {
       renderWithProviders(<MilestonesPage />, { as: 'listener' });
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       await user.click(showWinner());
-      await waitFor(() => expect(screen.getByText('Midnight on Lenox')).toBeInTheDocument());
+      await waitFor(() => expect(document.querySelector('.ms-plate')).not.toBeNull());
+      expect(plate().getByText('Midnight on Lenox')).toBeInTheDocument();
       expect(screen.queryByText('Points')).not.toBeInTheDocument();
       expect(document.querySelector('.ms-figures')).toBeNull();
-      expect(screen.getByText(/decided on engagement — no votes cast/i)).toBeInTheDocument();
-      // and only once — the note below must not duplicate it
-      expect(screen.getAllByText(/decided on engagement — no votes cast/i)).toHaveLength(1);
+      expect(plate().getByText(/decided on engagement — no votes cast/i)).toBeInTheDocument();
+      // and only once — the small-print note must not duplicate it
+      expect(plate().getAllByText(/decided on engagement — no votes cast/i)).toHaveLength(1);
+      expect(document.querySelector('.ms-plate-note')).toBeNull();
     });
 
     it('leaves the tally points cell blank rather than printing 0', async () => {
@@ -439,19 +457,47 @@ describe('MilestonesPage', () => {
       expect(pick('genre-rock')).toHaveAttribute('aria-pressed', 'false');
     });
 
-    it('gives every button an explicit type', () => {
+    it('gives every button on the page an explicit type', () => {
       renderWithProviders(<MilestonesPage />, { as: 'listener' });
-      document.querySelectorAll('button').forEach((b) => {
+      // Scoped to .ms-page. Layout's own chrome (mobile-search-trigger, the
+      // nav-item buttons) is outside this page's remit — it does omit type,
+      // which is worth fixing when Layout gets its own QA pass, but it is not
+      // this suite's business to assert on.
+      const buttons = document.querySelectorAll('.ms-page button');
+      expect(buttons.length).toBeGreaterThan(0);
+      buttons.forEach((b) => {
         expect(b.getAttribute('type')).toBe('button');
       });
     });
 
     it('announces loading politely', async () => {
+      // The response must be held open. Left ungated, msw resolves inside
+      // `await user.click(...)` and the skeleton is gone before we can look.
+      let release;
+      server.use(
+        http.get(`${API}/v1/awards/period-leaderboard`, async () => {
+          await new Promise((r) => { release = r; });
+          return leaderboard([entry()]);
+        })
+      );
       renderWithProviders(<MilestonesPage />, { as: 'listener' });
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       await user.click(showWinner());
-      const status = document.querySelector('[aria-live="polite"]');
+
+      const status = document.querySelector('.ms-skeleton[aria-live="polite"]');
       expect(status).not.toBeNull();
+      expect(status.getAttribute('role')).toBe('status');
+      expect(within(status).getByText(/loading the archive/i)).toBeInTheDocument();
+
+      // The submit relabels to "Loading" while in flight, so query the element
+      // rather than the name.
+      const submit = document.querySelector('.ms-submit');
+      expect(submit).toBeDisabled();
+      expect(submit.textContent).toMatch(/loading/i);
+
+      release();
+      await waitFor(() => expect(document.querySelector('.ms-skeleton')).toBeNull());
+      expect(showWinner()).not.toBeDisabled();
     });
   });
 });
