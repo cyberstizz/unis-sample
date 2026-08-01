@@ -46,7 +46,10 @@
   min-height: 100%;
   width: 100%;
   max-width: 100%;
-  overflow-x: clip;          // last line of defence — nothing escapes sideways
+  // Last line of defence for page content. The date picker panel is portalled
+  // to document.body and is deliberately outside this subtree, so it is sized
+  // by the viewport rather than clipped by it.
+  overflow-x: clip;
   color: var(--ms-ink);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
@@ -795,6 +798,15 @@
     flex-wrap: wrap;
     gap: 6px;
     justify-content: space-between;
+  }
+
+  // The picker is a flex item with no width of its own. Left alone it collapses
+  // to the toggle's text width, which is what dragged the whole dropdown down
+  // to ~128px and made the day grid overflow its own card.
+  .ms-period-picker .interval-date-picker {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
   }
 
   .ms-period-range {
