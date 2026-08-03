@@ -1,3 +1,4 @@
+
 class CacheService {
   constructor() {
     // In-memory cache (fast, session-only)
@@ -11,15 +12,6 @@ class CacheService {
       trending: 3 * 60 * 1000,    // 3 minutes - trending updates less frequently
       artist: 10 * 60 * 1000,     // 10 minutes - artist info rarely changes
       song: 30 * 60 * 1000,       // 30 minutes - song metadata is static
-
-      // ── Discover ──────────────────────────────────────────────────────────
-      // Before these existed, getCacheKeyFromUrl returned null for every
-      // endpoint the Discover page touches, so browsing bypassed the cache
-      // 100% of the time — four DB round-trips on every tab switch and every
-      // debounce tick.
-      search: 90 * 1000,          // 90 seconds - scores/rankings move, but not per-keystroke
-      videos: 2 * 60 * 1000,      // 2 minutes - matches the playlists cadence
-      playlistDiscovery: 2 * 60 * 1000, // 2 minutes - public playlist browse/search
     };
   }
 
