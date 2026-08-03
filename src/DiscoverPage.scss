@@ -1,11 +1,48 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  UNIS — Discover Page
+//
+//  Theme contract: every colour here resolves from the token layer
+//  (theme.scss + unis-design-tokens.scss). The only literal hexes left are the
+//  three metallic tier rings and the artist crown, which are deliberately
+//  theme-independent — a "gold" tier that turns green under the green theme
+//  stops meaning gold. They are declared once, as named tokens, below.
+// ═══════════════════════════════════════════════════════════════════════════
+
 .dsc-wrap {
+  // File-scoped surfaces. These replace the old hardcoded #0d1018 / #11141d,
+  // which pinned the page to the blue theme. Mixing --unis-bg with
+  // --unis-primary keeps the near-black surface but lets it pick up the
+  // active theme's tint, the same way the atmospheric gradient does.
+  --dsc-surface:    #{color-mix(in srgb, var(--unis-bg) 93%, var(--unis-primary))};
+  --dsc-surface-2:  #{color-mix(in srgb, var(--unis-bg) 88%, var(--unis-primary))};
+  --dsc-scrim:      rgba(0, 0, 0, .5);
+
+  // Intentionally theme-independent — see header note.
+  --dsc-crown-gold: #f2c94c;
+  --dsc-tier-platinum: conic-gradient(from 210deg, #eef2f8, #aeb9c9, #ffffff, #8b97a8, #cfd8e6, #eef2f8);
+  --dsc-tier-gold:     conic-gradient(from 210deg, #f7e58a, #c8a84b, #fff3c4, #b8902f, #f7e58a);
+  --dsc-tier-silver:   conic-gradient(from 210deg, #d3dae4, #9aa3b2, #eef1f6, #828b9b, #d3dae4);
+
   max-width: 1080px;
-  width: 100%;            
-  min-width: 0;           
-  box-sizing: border-box; 
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin: 0 auto;
-  padding: 16px 12px 120px; 
+  padding: 16px 12px 120px;
   font-family: var(--unis-font-sans);
+}
+
+// Visually hidden but available to assistive tech.
+.dsc-wrap .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ---- hero / headline ---- */
@@ -33,12 +70,14 @@
   font-weight: 800;
   letter-spacing: -.02em;
   margin: 0 0 6px;
+  color: var(--unis-text);
+  overflow-wrap: anywhere;
 }
 .dsc-h1 em {
   font-family: var(--unis-font-italic);
   font-style: italic;
   font-weight: 400;
-  background: linear-gradient(120deg, var(--unis-primary-2), #fff 70%);
+  background: linear-gradient(120deg, var(--unis-primary-2), var(--unis-text) 70%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -84,8 +123,9 @@
   transition: color .18s ease, background .18s ease, box-shadow .25s ease;
 }
 .dsc-type:hover { color: var(--unis-text); }
+.dsc-type:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 2px; }
 .dsc-type[aria-selected="true"] {
-  color: #fff;
+  color: var(--unis-text);
   background: linear-gradient(180deg, var(--unis-primary-2), var(--unis-primary));
   box-shadow: 0 6px 20px -4px var(--unis-primary-glow), inset 0 1px 0 rgba(255, 255, 255, .18);
 }
@@ -115,25 +155,30 @@
   transition: border-color .2s, background .2s;
 }
 .dsc-scope-btn:hover { border-color: var(--unis-primary); background: var(--unis-panel-hi); }
+.dsc-scope-btn:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 2px; }
 .dsc-scope-btn svg { color: var(--unis-primary-2); }
 .dsc-scope-btn .chev { color: var(--unis-text-3); margin-left: 2px; transition: transform .2s; }
 .dsc-scope.open .chev { transform: rotate(180deg); }
+
+// The menu is now conditionally mounted rather than display:none-toggled, so
+// its contents stay out of the accessibility tree and out of tab order when
+// closed.
 .dsc-scope-menu {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
   min-width: 230px;
   z-index: 30;
-  background: #0d1018;
+  margin: 0;
+  list-style: none;
+  background: var(--dsc-surface);
   border: 1px solid var(--unis-border-hi);
   border-radius: var(--unis-radius);
   padding: 6px;
   box-shadow: 0 24px 60px -12px rgba(0, 0, 0, .7);
-  display: none;
   max-height: 320px;
   overflow-y: auto;
 }
-.dsc-scope.open .dsc-scope-menu { display: block; }
 .dsc-scope-item {
   display: flex;
   align-items: center;
@@ -150,7 +195,8 @@
   padding: 9px 11px;
   border-radius: 9px;
 }
-.dsc-scope-item:hover { background: var(--unis-panel-hi); color: #fff; }
+.dsc-scope-item:hover { background: var(--unis-panel-hi); color: var(--unis-text); }
+.dsc-scope-item:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: -2px; }
 .dsc-scope-item .lvl {
   font-size: 10px;
   letter-spacing: .12em;
@@ -158,7 +204,7 @@
   color: var(--unis-text-4);
   flex: 0 0 auto;
 }
-.dsc-scope-item[aria-current="true"] { color: #fff; background: var(--unis-primary-soft); }
+.dsc-scope-item[aria-selected="true"] { color: var(--unis-text); background: var(--unis-primary-soft); }
 
 /* search field */
 .dsc-search {
@@ -178,17 +224,19 @@
 .dsc-search svg { color: var(--unis-text-3); flex: 0 0 auto; }
 .dsc-search input {
   flex: 1;
+  min-width: 0;
   border: 0;
   outline: 0;
   background: transparent;
-  color: #fff;
+  color: var(--unis-text);
   font: inherit;
   font-size: 13.5px;
 }
 .dsc-search input::placeholder { color: var(--unis-text-4); }
+.dsc-search input::-webkit-search-cancel-button { filter: invert(1) opacity(.5); }
 
 /* ---- section / rail ---- */
-.dsc-section { margin-top: 28px; min-width: 0 }
+.dsc-section { margin-top: 28px; min-width: 0; }
 .dsc-sec-head {
   display: flex;
   align-items: baseline;
@@ -228,6 +276,7 @@
   white-space: nowrap;
 }
 .dsc-seeall:hover { color: var(--unis-primary-2); }
+.dsc-seeall:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 3px; border-radius: 6px; }
 
 .dsc-rail {
   display: grid;
@@ -235,8 +284,8 @@
   grid-auto-columns: minmax(150px, 1fr);
   gap: 16px;
   overflow-x: auto;
-  min-width: 0;     
-  max-width: 100%;  
+  min-width: 0;
+  max-width: 100%;
   padding-bottom: 8px;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
@@ -254,6 +303,9 @@
 
 /* ===========================================================================
    USER CARD
+   Children are <span>s, not <div>s: the card is a single <button>, and a
+   <div> inside a <button> is invalid content model. Layout is restored with
+   explicit display rules.
    =========================================================================== */
 .dsc-user {
   display: flex;
@@ -269,12 +321,14 @@
 }
 .dsc-user:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 4px; border-radius: 14px; }
 .dsc-ava {
+  display: block;
   position: relative;
   width: 96px;
   height: 96px;
   border-radius: 50%;
   padding: 3px;
   margin-bottom: 12px;
+  box-sizing: border-box;
   box-shadow: 0 10px 34px -8px var(--unis-primary-glow);
   transition: transform .22s ease, box-shadow .22s ease;
 }
@@ -284,22 +338,25 @@
   height: 100%;
   border-radius: 50%;
   border: 2.5px solid var(--unis-bg);
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 30px;
   letter-spacing: -.02em;
-  color: rgba(255, 255, 255, .92);
+  color: var(--unis-text);
   overflow: hidden;
-  background: radial-gradient(circle at 35% 25%, var(--unis-panel-hi), #11141d);
+  background: radial-gradient(circle at 35% 25%, var(--unis-panel-hi), var(--dsc-surface-2));
 }
 .dsc-ava .img img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-/* tier rings */
-.dsc-ava[data-tier="platinum"] { background: conic-gradient(from 210deg, #eef2f8, #aeb9c9, #ffffff, #8b97a8, #cfd8e6, #eef2f8); }
-.dsc-ava[data-tier="gold"]     { background: conic-gradient(from 210deg, #f7e58a, #c8a84b, #fff3c4, #b8902f, #f7e58a); }
-.dsc-ava[data-tier="silver"]   { background: conic-gradient(from 210deg, #d3dae4, #9aa3b2, #eef1f6, #828b9b, #d3dae4); }
-/* listener ring = single muted band, thinner, no shimmer */
+
+/* Tier rings — metallic by design, deliberately not theme-tinted. */
+.dsc-ava[data-tier="platinum"] { background: var(--dsc-tier-platinum); }
+.dsc-ava[data-tier="gold"]     { background: var(--dsc-tier-gold); }
+.dsc-ava[data-tier="silver"]   { background: var(--dsc-tier-silver); }
+
+/* Listener ring = single muted band, thinner, no shimmer */
 .dsc-user[data-role="listener"] .dsc-ava { padding: 2px; box-shadow: 0 8px 26px -10px rgba(0, 0, 0, .6); }
 .dsc-user[data-role="listener"] .dsc-ava[data-tier="platinum"],
 .dsc-user[data-role="listener"] .dsc-ava[data-tier="gold"],
@@ -307,38 +364,30 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, .08));
 }
 
-.dsc-crown {
+.dsc-crown,
+.dsc-hp {
   position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dsc-surface);
+  border: 1px solid var(--unis-border-hi);
+}
+.dsc-crown {
   top: -9px;
   left: 50%;
   transform: translateX(-50%);
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #0d1018;
-  border: 1px solid var(--unis-border-hi);
   box-shadow: 0 4px 12px rgba(0, 0, 0, .5);
 }
-.dsc-crown svg { color: #f2c94c; }
-.dsc-hp {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #0d1018;
-  border: 1px solid var(--unis-border-hi);
-}
+.dsc-crown svg { color: var(--dsc-crown-gold); }
+.dsc-hp { bottom: -2px; right: -2px; }
 .dsc-hp svg { color: var(--unis-text-3); }
 
 .dsc-role {
+  display: block;
   font-size: 9.5px;
   letter-spacing: .18em;
   text-transform: uppercase;
@@ -348,9 +397,11 @@
 .dsc-user[data-role="artist"] .dsc-role { color: var(--unis-primary-2); }
 .dsc-user[data-role="listener"] .dsc-role { color: var(--unis-text-4); }
 .dsc-uname {
+  display: block;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: -.01em;
+  color: var(--unis-text);
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -378,44 +429,59 @@
   overflow: hidden;
   cursor: pointer;
   border: 1px solid var(--unis-border);
-  background: #0d1018;
+  background: var(--dsc-surface);
   display: block;
   width: 100%;
+  padding: 0;
+  font: inherit;
+  color: inherit;
   transition: transform .22s ease, box-shadow .22s ease;
 }
 .dsc-pl:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .7); }
 .dsc-pl:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 2px; }
 .dsc-pl .cover {
+  display: block;
   position: absolute;
   inset: 0;
-  background: linear-gradient(160deg, var(--unis-panel-hi), #11141d);
+  background: linear-gradient(160deg, var(--unis-panel-hi), var(--dsc-surface-2));
 }
 .dsc-pl .cover img { width: 100%; height: 100%; object-fit: cover; }
-.dsc-pl .fade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 38%, rgba(0, 0, 0, .18) 60%, rgba(0, 0, 0, .82) 100%); }
-.dsc-pl .meta { position: absolute; left: 14px; right: 14px; bottom: 12px; }
-.dsc-pl .ptitle { font-size: 15px; font-weight: 700; letter-spacing: -.01em; text-shadow: 0 1px 8px rgba(0, 0, 0, .5); }
-.dsc-pl .pcount { font-size: 11.5px; color: rgba(255, 255, 255, .78); margin-top: 2px; }
-.dsc-pl .badge {
+.dsc-pl .fade {
+  display: block;
   position: absolute;
-  top: 10px;
-  left: 10px;
-  font-size: 9.5px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 38%, rgba(0, 0, 0, .18) 60%, rgba(0, 0, 0, .82) 100%);
+}
+.dsc-pl .meta { display: block; position: absolute; left: 14px; right: 14px; bottom: 12px; text-align: left; }
+.dsc-pl .ptitle {
+  display: block;
+  font-size: 15px;
   font-weight: 700;
-  color: #fff;
-  background: rgba(0, 0, 0, .4);
-  border: 1px solid rgba(255, 255, 255, .18);
-  backdrop-filter: blur(4px);
-  padding: 4px 8px;
-  border-radius: 999px;
+  letter-spacing: -.01em;
+  color: var(--unis-text);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, .5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dsc-pl .pcount {
+  display: block;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, .78);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ===========================================================================
    SONG CARD
+   The card is no longer one big <button> with a nested <span role="button">.
+   It is a plain container holding three real buttons: the artwork, the play
+   control, and the title. Nested interactive content is invalid HTML and an
+   automatic axe failure.
    =========================================================================== */
-.dsc-song { cursor: pointer; background: transparent; border: 0; font: inherit; color: inherit; text-align: left; padding: 0; display: block; width: 100%; }
-.dsc-song:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 3px; border-radius: 14px; }
+.dsc-song { display: block; width: 100%; min-width: 0; text-align: left; }
 .dsc-song .art {
   position: relative;
   aspect-ratio: 1 / 1;
@@ -423,7 +489,23 @@
   overflow: hidden;
   border: 1px solid var(--unis-border);
 }
-.dsc-song .art .cover { position: absolute; inset: 0; background: linear-gradient(135deg, var(--unis-panel-hi), #11141d); }
+.dsc-song .art-open {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.dsc-song .art-open:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: -3px; }
+.dsc-song .art .cover {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--unis-panel-hi), var(--dsc-surface-2));
+}
 .dsc-song .art .cover img { width: 100%; height: 100%; object-fit: cover; }
 .dsc-song .play {
   position: absolute;
@@ -431,7 +513,10 @@
   bottom: 10px;
   width: 38px;
   height: 38px;
+  border: 0;
+  padding: 0;
   border-radius: 50%;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -442,20 +527,40 @@
   transition: opacity .2s, transform .2s;
 }
 .dsc-song:hover .play,
-.dsc-song:focus-within .play { opacity: 1; transform: none; }
-.dsc-song .play svg { color: #fff; margin-left: 2px; }
+.dsc-song .play:focus-visible { opacity: 1; transform: none; }
+.dsc-song .play:focus-visible { outline: 2px solid var(--unis-text); outline-offset: 2px; }
+.dsc-song .play svg { color: var(--unis-text); margin-left: 2px; }
 .dsc-song .dur {
   position: absolute;
   left: 9px;
   bottom: 9px;
+  pointer-events: none;
   font-size: 11px;
   font-weight: 600;
-  color: #fff;
-  background: rgba(0, 0, 0, .5);
+  color: var(--unis-text);
+  background: var(--dsc-scrim);
   padding: 2px 7px;
   border-radius: 6px;
 }
-.dsc-song .stitle { font-size: 13.5px; font-weight: 700; margin-top: 9px; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsc-song .stitle {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--unis-text);
+  margin-top: 9px;
+  letter-spacing: -.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dsc-song .stitle:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 2px; border-radius: 4px; }
 .dsc-song .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
 .dsc-song .sart { font-size: 12px; color: var(--unis-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dsc-plays {
@@ -471,37 +576,79 @@
   border-radius: 999px;
 }
 
+/* Touch devices never fire :hover — without this the play button is invisible
+   and unreachable on every phone and tablet. */
+@media (hover: none) {
+  .dsc-song .play { opacity: 1; transform: none; }
+}
+
 /* ===========================================================================
    VIDEO CARD
    =========================================================================== */
-.dsc-vid { cursor: pointer; background: transparent; border: 0; font: inherit; color: inherit; text-align: left; padding: 0; display: block; width: 100%; }
+.dsc-vid {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+}
 .dsc-vid:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 3px; border-radius: 14px; }
 .dsc-vid .frame {
+  display: block;
   position: relative;
   aspect-ratio: 16 / 9;
   border-radius: var(--unis-radius);
   overflow: hidden;
   border: 1px solid var(--unis-border);
 }
-.dsc-vid .frame .cover { position: absolute; inset: 0; background: linear-gradient(120deg, var(--unis-panel-hi), #11141d); }
+.dsc-vid .frame .cover {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, var(--unis-panel-hi), var(--dsc-surface-2));
+}
 .dsc-vid .frame .cover img { width: 100%; height: 100%; object-fit: cover; }
-.dsc-vid .frame .scrim { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, .55)); }
+.dsc-vid .frame .scrim { display: block; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, .55)); }
 .dsc-vid .ply { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-.dsc-vid .ply span {
+.dsc-vid .ply > span {
   width: 46px;
   height: 46px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(13, 16, 24, .55);
+  background: color-mix(in srgb, var(--dsc-surface) 55%, transparent);
   border: 1px solid rgba(255, 255, 255, .25);
   backdrop-filter: blur(4px);
 }
-.dsc-vid .ply svg { color: #fff; margin-left: 2px; }
-.dsc-vid .dur { position: absolute; right: 9px; bottom: 9px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(0, 0, 0, .6); padding: 2px 7px; border-radius: 6px; }
-.dsc-vid .vtitle { font-size: 13.5px; font-weight: 700; margin-top: 9px; letter-spacing: -.01em; }
-.dsc-vid .vmeta { font-size: 12px; color: var(--unis-text-3); margin-top: 2px; }
+.dsc-vid .ply svg { color: var(--unis-text); margin-left: 2px; }
+.dsc-vid .dur {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--unis-text);
+  background: rgba(0, 0, 0, .6);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+.dsc-vid .vtitle {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--unis-text);
+  margin-top: 9px;
+  letter-spacing: -.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dsc-vid .vmeta { display: block; font-size: 12px; color: var(--unis-text-3); margin-top: 2px; }
 
 /* ---- load more ---- */
 .dsc-loadmore { display: flex; justify-content: center; margin-top: 26px; }
@@ -518,9 +665,11 @@
   transition: border-color .2s, background .2s;
 }
 .dsc-loadmore-btn:hover:not(:disabled) { border-color: var(--unis-primary); background: var(--unis-panel-hi); }
+.dsc-loadmore-btn:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 2px; }
 .dsc-loadmore-btn:disabled { opacity: .55; cursor: default; }
 
-/* ---- loading ---- */
+/* ---- loading / status ---- */
+.dsc-status:empty { display: none; }
 .dsc-loading { display: flex; justify-content: center; padding: 50px 0; }
 .dsc-loading__spinner {
   width: 30px;
@@ -538,6 +687,11 @@
 .dsc-empty p { margin: 0; font-size: 13.5px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .dsc-ava, .dsc-pl, .dsc-song .play, .dsc-type { transition: none; }
+  .dsc-ava,
+  .dsc-pl,
+  .dsc-song .play,
+  .dsc-type { transition: none; }
+  .dsc-user:hover .dsc-ava,
+  .dsc-pl:hover { transform: none; }
   .dsc-loading__spinner { animation: none; }
 }
