@@ -157,6 +157,36 @@ function getCacheKeyFromUrl(url) {
     return { type: 'artist', id: artistMatch[1], params: {} };
   }
 
+  // ── Discover page endpoint families ──────────────────────────────────────
+  // These must be matched BEFORE the generic /artist/ and /v1/media/song/
+  // patterns below, otherwise /v1/media/videos/artist/{id} would be filed
+  // under the 'artist' key type and collide with real artist profiles.
+
+  // Full search: /v1/search?q=&type=&jurisdictionId=&limit=&offset=
+  // Excludes /suggestions and /trending, which have their own semantics.
+  if (/\/v1\/search(\?|$)/.test(url)) {
+    const params = extractQueryParams(url);
+    return {
+      type: 'search',
+      id: `${params.type || 'all'}:${params.jurisdictionId || 'global'}`,
+      params,
+    };
+  }
+
+  // Videos: /v1/media/videos/{recent|jurisdiction/{id}|artist/{id}}
+  const videosMatch = url.match(/\/v1\/media\/videos\/(recent|jurisdiction\/[^?\/]+|artist\/[^?\/]+)/);
+  if (videosMatch) {
+    const params = extractQueryParams(url);
+    return { type: 'videos', id: videosMatch[1], params };
+  }
+
+  // Public playlist discovery: /v1/playlists/{discover|search|official|community/{id}}
+  const playlistDiscoveryMatch = url.match(/\/v1\/playlists\/(discover|search|official|community\/[^?\/]+)/);
+  if (playlistDiscoveryMatch) {
+    const params = extractQueryParams(url);
+    return { type: 'playlistDiscovery', id: playlistDiscoveryMatch[1], params };
+  }
+
   // Song: /v1/media/song/{songId} — bare endpoint only.
   // The trailing (?:\?|$) ensures we don't match subpaths like
   // /is-liked or /likes/count, which would collide on the same
@@ -200,13 +230,18 @@ function invalidateCachesForMutation(url, method) {
       cacheService.invalidateType('feed');
       cacheService.invalidateType('user');
       cacheService.invalidateType('artist');
+      // Discover ranks on the same score a play just moved.
+      cacheService.invalidateType('search');
+      cacheService.invalidateType('videos');
     }
     return;
   }
 
-  // Playlist mutations
-  if (url.includes('/api/playlists')) {
+  // Playlist mutations — both the owner's own lists and the public
+  // discovery/search surfaces go stale when a playlist changes.
+  if (url.includes('/api/playlists') || url.includes('/v1/playlists')) {
     cacheService.invalidateType('playlists');
+    cacheService.invalidateType('playlistDiscovery');
     console.log('[Cache] Invalidated playlists after mutation');
     return;
   }
