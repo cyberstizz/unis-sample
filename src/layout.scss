@@ -2,10 +2,6 @@ $bg-black: #000000;
 $text-gray: #A9A9A9;
 $footer-height-desktop: 80px;
 $footer-height-mobile: 120px;
-$player-height-desktop: 280px;   
-$player-height-mobile: 320px;   
-$unis-blue: var(--unis-primary);
-
 .layout-container {
   display: flex;
   flex-direction: column;
@@ -13,33 +9,13 @@ $unis-blue: var(--unis-primary);
   margin-left: var(--sidebar-width);
   width: calc(100% - var(--sidebar-width));
   padding-top: 11vh; // clears the fixed header
-  // background: $bg-black;
   color: $text-gray;
   font-family: 'Arial', sans-serif;
   position: relative;
   align-items: center;
   justify-content: center;
-  // margin: 0; <-- REMOVE THIS, it was killing margin-left
   overflow: hidden;
   z-index: 1;
-
-  &::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    margin-left: var(--sidebar-width);
-    width: calc(100% - var(--sidebar-width));
-    height: 100vh;
-    background-image: linear-gradient(to bottom, transparent, $bg-black 90%), var(--background-image);
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    opacity: 0.15;
-    z-index: -1;
-    filter: blur(5px);
-    pointer-events: none;
-  }
 }
 
 

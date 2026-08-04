@@ -6,9 +6,12 @@
 // the main content area.
 //
 // NOTE:
-// backgroundImage is intentionally accepted by Layout for backwards
-// compatibility, but it is no longer used to set --background-image.
-// The global atmospheric gradient is now handled elsewhere.
+// backgroundImage is accepted by Layout for backwards compatibility with its
+// ~17 callers, but it is DEPRECATED and inert — it sets no CSS variable and
+// has no effect. The per-page ambient background it once fed was removed by
+// design and the CSS that read it is gone. The two "--background-image" tests
+// below lock that no-op in place: if either starts failing, someone has
+// re-wired a prop that is meant to do nothing.
 //
 // =============================================================================
 
@@ -72,7 +75,7 @@ describe('Layout', () => {
     expect(document.querySelector('.layout-container')).toBeInTheDocument();
   });
 
-  it('accepts backgroundImage without applying an inline CSS variable', () => {
+  it('treats backgroundImage as an inert no-op (sets no CSS variable)', () => {
     render(
       <Layout backgroundImage="/images/hero.jpg">
         <p />
