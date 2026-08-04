@@ -24,8 +24,8 @@ const TYPES = [
 
 // Order of rails in the "All" view, and the per-type fetch set.
 const RAIL_TYPES = ["user", "playlist", "song", "video"];
-const RAIL_LIMIT = 12;
-const GRID_LIMIT = 30;
+const RAIL_LIMIT = 10;
+const GRID_LIMIT = 10;
 
 const RAIL_TITLES = {
   all: "Everything",
@@ -35,23 +35,26 @@ const RAIL_TITLES = {
   video: "Videos",
 };
 
-// Static — these are the only jurisdictions live today. Add to this list as new
-// ones launch. Module scope on purpose: it never changes, so it must not be
-// re-allocated on every render.
+// The only jurisdictions live today. Harlem is the parent and resolves to the
+// union of its children server-side (search_all rolls the hierarchy up), so it
+// needs no special handling here. There is deliberately no "Everywhere":
+// every user belongs to a child jurisdiction, so they are always reachable by
+// selecting a scope they are part of.
 const SCOPE_OPTIONS = [
-  { id: null, name: "Everywhere", level: "All" },
-  { id: JURISDICTION_IDS.harlem, name: "Harlem", level: "All active" },
+  { id: JURISDICTION_IDS.harlem, name: "Harlem", level: "Uptown + Downtown" },
   { id: JURISDICTION_IDS["uptown-harlem"], name: "Uptown Harlem", level: "Neighborhood" },
   { id: JURISDICTION_IDS["downtown-harlem"], name: "Downtown Harlem", level: "Neighborhood" },
 ];
 
-const DEFAULT_SCOPE = SCOPE_OPTIONS.find((o) => o.id === JURISDICTION_IDS.harlem) || SCOPE_OPTIONS[0];
+const DEFAULT_SCOPE = SCOPE_OPTIONS[0]; // Harlem — the widest available scope
 
 // Only ids we recognise are honoured from the URL. `jname` is deliberately NOT
 // read from the query string any more — it was a raw display string rendered
 // straight into the <h1>, so `?jname=<anything>` put attacker-chosen copy on
 // the page. The name is now always derived from the id.
 const scopeById = (id) => (id ? SCOPE_OPTIONS.find((o) => o.id === id) || null : null);
+
+// Scope is never null: the page always browses somewhere.
 
 // These types cannot paginate server-side: the playlist and video endpoints
 // return a full unpaginated list with no limit/offset. We page them in memory.
@@ -386,7 +389,7 @@ const DiscoverPage = () => {
   // query onto a completely different result set.
   const reqIdRef = useRef(0);
 
-  const scopeName = scope?.name || "Everywhere";
+  const scopeName = scope?.name || DEFAULT_SCOPE.name;
 
   // -- resolve the default scope from the signed-in user's jurisdiction --
   // Reads AuthContext, which already holds the full profile. The old code
@@ -552,8 +555,8 @@ const DiscoverPage = () => {
   }, [scopeOpen, closeScope]);
 
   const chooseScope = useCallback((opt) => {
-    console.log(`[Discover] scope changed → ${opt?.name || "Everywhere"}`);
-    setScope(opt && opt.id ? opt : null);
+    console.log(`[Discover] scope changed → ${opt.name}`);
+    setScope(opt);
     closeScope(true);
   }, [closeScope]);
 
@@ -681,7 +684,7 @@ const DiscoverPage = () => {
               {scopeOpen && (
                 <ul className="dsc-scope-menu" role="listbox" aria-label="Jurisdiction">
                   {SCOPE_OPTIONS.map((o) => {
-                    const selected = o.id ? scope?.id === o.id : !scope;
+                    const selected = scope?.id === o.id;
                     return (
                       <li key={o.id || "everywhere"} role="none">
                         <button
@@ -750,7 +753,7 @@ const DiscoverPage = () => {
                 {gridHasMore && (
                   <div className="dsc-loadmore">
                     <button className="dsc-loadmore-btn" type="button" onClick={loadMore} disabled={loadingMore}>
-                      {loadingMore ? "Loading…" : "Load more"}
+                      {loadingMore ? "Loading…" : "Show more"}
                     </button>
                   </div>
                 )}
