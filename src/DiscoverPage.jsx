@@ -56,9 +56,9 @@ const scopeById = (id) => (id ? SCOPE_OPTIONS.find((o) => o.id === id) || null :
 
 // Scope is never null: the page always browses somewhere.
 
-// These types cannot paginate server-side: the playlist and video endpoints
-// return a full unpaginated list with no limit/offset. We page them in memory.
-const CLIENT_PAGED = new Set(["playlist", "video"]);
+// The video endpoints return a fixed unpaginated list with no limit/offset, so
+// that grid pages in memory. Every other type pages server-side.
+const CLIENT_PAGED = new Set(["video"]);
 
 const EMPTY_BUCKETS = { user: [], playlist: [], song: [], video: [] };
 
@@ -115,23 +115,6 @@ const normalizeVideo = (v) => ({
   },
 });
 
-// Playlists are not in the search index either — `search_all` has no playlist
-// branch at all, which is why the Playlists rail was permanently empty. They
-// have their own public discovery endpoints, so they are sourced the same way
-// videos are.
-const normalizePlaylist = (p) => ({
-  id: p.playlistId,
-  name: p.name,
-  subtitle: p.creatorName || "Unis",
-  type: "playlist",
-  artworkUrl: p.coverImageUrl || p.firstFourArtworks?.[0] || null,
-  score: p.followerCount ?? 0,
-  extra: {
-    songCount: p.songCount,
-    playlistType: p.type,
-  },
-});
-
 // ----------------------------------------------------------------------------
 // fetchers — all go through apiCall so they inherit the axios baseURL, the auth
 // header, the response cache and the 401 session teardown. The previous raw
@@ -171,30 +154,18 @@ const fetchVideos = async ({ q, jurisdictionId }) => {
   );
 };
 
-const fetchPlaylists = async ({ q, jurisdictionId }) => {
-  const needle = (q || "").trim();
-  const url = needle
-    ? `/v1/playlists/search?q=${encodeURIComponent(needle)}`
-    : `/v1/playlists/discover${jurisdictionId ? `?jurisdictionId=${jurisdictionId}` : ""}`;
-
-  const res = await apiCall({ method: "get", url });
-  let items = (Array.isArray(res.data) ? res.data : []).map(normalizePlaylist);
-  console.log(`[Discover] playlists ${needle ? `q="${needle}"` : `scope=${jurisdictionId || "all"}`} → ${items.length} result(s)`);
-
-  // /playlists/search is global — it has no jurisdiction parameter — so a
-  // scoped query has to be narrowed here until the endpoint grows one.
-  if (needle && jurisdictionId) {
-    items = items.filter((p) => !p.extra?.jurisdictionId || p.extra.jurisdictionId === jurisdictionId);
-  }
-  return items;
-};
+// Playlists now come from /v1/search like users and songs.
+//
+// The dedicated endpoints could not work for this page:
+// findPublicByJurisdiction matches `p.jurisdiction.jurisdictionId = :jId`
+// exactly with no hierarchy rollup, so the Harlem parent returned nothing;
+// and /playlists/search takes no jurisdiction at all, so a scoped text query
+// returned global results. search_all v4 has a playlist branch WITH the
+// recursive rollup, which fixes both and gives real server-side offset paging.
 
 // Single entry point so the rails and the grid don't care where a type lives.
-const fetchByType = (opts) => {
-  if (opts.type === "video") return fetchVideos(opts);
-  if (opts.type === "playlist") return fetchPlaylists(opts);
-  return fetchSearch(opts);
-};
+const fetchByType = (opts) =>
+  opts.type === "video" ? fetchVideos(opts) : fetchSearch(opts);
 
 // ----------------------------------------------------------------------------
 // inline icons

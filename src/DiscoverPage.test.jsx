@@ -61,17 +61,16 @@ const searchSongs = [
   },
 ];
 
-const playlistPayload = [
+const searchPlaylists = [
   {
-    playlistId: 'pl-001', name: 'Harlem Heat', type: 'community', visibility: 'public',
-    songCount: 24, followerCount: 310, coverImageUrl: 'https://cdn.test/pl-001.jpg',
-    creatorName: 'Unis Editorial', creatorId: 'user-artist-001', firstFourArtworks: [],
+    id: 'pl-001', name: 'Harlem Heat', subtitle: 'Unis Editorial', type: 'playlist',
+    artworkUrl: 'https://cdn.test/pl-001.jpg', score: 310,
+    extra: { songCount: 24, playlistType: 'community' },
   },
   {
-    playlistId: 'pl-002', name: 'Sunday Slow', type: 'personal', visibility: 'public',
-    songCount: 8, followerCount: 40, coverImageUrl: null,
-    creatorName: 'Casey', creatorId: 'user-listener-001',
-    firstFourArtworks: ['https://cdn.test/a.jpg'],
+    id: 'pl-002', name: 'Sunday Slow', subtitle: 'Casey', type: 'playlist',
+    artworkUrl: null, score: 40,
+    extra: { songCount: 8, playlistType: 'personal' },
   },
 ];
 
@@ -88,17 +87,15 @@ const videoPayload = [
 function installDiscover({
   users = searchUsers,
   songs = searchSongs,
-  playlists = playlistPayload,
+  playlists = searchPlaylists,
   videos = videoPayload,
 } = {}) {
   server.use(
     http.get(`${API}/v1/search`, ({ request }) => {
       const type = new URL(request.url).searchParams.get('type');
-      const byType = { user: users, song: songs, artist: users };
+      const byType = { user: users, song: songs, artist: users, playlist: playlists };
       return HttpResponse.json({ results: byType[type] || [] });
     }),
-    http.get(`${API}/v1/playlists/discover`, () => HttpResponse.json(playlists)),
-    http.get(`${API}/v1/playlists/search`, () => HttpResponse.json(playlists)),
     http.get(`${API}/v1/media/videos/jurisdiction/:id`, () => HttpResponse.json(videos)),
     http.get(`${API}/v1/media/videos/recent`, () => HttpResponse.json(videos)),
   );
@@ -152,21 +149,21 @@ describe('DiscoverPage', () => {
       expect(await railFor('Videos')).toBeInTheDocument();
     });
 
-    it('sources playlists from the playlist endpoints, not from /v1/search', async () => {
+    it('requests playlists through search so the jurisdiction rollup applies', async () => {
       const seen = [];
       server.use(
         http.get(`${API}/v1/search`, ({ request }) => {
-          seen.push(new URL(request.url).searchParams.get('type'));
-          return HttpResponse.json({ results: [] });
+          const p = new URL(request.url).searchParams;
+          seen.push({ type: p.get('type'), jid: p.get('jurisdictionId') });
+          return HttpResponse.json({ results: searchPlaylists });
         })
       );
       renderDiscover();
 
-      await waitFor(() => expect(seen.length).toBeGreaterThan(0));
-      // search_all has no playlist branch — asking it for playlists always
-      // returned an empty set, which is why the rail was permanently blank.
-      expect(seen).not.toContain('playlist');
-      expect(await screen.findByText('Harlem Heat')).toBeInTheDocument();
+      // findPublicByJurisdiction had no hierarchy rollup, so the parent scope
+      // returned nothing. search_all v4 does the rollup.
+      await waitFor(() => expect(seen.some((r) => r.type === 'playlist')).toBe(true));
+      expect(seen.find((r) => r.type === 'playlist').jid).toBe(HARLEM);
     });
 
     it('shows real playlist content rather than an empty rail', async () => {
@@ -354,18 +351,22 @@ describe('DiscoverPage', () => {
       expect(queries.filter((q) => q === 'na')).toHaveLength(0);
     });
 
-    it('routes a text query to the playlist search endpoint', async () => {
+    it('carries the jurisdiction into a playlist text query', async () => {
       const user = userEvent.setup();
-      let searched = null;
+      const seen = [];
       server.use(
-        http.get(`${API}/v1/playlists/search`, ({ request }) => {
-          searched = new URL(request.url).searchParams.get('q');
-          return HttpResponse.json(playlistPayload);
+        http.get(`${API}/v1/search`, ({ request }) => {
+          const p = new URL(request.url).searchParams;
+          seen.push({ type: p.get('type'), q: p.get('q'), jid: p.get('jurisdictionId') });
+          return HttpResponse.json({ results: [] });
         })
       );
       renderDiscover();
       await user.type(screen.getByRole('searchbox', { name: /Search Discover/i }), 'harlem');
-      await waitFor(() => expect(searched).toBe('harlem'));
+      // /playlists/search had no jurisdiction param, so scoped queries leaked global results.
+      await waitFor(() =>
+        expect(seen.some((r) => r.type === 'playlist' && r.q === 'harlem' && r.jid === HARLEM)).toBe(true)
+      );
     });
 
     it('filters videos client-side, since the endpoint takes no query', async () => {
@@ -461,7 +462,7 @@ describe('DiscoverPage', () => {
   describe('load more', () => {
     it('requests the next offset for server-paginated types', async () => {
       const user = userEvent.setup();
-      const page1 = Array.from({ length: 30 }, (_, i) => ({
+      const page1 = Array.from({ length: 10 }, (_, i) => ({
         id: `s-${i}`, name: `Song ${i}`, subtitle: 'Nas Jr', type: 'song',
         artworkUrl: null, score: 1, extra: { duration: 120000 },
       }));
@@ -475,31 +476,34 @@ describe('DiscoverPage', () => {
       );
       renderDiscover({ route: '/discover?type=song' });
 
-      await user.click(await screen.findByRole('button', { name: 'Load more' }));
-      await waitFor(() => expect(offsets).toContain('30'));
+      await user.click(await screen.findByRole('button', { name: 'Show more' }));
+      await waitFor(() => expect(offsets).toContain('10'));
     });
 
-    it('pages playlists in memory, since that endpoint has no offset', async () => {
+    it('pages playlists server-side, ten at a time', async () => {
       const user = userEvent.setup();
-      const many = Array.from({ length: 42 }, (_, i) => ({
-        playlistId: `pl-${i}`, name: `List ${i}`, songCount: 3,
-        followerCount: 1, coverImageUrl: null, creatorName: 'Casey', firstFourArtworks: [],
+      const page = (start) => Array.from({ length: 10 }, (_, i) => ({
+        id: `pl-${start + i}`, name: `List ${start + i}`, subtitle: 'Casey',
+        type: 'playlist', artworkUrl: null, score: 1, extra: { songCount: 3 },
       }));
-      let calls = 0;
+      const offsets = [];
       server.use(
-        http.get(`${API}/v1/playlists/discover`, () => {
-          calls += 1;
-          return HttpResponse.json(many);
+        http.get(`${API}/v1/search`, ({ request }) => {
+          const p = new URL(request.url).searchParams;
+          if (p.get('type') !== 'playlist') return HttpResponse.json({ results: [] });
+          const off = Number(p.get('offset'));
+          offsets.push(off);
+          return HttpResponse.json({ results: page(off) });
         })
       );
       renderDiscover({ route: '/discover?type=playlist' });
 
       await screen.findByText('List 0');
-      expect(screen.queryByText('List 41')).not.toBeInTheDocument();
+      expect(screen.queryByText('List 10')).not.toBeInTheDocument();
 
-      await user.click(screen.getByRole('button', { name: 'Load more' }));
-      expect(await screen.findByText('List 41')).toBeInTheDocument();
-      expect(calls).toBe(1); // no refetch of page one
+      await user.click(screen.getByRole('button', { name: 'Show more' }));
+      expect(await screen.findByText('List 10')).toBeInTheDocument();
+      await waitFor(() => expect(offsets).toContain(10));
     });
   });
 
@@ -536,12 +540,12 @@ describe('DiscoverPage', () => {
     it('logs a failure rather than swallowing it', async () => {
       const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
       server.use(
-        http.get(`${API}/v1/playlists/discover`, () => new HttpResponse(null, { status: 500 }))
+        http.get(`${API}/v1/media/videos/jurisdiction/:id`, () => new HttpResponse(null, { status: 500 }))
       );
       renderDiscover();
       await waitFor(() =>
         expect(spy).toHaveBeenCalledWith(
-          expect.stringContaining('[Discover] rail "playlist" failed:'),
+          expect.stringContaining('[Discover] rail "video" failed:'),
           expect.anything()
         )
       );
