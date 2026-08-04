@@ -1,6 +1,42 @@
-import React, { useState, useEffect, useContext } from 'react';
+// ═══════════════════════════════════════════════════════════════════════════
+//  UNIS — Jurisdiction Page (v5)
+//
+//  The identity page for one place. Three sections, three jobs:
+//    1. Hero        — who this place is RIGHT NOW (name, live stats, song of
+//                     the week)
+//    2. Chart       — this week's rankings (top artists + top tracks)
+//    3. Hall of fame — the history (WinnersTimeline, embedded, ONE instance)
+//
+//  v5 changes from v4:
+//    • Removed the duplicate <WinnersTimeline> that rendered outside .jp
+//      (the "second timeline running down the whole page" bug)
+//    • Removed the Local Anthem + About sections and the trending strip —
+//      each repeated content that already lives in the hero or the boards
+//    • Hero pills + stats are now 100% data-derived (no hardcoded "Harlem" /
+//      "Invite-Only" / "Active Poll: Live" literals)
+//    • userId comes from useAuth() instead of hand-rolled JWT atob
+//    • alert() → inline toast (same pattern as findpage)
+//    • Play tracking is effect-based off PlayerContext.currentMedia, so a
+//      cancelled PlayChoiceModal never credits a play, and a QUEUED song is
+//      credited when it actually starts playing (same fix as findpage/songPage)
+//    • Theme contract: jurisdictionPage.scss resolves every colour from the
+//      token layer (theme.scss + unis-design-tokens.scss)
+//
+//  Known, deliberate debt (tracked): play tracking still sends the
+//  client-supplied ?userId= — backend must derive it from the JWT before this
+//  can change. Same as the other 13 call sites.
+// ═══════════════════════════════════════════════════════════════════════════
+
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+  useRef,
+} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
+import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
 import './jurisdictionPage.scss';
 import Layout from './layout';
@@ -8,6 +44,8 @@ import prominentArtistBg from './assets/songartworkfour.jpeg';
 import albumArt from './assets/songartworktwo.jpeg';
 import { buildUrl } from './utils/buildUrl';
 import WinnersTimeline from './winnersTimeline';
+
+const TOAST_MS = 4500;
 
 // Inline play icon — same guaranteed-visibility approach as Player/Feed
 const PlayIcon = ({ size = 14 }) => (
@@ -27,31 +65,48 @@ const PlayIcon = ({ size = 14 }) => (
   </svg>
 );
 
+// Three-bar mini equalizer — the "live" signal on the charts pill.
+// Pure CSS animation (frozen under prefers-reduced-motion in the scss).
+const LiveBars = () => (
+  <span className="jp-eq" aria-hidden="true">
+    <i />
+    <i />
+    <i />
+  </span>
+);
+
 const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
   const { jurisdiction: jurNameFromParams } = useParams();
   const jurName = jurNameFromParams || jurisdiction;
   const navigate = useNavigate();
-  const { requestPlay } = useContext(PlayerContext);
+  const { requestPlay, currentMedia } = useContext(PlayerContext);
+  const { user } = useAuth();
+  const userId = user?.userId || null;
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [userId, setUserId] = useState(null);
+  const [toast, setToast] = useState(null);
 
-  // Get userId from token
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUserId(payload.userId);
-      } catch (err) {
-        console.error('Failed to get userId from token:', err);
-      }
-    }
+  const toastTimer = useRef(null);
+  // songId the user asked this page to play, awaiting confirmation that it
+  // actually became the current track (see the tracking effect below).
+  const pendingTrackRef = useRef(null);
+
+  const showToast = useCallback((message) => {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), TOAST_MS);
   }, []);
 
-  // Fetch jurisdiction data — identical logic to original
+  useEffect(
+    () => () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    },
+    []
+  );
+
+  // ── Fetch jurisdiction + weekly tops ──────────────────────────────────────
   useEffect(() => {
     const fetchData = async () => {
       if (!jurName) {
@@ -69,12 +124,10 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           url: `/v1/jurisdictions/byName/${encodeURIComponent(jurName)}`,
         });
 
-        const firstResult = jurResponse.data?.[0];
-
-        if (!firstResult) throw new Error('Jurisdiction not found');
-
-        const jurId = firstResult.jurisdictionId;
-        const jurDetails = firstResult;
+        // Backend returns an array; be tolerant of a bare object.
+        const body = jurResponse.data;
+        const jurDetails = Array.isArray(body) ? body[0] : body;
+        const jurId = jurDetails?.jurisdictionId;
 
         if (!jurId) throw new Error('Jurisdiction not found');
 
@@ -90,19 +143,14 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
 
         const normalized = {
           description:
-            rawData.jurisdiction.bio ||
+            jurDetails.bio ||
             `The heartbeat of ${jurName}. Where local artists define the sound of the streets.`,
 
-          artistOfMonth: topArtist
-            ? {
-                id: topArtist.userId,
-                name: topArtist.username,
-                image: buildUrl(topArtist.photoUrl) || prominentArtistBg,
-                bio: topArtist.bio || 'Rising star in the community.',
-                supporters: topArtist.score || 0,
-                plays: topArtist.score || 0,
-              }
-            : null,
+          // hasChildren is the one hierarchy signal byName gives us:
+          // leaves are neighborhoods, everything above is a district.
+          isLeaf: jurDetails.hasChildren === false,
+
+          topArtistName: topArtist?.username || null,
 
           songOfWeek: topSong
             ? {
@@ -110,8 +158,6 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                 title: topSong.title,
                 artist: topSong.artist?.username || 'Unknown',
                 artistId: topSong.artist?.userId,
-                plays: topSong.plays || topSong.score || 0,
-                likes: topSong.likes || 0,
                 image: buildUrl(topSong.artworkUrl) || albumArt,
                 fileUrl: buildUrl(topSong.fileUrl),
               }
@@ -122,19 +168,19 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
             rank: i + 1,
             name: artist.username,
             genre: artist.genre?.name || '',
-            supporters: artist.score || 0,
-            plays: artist.score || 0,
+            score: artist.score || 0,
             thumbnail: buildUrl(artist.photoUrl) || prominentArtistBg,
           })),
 
+          // Songs are ranked by the same weighted-vote scoring as artists,
+          // so both boards display the score as "pts" — no fake "plays".
           topSongs: (rawData.topSongs || []).map((song, i) => ({
             id: song.songId,
             rank: i + 1,
             title: song.title,
             artist: song.artist?.username || 'Unknown',
             artistId: song.artist?.userId,
-            plays: song.plays || song.score || 0,
-            likes: song.likes || 0,
+            score: song.score ?? song.plays ?? 0,
             thumbnail: buildUrl(song.artworkUrl) || prominentArtistBg,
             fileUrl: buildUrl(song.fileUrl),
           })),
@@ -142,8 +188,8 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
 
         setData(normalized);
       } catch (err) {
-        console.error('Jurisdiction fetch error:', err);
-        setError(`Failed to load data for ${jurName}.`);
+        console.error('[jurisdiction] fetch error:', err?.message || err);
+        setError(`Couldn't load ${jurName}. Check your connection and try again.`);
         setData(null);
       } finally {
         setLoading(false);
@@ -153,89 +199,67 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
     fetchData();
   }, [jurName]);
 
-  // ═══════════════════════════════════════
-  // PLAY HANDLERS — gated through requestPlay
-  // ═══════════════════════════════════════
+  // ── Play tracking — effect-based off currentMedia ─────────────────────────
+  // handlePlay only REQUESTS playback (requestPlay may open PlayChoiceModal).
+  // A play is credited only once the requested song actually becomes the
+  // current track: cancel → never credited; queue → credited when it starts.
+  useEffect(() => {
+    const playingId = currentMedia?.id || currentMedia?.songId;
+    if (!playingId || !userId) return;
+    if (pendingTrackRef.current !== playingId) return;
 
-  const handlePlayTopArtist = async () => {
-    if (!data?.artistOfMonth) return;
+    pendingTrackRef.current = null;
 
-    try {
-      const response = await apiCall({
-        method: 'get',
-        url: `/v1/users/${data.artistOfMonth.id}/default-song`,
+    apiCall({
+      method: 'post',
+      url: `/v1/media/song/${playingId}/play?userId=${userId}`,
+    }).catch((err) =>
+      console.error('[jurisdiction] play tracking failed:', err?.message || err)
+    );
+  }, [currentMedia?.id, currentMedia?.songId, userId]);
+
+  // ── Play handlers — everything funnels through requestPlay ────────────────
+
+  const playSong = useCallback(
+    (song) => {
+      if (!song.fileUrl) {
+        showToast("This track isn't available right now.");
+        return;
+      }
+
+      requestPlay({
+        type: 'song',
+        id: song.id,
+        songId: song.id,
+        url: song.fileUrl,
+        fileUrl: song.fileUrl,
+        title: song.title,
+        artist: song.artist,
+        artistId: song.artistId,
+        artwork: song.thumbnail || song.image,
+        artworkUrl: song.thumbnail || song.image,
       });
 
-      const defaultSong = response.data;
+      pendingTrackRef.current = song.id;
+    },
+    [requestPlay, showToast]
+  );
 
-      if (defaultSong?.fileUrl) {
-        const fullUrl = buildUrl(defaultSong.fileUrl);
-        const fullArtwork = buildUrl(defaultSong.artworkUrl) || data.artistOfMonth.image;
-
-        requestPlay({
-          type: 'song',
-          id: defaultSong.songId,
-          songId: defaultSong.songId,
-          url: fullUrl,
-          fileUrl: fullUrl,
-          title: defaultSong.title,
-          artist: data.artistOfMonth.name,
-          artistId: data.artistOfMonth.id,
-          artwork: fullArtwork,
-          artworkUrl: fullArtwork,
+  const playArtist = useCallback(
+    async (artist) => {
+      try {
+        const response = await apiCall({
+          method: 'get',
+          url: `/v1/users/${artist.id}/default-song`,
         });
 
-        if (defaultSong.songId && userId) {
-          await apiCall({
-            method: 'post',
-            url: `/v1/media/song/${defaultSong.songId}/play?userId=${userId}`,
-          }).catch(() => {});
+        const defaultSong = response.data;
+
+        if (!defaultSong?.fileUrl) {
+          showToast(`${artist.name} hasn't set a default song yet.`);
+          return;
         }
-      } else {
-        alert('No default song available for this artist');
-      }
-    } catch {
-      alert("Could not load artist's song");
-    }
-  };
 
-  const handlePlayTopSong = async () => {
-    if (!data?.songOfWeek?.fileUrl) {
-      alert('Song not available');
-      return;
-    }
-
-    requestPlay({
-      type: 'song',
-      id: data.songOfWeek.id,
-      songId: data.songOfWeek.id,
-      url: data.songOfWeek.fileUrl,
-      fileUrl: data.songOfWeek.fileUrl,
-      title: data.songOfWeek.title,
-      artist: data.songOfWeek.artist,
-      artistId: data.songOfWeek.artistId,
-      artwork: data.songOfWeek.image,
-      artworkUrl: data.songOfWeek.image,
-    });
-
-    if (data.songOfWeek.id && userId) {
-      await apiCall({
-        method: 'post',
-        url: `/v1/media/song/${data.songOfWeek.id}/play?userId=${userId}`,
-      }).catch(() => {});
-    }
-  };
-
-  const handlePlayArtist = async (artist) => {
-    try {
-      const response = await apiCall({
-        method: 'get',
-        url: `/v1/users/${artist.id}/default-song`,
-      });
-
-      const defaultSong = response.data;
-
-      if (defaultSong?.fileUrl) {
         const fullUrl = buildUrl(defaultSong.fileUrl);
         const fullArtwork = buildUrl(defaultSong.artworkUrl) || artist.thumbnail;
 
@@ -252,57 +276,31 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           artworkUrl: fullArtwork,
         });
 
-        if (defaultSong.songId && userId) {
-          await apiCall({
-            method: 'post',
-            url: `/v1/media/song/${defaultSong.songId}/play?userId=${userId}`,
-          }).catch(() => {});
-        }
-      } else {
-        alert(`${artist.name} has no default song`);
+        pendingTrackRef.current = defaultSong.songId;
+      } catch (err) {
+        console.error('[jurisdiction] default song fetch failed:', err?.message || err);
+        showToast(`Couldn't load ${artist.name}'s song. Try again in a moment.`);
       }
-    } catch {
-      alert("Could not load artist's song");
-    }
-  };
-
-  const handlePlaySong = async (song) => {
-    if (!song.fileUrl) {
-      alert('Song not available');
-      return;
-    }
-
-    requestPlay({
-      type: 'song',
-      id: song.id,
-      songId: song.id,
-      url: song.fileUrl,
-      fileUrl: song.fileUrl,
-      title: song.title,
-      artist: song.artist,
-      artistId: song.artistId,
-      artwork: song.thumbnail,
-      artworkUrl: song.thumbnail,
-    });
-
-    if (song.id && userId) {
-      await apiCall({
-        method: 'post',
-        url: `/v1/media/song/${song.id}/play?userId=${userId}`,
-      }).catch(() => {});
-    }
-  };
+    },
+    [requestPlay, showToast]
+  );
 
   const handleViewArtist = (artistId) => navigate(`/artist/${artistId}`);
   const handleViewSong = (songId) => navigate(`/song/${songId}`);
 
-  // ═══════════════════════════════════════
-  // RENDER — Loading & Error
-  // ═══════════════════════════════════════
+  // Keyboard support for the clickable chart rows (role="button").
+  const keyActivate = (fn) => (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fn();
+    }
+  };
+
+  // ── Render — loading & error ──────────────────────────────────────────────
 
   if (loading) {
     return (
-      <Layout backgroundImage={prominentArtistBg}>
+      <Layout>
         <div className="jp-loading">Loading {jurName}...</div>
       </Layout>
     );
@@ -310,50 +308,57 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
 
   if (!data) {
     return (
-      <Layout backgroundImage={prominentArtistBg}>
+      <Layout>
         <div className="jp-error">{error || `No data available for ${jurName}`}</div>
       </Layout>
     );
   }
 
+  const artistsCharting = data.topArtists.length;
+  const pointsThisWeek = data.topArtists.reduce((sum, a) => sum + (a.score || 0), 0);
+
   return (
-    <Layout backgroundImage={data.artistOfMonth?.image || prominentArtistBg}>
-      <div className="jp jp-v4">
-        {/* ═══════ DASHBOARD HERO ═══════ */}
-        <section className="jp-dashboard-hero">
+    <Layout>
+      <div className="jp jp-v5">
+        {/* ═══════ 1 · HERO — this place, right now ═══════ */}
+        <section
+          className={`jp-hero ${data.songOfWeek ? '' : 'jp-hero--solo'}`}
+          data-name={jurName}
+        >
           <div className="jp-hero-content">
             <div className="jp-pills">
-              <span>Harlem</span>
-              <span>Neighborhood Tier</span>
-              <span className="is-active">Live Charts</span>
-              <span>Invite-Only</span>
+              <span className="jp-pill jp-pill--live">
+                <LiveBars />
+                Live charts
+              </span>
+              <span className="jp-pill">{data.isLeaf ? 'Neighborhood' : 'District'}</span>
             </div>
 
-            <h1 className="jp-dashboard-title">{jurName}</h1>
+            <h1 className="jp-title">{jurName}</h1>
 
-            <p className="jp-dashboard-subtitle">{data.description}</p>
+            <p className="jp-subtitle">{data.description}</p>
 
-            <div className="jp-dashboard-stats">
-              <div className="jp-dashboard-stat">
-                <span>Top Artist</span>
-                <strong>{data.artistOfMonth?.name || 'No artist yet'}</strong>
+            <dl className="jp-stats">
+              <div className="jp-stat">
+                <dt>Top artist</dt>
+                <dd>{data.topArtistName || 'No artist yet'}</dd>
               </div>
 
-              <div className="jp-dashboard-stat">
-                <span>Top Track</span>
-                <strong>{data.songOfWeek?.title || 'No track yet'}</strong>
+              <div className="jp-stat">
+                <dt>Top track</dt>
+                <dd>{data.songOfWeek?.title || 'No track yet'}</dd>
               </div>
 
-              <div className="jp-dashboard-stat">
-                <span>Active Poll</span>
-                <strong className="jp-live-text">Live</strong>
+              <div className="jp-stat">
+                <dt>Artists charting</dt>
+                <dd>{artistsCharting}</dd>
               </div>
 
-              <div className="jp-dashboard-stat">
-                <span>Total Artists</span>
-                <strong>{data.topArtists.length}</strong>
+              <div className="jp-stat">
+                <dt>Points this week</dt>
+                <dd>{pointsThisWeek.toLocaleString()}</dd>
               </div>
-            </div>
+            </dl>
 
             <div className="jp-hero-actions">
               <button
@@ -361,7 +366,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                 className="jp-primary-action"
                 onClick={() => navigate('/voteawards')}
               >
-                Vote Now
+                Vote now
               </button>
 
               <button
@@ -369,235 +374,170 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                 className="jp-secondary-action"
                 onClick={() => navigate('/findpage')}
               >
-                Explore Tracks
+                Explore tracks
               </button>
             </div>
           </div>
 
           {data.songOfWeek && (
             <article
-              className="jp-featured-release"
+              className="jp-featured"
+              role="button"
+              tabIndex={0}
+              aria-label={`Song of the week: ${data.songOfWeek.title}`}
               onClick={() => handleViewSong(data.songOfWeek.id)}
+              onKeyDown={keyActivate(() => handleViewSong(data.songOfWeek.id))}
             >
               <img
                 src={data.songOfWeek.image}
-                alt={data.songOfWeek.title}
+                alt=""
                 className="jp-featured-art"
               />
 
               <div className="jp-featured-overlay">
-                <span className="jp-featured-kicker">Featured Release</span>
+                <span className="jp-featured-kicker">Song of the week</span>
                 <h2>{data.songOfWeek.title}</h2>
                 <p>{data.songOfWeek.artist}</p>
 
                 <button
                   type="button"
                   className="jp-featured-listen"
+                  aria-label={`Play song of the week: ${data.songOfWeek.title}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handlePlayTopSong();
+                    playSong(data.songOfWeek);
                   }}
                 >
                   <PlayIcon size={13} />
-                  Listen Now
+                  Listen now
                 </button>
               </div>
             </article>
           )}
         </section>
 
-        {/* ═══════ TRENDING TRACKS ═══════ */}
-        <section className="jp-section jp-trending-strip">
-          <div className="jp-section-heading">
-            <div>
-              <span className="jp-section-eyebrow">Now Moving</span>
-              <h2>Trending in {jurName}</h2>
-            </div>
+        {/* ═══════ 2 · THIS WEEK'S CHART ═══════ */}
+        <section className="jp-section jp-chart">
+          <header className="jp-section-head">
+            <span className="jp-eyebrow">This week&rsquo;s chart</span>
+            <h2 className="jp-chart-title">
+              Who {jurName} is <em>backing</em>
+            </h2>
+          </header>
 
-            <button
-              type="button"
-              className="jp-text-action"
-              onClick={() => navigate('/findpage')}
-            >
-              Show all
-            </button>
-          </div>
+          <div className="jp-boards">
+            <div className="jp-board">
+              <h3 className="jp-board-title">
+                Top <em>artists</em>
+              </h3>
 
-          <div className="jp-track-row">
-            {data.topSongs.length > 0 ? (
-              data.topSongs.slice(0, 6).map((song) => (
-                <article
-                  key={song.id}
-                  className="jp-track-card"
-                  onClick={() => handleViewSong(song.id)}
-                >
-                  <div className="jp-track-art-wrap">
-                    <img src={song.thumbnail} alt={song.title} />
-                    <span className="jp-rank-badge">#{song.rank}</span>
-
-                    <button
-                      type="button"
-                      className="jp-floating-play"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePlaySong(song);
-                      }}
+              <div className="jp-rows">
+                {data.topArtists.length > 0 ? (
+                  data.topArtists.map((artist) => (
+                    <div
+                      key={artist.id}
+                      className="jp-row"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View ${artist.name}`}
+                      onClick={() => handleViewArtist(artist.id)}
+                      onKeyDown={keyActivate(() => handleViewArtist(artist.id))}
                     >
-                      <PlayIcon size={14} />
-                    </button>
-                  </div>
+                      <span className="jp-row-rank">
+                        {String(artist.rank).padStart(2, '0')}
+                      </span>
 
-                  <h3>{song.title}</h3>
-                  <p>{song.artist}</p>
-                </article>
-              ))
-            ) : (
-              <p className="jp-empty">No songs yet in {jurName}</p>
-            )}
-          </div>
-        </section>
+                      <img src={artist.thumbnail} alt="" />
 
-        {/* ═══════ LEADERBOARDS ═══════ */}
-        <section className="jp-section jp-leaderboard-grid">
-          <div className="jp-board-card">
-            <div className="jp-section-heading compact">
-              <div>
-                <span className="jp-section-eyebrow">Jurisdiction Rank</span>
-                <h2>Top Artists</h2>
+                      <div className="jp-row-main">
+                        <strong>{artist.name}</strong>
+                        <span>{artist.genre || 'Local artist'}</span>
+                      </div>
+
+                      <div className="jp-row-score">
+                        <strong>{artist.score.toLocaleString()}</strong>
+                        <span>pts</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="jp-row-play"
+                        aria-label={`Play ${artist.name}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playArtist(artist);
+                        }}
+                      >
+                        <PlayIcon size={12} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="jp-empty">
+                    No artists charting yet in {jurName}. The first vote starts the chart.
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="jp-ranked-list">
-              {data.topArtists.length > 0 ? (
-                data.topArtists.map((artist) => (
-                  <div
-                    key={artist.id}
-                    className="jp-ranked-row"
-                    onClick={() => handleViewArtist(artist.id)}
-                  >
-                    <span className="jp-ranked-number">
-                      {String(artist.rank).padStart(2, '0')}
-                    </span>
+            <div className="jp-board">
+              <h3 className="jp-board-title">
+                Top <em>tracks</em>
+              </h3>
 
-                    <img src={artist.thumbnail} alt={artist.name} />
-
-                    <div className="jp-ranked-main">
-                      <strong>{artist.name}</strong>
-                      <span>{artist.genre || 'Local artist'}</span>
-                    </div>
-
-                    <div className="jp-ranked-score">
-                      <strong>{artist.plays.toLocaleString()}</strong>
-                      <span>pts</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="jp-row-play"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePlayArtist(artist);
-                      }}
+              <div className="jp-rows">
+                {data.topSongs.length > 0 ? (
+                  data.topSongs.map((song) => (
+                    <div
+                      key={song.id}
+                      className="jp-row"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View ${song.title}`}
+                      onClick={() => handleViewSong(song.id)}
+                      onKeyDown={keyActivate(() => handleViewSong(song.id))}
                     >
-                      <PlayIcon size={12} />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className="jp-empty">No artists yet in {jurName}</p>
-              )}
-            </div>
-          </div>
+                      <span className="jp-row-rank">
+                        {String(song.rank).padStart(2, '0')}
+                      </span>
 
-          <div className="jp-board-card">
-            <div className="jp-section-heading compact">
-              <div>
-                <span className="jp-section-eyebrow">Local Sound</span>
-                <h2>Top Tracks</h2>
+                      <img src={song.thumbnail} alt="" />
+
+                      <div className="jp-row-main">
+                        <strong>{song.title}</strong>
+                        <span>{song.artist}</span>
+                      </div>
+
+                      <div className="jp-row-score">
+                        <strong>{song.score.toLocaleString()}</strong>
+                        <span>pts</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="jp-row-play"
+                        aria-label={`Play ${song.title}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playSong(song);
+                        }}
+                      >
+                        <PlayIcon size={12} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="jp-empty">
+                    No tracks charting yet in {jurName}. Upload one and claim the top spot.
+                  </p>
+                )}
               </div>
-            </div>
-
-            <div className="jp-ranked-list">
-              {data.topSongs.length > 0 ? (
-                data.topSongs.map((song) => (
-                  <div
-                    key={song.id}
-                    className="jp-ranked-row"
-                    onClick={() => handleViewSong(song.id)}
-                  >
-                    <span className="jp-ranked-number">
-                      {String(song.rank).padStart(2, '0')}
-                    </span>
-
-                    <img src={song.thumbnail} alt={song.title} />
-
-                    <div className="jp-ranked-main">
-                      <strong>{song.title}</strong>
-                      <span>{song.artist}</span>
-                    </div>
-
-                    <div className="jp-ranked-score">
-                      <strong>{song.plays.toLocaleString()}</strong>
-                      <span>plays</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="jp-row-play"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePlaySong(song);
-                      }}
-                    >
-                      <PlayIcon size={12} />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className="jp-empty">No tracks yet in {jurName}</p>
-              )}
             </div>
           </div>
         </section>
 
-        {/* ═══════ LOCAL ANTHEM FEATURE ═══════ */}
-        {data.songOfWeek && (
-          <section className="jp-section jp-anthem-feature">
-            <div className="jp-anthem-copy">
-              <span className="jp-section-eyebrow">Local Anthem</span>
-              <h2>The track currently representing {jurName}</h2>
-              <p>
-                This is the leading song in the jurisdiction right now, powered
-                by local activity and community attention.
-              </p>
-
-              <button
-                type="button"
-                className="jp-primary-action"
-                onClick={handlePlayTopSong}
-              >
-                <PlayIcon size={14} />
-                Listen Now
-              </button>
-            </div>
-
-            <div
-              className="jp-anthem-art"
-              onClick={() => handleViewSong(data.songOfWeek.id)}
-            >
-              <img src={data.songOfWeek.image} alt={data.songOfWeek.title} />
-
-              <div>
-                <span>#1 This Week</span>
-                <strong>{data.songOfWeek.title}</strong>
-                <p>{data.songOfWeek.artist}</p>
-              </div>
-            </div>
-          </section>
-        )}
-
-         {/* ═══════ PAST WINNERS TIMELINE ═══════ */}
-        <section className="jp-section jp-winners-section">
+        {/* ═══════ 3 · HALL OF FAME — one timeline, one instance ═══════ */}
+        <section className="jp-section jp-winners">
           <WinnersTimeline
             jurisdiction={jurName}
             variant="embedded"
@@ -607,44 +547,15 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           />
         </section>
 
-        {/* ═══════ ABOUT JURISDICTION ═══════ */}
-        <section className="jp-section jp-about-card">
-          <div>
-            <span className="jp-section-eyebrow">About this jurisdiction</span>
-            <h2>{jurName} Local Music Hub</h2>
-            <p>
-              UNIS jurisdictions organize music by place, giving listeners a way
-              to discover the artists and songs gaining support in a specific
-              neighborhood instead of relying only on global algorithms.
-            </p>
-          </div>
-
-          <div className="jp-about-actions">
-            <button
-              type="button"
-              className="jp-secondary-action"
-              onClick={() => navigate('/voteawards')}
-            >
-              Vote Now
-            </button>
-
-            <button
-              type="button"
-              className="jp-secondary-action"
-              onClick={() => navigate('/findpage')}
-            >
-              Discover More
-            </button>
-          </div>
-        </section>
-
-        {error && <div className="jp-error-banner">{error}</div>}
+        {/* Toast — replaces the old alert() calls */}
+        <div
+          className={`jp-toast ${toast ? 'is-visible' : ''}`}
+          role="status"
+          aria-live="polite"
+        >
+          {toast}
+        </div>
       </div>
-      <WinnersTimeline 
-        jurisdiction={jurName}
-        variant="embedded"
-        initialCount={5}
-      />
     </Layout>
   );
 };
