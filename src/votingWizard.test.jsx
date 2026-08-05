@@ -353,7 +353,7 @@ describe('VotingWizard', () => {
       return user;
     };
 
-    it('shows success screen on 200 OK', async () => {
+    it('shows the full-bleed success takeover on 200 OK', async () => {
       server.use(
         http.post(`${API}/v1/vote/submit`, () => HttpResponse.json({ success: true }))
       );
@@ -361,9 +361,15 @@ describe('VotingWizard', () => {
       const user = await mountAndGoToStep3();
       await submitValidVote(user);
 
+      // Takeover copy replaces the old receipt card.
       await waitFor(() =>
-        expect(screen.getByText(/Vote Recorded/i)).toBeInTheDocument()
+        expect(screen.getByText(/vote locked in/i)).toBeInTheDocument()
       );
+      expect(screen.getByText(/You backed/i)).toBeInTheDocument();
+      // Themed points tag states the award (+25 pts).
+      expect(screen.getByText(/\+25/)).toBeInTheDocument();
+      // Single dismiss pill.
+      expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument();
     });
 
     it('shows "Already Voted" on 409 duplicate', async () => {

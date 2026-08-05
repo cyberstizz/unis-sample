@@ -1,3 +1,15 @@
+// ═══════════════════════════════════════════════════════════════════════
+//  UNIS — Reward Pulse
+//  Transient "+N pts" tag that floats in when a play / like / vote / etc.
+//  credits the user. Redesigned to match the vote-result takeover tag:
+//  a solid, theme-colored chip that states EXACTLY how many points the
+//  user now has (before → after), never an abbreviation.
+//
+//  Theme: the fill is var(--unis-primary) (the user's active theme color),
+//  deepened toward the app background so white text stays legible on the
+//  lighter themes (amber, brown). Points + running score are the focus.
+// ═══════════════════════════════════════════════════════════════════════
+
 .reward-pulse-layer {
   position: fixed;
   inset: 0;
@@ -8,38 +20,38 @@
 .reward-pulse {
   position: fixed;
   left: 50%;
-  bottom: calc(92px + (var(--reward-stack-index, 0) * 58px));
+  bottom: calc(92px + (var(--reward-stack-index, 0) * 62px));
   transform: translateX(-50%);
+
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 11px;
   max-width: min(360px, calc(100vw - 32px));
-  padding: 10px 14px;
-  border-radius: 999px;
+  padding: 11px 15px;
+  border-radius: 14px;
 
+  // Theme-colored tag, deepened toward the app bg for legibility on every
+  // theme (blue, orange, red, green, purple, amber, dianna).
   background:
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--unis-primary-soft, rgba(255, 255, 255, 0.08)) 72%, var(--unis-panel-hi, rgba(255, 255, 255, 0.07))),
-      color-mix(in srgb, var(--unis-panel-2, rgba(255, 255, 255, 0.045)) 82%, transparent)
-    ),
-    color-mix(in srgb, var(--unis-bg, #07090f) 86%, transparent);
+      var(--unis-primary, #163387),
+      color-mix(in srgb, var(--unis-primary, #163387) 74%, #05070d)
+    );
 
   border: 1px solid color-mix(
     in srgb,
-    var(--unis-primary, #ffd166) 32%,
-    var(--unis-border-hi, rgba(255, 255, 255, 0.14))
+    var(--unis-primary, #163387) 40%,
+    rgba(255, 255, 255, 0.22)
   );
 
   box-shadow:
-    0 16px 44px rgba(0, 0, 0, 0.34),
-    0 0 30px var(--unis-primary-glow, rgba(255, 209, 102, 0.24)),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 16px 40px rgba(0, 0, 0, 0.42),
+    0 0 26px var(--unis-primary-glow, rgba(22, 51, 135, 0.5)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 
-  backdrop-filter: blur(18px) saturate(1.18);
-  -webkit-backdrop-filter: blur(18px) saturate(1.18);
-
-  color: var(--reward-pulse-color, var(--unis-primary-2, #ffd166));
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.32);
   user-select: none;
 }
 
@@ -48,93 +60,68 @@
   height: 7px;
   flex: 0 0 auto;
   border-radius: 999px;
-  background: currentColor;
-  box-shadow: 0 0 14px currentColor;
-  opacity: 0.92;
+  background: #ffffff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.85);
+  opacity: 0.95;
 }
 
 .reward-pulse__content {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
 
 .reward-pulse__mainline {
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 9px;
   min-width: 0;
   white-space: nowrap;
 }
 
 .reward-pulse__points {
-  font-size: 0.94rem;
-  font-weight: 850;
-  letter-spacing: 0.02em;
+  font-size: 1.06rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
   line-height: 1;
-  color: currentColor;
+  color: #ffffff;
+}
+
+.reward-pulse__unit {
+  margin-left: 3px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  opacity: 0.82;
 }
 
 .reward-pulse__label {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 0.78rem;
-  font-weight: 650;
+  font-size: 0.77rem;
+  font-weight: 600;
   line-height: 1;
-  color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  color: rgba(255, 255, 255, 0.86);
 }
 
 .reward-pulse__score {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: 0.02em;
-  color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+  letter-spacing: 0.015em;
+  color: rgba(255, 255, 255, 0.78);
   white-space: nowrap;
 }
 
 .reward-pulse__score strong {
-  color: var(--unis-text, #ffffff);
+  color: #ffffff;
   font-weight: 850;
 }
 
-.reward-pulse--default,
-.reward-pulse--support {
-  --reward-pulse-color: var(--unis-primary-2, #ffd166);
-}
-
-.reward-pulse--play {
-  --reward-pulse-color: color-mix(
-    in srgb,
-    var(--unis-primary-2, #8fffc1) 74%,
-    #8fffc1
-  );
-}
-
-.reward-pulse--like {
-  --reward-pulse-color: color-mix(
-    in srgb,
-    var(--unis-primary-2, #ff7aa8) 62%,
-    #ff7aa8
-  );
-}
-
-.reward-pulse--vote {
-  --reward-pulse-color: color-mix(
-    in srgb,
-    var(--unis-primary-2, #8fd3ff) 72%,
-    #8fd3ff
-  );
-}
-
-.reward-pulse--referral {
-  --reward-pulse-color: color-mix(
-    in srgb,
-    var(--unis-primary-2, #bda8ff) 68%,
-    #bda8ff
-  );
-}
-
+// Type is no longer a color switch (the tag always wears the theme color) —
+// the label copy carries the context ("Play counted", "Vote counted", …).
+// Anchors still control where the tag appears.
 .reward-pulse--center {
   top: 50%;
   bottom: auto;
@@ -142,27 +129,27 @@
 }
 
 .reward-pulse--player {
-  bottom: calc(92px + (var(--reward-stack-index, 0) * 58px));
+  bottom: calc(92px + (var(--reward-stack-index, 0) * 62px));
 }
 
 .reward-pulse--header {
-  top: calc(76px + (var(--reward-stack-index, 0) * 58px));
+  top: calc(76px + (var(--reward-stack-index, 0) * 62px));
   bottom: auto;
 }
 
 @media (max-width: 700px) {
   .reward-pulse {
-    bottom: calc(84px + (var(--reward-stack-index, 0) * 56px));
+    bottom: calc(84px + (var(--reward-stack-index, 0) * 60px));
     max-width: min(320px, calc(100vw - 24px));
-    padding: 9px 12px;
+    padding: 10px 13px;
   }
 
   .reward-pulse--header {
-    top: calc(68px + (var(--reward-stack-index, 0) * 56px));
+    top: calc(68px + (var(--reward-stack-index, 0) * 60px));
   }
 
   .reward-pulse__points {
-    font-size: 0.88rem;
+    font-size: 1rem;
   }
 
   .reward-pulse__label {
@@ -170,7 +157,7 @@
   }
 
   .reward-pulse__score {
-    font-size: 0.64rem;
+    font-size: 0.66rem;
   }
 }
 

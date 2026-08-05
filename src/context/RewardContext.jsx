@@ -15,18 +15,13 @@ const MAX_REWARDS_ON_SCREEN = 4;
 const createRewardId = () =>
   `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-const formatScore = (score) => {
-  const value = Number(score) || 0;
-
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
-  }
-
-  if (value >= 1_000) {
-    return `${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}K`;
-  }
-
-  return value.toLocaleString();
+// EXACT score display — never abbreviate. The old K/M rounding made a real
+// +25 move look frozen (7,325 → 7,350 both rendered "7.3K"). Now every point
+// is visible, thousands grouped with commas.
+export const formatScore = (score) => {
+  const value = Number(score);
+  if (!Number.isFinite(value)) return '0';
+  return Math.round(value).toLocaleString('en-US');
 };
 
 export const useReward = () => {
@@ -183,7 +178,10 @@ export const RewardProvider = ({ children }) => {
 
               <span className="reward-pulse__content">
                 <span className="reward-pulse__mainline">
-                  <span className="reward-pulse__points">+{reward.points}</span>
+                  <span className="reward-pulse__points">
+                    +{reward.points}
+                    <span className="reward-pulse__unit">pts</span>
+                  </span>
 
                   {reward.label && (
                     <span className="reward-pulse__label">{reward.label}</span>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { apiCall } from './components/axiosInstance';
-import { useReward } from './context/RewardContext';
+import { useReward, formatScore } from './context/RewardContext';
 import { useAuth } from './context/AuthContext';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 import { buildUrl } from './utils/buildUrl';
@@ -133,6 +133,24 @@ const iconDraw = {
 
 // --- COMPONENT ------------------------------------------------------------
 
+// Points a single vote awards the user. Kept as a named constant so the
+// takeover, the score math, and any future backend echo stay in one place.
+// NOTE: the points doc lists user votes at +2 — reconcile with backend.
+const VOTE_POINTS = 25;
+
+// Interval → the noun the takeover headline reads naturally with
+// ("for the week", "for the day"). Falls back to the raw interval.
+const INTERVAL_NOUN = {
+  daily: 'day',
+  weekly: 'week',
+  monthly: 'month',
+  quarterly: 'quarter',
+  midterm: 'half-year',
+  'semi-annual': 'half-year',
+  yearly: 'year',
+  annual: 'year',
+};
+
 const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }) => {
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
@@ -141,7 +159,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     selectedType: 'artist',
     selectedInterval: 'daily',
   }); // ★ ironclad: jurisdiction moved to selectedJurisdictionId (real UUID)
-  const { showReward } = useReward();
+  const { setScoreTotal, displayedScore } = useReward();
   const { theme, user } = useAuth();
   const activeLogo = LOGO_MAP[theme] || logoblue;
 
@@ -533,13 +551,30 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
       await apiCall({ method: 'post', url: '/v1/vote/submit', data: voteData });
 
-      setVoteResult({ status: 'success', message: 'Vote Recorded' });
+      // Capture the EXACT running score for the takeover (before → after).
+      // No floating reward pill on the vote path anymore — the takeover owns
+      // the "+N pts" moment, so the two no longer stack/overlap.
+      const rawBefore =
+        displayedScore ??
+        user?.score ??
+        user?.totalScore ??
+        user?.points ??
+        null;
 
-      showReward({
-        points: 25,
-        label: 'Vote counted',
-        type: 'vote',
-        anchor: 'center',
+      let scoreBefore = null;
+      let scoreAfter = null;
+      if (rawBefore != null && Number.isFinite(Number(rawBefore))) {
+        scoreBefore = Number(rawBefore);
+        scoreAfter = scoreBefore + VOTE_POINTS;
+        setScoreTotal(scoreAfter); // keep the app-wide running total in sync
+      }
+
+      setVoteResult({
+        status: 'success',
+        message: 'Vote Recorded',
+        points: VOTE_POINTS,
+        scoreBefore,
+        scoreAfter,
       });
     } catch (err) {
       const resp = err.response;
@@ -733,6 +768,100 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
           )}
         </div>
       </div>
+    );
+  };
+
+  // --- SUCCESS TAKEOVER ---------------------------------------------------
+  // Full-bleed result: the nominee's artwork consumes the whole modal, a
+  // themed points tag states the exact score gained (before → after), and a
+  // single pill dismisses. Replaces the old receipt card + floating pill.
+  const renderSuccessTakeover = () => {
+    const { points = VOTE_POINTS, scoreBefore, scoreAfter } = voteResult;
+
+    const typeWord = formatText(currentFilters.selectedType);          // "Song"
+    const intervalKey = (currentFilters.selectedInterval || '').toLowerCase();
+    const intervalNoun = INTERVAL_NOUN[intervalKey] || formatText(currentFilters.selectedInterval);
+    const category = `${typeWord} of the ${intervalNoun}`;             // "Song of the week"
+    const hasScore =
+      typeof scoreBefore === 'number' && typeof scoreAfter === 'number';
+
+    return (
+      <motion.div
+        className="vw-win"
+        initial={{ opacity: 0, scale: 0.98, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {showArtwork && (
+          <div
+            className="vw-win__bg"
+            style={{ backgroundImage: `url("${artworkUrl}")` }}
+            aria-hidden="true"
+          />
+        )}
+        <div className="vw-win__scrim" aria-hidden="true" />
+        <div className="vw-win__accentline" aria-hidden="true" />
+
+        <div className="vw-win__frame">
+          <header className="vw-win__top">
+            <img src={activeLogo} alt="UNIS" className="vw-win__logo" />
+            <button className="vw-win__close" onClick={onClose} aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+          </header>
+
+          <div className="vw-win__badgerow">
+            <div className="vw-win__badge">
+              {category}
+              <small>{selectedJurisdictionName}</small>
+            </div>
+            <div className="vw-win__tagwrap">
+              <div className="vw-win__tag">
+                <b>+{points}<sup>pts</sup></b>
+                <span>earned</span>
+              </div>
+              {hasScore && (
+                <div className="vw-win__score">
+                  <s>{formatScore(scoreBefore)}</s> &rarr;{' '}
+                  <strong>{formatScore(scoreAfter)}</strong>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="vw-win__spacer" />
+
+          {showArtwork && (
+            <img
+              src={artworkUrl}
+              alt={selectedNominee.name}
+              className="vw-win__cover"
+            />
+          )}
+
+          <p className="vw-win__eyebrow">Vote locked in</p>
+          <h2 className="vw-win__head">
+            You backed <em>{selectedNominee.name}</em> for the {intervalNoun}
+          </h2>
+          <p className="vw-win__body">
+            Your vote counted toward {category} in {selectedJurisdictionName}. One
+            vote per interval &mdash; results post at 12:00&nbsp;AM ET when the{' '}
+            {intervalNoun} closes.
+          </p>
+
+          <button
+            className="vw-btn vw-win__cta"
+            onClick={() => onVoteSuccess(selectedNominee.id)}
+          >
+            Done
+          </button>
+          <p className="vw-win__sub">
+            +{points} points added to your score. Come back tomorrow to vote again.
+          </p>
+        </div>
+      </motion.div>
     );
   };
 
@@ -957,6 +1086,10 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
             exit="exit"
             onClick={(e) => e.stopPropagation()}
           >
+            {voteResult.status === 'success' ? (
+              renderSuccessTakeover()
+            ) : (
+              <>
             {/* Ambient artwork wash — blurred copy of the cover/photo */}
             {showArtwork && (
               <div
@@ -1062,6 +1195,8 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
                 </footer>
               )}
             </div>
+              </>
+            )}
           </motion.div>
         </motion.div>
       )}

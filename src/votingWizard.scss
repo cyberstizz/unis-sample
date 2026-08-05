@@ -835,3 +835,285 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
     grid-template-columns: 1fr 1fr;
   }
 }
+// =========================================================================
+// SUCCESS TAKEOVER (.vw-win)
+// Full-bleed vote result: the nominee's artwork fills the modal, a themed
+// points tag states the EXACT score gained, one pill dismisses. Replaces the
+// old receipt card + the floating center reward pill (no more overlap).
+// =========================================================================
+.vw-win {
+  position: relative;
+  min-height: min(560px, 82vh);
+  display: flex;
+  flex-direction: column;
+  color: $vw-text;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.vw-win__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transform: scale(1.06);
+  filter: saturate(1.15);
+}
+
+.vw-win__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(120% 78% at 62% 12%, rgba($vw-art, 0.28), transparent 58%),
+    linear-gradient(
+      180deg,
+      rgba(7, 9, 15, 0.18) 0%,
+      rgba(7, 9, 15, 0.1) 32%,
+      rgba(7, 9, 15, 0.62) 58%,
+      rgba(7, 9, 15, 0.92) 82%,
+      #07090f 100%
+    );
+}
+
+.vw-win__accentline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 46%;
+  height: 2px;
+  z-index: 1;
+  background: linear-gradient(90deg, transparent, rgba($vw-art, 0.95) 72%, #eaf3ff);
+
+  &::after {
+    content: "";
+    position: absolute;
+    right: 24px;
+    top: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #eaf3ff;
+    box-shadow: 0 0 12px rgba($vw-art, 0.9);
+  }
+}
+
+.vw-win__frame {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 22px 26px;
+}
+
+.vw-win__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vw-win__logo {
+  height: 22px;
+  width: auto;
+  opacity: 0.96;
+}
+
+.vw-win__close {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.24); }
+}
+
+.vw-win__badgerow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.vw-win__badge {
+  font-family: $vw-body;
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  border: 1.5px solid color-mix(in srgb, rgb($vw-art) 52%, #ffffff);
+  border-radius: 12px;
+  padding: 8px 14px;
+  backdrop-filter: blur(4px);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  small {
+    display: block;
+    margin-top: 3px;
+    font-weight: 600;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.72);
+  }
+}
+
+.vw-win__tagwrap { text-align: right; flex: 0 0 auto; }
+
+// The themed points tag — the moment the user loves. Theme-primary fill,
+// deepened toward the app bg so white reads on every theme; exact number.
+.vw-win__tag {
+  display: inline-block;
+  min-width: 76px;
+  padding: 9px 13px 8px;
+  border-radius: 12px;
+  text-align: right;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  background:
+    linear-gradient(
+      135deg,
+      var(--unis-primary, #163387),
+      color-mix(in srgb, var(--unis-primary, #163387) 72%, #05070d)
+    );
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.36),
+    0 0 22px var(--unis-primary-glow, rgba(22, 51, 135, 0.5)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+
+  b {
+    display: block;
+    font-family: $vw-display;
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+
+    sup {
+      font-size: 12px;
+      font-weight: 700;
+      vertical-align: super;
+      margin-left: 1px;
+    }
+  }
+
+  span {
+    display: block;
+    margin-top: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.78;
+  }
+}
+
+.vw-win__score {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.66);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+
+  s { color: rgba(255, 255, 255, 0.44); }
+  strong { color: #fff; font-weight: 850; }
+}
+
+.vw-win__spacer { flex: 1 1 auto; min-height: 12px; }
+
+.vw-win__cover {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 15px;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.92),
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    0 0 26px rgba($vw-art, 0.5);
+}
+
+.vw-win__eyebrow {
+  margin: 0 0 8px;
+  font-family: $vw-body;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, rgb($vw-art) 36%, #ffffff);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.vw-win__head {
+  margin: 0;
+  font-family: $vw-display;
+  font-size: 30px;
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+
+  em {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    color: color-mix(in srgb, rgb($vw-art) 30%, #ffffff);
+  }
+}
+
+.vw-win__body {
+  margin: 14px 0 0;
+  max-width: 300px;
+  font-family: $vw-body;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.76);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+.vw-win__cta.vw-btn {
+  width: 100%;
+  height: 54px;
+  margin-top: 20px;
+  border: none;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0b1330;
+  font-family: $vw-display;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+
+  &:hover { transform: translateY(-1px); box-shadow: 0 14px 36px rgba(0, 0, 0, 0.42); }
+  &:active { transform: translateY(0) scale(0.99); }
+}
+
+.vw-win__sub {
+  margin: 12px 2px 0;
+  text-align: center;
+  font-family: $vw-body;
+  font-size: 12.5px;
+  line-height: 1.45;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vw-win__cta.vw-btn { transition: none; }
+}
