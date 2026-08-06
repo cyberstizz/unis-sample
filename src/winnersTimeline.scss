@@ -3,27 +3,32 @@
 // Used by both the embedded widget (jurisdiction page section)
 // and the full-page archive at /jurisdiction/:jur/winners.
 // Aesthetic: matches jurisdictionPage.scss — dark premium dashboard,
-// blue accent, DM Sans body + serif italic flourishes.
+// accent from the active theme, Inter body + Instrument Serif italic flourishes.
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900&family=Playfair+Display:ital,wght@1,500;1,600&display=swap');
+// Fonts come from unis-design-tokens.scss (Inter + Instrument Serif) —
+// no local @import, so the timeline matches Discover / the jurisdiction page.
 
 // ── Tokens ──────────────────────────────────────
-$wt-bg-base: #07080b;
-$wt-bg-panel: rgba(16, 19, 29, 0.78);
-$wt-bg-soft: rgba(255, 255, 255, 0.045);
-$wt-bg-hover: rgba(255, 255, 255, 0.08);
+// Theme contract: every colour resolves from the token layer
+// (theme.scss + unis-design-tokens.scss). The old literal blues pinned this
+// component to the blue theme — under orange/green/purple the timeline stayed
+// blue while the rest of the page re-tinted.
+$wt-bg-base: var(--unis-bg);
+$wt-bg-panel: var(--unis-panel-2);
+$wt-bg-soft: var(--unis-panel-2);
+$wt-bg-hover: var(--unis-panel-hi);
 
-$wt-border-soft: rgba(255, 255, 255, 0.075);
-$wt-border-medium: rgba(255, 255, 255, 0.12);
+$wt-border-soft: var(--unis-border);
+$wt-border-medium: var(--unis-border-hi);
 
-$wt-blue-solid: #1b63d8;
-$wt-blue-bright: #3f8cff;
-$wt-blue-glow: rgba(63, 140, 255, 0.45);
+$wt-blue-solid: var(--unis-primary);
+$wt-blue-bright: var(--unis-primary-2, var(--unis-primary));
+$wt-blue-glow: var(--unis-primary-glow);
 
-$wt-text-primary: #f5f7fb;
-$wt-text-secondary: rgba(245, 247, 251, 0.68);
-$wt-text-muted: rgba(245, 247, 251, 0.45);
-$wt-text-faint: rgba(245, 247, 251, 0.28);
+$wt-text-primary: var(--unis-text);
+$wt-text-secondary: var(--unis-text-2);
+$wt-text-muted: var(--unis-text-3);
+$wt-text-faint: var(--unis-text-4);
 
 $wt-radius-sm: 8px;
 $wt-radius-md: 12px;
@@ -31,7 +36,7 @@ $wt-radius-lg: 18px;
 $wt-radius-xl: 24px;
 
 $wt-shadow-card: 0 18px 52px rgba(0, 0, 0, 0.32);
-$wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
+$wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
 
 // ── Animations ──────────────────────────────────
 @keyframes wt-fadeUp {
@@ -56,10 +61,10 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
 
 @keyframes wt-pulseDot {
   0%, 100% {
-    box-shadow: 0 0 0 4px $wt-bg-base, 0 0 16px rgba(63, 140, 255, 0.32);
+    box-shadow: 0 0 0 4px $wt-bg-base, 0 0 16px var(--unis-primary-glow);
   }
   50% {
-    box-shadow: 0 0 0 4px $wt-bg-base, 0 0 24px rgba(63, 140, 255, 0.55);
+    box-shadow: 0 0 0 4px $wt-bg-base, 0 0 24px var(--unis-primary-glow);
   }
 }
 
@@ -70,7 +75,7 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
 .wt {
   width: 100%;
   color: $wt-text-primary;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--unis-font-sans);
   animation: wt-fadeIn 0.4s ease;
 
   *,
@@ -114,7 +119,7 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
     height: 6px;
     border-radius: 999px;
     background: $wt-blue-bright;
-    box-shadow: 0 0 16px rgba(63, 140, 255, 0.65);
+    box-shadow: 0 0 16px var(--unis-primary-glow);
   }
 }
 
@@ -127,9 +132,9 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
   line-height: 1.02;
 
   em {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--unis-font-italic);
     font-style: italic;
-    font-weight: 500;
+    font-weight: 400;
     color: $wt-blue-bright;
     letter-spacing: -0.02em;
   }
@@ -166,7 +171,7 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
   border-radius: $wt-radius-lg;
   border: 1px solid $wt-border-soft;
   background:
-    radial-gradient(circle at 88% 0%, rgba(63, 140, 255, 0.07), transparent 50%),
+    radial-gradient(circle at 88% 0%, var(--unis-glow-2), transparent 50%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
 }
 
@@ -219,8 +224,8 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
     background:
       radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.2), transparent 40%),
       linear-gradient(135deg, $wt-blue-bright 0%, $wt-blue-solid 100%);
-    border-color: rgba(63, 140, 255, 0.6);
-    box-shadow: 0 6px 18px rgba(27, 99, 216, 0.28);
+    border-color: var(--unis-primary-border);
+    box-shadow: 0 6px 18px var(--unis-primary-glow);
   }
 }
 
@@ -292,7 +297,7 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
   border: 2.5px solid $wt-blue-bright;
   box-shadow:
     0 0 0 4px $wt-bg-base,
-    0 0 18px rgba(63, 140, 255, 0.45);
+    0 0 18px var(--unis-primary-glow);
   z-index: 1;
 }
 
@@ -320,6 +325,8 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
 // ═════════════════════════════════════════════════
 
 .wt-card {
+  position: relative;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 68px minmax(0, 1fr);
   gap: 14px;
@@ -328,8 +335,9 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
   border-radius: $wt-radius-lg;
   border: 1px solid $wt-border-soft;
   background:
-    radial-gradient(circle at 95% 0%, rgba(63, 140, 255, 0.06), transparent 42%),
+    radial-gradient(circle at 95% 0%, var(--unis-glow-2), transparent 42%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.018));
+  backdrop-filter: blur(18px);
   cursor: pointer;
   transition:
     transform 0.2s ease,
@@ -337,9 +345,19 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
     box-shadow 0.2s ease,
     background 0.2s ease;
 
+  // Card children sit above the ambient glow layer.
+  > * { position: relative; z-index: 1; }
+
+  &:focus-visible {
+    outline: 2px solid var(--unis-primary-2, var(--unis-primary));
+    outline-offset: 2px;
+  }
+
+  &:hover .wt-card-glow { opacity: 0.42; }
+
   &:hover {
     transform: translateY(-2px);
-    border-color: rgba(63, 140, 255, 0.35);
+    border-color: var(--unis-primary-border);
     box-shadow: $wt-shadow-card;
 
     .wt-card-play {
@@ -352,6 +370,21 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
       filter: brightness(0.85) saturate(1.08);
     }
   }
+}
+
+// ── Ambient glow — the winner's own artwork, blurred behind the card.
+// Same treatment as the Milestones winner plate (.ms-plate-glow), so a
+// gold-toned cover warms its card and a cool cover cools it.
+.wt-card-glow {
+  position: absolute;
+  inset: -45%;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(64px) saturate(1.5);
+  opacity: 0.3;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
 }
 
 .wt-card-art-wrap {
@@ -481,12 +514,13 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
     border: 1px solid rgba(255, 255, 255, 0.08);
     background:
       radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.18), transparent 34%),
-      linear-gradient(135deg, $wt-blue-bright 0%, $wt-blue-solid 45%, #123b96 100%);
+      linear-gradient(135deg, $wt-blue-bright 0%, $wt-blue-solid 45%,
+        color-mix(in srgb, var(--unis-primary), black 34%) 100%);
     box-shadow: $wt-shadow-blue;
 
     &:hover {
       transform: translateY(-1px);
-      box-shadow: 0 16px 42px rgba(27, 99, 216, 0.36);
+      box-shadow: 0 16px 42px var(--unis-primary-glow);
     }
   }
 }
@@ -553,18 +587,38 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
   grid-area: ad;
   position: sticky;
   top: 24px;
+  overflow: hidden;
   min-height: 460px;
   padding: 20px;
   border-radius: $wt-radius-lg;
   border: 1px dashed $wt-border-medium;
-  background: rgba(255, 255, 255, 0.022);
+  background:
+    radial-gradient(circle at 90% 0%, var(--unis-glow-2), transparent 46%),
+    rgba(255, 255, 255, 0.022);
+  backdrop-filter: blur(18px);
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
 }
 
+// Ambient theme wash — matches the winner cards and the Milestones plate, so
+// an empty ad slot still reads as part of the page rather than a hole in it.
+.wt-ad-glow {
+  position: absolute;
+  inset: -40%;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 50% 35%,
+      color-mix(in srgb, var(--unis-primary), transparent 62%), transparent 62%);
+  filter: blur(58px) saturate(1.4);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .wt-ad-inner {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -711,4 +765,84 @@ $wt-shadow-blue: 0 12px 32px rgba(27, 99, 216, 0.28);
     gap: 4px;
     text-align: center;
   }
+}
+
+// ═════════════════════════════════════════════════
+// LOADING / ERROR STATES
+// ═════════════════════════════════════════════════
+
+@keyframes wt-shimmer {
+  0%   { background-position: -420px 0; }
+  100% { background-position: 420px 0; }
+}
+
+.wt-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-left: 30px;
+}
+
+.wt-skeleton-row {
+  height: 96px;
+  border-radius: $wt-radius-lg;
+  border: 1px solid $wt-border-soft;
+  background:
+    linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.03) 20%,
+      rgba(255, 255, 255, 0.07) 42%,
+      rgba(255, 255, 255, 0.03) 64%
+    );
+  background-size: 420px 100%;
+  animation: wt-shimmer 1.35s linear infinite;
+}
+
+.wt-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 24px;
+  border-radius: $wt-radius-lg;
+  border: 1px solid $wt-border-soft;
+  background: $wt-bg-soft;
+
+  p {
+    margin: 0;
+    color: $wt-text-secondary;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+}
+
+.wt-retry {
+  min-height: 38px;
+  padding: 0 20px;
+  border-radius: 10px;
+  border: 1px solid $wt-border-medium;
+  background: $wt-bg-soft;
+  color: $wt-text-primary;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+
+  &:hover {
+    background: $wt-bg-hover;
+    border-color: var(--unis-primary-border);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--unis-primary-2, var(--unis-primary));
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wt-skeleton-row { animation: none; }
+  .wt-card,
+  .wt-card-glow { transition: none; }
 }

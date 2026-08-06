@@ -207,10 +207,20 @@
   padding: 42px;
   border-radius: 26px;
   border: 1px solid var(--unis-border-hi);
+  // ── The gradient — built entirely from --unis-primary, so it is the SAME
+  // effect in every palette rather than a hardcoded blue. Two theme-tinted
+  // pools of light (top-right hot, bottom-left cool) over a near-black base
+  // that itself carries a trace of the theme colour.
   background:
-    radial-gradient(circle at 80% 12%, var(--unis-glow-1), transparent 36%),
-    radial-gradient(circle at 6% 6%, rgba(255, 255, 255, 0.07), transparent 30%),
-    linear-gradient(150deg, var(--jp-surface-2) 0%, var(--jp-surface) 55%, var(--unis-bg) 100%);
+    radial-gradient(ellipse 74% 62% at 82% 8%,
+      color-mix(in srgb, var(--unis-primary), transparent 55%), transparent 62%),
+    radial-gradient(ellipse 66% 74% at 4% 96%,
+      color-mix(in srgb, var(--unis-primary), transparent 74%), transparent 58%),
+    radial-gradient(circle at 8% 4%, rgba(255, 255, 255, 0.07), transparent 30%),
+    linear-gradient(152deg,
+      var(--jp-surface-2) 0%,
+      var(--jp-surface) 52%,
+      var(--unis-bg) 100%);
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.35);
   animation: jp-fade-up 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 
@@ -218,9 +228,10 @@
   &::after {
     content: attr(data-name);
     position: absolute;
+    z-index: 0;
     right: -1%;
     bottom: -4%;
-    color: rgba(255, 255, 255, 0.028);
+    color: rgba(255, 255, 255, 0.042);
     font-size: clamp(90px, 12vw, 150px);
     font-weight: 900;
     letter-spacing: -0.07em;
@@ -234,6 +245,61 @@
   &--solo {
     grid-template-columns: 1fr;
   }
+}
+
+// ── Hero backdrop stack ─────────────────────────────────────────────────────
+// The photo is texture, not a picture: desaturated, softened, and mixed into
+// the gradient with `soft-light` so it modulates the theme colour instead of
+// covering it. Legible only if you look for it — exactly the brief.
+//
+// Swapping in a real jurisdiction photo needs no CSS change; only the source
+// in HERO_IMAGES (or the backend symbolUrl) moves.
+.jp-hero-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center 42%;
+  // Grayscale first so the photo contributes LUMINANCE only — its own colour
+  // never fights the theme. Contrast keeps the architecture readable at low
+  // opacity; the slight blur stops any detail reading as a photograph.
+  filter: grayscale(1) contrast(1.22) brightness(0.92) blur(1.5px);
+  mix-blend-mode: soft-light;
+  opacity: 0.5;
+  // Fade the photo away from the copy: strongest top-right (behind the
+  // featured card), gone bottom-left (behind the title and stats).
+  -webkit-mask-image: radial-gradient(ellipse 92% 96% at 76% 18%,
+    rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.55) 42%, transparent 82%);
+  mask-image: radial-gradient(ellipse 92% 96% at 76% 18%,
+    rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.55) 42%, transparent 82%);
+  pointer-events: none;
+}
+
+// Pushes any residual neutral grey toward the active theme's hue, so the
+// blended photo belongs to the palette rather than sitting beside it.
+.jp-hero-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(150deg,
+      color-mix(in srgb, var(--unis-primary), transparent 62%) 0%,
+      color-mix(in srgb, var(--unis-primary), transparent 88%) 58%,
+      transparent 100%);
+  mix-blend-mode: color;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+// Contrast floor for the copy and the ghosted jurisdiction name.
+.jp-hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(100deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.16) 46%, transparent 72%),
+    linear-gradient(to top, rgba(0, 0, 0, 0.42) 0%, transparent 46%);
+  pointer-events: none;
 }
 
 .jp-hero-content {
@@ -728,6 +794,16 @@
     border-radius: 22px;
 
     &::after { display: none; }
+  }
+
+  // On a narrow hero the photo sits directly behind the copy — pull it back
+  // and centre the mask so contrast never depends on the image.
+  .jp-hero-photo {
+    opacity: 0.34;
+    -webkit-mask-image: radial-gradient(ellipse 120% 78% at 62% 12%,
+      rgba(0, 0, 0, 0.9) 0%, transparent 78%);
+    mask-image: radial-gradient(ellipse 120% 78% at 62% 12%,
+      rgba(0, 0, 0, 0.9) 0%, transparent 78%);
   }
 
   .jp-title {

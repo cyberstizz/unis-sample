@@ -1,5 +1,40 @@
-import React, { useState, useMemo } from 'react';
+// ═══════════════════════════════════════════════════════════════════════════
+//  UNIS — Winners Timeline (v2 · live data)
+//
+//  Vertical timeline of past poll winners for a jurisdiction. Used by:
+//    • the embedded widget on the jurisdiction page (variant="embedded")
+//    • the full archive at /jurisdiction/:jur/winners (variant="full")
+//
+//  DATA — wired to the real backend (mock generator removed):
+//    GET /v1/awards/past?type={song|artist}&startDate=&endDate=
+//        &jurisdictionId=&intervalId=
+//
+//  The endpoint returns Award rows ordered award_date DESC, votes_count DESC,
+//  with the song (incl. artist) or user attached. genreId is deliberately
+//  omitted, so each period can return one winner PER GENRE — we group by
+//  award_date and keep the highest-voted row, i.e. the period's overall
+//  champion. (A per-genre filter is an easy later extension: add genre pills
+//  and pass genreId.)
+//
+//  Fetching strategy: award rows are tiny (one per period), so one request
+//  covers a full archive window per interval (FETCH_PERIODS below) and
+//  "load more" pages client-side. When history outgrows this, swap in the
+//  cursor-based /v1/jurisdictions/:id/awards/history endpoint.
+// ═══════════════════════════════════════════════════════════════════════════
+
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+  useRef,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PlayerContext } from './context/playercontext';
+import { useAuth } from './context/AuthContext';
+import { apiCall } from './components/axiosInstance';
+import { buildUrl } from './utils/buildUrl';
+import { INTERVAL_IDS } from './utils/idMappings';
 import './winnersTimeline.scss';
 import songArtworkOne from './assets/songartworkfour.jpeg';
 import songArtworkTwo from './assets/songartworktwo.jpeg';
@@ -68,35 +103,15 @@ const CATEGORIES = [
   { value: 'artist', label: 'Artist' },
 ];
 
-// ═══════════════════════════════════════════════════════════
-// MOCK DATA — swap this entire block out when the backend
-// endpoint /v1/jurisdictions/:id/awards/history is ready.
-// Replace generateMockWinners() with an apiCall + cursor.
-// ═══════════════════════════════════════════════════════════
-
-const ARTIST_POOL = [
-  { name: 'stizz', photo: songArtworkOne },
-  { name: 'Lyricalqueen', photo: songArtworkTwo },
-  { name: 'rapking', photo: songArtworkOne },
-  { name: 'hiphop_artist1', photo: songArtworkTwo },
-  { name: 'Maverick', photo: songArtworkOne },
-  { name: 'JFlow', photo: songArtworkTwo },
-  { name: 'NinaSounds', photo: songArtworkOne },
-  { name: 'OctaveZero', photo: songArtworkTwo },
-];
-
-const SONG_POOL = [
-  { title: 'no more heroes', artist: 'stizz', artwork: songArtworkOne },
-  { title: 'Big booty sells', artist: 'Lyricalqueen', artwork: songArtworkTwo },
-  { title: 'The next one', artist: 'Lyricalqueen', artwork: songArtworkOne },
-  { title: 'borealis', artist: 'rapking', artwork: songArtworkTwo },
-  { title: 'Cold Streets', artist: 'rapking', artwork: songArtworkOne },
-  { title: 'Streetlight Hymn', artist: 'Maverick', artwork: songArtworkTwo },
-  { title: 'Lights Out', artist: 'JFlow', artwork: songArtworkOne },
-  { title: 'Sundown', artist: 'NinaSounds', artwork: songArtworkTwo },
-  { title: 'Perfect Storm', artist: 'OctaveZero', artwork: songArtworkOne },
-  { title: 'Through the Wall', artist: 'stizz', artwork: songArtworkTwo },
-];
+// UI interval value → INTERVAL_IDS key (idMappings.js)
+const INTERVAL_KEY = {
+  day: 'daily',
+  week: 'weekly',
+  month: 'monthly',
+  quarter: 'quarterly',
+  midterm: 'midterm',
+  year: 'annual',
+};
 
 const INTERVAL_STEP_DAYS = {
   day: 1,
@@ -107,14 +122,21 @@ const INTERVAL_STEP_DAYS = {
   year: 365,
 };
 
-// Anchor "today" for the mock so labels are stable across renders
-const MOCK_TODAY = new Date('2026-03-15');
+// How many periods back a single fetch covers, per interval.
+// Deep enough for years of history at launch scale.
+const FETCH_PERIODS = {
+  day: 45,
+  week: 52,
+  month: 24,
+  quarter: 12,
+  midterm: 8,
+  year: 6,
+};
 
-const formatPeriodLabel = (interval, periodsBack) => {
-  const stepDays = INTERVAL_STEP_DAYS[interval];
-  const endDate = new Date(MOCK_TODAY);
-  endDate.setDate(endDate.getDate() - periodsBack * stepDays);
+const isoDate = (d) => d.toISOString().slice(0, 10);
 
+// award_date marks the END of the awarded period.
+const formatPeriodLabel = (interval, endDate) => {
   switch (interval) {
     case 'day':
       return endDate.toLocaleDateString('en-US', {
@@ -153,49 +175,44 @@ const formatPeriodLabel = (interval, periodsBack) => {
   }
 };
 
-const generateMockWinners = (interval, category, count = 30) => {
-  const winners = [];
+// Award entity → the entry shape the cards render. Returns null for rows
+// whose target has been deleted (no song/user attached).
+const normalizeAward = (award, interval) => {
+  const base = {
+    id: award.awardId,
+    periodLabel: formatPeriodLabel(
+      interval,
+      new Date(`${award.awardDate}T00:00:00`)
+    ),
+    type: award.targetType,
+    votesCount: award.votesCount || 0,
+    determinationMethod: award.determinationMethod,
+  };
 
-  for (let i = 0; i < count; i++) {
-    const periodLabel = formatPeriodLabel(interval, i);
-
-    if (category === 'song') {
-      const song = SONG_POOL[i % SONG_POOL.length];
-      // Deterministic descending-ish vote counts so older periods skew lower
-      const voteCount = Math.max(18, 152 - i * 6 + ((i * 13) % 18));
-
-      winners.push({
-        id: `song-${interval}-${i}`,
-        periodLabel,
-        type: 'song',
-        winner: {
-          id: `song-mock-${i}`,
-          title: song.title,
-          artist: song.artist,
-          artistId: `artist-mock-${song.artist}`,
-          artwork: song.artwork,
-        },
-        voteCount,
-      });
-    } else {
-      const artist = ARTIST_POOL[i % ARTIST_POOL.length];
-      const wonPollsCount = Math.max(1, 9 - Math.floor(i / 4) + (i % 3));
-
-      winners.push({
-        id: `artist-${interval}-${i}`,
-        periodLabel,
-        type: 'artist',
-        winner: {
-          id: `artist-mock-${artist.name}-${i}`,
-          name: artist.name,
-          photo: artist.photo,
-        },
-        wonPollsCount,
-      });
-    }
+  if (award.targetType === 'song') {
+    if (!award.song) return null;
+    return {
+      ...base,
+      winner: {
+        id: award.song.songId,
+        title: award.song.title,
+        artist: award.song.artist?.username || 'Unknown',
+        artistId: award.song.artist?.userId,
+        artwork: buildUrl(award.song.artworkUrl) || songArtworkOne,
+        fileUrl: buildUrl(award.song.fileUrl),
+      },
+    };
   }
 
-  return winners;
+  if (!award.user) return null;
+  return {
+    ...base,
+    winner: {
+      id: award.user.userId,
+      name: award.user.username,
+      photo: buildUrl(award.user.photoUrl) || songArtworkTwo,
+    },
+  };
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -204,17 +221,34 @@ const generateMockWinners = (interval, category, count = 30) => {
 
 const WinnerCard = ({ entry, onClick, onPlay }) => {
   const isSong = entry.type === 'song';
+  const art = isSong ? entry.winner.artwork : entry.winner.photo;
 
   return (
-    <article className="wt-card" onClick={onClick}>
-      <div className="wt-card-art-wrap">
-        <img
-          src={isSong ? entry.winner.artwork : entry.winner.photo}
-          alt={isSong ? entry.winner.title : entry.winner.name}
-          className="wt-card-art"
-        />
+    <article
+      className="wt-card"
+      role="button"
+      tabIndex={0}
+      aria-label={`View ${isSong ? entry.winner.title : entry.winner.name}`}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
+      {/* Ambient glow — the winner's own artwork, blurred behind the card
+          (same treatment as the Milestones winner plate). */}
+      <div
+        className="wt-card-glow"
+        style={{ backgroundImage: `url(${art})` }}
+        aria-hidden="true"
+      />
 
-        {isSong && (
+      <div className="wt-card-art-wrap">
+        <img src={art} alt="" className="wt-card-art" />
+
+        {isSong && entry.winner.fileUrl && (
           <button
             type="button"
             className="wt-card-play"
@@ -238,11 +272,9 @@ const WinnerCard = ({ entry, onClick, onPlay }) => {
 
         <div className="wt-card-stat">
           <TrophyIcon size={11} />
-          {isSong
-            ? `${entry.voteCount.toLocaleString()} votes`
-            : `Won ${entry.wonPollsCount} poll${
-                entry.wonPollsCount === 1 ? '' : 's'
-              }`}
+          {entry.votesCount > 0
+            ? `${entry.votesCount.toLocaleString()} vote${entry.votesCount === 1 ? '' : 's'}`
+            : 'Won on engagement'}
         </div>
       </div>
     </article>
@@ -254,6 +286,7 @@ const WinnerCard = ({ entry, onClick, onPlay }) => {
 //
 // Props:
 //   jurisdiction       – display + URL slug for the place
+//   jurisdictionId     – UUID; when omitted, resolved via byName
 //   initialInterval    – 'day' | 'week' | 'month' | 'quarter' | 'midterm' | 'year'
 //   initialCategory    – 'song' | 'artist'
 //   variant            – 'embedded' (lives inside another page) | 'full'
@@ -264,6 +297,7 @@ const WinnerCard = ({ entry, onClick, onPlay }) => {
 
 const WinnersTimeline = ({
   jurisdiction = 'Downtown Harlem',
+  jurisdictionId = null,
   initialInterval = 'week',
   initialCategory = 'song',
   variant = 'embedded',
@@ -272,18 +306,138 @@ const WinnersTimeline = ({
   showHeader = true,
 }) => {
   const navigate = useNavigate();
+  const { requestPlay, currentMedia } = useContext(PlayerContext);
+  const { user } = useAuth();
+  const userId = user?.userId || null;
 
   const [activeInterval, setActiveInterval] = useState(initialInterval);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [visibleCount, setVisibleCount] = useState(initialCount);
 
-  const allWinners = useMemo(
-    () => generateMockWinners(activeInterval, activeCategory, 30),
-    [activeInterval, activeCategory]
-  );
+  const [jurId, setJurId] = useState(jurisdictionId);
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
-  const visibleWinners = allWinners.slice(0, visibleCount);
-  const hasMore = visibleCount < allWinners.length;
+  // songId requested from this timeline, awaiting confirmation that it
+  // actually became the current track (same pattern as jurisdictionPage).
+  const pendingTrackRef = useRef(null);
+
+  // ── Resolve jurisdiction UUID (skipped when the parent supplies it) ──
+  useEffect(() => {
+    if (jurisdictionId) {
+      setJurId(jurisdictionId);
+      return undefined;
+    }
+
+    let active = true;
+
+    apiCall({
+      method: 'get',
+      url: `/v1/jurisdictions/byName/${encodeURIComponent(jurisdiction)}`,
+    })
+      .then((res) => {
+        if (!active) return;
+        const body = res.data;
+        const first = Array.isArray(body) ? body[0] : body;
+        if (first?.jurisdictionId) {
+          setJurId(first.jurisdictionId);
+        } else {
+          setError(`Couldn't find ${jurisdiction}.`);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error('[winnersTimeline] byName lookup failed:', err?.message || err);
+        setError('Couldn\u2019t load past winners. Check your connection and try again.');
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [jurisdiction, jurisdictionId]);
+
+  // ── Fetch the archive window for the active interval/category ──
+  useEffect(() => {
+    if (!jurId) return undefined;
+
+    let active = true;
+
+    const fetchWinners = async () => {
+      setLoading(true);
+      setError(null);
+
+      const end = new Date();
+      const start = new Date(end);
+      start.setDate(
+        start.getDate() -
+          FETCH_PERIODS[activeInterval] * INTERVAL_STEP_DAYS[activeInterval]
+      );
+
+      const intervalId = INTERVAL_IDS[INTERVAL_KEY[activeInterval]];
+
+      try {
+        const res = await apiCall({
+          method: 'get',
+          url:
+            `/v1/awards/past?type=${activeCategory}` +
+            `&startDate=${isoDate(start)}&endDate=${isoDate(end)}` +
+            `&jurisdictionId=${jurId}&intervalId=${intervalId}`,
+        });
+
+        if (!active) return;
+
+        // One winner per genre per period comes back; keep the top row per
+        // award_date. Rows arrive ordered date DESC, votes DESC, so the
+        // first row seen for a date is that period's overall champion.
+        const byDate = new Map();
+        (res.data || []).forEach((award) => {
+          if (!byDate.has(award.awardDate)) byDate.set(award.awardDate, award);
+        });
+
+        const normalized = [...byDate.values()]
+          .map((award) => normalizeAward(award, activeInterval))
+          .filter(Boolean);
+
+        setEntries(normalized);
+      } catch (err) {
+        if (!active) return;
+        console.error('[winnersTimeline] awards fetch failed:', err?.message || err);
+        setError('Couldn\u2019t load past winners. Check your connection and try again.');
+        setEntries([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    fetchWinners();
+
+    return () => {
+      active = false;
+    };
+  }, [jurId, activeInterval, activeCategory, retryNonce]);
+
+  // ── Effect-based play tracking (credited only once it actually plays) ──
+  useEffect(() => {
+    const playingId = currentMedia?.id || currentMedia?.songId;
+    if (!playingId || !userId) return;
+    if (pendingTrackRef.current !== playingId) return;
+
+    pendingTrackRef.current = null;
+
+    apiCall({
+      method: 'post',
+      url: `/v1/media/song/${playingId}/play?userId=${userId}`,
+    }).catch((err) =>
+      console.error('[winnersTimeline] play tracking failed:', err?.message || err)
+    );
+  }, [currentMedia?.id, currentMedia?.songId, userId]);
+
+  const visibleWinners = entries.slice(0, visibleCount);
+  const hasMore = visibleCount < entries.length;
 
   const handleNavigate = (entry) => {
     if (entry.type === 'song') {
@@ -293,11 +447,27 @@ const WinnersTimeline = ({
     }
   };
 
-  const handlePlay = (entry) => {
-    // Mock placeholder – when real data lands, wire to PlayerContext.playMedia
-    // exactly like JurisdictionPage.handlePlaySong does.
-    console.log('[WinnersTimeline mock] play requested:', entry.winner.title);
-  };
+  const handlePlay = useCallback(
+    (entry) => {
+      if (entry.type !== 'song' || !entry.winner.fileUrl) return;
+
+      requestPlay({
+        type: 'song',
+        id: entry.winner.id,
+        songId: entry.winner.id,
+        url: entry.winner.fileUrl,
+        fileUrl: entry.winner.fileUrl,
+        title: entry.winner.title,
+        artist: entry.winner.artist,
+        artistId: entry.winner.artistId,
+        artwork: entry.winner.artwork,
+        artworkUrl: entry.winner.artwork,
+      });
+
+      pendingTrackRef.current = entry.winner.id;
+    },
+    [requestPlay]
+  );
 
   const handleLoadMore = () => {
     if (variant === 'embedded') {
@@ -307,7 +477,9 @@ const WinnersTimeline = ({
         )}/winners?interval=${activeInterval}&category=${activeCategory}`
       );
     } else {
-      setVisibleCount((c) => Math.min(c + pageSize, allWinners.length));
+      // Ad-refresh hookup lives here (wt-page-ad-slot refreshes every
+      // pageSize winners revealed) — wire when the ad partner lands.
+      setVisibleCount((c) => Math.min(c + pageSize, entries.length));
     }
   };
 
@@ -375,48 +547,67 @@ const WinnersTimeline = ({
         </div>
       </div>
 
-      <div className="wt-timeline">
-        {visibleWinners.length === 0 ? (
-          <p className="wt-empty">No winners on record yet.</p>
-        ) : (
-          visibleWinners.map((entry, idx) => {
-            const isLast = idx === visibleWinners.length - 1 && !hasMore;
-            return (
-              <div
-                key={entry.id}
-                className={`wt-entry ${isLast ? 'wt-entry--last' : ''}`}
-              >
-                <div className="wt-gutter">
-                  <span className="wt-dot" />
-                </div>
+      {loading ? (
+        <div className="wt-skeleton" aria-hidden="true">
+          <div className="wt-skeleton-row" />
+          <div className="wt-skeleton-row" />
+          <div className="wt-skeleton-row" />
+        </div>
+      ) : error ? (
+        <div className="wt-error" role="alert">
+          <p>{error}</p>
+          <button
+            type="button"
+            className="wt-retry"
+            onClick={() => setRetryNonce((n) => n + 1)}
+          >
+            Retry
+          </button>
+        </div>
+      ) : (
+        <div className="wt-timeline">
+          {visibleWinners.length === 0 ? (
+            <p className="wt-empty">
+              No winners on record for this interval yet. The next poll crowns
+              the first.
+            </p>
+          ) : (
+            visibleWinners.map((entry, idx) => {
+              const isLast = idx === visibleWinners.length - 1 && !hasMore;
+              return (
+                <div
+                  key={entry.id}
+                  className={`wt-entry ${isLast ? 'wt-entry--last' : ''}`}
+                >
+                  <div className="wt-gutter">
+                    <span className="wt-dot" />
+                  </div>
 
-                <div className="wt-entry-content">
-                  <p className="wt-period">{entry.periodLabel}</p>
-                  <WinnerCard
-                    entry={entry}
-                    onClick={() => handleNavigate(entry)}
-                    onPlay={() => handlePlay(entry)}
-                  />
+                  <div className="wt-entry-content">
+                    <p className="wt-period">{entry.periodLabel}</p>
+                    <WinnerCard
+                      entry={entry}
+                      onClick={() => handleNavigate(entry)}
+                      onPlay={() => handlePlay(entry)}
+                    />
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        )}
-      </div>
+              );
+            })
+          )}
+        </div>
+      )}
 
-      {hasMore && (
+      {/* Embedded: the button is the door to the full archive, so it shows
+          whenever there is ANY history. Full: standard client-side reveal. */}
+      {!loading && !error && (variant === 'embedded' ? entries.length > 0 : hasMore) && (
         <div className="wt-load-more-wrap">
-          {/*
-            Embedded variant: button NAVIGATES to the full archive page.
-            If you prefer the button to say "See full archive" on the
-            embedded widget, swap the label below.
-          */}
           <button
             type="button"
             className={`wt-load-more wt-load-more--${variant}`}
             onClick={handleLoadMore}
           >
-            Load more winners
+            {variant === 'embedded' ? 'See full archive' : 'Load more winners'}
             {variant === 'embedded' ? (
               <ArrowRightIcon size={12} />
             ) : (

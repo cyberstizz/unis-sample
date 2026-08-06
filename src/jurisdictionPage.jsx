@@ -42,10 +42,30 @@ import './jurisdictionPage.scss';
 import Layout from './layout';
 import prominentArtistBg from './assets/songartworkfour.jpeg';
 import albumArt from './assets/songartworktwo.jpeg';
+import heroHarlem from './assets/apollopic.jpg';
+import heroDefault from './assets/biglpic.jpg';
 import { buildUrl } from './utils/buildUrl';
 import WinnersTimeline from './winnersTimeline';
 
 const TOAST_MS = 4500;
+
+// ── Hero backdrop imagery ────────────────────────────────────────────────────
+// One stock photo per jurisdiction, blended into the theme gradient so it
+// reads as texture rather than a picture. To add a real photo: drop it in
+// ./assets and add a lowercase-name entry here — nothing else changes.
+//
+// When the backend starts serving a per-jurisdiction image, prefer
+// `jurDetails.heroImageUrl` and keep this map as the fallback. The
+// Jurisdiction entity already carries `symbolUrl`, which is wired below as
+// the first choice when present.
+const HERO_IMAGES = {
+  'harlem': heroHarlem,
+  'uptown harlem': heroHarlem,
+  'downtown harlem': heroHarlem,
+};
+
+const heroImageFor = (name) =>
+  HERO_IMAGES[String(name || '').trim().toLowerCase()] || heroDefault;
 
 // Inline play icon — same guaranteed-visibility approach as Player/Feed
 const PlayIcon = ({ size = 14 }) => (
@@ -149,6 +169,11 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           // hasChildren is the one hierarchy signal byName gives us:
           // leaves are neighborhoods, everything above is a district.
           isLeaf: jurDetails.hasChildren === false,
+
+          jurisdictionId: jurId,
+
+          // Backend-supplied art wins; otherwise the local stock photo.
+          heroImage: buildUrl(jurDetails.symbolUrl) || heroImageFor(jurName),
 
           topArtistName: topArtist?.username || null,
 
@@ -325,6 +350,20 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           className={`jp-hero ${data.songOfWeek ? '' : 'jp-hero--solo'}`}
           data-name={jurName}
         >
+          {/* Backdrop stack, painted under the content:
+              1. photo — desaturated and heavily softened
+              2. tint  — forces the photo to take the active theme's hue
+              3. scrim — protects the copy and the ghosted name
+              The gradient itself lives on .jp-hero and is theme-derived, so
+              this is the same treatment in every palette, not just blue. */}
+          <div
+            className="jp-hero-photo"
+            style={{ backgroundImage: `url(${data.heroImage})` }}
+            aria-hidden="true"
+          />
+          <div className="jp-hero-tint" aria-hidden="true" />
+          <div className="jp-hero-scrim" aria-hidden="true" />
+
           <div className="jp-hero-content">
             <div className="jp-pills">
               <span className="jp-pill jp-pill--live">
@@ -540,6 +579,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
         <section className="jp-section jp-winners">
           <WinnersTimeline
             jurisdiction={jurName}
+            jurisdictionId={data.jurisdictionId}
             variant="embedded"
             initialInterval="week"
             initialCategory="song"
