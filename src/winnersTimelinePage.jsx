@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import Layout from './layout';
 import WinnersTimeline from './winnersTimeline';
+import { apiCall } from './components/axiosInstance';
 import './winnersTimeline.scss';
-import prominentArtistBg from './assets/songartworkfour.jpeg';
 
 // ═══════════════════════════════════════════════════════════
 // FULL-PAGE archive view
@@ -42,8 +42,34 @@ const WinnersTimelinePage = () => {
     ? categoryParam
     : 'song';
 
+  // Resolve the UUID once here rather than letting the timeline do its own
+  // byName round-trip on every interval switch.
+  const [jurId, setJurId] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+
+    apiCall({
+      method: 'get',
+      url: `/v1/jurisdictions/byName/${encodeURIComponent(jurName)}`,
+    })
+      .then((res) => {
+        if (!active) return;
+        const body = res.data;
+        const first = Array.isArray(body) ? body[0] : body;
+        if (first?.jurisdictionId) setJurId(first.jurisdictionId);
+      })
+      .catch((err) =>
+        console.error('[winnersPage] byName lookup failed:', err?.message || err)
+      );
+
+    return () => {
+      active = false;
+    };
+  }, [jurName]);
+
   return (
-    <Layout backgroundImage={prominentArtistBg}>
+    <Layout>
       <div className="wt-page">
         <button
           type="button"
@@ -58,6 +84,7 @@ const WinnersTimelinePage = () => {
         <div className="wt-page-main">
           <WinnersTimeline
             jurisdiction={jurName}
+            jurisdictionId={jurId}
             initialInterval={initialInterval}
             initialCategory={initialCategory}
             variant="full"
@@ -75,6 +102,7 @@ const WinnersTimelinePage = () => {
           WinnersTimeline.handleLoadMore for now.
         */}
         <aside className="wt-page-ad-slot" aria-label="Sponsored">
+          <div className="wt-ad-glow" aria-hidden="true" />
           <div className="wt-ad-inner">
             <span className="wt-ad-label">Ad space</span>
             <span className="wt-ad-note">
