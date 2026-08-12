@@ -156,6 +156,39 @@ const PrizeTable = () => (
   </div>
 );
 
+// ── Revenue split ───────────────────────────────────────────────────────────
+// Mirrors EarningsService.SUPPORTER_RATE / LEVEL1_RATE / LEVEL2_RATE /
+// LEVEL3_RATE and the DISPLAY_AD_SPLIT array in earnings.jsx. Three copies of
+// these numbers now exist; they must be changed together.
+
+export const DISPLAY_AD_SPLIT = [
+  { key: 'unis', label: 'Unis', pct: 68, note: 'Runs the platform' },
+  { key: 'artist', label: 'Your artist', pct: 15, note: 'The artist you support' },
+  { key: 'level1', label: 'Who invited you', pct: 10, note: 'Your referrer' },
+  { key: 'level2', label: 'Who invited them', pct: 5, note: 'One step further back' },
+  { key: 'level3', label: 'One more back', pct: 2, note: 'Three steps from you' },
+];
+
+const RevenueSplit = () => (
+  <div className="help-ladder" role="table" aria-label="How ad revenue is divided">
+    <div className="help-ladder__head" role="row">
+      <span role="columnheader">Goes to</span>
+      <span role="columnheader">Who that is</span>
+      <span role="columnheader">Share</span>
+    </div>
+    {DISPLAY_AD_SPLIT.map((s) => (
+      <div className="help-ladder__row" role="row" key={s.key}>
+        <span className="help-ladder__name" role="cell">{s.label}</span>
+        <span className="help-ladder__cadence" role="cell">{s.note}</span>
+        <span className="help-ladder__bar" role="cell">
+          <span className="help-ladder__fill" style={{ width: `${s.pct}%` }} />
+          <b>{s.pct}%</b>
+        </span>
+      </div>
+    ))}
+  </div>
+);
+
 // ════════════════════════════════════════════════════════════════════════════
 
 export const HELP_SECTIONS = [
@@ -454,10 +487,253 @@ export const HELP_SECTIONS = [
       },
     ],
   },
-  { id: 'ranking', title: 'Rankings', blurb: 'How leaderboards are ordered.', status: 'draft', articles: [] },
+  {
+    id: 'ranking',
+    title: 'Rankings',
+    blurb: 'What your rank means and how often it moves.',
+    status: 'published',
+    articles: [
+      {
+        id: 'ranking-what',
+        q: 'What is my rank?',
+        a: (
+          <>
+            <p>
+              Where you stand against every other artist in your jurisdiction
+              right now, for a given period. It is worked out the same way an
+              award winner is — weighted votes first, then plays, likes, score,
+              and seniority — so your rank is a live preview of who would win if
+              the period closed today.
+            </p>
+            <p>
+              You get two ranks in each place: one against every artist there,
+              and one against only the artists in your genre.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'ranking-when',
+        q: 'How often does my rank update?',
+        a: (
+          <>
+            <p>
+              Once a night. Unis recalculates every rank after midnight Eastern
+              and swaps the new standings in all at once, so you never catch the
+              board mid-calculation.
+            </p>
+            <p>
+              Each rank is measured against the last <b>complete</b> day. That
+              is why today&rsquo;s activity does not move your rank until
+              tomorrow — a half-finished day would make the number jump around
+              for reasons nobody could act on.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'ranking-periods',
+        q: 'Why do I have more than one rank?',
+        a: (
+          <>
+            <p>
+              Because different periods tell you different things. Unis keeps a
+              rank for the day, the week, the month, the quarter, the year, and
+              for all time.
+            </p>
+            <p>
+              A strong week and a weak year usually means you are climbing. The
+              reverse usually means an older release is carrying you. Both are
+              worth knowing, so neither one is hidden.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'ranking-vs-award',
+        q: 'Is my rank the same as an award?',
+        a: (
+          <>
+            <p>
+              No. A rank is where you stand while a period is still running. An
+              award is what gets recorded when it closes. Ranks move every
+              night; awards are permanent.
+            </p>
+            <p>
+              Being ranked first for the week does not guarantee the weekly
+              award. Nothing is settled until the period ends.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
   { id: 'points', title: 'Points and levels', blurb: 'What earns points and how levels work.', status: 'draft', articles: [] },
-  { id: 'plays', title: 'Play counts', blurb: 'What counts as a play.', status: 'draft', articles: [] },
-  { id: 'queue', title: 'Queue', blurb: 'How the player queue behaves.', status: 'draft', articles: [] },
+  {
+    id: 'plays',
+    title: 'Play counts',
+    blurb: 'What counts as a play and why the same song stops counting.',
+    status: 'published',
+    articles: [
+      {
+        id: 'plays-what',
+        q: 'What happens when I play a song?',
+        a: (
+          <>
+            <p>
+              Three things at once. You earn a point, the song earns a point,
+              and the artist earns a point. One play, three ledgers.
+            </p>
+            <p>
+              This is why listening is not a passive act on Unis. Every play you
+              choose is a small amount of standing you are handing to an artist,
+              and a small amount you are building for yourself.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'plays-repeat',
+        q: 'Why did playing that song again not count?',
+        a: (
+          <>
+            <p>
+              The same song only counts once every <b>30 minutes</b> for the
+              same listener. Play it on repeat and the second play through does
+              nothing — no point for you, none for the song, none for the
+              artist.
+            </p>
+            <p>
+              There is no limit on how many <em>different</em> songs you play.
+              Listening widely keeps earning; looping one track does not. That
+              is the point of the rule — a play should mean somebody chose to
+              listen, not that a tab was left open.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'plays-queue',
+        q: 'Do plays from a playlist or my queue count?',
+        a: (
+          <>
+            <p>
+              Yes. A play is a play wherever it comes from — a playlist, your
+              queue, an artist page, or search. The 30-minute rule still applies
+              to each song individually, so a playlist with the same track twice
+              only counts it once.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'plays-points',
+        q: 'What are the points actually for?',
+        a: (
+          <>
+            <p>
+              They set your level, and your level is how Unis will decide access
+              to live events and giveaways as those roll out. Points are the
+              record of showing up.
+            </p>
+            <p>
+              Artists and listeners both earn them, but artists have far more
+              ways to — their songs earn on every play, every like, and every
+              vote, on top of whatever they earn as listeners themselves.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'queue',
+    title: 'Queue',
+    blurb: 'What plays next, shuffling, repeating, and saving a queue.',
+    status: 'published',
+    articles: [
+      {
+        id: 'queue-add',
+        q: 'What happens when I tap a song?',
+        a: (
+          <>
+            <p>
+              If nothing is playing, it starts. If something is already playing,
+              Unis asks what you meant: <b>Play now</b> interrupts and starts the
+              track immediately, <b>Add to queue</b> puts it at the end to play
+              after everything already lined up.
+            </p>
+            <p>
+              You are never guessing which one you got, and a tap never silently
+              wipes out a queue you spent time building.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'queue-shuffle',
+        q: 'How does shuffle work?',
+        a: (
+          <>
+            <p>
+              It genuinely randomizes. Unis uses a true shuffle — every ordering
+              of your queue is equally likely, with no weighting toward
+              particular artists or songs.
+            </p>
+            <p>
+              The track you are currently playing stays where it is and moves to
+              the front; everything else is reordered behind it. Turning shuffle
+              off restores your original order and keeps your place in it.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'queue-repeat',
+        q: 'Can I repeat a song or the whole queue?',
+        a: (
+          <>
+            <p>
+              Both. The repeat control cycles through three states: off, repeat
+              the whole queue when it reaches the end, and repeat the current
+              track.
+            </p>
+            <p className="help-note">
+              Repeating one track will not keep earning points for it. The
+              30-minute rule in Play counts still applies.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'queue-manage',
+        q: 'Can I edit my queue or keep it?',
+        a: (
+          <>
+            <p>
+              You can remove any track from the queue without stopping playback,
+              and you can save the whole queue as a playlist in one step. A good
+              listening session does not have to be rebuilt from memory later.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'queue-video',
+        q: 'What happens to my queue when I watch a video?',
+        a: (
+          <>
+            <p>
+              Nothing. Starting a video pauses the music so the two are not
+              playing over each other, but your queue is held exactly as it
+              was — same tracks, same order, same position. Close the video and
+              press play, and you pick up where you left off.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
   { id: 'playlists', title: 'Playlists', blurb: 'Personal, community, and official playlists.', status: 'draft', articles: [] },
   { id: 'verification', title: 'Verification', blurb: 'Phone and email verification, and what they unlock.', status: 'draft', articles: [] },
   { id: 'follow', title: 'Following', blurb: 'Following artists and listeners.', status: 'draft', articles: [] },
@@ -467,7 +743,107 @@ export const HELP_SECTIONS = [
   { id: 'jurisdiction', title: 'Jurisdictions', blurb: 'How Unis divides the map.', status: 'draft', articles: [] },
   { id: 'referrals', title: 'Referrals', blurb: 'Referral codes and the three referral levels.', status: 'draft', articles: [] },
   { id: 'supporter', title: 'Supporting an artist', blurb: 'Picking an artist to support and switching later.', status: 'draft', articles: [] },
-  { id: 'payouts', title: 'Earnings and payouts', blurb: 'How money is split and how you get paid.', status: 'draft', articles: [] },
+  {
+    id: 'payouts',
+    title: 'Earnings and payouts',
+    blurb: 'Where the money comes from, who it goes to, and how you get paid.',
+    status: 'published',
+    articles: [
+      {
+        id: 'payouts-source',
+        q: 'Where does the money come from?',
+        a: (
+          <>
+            <p>
+              Advertisers. When you are signed in and an ad appears on Unis, that
+              view earns real money — and Unis splits it out immediately, to a
+              fixed formula, every single time.
+            </p>
+            <p>
+              You have to be signed in for a view to earn anything. Browsing
+              signed out costs the artist you support real income.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'payouts-split',
+        q: 'Who gets paid when I see an ad?',
+        a: (
+          <>
+            <p>
+              Two people, neither of them you: the artist you support, and
+              whoever invited you to Unis.
+            </p>
+            <RevenueSplit />
+            <p>
+              You cannot earn from your own viewing. That is deliberate — it
+              removes any reason to farm your own ad views, and it means the
+              money moves outward through the community instead of in a circle.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'payouts-artist',
+        q: 'What is a supported artist?',
+        a: (
+          <>
+            <p>
+              The artist who earns from your listening. You choose one when you
+              sign up, and you always have one — this is the mechanism that keeps
+              money circulating locally instead of pooling at the top.
+            </p>
+            <p>
+              You can switch whenever you like, but the change takes effect at
+              the end of the pay period, not immediately. That protects the
+              artist you were supporting from losing income they had already
+              earned.
+            </p>
+            <p className="help-note">
+              If your supported artist leaves Unis, you will be asked to pick a
+              new one. Some share of your ad revenue always goes to an artist.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'payouts-referrer',
+        q: 'What if the person who invited me leaves?',
+        a: (
+          <>
+            <p>
+              Their share stays with Unis. It does not transfer to anyone else
+              and it is not redistributed — the referral chain simply stops
+              there.
+            </p>
+            <p>
+              Your supported artist keeps earning either way. That part of the
+              split is never affected by what happens to your referrer.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'payouts-getting-paid',
+        q: 'How do I actually get paid?',
+        a: (
+          <>
+            <p>
+              Through Stripe. Connect a Stripe account from the Earnings page,
+              and once your balance reaches <b>$50</b> you can request a payout.
+              Below that it keeps accruing.
+            </p>
+            <p>
+              You will need a verified phone number for earnings to be
+              attributed to you at all, so add one before you start building a
+              balance.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
 ];
 
 export default HELP_SECTIONS;
