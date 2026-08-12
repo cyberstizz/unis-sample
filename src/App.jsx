@@ -40,7 +40,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import DiscoverPage from './DiscoverPage';   
 import ListenerPage from './ListenerPage';   
 import MessagesPage from './MessagePage';
-import HelpPage from './helpPage';
+import HelpPage from './HelpPage';
 
 // Theme
 import './theme.scss';
