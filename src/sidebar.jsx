@@ -67,6 +67,13 @@ const ICONS = {
       <circle cx="12" cy="12" r="3" />
     </svg>
   ),
+  help: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle className="fs" cx="12" cy="12" r="8.4" />
+      <path d="M9.7 9.4a2.4 2.4 0 1 1 3.1 2.9c-.6.2-.8.7-.8 1.3v.5" />
+      <circle className="fs2" cx="12" cy="16.8" r="0.9" />
+    </svg>
+  ),
   admin: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path className="fs" d="M12 3.4l6.6 2.4v5.2c0 4.1-2.8 6.8-6.6 8.1-3.8-1.3-6.6-4-6.6-8.1V5.8z" />
@@ -201,6 +208,7 @@ const Sidebar = () => {
         { key: 'playlists', label: 'Playlists', icon: 'playlists', onClick: handlePlaylists, match: () => false },
         { key: 'earnings',  label: 'Earnings',  icon: 'earnings',  onClick: onEarnings,      match: (p) => p.startsWith('/earnings') },
         { key: 'settings',  label: 'Settings',  icon: 'settings',  onClick: onSettings,      match: (p) => p === '/profile' || p === '/artistDashboard' },
+        { key: 'help',      label: 'Help',      icon: 'help',      onClick: () => handleNav('/help'), match: (p) => p.startsWith('/help') }, 
         ...(user && user.adminRole
           ? [{ key: 'admin', label: 'Admin', icon: 'admin', onClick: () => handleNav('/admin'), match: (p) => p.startsWith('/admin') }]
           : []),

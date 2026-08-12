@@ -40,6 +40,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import DiscoverPage from './DiscoverPage';   
 import ListenerPage from './ListenerPage';   
 import MessagesPage from './MessagePage';
+import HelpPage from './helpPage';
 
 // Theme
 import './theme.scss';
@@ -95,6 +96,7 @@ const AppLayout = () => {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/cookie" element={<CookiePolicy />} />
+        <Route path="/help" element={<HelpPage />} />
         <Route path="/report" element={<ReportInfringement />} />
         <Route path="/waitlist" element={<WaitlistPage />} />
 
