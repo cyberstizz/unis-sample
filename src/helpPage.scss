@@ -1,0 +1,465 @@
+// helpPage.scss — help center
+// Theme-driven like sidebar.scss: every accent reads from --unis-primary via
+// color-mix, so the page follows whichever of the 7 themes the user is on.
+
+.help-page {
+  --hp-accent: color-mix(in srgb, var(--unis-primary), white 32%);
+  --hp-soft:   color-mix(in srgb, var(--unis-primary), transparent 88%);
+  --hp-edge:   color-mix(in srgb, var(--unis-primary), transparent 84%);
+
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 40px 20px 120px;   // bottom clears the player
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
+  color: var(--unis-text, #fff);
+
+  @media (max-width: 768px) {
+    padding: 28px 16px 140px;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Hero
+// ─────────────────────────────────────────────────────────────
+.help-hero {
+  margin-bottom: 34px;
+
+  &__eyebrow {
+    margin: 0 0 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--hp-accent);
+  }
+
+  &__title {
+    margin: 0 0 10px;
+    font-size: clamp(30px, 6vw, 42px);
+    font-weight: 700;
+    letter-spacing: -0.8px;
+    line-height: 1.08;
+  }
+
+  &__sub {
+    margin: 0;
+    max-width: 52ch;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  }
+}
+
+.help-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 0 14px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--unis-panel-2, rgba(255, 255, 255, 0.045));
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:focus-within {
+    border-color: color-mix(in srgb, var(--unis-primary), transparent 55%);
+    background: var(--unis-panel-hi, rgba(255, 255, 255, 0.07));
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+    stroke-width: 1.8;
+    stroke-linecap: round;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: none;
+    background: transparent;
+    color: var(--unis-text, #fff);
+    font-size: 14.5px;
+    font-family: inherit;
+    outline: none;
+
+    &::placeholder { color: var(--unis-text-4, rgba(255, 255, 255, 0.32)); }
+    &::-webkit-search-cancel-button { display: none; }
+  }
+
+  button {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 50%;
+    background: var(--unis-panel-hi, rgba(255, 255, 255, 0.07));
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover { background: var(--hp-soft); color: var(--hp-accent); }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Topic list
+// ─────────────────────────────────────────────────────────────
+.help-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.help-topic {
+  border-radius: 14px;
+  background: var(--unis-panel-2, rgba(255, 255, 255, 0.045));
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+  overflow: hidden;
+  transition: border-color 0.18s ease, background 0.18s ease;
+
+  &:hover { border-color: var(--unis-border-hi, rgba(255, 255, 255, 0.14)); }
+
+  &.open {
+    background: var(--hp-soft);
+    border-color: var(--hp-edge);
+  }
+
+  &__head {
+    display: grid;
+    grid-template-columns: minmax(0, auto) 1fr auto auto;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 17px 18px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr auto auto;
+      row-gap: 4px;
+    }
+  }
+
+  &__id {
+    font-size: 16px;
+    font-weight: 650;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+  }
+
+  &__blurb {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+
+    @media (max-width: 640px) {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+  }
+
+  &__count {
+    flex-shrink: 0;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--unis-panel-hi, rgba(255, 255, 255, 0.07));
+    color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 22px;
+    text-align: center;
+  }
+
+  &.open &__count {
+    background: color-mix(in srgb, var(--unis-primary), transparent 74%);
+    color: var(--hp-accent);
+  }
+
+  &__panel {
+    padding: 0 18px 8px;
+  }
+}
+
+.help-chev {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s ease, stroke 0.2s ease;
+}
+
+.help-topic.open > .help-topic__head .help-chev,
+.help-qa.open > .help-qa__q .help-chev {
+  transform: rotate(180deg);
+  stroke: var(--hp-accent);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Question / answer
+// ─────────────────────────────────────────────────────────────
+.help-qa {
+  border-top: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+
+  &:first-child { border-top: none; }
+
+  &__q {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    padding: 15px 0;
+    border: none;
+    background: transparent;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+    text-align: left;
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 550;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: color 0.15s ease;
+
+    &:hover { color: var(--unis-text, #fff); }
+  }
+
+  &.open > &__q { color: var(--unis-text, #fff); }
+
+  &__a {
+    padding: 2px 0 18px;
+    font-size: 14px;
+    line-height: 1.68;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+
+    p { margin: 0 0 13px; }
+    p:last-child { margin-bottom: 0; }
+
+    b { color: var(--unis-text, #fff); font-weight: 650; }
+
+    ul {
+      margin: 0 0 13px;
+      padding-left: 18px;
+      li { margin-bottom: 9px; }
+      li::marker { color: var(--hp-accent); }
+    }
+  }
+}
+
+.help-note {
+  padding: 11px 13px;
+  border-radius: 10px;
+  border-left: 2px solid var(--hp-accent);
+  background: color-mix(in srgb, var(--unis-primary), transparent 92%);
+  font-size: 13px;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+}
+
+// ─────────────────────────────────────────────────────────────
+// Interval ladder — bar length IS the award weight
+// ─────────────────────────────────────────────────────────────
+.help-ladder {
+  margin: 4px 0 15px;
+  border-radius: 12px;
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+  overflow: hidden;
+
+  &__head,
+  &__row {
+    display: grid;
+    grid-template-columns: 92px 1fr 116px;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 13px;
+
+    @media (max-width: 560px) {
+      grid-template-columns: 78px 1fr 84px;
+      gap: 8px;
+      padding: 9px 10px;
+    }
+  }
+
+  &__head {
+    background: rgba(0, 0, 0, 0.22);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--unis-text-4, rgba(255, 255, 255, 0.32));
+  }
+
+  &__row {
+    border-top: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+  }
+
+  &__name {
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--unis-text, #fff);
+  }
+
+  &__cadence {
+    font-size: 12.5px;
+    color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 20px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+
+    b {
+      position: relative;
+      z-index: 1;
+      margin-left: 7px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--unis-text, #fff);
+    }
+  }
+
+  &__fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 5px;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--unis-primary), transparent 40%),
+      color-mix(in srgb, var(--unis-primary), transparent 72%)
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Jurisdiction ladder — indent encodes containment
+// ─────────────────────────────────────────────────────────────
+.help-juris {
+  margin: 4px 0 15px;
+  display: flex;
+  flex-direction: column;
+
+  &__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 13px;
+    border-left: 2px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+    background: rgba(255, 255, 255, 0.02);
+
+    & + & { margin-left: 16px; }
+
+    @media (max-width: 560px) {
+      & + & { margin-left: 9px; }
+      flex-direction: column;
+      gap: 2px;
+    }
+  }
+
+  &__row--site {
+    border-left-color: var(--hp-accent);
+    background: var(--hp-soft);
+  }
+
+  &__row--home {
+    border-left-color: var(--hp-accent);
+    background: color-mix(in srgb, var(--unis-primary), transparent 90%);
+  }
+
+  &__tier {
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--unis-text, #fff);
+  }
+
+  &__note {
+    font-size: 12px;
+    color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Empty state + footer
+// ─────────────────────────────────────────────────────────────
+.help-empty {
+  padding: 44px 20px;
+  text-align: center;
+
+  p {
+    margin: 0 0 16px;
+    font-size: 14.5px;
+    color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+  }
+
+  button {
+    padding: 9px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--hp-edge);
+    background: var(--hp-soft);
+    color: var(--hp-accent);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover { background: color-mix(in srgb, var(--unis-primary), transparent 78%); }
+  }
+}
+
+.help-foot {
+  margin-top: 34px;
+  padding-top: 22px;
+  border-top: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+  font-size: 13px;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+
+  p { margin: 0 0 12px; }
+
+  a {
+    color: var(--hp-accent);
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+
+  &__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 0;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Reduced motion
+// ─────────────────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .help-chev,
+  .help-topic,
+  .help-search {
+    transition: none;
+  }
+}
