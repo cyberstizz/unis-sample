@@ -831,8 +831,143 @@ export const HELP_SECTIONS = [
       },
     ],
   },
-  { id: 'verification', title: 'Verification', blurb: 'Phone and email verification, and what they unlock.', status: 'draft', articles: [] },
-  { id: 'follow', title: 'Following', blurb: 'Following artists and listeners.', status: 'draft', articles: [] },
+  {
+    id: 'verification',
+    title: 'Phone verification',
+    blurb: 'Why Unis asks for a number and what it unlocks.',
+    status: 'published',
+    articles: [
+      {
+        id: 'verification-why',
+        q: 'Why does Unis want my phone number?',
+        a: (
+          <>
+            <p>
+              To keep bots out. Everything that decides an outcome on Unis — who
+              wins an award, who gets paid — runs on the assumption that one
+              account is one person. An email address takes seconds to fake. A
+              phone number does not.
+            </p>
+            <p>
+              Verifying is what separates a listener from a script. It is the
+              single measure standing between a local award and someone with a
+              thousand throwaway accounts.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'verification-how',
+        q: 'How do I verify?',
+        a: (
+          <>
+            <p>
+              From Settings. Enter your number, and Unis texts you a six-digit
+              code. Type it back in and you are verified — it takes under a
+              minute and you only do it once.
+            </p>
+            <p className="help-note">
+              If the code does not arrive, check the number for a typo and
+              request a new one. Codes expire, so an old text will not work.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'verification-unlocks',
+        q: 'What does verifying unlock?',
+        a: (
+          <>
+            <p>Four things stay locked until you verify:</p>
+            <ul>
+              <li><b>Voting</b> — in every jurisdiction and every interval.</li>
+              <li><b>Commenting</b> — on songs, videos, and artist pages.</li>
+              <li><b>Messaging</b> — sending direct messages to other users.</li>
+              <li><b>Earnings</b> — ad revenue is only attributed to verified accounts.</li>
+            </ul>
+            <p>
+              That last one is worth reading twice. If you are an artist with
+              supporters, or you referred people to Unis,{' '}
+              <b>you do not earn anything until your phone is verified</b>. The
+              views still happen; the money does not reach you.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'verification-without',
+        q: 'What can I do without verifying?',
+        a: (
+          <>
+            <p>
+              Most of Unis. You can play music, like songs, follow artists,
+              build playlists, browse leaderboards, and support an artist
+              without ever entering a number.
+            </p>
+            <p>
+              Verification is not a gate on listening. It is a gate on the
+              things where a fake account would do damage.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'follow',
+    title: 'Following',
+    blurb: 'Following artists and listeners, and what it changes.',
+    status: 'published',
+    articles: [
+      {
+        id: 'follow-what',
+        q: 'What does following someone do?',
+        a: (
+          <>
+            <p>
+              It is how you keep track of people on Unis. Follow an artist whose
+              releases you want to catch, or a listener whose taste you trust.
+            </p>
+            <p>
+              You can follow both — artists and listeners alike. Unfollow at any
+              time, from the same button.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'follow-visible',
+        q: 'Can people see that I followed them?',
+        a: (
+          <>
+            <p>
+              They can see the count. Follower totals are public and show on
+              every profile, including to signed-out visitors — for an artist,
+              it is part of how their standing reads at a glance.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'follow-messages',
+        q: 'Does following change who can message me?',
+        a: (
+          <>
+            <p>
+              Yes, and this is the one place following has real teeth. By default
+              anyone on Unis can message you. If you restrict your messages in
+              Settings, only people <em>you</em> follow can reach you.
+            </p>
+            <p>
+              Note the direction: it is who you follow, not who follows you. That
+              way an artist with a large following can lock their inbox down to
+              the people they actually chose to keep track of.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
   { id: 'likes', title: 'Likes', blurb: 'What liking a song does.', status: 'draft', articles: [] },
   { id: 'messaging', title: 'Messages', blurb: 'Direct messages and artist broadcasts.', status: 'draft', articles: [] },
   { id: 'comments', title: 'Comments', blurb: 'Commenting, editing, and moderation.', status: 'draft', articles: [] },
