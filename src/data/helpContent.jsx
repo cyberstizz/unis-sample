@@ -734,7 +734,103 @@ export const HELP_SECTIONS = [
       },
     ],
   },
-  { id: 'playlists', title: 'Playlists', blurb: 'Personal, community, and official playlists.', status: 'draft', articles: [] },
+  {
+    id: 'playlists',
+    title: 'Playlists',
+    blurb: 'Making them, sharing them, and how they differ from your queue.',
+    status: 'published',
+    articles: [
+      {
+        id: 'playlists-vs-queue',
+        q: 'What is the difference between a playlist and my queue?',
+        a: (
+          <>
+            <p>
+              A playlist is something you keep. Your queue is what you are
+              listening to right now. Both hold songs and both feed the player,
+              but a playlist survives the session and a queue is the session.
+            </p>
+            <p>
+              They open one at a time — opening the playlist closes the queue,
+              and opening the queue closes the playlist — so you always know
+              which list you are looking at. Songs move freely between them:
+              send a track from a playlist into your queue, or turn the queue
+              you have built into a playlist in one step.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'playlists-create',
+        q: 'How do I make a playlist?',
+        a: (
+          <>
+            <p>
+              Two ways. Build one from scratch by adding songs as you find them,
+              or save your current queue as a playlist once you have a run of
+              tracks you want to keep.
+            </p>
+            <p>
+              Give it a name and a cover image so it is recognizable at a
+              glance, then decide whether anyone else can see it.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'playlists-privacy',
+        q: 'Who can see my playlist?',
+        a: (
+          <>
+            <p>
+              You choose when you create it, and you can change it later.
+            </p>
+            <ul>
+              <li>
+                <b>Private</b> — only you. Nobody can find it, open it, or see
+                that it exists. This is the default.
+              </li>
+              <li>
+                <b>Public</b> — anyone on Unis can open it. It shows up in
+                search and under Playlists on the Discover page.
+              </li>
+            </ul>
+          </>
+        ),
+      },
+      {
+        id: 'playlists-unis',
+        q: 'What are Unis playlists?',
+        a: (
+          <>
+            <p>
+              Playlists put together by the platform rather than by a listener.
+              They are added regularly and every user can play them.
+            </p>
+            <p>
+              Some are curated by hand and some are built from award winners, so
+              they are a fast way to hear what a jurisdiction has actually been
+              voting for.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'playlists-points',
+        q: 'Do plays from a playlist count?',
+        a: (
+          <>
+            <p>
+              Yes, exactly the same as anywhere else. Points go to you, the song,
+              and the artist, and the 30-minute rule still applies to each song
+              individually — so a playlist with the same track twice only counts
+              it once.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
   { id: 'verification', title: 'Verification', blurb: 'Phone and email verification, and what they unlock.', status: 'draft', articles: [] },
   { id: 'follow', title: 'Following', blurb: 'Following artists and listeners.', status: 'draft', articles: [] },
   { id: 'likes', title: 'Likes', blurb: 'What liking a song does.', status: 'draft', articles: [] },
