@@ -22,11 +22,14 @@ import React from 'react';
 // These must match the backend. Cross-references are noted so a future change
 // has one obvious checklist.
 //
-//   VOTE_POINTS      → ScoreUpdateService.onVote (voter increment)
-//   INTERVAL_WEIGHTS → AwardService.VOTE_WEIGHTS
-//   AWARD_PRIZE      → AwardService.AWARD_POINTS
+//   VOTE_POINTS                 → ScoreUpdateService.onVote (voter increment)
+//   INTERVAL_WEIGHTS            → AwardService.VOTE_WEIGHTS
+//   AWARD_PRIZE                 → AwardService.AWARD_POINTS
+//   MESSAGE_REQUEST_DAILY_LIMIT → MessagingService.MAX_NEW_REQUESTS_PER_DAY
 
 export const VOTE_POINTS = 2;
+
+export const MESSAGE_REQUEST_DAILY_LIMIT = 15;
 
 export const INTERVAL_WEIGHTS = [
   { key: 'daily', label: 'Daily', weight: 10, prize: 50, cadence: 'Every day', window: 'Midnight to midnight' },
@@ -88,6 +91,44 @@ const JurisdictionLadder = () => (
       <span className="help-juris__tier">Your neighborhood</span>
       <span className="help-juris__note">Your home jurisdiction</span>
     </div>
+  </div>
+);
+
+// ── The message lanes ───────────────────────────────────────────────────────
+// Signature element of the messaging section, and the same trick as the
+// interval ladder: it is not an illustration of the rule, it IS the rule. A
+// reader should be able to place themselves in one of these five rows without
+// reading the prose around it.
+//
+// Requires the .help-lanes block appended to helpPage.scss.
+
+const LANE_ROWS = [
+  { who: 'People you follow', lane: 'inbox', note: 'Straight to your messages' },
+  { who: 'People who support you', lane: 'inbox', note: 'If you left that switch on' },
+  { who: 'Anyone you messaged first', lane: 'inbox', note: 'Always, from then on' },
+  { who: 'Everyone else', lane: 'requests', note: 'One message, waiting for you' },
+  { who: 'People you blocked', lane: 'none', note: 'Cannot reach you at all' },
+];
+
+const MessageLanes = () => (
+  <div className="help-lanes" role="table" aria-label="Where a message lands">
+    <div className="help-lanes__head" role="row">
+      <span role="columnheader">Who is writing</span>
+      <span role="columnheader">Where it lands</span>
+    </div>
+    {LANE_ROWS.map((r) => (
+      <div className={`help-lanes__row help-lanes__row--${r.lane}`} role="row" key={r.who}>
+        <span className="help-lanes__who" role="cell">{r.who}</span>
+        <span className="help-lanes__where" role="cell">
+          <b>
+            {r.lane === 'inbox' && 'Your inbox'}
+            {r.lane === 'requests' && 'Requests'}
+            {r.lane === 'none' && 'Nowhere'}
+          </b>
+          <span>{r.note}</span>
+        </span>
+      </div>
+    ))}
   </div>
 );
 
@@ -949,19 +990,31 @@ export const HELP_SECTIONS = [
         ),
       },
       {
+        // ⚠ REWRITTEN for the two-lane messaging model, and only true once the
+        // new messaging backend is deployed. The previous version said
+        // restricting messages limits you to "only people you follow" — true of
+        // the old single-lane gate, not of this one: supporters also get
+        // through, and an unrestricted account still hears from strangers, just
+        // in a different place. Ships in the same PR as the `messaging` section.
         id: 'follow-messages',
         q: 'Does following change who can message me?',
         a: (
           <>
             <p>
-              Yes, and this is the one place following has real teeth. By default
-              anyone on Unis can message you. If you restrict your messages in
-              Settings, only people <em>you</em> follow can reach you.
+              Yes. Following someone puts their messages in your inbox instead
+              of your requests folder — it is one of the two connections Unis
+              treats as knowing a person. The other is support.
             </p>
             <p>
-              Note the direction: it is who you follow, not who follows you. That
-              way an artist with a large following can lock their inbox down to
-              the people they actually chose to keep track of.
+              Note the direction: it is who <em>you</em> follow, not who follows
+              you. An artist with a large following still only gives inbox
+              access to the people they chose to keep track of.
+            </p>
+            <p>
+              If you tighten your message settings to <b>people you know</b>,
+              that same pair is the whole list — artists you follow and
+              listeners who support you. Everyone else cannot start a
+              conversation with you at all.
             </p>
           </>
         ),
@@ -969,7 +1022,328 @@ export const HELP_SECTIONS = [
     ],
   },
   { id: 'likes', title: 'Likes', blurb: 'What liking a song does.', status: 'draft', articles: [] },
-  { id: 'messaging', title: 'Messages', blurb: 'Direct messages and artist broadcasts.', status: 'draft', articles: [] },
+  {
+    // ⚠ PUBLISH AFTER DEPLOY. Rule 1 of this file is that nothing describes
+    // intended behaviour. Every article below is true of the new messaging
+    // backend and NOT of what is running in production right now. Change
+    // `status` to 'published' in the same PR that ships the migration and the
+    // new MessagingService — that one word is the only edit needed.
+    id: 'messaging',
+    title: 'Messages',
+    blurb: 'Who can reach you, how requests work, and messaging artists directly.',
+    status: 'draft',
+    articles: [
+      {
+        id: 'messaging-who',
+        q: 'Can anyone message me?',
+        a: (
+          <>
+            <p>
+              Anyone can write to you, but not everyone reaches your inbox. Unis
+              splits messages into two places, and where a message lands depends
+              on whether you already have a connection to the person sending it.
+            </p>
+            <MessageLanes />
+            <p>
+              Your inbox is for people you have some link with. Requests is for
+              everyone else — a holding area you check when you feel like it,
+              not a queue that interrupts you.
+            </p>
+            <p className="help-note">
+              This applies to listeners and artists equally. There is no separate
+              set of rules for artists, and no request to accept before you can
+              talk to someone.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'messaging-requests',
+        q: 'What is a message request?',
+        a: (
+          <>
+            <p>
+              The first message from someone you have no connection to. It waits
+              in Requests instead of arriving in your inbox, and while it waits
+              it is deliberately limited:
+            </p>
+            <ul>
+              <li>
+                <b>They can send one message.</b> Not a stream — one. They
+                cannot write again until you accept.
+              </li>
+              <li>
+                <b>Text only.</b> No tracks, no support, nothing attached. Those
+                unlock after you accept.
+              </li>
+              <li>
+                <b>You are not notified.</b> A request never rings, buzzes, or
+                pushes to your phone.
+              </li>
+              <li>
+                <b>They cannot tell you read it.</b> No <em>Seen</em> mark is
+                sent from a request, ever.
+              </li>
+            </ul>
+            <p>
+              So you can open a request, read it fully, and walk away, and the
+              person who sent it learns nothing at all.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'messaging-accept',
+        q: 'What happens when I accept or delete a request?',
+        a: (
+          <>
+            <p>
+              <b>Accept</b> moves the conversation into your inbox. From then on
+              they can message you normally and send tracks and support, and you
+              are talking like any other thread.
+            </p>
+            <p>
+              <b>Delete</b> removes it. The sender is never told — no notice, no
+              read mark, nothing that distinguishes a declined request from one
+              you simply have not opened.
+            </p>
+            <p>
+              <b>Block</b> deletes it and stops that account reaching you again.
+            </p>
+            <p className="help-note">
+              Replying counts as accepting. If you just answer the message, the
+              conversation moves to your inbox on its own — you never have to do
+              both.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'messaging-artists',
+        q: 'How do I message an artist?',
+        a: (
+          <>
+            <p>
+              From their profile — the Message button opens a conversation with
+              them. You can also start one from your inbox and search for them
+              by name.
+            </p>
+            <p>
+              If you follow each other, or you support them, you land in their
+              inbox. Otherwise your first message waits in their requests,
+              exactly like anyone else&rsquo;s.
+            </p>
+            <p>
+              <b>Supporting an artist puts you in their inbox.</b> If you are
+              putting money behind an artist, your message does not sit in a
+              holding folder — it goes straight to them. Artists can turn this
+              off, but it is on by default.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'messaging-inside',
+        q: 'What can I do inside a conversation?',
+        a: (
+          <>
+            <p>Four things, beyond typing:</p>
+            <ul>
+              <li>
+                <b>Share a track.</b> It arrives as a playable card with the
+                song&rsquo;s current standing in its jurisdiction, so you are
+                sending a place on the board, not just a link.
+              </li>
+              <li>
+                <b>Send support.</b> Money and a note in the same message. It
+                appears in the thread as its own bubble, and it counts as
+                support exactly like sending it from a profile.
+              </li>
+              <li>
+                <b>React.</b> One emoji per message. Tapping the same one again
+                removes it.
+              </li>
+              <li>
+                <b>Send a photo.</b> Once a conversation is accepted.
+              </li>
+            </ul>
+            <p className="help-note">
+              Tracks, support, and photos are not available in a request. They
+              unlock once the other person accepts.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'messaging-control',
+        q: 'Can I control who messages me?',
+        a: (
+          <>
+            <p>Yes, in Settings under Messages. There are three choices:</p>
+            <ul>
+              <li>
+                <b>Everyone.</b> Anyone can write; people you do not know land
+                in requests. This is the default.
+              </li>
+              <li>
+                <b>People you know.</b> Only artists you follow and listeners
+                who support you. Nobody else can start a conversation with you
+                at all.
+              </li>
+              <li>
+                <b>No one.</b> Nobody new can write to you. You can still start
+                conversations yourself.
+              </li>
+            </ul>
+            <p>
+              Whatever you choose, <b>anyone you have already messaged can
+              always reach you</b>. Tightening this setting never cuts off a
+              conversation you are already in.
+            </p>
+            <p className="help-note">
+              The same screen holds your active status, your read receipts, the
+              spam filter, and your blocked accounts.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'messaging-seen',
+        q: 'Can people tell when I have read a message?',
+        a: (
+          <>
+            <p>
+              In an accepted conversation, yes — a <em>Seen</em> mark appears
+              under their last message once you open it. In a request, never.
+            </p>
+            <p>
+              You can turn read receipts off in Settings, and the same is true of
+              your active status. Both are <b>mutual</b>: switch receipts off and
+              you stop seeing when others have read yours; switch active status
+              off and you stop seeing who is online.
+            </p>
+            <p>
+              That is deliberate. A setting that let you watch other people while
+              staying invisible yourself would not be a privacy control, it would
+              be an advantage.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'messaging-spam',
+        q: 'What stops people from spamming me?',
+        a: (
+          <>
+            <p>Five rules, working together:</p>
+            <ul>
+              <li>
+                <b>A verified phone number is required to send.</b> No verified
+                number, no messages — the same gate as voting.
+              </li>
+              <li>
+                <b>Strangers get one message.</b> Nobody can pile message after
+                message into your requests folder.
+              </li>
+              <li>
+                <b>That message is text only.</b> No images or attachments can
+                reach you from someone you have not accepted.
+              </li>
+              <li>
+                <b>{MESSAGE_REQUEST_DAILY_LIMIT} new people per day.</b> One
+                account can only start conversations with{' '}
+                {MESSAGE_REQUEST_DAILY_LIMIT} people it does not know in a day.
+                Bulk outreach hits a wall quickly.
+              </li>
+              <li>
+                <b>Bulk and low-quality messages are filtered.</b> They go to a
+                separate folder rather than your requests. You can switch this
+                off.
+              </li>
+            </ul>
+            <p>
+              None of this applies to people you already know. The limits exist
+              at the point of first contact, which is the only place spam comes
+              from.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'messaging-block',
+        q: 'How do I block or report someone?',
+        a: (
+          <>
+            <p>
+              Both are in the menu at the top of any conversation, and blocking
+              is also offered directly on a request.
+            </p>
+            <p>
+              <b>Blocking</b> stops messages in both directions — they cannot
+              write to you and you cannot write to them until you unblock. If
+              they had a request waiting, it is deleted. Your blocked accounts
+              are listed in message settings and you can undo it there.
+            </p>
+            <p>
+              <b>Reporting</b> sends the conversation to Unis for review.
+              Reporting does not block on its own, so block as well if you do
+              not want to hear from them while it is looked at.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'messaging-broadcast',
+        q: 'Why did an artist I support message me?',
+        a: (
+          <>
+            <p>
+              Artists can send one message to everyone supporting them. It
+              arrives as a normal conversation, not an announcement — you can
+              reply, and your reply goes to the artist alone.
+            </p>
+            <p>
+              Only people who support that artist receive it. Blocking an artist
+              stops their broadcasts along with everything else.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'messaging-cant',
+        q: 'Why can I not message someone?',
+        a: (
+          <>
+            <p>There are five reasons a message will not send:</p>
+            <ul>
+              <li>
+                <b>Your phone is not verified.</b> Add a number in Settings.
+              </li>
+              <li>
+                <b>They only accept messages from people they know.</b> Follow
+                them or support them, and you will reach them.
+              </li>
+              <li>
+                <b>They are not accepting new messages.</b> Their inbox is
+                closed to people they have not written to.
+              </li>
+              <li>
+                <b>One of you has blocked the other.</b>
+              </li>
+              <li>
+                <b>You have already sent them a request.</b> Wait for it to be
+                accepted rather than sending again.
+              </li>
+            </ul>
+            <p className="help-note">
+              Every refusal tells you which one it was, except a block — that one
+              is deliberately vague in both directions.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
   { id: 'comments', title: 'Comments', blurb: 'Commenting, editing, and moderation.', status: 'draft', articles: [] },
   { id: 'jurisdiction', title: 'Jurisdictions', blurb: 'How Unis divides the map.', status: 'draft', articles: [] },
   { id: 'referrals', title: 'Referrals', blurb: 'Referral codes and the three referral levels.', status: 'draft', articles: [] },
