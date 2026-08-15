@@ -1031,7 +1031,7 @@ export const HELP_SECTIONS = [
     id: 'messaging',
     title: 'Messages',
     blurb: 'Who can reach you, how requests work, and messaging artists directly.',
-    status: 'draft',
+    status: 'published',
     articles: [
       {
         id: 'messaging-who',
