@@ -26,10 +26,16 @@ import React from 'react';
 //   INTERVAL_WEIGHTS            → AwardService.VOTE_WEIGHTS
 //   AWARD_PRIZE                 → AwardService.AWARD_POINTS
 //   MESSAGE_REQUEST_DAILY_LIMIT → MessagingService.MAX_NEW_REQUESTS_PER_DAY
+//   COMMENTS_PER_TRACK          → CommentService.MAX_COMMENTS_PER_USER_PER_SONG
+//   COMMENT_MAX_LENGTH          → CommentService.MAX_COMMENT_LENGTH
 
 export const VOTE_POINTS = 2;
 
 export const MESSAGE_REQUEST_DAILY_LIMIT = 15;
+
+export const COMMENTS_PER_TRACK = 3;
+
+export const COMMENT_MAX_LENGTH = 2000;
 
 export const INTERVAL_WEIGHTS = [
   { key: 'daily', label: 'Daily', weight: 10, prize: 50, cadence: 'Every day', window: 'Midnight to midnight' },
@@ -1028,10 +1034,13 @@ export const HELP_SECTIONS = [
     // backend and NOT of what is running in production right now. Change
     // `status` to 'published' in the same PR that ships the migration and the
     // new MessagingService — that one word is the only edit needed.
+    //
+    // (Was 'publishedh' — a typo, which the page treated as a draft. Set to
+    // 'draft' explicitly so the intent is unambiguous.)
     id: 'messaging',
     title: 'Messages',
     blurb: 'Who can reach you, how requests work, and messaging artists directly.',
-    status: 'published',
+    status: 'draft',
     articles: [
       {
         id: 'messaging-who',
@@ -1344,8 +1353,255 @@ export const HELP_SECTIONS = [
       },
     ],
   },
-  { id: 'comments', title: 'Comments', blurb: 'Commenting, editing, and moderation.', status: 'draft', articles: [] },
-  { id: 'jurisdiction', title: 'Jurisdictions', blurb: 'How Unis divides the map.', status: 'draft', articles: [] },
+  {
+    id: 'comments',
+    title: 'Comments',
+    blurb: 'Leaving them, replying, editing, and the limits that keep threads readable.',
+    status: 'published',
+    articles: [
+      {
+        id: 'comments-who',
+        q: 'Who can comment?',
+        a: (
+          <>
+            <p>
+              Anyone with a verified phone number. Comments sit behind the same
+              gate as voting, for the same reason — a comment section that
+              anyone can fill from a script stops being worth reading within a
+              week.
+            </p>
+            <p>
+              Reading is open to everyone. You can browse every comment on Unis
+              without an account at all; you just cannot add one until you
+              verify.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'comments-limit',
+        q: 'Why can I not comment again on this song?',
+        a: (
+          <>
+            <p>
+              You get <b>{COMMENTS_PER_TRACK}</b> comments on any one song or
+              video. Once you have used them, the box closes for that track.
+            </p>
+            <p>
+              The limit exists so no single person can dominate a track&rsquo;s
+              comments. Three is enough to say something real and not enough to
+              take the section over.
+            </p>
+            <p className="help-note">
+              One exception, and it matters: <b>you can always reply underneath
+              your own comment</b>, even after you have used all{' '}
+              {COMMENTS_PER_TRACK}. If somebody responds to you, you are never
+              locked out of answering them.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'comments-replies',
+        q: 'Can I reply to a reply?',
+        a: (
+          <>
+            <p>
+              No. Threads go one level deep — a comment, and replies underneath
+              it. Replying to a reply puts your response under the original
+              comment instead.
+            </p>
+            <p>
+              Deeply nested threads collapse into unreadable columns on a phone,
+              and the conversation drifts away from the song it is supposed to
+              be about. One level keeps every reply attached to the thing that
+              started it.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'comments-edit',
+        q: 'Can I edit or delete a comment?',
+        a: (
+          <>
+            <p>
+              Both, on your own comments, at any time. There is no window that
+              closes — a typo from last year is still fixable.
+            </p>
+            <p>
+              A deleted comment disappears from the track along with its
+              replies&rsquo; context. Editing keeps the comment in place and
+              simply changes what it says.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'comments-artist-delete',
+        q: 'Can an artist delete comments on their own song?',
+        a: (
+          <>
+            <p>
+              Yes. An artist can remove any comment on their own songs and
+              videos, not just their own comments.
+            </p>
+            <p>
+              Your page is yours. An artist should not have to wait on a
+              moderation queue to take something off their own release. It only
+              extends to their own media — nobody can reach into someone
+              else&rsquo;s comments.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'comments-length',
+        q: 'Is there a length limit?',
+        a: (
+          <>
+            <p>
+              {COMMENT_MAX_LENGTH.toLocaleString()} characters, which is several
+              paragraphs. Long enough for a real thought about a record, short
+              enough that nobody is pasting an essay into a track page.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'jurisdiction',
+    title: 'Jurisdictions',
+    blurb: 'Your place on Unis, and what it decides.',
+    status: 'published',
+    articles: [
+      {
+        id: 'jurisdiction-what',
+        q: 'What is a jurisdiction?',
+        a: (
+          <>
+            <p>
+              A place, and your place on Unis. Every listener and every artist
+              belongs to one — a neighborhood, not a city — and each neighborhood
+              sits inside a larger one, all the way up to Unis itself.
+            </p>
+            <JurisdictionLadder />
+            <p>
+              This is the idea the rest of the platform is built on. Music is
+              local before it is anything else, and a neighborhood is a real
+              scene in a way that a country is not.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'jurisdiction-mine',
+        q: 'How is my jurisdiction decided?',
+        a: (
+          <>
+            <p>
+              From the address you give when you create your account. Unis finds
+              the most specific neighborhood that contains it — not the city, not
+              the state, the smallest place you actually belong to.
+            </p>
+            <p className="help-note">
+              You can see yours at the top of the sidebar at any time. Tapping it
+              opens your jurisdiction&rsquo;s page.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'jurisdiction-does',
+        q: 'What does my jurisdiction decide?',
+        a: (
+          <>
+            <p>Four things, and they are the four that matter most:</p>
+            <ul>
+              <li>
+                <b>Where you can vote.</b> Your own neighborhood, and every
+                jurisdiction above it.
+              </li>
+              <li>
+                <b>Which awards you compete for,</b> if you are an artist. Your
+                neighborhood&rsquo;s, and every one above it.
+              </li>
+              <li>
+                <b>Which leaderboards you appear on.</b> You are ranked in each
+                place you belong to, separately.
+              </li>
+              <li>
+                <b>What you see first.</b> Your feed and the Find page lead with
+                what is happening where you are.
+              </li>
+            </ul>
+          </>
+        ),
+      },
+      {
+        id: 'jurisdiction-upward',
+        q: 'Why can I vote in places I do not live?',
+        a: (
+          <>
+            <p>
+              You cannot — but the places above you count as yours. Your city
+              contains your neighborhood, your state contains your city, and Unis
+              contains everything, so all of them are places you are genuinely
+              part of.
+            </p>
+            <p>
+              What you cannot do is vote sideways. A neighborhood you do not
+              belong to is closed to you, however close it is, and that is what
+              keeps a local award local.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'jurisdiction-page',
+        q: 'What is on a jurisdiction page?',
+        a: (
+          <>
+            <p>
+              What that place is listening to. Its song of the week, its leading
+              artists and songs, and its full record of past winners going back
+              as far as the place has existed on Unis.
+            </p>
+            <p>
+              Any jurisdiction is open to browse, whether you belong to it or
+              not. You just cannot vote there.
+            </p>
+          </>
+        ),
+      },
+      {
+        // ⚠ VERIFY BEFORE SHIPPING. There is no endpoint that changes a user's
+        // jurisdiction after registration — `setJurisdiction` is only called in
+        // UserController.register. This copy is written to be true either way
+        // (it does not promise self-service and does not rule it out), but if
+        // you intend to add a move flow, rewrite this rather than shipping it
+        // as the permanent answer.
+        id: 'jurisdiction-change',
+        q: 'What if I move, or my jurisdiction is wrong?',
+        a: (
+          <>
+            <p>
+              Your jurisdiction is set once, when you create your account, and it
+              stays put after that. If the wrong one was picked, or you have
+              moved, contact us and we will correct it.
+            </p>
+            <p>
+              It is deliberately not a switch you can flip. If people could
+              change neighborhood freely, anyone could move into whichever race
+              they were most likely to win, and every local award would stop
+              meaning anything.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
   { id: 'referrals', title: 'Referrals', blurb: 'Referral codes and the three referral levels.', status: 'draft', articles: [] },
   { id: 'supporter', title: 'Supporting an artist', blurb: 'Picking an artist to support and switching later.', status: 'draft', articles: [] },
   {
