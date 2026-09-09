@@ -270,6 +270,43 @@ const LevelLadder = () => (
   </div>
 );
 
+// ── Waitlist activation thresholds ──────────────────────────────────────────
+// Mirrors PreRegistrationService.getThresholdForRegion. The service keeps two
+// explicit sets (MAJOR_METROS, MID_MARKETS) and falls through to the smallest
+// threshold for everywhere else, so this is a tier table, not a lookup.
+
+export const WAITLIST_TIERS = [
+  { key: 'major', label: 'Major metros', threshold: 1000, note: 'LA, Chicago, Atlanta, Houston, and 11 more' },
+  { key: 'mid', label: 'Mid-size markets', threshold: 500, note: 'Nashville, Austin, Charlotte, and 17 more' },
+  { key: 'rest', label: 'Everywhere else', threshold: 250, note: 'Every other city and town' },
+];
+
+const WaitlistTiers = () => {
+  const max = Math.max(...WAITLIST_TIERS.map((t) => t.threshold));
+  return (
+    <div className="help-ladder" role="table" aria-label="Signups needed to unlock a region">
+      <div className="help-ladder__head" role="row">
+        <span role="columnheader">Region</span>
+        <span role="columnheader">Examples</span>
+        <span role="columnheader">Needed</span>
+      </div>
+      {WAITLIST_TIERS.map((t) => (
+        <div className="help-ladder__row" role="row" key={t.key}>
+          <span className="help-ladder__name" role="cell">{t.label}</span>
+          <span className="help-ladder__cadence" role="cell">{t.note}</span>
+          <span className="help-ladder__bar" role="cell">
+            <span
+              className="help-ladder__fill"
+              style={{ width: `${(t.threshold / max) * 100}%` }}
+            />
+            <b>{t.threshold.toLocaleString()}</b>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // ── Revenue split ───────────────────────────────────────────────────────────
 // Mirrors EarningsService.SUPPORTER_RATE / LEVEL1_RATE / LEVEL2_RATE /
 // LEVEL3_RATE and the DISPLAY_AD_SPLIT array in earnings.jsx. Three copies of
@@ -1754,6 +1791,110 @@ export const HELP_SECTIONS = [
               {COMMENT_MAX_LENGTH.toLocaleString()} characters, which is several
               paragraphs. Long enough for a real thought about a record, short
               enough that nobody is pasting an essay into a track page.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'waitlist',
+    title: 'Waitlist',
+    blurb: 'Unis is not everywhere yet. How a region gets unlocked, and how you speed it up.',
+    status: 'published',
+    articles: [
+      {
+        id: 'waitlist-why',
+        q: 'Why can I not use Unis where I live?',
+        a: (
+          <>
+            <p>
+              Because Unis only works when a place is actually populated. The
+              whole platform is built on local competition — awards, rankings,
+              a scene voting on its own artists. Open a city with eleven people
+              in it and every award is meaningless on day one.
+            </p>
+            <p>
+              So Unis opens region by region, and a region opens when enough
+              people from it have signed up to make it a real scene rather than
+              an empty leaderboard.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'waitlist-threshold',
+        q: 'How many people does my region need?',
+        a: (
+          <>
+            <p>
+              It depends on the size of the place. A major metro needs more
+              people to feel populated than a small city does, so the bar moves
+              with the market.
+            </p>
+            <WaitlistTiers />
+            <p>
+              You can see exactly where your region stands the moment you sign
+              up — the live count, the target, and how many more are needed.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'waitlist-signup',
+        q: 'What happens when I join the waitlist?',
+        a: (
+          <>
+            <p>
+              You pick your state and your metro area, choose whether you are a
+              listener or an artist, and set your username and password. Your
+              account is created right then — it just does not open until your
+              region does.
+            </p>
+            <p>
+              Your username is reserved from that moment. Nobody else can take
+              it while you wait.
+            </p>
+            <p className="help-note">
+              If your city is not in the list, choose <b>Other</b> and type it
+              in. It becomes its own region with its own count, so small towns
+              are not stuck waiting behind a metro they do not belong to.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'waitlist-faster',
+        q: 'Can I make my region open faster?',
+        a: (
+          <>
+            <p>
+              Yes, and this is the only thing that actually moves it. You get a
+              referral code when you join. Everyone who signs up with it counts
+              toward your region&rsquo;s total.
+            </p>
+            <p>
+              There is no queue position to climb and no way to skip ahead
+              alone — a region opens for everyone at once or not at all. The
+              only lever is bringing more of your city with you.
+            </p>
+            <p>
+              Codes look like <b>UNIS-XXXXXX</b>, and they deliberately leave
+              out characters that are easy to confuse, so a code read aloud or
+              written down still works.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'waitlist-notified',
+        q: 'How will I know when my region opens?',
+        a: (
+          <>
+            <p>
+              Email, the moment it activates. That is the only thing your
+              address is used for on the waitlist — no newsletters, and your
+              details are not passed to anyone else.
             </p>
           </>
         ),
