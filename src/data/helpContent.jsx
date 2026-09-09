@@ -203,6 +203,73 @@ const PrizeTable = () => (
   </div>
 );
 
+// ── Points and levels ───────────────────────────────────────────────────────
+// POINT_ACTIONS mirrors ScoreUpdateService one method at a time. The `you`
+// column is the increment to the acting user; `they` is what the song, video,
+// or artist gains from the same action. LEVELS mirrors
+// ScoreUpdateService.calculateLevel — thresholds, not ranges, so the bands
+// below are derived rather than typed twice.
+
+export const POINT_ACTIONS = [
+  { key: 'play', label: 'Play a track', you: '+1', they: 'Track +1, artist +1' },
+  { key: 'like', label: 'Like a track', you: '+1', they: 'Track +2, artist +1' },
+  { key: 'vote', label: 'Cast a vote', you: `+${2}`, they: 'Nominee +3, artist +3' },
+  { key: 'refer', label: 'Refer someone', you: '+5', they: '—' },
+  { key: 'playlist', label: 'Start a community playlist', you: '+5', they: '—' },
+  { key: 'suggest', label: 'Get a suggestion approved', you: '+2', they: '—' },
+  { key: 'plvote', label: 'Vote on a suggestion', you: '+1', they: '—' },
+  { key: 'milestone', label: 'Your playlist hits 10 followers', you: '+10', they: '—' },
+  { key: 'supported', label: 'Someone picks you to support', you: '+5', they: '—' },
+  { key: 'award', label: 'Win an award', you: '+50 to +5,000', they: '—' },
+  { key: 'month', label: 'Every month on Unis', you: '+1', they: '—' },
+];
+
+export const LEVELS = [
+  { key: 'silver', label: 'Silver', from: 0, note: 'Where everyone starts' },
+  { key: 'gold', label: 'Gold', from: 100, note: 'A few weeks of listening' },
+  { key: 'platinum', label: 'Platinum', from: 500, note: 'Regulars and working artists' },
+  { key: 'diamond', label: 'Diamond', from: 1000, note: 'The top of the board' },
+];
+
+const PointTable = () => (
+  <div className="help-ladder" role="table" aria-label="What earns points">
+    <div className="help-ladder__head help-ladder__head--wide" role="row">
+      <span role="columnheader">You</span>
+      <span role="columnheader">Action</span>
+      <span role="columnheader">Points</span>
+    </div>
+    {POINT_ACTIONS.map((a) => (
+      <div className="help-ladder__row help-ladder__row--wide" role="row" key={a.key}>
+        <span className="help-ladder__name" role="cell">{a.you}</span>
+        <span className="help-ladder__cadence" role="cell">{a.label}</span>
+        <span className="help-ladder__prize" role="cell">{a.they}</span>
+      </div>
+    ))}
+  </div>
+);
+
+const LevelLadder = () => (
+  <div className="help-ladder" role="table" aria-label="Levels and their thresholds">
+    <div className="help-ladder__head help-ladder__head--wide" role="row">
+      <span role="columnheader">Level</span>
+      <span role="columnheader">Who is here</span>
+      <span role="columnheader">Points</span>
+    </div>
+    {LEVELS.map((l, i) => {
+      const next = LEVELS[i + 1];
+      return (
+        <div className="help-ladder__row help-ladder__row--wide" role="row" key={l.key}>
+          <span className="help-ladder__name" role="cell">{l.label}</span>
+          <span className="help-ladder__cadence" role="cell">{l.note}</span>
+          <span className="help-ladder__prize" role="cell">
+            {next ? `${l.from}–${next.from - 1}` : `${l.from.toLocaleString()}+`}
+          </span>
+        </div>
+      );
+    })}
+  </div>
+);
+
 // ── Revenue split ───────────────────────────────────────────────────────────
 // Mirrors EarningsService.SUPPORTER_RATE / LEVEL1_RATE / LEVEL2_RATE /
 // LEVEL3_RATE and the DISPLAY_AD_SPLIT array in earnings.jsx. Three copies of
@@ -615,7 +682,128 @@ export const HELP_SECTIONS = [
       },
     ],
   },
-  { id: 'points', title: 'Points and levels', blurb: 'What earns points and how levels work.', status: 'draft', articles: [] },
+  {
+    id: 'points',
+    title: 'Points and levels',
+    blurb: 'What earns points, what levels mean, and why your score only goes up.',
+    status: 'published',
+    articles: [
+      {
+        id: 'points-what',
+        q: 'What are points?',
+        a: (
+          <>
+            <p>
+              Your record of showing up. Every meaningful thing you do on
+              Unis — playing, liking, voting, referring, curating — adds to a
+              single running score, and that score sets your level.
+            </p>
+            <p>
+              Artists and listeners share the same scale. An artist just has
+              more ways onto it: their tracks earn on every play, like, and vote
+              they receive, on top of whatever they earn listening themselves.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'points-earn',
+        q: 'What earns points?',
+        a: (
+          <>
+            <p>
+              Most of it is what you were doing anyway. The left column is what
+              you earn; the right is what the track and its artist earn from the
+              same action.
+            </p>
+            <PointTable />
+            <p className="help-note">
+              A play or a like pays you and the artist at the same time. You are
+              never choosing between building your own score and backing
+              somebody else&rsquo;s — one action does both.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'points-levels',
+        q: 'What are levels for?',
+        a: (
+          <>
+            <p>
+              Four bands, set by your score, shown on your profile.
+            </p>
+            <LevelLadder />
+            <p>
+              Levels are how Unis will decide access to live events and
+              giveaways as those roll out. They are also the plainest signal of
+              who has actually been here — a Diamond listener has put in a lot
+              of listening, and that is visible to everyone.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'points-down',
+        q: 'Can my score go down?',
+        a: (
+          <>
+            <p>
+              No. Points only ever go up. Unfollowing, unliking, switching the
+              artist you support, deleting a playlist — none of it takes
+              anything back.
+            </p>
+            <p>
+              Points record what you did, not what you currently have. Something
+              you did last year still happened, so the score keeps it.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'points-vs-votes',
+        q: 'Are points the same as votes?',
+        a: (
+          <>
+            <p>
+              No, and this is the one thing worth getting straight. <b>Votes
+              decide who wins awards. Points decide your level.</b> They are
+              separate systems that happen to touch at one point: casting a vote
+              earns you points, the same way a play does.
+            </p>
+            <p>
+              So a listener with a huge score has no more say in an award than
+              anyone else — one vote each, whoever you are. Score buys standing,
+              not influence.
+            </p>
+            <p className="help-note">
+              The one exception is a tie. If two nominees are dead level on
+              votes, plays, and likes, score is the next tiebreaker — but only
+              after all three of those have failed to separate them.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'points-limits',
+        q: 'Can I just play the same song all day?',
+        a: (
+          <>
+            <p>
+              It will not do anything after the first play. The 30-minute rule
+              in Play counts means the same track only pays once per half hour,
+              for you and for the artist.
+            </p>
+            <p>
+              Listening widely is what accumulates. That is the whole point of
+              the limit — a score should mean somebody was actually here, not
+              that a tab was left open overnight.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
   {
     id: 'plays',
     title: 'Play counts',
@@ -1027,7 +1215,109 @@ export const HELP_SECTIONS = [
       },
     ],
   },
-  { id: 'likes', title: 'Likes', blurb: 'What liking a song does.', status: 'draft', articles: [] },
+  {
+    id: 'likes',
+    title: 'Likes',
+    blurb: 'What a like is worth, who can see it, and how it differs from a vote.',
+    status: 'published',
+    articles: [
+      {
+        id: 'likes-what',
+        q: 'What does liking a track do?',
+        a: (
+          <>
+            <p>
+              It pays three ways at once. You earn <b>1 point</b>, the track
+              earns <b>2</b>, and the artist earns <b>1</b>. Songs and videos
+              work identically.
+            </p>
+            <p>
+              A like is worth double to the track precisely because it costs you
+              a deliberate tap. A play can happen because a queue rolled on. A
+              like only happens because somebody meant it.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'likes-vs-votes',
+        q: 'How is a like different from a vote?',
+        a: (
+          <>
+            <p>
+              A like is unlimited and instant. A vote is scarce and decides an
+              award. You can like every track you hear today; you get one vote
+              per interval, per category, per place.
+            </p>
+            <p>
+              Likes still reach the awards, just not first. If two nominees tie
+              on votes and then on plays, likes are the next thing that
+              separates them — so a track with real affection behind it wins the
+              close ones.
+            </p>
+            <p className="help-note">
+              Liking does not require a verified phone number. Voting does.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'likes-public',
+        q: 'Can people see what I liked?',
+        a: (
+          <>
+            <p>
+              They see the number, not the name. Every track shows its like
+              count publicly, including to signed-out visitors, and an
+              artist&rsquo;s profile shows their total likes across everything
+              they have released.
+            </p>
+            <p>
+              Which individual accounts liked a track is not shown anywhere on
+              Unis.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'likes-unlike',
+        q: 'What happens if I unlike something?',
+        a: (
+          <>
+            <p>
+              The like comes off the track and its count drops by one. Points
+              already earned stay where they are — yours, the track&rsquo;s, and
+              the artist&rsquo;s.
+            </p>
+            <p>
+              Points are a record of what happened, not a running tally of what
+              you currently feel. You liked it at the time, and the score keeps
+              that.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'likes-artist',
+        q: 'What do likes do for an artist?',
+        a: (
+          <>
+            <p>
+              Three things. They add to the track&rsquo;s score, which feeds its
+              standing on leaderboards. They add to the artist&rsquo;s own score
+              and level. And they sit third in the tiebreaker when an award comes
+              down to the wire.
+            </p>
+            <p>
+              A track with strong likes and modest votes is usually a record
+              people love but have not thought to back yet. That gap is worth
+              watching — it is often the clearest sign of what to push.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
   {
     // ⚠ PUBLISH AFTER DEPLOY. Rule 1 of this file is that nothing describes
     // intended behaviour. Every article below is true of the new messaging
@@ -1602,8 +1892,229 @@ export const HELP_SECTIONS = [
       },
     ],
   },
-  { id: 'referrals', title: 'Referrals', blurb: 'Referral codes and the three referral levels.', status: 'draft', articles: [] },
-  { id: 'supporter', title: 'Supporting an artist', blurb: 'Picking an artist to support and switching later.', status: 'draft', articles: [] },
+  {
+    id: 'referrals',
+    title: 'Referrals',
+    blurb: 'Your code, the three levels, and what inviting someone is actually worth.',
+    status: 'published',
+    articles: [
+      {
+        id: 'referrals-code',
+        q: 'Where is my referral code?',
+        a: (
+          <>
+            <p>
+              You already have one. Unis generates it the moment you create your
+              account — your username, a dash, and five random
+              characters. Anyone who signs up with it is permanently linked to
+              you.
+            </p>
+            <p>
+              It never expires, there is no cap on how many people can use it,
+              and you cannot lose it.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'referrals-levels',
+        q: 'What are the three levels?',
+        a: (
+          <>
+            <p>
+              Referrals pay three steps down, not one. When somebody sees an ad
+              on Unis, money reaches the person who invited them, the person who
+              invited <em>that</em> person, and one step further back again.
+            </p>
+            <RevenueSplit />
+            <p>
+              So you earn from people you have never met. Invite one person who
+              turns out to be a connector, and their whole branch pays you
+              quietly for as long as it keeps growing.
+            </p>
+            <p className="help-note">
+              The chain stops at three. Nothing reaches a fourth step, and there
+              is no arrangement where inviting people is your only reason to be
+              here.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'referrals-points',
+        q: 'Do I get points for referring someone?',
+        a: (
+          <>
+            <p>
+              Yes, the moment they sign up — separate from any money their
+              viewing later earns you. Points land immediately; earnings build
+              over time as they use Unis.
+            </p>
+            <p>
+              A referral is one of the largest single point awards a listener
+              can earn outside of curating, because bringing a real person into
+              a local scene is worth more than any single play.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'referrals-when',
+        q: 'When do I start earning from someone I referred?',
+        a: (
+          <>
+            <p>
+              As soon as they are signed in and seeing ads. There is no waiting
+              period and no threshold they have to cross first.
+            </p>
+            <p>
+              Two things can stop it. <b>They have to be signed in</b> — a
+              signed-out visitor earns nobody anything. And{' '}
+              <b>your phone has to be verified</b>, or the money is calculated
+              and simply never attributed to you.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'referrals-nocode',
+        q: 'What if I forgot to enter a code when I signed up?',
+        a: (
+          <>
+            <p>
+              Then no referrer was recorded, and that cannot be changed
+              afterward. The link is made once, at signup, from the code in the
+              form.
+            </p>
+            <p>
+              An unclaimed referral share stays with Unis. It is not reassigned
+              and it does not roll to anyone else.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'supporter',
+    title: 'Supporting an artist',
+    blurb: 'Choosing one, switching later, and why the change waits for the 1st.',
+    status: 'published',
+    articles: [
+      {
+        id: 'supporter-what',
+        q: 'What does supporting an artist mean?',
+        a: (
+          <>
+            <p>
+              One artist earns from your presence on Unis. Every ad you see
+              signed in sends a share to them — not to you, not to the platform
+              alone, to a specific artist you picked.
+            </p>
+            <p>
+              You choose when you sign up and you always have one. It costs you
+              nothing beyond being here, which is the whole idea: listening is
+              already the contribution.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'supporter-choose',
+        q: 'Who can I support?',
+        a: (
+          <>
+            <p>
+              Any artist on Unis, anywhere — you are not limited to your own
+              jurisdiction. The one person you cannot support is yourself, if
+              you are an artist.
+            </p>
+            <p>
+              Most people back somebody local, and that is what keeps money
+              circulating inside a scene rather than draining out of it. But the
+              choice is genuinely yours.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'supporter-switch',
+        q: 'Can I switch artists?',
+        a: (
+          <>
+            <p>
+              Whenever you like, but the change takes effect on the <b>1st of
+              next month</b>, not immediately. Until then your current artist
+              stays effective and keeps earning.
+            </p>
+            <p>
+              Your first-ever pick is the exception — that one takes effect
+              straight away, because there is nobody being switched away from.
+            </p>
+            <p className="help-note">
+              A queued change is visible on your profile until it lands, and you
+              can cancel it or pick somebody else right up until the 1st. The
+              last choice standing at the month boundary is the one that takes.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'supporter-why-wait',
+        q: 'Why does switching wait until the 1st?',
+        a: (
+          <>
+            <p>
+              So artists can count on the month they are in. If support could
+              move mid-month, an artist&rsquo;s income would swing daily and
+              nobody could plan around it.
+            </p>
+            <p>
+              Nothing you have already earned for an artist is ever taken back.
+              Every ad view is stamped with whoever was effective at that moment,
+              so a departing artist keeps every cent from the time they were
+              yours. The switch changes the future, never the past.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'supporter-artist-side',
+        q: 'What do I get as an artist when someone supports me?',
+        a: (
+          <>
+            <p>
+              Points immediately, and income for as long as they stay. Each new
+              supporter adds to your score, and from then on every ad they see
+              signed in pays you a share.
+            </p>
+            <p>
+              This is the most durable income on Unis. A play is one moment; a
+              supporter is somebody quietly earning for you every time they open
+              the app.
+            </p>
+            <p className="help-note">
+              Your phone has to be verified for any of it to reach you. Without
+              it the views are recorded and the money is not attributed.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'supporter-leaves',
+        q: 'What if the artist I support leaves Unis?',
+        a: (
+          <>
+            <p>
+              You will be asked to pick a new one. Some share of your ad revenue
+              always goes to an artist — that part of the split never lapses back
+              to the platform the way an unclaimed referral does.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
   {
     id: 'payouts',
     title: 'Earnings and payouts',
