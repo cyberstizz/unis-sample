@@ -107,6 +107,10 @@ export const PlayerProvider = ({ children }) => {
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
 
   const audioRef = useRef(null);
+  // Set by prev() so the header logo knows a song change went BACKWARD
+  // (it sways left for previous, right for everything else). Stamped with a
+  // time so a stale marker can't leak into a later, unrelated song change.
+  const navDirectionRef = useRef(null);
 
   // ========================================================================
   // QUEUE PERSISTENCE — save
@@ -419,6 +423,7 @@ export const PlayerProvider = ({ children }) => {
       return;
     }
 
+    navDirectionRef.current = { dir: -1, at: Date.now() };
     setCurrentIndex(idx);
     setCurrentMedia(queue[idx]);
   }, [queue, currentIndex, isTrackBlocked]);
@@ -987,6 +992,7 @@ export const PlayerProvider = ({ children }) => {
 
   return (
     <PlayerContext.Provider value={{
+      navDirectionRef,
       // Player state
       isExpanded,
       toggleExpand,
