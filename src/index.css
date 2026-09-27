@@ -39,9 +39,36 @@ button {
 button:hover {
   border-color: #646cff;
 }
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+/* ─── Click / tap outlines: removed app-wide ────────────────────────────
+   Why the white rings kept coming back: this file started as Vite's starter
+   template, which shipped `button:focus { outline: 4px auto ... }`. That rule
+   fired on every mouse click, on every button in the app, so each new page
+   brought the ring back until someone patched that page locally. The rule is
+   gone; these three rules replace it for the whole app.
+
+   Keyboard users (Tab key) still get a focus ring on buttons, links and
+   cards — that's the :focus-visible case, which browsers only trigger from
+   the keyboard, never from a click or tap. */
+
+/* 1. Mobile tap flash (the grey/white box on tap). Inherited, so this covers
+      every element. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 2. Clicks and taps on buttons, links, cards: no outline. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 3. Form fields: browsers draw their ring on every click into a field.
+      Unis fields show focus with their own border/glow and the text caret,
+      so the browser ring is dropped here. */
+input:focus,
+textarea:focus,
+select:focus,
+[contenteditable]:focus {
+  outline: none;
 }
 
 /* The single layout rule — everything else flows from the JS-calculated variable */
