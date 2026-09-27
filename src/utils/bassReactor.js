@@ -1,87 +1,289 @@
 // src/utils/bassReactor.js
 //
 // Singleton Web Audio engine that taps the app's shared media element and
-// publishes a smoothed 0–1 "kick energy" value every animation frame. Any
-// component can subscribe (the header logo does).
+// publishes BEAT EVENTS every animation frame. The header logo subscribes.
 //
-// ─── HOW THE MOTION IS SHAPED ───────────────────────────────────────────
-// The goal is for the logo to POP on the kick drum, not wobble along with the
-// whole low end. Absolute low-frequency energy doesn't do that: a sustained
-// bassline or 808 keeps the band "hot" the whole time, so you get constant,
-// barely-noticeable motion instead of distinct hits.
+// ─── WHAT CHANGED (v2 — "kick + snare") ─────────────────────────────────
+// v1 watched only 35–130 Hz and reported how far that band sat above its
+// own slow average. That made the logo react to the kick alone, with small
+// hits most people never noticed. v2 does what good music visualizers do:
 //
-// Instead we measure how far the kick band jumps ABOVE its own recent
-// baseline. A slow-moving average of the band represents the sustained
-// bassline/drone; subtract it and what's left is the transient — the kick
-// punching through. That transient is normalized, gated, and run through an
-// envelope follower (fast attack / smooth release) so each kick becomes a
-// clean pop that settles back toward rest before the next beat.
+//  1. TWO DRUM DETECTORS, not one.
+//       • KICK  — 40–130 Hz (the thump)
+//       • SNARE — 1.8–5 kHz "crack" confirmed by 180–400 Hz "body".
+//         Requiring the body keeps hi-hats (crack, no body) from firing it.
+//     The logo gets a DIFFERENT gesture for each, so the eye can read the
+//     groove: kick = punch, snare = tilt + flash (alternating sides, so a
+//     backbeat on 2 & 4 reads as the logo dancing side to side).
 //
-// Hard constraints this module handles for you:
+//  2. SPECTRAL FLUX onset detection. Instead of "how loud is the band", we
+//     measure how much NEW energy arrived since the last frame, bin by bin.
+//     A sustained 808 or bassline produces almost no flux; a drum hit produces
+//     a spike. Each spike is compared to an adaptive threshold
+//     (running mean + K × std-dev), so the detector self-calibrates to any
+//     master — quiet demo or brick-walled single.
+//
+//  3. DISCRETE HITS with a strength, instead of a blurry envelope. The
+//     consumer turns each hit into a spring impulse, so every drum hit gets a
+//     crisp, same-shaped pop with a little rebound.
+//
+//  4. SONG ENERGY. A slow loudness ratio (now vs. the last few seconds) says
+//     whether we're in a verse or a hook, so hits get bigger when the song
+//     gets bigger — the "strong points" read as strong.
+//
+//  5. HEADROOM. The analyser's default dB ceiling (-30) clips loud, modern
+//     masters: the kick band sat pinned at 255 and there was nothing left to
+//     detect. We widen the range to -95…-5 dB.
+//
+//  6. TIME-BASED, not frame-based. All smoothing uses real elapsed time, so
+//     the motion feels identical on 60 Hz and 120 Hz (ProMotion) screens.
+//
+// Hard constraints this module handles for you (unchanged from v1):
 //  • createMediaElementSource() may only ever be called ONCE per element —
 //    we cache source nodes in a Map keyed by element.
 //  • Once an element is routed through an AudioContext, its sound comes out
 //    of the graph, so the analyser is always connected to ctx.destination.
 //  • Cross-origin media without CORS approval outputs silence into the graph.
-//    We therefore refuse to attach any element that wasn't rendered with
-//    crossOrigin="anonymous" (see player.jsx), and your R2 bucket must have
-//    a CORS policy allowing your origin.
+//    We refuse any element not rendered with crossOrigin="anonymous"
+//    (see player.jsx), and the R2 bucket must allow this origin via CORS.
 //  • iOS/Safari suspend the AudioContext until a user gesture — we resume()
 //    on every attach, which is always triggered by a play action.
 
 const KILL_SWITCH_KEY = 'unis-logo-pulse'; // localStorage 'off' disables
 
-// ─── TUNING ─────────────────────────────────────────────────────────────
-// All the "feel" lives here. Safe to tweak live.
-const CONFIG = {
-  // Frequency window the pulse listens to, in Hz. A kick's thump lives roughly
-  // 40–130 Hz. Narrow = tighter to the kick; widen the top toward ~180 to also
-  // catch snare/clap body if you ever want a busier feel.
-  bandLoHz: 35,
-  bandHiHz: 130,
+// ─── DETECTOR TUNING ────────────────────────────────────────────────────
+// Everything about WHAT counts as a hit lives here. How big the logo moves
+// lives in header.jsx (MOTION).
+export const DETECTOR_CONFIG = {
+  kick:  { loHz: 40,   hiHz: 130,  k: 2.0, refractoryMs: 110 },
+  snare: { loHz: 1800, hiHz: 5000, k: 2.0, refractoryMs: 120 },
 
-  // How fast the "sustained level" baseline adapts (per frame, 0–1).
-  // Lower = slower = a single kick stands out more. Too high and the baseline
-  // "eats" the kick before it can register.
-  baselineRate: 0.015,
+  // A snare/clap must also push new energy into its "body" range. Hi-hats
+  // and shakers don't, so this is what keeps them from firing the snare.
+  // bodyZ = std-devs above the body band's own running mean.
+  snareBody: { loHz: 180, hiHz: 400, bodyZ: 1.0, minFlux: 0.015 },
 
-  // Adaptive normalization: the loudest recent transient maps to ~1.0.
-  // peakDecay is per-frame; lower = forgets loud hits faster (more sensitive
-  // in quiet sections). minPeak stops silence from being amplified into noise.
-  peakDecay: 0.994,
-  minPeak: 0.04,
+  // Don't fire for this long after a reset (new song / new element) while
+  // the running stats find their feet. Otherwise the first frames of every
+  // song are judged against a threshold of zero.
+  warmupMs: 200,
 
-  // Noise gate on the normalized transient (0–1). Everything below this is
-  // treated as rest, so the logo actually sits still between hits.
-  gate: 0.08,
+  // Running mean/std-dev time constant for the adaptive threshold (seconds).
+  // Longer = steadier threshold; shorter = adapts faster to a drop/switch-up.
+  statsTau: 1.2,
 
-  // Dynamics curve. >1 keeps soft hits soft and lets hard hits pop
-  // (preserves the groove's dynamics). =1 is linear. <1 flattens everything.
-  gamma: 1.15,
+  // A band must rise at least this much (0–1 byte-scale flux, ≈ 2.7 dB
+  // averaged across the band) to count at all. Stops frame-to-frame
+  // shimmer in a held 808, silence and fade-outs from reading as hits.
+  minFlux: 0.03,
 
-  // Envelope follower coefficients (per frame). attack = how fast it rises to
-  // a new peak, release = how slowly it falls. Fast attack + slow release is
-  // what makes a "kick" read as a kick.
-  attack: 0.5,   // ~87% of a step in ~4 frames (~65ms) — snappy, not jittery
-  release: 0.09, // decays to ~rest over ~450–500ms — one clean pop per beat
+  // Hysteresis: after firing, flux must fall below threshold × rearm before
+  // the band can fire again. Kills double-triggers on one drum hit.
+  rearm: 0.85,
+
+  // If the kick fired this recently, the snare needs a much bigger crack to
+  // fire too (a kick's beater click lands in the snare's crack band).
+  kickMaskMs: 60,
+  kickMaskExtraZ: 2.5,
+
+  // How loud the hardest recent hit was, in std-devs above the mean.
+  // Hit strength is measured against this so the biggest hits map to ~1.0.
+  zPeakTau: 3.0,
+  zPeakMinAboveK: 1.5,
+
+  // Song energy: fast loudness vs slow loudness (seconds).
+  loudFastTau: 0.15,
+  loudSlowTau: 6.0,
 };
 
+const ANALYSER_MIN_DB = -95;
+const ANALYSER_MAX_DB = -5;
+
+// Exponential smoothing factor for a time constant, frame-rate independent.
+const alphaFor = (dt, tau) => 1 - Math.exp(-dt / tau);
+const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+
+function makeBand(binLo, binHi, cfg) {
+  return {
+    binLo, binHi, cfg,
+    mean: 0, variance: 0,
+    zPeak: cfg.k + DETECTOR_CONFIG.zPeakMinAboveK,
+    armed: true, lastHitAt: -Infinity,
+    flux: 0,
+  };
+}
+
+function bandFlux(bins, prev, lo, hi) {
+  let sum = 0;
+  for (let i = lo; i <= hi; i++) {
+    const d = bins[i] - prev[i];
+    if (d > 0) sum += d;
+  }
+  return sum / ((hi - lo + 1) * 255);
+}
+
+// Update a band's stats and decide whether it fires this frame.
+// Returns hit strength 0–1 (0 = no hit). extraZ raises the bar temporarily.
+function stepBand(band, flux, dt, nowMs, extraZ = 0) {
+  const C = DETECTOR_CONFIG;
+  band.flux = flux;
+
+  const std = Math.sqrt(band.variance);
+  const threshold = band.mean + (band.cfg.k + extraZ) * std;
+  const z = std > 1e-6 ? (flux - band.mean) / std : 0;
+
+  let strength = 0;
+  const canFire = band.armed
+    && flux > C.minFlux
+    && flux > threshold
+    && nowMs - band.lastHitAt >= band.cfg.refractoryMs;
+
+  if (canFire) {
+    band.zPeak = Math.max(band.zPeak, z);
+    strength = clamp01((z - band.cfg.k) / Math.max(0.5, band.zPeak - band.cfg.k));
+    // Any hit that cleared the threshold is a real hit: give it a floor so it
+    // is always visible. Strength then only decides "big" vs "bigger".
+    strength = 0.35 + 0.65 * strength;
+    band.armed = false;
+    band.lastHitAt = nowMs;
+  } else if (!band.armed && flux < threshold * C.rearm) {
+    band.armed = true;
+  }
+
+  // Update running stats AFTER the decision so a hit is judged against the
+  // song so far, not against itself.
+  const a = alphaFor(dt, C.statsTau);
+  const diff = flux - band.mean;
+  band.mean += a * diff;
+  band.variance += a * (diff * diff - band.variance);
+
+  // Let the "loudest recent hit" reference decay so quiet sections recover.
+  const floor = band.cfg.k + C.zPeakMinAboveK;
+  band.zPeak = floor + (band.zPeak - floor) * Math.exp(-dt / C.zPeakTau);
+
+  return strength;
+}
+
+/**
+ * Pure beat detector — no Web Audio, so it's unit-testable with synthetic
+ * spectra. The live engine below feeds it real analyser data.
+ *
+ * process({ bins, rms, dt, nowMs }) → {
+ *   kickHit:   0–1 (>0 only on the frame a kick is detected),
+ *   snareHit:  0–1 (>0 only on the frame a snare/clap is detected),
+ *   snareSide: +1 / -1, alternates on each snare (for side-to-side motion),
+ *   energy:    0–1, how "big" this part of the song is vs. the last few secs,
+ *   kick:      0–1 decaying kick envelope (legacy subscribeBass value),
+ *   dt:        seconds since the previous frame (clamped), for consumers'
+ *              own time-based animation,
+ * }
+ */
+export function createBeatDetector({ binHz, binCount }) {
+  const C = DETECTOR_CONFIG;
+  const toBin = (hz) => Math.min(binCount - 1, Math.max(1, Math.round(hz / binHz)));
+  const range = (b) => {
+    const lo = toBin(b.loHz);
+    return [lo, Math.max(lo, toBin(b.hiHz))];
+  };
+
+  const kick = makeBand(...range(C.kick), C.kick);
+  const snare = makeBand(...range(C.snare), C.snare);
+  const [bodyLo, bodyHi] = range(C.snareBody);
+  const body = { lo: bodyLo, hi: bodyHi, mean: 0, variance: 0 };
+  let startedAt = null;
+
+  let prev = new Uint8Array(binCount);
+  let primed = false;
+  let snareSide = 1;
+  let loudFast = 0;
+  let loudSlow = 0;
+  let kickEnv = 0;
+
+  function reset() {
+    for (const b of [kick, snare]) {
+      b.mean = 0; b.variance = 0; b.armed = true; b.lastHitAt = -Infinity;
+      b.zPeak = b.cfg.k + C.zPeakMinAboveK;
+    }
+    body.mean = 0; body.variance = 0;
+    startedAt = null;
+    prev = new Uint8Array(binCount);
+    primed = false;
+    loudFast = 0; loudSlow = 0; kickEnv = 0;
+  }
+
+  function process({ bins, rms = 0, dt, nowMs }) {
+    // Clamp dt: a backgrounded tab can hand us a multi-second gap.
+    dt = Math.min(Math.max(dt, 1 / 240), 1 / 20);
+
+    // Song energy (verse vs hook). Seed both followers from the first real
+    // reading so a song doesn't start out looking like a "hook".
+    if (loudSlow === 0 && rms > 0) { loudFast = rms; loudSlow = rms; }
+    loudFast += alphaFor(dt, C.loudFastTau) * (rms - loudFast);
+    loudSlow += alphaFor(dt, C.loudSlowTau) * (rms - loudSlow);
+    const ratio = loudSlow > 0.005 ? loudFast / loudSlow : 0;
+    const energy = clamp01((ratio - 0.6) / 0.8); // ~0.5 at "normal" level
+
+    if (startedAt === null) startedAt = nowMs;
+    const warm = nowMs - startedAt >= C.warmupMs;
+
+    if (!primed) {
+      prev.set(bins);
+      primed = true;
+      return { kickHit: 0, snareHit: 0, snareSide, energy, kick: 0, dt };
+    }
+
+    const kFlux = bandFlux(bins, prev, kick.binLo, kick.binHi);
+    const sFlux = bandFlux(bins, prev, snare.binLo, snare.binHi);
+    const bFlux = bandFlux(bins, prev, body.lo, body.hi);
+    prev.set(bins);
+
+    // During warm-up, stats update but nothing is allowed to fire.
+    const block = warm ? 0 : Infinity;
+    const kickHit = stepBand(kick, kFlux, dt, nowMs, block);
+
+    // Snare: masked right after a kick (beater click), and must have body.
+    const recentKick = nowMs - kick.lastHitAt < C.kickMaskMs;
+    const bodyStd = Math.sqrt(body.variance);
+    const hasBody = bFlux >= C.snareBody.minFlux
+      && bFlux > body.mean + C.snareBody.bodyZ * bodyStd;
+    const prevSnareAt = snare.lastHitAt;
+    let snareHit = stepBand(snare, sFlux, dt, nowMs, block + (recentKick ? C.kickMaskExtraZ : 0));
+    if (snareHit > 0 && !hasBody) {
+      // It was a hat/shaker: undo the fire so the band stays armed.
+      snareHit = 0;
+      snare.armed = true;
+      snare.lastHitAt = prevSnareAt;
+    }
+    const ba = alphaFor(dt, C.statsTau);
+    const bDiff = bFlux - body.mean;
+    body.mean += ba * bDiff;
+    body.variance += ba * (bDiff * bDiff - body.variance);
+
+    if (snareHit > 0) snareSide = -snareSide;
+
+    // Legacy envelope: instant attack, ~180ms decay.
+    kickEnv = Math.max(kickHit, kickEnv * Math.exp(-dt / 0.18));
+    if (kickEnv < 0.001) kickEnv = 0;
+
+    return { kickHit, snareHit, snareSide, energy, kick: kickEnv, dt };
+  }
+
+  return { process, reset, _bands: { kick, snare, body } };
+}
+
+// ─── LIVE ENGINE ────────────────────────────────────────────────────────
 let ctx = null;
 let analyser = null;
 let freqData = null;
+let timeData = null;
+let detector = null;
 
 const sources = new Map();      // mediaElement -> MediaElementAudioSourceNode
 let connectedSource = null;     // the source currently feeding the analyser
 
-const subscribers = new Set();
+const subscribers = new Set();  // beat subscribers (frame object)
 let rafId = null;
-
-// ─── Envelope / detector state ──────────────────────────────────────────
-let baseline = 0;       // slow-moving sustained level of the band
-let adaptivePeak = CONFIG.minPeak;
-let env = 0;            // published value
-let binLo = 1;
-let binHi = 8;
+let lastTs = null;
 
 export function isPulseEnabled() {
   try {
@@ -103,16 +305,18 @@ function ensureContext() {
   if (!AC) return false;
   ctx = new AC();
   analyser = ctx.createAnalyser();
-  analyser.fftSize = 2048;               // bin width ≈ 21–23 Hz at 44.1/48k
-  // Low, not zero: we want transients to survive to our own envelope
-  // follower rather than being pre-blurred by the analyser.
-  analyser.smoothingTimeConstant = 0.25;
+  analyser.fftSize = 2048;               // bin ≈ 21–23 Hz: enough to isolate the kick
+  analyser.smoothingTimeConstant = 0;    // flux needs raw frames; we smooth ourselves
+  analyser.minDecibels = ANALYSER_MIN_DB;
+  analyser.maxDecibels = ANALYSER_MAX_DB;
   freqData = new Uint8Array(analyser.frequencyBinCount);
+  timeData = new Float32Array(analyser.fftSize);
   analyser.connect(ctx.destination);
 
-  const binHz = ctx.sampleRate / analyser.fftSize;
-  binLo = Math.max(1, Math.round(CONFIG.bandLoHz / binHz));
-  binHi = Math.max(binLo + 1, Math.round(CONFIG.bandHiHz / binHz));
+  detector = createBeatDetector({
+    binHz: ctx.sampleRate / analyser.fftSize,
+    binCount: analyser.frequencyBinCount,
+  });
   return true;
 }
 
@@ -133,7 +337,7 @@ export function attachMediaElement(el) {
     try {
       src = ctx.createMediaElementSource(el);
     } catch (e) {
-      // Element already claimed by another context, or unsupported.
+      console.error('[bassReactor] createMediaElementSource failed:', e);
       return false;
     }
     sources.set(el, src);
@@ -145,75 +349,75 @@ export function attachMediaElement(el) {
     }
     src.connect(analyser);
     connectedSource = src;
+    detector.reset(); // new element = new song context
   }
 
   if (ctx.state === 'suspended') {
-    ctx.resume().catch(() => {});
+    ctx.resume().catch((e) => console.error('[bassReactor] resume failed:', e));
   }
   return true;
 }
 
-function frame() {
+function computeRms() {
+  if (analyser.getFloatTimeDomainData) {
+    analyser.getFloatTimeDomainData(timeData);
+    let s = 0;
+    for (let i = 0; i < timeData.length; i++) s += timeData[i] * timeData[i];
+    return Math.sqrt(s / timeData.length);
+  }
+  return 0; // very old Safari: energy just stays neutral
+}
+
+function frame(ts) {
   rafId = requestAnimationFrame(frame);
-  if (!analyser) return;
+  if (!analyser || !detector) return;
+
+  const dt = lastTs == null ? 1 / 60 : (ts - lastTs) / 1000;
+  lastTs = ts;
 
   analyser.getByteFrequencyData(freqData);
+  const out = detector.process({ bins: freqData, rms: computeRms(), dt, nowMs: ts });
 
-  // 1. Current energy in the kick band (0–1).
-  let sum = 0;
-  for (let i = binLo; i <= binHi; i++) sum += freqData[i];
-  const energy = sum / ((binHi - binLo + 1) * 255);
+  for (const fn of subscribers) {
+    try { fn(out); } catch (e) { console.error('[bassReactor] subscriber error:', e); }
+  }
+}
 
-  // 2. Track the sustained level of the band, then measure how far we've
-  //    jumped above it right now. That jump IS the kick transient; a steady
-  //    bassline raises the baseline and gets subtracted away.
-  baseline += (energy - baseline) * CONFIG.baselineRate;
-  const transient = Math.max(0, energy - baseline);
-
-  // 3. Adaptive normalization so the hardest recent kick maps near 1.0,
-  //    regardless of how the track was mastered.
-  adaptivePeak = Math.max(transient, adaptivePeak * CONFIG.peakDecay, CONFIG.minPeak);
-  let target = Math.min(1, transient / adaptivePeak);
-
-  // 4. Gate out the noise floor so the logo rests between hits, then rescale
-  //    what's left back to the full 0–1 range.
-  target = target <= CONFIG.gate ? 0 : (target - CONFIG.gate) / (1 - CONFIG.gate);
-
-  // 5. Dynamics curve — soft hits stay soft, hard hits pop.
-  if (target > 0) target = Math.pow(target, CONFIG.gamma);
-
-  // 6. Envelope follower: fast rise onto a new peak, smooth fall after.
-  const rate = target > env ? CONFIG.attack : CONFIG.release;
-  env += (target - env) * rate;
-  if (env < 0.0005) env = 0; // snap fully to rest; kills sub-pixel drift
-
-  for (const fn of subscribers) fn(env);
+function startLoop() {
+  if (rafId == null && analyser && subscribers.size > 0) {
+    lastTs = null;
+    rafId = requestAnimationFrame(frame);
+  }
 }
 
 /**
- * Subscribe to the kick envelope. Callback receives a 0–1 float every
- * animation frame while at least one subscriber exists.
+ * Subscribe to beat frames (see createBeatDetector for the shape).
+ * Callback runs every animation frame while at least one subscriber exists.
  * Returns an unsubscribe function.
  */
-export function subscribeBass(fn) {
+export function subscribeBeat(fn) {
   subscribers.add(fn);
-  if (rafId == null && analyser) rafId = requestAnimationFrame(frame);
+  startLoop();
   return () => {
     subscribers.delete(fn);
     if (subscribers.size === 0 && rafId != null) {
       cancelAnimationFrame(rafId);
       rafId = null;
-      // reset detector so the next session starts clean
-      env = 0;
-      baseline = 0;
-      adaptivePeak = CONFIG.minPeak;
+      lastTs = null;
+      if (detector) detector.reset();
     }
   };
 }
 
+/**
+ * Legacy API (v1): callback receives a single 0–1 kick envelope per frame.
+ * Kept so nothing else breaks; new code should use subscribeBeat.
+ */
+export function subscribeBass(fn) {
+  return subscribeBeat((out) => fn(out.kick));
+}
+
 /** Kick the loop after a late attach (analyser created after subscribe). */
 export function ensureRunning() {
-  if (rafId == null && analyser && subscribers.size > 0) {
-    rafId = requestAnimationFrame(frame);
-  }
+  startLoop();
 }
