@@ -1,20 +1,14 @@
 // src/utils/bassReactor.js
 //
 // Singleton Web Audio engine that taps the app's shared media element and
-// publishes BEAT EVENTS every animation frame. The header logo subscribes.
+// reports KICK and SNARE hits every animation frame. The header logo
+// subscribes and pops on each hit.
 //
-// ─── WHAT CHANGED (v2 — "kick + snare") ─────────────────────────────────
-// v1 watched only 35–130 Hz and reported how far that band sat above its
-// own slow average. That made the logo react to the kick alone, with small
-// hits most people never noticed. v2 does what good music visualizers do:
-//
-//  1. TWO DRUM DETECTORS, not one.
+// ─── HOW HITS ARE DETECTED ──────────────────────────────────────────────
+//  1. TWO DRUM DETECTORS.
 //       • KICK  — 40–130 Hz (the thump)
 //       • SNARE — 1.8–5 kHz "crack" confirmed by 180–400 Hz "body".
 //         Requiring the body keeps hi-hats (crack, no body) from firing it.
-//     The logo gets a DIFFERENT gesture for each, so the eye can read the
-//     groove: kick = punch, snare = tilt + flash (alternating sides, so a
-//     backbeat on 2 & 4 reads as the logo dancing side to side).
 //
 //  2. SPECTRAL FLUX onset detection. Instead of "how loud is the band", we
 //     measure how much NEW energy arrived since the last frame, bin by bin.
@@ -23,19 +17,11 @@
 //     (running mean + K × std-dev), so the detector self-calibrates to any
 //     master — quiet demo or brick-walled single.
 //
-//  3. DISCRETE HITS with a strength, instead of a blurry envelope. The
-//     consumer turns each hit into a spring impulse, so every drum hit gets a
-//     crisp, same-shaped pop with a little rebound.
-//
-//  4. SONG ENERGY. A slow loudness ratio (now vs. the last few seconds) says
-//     whether we're in a verse or a hook, so hits get bigger when the song
-//     gets bigger — the "strong points" read as strong.
-//
-//  5. HEADROOM. The analyser's default dB ceiling (-30) clips loud, modern
+//  3. HEADROOM. The analyser's default dB ceiling (-30) clips loud, modern
 //     masters: the kick band sat pinned at 255 and there was nothing left to
 //     detect. We widen the range to -95…-5 dB.
 //
-//  6. TIME-BASED, not frame-based. All smoothing uses real elapsed time, so
+//  4. TIME-BASED, not frame-based. All smoothing uses real elapsed time, so
 //     the motion feels identical on 60 Hz and 120 Hz (ProMotion) screens.
 //
 // Hard constraints this module handles for you (unchanged from v1):
@@ -90,10 +76,6 @@ export const DETECTOR_CONFIG = {
   // Hit strength is measured against this so the biggest hits map to ~1.0.
   zPeakTau: 3.0,
   zPeakMinAboveK: 1.5,
-
-  // Song energy: fast loudness vs slow loudness (seconds).
-  loudFastTau: 0.15,
-  loudSlowTau: 6.0,
 };
 
 const ANALYSER_MIN_DB = -95;
@@ -168,11 +150,9 @@ function stepBand(band, flux, dt, nowMs, extraZ = 0) {
  * Pure beat detector — no Web Audio, so it's unit-testable with synthetic
  * spectra. The live engine below feeds it real analyser data.
  *
- * process({ bins, rms, dt, nowMs }) → {
+ * process({ bins, dt, nowMs }) → {
  *   kickHit:   0–1 (>0 only on the frame a kick is detected),
  *   snareHit:  0–1 (>0 only on the frame a snare/clap is detected),
- *   snareSide: +1 / -1, alternates on each snare (for side-to-side motion),
- *   energy:    0–1, how "big" this part of the song is vs. the last few secs,
  *   kick:      0–1 decaying kick envelope (legacy subscribeBass value),
  *   dt:        seconds since the previous frame (clamped), for consumers'
  *              own time-based animation,
@@ -194,9 +174,6 @@ export function createBeatDetector({ binHz, binCount }) {
 
   let prev = new Uint8Array(binCount);
   let primed = false;
-  let snareSide = 1;
-  let loudFast = 0;
-  let loudSlow = 0;
   let kickEnv = 0;
 
   function reset() {
@@ -208,20 +185,12 @@ export function createBeatDetector({ binHz, binCount }) {
     startedAt = null;
     prev = new Uint8Array(binCount);
     primed = false;
-    loudFast = 0; loudSlow = 0; kickEnv = 0;
+    kickEnv = 0;
   }
 
-  function process({ bins, rms = 0, dt, nowMs }) {
+  function process({ bins, dt, nowMs }) {
     // Clamp dt: a backgrounded tab can hand us a multi-second gap.
     dt = Math.min(Math.max(dt, 1 / 240), 1 / 20);
-
-    // Song energy (verse vs hook). Seed both followers from the first real
-    // reading so a song doesn't start out looking like a "hook".
-    if (loudSlow === 0 && rms > 0) { loudFast = rms; loudSlow = rms; }
-    loudFast += alphaFor(dt, C.loudFastTau) * (rms - loudFast);
-    loudSlow += alphaFor(dt, C.loudSlowTau) * (rms - loudSlow);
-    const ratio = loudSlow > 0.005 ? loudFast / loudSlow : 0;
-    const energy = clamp01((ratio - 0.6) / 0.8); // ~0.5 at "normal" level
 
     if (startedAt === null) startedAt = nowMs;
     const warm = nowMs - startedAt >= C.warmupMs;
@@ -229,7 +198,7 @@ export function createBeatDetector({ binHz, binCount }) {
     if (!primed) {
       prev.set(bins);
       primed = true;
-      return { kickHit: 0, snareHit: 0, snareSide, energy, kick: 0, dt };
+      return { kickHit: 0, snareHit: 0, kick: 0, dt };
     }
 
     const kFlux = bandFlux(bins, prev, kick.binLo, kick.binHi);
@@ -259,13 +228,11 @@ export function createBeatDetector({ binHz, binCount }) {
     body.mean += ba * bDiff;
     body.variance += ba * (bDiff * bDiff - body.variance);
 
-    if (snareHit > 0) snareSide = -snareSide;
-
     // Legacy envelope: instant attack, ~180ms decay.
     kickEnv = Math.max(kickHit, kickEnv * Math.exp(-dt / 0.18));
     if (kickEnv < 0.001) kickEnv = 0;
 
-    return { kickHit, snareHit, snareSide, energy, kick: kickEnv, dt };
+    return { kickHit, snareHit, kick: kickEnv, dt };
   }
 
   return { process, reset, _bands: { kick, snare, body } };
@@ -275,7 +242,6 @@ export function createBeatDetector({ binHz, binCount }) {
 let ctx = null;
 let analyser = null;
 let freqData = null;
-let timeData = null;
 let detector = null;
 
 const sources = new Map();      // mediaElement -> MediaElementAudioSourceNode
@@ -310,7 +276,6 @@ function ensureContext() {
   analyser.minDecibels = ANALYSER_MIN_DB;
   analyser.maxDecibels = ANALYSER_MAX_DB;
   freqData = new Uint8Array(analyser.frequencyBinCount);
-  timeData = new Float32Array(analyser.fftSize);
   analyser.connect(ctx.destination);
 
   detector = createBeatDetector({
@@ -358,16 +323,6 @@ export function attachMediaElement(el) {
   return true;
 }
 
-function computeRms() {
-  if (analyser.getFloatTimeDomainData) {
-    analyser.getFloatTimeDomainData(timeData);
-    let s = 0;
-    for (let i = 0; i < timeData.length; i++) s += timeData[i] * timeData[i];
-    return Math.sqrt(s / timeData.length);
-  }
-  return 0; // very old Safari: energy just stays neutral
-}
-
 function frame(ts) {
   rafId = requestAnimationFrame(frame);
   if (!analyser || !detector) return;
@@ -376,7 +331,7 @@ function frame(ts) {
   lastTs = ts;
 
   analyser.getByteFrequencyData(freqData);
-  const out = detector.process({ bins: freqData, rms: computeRms(), dt, nowMs: ts });
+  const out = detector.process({ bins: freqData, dt, nowMs: ts });
 
   for (const fn of subscribers) {
     try { fn(out); } catch (e) { console.error('[bassReactor] subscriber error:', e); }

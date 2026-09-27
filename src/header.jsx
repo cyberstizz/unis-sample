@@ -7,7 +7,7 @@ import { PlayerContext } from './context/playercontext';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
 import { attachMediaElement, subscribeBeat, ensureRunning, isPulseEnabled } from './utils/bassReactor';
-import { LOGO_MOTION, createLogoMotionState, stepLogoMotion } from './utils/logoMotion';
+import { createLogoMotionState, stepLogoMotion, logoStyle } from './utils/logoMotion';
 import { DollarSign, House, Music, MapPin, Search, Menu, LogIn } from 'lucide-react';
 import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
@@ -45,17 +45,10 @@ const Header = () => {
 
   // ─── BEAT-REACTIVE LOGO ────────────────────────────────────────
   // While a track is playing, the shared media element is routed through
-  // bassReactor, which reports discrete KICK and SNARE hits plus how big the
-  // current section of the song is (energy). Each drum gets its own gesture
-  // so the eye can follow the groove:
-  //   • kick  → punch: the logo pops bigger with a slight squash
-  //   • snare → tilt + hop + glow flash, alternating left/right, so a
-  //             backbeat on 2 & 4 reads as the logo dancing side to side
-  //   • energy → a gentle "breath" in overall size, and bigger hits in the
-  //              hook than in the verse
-  // Hits kick damped springs (a little overshoot and rebound), which is what
-  // makes the motion feel physical instead of mechanical. We mutate the <img>
-  // style directly in the rAF callback: no React state, no re-renders.
+  // bassReactor, which detects kick and snare hits. On each hit the logo
+  // pops bigger with a glow and eases back to rest (utils/logoMotion.js).
+  // We mutate the <img> style directly in the rAF callback: no React state,
+  // no re-renders.
   //
   // Requirements handled elsewhere:
   //  • player.jsx renders <audio>/<video> with crossOrigin="anonymous"
@@ -89,16 +82,9 @@ const Header = () => {
     const m = createLogoMotionState();
 
     const unsubscribe = subscribeBeat((beat) => {
-      stepLogoMotion(m, beat);
-      const s = 1 + m.breath * LOGO_MOTION.breathScale + m.scale;
-      const squash = m.scale * LOGO_MOTION.kickSquash;
-      img.style.transform =
-        `translateY(${m.lift.toFixed(2)}px) rotate(${m.tilt.toFixed(2)}deg) `
-        + `scale(${(s + squash).toFixed(4)}, ${(s - squash).toFixed(4)})`;
-      img.style.filter = m.glow > 0.02
-        ? `drop-shadow(0 0 ${(m.glow * LOGO_MOTION.glowPx).toFixed(1)}px var(--unis-primary-glow)) `
-          + `brightness(${(1 + m.glow * LOGO_MOTION.glowBrightness).toFixed(3)})`
-        : '';
+      const { transform, filter } = logoStyle(stepLogoMotion(m, beat));
+      img.style.transform = transform;
+      img.style.filter = filter;
     });
     ensureRunning();
 

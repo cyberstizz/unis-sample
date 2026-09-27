@@ -23,9 +23,9 @@ function voice(hits, loHz, hiHz, peak, decaySec) {
 
 /**
  * Render a pattern and run it through a fresh detector.
- * Returns [{ t, kickHit, snareHit, snareSide, energy }] per frame.
+ * Returns [{ t, kickHit, snareHit }] per frame.
  */
-function run({ seconds = 8, fps = 60, voices = [], bass = 0, noise = 6, loudness = () => 0.2 }) {
+function run({ seconds = 8, fps = 60, voices = [], bass = 0, noise = 6 }) {
   const det = createBeatDetector({ binHz: BIN_HZ, binCount: BINS });
   const rand = rng();
   const frames = [];
@@ -44,7 +44,7 @@ function run({ seconds = 8, fps = 60, voices = [], bass = 0, noise = 6, loudness
     for (let i = 0; i < BINS; i++) {
       bins[i] = Math.max(0, Math.min(255, Math.round(spec[i] + (rand() - 0.5) * 2 * noise)));
     }
-    const out = det.process({ bins, rms: loudness(t), dt, nowMs: t * 1000 });
+    const out = det.process({ bins, dt, nowMs: t * 1000 });
     frames.push({ t, ...out });
   }
   return frames;
@@ -83,14 +83,11 @@ describe('bassReactor beat detector', () => {
     for (const k of kicks) expect(nearest(hits, k)).toBeLessThanOrEqual(1 / 60 + 1e-6);
   });
 
-  it('fires on snares and alternates sides so the logo sways', () => {
+  it('fires once per snare, on the frame it lands', () => {
     const snares = beats(0.5 + BEAT, BEAT * 2, 8);
-    const frames = run({ voices: snaresAt(snares) });
-    const hitFrames = frames.filter((f) => f.snareHit > 0);
-    expect(hitFrames).toHaveLength(snares.length);
-    for (let i = 1; i < hitFrames.length; i++) {
-      expect(hitFrames[i].snareSide).toBe(-hitFrames[i - 1].snareSide);
-    }
+    const hits = hitTimes(run({ voices: snaresAt(snares) }), 'snareHit');
+    expect(hits).toHaveLength(snares.length);
+    for (const s of snares) expect(nearest(hits, s)).toBeLessThanOrEqual(1 / 60 + 1e-6);
   });
 
   it('does not mistake hi-hats (crack with no body) for snares', () => {
@@ -128,18 +125,10 @@ describe('bassReactor beat detector', () => {
     expect(hitTimes(at120, 'snareHit')).toHaveLength(hitTimes(at60, 'snareHit').length);
   });
 
-  it('reports more energy in the hook than in the verse', () => {
-    // 6s quiet verse, then a louder hook.
-    const frames = run({ seconds: 10, loudness: (t) => (t < 6 ? 0.1 : 0.25) });
-    const verse = frames.find((f) => Math.abs(f.t - 5.5) < 1e-6).energy;
-    const hook = frames.find((f) => Math.abs(f.t - 7) < 1e-6).energy;
-    expect(hook).toBeGreaterThan(verse + 0.3);
-  });
-
   it('reset() clears state for a new song', () => {
     const det = createBeatDetector({ binHz: BIN_HZ, binCount: BINS });
     const bins = new Uint8Array(BINS).fill(200);
-    det.process({ bins, rms: 0.2, dt: 1 / 60, nowMs: 0 });
+    det.process({ bins, dt: 1 / 60, nowMs: 0 });
     det.reset();
     const { kick, snare } = det._bands;
     expect(kick.mean).toBe(0);

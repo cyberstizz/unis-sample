@@ -1,56 +1,46 @@
-// Unit tests for the header logo's spring motion (stepLogoMotion).
+// Unit tests for the header logo pulse.
 import { describe, it, expect } from 'vitest';
-import { stepLogoMotion, createLogoMotionState, LOGO_MOTION } from './logoMotion';
+import { stepLogoMotion, createLogoMotionState, logoStyle, LOGO_MOTION } from './logoMotion';
 
-const fresh = createLogoMotionState;
-const quiet = { kickHit: 0, snareHit: 0, snareSide: 1, energy: 0.5, dt: 1 / 60 };
+const idle = { kickHit: 0, snareHit: 0, dt: 1 / 60 };
 
-function simulate(first, frames = 40) {
-  const m = fresh();
-  const trace = [];
-  stepLogoMotion(m, { ...quiet, ...first });
-  trace.push({ ...m });
-  for (let i = 1; i < frames; i++) {
-    stepLogoMotion(m, quiet);
-    trace.push({ ...m });
-  }
-  return trace;
-}
-
-describe('stepLogoMotion', () => {
-  it('a full-strength kick peaks at about kickScale, quickly', () => {
-    const trace = simulate({ kickHit: 1 });
-    const peak = Math.max(...trace.map((s) => s.scale));
-    const peakFrame = trace.findIndex((s) => s.scale === peak);
-    expect(peak).toBeGreaterThan(LOGO_MOTION.kickScale * 0.85);
-    expect(peak).toBeLessThan(LOGO_MOTION.kickScale * 1.15);
-    expect(peakFrame).toBeLessThanOrEqual(4); // ≤ ~70ms: reads as "on the beat"
+describe('logo pulse', () => {
+  it('rests with no transform when nothing is hitting', () => {
+    const m = createLogoMotionState();
+    for (let i = 0; i < 30; i++) stepLogoMotion(m, idle);
+    expect(logoStyle(m)).toEqual({ transform: '', filter: '' });
   });
 
-  it('settles back to rest well before the next beat at 90 BPM', () => {
-    const trace = simulate({ kickHit: 1 }, 30); // 500ms
-    expect(Math.abs(trace[trace.length - 1].scale)).toBeLessThan(0.005);
+  it('pops to full size on a kick', () => {
+    const m = stepLogoMotion(createLogoMotionState(), { ...idle, kickHit: 0.4 });
+    expect(logoStyle(m).transform).toBe(`scale(${(1 + LOGO_MOTION.popScale).toFixed(4)})`);
   });
 
-  it('snares tilt toward snareSide and flash the glow', () => {
-    const left = simulate({ snareHit: 1, snareSide: -1 });
-    const right = simulate({ snareHit: 1, snareSide: 1 });
-    expect(Math.min(...left.map((s) => s.tilt))).toBeLessThan(-LOGO_MOTION.snareTiltDeg * 0.8);
-    expect(Math.max(...right.map((s) => s.tilt))).toBeGreaterThan(LOGO_MOTION.snareTiltDeg * 0.8);
-    expect(left[0].glow).toBeGreaterThan(0.9);
-    expect(Math.min(...right.map((s) => s.lift))).toBeLessThan(0); // hops up
+  it('pops the same way on a snare', () => {
+    const k = logoStyle(stepLogoMotion(createLogoMotionState(), { ...idle, kickHit: 1 }));
+    const s = logoStyle(stepLogoMotion(createLogoMotionState(), { ...idle, snareHit: 1 }));
+    expect(s).toEqual(k);
   });
 
-  it('hits are bigger in loud sections than quiet ones', () => {
-    const peakAt = (energy) => Math.max(...simulate({ kickHit: 1, energy }).map((s) => s.scale));
-    expect(peakAt(1)).toBeGreaterThan(peakAt(0) * 1.5);
+  it('only ever grows then shrinks (no bounce, never below normal size)', () => {
+    const m = stepLogoMotion(createLogoMotionState(), { ...idle, kickHit: 1 });
+    let last = m.pulse;
+    for (let i = 0; i < 40; i++) {
+      stepLogoMotion(m, idle);
+      expect(m.pulse).toBeLessThanOrEqual(last);
+      expect(m.pulse).toBeGreaterThanOrEqual(0);
+      last = m.pulse;
+    }
   });
 
-  it('stays stable on a long frame (backgrounded tab)', () => {
-    const m = fresh();
-    stepLogoMotion(m, { ...quiet, kickHit: 1, dt: 0.05 });
-    for (let i = 0; i < 20; i++) stepLogoMotion(m, { ...quiet, dt: 0.05 });
-    expect(Number.isFinite(m.scale)).toBe(true);
-    expect(Math.abs(m.scale)).toBeLessThan(0.01);
+  it('is back at rest (under a pixel on the 92px logo) within ~0.5s', () => {
+    const m = stepLogoMotion(createLogoMotionState(), { ...idle, kickHit: 1 });
+    for (let i = 0; i < 30; i++) stepLogoMotion(m, idle);
+    expect(m.pulse * LOGO_MOTION.popScale * 92).toBeLessThan(0.5);
+  });
+
+  it('a kick and snare together make one pop, not a bigger one', () => {
+    const both = stepLogoMotion(createLogoMotionState(), { ...idle, kickHit: 1, snareHit: 1 });
+    expect(both.pulse).toBe(1);
   });
 });
