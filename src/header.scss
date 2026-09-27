@@ -128,7 +128,6 @@ $header-height: 75px;
   appearance: none;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  transition: none;
 
   &:hover,
   &:active,
@@ -144,6 +143,16 @@ $header-height: 75px;
     outline: 2px solid rgba(255, 255, 255, 0.28);
     outline-offset: 4px;
     border-radius: 8px;
+  }
+
+  // Press-in on tap. Scales the BUTTON, so it stacks with the beat pops and
+  // gestures on the <img> inside instead of fighting them. Declared after
+  // the :active reset above so it wins. Quick in, slightly slower out.
+  transition: transform 0.16s ease-out;
+
+  &.is-pressed {
+    transform: scale(0.93);
+    transition-duration: 0.08s;
   }
 
   .logo-img {
@@ -224,6 +233,16 @@ $header-height: 75px;
 @media (prefers-reduced-motion: reduce) {
   .header-logo .logo-img.logo-breathe {
     animation: none;
+  }
+
+  // Still acknowledge the tap, just without movement.
+  .header-logo {
+    transition: opacity 0.12s ease-out;
+  }
+
+  .header-logo.is-pressed {
+    transform: none;
+    opacity: 0.8;
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useContext } from "react";
+import React, { useState, useRef, useEffect, useContext, useCallback } from "react";
 import "./header.scss";
 import { useNavigate, useLocation } from 'react-router-dom';
 import SearchBar from './components/SearchBar';
@@ -8,6 +8,9 @@ import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
 import { attachMediaElement, subscribeBeat, ensureRunning, isPulseEnabled } from './utils/bassReactor';
 import { createLogoMotionState, stepLogoMotion, logoStyle } from './utils/logoMotion';
+import {
+  GESTURE_CONFIG, playLogoGesture, isGestureRunning, createPlaybackGestureTracker,
+} from './utils/logoGestures';
 import { DollarSign, House, Music, MapPin, Search, Menu, LogIn } from 'lucide-react';
 import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
@@ -22,13 +25,26 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, isGuest, theme } = useAuth();
-  const { audioRef, isPlaying } = useContext(PlayerContext) || {};
+  const { audioRef, isPlaying, currentMedia, navDirectionRef } = useContext(PlayerContext) || {};
+  const mediaId = currentMedia
+    ? (currentMedia.id ?? currentMedia.songId ?? currentMedia.url ?? currentMedia.fileUrl ?? null)
+    : null;
   const { triggerGate, gateProps } = useAuthGate();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [shouldBreathe, setShouldBreathe] = useState(false);
   const menuRef = useRef(null);
   const logoImgRef = useRef(null);
+  const logoBtnRef = useRef(null);
+
+  // ─── LOGO GESTURES (see utils/logoGestures.js) ─────────────────
+  const gestureRef = useRef(null);          // the Animation currently playing
+  const trackerRef = useRef(null);
+  if (!trackerRef.current) trackerRef.current = createPlaybackGestureTracker();
+  const prevMediaIdRef = useRef(mediaId);   // restored song on load ≠ a change
+  const prevPlayingRef = useRef(isPlaying);
+  const pauseTimerRef = useRef(null);
+  const hasPlayedRef = useRef(false);       // any playback yet this page session?
 
   // Breath animation: only on first page load of session
   useEffect(() => {
@@ -43,10 +59,89 @@ const Header = () => {
     }
   }, []);
 
+  const runGesture = useCallback((name, opts = {}) => {
+    const anim = playLogoGesture(logoImgRef.current, name, { ...opts, current: gestureRef.current });
+    if (anim) gestureRef.current = anim;
+  }, []);
+
+  const clearPauseTimer = () => {
+    if (pauseTimerRef.current) {
+      clearTimeout(pauseTimerRef.current);
+      pauseTimerRef.current = null;
+    }
+  };
+
+  // Song change → sway; resume → hop; pause → squash.
+  useEffect(() => {
+    const now = performance.now();
+    const tracker = trackerRef.current;
+
+    if (mediaId !== prevMediaIdRef.current) {
+      const hadPrevious = prevMediaIdRef.current != null;
+      prevMediaIdRef.current = mediaId;
+      if (mediaId != null) {
+        clearPauseTimer(); // a "pause" while switching songs isn't a pause
+        const result = tracker.songChanged({
+          hadPrevious, navMarker: navDirectionRef?.current, nowMs: now,
+        });
+        if (navDirectionRef) navDirectionRef.current = null;
+        if (result) runGesture('sway', { direction: result.direction });
+      }
+    }
+
+    if (isPlaying !== prevPlayingRef.current) {
+      prevPlayingRef.current = isPlaying;
+      if (isPlaying) {
+        hasPlayedRef.current = true;
+        clearPauseTimer();
+        if (tracker.playStarted({ nowMs: now }) === 'hop') runGesture('hop');
+      } else if (tracker.playStopped({ ended: !!audioRef?.current?.ended, nowMs: now })) {
+        clearPauseTimer();
+        pauseTimerRef.current = setTimeout(() => {
+          pauseTimerRef.current = null;
+          const media = audioRef?.current;
+          if (media && !media.paused) return; // it was a blip, not a pause
+          tracker.pauseConfirmed();
+          runGesture('squash');
+        }, GESTURE_CONFIG.pauseConfirmMs);
+      }
+    }
+  }, [mediaId, isPlaying, audioRef, navDirectionRef, runGesture]);
+
+  // Playback failure → shake. Media 'error' events don't bubble, so we listen
+  // in the capture phase on document; that also survives the player swapping
+  // between its <audio> and <video> elements. Ignored: errors from clearing
+  // the player (empty src) and a stale restored song failing to preload
+  // before the user has played anything.
+  useEffect(() => {
+    const onError = (e) => {
+      const media = audioRef?.current;
+      if (!media || e.target !== media) return;
+      if (!media.getAttribute('src')) return;
+      if (!hasPlayedRef.current && media.paused) return;
+      runGesture('shake');
+    };
+    document.addEventListener('error', onError, true);
+    return () => document.removeEventListener('error', onError, true);
+  }, [audioRef, runGesture]);
+
+  // Unmount: stop any pending squash and running gesture.
+  useEffect(() => () => {
+    clearPauseTimer();
+    if (gestureRef.current) {
+      try { gestureRef.current.cancel(); } catch { /* already finished */ }
+    }
+  }, []);
+
+  // Press-in on tap (the look is CSS: .header-logo.is-pressed).
+  const pressLogo = () => logoBtnRef.current?.classList.add('is-pressed');
+  const releaseLogo = () => logoBtnRef.current?.classList.remove('is-pressed');
+
   // ─── BEAT-REACTIVE LOGO ────────────────────────────────────────
   // While a track is playing, the shared media element is routed through
-  // bassReactor, which detects kick and snare hits. On each hit the logo
-  // pops bigger with a glow and eases back to rest (utils/logoMotion.js).
+  // bassReactor, which detects kick, snare and hi-hat hits. On each hit the
+  // logo pops bigger with a glow and eases back to rest (utils/logoMotion.js).
+  // Pops are held at rest while muted (volume 0) and while a gesture plays.
   // We mutate the <img> style directly in the rAF callback: no React state,
   // no re-renders.
   //
@@ -82,6 +177,13 @@ const Header = () => {
     const m = createLogoMotionState();
 
     const unsubscribe = subscribeBeat((beat) => {
+      const media = audioRef.current;
+      if (!media || media.muted || media.volume === 0 || isGestureRunning(gestureRef.current)) {
+        m.pulse = 0;
+        img.style.transform = '';
+        img.style.filter = '';
+        return;
+      }
       const { transform, filter } = logoStyle(stepLogoMotion(m, beat));
       img.style.transform = transform;
       img.style.filter = filter;
@@ -266,9 +368,14 @@ const Header = () => {
           </button>
 
           <button
+            ref={logoBtnRef}
             type="button"
             className="header-logo"
             onClick={handleHome}
+            onPointerDown={pressLogo}
+            onPointerUp={releaseLogo}
+            onPointerLeave={releaseLogo}
+            onPointerCancel={releaseLogo}
             aria-label="Go to Unis home"
           >
             <img
