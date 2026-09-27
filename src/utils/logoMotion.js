@@ -1,7 +1,7 @@
 // src/utils/logoMotion.js
 //
 // Turns beat events from bassReactor into the header logo's pulse.
-// One gesture only: on every kick or snare the logo pops bigger with a glow,
+// One gesture only: on every kick, snare or hi-hat the logo pops bigger with a glow,
 // then eases smoothly back to rest. No tilt, no bounce, no drifting — the
 // logo sits still between hits so each drum hit is easy to see.
 //
@@ -21,13 +21,13 @@ export function createLogoMotionState() {
 
 /**
  * Advance the pulse by one frame.
- * beat = { kickHit, snareHit, dt } from bassReactor's subscribeBeat.
- * Kick and snare do the same thing; if both land together it's one pop.
+ * beat = { kickHit, snareHit, hatHit, dt } from bassReactor's subscribeBeat.
+ * All three do the same thing; if they land together it's one pop.
  */
 export function stepLogoMotion(m, beat) {
   const dt = beat.dt || 1 / 60;
   m.pulse *= Math.exp(-dt / LOGO_MOTION.decay);
-  if (beat.kickHit > 0 || beat.snareHit > 0) m.pulse = 1;
+  if (beat.kickHit > 0 || beat.snareHit > 0 || beat.hatHit > 0) m.pulse = 1;
   if (m.pulse < 0.002) m.pulse = 0;
   return m;
 }

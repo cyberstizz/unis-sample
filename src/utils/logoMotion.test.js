@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { stepLogoMotion, createLogoMotionState, logoStyle, LOGO_MOTION } from './logoMotion';
 
-const idle = { kickHit: 0, snareHit: 0, dt: 1 / 60 };
+const idle = { kickHit: 0, snareHit: 0, hatHit: 0, dt: 1 / 60 };
 
 describe('logo pulse', () => {
   it('rests with no transform when nothing is hitting', () => {
@@ -22,6 +22,12 @@ describe('logo pulse', () => {
     expect(s).toEqual(k);
   });
 
+  it('pops the same way on a hi-hat', () => {
+    const k = logoStyle(stepLogoMotion(createLogoMotionState(), { ...idle, kickHit: 1 }));
+    const h = logoStyle(stepLogoMotion(createLogoMotionState(), { ...idle, hatHit: 1 }));
+    expect(h).toEqual(k);
+  });
+
   it('only ever grows then shrinks (no bounce, never below normal size)', () => {
     const m = stepLogoMotion(createLogoMotionState(), { ...idle, kickHit: 1 });
     let last = m.pulse;
@@ -39,8 +45,8 @@ describe('logo pulse', () => {
     expect(m.pulse * LOGO_MOTION.popScale * 92).toBeLessThan(0.5);
   });
 
-  it('a kick and snare together make one pop, not a bigger one', () => {
-    const both = stepLogoMotion(createLogoMotionState(), { ...idle, kickHit: 1, snareHit: 1 });
+  it('drums landing together make one pop, not a bigger one', () => {
+    const both = stepLogoMotion(createLogoMotionState(), { ...idle, kickHit: 1, snareHit: 1, hatHit: 1 });
     expect(both.pulse).toBe(1);
   });
 });

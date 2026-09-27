@@ -1,14 +1,16 @@
 // src/utils/bassReactor.js
 //
 // Singleton Web Audio engine that taps the app's shared media element and
-// reports KICK and SNARE hits every animation frame. The header logo
+// reports KICK, SNARE and HI-HAT hits every animation frame. The header logo
 // subscribes and pops on each hit.
 //
 // ─── HOW HITS ARE DETECTED ──────────────────────────────────────────────
-//  1. TWO DRUM DETECTORS.
-//       • KICK  — 40–130 Hz (the thump)
-//       • SNARE — 1.8–5 kHz "crack" confirmed by 180–400 Hz "body".
-//         Requiring the body keeps hi-hats (crack, no body) from firing it.
+//  1. THREE DRUM DETECTORS.
+//       • KICK   — 40–130 Hz (the thump)
+//       • SNARE  — 1.8–5 kHz "crack" confirmed by 180–400 Hz "body".
+//         Requiring the body keeps hats from being counted as snares.
+//       • HI-HAT — 6–14 kHz (the sizzle). A snare also has energy up here,
+//         so a snare can fire both; the logo treats that as one pop.
 //
 //  2. SPECTRAL FLUX onset detection. Instead of "how loud is the band", we
 //     measure how much NEW energy arrived since the last frame, bin by bin.
@@ -43,6 +45,7 @@ const KILL_SWITCH_KEY = 'unis-logo-pulse'; // localStorage 'off' disables
 export const DETECTOR_CONFIG = {
   kick:  { loHz: 40,   hiHz: 130,  k: 2.0, refractoryMs: 110 },
   snare: { loHz: 1800, hiHz: 5000, k: 2.0, refractoryMs: 120 },
+  hat:   { loHz: 6000, hiHz: 14000, k: 2.0, refractoryMs: 70 },
 
   // A snare/clap must also push new energy into its "body" range. Hi-hats
   // and shakers don't, so this is what keeps them from firing the snare.
@@ -153,6 +156,7 @@ function stepBand(band, flux, dt, nowMs, extraZ = 0) {
  * process({ bins, dt, nowMs }) → {
  *   kickHit:   0–1 (>0 only on the frame a kick is detected),
  *   snareHit:  0–1 (>0 only on the frame a snare/clap is detected),
+ *   hatHit:    0–1 (>0 only on the frame a hi-hat is detected),
  *   kick:      0–1 decaying kick envelope (legacy subscribeBass value),
  *   dt:        seconds since the previous frame (clamped), for consumers'
  *              own time-based animation,
@@ -168,6 +172,7 @@ export function createBeatDetector({ binHz, binCount }) {
 
   const kick = makeBand(...range(C.kick), C.kick);
   const snare = makeBand(...range(C.snare), C.snare);
+  const hat = makeBand(...range(C.hat), C.hat);
   const [bodyLo, bodyHi] = range(C.snareBody);
   const body = { lo: bodyLo, hi: bodyHi, mean: 0, variance: 0 };
   let startedAt = null;
@@ -177,7 +182,7 @@ export function createBeatDetector({ binHz, binCount }) {
   let kickEnv = 0;
 
   function reset() {
-    for (const b of [kick, snare]) {
+    for (const b of [kick, snare, hat]) {
       b.mean = 0; b.variance = 0; b.armed = true; b.lastHitAt = -Infinity;
       b.zPeak = b.cfg.k + C.zPeakMinAboveK;
     }
@@ -198,12 +203,13 @@ export function createBeatDetector({ binHz, binCount }) {
     if (!primed) {
       prev.set(bins);
       primed = true;
-      return { kickHit: 0, snareHit: 0, kick: 0, dt };
+      return { kickHit: 0, snareHit: 0, hatHit: 0, kick: 0, dt };
     }
 
     const kFlux = bandFlux(bins, prev, kick.binLo, kick.binHi);
     const sFlux = bandFlux(bins, prev, snare.binLo, snare.binHi);
     const bFlux = bandFlux(bins, prev, body.lo, body.hi);
+    const hFlux = bandFlux(bins, prev, hat.binLo, hat.binHi);
     prev.set(bins);
 
     // During warm-up, stats update but nothing is allowed to fire.
@@ -228,14 +234,16 @@ export function createBeatDetector({ binHz, binCount }) {
     body.mean += ba * bDiff;
     body.variance += ba * (bDiff * bDiff - body.variance);
 
+    const hatHit = stepBand(hat, hFlux, dt, nowMs, block);
+
     // Legacy envelope: instant attack, ~180ms decay.
     kickEnv = Math.max(kickHit, kickEnv * Math.exp(-dt / 0.18));
     if (kickEnv < 0.001) kickEnv = 0;
 
-    return { kickHit, snareHit, kick: kickEnv, dt };
+    return { kickHit, snareHit, hatHit, kick: kickEnv, dt };
   }
 
-  return { process, reset, _bands: { kick, snare, body } };
+  return { process, reset, _bands: { kick, snare, hat, body } };
 }
 
 // ─── LIVE ENGINE ────────────────────────────────────────────────────────

@@ -58,7 +58,8 @@ const beats = (from, every, until) => {
 };
 const kicksAt = (hits) => voice(hits, 40, 130, 235, 0.12);
 const snaresAt = (hits) => [voice(hits, 1800, 5000, 210, 0.08), voice(hits, 180, 400, 190, 0.08)];
-const hatsAt = (hits) => voice(hits, 1800, 5000, 170, 0.03); // crack, no body
+// Hats: sizzle up top plus some crack, but no snare body.
+const hatsAt = (hits) => [voice(hits, 6000, 14000, 190, 0.03), voice(hits, 1800, 5000, 150, 0.03)];
 
 const hitTimes = (frames, key) => frames.filter((f) => f[key] > 0).map((f) => f.t);
 const nearest = (times, t) => Math.min(...times.map((x) => Math.abs(x - t)));
@@ -91,19 +92,33 @@ describe('bassReactor beat detector', () => {
   });
 
   it('does not mistake hi-hats (crack with no body) for snares', () => {
-    const frames = run({ voices: [hatsAt(beats(0.5, BEAT / 2, 8))] });
+    const frames = run({ voices: hatsAt(beats(0.5, BEAT / 2, 8)) });
     expect(hitTimes(frames, 'snareHit')).toHaveLength(0);
   });
 
-  it('separates kick and snare in a full boom-bap pattern with hats', () => {
+  it('fires once per hi-hat, on the frame it lands', () => {
+    const hats = beats(0.5, BEAT / 2, 8); // 8th notes
+    const hits = hitTimes(run({ voices: hatsAt(hats) }), 'hatHit');
+    expect(hits).toHaveLength(hats.length);
+    for (const h of hats) expect(nearest(hits, h)).toBeLessThanOrEqual(1 / 60 + 1e-6);
+  });
+
+  it('does not fire the hi-hat on kicks', () => {
+    const frames = run({ bass: 150, voices: [kicksAt(beats(0.5, BEAT, 8))] });
+    expect(hitTimes(frames, 'hatHit')).toHaveLength(0);
+  });
+
+  it('catches kick, snare and hats separately in a full boom-bap pattern', () => {
     const kicks = beats(0.5, BEAT * 2, 8);
     const snares = beats(0.5 + BEAT, BEAT * 2, 8);
     const hats = beats(0.5, BEAT / 2, 8);
-    const frames = run({ bass: 150, voices: [kicksAt(kicks), ...snaresAt(snares), hatsAt(hats)] });
+    const frames = run({ bass: 150, voices: [kicksAt(kicks), ...snaresAt(snares), ...hatsAt(hats)] });
     const kHits = hitTimes(frames, 'kickHit');
     const sHits = hitTimes(frames, 'snareHit');
+    const hHits = hitTimes(frames, 'hatHit');
     expect(kHits).toHaveLength(kicks.length);
     expect(sHits).toHaveLength(snares.length);
+    expect(hHits).toHaveLength(hats.length);
     for (const s of sHits) expect(nearest(kicks, s)).toBeGreaterThan(0.2); // no kick→snare bleed
   });
 
