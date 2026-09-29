@@ -86,11 +86,18 @@ const JURISDICTION_LABEL = {
   harlem: 'Harlem',
 };
 
+// A winner decided cleanly on votes gets no line — that is the expected case
+// and saying so is noise. Everything else is worth a sentence.
+// WEIGHTED_VOTES and FALLBACK are retired backend values kept here so awards
+// decided before the composite rewrite still render.
 const TIEBREAKERS = {
+  ENGAGEMENT: () => 'Decided on engagement — plays and likes outweighed votes',
+  VOTE_POINTS: (n) => `Tied on points${n ? ` between ${n}` : ''} — taken on vote weight`,
   PLAYS: (n) => `Tie broken on plays${n ? ` between ${n}` : ''}`,
   LIKES: (n) => `Tie broken on likes${n ? ` between ${n}` : ''}`,
   SCORE: (n) => `Tie broken on lifetime score${n ? ` between ${n}` : ''}`,
   SENIORITY: (n) => `Tie broken on seniority${n ? ` between ${n}` : ''}`,
+  NO_ACTIVITY: () => 'No votes, plays or likes this period — decided on score and seniority',
   FALLBACK: () => 'Decided on engagement — no votes cast',
 };
 
@@ -127,7 +134,7 @@ const Segmented = ({ label, options, value, onChange, name }) => (
 // rows stay aligned. When nothing in the period scored at all the rail is
 // dropped entirely; a row of empty grooves is just noise.
 const TallyRow = ({ entry, share, index, onOpen, onPlay, canPlay, showBar }) => {
-  const hasPoints = entry.weightedPoints > 0;
+  const hasPoints = entry.totalPoints > 0;
 
   return (
     <li
@@ -159,7 +166,7 @@ const TallyRow = ({ entry, share, index, onOpen, onPlay, canPlay, showBar }) => 
         <span className="ms-tally-points">
           {hasPoints && (
             <>
-              {formatNumber(entry.weightedPoints)}
+              {formatNumber(entry.totalPoints)}
               <span className="ms-tally-unit">pts</span>
             </>
           )}
@@ -305,6 +312,11 @@ const MilestonesPage = () => {
           artwork: buildUrl(rawArt) || fallbackArt,
           votes: Number(row.votes ?? row.votesCount ?? 0),
           weightedPoints: Number(row.weightedPoints || 0),
+          engagementPoints: Number(row.engagementPoints || 0),
+          // totalPoints is what rows are ranked on. Falling back to
+          // weightedPoints keeps awards written before the composite rewrite
+          // (and the unsaved display awards) rendering exactly as they did.
+          totalPoints: Number(row.totalPoints ?? row.weightedPoints ?? 0),
           playsCount: Number(row.playsCount || 0),
           likesCount: Number(row.likesCount || 0),
           determinationMethod: row.determinationMethod || null,
@@ -360,7 +372,7 @@ const MilestonesPage = () => {
   }, [requestPlay]);
 
   const winner = entries[0] || null;
-  const maxPoints = entries.reduce((m, e) => Math.max(m, e.weightedPoints), 0);
+  const maxPoints = entries.reduce((m, e) => Math.max(m, e.totalPoints), 0);
   const tiebreak = winner?.determinationMethod && TIEBREAKERS[winner.determinationMethod]
     ? TIEBREAKERS[winner.determinationMethod](winner.tiedCandidatesCount)
     : null;
@@ -370,7 +382,12 @@ const MilestonesPage = () => {
   // omitting the fourth is more honest and reads cleaner.
   const figures = winner
     ? [
-        { key: 'points', label: 'Points', value: winner.weightedPoints, lead: true },
+        { key: 'points', label: 'Points', value: winner.totalPoints, lead: true },
+        // Only worth a cell when the total is genuinely a blend. If a winner
+        // scored purely on votes or purely on engagement, this repeats a number
+        // already on screen and pushes the row to five cells.
+        { key: 'votePoints', label: 'From votes',
+          value: (winner.engagementPoints > 0 && winner.weightedPoints > 0) ? winner.weightedPoints : 0 },
         { key: 'votes', label: 'Votes', value: winner.votes },
         { key: 'plays', label: 'Plays', value: winner.playsCount },
         { key: 'likes', label: 'Likes', value: winner.likesCount },
@@ -545,8 +562,8 @@ const MilestonesPage = () => {
                       entry={entry}
                       index={i}
                       showBar={maxPoints > 0}
-                      share={maxPoints > 0 && entry.weightedPoints > 0
-                        ? Math.max(4, (entry.weightedPoints / maxPoints) * 100)
+                      share={maxPoints > 0 && entry.totalPoints > 0
+                        ? Math.max(4, (entry.totalPoints / maxPoints) * 100)
                         : 0}
                       onOpen={openEntry}
                       onPlay={playEntry}

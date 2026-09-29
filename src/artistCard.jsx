@@ -3,9 +3,23 @@ import './ArtistCard.scss';
 import { buildUrl } from './utils/buildUrl';
 
 
+// An artist with no photo used to fall through to picsum.photos, which serves
+// a DIFFERENT random stock photograph on every page load. That is why a card
+// could look like a real person one moment and someone else the next. A
+// monogram is honest: it says "no photo yet" instead of inventing a face.
+// The hue is derived from the username so a given artist always gets the same
+// colour rather than flickering between renders.
+const monogramHue = (name = '') => {
+  let h = 0;
+  for (let i = 0; i < name.length; i += 1) h = (h * 31 + name.charCodeAt(i)) % 360;
+  return h;
+};
+
 const ArtistCard = ({ artist, onPress, onViewPress, index = 0 }) => {
   const locationName = artist.jurisdictionName || 'Your Area';
-  const photoUrl = buildUrl(artist.photoUrl) || 'https://picsum.photos/400/300';
+  const photoUrl = buildUrl(artist.photoUrl);
+  const initial = (artist.username || '?').trim().charAt(0).toUpperCase();
+  const hue = monogramHue(artist.username);
 
   return (
     <div
@@ -18,9 +32,15 @@ const ArtistCard = ({ artist, onPress, onViewPress, index = 0 }) => {
 
       <div className="ac-card" onClick={onPress}>
         <div
-          className="ac-photo"
-          style={{ backgroundImage: `url(${photoUrl})` }}
+          className={`ac-photo${photoUrl ? '' : ' ac-photo--monogram'}`}
+          style={photoUrl
+            ? { backgroundImage: `url(${photoUrl})` }
+            : { '--ac-monogram-hue': hue }}
         >
+          {!photoUrl && (
+            <span className="ac-monogram" aria-hidden="true">{initial}</span>
+          )}
+
           <div className="ac-fade-right" />
           <div className="ac-fade-bottom" />
           <div className="ac-ambient-glow" />

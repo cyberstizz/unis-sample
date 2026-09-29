@@ -96,6 +96,28 @@ const isWithinDays = (dateString, days) => {
   return diff >= 0 && diff <= days * 24 * 60 * 60 * 1000;
 };
 
+// Awards are computed per jurisdiction PER GENRE, so one week produces one
+// "Song of the Week" row for every genre — several rows sharing an award_date.
+// /v1/awards/past is called without a genreId, so all of them come back, and
+// taking the first N off the top produced two winners both dated Sept 27.
+//
+// This collapses the list to one row per award_date. The row kept is the one
+// with the highest totalPoints (the figure awards are now decided on), falling
+// back to votesCount for rows written before composite scoring.
+const bestPerAwardDate = (awards) => {
+  const byDate = new Map();
+  awards.forEach((a) => {
+    const key = a?.awardDate;
+    if (!key) return;
+    const held = byDate.get(key);
+    if (!held) { byDate.set(key, a); return; }
+    const weight = (x) => (x?.totalPoints ?? x?.weightedPoints ?? x?.votesCount ?? 0);
+    if (weight(a) > weight(held)) byDate.set(key, a);
+  });
+  return Array.from(byDate.values())
+    .sort((a, b) => (a.awardDate < b.awardDate ? 1 : -1));
+};
+
 const pickPhoto = (obj) => {
   if (!obj) return null;
   const candidate = obj.photoUrl
@@ -388,7 +410,7 @@ const Feed = () => {
   const [activeLens, setActiveLens] = useState('all');
 
   // ─── Awards-derived: timeline + artist of the week ───
-  const [weeklyWinners, setWeeklyWinners] = useState([]); // up to 3, newest first
+  const [weeklyWinners, setWeeklyWinners] = useState([]); // up to 4 distinct weeks, newest first
   const [artistOfWeek, setArtistOfWeek] = useState(null);
   const lastWinner = weeklyWinners.length ? weeklyWinners[0] : null;
 
@@ -478,13 +500,15 @@ const Feed = () => {
           apiCall({ method: 'get', url: `/v1/awards/past?type=artist&${baseParams}` }),
         ]);
 
-        // ── Songs of the week timeline (up to 3, newest first) ──
-        const songAwards = (songAwardsRes.data || [])
-          .filter((a) => !a?.awardDate || a.awardDate <= cutoff)
-          .filter((a) => a?.song);
+        // ── Songs of the week timeline (up to 4 distinct weeks, newest first) ──
+        const songAwards = bestPerAwardDate(
+          (songAwardsRes.data || [])
+            .filter((a) => !a?.awardDate || a.awardDate <= cutoff)
+            .filter((a) => a?.song)
+        );
 
         setWeeklyWinners(
-          songAwards.slice(0, 3).map((award) => ({
+          songAwards.slice(0, 4).map((award) => ({
             awardId: award.awardId,
             awardDate: award.awardDate,
             songId: award.song.songId || award.targetId,
@@ -495,10 +519,14 @@ const Feed = () => {
           }))
         );
 
-        // ── Artist of the week (most recent artist award) ──
-        const artistAwards = (artistAwardsRes.data || [])
-          .filter((a) => !a?.awardDate || a.awardDate <= cutoff)
-          .filter((a) => a?.user);
+        // ── Artist of the week (most recent week's leading artist) ──
+        // Same genre-fan-out problem: without the collapse, [0] was whichever
+        // genre's winner happened to sort first for the latest date.
+        const artistAwards = bestPerAwardDate(
+          (artistAwardsRes.data || [])
+            .filter((a) => !a?.awardDate || a.awardDate <= cutoff)
+            .filter((a) => a?.user)
+        );
 
         if (artistAwards.length) {
           const award = artistAwards[0];
@@ -955,12 +983,23 @@ const Feed = () => {
                       <svg className="artist-of-week-crown" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
                         <path d="M3 18h18l-1.5-9-4.5 4-3-7-3 7-4.5-4L3 18z" fill="#eab308" />
                       </svg>
-                      <div className="artist-of-week-photo">
-                        <img
-                          src={artistOfWeek.photoUrl || randomRapper}
-                          alt={artistOfWeek.username}
-                          onError={(e) => { e.target.src = randomRapper; }}
-                        />
+                      {/* An artist with no photo on file shows their initial,
+                          not a stock photograph of somebody else. */}
+                      <div className={`artist-of-week-photo${artistOfWeek.photoUrl ? '' : ' artist-of-week-photo--monogram'}`}>
+                        {artistOfWeek.photoUrl ? (
+                          <img
+                            src={artistOfWeek.photoUrl}
+                            alt={artistOfWeek.username}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.parentElement?.classList.add('artist-of-week-photo--monogram');
+                            }}
+                          />
+                        ) : (
+                          <span className="artist-of-week-initial" aria-hidden="true">
+                            {(artistOfWeek.username || '?').trim().charAt(0).toUpperCase()}
+                          </span>
+                        )}
                       </div>
                     </div>
 

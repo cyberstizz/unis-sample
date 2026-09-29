@@ -63,6 +63,33 @@
   justify-content: flex-end;
 }
 
+// Shown only when the artist has no photo on file. Replaces the random stock
+// photograph that used to fill this space.
+.ac-photo--monogram {
+  background-image: none;
+  background-color: hsl(var(--ac-monogram-hue, 220), 30%, 16%);
+  background-image: linear-gradient(
+    145deg,
+    hsl(var(--ac-monogram-hue, 220), 34%, 22%) 0%,
+    hsl(var(--ac-monogram-hue, 220), 28%, 11%) 100%
+  );
+}
+
+.ac-monogram {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4.5rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.22);
+  user-select: none;
+  pointer-events: none;
+}
+
 .ac-fade-right {
   position: absolute;
   inset: 0;

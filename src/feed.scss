@@ -951,7 +951,10 @@ $chart-down: #e2564b;
   justify-content: space-between;
   gap: 12px;
   padding: 4px 8px 0;
-  max-width: 560px;
+  // Was 560px, which fitted three 120px nodes and left the rest of the row
+  // empty on desktop. 720px seats four (4 x 120 + 3 x 12 = 528) with the
+  // same breathing room the three-up layout had.
+  max-width: 720px;
 }
 
 .winners-timeline-rail {
@@ -972,8 +975,10 @@ $chart-down: #e2564b;
   cursor: pointer;
   animation: fadeUp 0.5s ease both;
 
+  // The rail is the first child, so the nodes are children 2..5.
   &:nth-child(3) { animation-delay: 0.05s; }
   &:nth-child(4) { animation-delay: 0.1s; }
+  &:nth-child(5) { animation-delay: 0.15s; }
 
   &:hover .winners-timeline-thumb {
     transform: translateY(-3px);
@@ -1111,6 +1116,23 @@ $chart-down: #e2564b;
     object-fit: cover;
     display: block;
   }
+
+  // Shown when the artist has no photo on file, and when a stored photo URL
+  // fails to load. Previously both cases fell back to a stock rapper
+  // photograph, which put a stranger's face under a real artist's name.
+  &--monogram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.artist-of-week-initial {
+  font-size: 5.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.28);
+  user-select: none;
 }
 
 // Caption sits beneath the portrait.
@@ -1904,6 +1926,12 @@ $chart-down: #e2564b;
 
   .winners-timeline-node {
     width: 30%;
+  }
+
+  // Desktop shows four weeks; three is all that fits here. The rail is the
+  // first child, so the fourth node is :nth-child(5).
+  .winners-timeline-node:nth-child(5) {
+    display: none;
   }
 
   .winners-timeline-thumb {

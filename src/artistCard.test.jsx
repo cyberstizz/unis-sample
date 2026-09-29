@@ -167,7 +167,7 @@ describe('ArtistCard', () => {
     expect(photoDiv.style.backgroundImage).toContain(mockArtist.photoUrl);
   });
 
-  test('uses the fallback image when photoUrl is missing', () => {
+  test('renders a monogram instead of a stock photo when photoUrl is missing', () => {
     const artistWithoutPhoto = {
       ...mockArtist,
       photoUrl: undefined,
@@ -181,11 +181,13 @@ describe('ArtistCard', () => {
       />
     );
 
-    const photoDiv = Array.from(container.querySelectorAll('div')).find((div) =>
-      div.style.backgroundImage.includes('https://picsum.photos/400/300')
-    );
+    const photoDiv = container.querySelector('.ac-photo--monogram');
 
     expect(photoDiv).toBeTruthy();
+    // No remote stock photo is requested for a photoless artist.
+    expect(photoDiv.style.backgroundImage).not.toContain('picsum.photos');
+    expect(container.querySelector('.ac-monogram')?.textContent)
+      .toBe(mockArtist.username.charAt(0).toUpperCase());
   });
 
   test('starts hidden and becomes visible after the staggered timeout', () => {
