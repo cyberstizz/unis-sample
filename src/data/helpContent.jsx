@@ -31,6 +31,11 @@ import React from 'react';
 
 export const VOTE_POINTS = 2;
 
+// Engagement weights — AwardService.PLAY_WEIGHT / LIKE_WEIGHT.
+// Plays and likes score directly toward an award now; they are not a
+// no-votes fallback. Keep these in step with the backend constants.
+export const ENGAGEMENT_WEIGHTS = { play: 1, like: 5 };
+
 export const MESSAGE_REQUEST_DAILY_LIMIT = 15;
 
 export const COMMENTS_PER_TRACK = 3;
@@ -141,30 +146,37 @@ const MessageLanes = () => (
 // ── The tiebreaker cascade ──────────────────────────────────────────────────
 // Numbered deliberately: this genuinely is an ordered sequence, and the order
 // is the whole rule. Each step is only reached if the one above it is tied.
+// Step 1 is now the COMBINED total; step 2 is what keeps votes primary when
+// two nominees arrive at the same number by different routes.
 
 const CASCADE = [
   {
     n: 1,
-    title: 'Weighted votes',
-    body: 'Every vote received during the period, each counted at the weight of the interval it was cast for.',
+    title: 'Total points',
+    body: 'Vote points plus engagement points, added together. This is the number an award is decided on.',
   },
   {
     n: 2,
+    title: 'Vote points',
+    body: 'If two nominees finish level on total, the one who earned more of it from votes takes the award.',
+  },
+  {
+    n: 3,
     title: 'Plays',
     body: 'How many times the song was played during the period. For an artist, every play across all of their songs.',
   },
   {
-    n: 3,
+    n: 4,
     title: 'Likes',
     body: 'Likes received during the period.',
   },
   {
-    n: 4,
+    n: 5,
     title: 'Score',
     body: 'Lifetime points on Unis — the number that sets your level.',
   },
   {
-    n: 5,
+    n: 6,
     title: 'Seniority',
     body: 'Whoever has been on Unis longest wins. This step can never tie, so every award always has exactly one winner.',
   },
@@ -523,15 +535,27 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              By weighted votes first. If two nominees are level on that, Unis
-              works down a fixed order of tiebreakers until one of them is
-              ahead.
+              On points. Everything you do in a period earns them, and the
+              nominee with the most at the close takes the award.
+            </p>
+            <p>
+              A vote is worth between 10 and 250 points depending on which
+              award it was cast for. A play is worth 1. A like is worth 5. Those
+              are added together — votes are not checked first and engagement
+              second, it is one number.
+            </p>
+            <p>
+              So a vote still counts for far more than a play, by a wide margin.
+              But an artist a neighborhood is genuinely listening to can win
+              without a single vote being cast, and that is deliberate. Nobody
+              opening the voting wizard on a given day should not hand the award
+              to whoever talked one friend into a tap.
             </p>
             <TiebreakerCascade />
             <p className="help-note">
-              Every award records which step decided it. If a race came down to
-              plays rather than votes, that is part of the permanent record of
-              the win.
+              Every award records which step decided it, and whether votes or
+              engagement made up the larger half of the winning total. That is
+              part of the permanent record of the win.
             </p>
           </>
         ),
@@ -605,14 +629,16 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              The award is still given. If no votes were cast in a category, Unis
-              picks the winner from the same list, starting at the next
-              step — plays, then likes, then score, then seniority.
+              Nothing special happens — the award is decided the same way it
+              always is. With no votes cast, every nominee&rsquo;s total is
+              simply their engagement points, and whoever was played and liked
+              most that period wins it outright.
             </p>
             <p>
-              Quiet categories still crown someone, which means a new
-              jurisdiction has a real winner from its first day instead of an
-              empty page.
+              If a category saw no votes, no plays and no likes at all, someone
+              is still crowned: the nominee with the highest lifetime score,
+              then the longest-standing account. A new jurisdiction gets a real
+              winner from its first day instead of an empty page.
             </p>
           </>
         ),
