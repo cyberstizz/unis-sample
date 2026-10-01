@@ -5,6 +5,7 @@ import { apiCall } from "./components/axiosInstance";
 import { useAuth } from "./context/AuthContext";
 import Layout from "./layout";
 import VoteHistorySection from "./VoteHistorySection"; // ★ read-only; fetches the logged-in user's votes (self-view only)
+import ProfilePhotos from "./ProfilePhotos"; // Instagram-style photo grid + full-screen viewer
 import "./ListenerPage.scss";
 
 // ----------------------------------------------------------------------------
@@ -173,6 +174,10 @@ const ListenerPage = () => {
             </div>
           </div>
         </section>
+
+        {/* PHOTOS — directly under Follow / Find similar. Who can see them is
+            decided server-side (under-18 safeguard + "Public profile" toggle). */}
+        <ProfilePhotos ownerId={userId} ownerName={user.username} ownerAvatar={photo} isSelf={Boolean(isSelf)} />
 
         {/* "FREQUENCY" CTA (taste-match slot — real Discover loop; ★ personalized % is future backend) */}
         <section className="lpr-match">

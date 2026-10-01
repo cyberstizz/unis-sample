@@ -1,0 +1,258 @@
+/* ===========================================================================
+   PhotoViewer.scss — namespace: pv-
+   Full-screen photo viewer opened from the profile photo grid.
+   Portaled to <body>, z-index 3000: above the app header (1000) and the
+   full-screen player (2500), below AuthGateSheet (9998/9999), which renders
+   inside this dialog so the focus trap covers it.
+   =========================================================================== */
+
+.pv {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  font-family: var(--unis-font-sans);
+  overscroll-behavior: contain;
+  animation: pv-in .18s ease-out both;
+  outline: none;
+}
+
+.pv__backdrop { position: absolute; inset: 0; background: #000; }
+
+/* the photo itself, blurred way out, so letterboxed space isn't dead black */
+.pv__ambient {
+  position: absolute;
+  inset: -12%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(56px) saturate(1.25);
+  pointer-events: none;
+  transition: background-image .3s;
+}
+
+/* ---- top bar ---- */
+.pv__top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px 14px;
+}
+.pv__who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pv__ava {
+  width: 34px; height: 34px; flex: 0 0 auto; border-radius: 50%;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--unis-primary-2), var(--unis-primary));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 14px; overflow: hidden;
+}
+.pv__ava img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; border: 2px solid #000; }
+.pv__who-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.pv__name { font-weight: 700; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv__count { font-size: 12px; color: rgba(255, 255, 255, .6); font-variant-numeric: tabular-nums; }
+
+.pv__tools { display: flex; gap: 8px; flex: 0 0 auto; }
+.pv__icon-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; cursor: pointer; color: #fff;
+  background: rgba(255, 255, 255, .09);
+  transition: background .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pv__icon-btn:hover { background: rgba(255, 255, 255, .18); }
+
+/* ---- stage ---- */
+.pv__stage {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  touch-action: none;          /* we own swipes; no page scroll / zoom behind */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.pv__slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .24s cubic-bezier(.2, .8, .2, 1);
+}
+.pv__slide.is-dragging { transition: none; }
+.pv__img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  -webkit-user-drag: none;
+}
+@media (min-width: 621px) {
+  .pv__slide { padding: 8px 76px; }
+  .pv__img { border-radius: 6px; box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .8); }
+}
+.pv__img--from-next { animation: pv-from-next .24s cubic-bezier(.2, .8, .2, 1) both; }
+.pv__img--from-prev { animation: pv-from-prev .24s cubic-bezier(.2, .8, .2, 1) both; }
+
+/* double-tap heart — the one showy moment, in the viewer's theme */
+.pv__burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 10px 30px var(--unis-primary-glow));
+  animation: pv-burst .9s cubic-bezier(.2, .9, .3, 1.2) both;
+}
+
+.pv__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  transform: translateY(-50%);
+  width: 44px; height: 44px; border-radius: 50%;
+  display: none;
+  align-items: center; justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .14);
+  background: rgba(20, 22, 30, .55);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background .15s;
+}
+.pv__nav:hover { background: rgba(40, 44, 60, .8); }
+.pv__nav--prev { left: 16px; }
+.pv__nav--next { right: 16px; }
+@media (hover: hover) and (pointer: fine) { .pv__nav { display: inline-flex; } }
+
+/* ---- action bar ---- */
+.pv__bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px calc(env(safe-area-inset-bottom, 0px) + 14px) 8px;
+}
+.pv__like {
+  width: 46px; height: 46px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; background: transparent; color: #fff; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pv__like span { display: inline-flex; }
+.pv__like.is-liked svg { filter: drop-shadow(0 4px 12px var(--unis-primary-glow)); }
+.pv__like-pop { animation: pv-pop .35s cubic-bezier(.3, 1.6, .5, 1) both; }
+.pv__likes { font-weight: 700; font-size: 14px; }
+.pv__date { margin-left: auto; font-size: 12.5px; color: rgba(255, 255, 255, .55); }
+
+/* transient message (e.g. a like that didn't save) */
+.pv__notice {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
+  z-index: 4;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(24, 26, 36, .92);
+  border: 1px solid rgba(255, 255, 255, .12);
+  font-size: 13px;
+  text-align: center;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+}
+
+/* ---- delete confirmation sheet ---- */
+.pv__confirm {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 5;
+  transform: translateX(-50%);
+  width: min(440px, 100%);
+  box-sizing: border-box;
+  padding: 22px 20px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  border-radius: 22px 22px 0 0;
+  background: #10131c;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-bottom: 0;
+  box-shadow: 0 -24px 60px rgba(0, 0, 0, .6);
+  animation: pv-sheet .22s cubic-bezier(.2, .8, .2, 1) both;
+}
+@media (min-width: 621px) {
+  .pv__confirm { bottom: 24px; border-radius: 22px; border-bottom: 1px solid rgba(255, 255, 255, .1); }
+}
+.pv__confirm-title { margin: 0; font-size: 17px; font-weight: 800; }
+.pv__confirm-sub { margin: 6px 0 16px; font-size: 13.5px; color: rgba(255, 255, 255, .62); }
+.pv__confirm-error {
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  border-radius: var(--unis-radius-sm, 8px);
+  background: rgba(220, 38, 38, .1);
+  border: 1px solid rgba(248, 113, 113, .32);
+  color: #fca5a5;
+  font-size: 12.5px;
+}
+.pv__confirm-actions { display: flex; flex-direction: column; gap: 8px; }
+.pv__confirm-delete,
+.pv__confirm-cancel {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.pv__confirm-delete { border: 0; background: #e5484d; color: #fff; }
+.pv__confirm-delete:hover { background: #d63b40; }
+.pv__confirm-cancel { border: 1px solid rgba(255, 255, 255, .16); background: transparent; color: #fff; }
+.pv__confirm-delete:disabled,
+.pv__confirm-cancel:disabled { opacity: .6; cursor: default; }
+
+/* focus */
+.pv__icon-btn:focus-visible,
+.pv__nav:focus-visible,
+.pv__like:focus-visible,
+.pv__confirm-delete:focus-visible,
+.pv__confirm-cancel:focus-visible {
+  outline: 2px solid var(--unis-primary-2);
+  outline-offset: 2px;
+}
+
+/* ---- motion ---- */
+@keyframes pv-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pv-from-next { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: none; } }
+@keyframes pv-from-prev { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: none; } }
+@keyframes pv-pop { 0% { transform: scale(1); } 45% { transform: scale(1.28); } 100% { transform: scale(1); } }
+@keyframes pv-sheet { from { transform: translate(-50%, 24px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+@keyframes pv-burst {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.2); }
+  18%  { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  32%  { transform: translate(-50%, -50%) scale(.94); }
+  46%  { transform: translate(-50%, -50%) scale(1); }
+  78%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -62%) scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pv,
+  .pv__img--from-next,
+  .pv__img--from-prev,
+  .pv__like-pop,
+  .pv__confirm { animation: none; }
+  .pv__slide { transition: none; }
+  .pv__burst { animation: pv-burst-still .9s linear both; }
+  @keyframes pv-burst-still { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+}

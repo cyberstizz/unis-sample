@@ -24,6 +24,13 @@
 // looks broken. Passing behavior: 'instant' overrides the CSS per call.
 // (Worth also scoping those three `html` rules to their own pages.)
 //
+// WHY state.preserveScroll IS HONOURED
+// Some navigations only change the query string to mirror UI state in the URL
+// (e.g. /user/:id?photo=<id> while the full-screen photo viewer is open, so the
+// phone's back gesture closes the viewer instead of leaving the profile). The
+// page underneath hasn't changed, so jumping it to the top would lose the
+// user's place. Callers opt out with navigate(..., { state: { preserveScroll: true } }).
+//
 // WHY POP IS SKIPPED
 // On back/forward the browser restores the previous scroll offset, and users
 // expect to land where they left. Forcing the top on POP breaks that. We only
@@ -40,12 +47,15 @@ import { useLocation, useNavigationType } from 'react-router-dom';
 const SCROLL_CONTAINER_SELECTORS = ['.layout-content', '.app-wrapper'];
 
 const ScrollToTop = () => {
-  const { pathname, hash } = useLocation();
+  const { pathname, hash, state } = useLocation();
   const navigationType = useNavigationType();
 
   useEffect(() => {
     // Let the browser restore position on back/forward.
     if (navigationType === 'POP') return;
+
+    // Query-string-only UI state (photo viewer) — keep the page where it is.
+    if (state?.preserveScroll) return;
 
     // Honour in-page anchors (/terms#section-4) instead of fighting them.
     if (hash) {
