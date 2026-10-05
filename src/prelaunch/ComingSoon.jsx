@@ -14,8 +14,25 @@ import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CreateAccountWizard from '../createAccountWizard';
-import UnisMark from '../UnisMark';
+// Same logo files the app header uses, picked the same way (see header.jsx).
+import logoblue from '../assets/unisLogoThree.svg';
+import logoorange from '../assets/logo-orange.png';
+import logored from '../assets/logo-red.png';
+import logogreen from '../assets/logo-green.png';
+import logopurple from '../assets/logo-purple.png';
+import logoyellow from '../assets/logo-gold.png';
+import logodianna from '../assets/logo-dianna.png';
 import './ComingSoon.scss';
+
+const LOGO_MAP = {
+  blue: logoblue,
+  orange: logoorange,
+  red: logored,
+  green: logogreen,
+  purple: logopurple,
+  yellow: logoyellow,
+  dianna: logodianna,
+};
 
 const BAR_COUNT = 96;
 
@@ -64,7 +81,7 @@ export function buildSkyline(count = BAR_COUNT) {
 }
 
 export default function ComingSoon() {
-  const { user, logout } = useAuth();
+  const { user, logout, isGuest, theme } = useAuth();
   const [showSignup, setShowSignup] = useState(false);
   const [justSignedUp, setJustSignedUp] = useState(false);
   const bars = useMemo(() => buildSkyline(), []);
@@ -76,14 +93,13 @@ export default function ComingSoon() {
   }, []);
 
   const handle = user?.username || user?.displayName || null;
+  // Guests always get the default blue mark, exactly as the header does.
+  const activeLogo = isGuest ? logoblue : (LOGO_MAP[theme] || logoblue);
 
   return (
     <div className="cs-page">
       <header className="cs-top">
-        <span className="cs-lockup" aria-label="Unis">
-          <UnisMark size={30} title="Unis" />
-          <span className="cs-wordmark" aria-hidden="true">Unis</span>
-        </span>
+        <img className="cs-logo" src={activeLogo} alt="UNIS" draggable="false" />
         <nav className="cs-legal" aria-label="Legal">
           <Link to="/terms">Terms</Link>
           <Link to="/privacy">Privacy</Link>

@@ -28,19 +28,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22px var(--cs-pad) 0;
+  padding: 14px var(--cs-pad) 0;
 }
 
-.cs-lockup {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.cs-wordmark {
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: -0.03em;
+.cs-logo {
+  // Same artwork as the app header, a touch smaller (header is 92px).
+  height: clamp(58px, 6vw, 84px);
+  width: auto;
+  display: block;
+  user-select: none;
+  pointer-events: none;
 }
 
 .cs-legal {
