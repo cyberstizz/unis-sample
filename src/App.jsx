@@ -41,6 +41,8 @@ import DiscoverPage from './DiscoverPage';
 import ListenerPage from './ListenerPage';   
 import MessagesPage from './MessagePage';
 import HelpPage from './HelpPage';
+import ComingSoon from './prelaunch/ComingSoon';
+import { resolveGate } from './prelaunch/prelaunchConfig';
 
 // Theme
 import './theme.scss';
@@ -76,17 +78,34 @@ const SearchRedirect = () => {
 
 const AppLayout = () => {
   const { pathname } = useLocation();
-  const { user } = useAuth();
+  const { user, authLoaded } = useAuth();
   const isAuthPage = pathname === '/login' || pathname === '/register' || pathname.startsWith('/reset-password');
 
   useActivityTracker();
+
+  // ★ PRE-LAUNCH GATE (see src/prelaunch/prelaunchConfig.js). When the gate is
+  //   off this is always 'app' and everything below renders exactly as before.
+  const gate = resolveGate({ pathname, user, authLoaded });
+  if (gate === 'wait') return null;                         // no flash while auth resolves
+  if (gate === 'enter') return <Navigate to="/" replace />; // admin already signed in
+  if (gate === 'comingSoon') return <ComingSoon />;
+  if (gate === 'backstage') {
+    return (
+      <div className="app-wrapper">
+        <Login />
+      </div>
+    );
+  }
+  // 'open' = signup-support pages (verify email, reset password, legal, report,
+  // waitlist) rendered on their own: no sidebar, player or notifications.
+  const chromeless = gate === 'open';
 
   return (
     <div className="app-wrapper">
       {/* Resets scroll on navigation. Must be inside <Router> to read location,
           and outside <Routes> so it survives route changes. */}
       <ScrollToTop />
-      {!isAuthPage && <Sidebar />}
+      {!isAuthPage && !chromeless && <Sidebar />}
 
       <Routes>
         {/* Public routes — no auth needed at all */}
@@ -148,11 +167,11 @@ const AppLayout = () => {
       </Routes>
 
       {/* Only show notifications for logged-in users */}
-     {!isAuthPage && user && <WinnersNotification />}
-     {!isAuthPage && <SongNotification />}
+     {!isAuthPage && !chromeless && user && <WinnersNotification />}
+     {!isAuthPage && !chromeless && <SongNotification />}
 
-      {!isAuthPage && <Player />}
-      {!isAuthPage && <PlayChoiceModal />}
+      {!isAuthPage && !chromeless && <Player />}
+      {!isAuthPage && !chromeless && <PlayChoiceModal />}
     </div>
   );
 };
