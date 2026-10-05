@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
 import unisLogo from '../assets/unisLogoThree.svg';
+import { isPrelaunch } from '../prelaunch/prelaunchConfig';
 
 const wrap = {
   position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -54,6 +55,7 @@ const Spinner = () => (
 const VerifyEmail = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const prelaunch = isPrelaunch(); // before launch nobody can log in, so don't send them to /login
   const token = params.get('token');
 
   const [status, setStatus] = useState('verifying'); // verifying | success | error
@@ -106,8 +108,17 @@ const VerifyEmail = () => {
           <>
             <CheckMark />
             <h1 style={h1}>Email verified</h1>
-            <p style={sub}>Your account is active. You can log in now.</p>
-            <button style={btn} onClick={() => navigate('/login')}>Go to Login</button>
+            {prelaunch ? (
+              <>
+                <p style={sub}>You&rsquo;re all set. We&rsquo;ll email you the moment Unis opens.</p>
+                <button style={btn} onClick={() => navigate('/')}>Back to Unis</button>
+              </>
+            ) : (
+              <>
+                <p style={sub}>Your account is active. You can log in now.</p>
+                <button style={btn} onClick={() => navigate('/login')}>Go to Login</button>
+              </>
+            )}
           </>
         )}
 
@@ -125,7 +136,9 @@ const VerifyEmail = () => {
             />
             <button style={ghost} onClick={handleResend}>Resend verification link</button>
             {resendMsg && <p style={{ ...sub, fontSize: 13, marginTop: 12 }}>{resendMsg}</p>}
-            <button style={{ ...ghost, marginTop: 12 }} onClick={() => navigate('/login')}>Back to Login</button>
+            <button style={{ ...ghost, marginTop: 12 }} onClick={() => navigate(prelaunch ? '/' : '/login')}>
+              {prelaunch ? 'Back to Unis' : 'Back to Login'}
+            </button>
           </>
         )}
       </div>

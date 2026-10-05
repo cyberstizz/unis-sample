@@ -138,10 +138,20 @@ const formatFileSize = (bytes) => {
 // Component
 // ============================================
 
-const CreateAccountWizard = ({ show, onClose, onSuccess }) => {
+// `prelaunch` (optional, default false): used by the pre-launch Coming soon
+// page. It only changes the two finish screens — nobody can log in before
+// launch, so they say "we'll email you" and their button closes the wizard
+// (calling onSuccess) instead of sending people to /login.
+const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [stepDirection, setStepDirection] = useState('forward');
   const navigate = useNavigate();
+
+  // Pre-launch finish: hand control back to the Coming soon page.
+  const finishPrelaunch = () => {
+    if (onSuccess) onSuccess();
+    else onClose();
+  };
   
   const [formData, setFormData] = useState({
     referralCode: '',
@@ -1786,16 +1796,20 @@ const handleSubmit = async () => {
                   Your account is created. We sent a confirmation link to <strong>{verificationEmail}</strong>.
                 </p>
                 <p style={{ opacity: 0.7, fontSize: 14 }}>
-                  Click the link to verify it's you, then log in.
-                  {formData.role === 'artist' && ' Your debut track is attached and goes live once you verify.'}
+                  {prelaunch
+                    ? "Click the link to verify it's you. We'll email you the moment Unis opens."
+                    : "Click the link to verify it's you, then log in."}
+                  {formData.role === 'artist' && (prelaunch
+                    ? ' Your debut track is attached and goes live when Unis opens.'
+                    : ' Your debut track is attached and goes live once you verify.')}
                 </p>
                 <button
                   type="button"
                   className="btn btn-primary"
                   style={{ marginTop: 20, width: '100%' }}
-                  onClick={() => { onClose(); navigate('/login'); }}
+                  onClick={prelaunch ? finishPrelaunch : () => { onClose(); navigate('/login'); }}
                 >
-                  Go to Login
+                  {prelaunch ? 'Done' : 'Go to Login'}
                 </button>
               </div>
             </div>
@@ -1819,15 +1833,17 @@ const handleSubmit = async () => {
                   </div>
                 )}
                 <p style={{ opacity: 0.7, fontSize: 14, marginTop: 12 }}>
-                  Check your email to verify your account, then log in to add your track.
+                  {prelaunch
+                    ? "Check your email to verify your account. You can add your track when Unis opens."
+                    : 'Check your email to verify your account, then log in to add your track.'}
                 </p>
                 <button
                   type="button"
                   className="btn btn-primary"
                   style={{ marginTop: 16, width: '100%' }}
-                  onClick={() => { onClose(); navigate('/login'); }}
+                  onClick={prelaunch ? finishPrelaunch : () => { onClose(); navigate('/login'); }}
                 >
-                  Go to Login
+                  {prelaunch ? 'Done' : 'Go to Login'}
                 </button>
               </div>
             </div>
