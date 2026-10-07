@@ -7,7 +7,6 @@ import { buildUrl } from './utils/buildUrl';
 import Layout from './layout';
 import ArtistCard from './artistCard';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
-import PlaylistViewer from './playlistViewer'; // ★ feed #7
 import randomRapper from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import song2 from './assets/sdboomin_waitedallnight.mp3';
@@ -417,7 +416,6 @@ const Feed = () => {
   // ─── Charts lens ───
   const [chart, setChart] = useState(null); // { totalPlaysThisWeek, entries: [] }
   // ★ feed #7: playlist opened as an overlay (no /playlist/:id route exists)
-  const [viewingPlaylistId, setViewingPlaylistId] = useState(null);
   const [chartLoading, setChartLoading] = useState(false);
 
   // ─── Playlists lens ───
@@ -693,14 +691,9 @@ const Feed = () => {
 
   const handleSongNav = useCallback((mediaId, type = 'song') => navigate(`/${type}/${mediaId}`), [navigate]);
   const handleArtistNav = useCallback((artistId) => navigate(`/artist/${artistId}`), [navigate]);
-  // ★ FIX (feed #7 — "the screen just breaks when a playlist is clicked"):
-  //   navigate('/playlist/:id') pointed at a route that DOES NOT EXIST in
-  //   App.jsx (the only playlist route is /admin/playlists). React Router fell
-  //   through to the catch-all and the page went blank. PlaylistViewer is an
-  //   overlay component (playlistId + onClose), not a page — so open it in
-  //   place, exactly like playlistManager/playlistPanel do.
-  //   Restored — this was reverted by 46230a8 (Jul 16).
-  const handlePlaylistNav = useCallback((playlistId) => setViewingPlaylistId(playlistId), []);
+  // Playlists open their own page. (Feed #7's blank screen came from this
+  // route not existing yet — /playlist/:playlistId is now a real page.)
+  const handlePlaylistNav = useCallback((playlistId) => navigate(`/playlist/${playlistId}`), [navigate]);
 
   const handlePlayMedia = useCallback(async (e, media) => {
     e.stopPropagation();
@@ -1318,13 +1311,6 @@ const Feed = () => {
       {!isGuest && <LastWonNotification />}
 
       {/* Auth gate bottom sheet — triggered when guest taps Vote */}
-      {/* ★ feed #7: playlist overlay (replaces the dead /playlist/:id route) */}
-      {viewingPlaylistId && (
-        <PlaylistViewer
-          playlistId={viewingPlaylistId}
-          onClose={() => setViewingPlaylistId(null)}
-        />
-      )}
 
       <AuthGateSheet {...gateProps} />
     </Layout>

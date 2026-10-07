@@ -1,26 +1,244 @@
-import React, { useContext, useState, useEffect, useRef } from 'react';
+import React, { useContext, useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
+import {
+  DndContext, DragOverlay, closestCenter, KeyboardSensor, MouseSensor, TouchSensor,
+  useSensor, useSensors, defaultDropAnimationSideEffects,
+} from '@dnd-kit/core';
+import {
+  SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { CSS } from '@dnd-kit/utilities';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';   // ★ real signed-in user
 import { buildUrl } from './utils/buildUrl';        // ★ R2-aware URL builder
 import {
   ChevronDown, GripVertical, Trash2, Bookmark, ListX, Shuffle,
   SkipBack, SkipForward, Play, Pause, Repeat, Repeat1, MoreHorizontal, User,
+  ListMusic, ChevronRight, X,
 } from 'lucide-react'; // ★ expanded icon set for the transport + header
 import './queuePanel.scss';
+
+// ============================================================================
+// ROW HELPERS
+// ============================================================================
+
+// Queue durations are stored in milliseconds.
+const formatMs = (d) => {
+  if (!d && d !== 0) return '';
+  const ms = Number(d);
+  if (isNaN(ms)) return '';
+  const sec = ms / 1000;
+  return `${Math.floor(sec / 60)}:${Math.floor(sec % 60).toString().padStart(2, '0')}`;
+};
+
+const artOf = (t) => buildUrl(t?.artworkUrl || t?.artwork) || '/assets/placeholder.jpg';
+
+/**
+ * The visual body of a queue row. Shared by the real row and the floating copy
+ * that follows the pointer while dragging, so the two always look identical.
+ */
+const RowBody = ({ track, isCurrent, isPlaying, handleProps, rightSlot }) => (
+  <>
+    <div className="qp-left">
+      {isCurrent ? (
+        <div className={`qp-now-playing ${isPlaying ? '' : 'qp-paused'}`}>
+          <span className="qp-bar" /><span className="qp-bar" /><span className="qp-bar" />
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="qp-grip"
+          aria-label={`Reorder ${track.title || 'track'}`}
+          onClick={(e) => e.stopPropagation()}
+          {...handleProps}
+        >
+          <GripVertical size={16} />
+        </button>
+      )}
+      <img src={artOf(track)} alt="" className="qp-art" />
+    </div>
+
+    <div className="qp-meta">
+      <div className="qp-title">{track.title || track.name || 'Untitled'}</div>
+      <div className="qp-artist">{track.artist || track.artistName || 'Unknown'}</div>
+    </div>
+
+    <div className="qp-right">{rightSlot}</div>
+  </>
+);
+
+/**
+ * One sortable queue entry.
+ *
+ * The OUTER wrapper is what the drag system moves. The inner `.qp-item` keeps
+ * its own hover effect — giving them separate elements stops the CSS hover
+ * shift from fighting the drag library's transforms.
+ *
+ * Songs that arrived together from a playlist share a coloured rail down the
+ * left edge. The first song of each such group carries the group's label.
+ */
+const SortableQueueRow = ({
+  track, index, isCurrent, isPast, isPlaying, run, confirming,
+  rowRef, onPlay, onAskRemove, onConfirmRemove, onCancelConfirm,
+  onAskRemoveGroup, onConfirmRemoveGroup, onOpenPlaylist, currentQid,
+}) => {
+  const {
+    attributes, listeners, setNodeRef, setActivatorNodeRef,
+    transform, transition, isDragging,
+  } = useSortable({ id: track.qid, disabled: isCurrent });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+  };
+
+  const origin = track.origin;
+  const inGroup = !!(origin && origin.type === 'playlist');
+  const confirmingThis = confirming?.kind === 'item' && confirming.qid === track.qid;
+  const groupQids = run && inGroup ? run.qids : [];
+  const removableInGroup = groupQids.filter(q => q !== currentQid);
+  const confirmingGroup = confirming?.kind === 'group' && run && confirming.batchId === run.batchId && confirming.start === run.start;
+
+  const rightSlot = confirmingThis ? (
+    <div className="qp-confirm" onClick={(e) => e.stopPropagation()}>
+      <span className="qp-confirm-q">Remove?</span>
+      <button type="button" className="qp-confirm-cancel" onClick={onCancelConfirm}>Cancel</button>
+      <button type="button" className="qp-confirm-go" onClick={() => onConfirmRemove(track.qid)} autoFocus>
+        Remove
+      </button>
+    </div>
+  ) : (
+    <>
+      <span className="qp-duration">{formatMs(track.duration)}</span>
+      {!isCurrent && (
+        <button
+          type="button"
+          className="qp-remove"
+          onClick={(e) => { e.stopPropagation(); onAskRemove(track.qid); }}
+          title="Remove from queue"
+          aria-label={`Remove ${track.title || 'track'} from queue`}
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
+    </>
+  );
+
+  const railClass = inGroup
+    ? `qp-railed ${run?.isFirst ? 'qp-rail-first' : ''} ${run?.isLast ? 'qp-rail-last' : ''}`
+    : '';
+
+  return (
+    <div
+      ref={(node) => { setNodeRef(node); if (rowRef) rowRef.current = node; }}
+      style={style}
+      className={`qp-sortable ${railClass} ${isDragging ? 'qp-sortable-ghost' : ''}`}
+    >
+      {inGroup && run?.isFirst && (
+        <div className={`qp-group-label ${confirmingGroup ? 'qp-group-confirming' : ''}`}>
+          {confirmingGroup ? (
+            <div className="qp-confirm qp-confirm-group">
+              <span className="qp-confirm-q">
+                Remove {removableInGroup.length} song{removableInGroup.length !== 1 ? 's' : ''} from &ldquo;{origin.name}&rdquo;?
+              </span>
+              <button type="button" className="qp-confirm-cancel" onClick={onCancelConfirm}>Cancel</button>
+              <button
+                type="button"
+                className="qp-confirm-go"
+                onClick={() => onConfirmRemoveGroup(removableInGroup)}
+                autoFocus
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="qp-group-link"
+                onClick={() => onOpenPlaylist(origin.playlistId)}
+                title={`Open ${origin.name}`}
+              >
+                {origin.coverUrl
+                  ? <img src={origin.coverUrl} alt="" className="qp-group-cover" />
+                  : <span className="qp-group-cover qp-group-cover-empty"><ListMusic size={11} /></span>}
+                <span className="qp-group-from">From</span>
+                <span className="qp-group-name">{origin.name}</span>
+                <ChevronRight size={13} className="qp-group-chev" />
+              </button>
+              <span className="qp-group-count">{run.count}</span>
+              {removableInGroup.length > 1 && (
+                <button
+                  type="button"
+                  className="qp-group-remove"
+                  onClick={() => onAskRemoveGroup(run)}
+                  title="Remove these songs from the queue"
+                  aria-label={`Remove all songs from ${origin.name} in this group`}
+                >
+                  <X size={13} />
+                  <span>Remove all</span>
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      <div
+        className={`qp-item ${isCurrent ? 'qp-current' : ''} ${isPast ? 'qp-past' : ''} ${confirmingThis ? 'qp-item-confirming' : ''}`}
+        onClick={() => { if (!confirmingThis) onPlay(index); }}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
+            e.preventDefault();
+            onPlay(index);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-current={isCurrent ? 'true' : undefined}
+      >
+        <RowBody
+          track={track}
+          isCurrent={isCurrent}
+          isPlaying={isPlaying}
+          handleProps={{ ref: setActivatorNodeRef, ...attributes, ...listeners }}
+          rightSlot={rightSlot}
+        />
+      </div>
+    </div>
+  );
+};
+
+// Smooth settle when a dragged row is released into place.
+const dropAnimation = {
+  duration: 220,
+  easing: 'cubic-bezier(0.2, 0.9, 0.2, 1)',
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: { active: { opacity: '0.35' } },
+  }),
+};
 
 const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth, not a prop
   const { user } = useAuth(); // ★ signed-in user (same source as the header avatar)
   const {
-    queue, currentIndex, queueSource, currentMedia,
-    removeFromQueue, reorderQueue, clearQueue, saveQueueAsPlaylist,
-    playMedia,
+    queue, currentIndex, currentMedia,
+    removeQueueItems, moveQueueItem, clearQueue, saveQueueAsPlaylist,
+    playQueueIndex,
     isShuffled, toggleShuffle,
     isPlaying, togglePlayPause, next, prev, // ★ real transport wiring
     repeatMode, cycleRepeat,                // ★ new repeat support from context
     audioRef,                              // ★ for the live scrubber
   } = useContext(PlayerContext);
 
-  const [draggingIndex, setDraggingIndex] = useState(null);
+  const navigate = useNavigate();
+  const [activeQid, setActiveQid] = useState(null);    // row currently being dragged
+  // Inline confirmation in progress:
+  //   { kind: 'item',  qid }               → one song
+  //   { kind: 'group', batchId, start }    → a playlist group
+  //   { kind: 'clear' }                    → the whole queue
+  const [confirming, setConfirming] = useState(null);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [saveName, setSaveName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -69,6 +287,48 @@ const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth
     return () => window.removeEventListener('click', close);
   }, [menuOpen]);
 
+  // Drag sensors. Dragging starts from the grip handle only, so tapping a row
+  // still plays it and scrolling the list on a phone still scrolls.
+  //   Mouse    — starts after 4px of movement (a click never becomes a drag)
+  //   Touch    — starts after a brief 120ms hold on the handle
+  //   Keyboard — Space to lift, arrows to move, Space to drop, Esc to cancel
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  // Contiguous runs of songs that arrived together from one playlist add.
+  // Each entry: { batchId, start, end, isFirst, isLast, count, qids }
+  const runs = useMemo(() => {
+    const info = new Array(queue.length);
+    let i = 0;
+    while (i < queue.length) {
+      const batch = queue[i]?.origin?.batchId || null;
+      let j = i;
+      while (batch && j + 1 < queue.length && queue[j + 1]?.origin?.batchId === batch) j++;
+      const qids = queue.slice(i, j + 1).map(t => t.qid);
+      for (let k = i; k <= j; k++) {
+        info[k] = { batchId: batch, start: i, end: j, isFirst: k === i, isLast: k === j, count: j - i + 1, qids };
+      }
+      i = j + 1;
+    }
+    return info;
+  }, [queue]);
+
+  const qids = useMemo(() => queue.map(t => t.qid), [queue]);
+
+  // Escape cancels a pending confirmation before it closes anything else.
+  useEffect(() => {
+    if (!confirming) return;
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setConfirming(null); } };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [confirming]);
+
+  // Never reopen the panel with a stale confirmation showing.
+  useEffect(() => { if (!open) setConfirming(null); }, [open]);
+
   if (!open && !closing) return null; // ★ stay mounted through the exit animation
 
   // ★ animated dismiss — gives the "slide back out" feel on mobile + desktop
@@ -77,33 +337,43 @@ const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth
     setTimeout(() => { setClosing(false); onClose?.(); }, 280);
   };
 
-  const handleDragStart = (e, index) => {
-    if (index === currentIndex) return; // can't drag the currently playing track
-    setDraggingIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
+  // ── Drag and drop ──
+  // The queue changes exactly once, on drop — not on every pointer move.
+  const handleDragStart = ({ active }) => {
+    setConfirming(null);
+    setActiveQid(active.id);
   };
 
-  const handleDragOver = (e, overIndex) => {
-    e.preventDefault();
-    if (draggingIndex === null || draggingIndex === overIndex) return;
-    const newQueue = [...queue];
-    const [removed] = newQueue.splice(draggingIndex, 1);
-    newQueue.splice(overIndex, 0, removed);
-    reorderQueue(newQueue);
-    setDraggingIndex(overIndex);
+  const handleDragEnd = ({ active, over }) => {
+    setActiveQid(null);
+    if (!over || active.id === over.id) return;
+    const from = queue.findIndex(t => t.qid === active.id);
+    const to = queue.findIndex(t => t.qid === over.id);
+    if (from >= 0 && to >= 0) moveQueueItem(from, to);
   };
 
-  const handleDragEnd = () => setDraggingIndex(null);
+  const handleDragCancel = () => setActiveQid(null);
 
-  // ★ jump within the existing queue WITHOUT resetting shuffle / original order
+  const activeTrack = activeQid ? queue.find(t => t.qid === activeQid) : null;
+
+  // Jump to an exact queue position — never re-resolved by song id, so a song
+  // that appears twice always plays the copy you tapped.
   const handlePlay = (index) => {
-    if (queue[index]) playMedia(queue[index]);
+    setConfirming(null);
+    playQueueIndex(index);
   };
 
-  const handleRemove = (e, index) => {
-    e.stopPropagation();
-    if (index === currentIndex) return;
-    removeFromQueue(index);
+  // ── Removal, always confirmed in place ──
+  const askRemove = (qid) => setConfirming({ kind: 'item', qid });
+  const confirmRemove = (qid) => { setConfirming(null); removeQueueItems([qid]); };
+  const askRemoveGroup = (run) => setConfirming({ kind: 'group', batchId: run.batchId, start: run.start });
+  const confirmRemoveGroup = (groupQids) => { setConfirming(null); removeQueueItems(groupQids); };
+  const cancelConfirm = () => setConfirming(null);
+
+  const openPlaylist = (playlistId) => {
+    if (!playlistId) return;
+    handleClose();
+    navigate(`/playlist/${playlistId}`);
   };
 
   const handleSaveAsPlaylist = async () => {
@@ -123,7 +393,12 @@ const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth
 
   const handleClear = () => {
     if (queue.length === 0) return;
-    if (confirm('Clear the entire queue? Playback will stop.')) clearQueue();
+    setConfirming({ kind: 'clear' });
+  };
+
+  const confirmClear = () => {
+    setConfirming(null);
+    clearQueue();
   };
 
   // ★ live scrubber seek — click or drag anywhere on the bar
@@ -147,15 +422,6 @@ const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
-  };
-
-  // list durations are stored in ms (matches your existing convention)
-  const formatDuration = (d) => {
-    if (!d && d !== 0) return '';
-    const ms = Number(d);
-    if (isNaN(ms)) return '';
-    const sec = ms / 1000;
-    return `${Math.floor(sec / 60)}:${Math.floor(sec % 60).toString().padStart(2, '0')}`;
   };
 
   // ★ seconds → m:ss for the live scrubber (audio.currentTime is in seconds)
@@ -227,8 +493,20 @@ const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth
                 <div className="qp-now-title">{nowPlaying.title || nowPlaying.name || 'Untitled'}</div>
                 <div className="qp-now-artist">
                   {nowPlaying.artist || nowPlaying.artistName || 'Unknown'}
-                  {queueSource && <span className="qp-source"> · {queueSource}</span>}
                 </div>
+                {nowPlaying.origin?.type === 'playlist' && (
+                  <button
+                    type="button"
+                    className="qp-playing-from"
+                    onClick={() => openPlaylist(nowPlaying.origin.playlistId)}
+                    title={`Open ${nowPlaying.origin.name}`}
+                  >
+                    <ListMusic size={12} />
+                    <span className="qp-playing-from-k">Playing from</span>
+                    <span className="qp-playing-from-name">{nowPlaying.origin.name}</span>
+                    <ChevronRight size={12} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -293,6 +571,15 @@ const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth
         )}
 
         {/* Section header + overflow (Save / Clear) */}
+        {confirming?.kind === 'clear' ? (
+          <div className="qp-section qp-section-confirm">
+            <div className="qp-confirm qp-confirm-clear">
+              <span className="qp-confirm-q">Clear the entire queue? Playback will stop.</span>
+              <button type="button" className="qp-confirm-cancel" onClick={cancelConfirm}>Cancel</button>
+              <button type="button" className="qp-confirm-go" onClick={confirmClear} autoFocus>Clear</button>
+            </div>
+          </div>
+        ) : (
         <div className="qp-section">
           <div className="qp-section-l">
             <span className="qp-section-label">Up next</span>
@@ -326,6 +613,7 @@ const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth
             )}
           </div>
         </div>
+        )}
 
         {/* Queue list — single list over `queue` keeps drag/remove indices exact */}
         <div className="qp-body">
@@ -335,61 +623,67 @@ const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth
               <p className="qp-empty-hint">Play a song or add tracks with "Play Next" or "Play Later"</p>
             </div>
           ) : (
-            <div className="qp-list">
-              {queue.map((track, index) => {
-                const isCurrent = index === currentIndex;
-                const isPast = index < currentIndex;
-
-                return (
-                  <div
-                    key={`${track.songId || track.id}-${index}`}
-                    ref={isCurrent ? currentRowRef : null}
-                    className={`qp-item ${isCurrent ? 'qp-current' : ''} ${isPast ? 'qp-past' : ''} ${draggingIndex === index ? 'qp-dragging' : ''}`}
-                    draggable={!isCurrent}
-                    onDragStart={(e) => handleDragStart(e, index)}
-                    onDragOver={(e) => handleDragOver(e, index)}
-                    onDragEnd={handleDragEnd}
-                    onClick={() => handlePlay(index)}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div className="qp-left">
-                      {isCurrent ? (
-                        <div className={`qp-now-playing ${isPlaying ? '' : 'qp-paused'}`}>
-                          <span className="qp-bar" /><span className="qp-bar" /><span className="qp-bar" />
-                        </div>
-                      ) : (
-                        <GripVertical className="qp-grip" size={16} />
-                      )}
-                      <img
-                        src={buildUrl(track.artworkUrl || track.artwork) || '/assets/placeholder.jpg'}
-                        alt=""
-                        className="qp-art"
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis]}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+            >
+              <SortableContext items={qids} strategy={verticalListSortingStrategy}>
+                <div className={`qp-list ${activeQid ? 'qp-list-dragging' : ''}`}>
+                  {queue.map((track, index) => {
+                    const isCurrent = index === currentIndex;
+                    return (
+                      <SortableQueueRow
+                        key={track.qid}
+                        track={track}
+                        index={index}
+                        isCurrent={isCurrent}
+                        isPast={index < currentIndex}
+                        isPlaying={isPlaying}
+                        run={runs[index]}
+                        confirming={confirming}
+                        currentQid={queue[currentIndex]?.qid}
+                        rowRef={isCurrent ? currentRowRef : null}
+                        onPlay={handlePlay}
+                        onAskRemove={askRemove}
+                        onConfirmRemove={confirmRemove}
+                        onCancelConfirm={cancelConfirm}
+                        onAskRemoveGroup={askRemoveGroup}
+                        onConfirmRemoveGroup={confirmRemoveGroup}
+                        onOpenPlaylist={openPlaylist}
                       />
-                    </div>
+                    );
+                  })}
+                </div>
+              </SortableContext>
 
-                    <div className="qp-meta">
-                      <div className="qp-title">{track.title || track.name || 'Untitled'}</div>
-                      <div className="qp-artist">{track.artist || track.artistName || 'Unknown'}</div>
+              {/* The floating copy that follows the pointer. Portaled out of the
+                  panel because its backdrop blur and slide animation would
+                  otherwise offset a fixed-position overlay. It goes into #root,
+                  not <body>, because the colour theme is set on #root and the
+                  copy must match the user's chosen theme. */}
+              {createPortal(
+                <DragOverlay dropAnimation={dropAnimation} zIndex={1300}>
+                  {activeTrack ? (
+                    <div className="qp-drag-overlay">
+                      <div className="qp-item qp-item-lifted">
+                        <RowBody
+                          track={activeTrack}
+                          isCurrent={false}
+                          isPlaying={isPlaying}
+                          handleProps={{}}
+                          rightSlot={<span className="qp-duration">{formatMs(activeTrack.duration)}</span>}
+                        />
+                      </div>
                     </div>
-
-                    <div className="qp-right">
-                      <span className="qp-duration">{formatDuration(track.duration)}</span>
-                      {!isCurrent && (
-                        <button
-                          className="qp-remove"
-                          onClick={(e) => handleRemove(e, index)}
-                          title="Remove from queue"
-                          aria-label="Remove from queue"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  ) : null}
+                </DragOverlay>,
+                document.getElementById('root') || document.body
+              )}
+            </DndContext>
           )}
         </div>
 

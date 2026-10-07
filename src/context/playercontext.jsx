@@ -35,6 +35,58 @@ function fisherYatesShuffle(array) {
 }
 
 // ============================================================================
+// QUEUE ITEM IDENTITY
+// ============================================================================
+// Every queue entry carries its own `qid`, separate from the song's `id`.
+//
+// Why: the same song can legitimately sit in the queue more than once — queued
+// on its own AND inside a playlist that was added later. Song id therefore
+// can't identify a queue POSITION. Every lookup that used to match on song id
+// (finding the current track after a reorder, un-shuffling, jumping to a row)
+// now matches on qid.
+//
+// `id` stays the song id. player.jsx, play counting and rewards all rely on
+// currentMedia.id being the song id, so it is never overwritten.
+//
+// `origin` records where an entry came from:
+//   null                                   → queued on its own
+//   { type: 'playlist', playlistId, name,  → arrived as part of a playlist
+//     coverUrl, batchId }
+// `batchId` is unique per "add this playlist" action, so adding the same
+// playlist twice produces two distinct groups in the queue panel.
+const newQid = () =>
+  (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+    ? crypto.randomUUID()
+    : `q-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+const toQueueItem = (track, origin = null) => ({ ...track, qid: newQid(), origin });
+
+const ensureQid = (track) => (track && track.qid ? track : { ...track, qid: newQid(), origin: track?.origin ?? null });
+
+// Upgrades a queue persisted before qids existed. Runs once at startup.
+// If anything lacks a qid, the shuffle "original order" can't be matched back
+// to the queue reliably, so it's reset to the current order (shuffle off).
+// The user keeps every song and their place in the queue.
+function migrateRestoredQueue(restored) {
+  if (!restored) return null;
+  const queue = Array.isArray(restored.queue) ? restored.queue : [];
+  const original = Array.isArray(restored.originalQueue) ? restored.originalQueue : [];
+  const allHaveQids = queue.every(t => t && t.qid) && original.every(t => t && t.qid);
+  if (allHaveQids) return restored;
+
+  const upgraded = queue.map(ensureQid);
+  const idx = Math.min(Math.max(restored.currentIndex ?? 0, 0), Math.max(upgraded.length - 1, 0));
+  return {
+    ...restored,
+    queue: upgraded,
+    originalQueue: upgraded,
+    isShuffled: false,
+    currentIndex: idx,
+    currentMedia: upgraded[idx] ?? restored.currentMedia ?? null,
+  };
+}
+
+// ============================================================================
 // URL BUILDER — extracted so Media Session metadata can use it too
 // ============================================================================
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -56,7 +108,7 @@ export const PlayerProvider = ({ children }) => {
   // genuine miss isn't retried on every render.
   const restoredRef = useRef(null);
   if (restoredRef.current === null) {
-    restoredRef.current = loadQueueState(getCurrentUserId()) ?? false;
+    restoredRef.current = migrateRestoredQueue(loadQueueState(getCurrentUserId())) ?? false;
   }
   const restored = restoredRef.current || null;
 
@@ -78,7 +130,10 @@ export const PlayerProvider = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentMedia, setCurrentMedia] = useState(restored?.currentMedia ?? null);
   const [currentIndex, setCurrentIndex] = useState(restored?.currentIndex ?? 0);
-  const [playChoiceModal, setPlayChoiceModal] = useState({ open: false, pendingSong: null });
+  // pendingSong       → a single song is waiting on "Play now / Add to queue"
+  // pendingCollection → a whole playlist (or the rest of one) is waiting:
+  //                     { tracks, origin, title, artwork, startTitle }
+  const [playChoiceModal, setPlayChoiceModal] = useState({ open: false, pendingSong: null, pendingCollection: null });
 
 
   // --- Queue state (persisted across refreshes — see utils/queuePersistence.js) ---
@@ -333,26 +388,37 @@ export const PlayerProvider = ({ children }) => {
   // ========================================================================
 
   const playMedia = (media, newQueue = [], sourceName = null) => {
-    setCurrentMedia(media);
+    if (!media) return;
 
     if (newQueue.length > 0) {
-      setQueue(newQueue);
-      setOriginalQueue(newQueue);
+      // Legacy "replace the whole queue" path. Nothing in the app calls this
+      // any more — playlists now pour INTO the queue instead of replacing it —
+      // but it's kept so an older caller can't crash. Items still get qids.
+      const items = newQueue.map(t => toQueueItem(t, null));
+      const found = items.findIndex(t => (t.id || t.songId) === (media.id || media.songId));
+      const startIdx = found >= 0 ? found : 0;
+      setQueue(items);
+      setOriginalQueue(items);
       setIsShuffled(false);
-      setCurrentIndex(newQueue.findIndex(t => (t.id || t.songId) === (media.id || media.songId)) || 0);
       setQueueSource(sourceName);
-    } else {
-      const idx = queue.findIndex(t => (t.id || t.songId) === (media.id || media.songId));
-      if (idx >= 0) {
-        setCurrentIndex(idx);
-      }
+      setCurrentIndex(startIdx);
+      setCurrentMedia(items[startIdx]);
+      startAudio(items[startIdx]);
+      return;
     }
 
-    if (audioRef.current) {
-      audioRef.current.src = media.url || media.fileUrl;
-      audioRef.current.play().then(() => setIsPlaying(true))
-        .catch(err => console.error('Play failed:', err));
+    // Jump to a track already in the queue. Exact entry (qid) first; song id
+    // only as a fallback for callers that pass a plain song object.
+    let idx = media.qid ? queue.findIndex(t => t.qid === media.qid) : -1;
+    if (idx < 0) idx = queue.findIndex(t => (t.id || t.songId) === (media.id || media.songId));
+    if (idx >= 0) {
+      setCurrentIndex(idx);
+      setCurrentMedia(queue[idx]);
+      startAudio(queue[idx]);
+      return;
     }
+    setCurrentMedia(media);
+    startAudio(media);
   };
 
   /** True if the user has this track on their do-not-play list. */
@@ -440,99 +506,264 @@ export const PlayerProvider = ({ children }) => {
     }
   }, [currentMedia]);
 
+  // ========================================================================
+  // QUEUE ENGINE
+  // ========================================================================
+  //
+  // The model:
+  //   • The queue is the ONE place playback happens.
+  //   • A playlist is never loaded "instead of" the queue. It is poured INTO
+  //     it — either right after the current song (Play now) or at the end
+  //     (Add to queue) — exactly like a single song. Nothing the user has
+  //     already queued is ever thrown away by playing something.
+  //   • Once poured in, playlist songs are ordinary queue entries: they can be
+  //     moved and removed freely. Editing the queue never touches the playlist.
+  //
+  // Un-shuffle order (`originalQueue`) is kept consistent on every change:
+  //   shuffle off → it simply mirrors the queue
+  //   shuffle on  → additions are appended to it, removals are dropped from it,
+  //                 reorders leave it alone
+
+  const startAudio = useCallback((item) => {
+    if (!item || !audioRef.current) return;
+    audioRef.current.src = item.url || item.fileUrl;
+    audioRef.current.play()
+      .then(() => setIsPlaying(true))
+      .catch(err => console.error('Play failed:', err));
+  }, []);
+
+  /** Jump to an exact position in the queue (used by the queue panel). */
+  const playQueueIndex = useCallback((index) => {
+    const item = queue[index];
+    if (!item) return;
+    setCurrentIndex(index);
+    setCurrentMedia(item);
+    startAudio(item);
+  }, [queue, startAudio]);
+
+  /**
+   * Pour a collection of tracks into the queue.
+   *   mode 'empty' → the queue was empty; the collection becomes the queue
+   *   mode 'now'   → insert right after the current song and start playing
+   *   mode 'end'   → append after everything already queued
+   */
+  const insertCollection = useCallback((collection, mode) => {
+    const items = (collection?.tracks || []).map(t => toQueueItem(t, collection.origin));
+    if (items.length === 0) return;
+
+    // A specific row the user clicked ("play from here") plays even if it's on
+    // their do-not-play list — that's an explicit choice. Otherwise start at the
+    // first track they haven't blocked.
+    let first = 0;
+    if (!collection.startTitle) {
+      const i = items.findIndex(t => !isTrackBlocked(t));
+      first = i >= 0 ? i : 0;
+    }
+
+    if (mode === 'empty' || queue.length === 0) {
+      setQueue(items);
+      setOriginalQueue(items);
+      setIsShuffled(false);
+      setQueueSource(null);
+      setCurrentIndex(first);
+      setCurrentMedia(items[first]);
+      startAudio(items[first]);
+      return;
+    }
+
+    if (mode === 'now') {
+      const insertAt = Math.min(currentIndex + 1, queue.length);
+      const nq = [...queue];
+      nq.splice(insertAt, 0, ...items);
+      setQueue(nq);
+      setOriginalQueue(isShuffled ? [...originalQueue, ...items] : nq);
+      const target = insertAt + first;
+      setCurrentIndex(target);
+      setCurrentMedia(nq[target]);
+      startAudio(nq[target]);
+      return;
+    }
+
+    // 'end'
+    const nq = [...queue, ...items];
+    setQueue(nq);
+    setOriginalQueue(isShuffled ? [...originalQueue, ...items] : nq);
+  }, [queue, originalQueue, currentIndex, isShuffled, isTrackBlocked, startAudio]);
+
+  /**
+   * Ask to play a single song. Empty queue → it just plays. Otherwise the
+   * PlayChoiceModal asks "Play now" or "Add to queue".
+   */
   const requestPlay = useCallback((song) => {
-  if (!song) return;
- 
-  if (queue.length === 0) {
-    // Empty queue: this song becomes the queue. No prompt.
-    setQueue([song]);
-    setOriginalQueue([song]);
-    setCurrentIndex(0);
-    setCurrentMedia(song);
-    setQueueSource(null);
-    if (audioRef.current) {
-      audioRef.current.src = song.url || song.fileUrl;
-      audioRef.current.play()
-        .then(() => setIsPlaying(true))
-        .catch(err => console.error('Play failed:', err));
+    if (!song) return;
+
+    if (queue.length === 0) {
+      const item = toQueueItem(song, null);
+      setQueue([item]);
+      setOriginalQueue([item]);
+      setIsShuffled(false);
+      setQueueSource(null);
+      setCurrentIndex(0);
+      setCurrentMedia(item);
+      startAudio(item);
+      return;
     }
-    return;
-  }
- 
-  // Queue non-empty → ask the user
-  setPlayChoiceModal({ open: true, pendingSong: song });
-}, [queue.length]);
- 
+
+    setPlayChoiceModal({ open: true, pendingSong: song, pendingCollection: null });
+  }, [queue.length, startAudio]);
+
+  /**
+   * Ask to play a playlist (or the rest of one, starting at a clicked row).
+   * Same rules as a single song: empty queue → plays immediately; otherwise
+   * the PlayChoiceModal asks "Play now" or "Add to queue".
+   *
+   *   tracks     – the playlist's tracks, in playlist order
+   *   playlist   – { playlistId, name, coverUrl }
+   *   startIndex – row the user clicked; omit to start at the top
+   *   shuffle    – true for the playlist's Shuffle button
+   */
+  const requestPlayCollection = useCallback(({ tracks, playlist, startIndex = 0, shuffle = false }) => {
+    const playable = (tracks || []).filter(t => t && (t.url || t.fileUrl));
+    if (playable.length === 0) return;
+
+    const from = Math.max(0, Math.min(startIndex, playable.length - 1));
+    const ordered = shuffle ? fisherYatesShuffle(playable) : playable.slice(from);
+
+    const origin = playlist ? {
+      type: 'playlist',
+      playlistId: playlist.playlistId || playlist.id,
+      name: playlist.name || 'Playlist',
+      coverUrl: playlist.coverUrl || null,
+      batchId: newQid(),
+    } : null;
+
+    const collection = {
+      tracks: ordered,
+      origin,
+      title: playlist?.name || 'Playlist',
+      artwork: playlist?.coverUrl || ordered[0]?.artworkUrl || ordered[0]?.artwork || null,
+      // Set only when the user clicked a specific row: "Starts with <song>"
+      startTitle: !shuffle && from > 0 ? (ordered[0]?.title || null) : null,
+      shuffled: shuffle,
+    };
+
+    if (queue.length === 0) {
+      insertCollection(collection, 'empty');
+      return;
+    }
+
+    setPlayChoiceModal({ open: true, pendingSong: null, pendingCollection: collection });
+  }, [queue.length, insertCollection]);
+
+  const closePlayChoice = () =>
+    setPlayChoiceModal({ open: false, pendingSong: null, pendingCollection: null });
+
   const confirmPlayNow = useCallback(() => {
-    const song = playChoiceModal.pendingSong;
-    if (!song) return;
-  
-    // Insert immediately after the current track, then jump to it and play.
-    const insertIndex = currentIndex + 1;
-    const newQueue = [...queue];
-    newQueue.splice(insertIndex, 0, song);
-  
-    setQueue(newQueue);
-    setOriginalQueue(prev => [...prev, song]);
-    setCurrentIndex(insertIndex);
-    setCurrentMedia(song);
-  
-    if (audioRef.current) {
-      audioRef.current.src = song.url || song.fileUrl;
-      audioRef.current.play()
-        .then(() => setIsPlaying(true))
-        .catch(err => console.error('Play failed:', err));
+    const { pendingSong, pendingCollection } = playChoiceModal;
+    closePlayChoice();
+
+    if (pendingCollection) {
+      insertCollection(pendingCollection, 'now');
+      return;
     }
-  
-    setPlayChoiceModal({ open: false, pendingSong: null });
-  }, [playChoiceModal.pendingSong, queue, currentIndex]);
-  
+    if (!pendingSong) return;
+
+    const item = toQueueItem(pendingSong, null);
+    const insertAt = Math.min(currentIndex + 1, queue.length);
+    const nq = [...queue];
+    nq.splice(insertAt, 0, item);
+    setQueue(nq);
+    setOriginalQueue(isShuffled ? [...originalQueue, item] : nq);
+    setCurrentIndex(insertAt);
+    setCurrentMedia(item);
+    startAudio(item);
+  }, [playChoiceModal, insertCollection, queue, originalQueue, currentIndex, isShuffled, startAudio]);
+
   const confirmAddToQueue = useCallback(() => {
-    const song = playChoiceModal.pendingSong;
-    if (!song) return;
-    setQueue(prev => [...prev, song]);
-    setOriginalQueue(prev => [...prev, song]);
-    setPlayChoiceModal({ open: false, pendingSong: null });
-  }, [playChoiceModal.pendingSong]);
-  
+    const { pendingSong, pendingCollection } = playChoiceModal;
+    closePlayChoice();
+
+    if (pendingCollection) {
+      insertCollection(pendingCollection, 'end');
+      return;
+    }
+    if (!pendingSong) return;
+
+    const item = toQueueItem(pendingSong, null);
+    const nq = [...queue, item];
+    setQueue(nq);
+    setOriginalQueue(isShuffled ? [...originalQueue, item] : nq);
+  }, [playChoiceModal, insertCollection, queue, originalQueue, isShuffled]);
+
   const cancelPlayChoice = useCallback(() => {
-    setPlayChoiceModal({ open: false, pendingSong: null });
+    closePlayChoice();
   }, []);
 
   // ========================================================================
-  // QUEUE MANAGEMENT — Play Next / Play Later / Clear / Save
+  // QUEUE MANAGEMENT — Play Next / Play Later / Remove / Reorder / Clear / Save
   // ========================================================================
 
-  const playNext = (song) => {
-    const insertIndex = currentIndex + 1;
-    const newQueue = [...queue];
-    newQueue.splice(insertIndex, 0, song);
-    setQueue(newQueue);
-    setOriginalQueue([...originalQueue, song]);
+  // `origin` is optional — pass a playlist origin to tag a single song as
+  // having come from a playlist.
+  const playNext = (song, origin = null) => {
+    if (!song) return;
+    const item = toQueueItem(song, origin);
+    const insertAt = Math.min(currentIndex + 1, queue.length);
+    const nq = [...queue];
+    nq.splice(insertAt, 0, item);
+    setQueue(nq);
+    setOriginalQueue(isShuffled ? [...originalQueue, item] : nq);
   };
 
-  const playLater = (song) => {
-    setQueue(prev => [...prev, song]);
-    setOriginalQueue(prev => [...prev, song]);
+  const playLater = (song, origin = null) => {
+    if (!song) return;
+    const item = toQueueItem(song, origin);
+    const nq = [...queue, item];
+    setQueue(nq);
+    setOriginalQueue(isShuffled ? [...originalQueue, item] : nq);
   };
 
-  const removeFromQueue = (index) => {
-    if (index === currentIndex) return;
-    const newQueue = [...queue];
-    newQueue.splice(index, 1);
-    setQueue(newQueue);
-    if (index < currentIndex) {
-      setCurrentIndex(prev => prev - 1);
-    }
-  };
+  /**
+   * Remove entries by qid. The song that's currently playing is never removed
+   * (stop it with the transport instead), so removing a whole playlist group
+   * that contains the current song removes everything else in that group.
+   */
+  const removeQueueItems = useCallback((qids) => {
+    const drop = new Set(qids || []);
+    const current = queue[currentIndex];
+    if (current) drop.delete(current.qid);
+    if (drop.size === 0) return;
 
-  const reorderQueue = (newQueue) => {
-    const currentSong = queue[currentIndex];
-    setQueue(newQueue);
-    const newIndex = newQueue.findIndex(t =>
-      (t.id || t.songId) === (currentSong?.id || currentSong?.songId)
-    );
+    const nq = queue.filter(t => !drop.has(t.qid));
+    const newIndex = current ? nq.findIndex(t => t.qid === current.qid) : 0;
+    setQueue(nq);
+    setOriginalQueue(prev => prev.filter(t => !drop.has(t.qid)));
     setCurrentIndex(newIndex >= 0 ? newIndex : 0);
+  }, [queue, currentIndex]);
+
+  // Index-based removal kept for existing callers.
+  const removeFromQueue = (index) => {
+    const item = queue[index];
+    if (item) removeQueueItems([item.qid]);
+  };
+
+  /** Replace the queue order. The current song is re-located by its entry id. */
+  const reorderQueue = (newQueue) => {
+    const current = queue[currentIndex];
+    setQueue(newQueue);
+    if (!isShuffled) setOriginalQueue(newQueue);
+    const newIndex = current ? newQueue.findIndex(t => t.qid === current.qid) : -1;
+    setCurrentIndex(newIndex >= 0 ? newIndex : 0);
+  };
+
+  /** Move one entry from one position to another (used by drag and drop). */
+  const moveQueueItem = (fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return;
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= queue.length || toIndex >= queue.length) return;
+    const nq = [...queue];
+    const [moved] = nq.splice(fromIndex, 1);
+    nq.splice(toIndex, 0, moved);
+    reorderQueue(nq);
   };
 
   const clearQueue = () => {
@@ -580,20 +811,18 @@ export const PlayerProvider = ({ children }) => {
   // ========================================================================
 
   const toggleShuffle = () => {
+    const current = queue[currentIndex];
+
     if (isShuffled) {
-      const currentSong = queue[currentIndex];
       setQueue(originalQueue);
       setIsShuffled(false);
-      const newIndex = originalQueue.findIndex(t =>
-        (t.id || t.songId) === (currentSong?.id || currentSong?.songId)
-      );
+      const newIndex = current ? originalQueue.findIndex(t => t.qid === current.qid) : -1;
       setCurrentIndex(newIndex >= 0 ? newIndex : 0);
     } else {
-      const currentSong = queue[currentIndex];
       const rest = queue.filter((_, i) => i !== currentIndex);
       const shuffledRest = fisherYatesShuffle(rest);
-      const newQueue = [currentSong, ...shuffledRest];
-      setQueue(newQueue);
+      setOriginalQueue(queue);              // snapshot the order to return to
+      setQueue(current ? [current, ...shuffledRest] : shuffledRest);
       setIsShuffled(true);
       setCurrentIndex(0);
     }
@@ -750,26 +979,23 @@ export const PlayerProvider = ({ children }) => {
   // LOAD PLAYLIST INTO QUEUE
   // ========================================================================
 
+  // Pours a playlist into the queue (never replaces it). Kept for any caller
+  // that still passes a playlist object; new code calls requestPlayCollection.
   const loadPlaylist = async (pl) => {
-    if (pl.tracks && pl.tracks.length > 0) {
-      setQueue(pl.tracks);
-      setOriginalQueue(pl.tracks);
-      setCurrentIndex(0);
-      setCurrentMedia(pl.tracks[0]);
-      setQueueSource(pl.name);
-      setIsShuffled(false);
-      return;
-    }
+    if (!pl) return;
+    const full = (pl.tracks && pl.tracks.length > 0)
+      ? pl
+      : await loadPlaylistDetails(pl.playlistId || pl.id);
+    if (!full || !full.tracks || full.tracks.length === 0) return;
 
-    const fullPlaylist = await loadPlaylistDetails(pl.playlistId || pl.id);
-    if (fullPlaylist && fullPlaylist.tracks.length > 0) {
-      setQueue(fullPlaylist.tracks);
-      setOriginalQueue(fullPlaylist.tracks);
-      setCurrentIndex(0);
-      setCurrentMedia(fullPlaylist.tracks[0]);
-      setQueueSource(fullPlaylist.name);
-      setIsShuffled(false);
-    }
+    requestPlayCollection({
+      tracks: full.tracks,
+      playlist: {
+        playlistId: full.playlistId || full.id,
+        name: full.name,
+        coverUrl: full.coverImageUrl ? buildUrl(full.coverImageUrl) : null,
+      },
+    });
   };
 
   // ========================================================================
@@ -1000,6 +1226,7 @@ export const PlayerProvider = ({ children }) => {
       isPlaying,
       togglePlayPause,
       requestPlay,
+      requestPlayCollection,
       playChoiceModal,
       confirmPlayNow,
       confirmAddToQueue,
@@ -1025,10 +1252,13 @@ export const PlayerProvider = ({ children }) => {
       queue,
       currentIndex,
       queueSource,
+      playQueueIndex,
       playNext,
       playLater,
       removeFromQueue,
+      removeQueueItems,
       reorderQueue,
+      moveQueueItem,
       clearQueue,
       saveQueueAsPlaylist,
 

@@ -13,13 +13,13 @@ vi.mock('./components/axiosInstance', () => ({
   },
 }));
 
-vi.mock('./playlistViewer', () => ({
-  default: ({ playlistId, onClose }) => (
-    <div data-testid="playlist-viewer">
-      Playlist Viewer: {playlistId}
-      <button onClick={onClose}>Close Viewer</button>
-    </div>
-  ),
+// Playlists now open as a page (/playlist/:id) instead of a modal, so the
+// manager calls useNavigate. Mock it so these tests don't need a router and
+// can assert where the click goes.
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useNavigate: () => mockNavigate,
 }));
 
 vi.mock('./utils/buildUrl', () => ({
@@ -90,16 +90,17 @@ describe('PlaylistManager', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('shows personal playlists and opens PlaylistViewer when a playlist is selected', async () => {
-    renderPlaylistManager();
+  it('shows personal playlists and opens the playlist page when one is selected', async () => {
+    const onClose = vi.fn();
+    renderPlaylistManager({ onClose });
 
     expect(screen.getByText('Late Night Vibes')).toBeInTheDocument();
     expect(screen.getByText('3 songs')).toBeInTheDocument();
 
     await userEvent.click(screen.getByText('Late Night Vibes'));
 
-    expect(screen.getByTestId('playlist-viewer')).toBeInTheDocument();
-    expect(screen.getByText(/Playlist Viewer: 1/i)).toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/playlist/1');
   });
 
   it('creates a personal playlist with the selected visibility', async () => {

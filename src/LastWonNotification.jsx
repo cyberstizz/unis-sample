@@ -164,7 +164,7 @@ const LastWonNotification = () => {
   const [ambientColor, setAmbientColor] = useState(null); // Extracted from artwork
 
   const navigate = useNavigate();
-  const { playMedia } = useContext(PlayerContext);
+  const { requestPlay } = useContext(PlayerContext);
   const { user } = useAuth();
 
   const timerRef = useRef(null);
@@ -366,7 +366,9 @@ const LastWonNotification = () => {
         artwork: buildUrl(song.artworkUrl),
       };
 
-      playMedia(mediaObj, [mediaObj]);
+      // Same rule as every other play surface: never replace the user's queue.
+      // Empty queue → plays now; otherwise the Play now / Add to queue prompt.
+      requestPlay(mediaObj);
     } else if (notification?.navigateTo) {
       navigate(notification.navigateTo);
     }

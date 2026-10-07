@@ -1,12 +1,12 @@
 // src/components/PlaylistManager.jsx
 import React, { useContext, useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import {
   X, Music, Users, Award, Globe, Search, Plus, Info,
   Image as ImageIcon, Lock, EyeOff
 } from 'lucide-react';
 import axiosInstance from './components/axiosInstance';
-import PlaylistViewer from './playlistViewer';
 import { buildUrl } from './utils/buildUrl';
 import './playlistManager.scss';
 
@@ -33,7 +33,7 @@ const PlaylistManager = ({ open, onClose }) => {
   } = useContext(PlayerContext);
 
   const [activeTab, setActiveTab] = useState('mine');
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
+  const navigate = useNavigate();
   const [communityPlaylists, setCommunityPlaylists] = useState([]);
   const [officialPlaylists, setOfficialPlaylists] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -568,7 +568,11 @@ const PlaylistManager = ({ open, onClose }) => {
                   <button
                     key={pl.playlistId || pl.id}
                     className="pm-playlist-card"
-                    onClick={() => setSelectedPlaylistId(pl.playlistId || pl.id)}
+                    onClick={() => {
+                      // Playlists open as a full page now, not a modal on top of the manager.
+                      onClose?.();
+                      navigate(`/playlist/${pl.playlistId || pl.id}`);
+                    }}
                   >
                     <div className="pm-card-artwork">
                       {getCoverDisplay(pl)}
@@ -594,12 +598,6 @@ const PlaylistManager = ({ open, onClose }) => {
         </div>
       </div>
 
-      {selectedPlaylistId && (
-        <PlaylistViewer
-          playlistId={selectedPlaylistId}
-          onClose={() => setSelectedPlaylistId(null)}
-        />
-      )}
     </>
   );
 };

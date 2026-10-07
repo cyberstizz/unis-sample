@@ -869,3 +869,358 @@
   position: relative;
   z-index: 2;
 }
+// =============================================================================
+// QUEUE ↔ PLAYLIST — added for the queue/playlist pass
+//   • sortable rows (drag handle, lifted copy, ghost placeholder)
+//   • playlist groups (rail + label)
+//   • inline confirmations (song, group, clear queue)
+//   • "Playing from" link in Now Playing
+// =============================================================================
+
+// ── Sortable wrapper ─────────────────────────────────────────────────────────
+// The wrapper is moved by the drag system; the inner .qp-item keeps its own
+// hover styling. They're separate so the two transforms never fight.
+.qp-sortable {
+  position: relative;
+  will-change: transform;
+}
+
+// The spot the dragged row came from — a quiet placeholder while it's lifted.
+.qp-sortable-ghost .qp-item {
+  opacity: 0.32;
+  border-style: dashed;
+  border-color: var(--unis-border-hi);
+  background: var(--unis-panel);
+  box-shadow: none;
+  transform: none;
+}
+
+// While anything is being dragged, suppress hover lift on the other rows so
+// the list reads as one calm surface.
+.qp-list-dragging .qp-item:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+// The grip is now a real button (keyboard-reachable). Reset it to look like
+// the old icon, and claim touch input so a drag never scrolls the page.
+.qp-left .qp-grip {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border-radius: 8px;
+  touch-action: none;
+  cursor: grab;
+
+  &:active { cursor: grabbing; }
+  &:focus-visible {
+    outline: none;
+    color: var(--unis-text);
+    box-shadow: 0 0 0 2px var(--unis-primary-soft);
+  }
+}
+
+// The copy that follows the pointer. Lives outside .qp-container (portaled),
+// so it's styled at the top level.
+.qp-drag-overlay {
+  cursor: grabbing;
+
+  .qp-item-lifted {
+    border-color: color-mix(in srgb, var(--unis-primary) 55%, transparent);
+    background:
+      radial-gradient(240px 90px at 12% 50%, var(--unis-primary-soft), transparent 70%),
+      color-mix(in srgb, var(--unis-bg) 88%, white 4%);
+    box-shadow:
+      0 24px 60px rgba(0, 0, 0, 0.55),
+      0 0 0 1px var(--unis-border-hi),
+      0 0 40px -18px var(--unis-primary-glow);
+    transform: scale(1.025);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    &::before { opacity: 1; }
+  }
+
+  .qp-grip { cursor: grabbing; color: var(--unis-text-2); }
+}
+
+// ── Playlist groups ──────────────────────────────────────────────────────────
+// Songs added together from one playlist share a rail down the left edge.
+// The rail reaches into the 6px list gap so a group reads as one connected run.
+.qp-railed {
+  padding-left: 12px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 0;
+    bottom: -6px;
+    width: 3px;
+    border-radius: 0;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--unis-primary-2) 85%, transparent),
+      color-mix(in srgb, var(--unis-primary) 70%, transparent)
+    );
+    box-shadow: 0 0 12px -2px var(--unis-primary-glow);
+    pointer-events: none;
+  }
+
+  &.qp-rail-first::before {
+    top: 4px;
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+  }
+
+  &.qp-rail-last::before {
+    bottom: 10px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+  }
+
+  // The rail of a row that's being dragged shouldn't trail behind it.
+  &.qp-sortable-ghost::before { opacity: 0.35; }
+}
+
+.qp-group-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 2px 4px 6px 2px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.qp-group-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 3px 6px 3px 3px;
+  margin: 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  color: var(--unis-text-2);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+
+  &:hover {
+    background: var(--unis-panel-2);
+    color: var(--unis-text);
+    .qp-group-chev { opacity: 1; transform: translateX(1px); }
+  }
+}
+
+.qp-group-cover {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+.qp-group-cover-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--unis-panel-hi);
+  color: var(--unis-text-3);
+}
+
+.qp-group-from {
+  color: var(--unis-text-4);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+.qp-group-name {
+  color: var(--unis-primary-2);
+  font-weight: 850;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+}
+
+.qp-group-chev {
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.qp-group-count {
+  flex-shrink: 0;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--unis-panel-hi);
+  color: var(--unis-text-3);
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.qp-group-remove {
+  appearance: none;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--unis-text-4);
+  font-size: 10.5px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+
+  &:hover {
+    color: #ff7a7a;
+    border-color: rgba(239, 68, 68, 0.28);
+    background: rgba(239, 68, 68, 0.1);
+  }
+}
+
+// ── Inline confirmations ─────────────────────────────────────────────────────
+// Removal asks first, right where you tapped — no popup to hunt down.
+.qp-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  animation: qpConfirmIn 0.16s ease both;
+
+  .qp-confirm-q {
+    color: var(--unis-text-2);
+    font-size: 12px;
+    font-weight: 750;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  button {
+    appearance: none;
+    flex-shrink: 0;
+    height: 28px;
+    padding: 0 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+  }
+
+  .qp-confirm-cancel {
+    border: 1px solid var(--unis-border-hi);
+    background: transparent;
+    color: var(--unis-text-2);
+    &:hover { background: var(--unis-panel-2); color: var(--unis-text); }
+  }
+
+  .qp-confirm-go {
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    background: rgba(239, 68, 68, 0.16);
+    color: #ff8a8a;
+    &:hover { background: rgba(239, 68, 68, 0.26); color: #ffb0b0; }
+    &:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25); }
+  }
+}
+
+@keyframes qpConfirmIn {
+  from { opacity: 0; transform: translateX(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+// The row under confirmation gets a quiet red edge and stops lifting on hover.
+.qp-item.qp-item-confirming {
+  cursor: default;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+  &:hover { transform: none; }
+}
+
+.qp-group-confirming {
+  padding-right: 0;
+  .qp-confirm { width: 100%; }
+  .qp-confirm-q { flex: 1; font-size: 11.5px; }
+}
+
+.qp-section-confirm {
+  .qp-confirm-clear { width: 100%; }
+  .qp-confirm-q { flex: 1; }
+}
+
+// ── "Playing from" in Now Playing ────────────────────────────────────────────
+.qp-playing-from {
+  appearance: none;
+  margin-top: 8px;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px 0 8px;
+  border: 1px solid color-mix(in srgb, var(--unis-primary) 40%, transparent);
+  border-radius: 999px;
+  background: var(--unis-primary-soft);
+  color: var(--unis-text-2);
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+
+  .qp-playing-from-k { color: var(--unis-text-3); flex-shrink: 0; }
+  .qp-playing-from-name {
+    color: var(--unis-primary-2);
+    font-weight: 850;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  &:hover {
+    color: var(--unis-text);
+    border-color: color-mix(in srgb, var(--unis-primary) 65%, transparent);
+  }
+}
+
+// ── Touch devices ────────────────────────────────────────────────────────────
+// Phones have no hover, so controls that only appeared on hover were
+// unreachable there. Show them at rest.
+@media (hover: none) {
+  .qp-right .qp-remove {
+    opacity: 1;
+    transform: none;
+  }
+  .qp-left .qp-grip { color: var(--unis-text-3); }
+  .qp-item:hover { transform: none; box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-confirm { animation: none; }
+  .qp-drag-overlay .qp-item-lifted { transform: none; }
+}

@@ -54,6 +54,7 @@ const PlayChoiceModal = () => {
 
   const open = playChoiceModal?.open;
   const song = playChoiceModal?.pendingSong;
+  const collection = playChoiceModal?.pendingCollection;
 
   // Close on Escape
   useEffect(() => {
@@ -65,11 +66,43 @@ const PlayChoiceModal = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, cancelPlayChoice]);
 
-  if (!open || !song) return null;
+  if (!open || (!song && !collection)) return null;
 
-  const artwork = song.artwork || song.artworkUrl;
-  const title = song.title || 'Untitled';
-  const artist = song.artist || song.artistData?.username || 'Unknown';
+  // The same two choices apply to one song or to a whole playlist. A playlist
+  // is poured into the queue — it never replaces what's already there.
+  const isCollection = !!collection;
+  const count = collection?.tracks?.length || 0;
+  const songsLabel = `${count} song${count === 1 ? '' : 's'}`;
+
+  const artwork = isCollection
+    ? collection.artwork
+    : (song.artwork || song.artworkUrl);
+
+  const eyebrow = !isCollection
+    ? 'Up next'
+    : collection.shuffled
+      ? 'Shuffle playlist'
+      : collection.startTitle
+        ? 'Play from here'
+        : 'Playlist';
+
+  const title = isCollection
+    ? (collection.title || 'Playlist')
+    : (song.title || 'Untitled');
+
+  const artist = isCollection
+    ? (collection.startTitle
+        ? `${songsLabel} · starts with \u201C${collection.startTitle}\u201D`
+        : songsLabel)
+    : (song.artist || song.artistData?.username || 'Unknown');
+
+  const playNowSubtitle = isCollection
+    ? 'Plays right after the current song'
+    : 'Start playing right away';
+
+  const addToQueueSubtitle = isCollection
+    ? `Adds ${songsLabel} after your current queue`
+    : 'Plays after your current queue';
 
   return (
     <div
@@ -106,7 +139,7 @@ const PlayChoiceModal = () => {
               </div>
             )}
             <div className="pcm-info">
-              <div className="pcm-eyebrow">Up next</div>
+              <div className="pcm-eyebrow">{eyebrow}</div>
               <div id="pcm-title" className="pcm-title">{title}</div>
               <div className="pcm-artist">{artist}</div>
             </div>
@@ -127,7 +160,7 @@ const PlayChoiceModal = () => {
             </div>
             <div className="pcm-action-text">
               <div className="pcm-action-title">Play Now</div>
-              <div className="pcm-action-subtitle">Start playing right away</div>
+              <div className="pcm-action-subtitle">{playNowSubtitle}</div>
             </div>
             <span className="pcm-action-chevron" aria-hidden="true">
               <ChevronIcon />
@@ -144,7 +177,7 @@ const PlayChoiceModal = () => {
             </div>
             <div className="pcm-action-text">
               <div className="pcm-action-title">Add to Queue</div>
-              <div className="pcm-action-subtitle">Plays after your current queue</div>
+              <div className="pcm-action-subtitle">{addToQueueSubtitle}</div>
             </div>
             <span className="pcm-action-chevron" aria-hidden="true">
               <ChevronIcon />
