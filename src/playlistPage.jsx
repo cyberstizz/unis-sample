@@ -875,7 +875,7 @@ const PlaylistPage = () => {
               <p className="plp-empty-title">{isOwner ? 'Your playlist is empty' : 'No songs yet'}</p>
               {isOwner && (
                 <p className="plp-empty-hint">
-                  Add songs from any song&rsquo;s menu, or with the playlist button in the player.
+                  While a song is playing, tap the playlist button in the player to add it here.
                 </p>
               )}
             </div>
@@ -1040,11 +1040,17 @@ const PlaylistPage = () => {
               {!isCommunity && (
                 <div className="plp-field">
                   <span>Who can see it</span>
+                  <p className="plp-field-hint">
+                    {editVisibility === 'private' && 'Only you can open it.'}
+                    {editVisibility === 'unlisted' && 'Anyone with the link can open it. It won\u2019t appear in search or on Discover.'}
+                    {editVisibility === 'public' && 'Anyone can open it, and it shows up in search and on Discover.'}
+                  </p>
                   <div className="plp-seg">
                     {[
-                      { v: 'private', label: 'Only me', icon: <Lock size={14} /> },
-                      { v: 'unlisted', label: 'Anyone with the link', icon: <EyeOff size={14} /> },
-                      { v: 'public', label: 'Everyone', icon: <Globe size={14} /> },
+                      // Same names as the Playlist Manager and the help center.
+                      { v: 'private', label: 'Private', icon: <Lock size={14} /> },
+                      { v: 'unlisted', label: 'Unlisted', icon: <EyeOff size={14} /> },
+                      { v: 'public', label: 'Public', icon: <Globe size={14} /> },
                     ].map(opt => (
                       <button
                         key={opt.v}

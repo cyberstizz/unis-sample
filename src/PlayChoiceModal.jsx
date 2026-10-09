@@ -96,8 +96,10 @@ const PlayChoiceModal = () => {
         : songsLabel)
     : (song.artist || song.artistData?.username || 'Unknown');
 
+  // Play now starts immediately either way; for a playlist, the rest of the
+  // queue picks up after the playlist's songs.
   const playNowSubtitle = isCollection
-    ? 'Plays right after the current song'
+    ? 'Starts now, then your queue continues'
     : 'Start playing right away';
 
   const addToQueueSubtitle = isCollection

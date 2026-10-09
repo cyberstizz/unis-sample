@@ -72,6 +72,7 @@ Application root. Sets up global context providers, router, route map, and persi
 | `/` | Feed | Browsable (guests OK) |
 | `/artist/:artistId` | ArtistPage | Browsable |
 | `/song/:songId` | SongPage | Browsable |
+| `/playlist/:playlistId` | PlaylistPage | Browsable (private playlists show "not available" to anyone but the owner) |
 | `/jurisdiction/:jurisdiction` | JurisdictionPage | Browsable |
 | `/milestones` | MilestonesPage | Browsable |
 | `/leaderboards` | Leaderboards | Browsable |
@@ -151,16 +152,21 @@ Application root. Sets up global context providers, router, route map, and persi
 - `isPlaying` — Boolean
 - `isExpanded` — mini vs full-screen player mode
 
-*Queue state (session-based, ephemeral):*
-- `queue` — current playback queue (array of song objects)
+*Queue state (persisted per user — see `utils/queuePersistence.js`):*
+- `queue` — current playback queue (array of queue entries, see below)
 - `currentIndex` — position in queue
-- `queueSource` — label for where the queue came from (e.g., playlist name)
+- `queueSource` — legacy label; no longer set by any caller. Per-entry `origin` replaced it.
 - `isShuffled` — Boolean
-- `originalQueue` — pre-shuffle order (for unshuffle restoration)
+- `originalQueue` — the order to return to when shuffle is turned off. Mirrors `queue` while shuffle is off; while it's on, additions are appended to it and removals are dropped from it.
 - `autoplay` — Boolean
 
+*Queue entries:* every entry is the song object plus two fields.
+- `qid` — unique per queue entry. The same song can sit in the queue twice (queued alone and inside a playlist), so **position lookups always use `qid`, never the song id.** `id`/`songId` stay the song id because play counting and rewards read `currentMedia.id`.
+- `origin` — `null` if queued on its own, or `{ type: 'playlist', playlistId, name, coverUrl, batchId }` if it arrived from a playlist. `batchId` is unique per "add this playlist" action; QueuePanel groups contiguous entries sharing one.
+- Queues persisted before `qid` existed are upgraded once at startup (`migrateRestoredQueue`): every entry gets a `qid` and shuffle is reset, so nobody loses their queue on deploy.
+
 *Play Choice Modal:*
-- `playChoiceModal` — `{ open: Boolean, pendingSong: Object }` — drives PlayChoiceModal component
+- `playChoiceModal` — `{ open, pendingSong, pendingCollection }`. `pendingSong` is a single song; `pendingCollection` is a playlist (or the rest of one) waiting on the same Play now / Add to queue choice: `{ tracks, origin, title, artwork, startTitle, shuffled }`.
 
 *Playlist Library:*
 - `playlists` — user's own playlists
@@ -172,14 +178,19 @@ Application root. Sets up global context providers, router, route map, and persi
 
 | Function | Logic |
 |----------|-------|
-| `playMedia(media, queue, source)` | Sets currentMedia, replaces queue if new queue passed, finds song index. Plays via audioRef. |
-| `requestPlay(song)` | Smart play: if queue empty → plays immediately. If queue has items → opens PlayChoiceModal. |
-| `confirmPlayNow()` | Inserts song after current track, jumps to it, plays. Closes modal. |
-| `confirmAddToQueue()` | Appends song to end of queue. Closes modal. |
-| `next()` / `prev()` | Increments/decrements currentIndex, updates currentMedia. Stops at queue end. |
-| `toggleShuffle()` | Fisher-Yates shuffle keeping current song at index 0. Unshuffle restores originalQueue. |
-| `playNext(song)` / `playLater(song)` | Insert after current / append to end |
-| `removeFromQueue(index)` | Removes track (blocks removal of currently playing track) |
+| `requestPlay(song)` | Single song. Queue empty → plays immediately. Otherwise opens PlayChoiceModal. **The only play entry point pages should use** — nothing replaces the user's queue. |
+| `requestPlayCollection({ tracks, playlist, startIndex, shuffle })` | A whole playlist, or the rest of one from `startIndex`. Same rule as `requestPlay`: empty queue → plays; otherwise PlayChoiceModal. `shuffle: true` randomizes only the playlist's songs; the queue's own shuffle setting is untouched. |
+| `confirmPlayNow()` | Song or collection: inserts right after the current entry, jumps to it, plays. The rest of the queue continues after it. |
+| `confirmAddToQueue()` | Song or collection: appends after everything already queued. |
+| `playQueueIndex(index)` | Jump to an exact queue position (QueuePanel rows). Never re-resolves by song id. |
+| `playMedia(media, queue?, source?)` | Legacy. With a queue argument it still replaces the queue, but **no caller passes one any more**; don't add one. Without it, jumps to the matching entry (`qid` first, song id as fallback). |
+| `loadPlaylist(playlist)` | Legacy wrapper — now routes through `requestPlayCollection`, so it pours rather than replaces. |
+| `next()` / `prev()` | Increments/decrements currentIndex, skipping blocked songs. Stops at queue end unless repeat-all. |
+| `toggleShuffle()` | Fisher-Yates on everything except the current entry, which moves to index 0. On: snapshots the order into `originalQueue`. Off: restores it and re-finds the current entry by `qid`. |
+| `playNext(song, origin?)` / `playLater(song, origin?)` | Insert after current / append to end. Optional `origin` tags the entry as coming from a playlist. |
+| `removeQueueItems(qids)` | Removes entries by `qid`, from both `queue` and `originalQueue`. The currently playing entry is always kept. |
+| `removeFromQueue(index)` | Index wrapper around `removeQueueItems`. |
+| `moveQueueItem(from, to)` / `reorderQueue(newQueue)` | Reorder; the current entry is re-found by `qid`. While shuffled, `originalQueue` is left alone. |
 | `clearQueue()` | Resets all queue state, pauses audio |
 | `saveQueueAsPlaylist(name)` | Creates playlist → adds all queue tracks → refreshes library |
 | `loadUserPlaylists()` | GET `/v1/playlists/mine` → normalizes → updates state |
@@ -472,27 +483,28 @@ On `unis:logout`: clears all playlist, queue, and media state.
 
 ### `QueuePanel.jsx`
 
-**Role:** Full queue management UI. Shows current playback queue with the currently playing track highlighted.
+**Role:** Slide-in panel showing the playback queue, with the Now Playing cockpit (scrubber + transport) at the top.
 
 **Props:** `open`, `onClose`
 
 **Capabilities:**
-- View full queue with current track indicator
-- Drag-and-drop reorder (HTML5 drag events, blocks dragging the currently playing track)
-- Remove individual tracks (except currently playing)
-- Shuffle toggle
-- Clear entire queue
-- Save queue as a new playlist (with name input modal)
+- Rows keyed by `qid`. Tapping a row calls `playQueueIndex` (exact position, never song id).
+- **Playlist groups:** contiguous entries sharing an `origin.batchId` get a colored rail and a "From [playlist]" label linking to `/playlist/:id`, with a **Remove all** action for the group.
+- **"Playing from"** link in Now Playing when the current entry came from a playlist.
+- **Drag to reorder** with `@dnd-kit` (`DndContext` + `SortableContext`), started from the grip handle only, so tapping still plays and a phone can still scroll. Mouse starts after 4px, touch after a 120ms hold, keyboard via Space + arrows. The queue changes once, on drop (`moveQueueItem`). The lifted copy (`DragOverlay`) is portaled into `#root` so it keeps the user's colour theme. The current entry can't be dragged.
+- **Inline confirmations** — removing a song, removing a group, and clearing the queue each ask in place (`confirming` state); Escape cancels.
+- Remove buttons and grips stay visible on touch devices (`@media (hover: none)`).
+- Shuffle, repeat, save queue as a playlist.
 
-**Dependencies:** `PlayerContext` (for `queue`, `currentIndex`, `removeFromQueue`, `reorderQueue`, `clearQueue`, `saveQueueAsPlaylist`, `toggleShuffle`, `isShuffled`), `lucide-react`
+**Dependencies:** `PlayerContext`, `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/modifiers`, `@dnd-kit/utilities`, `lucide-react`, `react-router-dom` (`useNavigate`)
 
 ---
 
 ### `PlayChoiceModal.jsx`
 
-**Role:** Lightweight modal that appears when the user clicks play on a song while another song is already in the queue.
+**Role:** Asks "Play now" or "Add to queue" whenever something is played while the queue already has songs.
 
-**Behavior:** Reads `playChoiceModal` state from PlayerContext. Offers three options: "Play Now" (inserts after current track and jumps), "Add to Queue" (appends to end), "Cancel". Closes on Escape key or backdrop click.
+**Behavior:** Handles both a single song (`pendingSong`) and a whole playlist (`pendingCollection`). For a playlist it shows the song count, "Shuffle playlist" when shuffled, or "starts with [song]" when the user tapped a row partway down. Closes on Escape or backdrop click.
 
 **Context Functions Used:** `confirmPlayNow`, `confirmAddToQueue`, `cancelPlayChoice`
 
@@ -615,43 +627,28 @@ No internal state or API logic — fully controlled by parent (`ArtistDashboard`
 
 ### `PlaylistManager.jsx`
 
-**Role:** Full-screen modal directory of all user playlists plus followed playlists. Clicking a playlist opens `PlaylistViewer` on top.
+**Role:** Full-screen modal directory of the user's playlists, followed playlists, community and official playlists, plus search and creation. Clicking a playlist **closes the manager and navigates to `/playlist/:id`**.
 
 **Key features:**
-- Displays personal playlists and followed playlists in separate sections
-- Playlist covers: uses `firstFourArtworks` for a 4-panel grid, or `coverImageUrl`, or generic icon
-- Create new playlist inline
-- Opens PlaylistViewer for detail view
+- Tabs for mine / following / community / official, with search
+- Playlist covers: `coverImageUrl`, else `firstFourArtworks` mosaic, else generic icon
+- Create personal (Private / Unlisted / Public) and community playlists inline
 
 ---
 
-### `PlaylistViewer.jsx`
+### `PlaylistPage.jsx` (`/playlist/:playlistId`)
 
-**Role:** Detail view for a single playlist. Play, reorder, remove tracks, rename, delete.
+**Role:** The playlist page.
 
-**Drag-and-Drop:** Native HTML5 drag events. Optimistic reorder → commits via API → reverts on failure.
+**Playback:** Play, Shuffle and tapping a row all go through `requestPlayCollection`, so a playlist is **poured into** the queue and never replaces it. Once this playlist is the one playing (`currentMedia.origin.playlistId` matches), Play becomes pause/resume and tapping a row jumps to that song's existing entry in the queue (matched by `batchId` + `playlistItemId`) instead of adding the playlist again. A row's "Add to queue" appends just that song, tagged with the playlist as its origin.
 
----
+**Owner tools:** edit name / description / visibility (labels match the manager: Private, Unlisted, Public), change cover (`POST /v1/playlists/{id}/cover`), delete, drag-to-reorder (`@dnd-kit`, optimistic then `reorderPlaylist`, reverts on failure), remove a song with an inline confirmation.
 
-### `PlaylistPanel.jsx`
+**Community playlists:** Songs / Suggestions / Activity tabs. Suggestions are voted on through `voteOnSuggestion`; a suggestion joins at net +5 and is dropped at net −3 (enforced by the backend).
 
-**Role:** Compact sidebar panel displaying non-default playlists. Lightweight alternative to PlaylistManager.
+**States:** loading skeleton, empty playlist, unavailable (private or deleted — the backend returns the same "not found" for both on purpose).
 
----
-
-### `Playlists.jsx`
-
-**Role:** Dedicated page route for playlist library (simpler list view alternative to PlaylistManager modal).
-
-**Refactor Flag:** Overlaps with `PlaylistManager`. Consider consolidating.
-
----
-
-### `playlistService.jsx` (`/src/`)
-
-**Role:** Service wrapper for playlist API calls. Duplicates functionality in `PlayerContext`. Not actively consumed.
-
-**Refactor Flag:** Deprecate in favor of PlayerContext.
+**Note:** editing the playlist never touches the queue, and editing the queue never touches the playlist. Queue entries are copies.
 
 ---
 
@@ -1193,7 +1190,9 @@ if (!user) { triggerGate('vote'); return; }
 |--------|----------|---------|
 | GET | `/v1/playlists/mine` | PlayerContext |
 | GET | `/v1/playlists/following` | PlayerContext |
-| GET | `/v1/playlists/{id}` | PlayerContext (loadPlaylistDetails) |
+| GET | `/v1/playlists/{id}` | PlayerContext (loadPlaylistDetails) → PlaylistPage |
+| POST | `/v1/playlists/{id}/cover` | PlaylistPage |
+| GET | `/v1/playlists/{id}/activity` | PlaylistPage (community Activity tab) |
 | POST | `/v1/playlists` | PlayerContext (createPlaylist) |
 | PUT | `/v1/playlists/{id}` | PlayerContext (updatePlaylist) |
 | DELETE | `/v1/playlists/{id}` | PlayerContext (deletePlaylist) |
@@ -1276,8 +1275,6 @@ path parameter, so a client cannot request another user's financials.
 | Welcome popup | `ArtistDashboard` | `showWelcomePopup` may reset to `true` on every mount. Persist "seen" state. |
 | Duplicate lyrics UI | `ArtistDashboard` | May have both `LyricsWizard` import AND a raw JSX lyrics modal. Verify. |
 | Dashboard API load | `ArtistDashboard` | 6+ requests on load. Consider a single `/dashboard-summary` endpoint. |
-| Playlist redundancy | `Playlists.jsx` | Overlaps with `PlaylistManager`. Consider consolidating. |
-| `playlistService.jsx` | `/src/` | Duplicates PlayerContext functionality. Not consumed. Deprecate or delete. |
 | Legacy `ResetPassword.jsx` | `/src/` root | Duplicate of `/src/pages/ResetPassword.jsx`. Verify which is active and delete the other. |
 | DMCA backend | `ReportInfringement.jsx` | Frontend complete but submission only logs to console. Needs backend POST endpoint. |
 
@@ -1292,7 +1289,6 @@ path parameter, so a client cannot request another user's financials.
 | `mapDemo.jsx` + `.scss` | Deprecated prototype | `react-simple-maps` with dummy data. Superseded by `FindPage.jsx`. |
 | `Register.jsx` (`/src/pages/`) | Deprecated stub | Plain form, no styling. Superseded by `CreateAccountWizard.jsx`. |
 | `api.js` (`/src/services/`) | Legacy stub | Only used by `Register.jsx`. Delete together. |
-| `playlistService.jsx` | Unused | Duplicates `PlayerContext` functions. Not consumed by any component. |
 | `ResetPassword.jsx` (`/src/` root) | Likely superseded | `/src/pages/ResetPassword.jsx` is the one wired to the router. Verify and delete. |
 
 ---
@@ -1310,8 +1306,8 @@ path parameter, so a client cannot request another user's financials.
 | `CashoutPanel.jsx` | 23K | Stripe Connect payout UI |
 | `DownloadModal.jsx` | 15K | Song download flow (free/paid) |
 | `LastWonNotification.jsx` | 15K | Animated award notification |
-| `PlayChoiceModal.jsx` | 2.5K | Play Now vs Add to Queue prompt |
-| `QueuePanel.jsx` | 7.5K | Queue management UI |
+| `PlayChoiceModal.jsx` | 6K | Play now / Add to queue prompt (songs and playlists) |
+| `QueuePanel.jsx` | 28K | Queue panel: drag reorder, playlist groups, inline confirms |
 | `ReferralCodeCard.jsx` | 4.0K | Referral code display + copy |
 | `ResetPassword.jsx` | 5.5K | Legacy reset password (verify if active) |
 | `ThemePicker.jsx` | 4.5K | 7-theme color selector |
@@ -1344,11 +1340,9 @@ path parameter, so a client cannot request another user's financials.
 | `main.jsx` | 512B | Entry point |
 | `milestonesPage.jsx` | 17K | Historical award archive |
 | `player.jsx` | 21K | Global media player |
-| `playlistManager.jsx` | 23K | Playlist library modal |
-| `playlistPanel.jsx` | 2.0K | Compact playlist sidebar |
-| `playlistViewer.jsx` | 29K | Playlist detail view |
-| `playlistWizard.jsx` | 13K | Add to playlist wizard |
-| `playlists.jsx` | 1.5K | Playlist page (legacy) |
+| `playlistManager.jsx` | 23K | Playlist library modal (opens /playlist/:id) |
+| `playlistPage.jsx` | 43K | Playlist page — /playlist/:playlistId |
+| `playlistWizard.jsx` | 13K | Add-to-playlist / suggest-to-community from the player |
 | `privacyPolicy.jsx` | 19K | Privacy policy legal page |
 | `profile.jsx` | 13K | Listener profile page |
 | `reportInfringement.jsx` | 14K | DMCA takedown form |

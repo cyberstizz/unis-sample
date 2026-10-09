@@ -925,6 +925,14 @@ $cols-editable: 22px 40px minmax(0, 1fr) 150px 64px 40px;
     text-transform: uppercase;
   }
 
+  .plp-field-hint {
+    order: 2;
+    margin: 0;
+    color: var(--unis-text-3);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
   input, textarea {
     width: 100%;
     box-sizing: border-box;

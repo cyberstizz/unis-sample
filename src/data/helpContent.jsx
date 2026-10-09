@@ -947,7 +947,7 @@ export const HELP_SECTIONS = [
   {
     id: 'queue',
     title: 'Queue',
-    blurb: 'What plays next, shuffling, repeating, and saving a queue.',
+    blurb: 'What plays next, rearranging, shuffling, repeating, and saving a queue.',
     status: 'published',
     articles: [
       {
@@ -956,14 +956,36 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              If nothing is playing, it starts. If something is already playing,
-              Unis asks what you meant: <b>Play now</b> interrupts and starts the
-              track immediately, <b>Add to queue</b> puts it at the end to play
-              after everything already lined up.
+              If your queue is empty, it starts playing. If you already have
+              songs lined up, Unis asks what you meant: <b>Play now</b> starts
+              the song immediately and the rest of your queue picks up after it,
+              and <b>Add to queue</b> puts it at the end, after everything
+              already lined up.
             </p>
             <p>
-              You are never guessing which one you got, and a tap never silently
-              wipes out a queue you spent time building.
+              You are never guessing which one you got, and playing something
+              never wipes out a queue you spent time building. Whole playlists
+              work the same way.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'queue-playlists',
+        q: 'Why are some songs in my queue grouped together?',
+        a: (
+          <>
+            <p>
+              Those songs came from a playlist. When you play or queue a
+              playlist, its songs arrive together, joined by a colored line down
+              the left side, with the playlist&rsquo;s name above the first one.
+              Tap the name to open the playlist. While one of those songs is
+              playing, Now playing shows which playlist it came from.
+            </p>
+            <p>
+              Once they arrive they are ordinary queue songs. Move them, remove
+              them one at a time, or use <b>Remove all</b> on the group. None of
+              that changes the playlist itself.
             </p>
           </>
         ),
@@ -979,9 +1001,12 @@ export const HELP_SECTIONS = [
               particular artists or songs.
             </p>
             <p>
-              The track you are currently playing stays where it is and moves to
-              the front; everything else is reordered behind it. Turning shuffle
-              off restores your original order and keeps your place in it.
+              The song playing now moves to the top and keeps playing; everything
+              else in your queue is reordered behind it, including songs you have
+              already heard. Turning shuffle off puts your queue back in its
+              original order and keeps your place. Songs you added while shuffle
+              was on stay at the end, songs you removed stay removed, and songs
+              you moved while shuffled go back where they were.
             </p>
           </>
         ),
@@ -1005,12 +1030,19 @@ export const HELP_SECTIONS = [
       },
       {
         id: 'queue-manage',
-        q: 'Can I edit my queue or keep it?',
+        q: 'Can I rearrange, remove, or keep my queue?',
         a: (
           <>
             <p>
-              You can remove any track from the queue without stopping playback,
-              and you can save the whole queue as a playlist in one step. A good
+              Drag any song by its handle to move it. To remove a song, tap its
+              trash icon — Unis asks you to confirm right there in the row, so a
+              stray tap never costs you a track. The song that is playing now
+              can&rsquo;t be removed; skip it instead.
+            </p>
+            <p>
+              <b>Clear queue</b>, in the queue&rsquo;s three-dot menu, empties
+              everything and stops playback, also after you confirm. The same
+              menu saves your whole queue as a playlist in one step, so a good
               listening session does not have to be rebuilt from memory later.
             </p>
           </>
@@ -1035,7 +1067,7 @@ export const HELP_SECTIONS = [
   {
     id: 'playlists',
     title: 'Playlists',
-    blurb: 'Making them, sharing them, and how they differ from your queue.',
+    blurb: 'Making them, playing them, sharing them, and how they differ from your queue.',
     status: 'published',
     articles: [
       {
@@ -1045,32 +1077,63 @@ export const HELP_SECTIONS = [
           <>
             <p>
               A playlist is something you keep. Your queue is what you are
-              listening to right now. Both hold songs and both feed the player,
-              but a playlist survives the session and a queue is the session.
+              listening to right now. A playlist survives the session; a queue
+              is the session.
             </p>
             <p>
-              They open one at a time — opening the playlist closes the queue,
-              and opening the queue closes the playlist — so you always know
-              which list you are looking at. Songs move freely between them:
-              send a track from a playlist into your queue, or turn the queue
-              you have built into a playlist in one step.
+              Playing a playlist never replaces your queue. Its songs are added
+              into it, with the same choice you get for a single song:{' '}
+              <b>Play now</b> starts the playlist immediately and your queue
+              picks up after it, and <b>Add to queue</b> lines it up after
+              everything already there.
+            </p>
+            <p>
+              Once they are in, those songs belong to your queue. Rearranging or
+              removing them does not touch the playlist, and editing the
+              playlist does not change a queue you already built. You can also
+              send a single song from a playlist into your queue from its
+              three-dot menu, or turn your whole queue into a playlist in one
+              step.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'playlists-play',
+        q: 'What happens when I tap a song inside a playlist?',
+        a: (
+          <>
+            <p>
+              Unis plays the playlist from that song onward — the songs above it
+              are left out, the same as starting an album partway through. If
+              your queue already has songs, you get the Play now / Add to queue
+              choice first.
+            </p>
+            <p>
+              If that playlist is the one playing right now, tapping a song just
+              jumps to it; nothing is added twice. The <b>Shuffle</b> button next
+              to Play adds the whole playlist in a random order without
+              reshuffling the rest of your queue.
             </p>
           </>
         ),
       },
       {
         id: 'playlists-create',
-        q: 'How do I make a playlist?',
+        q: 'How do I make or edit a playlist?',
         a: (
           <>
             <p>
-              Two ways. Build one from scratch by adding songs as you find them,
-              or save your current queue as a playlist once you have a run of
-              tracks you want to keep.
+              Two ways to make one. Create it from Playlists in the sidebar, then add
+              songs as you find them: while a song is playing, tap the playlist
+              button in the player and choose where it goes. Or save your current
+              queue as a playlist once you have a run of tracks you want to keep.
             </p>
             <p>
-              Give it a name and a cover image so it is recognizable at a
-              glance, then decide whether anyone else can see it.
+              To edit a playlist you own, open it and use the three-dot menu next
+              to Play to change its name, description, cover, or who can see it.
+              Drag songs by their handle to reorder them, and remove a song from
+              its own three-dot menu — Unis asks before removing anything.
             </p>
           </>
         ),
@@ -1089,10 +1152,35 @@ export const HELP_SECTIONS = [
                 that it exists. This is the default.
               </li>
               <li>
+                <b>Unlisted</b> — anyone you send the link to can open it, but it
+                does not appear in search or on the Discover page.
+              </li>
+              <li>
                 <b>Public</b> — anyone on Unis can open it. It shows up in
                 search and under Playlists on the Discover page.
               </li>
             </ul>
+            <p>Community playlists are always public.</p>
+          </>
+        ),
+      },
+      {
+        id: 'playlists-community',
+        q: 'What are community playlists?',
+        a: (
+          <>
+            <p>
+              Playlists that belong to a jurisdiction rather than to one person.
+              Anyone can suggest a song for one — while it is playing, tap the
+              playlist button in the player and pick the community playlist —
+              and the community decides whether it stays.
+            </p>
+            <p>
+              A suggestion joins the playlist once it has 5 more up votes than
+              down votes, and is dropped once it has 3 more down votes than up.
+              You get one vote per suggestion and can change your mind. Open the
+              playlist&rsquo;s Suggestions tab to vote.
+            </p>
           </>
         ),
       },

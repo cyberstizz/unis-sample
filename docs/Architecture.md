@@ -48,6 +48,7 @@
 | `/` | Feed | Protected |
 | `/artist/:artistId` | ArtistPage | Protected |
 | `/song/:songId` | SongPage | Protected |
+| `/playlist/:playlistId` | PlaylistPage | Protected |
 | `/jurisdiction/:jurisdiction` | JurisdictionPage | Protected |
 | `/artistDashboard` | ArtistDashboard | Protected (Artist role) |
 
@@ -96,7 +97,8 @@
 
 | Function | Logic |
 |----------|-------|
-| `playMedia(track, queue)` | Sets `currentMedia`. Replaces queue if `newPlaylist` passed; otherwise finds song index in existing queue. |
+| `requestPlay(song)` / `requestPlayCollection({...})` | How pages start playback. A song or a whole playlist is **added into** the queue — never replaces it. Empty queue plays immediately; otherwise PlayChoiceModal asks Play now / Add to queue. See FRONTEND_ARCHITECTURE.md §2 (PlayerContext) for the queue-entry model (`qid`, `origin`). |
+| `playMedia(track, queue?)` | Legacy. Jumps to a track already in the queue. Its queue-replacing form is unused — don't add callers. |
 | `next()` / `prev()` | Increments/decrements `currentIndex`, updates `currentMedia` |
 | `loadUserPlaylists()` | GET `/v1/playlists` → normalizes data (maps `songId` → `id`) → updates state |
 | `createPlaylist(name)` | POST to API → calls `loadUserPlaylists()` |
@@ -438,29 +440,16 @@
 ## 7. Playlist System
 
 ### `PlaylistManager.jsx`
-**Purpose:** Grid modal directory of all user playlists. Clicking a playlist opens `PlaylistViewer` on top.
+**Purpose:** Modal directory of the user's, followed, community and official playlists, with search and creation. Clicking a playlist closes the modal and navigates to `/playlist/:id`.
 
-**Artwork:** Uses `pl.tracks[0].artworkUrl` as cover. Falls back to generic icon if playlist is empty.
-
-**Empty state:** Directs user to use "Create (+)" button on the main Player (this component has no create button itself).
-
-**Porting Note:** Convert nested modal pattern to Stack Navigation in React Native.
+**Porting Note:** In React Native, make this a Library screen that pushes a Playlist screen.
 
 ---
 
-### `PlaylistViewer.jsx`
-**Purpose:** Detail view for a single playlist. Play, reorder, remove tracks, rename, delete.
+### `PlaylistPage.jsx`
+**Purpose:** The playlist page (`/playlist/:playlistId`). Play / Shuffle / row taps pour the playlist into the queue through `requestPlayCollection`; owners edit details, cover and visibility, drag to reorder, and remove songs with an inline confirm. Community playlists add Suggestions (vote) and Activity tabs.
 
-**Drag-and-Drop:** Native HTML5 drag events. Optimistic reorder in `localTracks` → commits via `reorderPlaylist` API → reverts on failure.
-
-**Porting Note:** HTML5 drag events don't exist in React Native. Use `react-native-draggable-flatlist`. Replace `confirm()` with `Alert.alert()`.
-
----
-
-### `Playlists.jsx`
-**Purpose:** Dedicated page route for playlist library (simpler list view alternative to PlaylistManager modal).
-
-**Refactor Flag:** Overlaps significantly with `PlaylistManager.jsx`. Consider deprecating in React Native port — consolidate into a single "Library" screen.
+**Porting Note:** Use `react-native-draggable-flatlist` for reorder; keep the same `requestPlayCollection` rule so mobile never replaces the queue either.
 
 ---
 
@@ -743,7 +732,6 @@ localStorage.getItem('token') exists? → render <Outlet /> (child route)
 | Welcome popup | `ArtistDashboard` | `showWelcomePopup` resets to `true` on every mount. Should persist "seen" state in localStorage. |
 | Duplicate lyrics UI | `ArtistDashboard` | Has both `LyricsWizard` import AND a raw JSX lyrics modal. Verify which is intended. |
 | Dashboard API load | `ArtistDashboard` | 6+ requests on load causes "popcorn" UI. Consider a single `/dashboard-summary` endpoint. |
-| Playlist redundancy | `Playlists.jsx` | Overlaps with `PlaylistManager`. Consider consolidating. |
 | Unicode reversal | `DeleteAccountWizard` | Username reversal breaks on emoji. Restrict usernames to alphanumeric on sign-up. |
 | Logout inconsistency | `AuthContext` vs `DeleteAccountWizard` | Auth uses hard redirect (`window.location.href`), Delete uses client routing (`navigate()`). Standardize. |
 | Guest login state | `Header.jsx` | Shows only "Logout" when user is null. Should show "Login" button instead. |
@@ -894,23 +882,6 @@ These files exist in the repo but are not actively used in the live application.
 
 ---
 
-### `PlaylistPanel.jsx`
-**Purpose:** A compact sidebar panel displaying the user's non-default playlists. Clicking a playlist opens it in `PlaylistViewer`. Acts as a lightweight alternative to the full `PlaylistManager` modal.
-
-**State:** `openViewer` (Boolean), `viewerTracks` (Array), `viewerTitle` (String)
-
-**Key Logic:**
-- Filters out playlists where `pl.isDefault === true` — only shows user-created lists
-- On open: passes `playlist.tracks` and `playlist.name` to `PlaylistViewer` as local state
-- `onRemove`: filters `viewerTracks` locally (optimistic UI — does not call API directly)
-- `onReorder`: replaces `viewerTracks` with new order locally
-
-**Note:** Local track mutations (remove/reorder) update panel state only. Actual persistence is handled inside `PlaylistViewer` which calls `PlayerContext` API functions.
-
-**Dependencies:** `PlayerContext` (for `playlists`), `PlaylistViewer`, `playlistpanel.scss`
-
----
-
 ## 13. Confirmed Deprecated Files (Updated)
 
 These files have been reviewed and confirmed as deprecated prototypes. Safe to delete after verifying no hidden imports remain.
@@ -935,28 +906,6 @@ These files have been reviewed and confirmed as deprecated prototypes. Safe to d
 ---
 
 ## 14. Final Components (Session 3 — Complete)
-
-### `playlistService.js` (`/src/services/`)
-**Purpose:** A clean service object wrapping all playlist-related API calls. Acts as an abstraction layer over `axiosInstance` for playlist CRUD operations.
-
-**Note:** This service duplicates functionality already built into `PlayerContext.js`. `PlayerContext` handles all playlist API calls directly and is what the app actually uses. `playlistService.js` appears to be an earlier or parallel implementation that is not actively consumed by any component.
-
-**Methods:**
-
-| Method | HTTP | Endpoint |
-|--------|------|----------|
-| `getUserPlaylists()` | GET | `/playlists` |
-| `getPlaylistById(id)` | GET | `/playlists/{id}` |
-| `createPlaylist(name)` | POST | `/playlists` |
-| `updatePlaylist(id, name)` | PUT | `/playlists/{id}` |
-| `deletePlaylist(id)` | DELETE | `/playlists/{id}` |
-| `addTrackToPlaylist(id, songId)` | POST | `/playlists/{id}/tracks` |
-| `removeTrackFromPlaylist(id, itemId)` | DELETE | `/playlists/{id}/tracks/{itemId}` |
-| `reorderPlaylist(id, orderedItemIds)` | PUT | `/playlists/{id}/reorder` |
-
-**Refactor Flag:** Consider deprecating in favor of `PlayerContext` which is the single source of truth for playlist state and API calls.
-
----
 
 ### `PrivacyPolicy.jsx`
 **Purpose:** Static legal page covering Unis' full privacy practices. Compliant with GDPR and CCPA disclosure requirements.
@@ -1135,6 +1084,5 @@ These are concrete tasks identified during documentation that must be addressed:
 | 🟡 Medium | Fix empty votes display in LeaderboardsPage result rows | `LeaderboardsPage.jsx` |
 | 🟡 Medium | Persist `showWelcomePopup` state in localStorage | `ArtistDashboard.jsx` |
 | 🟢 Low | Delete confirmed deprecated files: `ExploreFind`, `Onboarding`, `MapDemo`, `Register`, `api.js` | Multiple |
-| 🟢 Low | Consolidate `playlistService.js` into `PlayerContext` or delete | `playlistService.js` |
 | 🟢 Low | Add Login button to Header for unauthenticated state | `Header.jsx` |
 | 🟢 Low | Clean up unused imports in `Main.jsx` | `Main.jsx` |
