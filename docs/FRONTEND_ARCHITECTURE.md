@@ -644,7 +644,9 @@ No internal state or API logic — fully controlled by parent (`ArtistDashboard`
 
 **Owner tools:** edit name / description / visibility (labels match the manager: Private, Unlisted, Public), change cover (`POST /v1/playlists/{id}/cover`), delete, drag-to-reorder (`@dnd-kit`, optimistic then `reorderPlaylist`, reverts on failure), remove a song with an inline confirmation.
 
-**Community playlists:** Songs / Suggestions / Activity tabs. Suggestions are voted on through `voteOnSuggestion`; a suggestion joins at net +5 and is dropped at net −3 (enforced by the backend).
+**Community playlists:** Songs / Suggestions / Activity tabs. The playlist response carries only active tracks, so pending suggestions are loaded separately from `GET /v1/playlists/{id}/pending` (which also returns the viewer's `myVote`). Voting goes through `voteOnSuggestion`; a suggestion joins at net +5 and is dropped at net −3. The backend refuses votes on your own suggestion (the page shows "Your suggestion" instead of buttons) and on tracks that aren't pending, and pays the +1 voting point on a first vote only.
+
+**Delete:** `ownerPointsEarned` (owner only) is shown in the delete confirmation — deleting takes back the community-start +5 and the 10-follower +10 if they were paid.
 
 **States:** loading skeleton, empty playlist, unavailable (private or deleted — the backend returns the same "not found" for both on purpose).
 
@@ -1193,6 +1195,7 @@ if (!user) { triggerGate('vote'); return; }
 | GET | `/v1/playlists/{id}` | PlayerContext (loadPlaylistDetails) → PlaylistPage |
 | POST | `/v1/playlists/{id}/cover` | PlaylistPage |
 | GET | `/v1/playlists/{id}/activity` | PlaylistPage (community Activity tab) |
+| GET | `/v1/playlists/{id}/pending` | PlaylistPage (community Suggestions tab) |
 | POST | `/v1/playlists` | PlayerContext (createPlaylist) |
 | PUT | `/v1/playlists/{id}` | PlayerContext (updatePlaylist) |
 | DELETE | `/v1/playlists/{id}` | PlayerContext (deletePlaylist) |

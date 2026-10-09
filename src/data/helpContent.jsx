@@ -229,8 +229,8 @@ export const POINT_ACTIONS = [
   { key: 'refer', label: 'Refer someone', you: '+5', they: '—' },
   { key: 'playlist', label: 'Start a community playlist', you: '+5', they: '—' },
   { key: 'suggest', label: 'Get a suggestion approved', you: '+2', they: '—' },
-  { key: 'plvote', label: 'Vote on a suggestion', you: '+1', they: '—' },
-  { key: 'milestone', label: 'Your playlist hits 10 followers', you: '+10', they: '—' },
+  { key: 'plvote', label: 'Vote on someone else\u2019s suggestion (first vote)', you: '+1', they: '—' },
+  { key: 'milestone', label: 'Your playlist reaches 10 followers (once)', you: '+10', they: '—' },
   { key: 'supported', label: 'Someone picks you to support', you: '+5', they: '—' },
   { key: 'award', label: 'Win an award', you: '+50 to +5,000', they: '—' },
   { key: 'month', label: 'Every month on Unis', you: '+1', they: '—' },
@@ -812,9 +812,16 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              No. Points only ever go up. Unfollowing, unliking, switching the
-              artist you support, deleting a playlist — none of it takes
-              anything back.
+              Only in one case: deleting a playlist you made. That takes back
+              the points the playlist itself earned you — the 5 for starting a
+              community playlist, and the 10 if it reached 10 followers. Unis
+              shows you the amount before you confirm, and it can lower your
+              level if it takes you below that level&rsquo;s threshold.
+            </p>
+            <p>
+              Nothing else lowers your score. Unfollowing, unliking, switching
+              the artist you support, or people unfollowing your playlist —
+              none of it takes anything back.
             </p>
             <p>
               Points record what you did, not what you currently have. Something
@@ -1178,8 +1185,10 @@ export const HELP_SECTIONS = [
             <p>
               A suggestion joins the playlist once it has 5 more up votes than
               down votes, and is dropped once it has 3 more down votes than up.
-              You get one vote per suggestion and can change your mind. Open the
-              playlist&rsquo;s Suggestions tab to vote.
+              Open the playlist&rsquo;s Suggestions tab to vote. You get one
+              vote per suggestion and can change your mind; the vote you cast
+              stays highlighted. You can&rsquo;t vote on a song you suggested
+              yourself, and songs already in the playlist aren&rsquo;t voted on.
             </p>
           </>
         ),

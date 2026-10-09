@@ -585,9 +585,8 @@ export const PlayerProvider = ({ children }) => {
     }
 
     // 'end'
-    const nq = [...queue, ...items];
-    setQueue(nq);
-    setOriginalQueue(isShuffled ? [...originalQueue, ...items] : nq);
+    setQueue(prev => [...prev, ...items]);
+    setOriginalQueue(prev => [...prev, ...items]);
   }, [queue, originalQueue, currentIndex, isShuffled, isTrackBlocked, startAudio]);
 
   /**
@@ -690,10 +689,9 @@ export const PlayerProvider = ({ children }) => {
     if (!pendingSong) return;
 
     const item = toQueueItem(pendingSong, null);
-    const nq = [...queue, item];
-    setQueue(nq);
-    setOriginalQueue(isShuffled ? [...originalQueue, item] : nq);
-  }, [playChoiceModal, insertCollection, queue, originalQueue, isShuffled]);
+    setQueue(prev => [...prev, item]);
+    setOriginalQueue(prev => [...prev, item]);
+  }, [playChoiceModal, insertCollection]);
 
   const cancelPlayChoice = useCallback(() => {
     closePlayChoice();
@@ -705,22 +703,29 @@ export const PlayerProvider = ({ children }) => {
 
   // `origin` is optional — pass a playlist origin to tag a single song as
   // having come from a playlist.
+  // Both use functional updates (prev => ...), so several calls in a row each
+  // build on the last. Building from the `queue` snapshot instead made the
+  // second of two back-to-back adds overwrite the first.
   const playNext = (song, origin = null) => {
     if (!song) return;
     const item = toQueueItem(song, origin);
-    const insertAt = Math.min(currentIndex + 1, queue.length);
-    const nq = [...queue];
-    nq.splice(insertAt, 0, item);
-    setQueue(nq);
-    setOriginalQueue(isShuffled ? [...originalQueue, item] : nq);
+    const insertInto = (list) => {
+      const nq = [...list];
+      nq.splice(Math.min(currentIndex + 1, list.length), 0, item);
+      return nq;
+    };
+    setQueue(insertInto);
+    // Shuffle off: the return-to order mirrors the queue, so insert at the same
+    // spot. Shuffle on: additions go to the end of the return-to order.
+    setOriginalQueue(prev => (isShuffled ? [...prev, item] : insertInto(prev)));
   };
 
   const playLater = (song, origin = null) => {
     if (!song) return;
     const item = toQueueItem(song, origin);
-    const nq = [...queue, item];
-    setQueue(nq);
-    setOriginalQueue(isShuffled ? [...originalQueue, item] : nq);
+    // Appending keeps both lists in step whether shuffle is on or off.
+    setQueue(prev => [...prev, item]);
+    setOriginalQueue(prev => [...prev, item]);
   };
 
   /**

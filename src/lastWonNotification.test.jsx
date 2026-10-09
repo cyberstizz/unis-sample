@@ -12,7 +12,7 @@
 //   • Render variants: song-daily, song-weekly, artist-daily
 //   • Date formatting: daily ("April 25, 2026"), weekly range
 //   • Image fallback: placeholder when no artwork URL present
-//   • Action buttons: Vote → /voteawards; Listen → playMedia + dismiss;
+//   • Action buttons: Vote → /voteawards; Listen → requestPlay + dismiss;
 //     View Profile → navigate to /artist/:id + dismiss
 //   • Dismissal: close button, click on overlay, click inside card stays open
 //   • Auto-dismiss after 12s once stage 3 reveal completes
@@ -53,13 +53,13 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-const { playMediaSpy } = vi.hoisted(() => ({ playMediaSpy: vi.fn() }));
+const { requestPlaySpy } = vi.hoisted(() => ({ requestPlaySpy: vi.fn() }));
 vi.mock('./context/playercontext', async () => {
   const actual = await vi.importActual('./context/playercontext');
   const React = require('react');
   return {
     ...actual,
-    PlayerContext: React.createContext({ playMedia: playMediaSpy }),
+    PlayerContext: React.createContext({ requestPlay: requestPlaySpy }),
   };
 });
 
@@ -160,7 +160,7 @@ beforeEach(() => {
   cacheService.clearAll();
   lastAwardsRequests = [];
   navigateSpy.mockReset();
-  playMediaSpy.mockReset();
+  requestPlaySpy.mockReset();
   // Make Math.random deterministic — always returns 0, picking the first
   // valid category. This avoids flaky tests when multiple categories return
   // data and the picker is random.
@@ -491,24 +491,25 @@ describe('LastWonNotification — Vote button', () => {
 });
 
 describe('LastWonNotification — Listen button (song)', () => {
-  it('calls playMedia with the song details and dismisses', async () => {
+  it('calls requestPlay with the song details and dismisses', async () => {
     mockAwardsByCategory({ songDaily: [songDailyAward()] });
     await renderAndReveal();
     fireEvent.click(screen.getByRole('button', { name: /listen/i }));
 
-    expect(playMediaSpy).toHaveBeenCalledTimes(1);
-    const [mediaArg, queueArg] = playMediaSpy.mock.calls[0];
+    expect(requestPlaySpy).toHaveBeenCalledTimes(1);
+    const args = requestPlaySpy.mock.calls[0];
+    const mediaArg = args[0];
     expect(mediaArg.type).toBe('song');
     expect(mediaArg.id).toBe('song-001');
     expect(mediaArg.title).toBe('Midnight Uptown');
     expect(mediaArg.artist).toBe('Tony Fadd');
     expect(mediaArg.url).toContain('/uploads/song1.mp3');
-    // Queue is a single-item list
-    expect(Array.isArray(queueArg)).toBe(true);
-    expect(queueArg).toHaveLength(1);
+    // Only the song is passed — never a replacement queue. Listening from a
+    // win notification must not wipe the queue the user built.
+    expect(args).toHaveLength(1);
   });
 
-  it('does not navigate (uses playMedia, not router) for song awards', async () => {
+  it('does not navigate (uses requestPlay, not router) for song awards', async () => {
     mockAwardsByCategory({ songDaily: [songDailyAward()] });
     await renderAndReveal();
     fireEvent.click(screen.getByRole('button', { name: /listen/i }));
@@ -522,7 +523,7 @@ describe('LastWonNotification — View Profile button (artist)', () => {
     await renderAndReveal();
     fireEvent.click(screen.getByRole('button', { name: /view profile/i }));
     expect(navigateSpy).toHaveBeenCalledWith('/artist/art-3');
-    expect(playMediaSpy).not.toHaveBeenCalled();
+    expect(requestPlaySpy).not.toHaveBeenCalled();
   });
 });
 

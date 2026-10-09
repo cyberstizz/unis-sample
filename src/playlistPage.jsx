@@ -316,8 +316,20 @@ const PlaylistPage = () => {
       const all = (data.tracks || []).map(normalizeTrack);
       setPlaylist(data);
       setTracks(all.filter(t => t.status === 'active'));
-      setPending(all.filter(t => t.status === 'pending'));
+      setPending([]);
       setStatus('ready');
+
+      // The playlist response only carries songs already IN the playlist.
+      // Pending suggestions come from their own endpoint — without this call
+      // the Suggestions tab was always empty and nobody could vote.
+      if (data.type === 'community') {
+        try {
+          const res = await axiosInstance.get(`/v1/playlists/${data.playlistId || playlistId}/pending`);
+          if (!cancelled) setPending((res.data || []).map(normalizeTrack));
+        } catch (err) {
+          console.error('Failed to load suggestions:', err);
+        }
+      }
     };
     load();
     return () => { cancelled = true; };
@@ -607,6 +619,9 @@ const PlaylistPage = () => {
   };
 
   const handleVote = async (track, voteType) => {
+    if (!user) { showToast('Sign in to vote'); return; }
+    // Already voted this way — the backend would refuse it, so don't send it.
+    if (track.myVote === voteType) return;
     try {
       const result = await voteOnSuggestion(pid, track.playlistItemId, voteType);
       if (result.status === 'active') {
@@ -617,11 +632,11 @@ const PlaylistPage = () => {
         setPending(prev => prev.filter(t => t.playlistItemId !== track.playlistItemId));
       } else {
         setPending(prev => prev.map(t => t.playlistItemId === track.playlistItemId
-          ? { ...t, upvotes: result.upvotes, downvotes: result.downvotes }
+          ? { ...t, upvotes: result.upvotes, downvotes: result.downvotes, myVote: voteType }
           : t));
       }
     } catch {
-      showToast(user ? "Couldn't record your vote" : 'Sign in to vote');
+      showToast("Couldn't record your vote");
     }
   };
 
@@ -956,7 +971,12 @@ const PlaylistPage = () => {
             </div>
           ) : (
             <div className="plp-suggestions">
-              {pending.map((track) => (
+              {pending.map((track) => {
+                // A suggestion is never voted on by the person who made it.
+                const isMine = !!user && (
+                  track.addedById ? track.addedById === user.userId : track.addedByUsername === user.username
+                );
+                return (
                 <div key={track.playlistItemId} className="plp-suggestion">
                   <img src={track.artworkUrl || '/assets/placeholder.jpg'} alt="" className="plp-art" />
                   <div className="plp-title-text">
@@ -966,16 +986,39 @@ const PlaylistPage = () => {
                       {track.addedByUsername && <span> · suggested by {track.addedByUsername}</span>}
                     </div>
                   </div>
-                  <div className="plp-votes">
-                    <button type="button" className="plp-vote plp-vote-up" onClick={() => handleVote(track, 'up')} aria-label="Vote to add">
-                      <ThumbsUp size={15} /> <span>{track.upvotes}</span>
-                    </button>
-                    <button type="button" className="plp-vote plp-vote-down" onClick={() => handleVote(track, 'down')} aria-label="Vote against">
-                      <ThumbsDown size={15} /> <span>{track.downvotes}</span>
-                    </button>
-                  </div>
+                  {isMine ? (
+                    <div className="plp-votes">
+                      <span className="plp-own-suggestion">Your suggestion</span>
+                      <span className="plp-vote-tally" aria-label={`${track.upvotes} up, ${track.downvotes} down`}>
+                        <ThumbsUp size={13} /> {track.upvotes}
+                        <ThumbsDown size={13} /> {track.downvotes}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="plp-votes">
+                      <button
+                        type="button"
+                        className={`plp-vote plp-vote-up ${track.myVote === 'up' ? 'plp-vote-on' : ''}`}
+                        onClick={() => handleVote(track, 'up')}
+                        aria-pressed={track.myVote === 'up'}
+                        aria-label={track.myVote === 'up' ? 'You voted to add' : 'Vote to add'}
+                      >
+                        <ThumbsUp size={15} /> <span>{track.upvotes}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`plp-vote plp-vote-down ${track.myVote === 'down' ? 'plp-vote-on' : ''}`}
+                        onClick={() => handleVote(track, 'down')}
+                        aria-pressed={track.myVote === 'down'}
+                        aria-label={track.myVote === 'down' ? 'You voted against' : 'Vote against'}
+                      >
+                        <ThumbsDown size={15} /> <span>{track.downvotes}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )
         )}
@@ -1084,6 +1127,11 @@ const PlaylistPage = () => {
                 &ldquo;{playlist.name}&rdquo; will be removed from your library. This can&rsquo;t be undone.
                 Songs already in your queue will keep playing.
               </p>
+              {playlist.ownerPointsEarned > 0 && (
+                <p className="plp-dialog-points">
+                  You&rsquo;ll also lose the {playlist.ownerPointsEarned} points this playlist earned you.
+                </p>
+              )}
               <div className="plp-dialog-actions">
                 <button type="button" className="plp-btn-ghost" onClick={() => setDeleteOpen(false)} disabled={deleting}>Cancel</button>
                 <button type="button" className="plp-btn-danger" onClick={handleDelete} disabled={deleting} autoFocus>
