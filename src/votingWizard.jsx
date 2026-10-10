@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { useReward, formatScore } from './context/RewardContext';
 import { useAuth } from './context/AuthContext';
-import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
+import { GENRE_IDS, GENRE_NAMES, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
+// Points + interval list come from the help center's shared constants, so the
+// wizard and the help page can never quote different numbers (helpContent
+// rule #2). VOTE_POINTS mirrors ScoreUpdateService.onVote on the backend.
+import { VOTE_POINTS, INTERVAL_WEIGHTS } from './data/helpContent';
 import { buildUrl } from './utils/buildUrl';
+import PhoneVerificationModal from './phoneVerificationModal';
+// The app's standard "no artwork" image — the song and artist pages use the
+// same one, so a nominee with no photo looks the same here as everywhere else.
+import fallbackArtwork from './assets/theQuiet.jpg';
 import './votingWizard.scss';
 
 // Theme-aware logo — mirrors the Header component so the wizard logo
@@ -31,17 +40,20 @@ const LOGO_MAP = {
 const TOTAL_STEPS = 3;
 
 // -------------------------------------------------------------------------
-// Artwork resolver.
+// Artwork.
 //
-// The nominee object's shape depends on WHERE the wizard was opened:
-//   - From voteawards.jsx it's normalized and has `imageUrl` (already
-//     absolute, via buildUrl).
-//   - From the home/song/artist pages it's often the raw entity, where the
-//     field is `artworkUrl` (song) or `photoUrl` (artist) and the path is
-//     RELATIVE.
+// WHY THE IMAGE ONLY "SOMETIMES" APPEARED — three separate causes:
+//   1. The artist page opened the wizard with NO image field at all, so artist
+//      votes from /artist/:id never had a picture.
+//   2. Every value was run through buildUrl, which prefixes relative paths with
+//      the API origin. The app's own bundled placeholder ("/assets/theQuiet-…
+//      .jpg", used by the song page when a song has no artwork) was rewritten
+//      to the backend and 404'd — so the image vanished for exactly those songs.
+//   3. Only the FIRST field found was ever tried. If it failed, nothing else was.
 //
-// So: pick the first present field, and only run buildUrl when the value
-// isn't already absolute (avoids double-prefixing the voteawards URL).
+// Now: collect every candidate URL (nominee fields → fetched details → the
+// standard placeholder), try them in order, and only render an image once one
+// has actually loaded. The image always appears.
 // -------------------------------------------------------------------------
 const ARTWORK_KEYS = [
   'imageUrl',
@@ -55,38 +67,192 @@ const ARTWORK_KEYS = [
   'pictureUrl',
 ];
 
-function resolveArtwork(n) {
-  if (!n) return null;
-  let raw = null;
-  for (const k of ARTWORK_KEYS) {
-    if (n[k] && typeof n[k] === 'string') {
-      raw = n[k];
-      break;
-    }
-  }
-  if (!raw) {
-    const nested = n.song || n.track || n.artistProfile || n.user || null;
-    if (nested) {
-      for (const k of ARTWORK_KEYS) {
-        if (nested[k] && typeof nested[k] === 'string') {
-          raw = nested[k];
-          break;
-        }
-      }
-    }
-  }
-  if (!raw) return null;
+const APP_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/';
 
-  // Always run buildUrl. It handles three cases idempotently:
-  //   - private R2 URLs → rewritten to the public CDN
-  //   - already-public URLs → safe-encoded, returned as-is
-  //   - relative paths → prefixed with API_BASE_URL
+// Images the app ships itself (Vite assets, inlined data URIs, blob previews).
+// These are already valid as-is and must never be sent through buildUrl.
+function isAppAsset(url) {
+  return (
+    /^(data:|blob:)/i.test(url) ||
+    url.startsWith(`${APP_BASE}assets/`) ||
+    url.startsWith('/src/') ||
+    url.startsWith('/@fs/') ||
+    url.startsWith('/node_modules/')
+  );
+}
+
+function toImageSrc(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const value = raw.trim();
+  if (!value) return null;
+  if (isAppAsset(value)) return value;
+  // buildUrl handles the server's media: private R2 → public CDN, public URLs
+  // pass through encoded, relative /uploads/ paths get the API origin.
   try {
-    return buildUrl(raw);
+    return buildUrl(value) || null;
   } catch (e) {
-    return raw;
+    return value;
   }
 }
+
+function collectArtwork(obj, out) {
+  if (!obj || typeof obj !== 'object') return;
+  for (const k of ARTWORK_KEYS) {
+    const src = toImageSrc(obj[k]);
+    if (src && !out.includes(src)) out.push(src);
+  }
+}
+
+function artworkCandidatesFor(n) {
+  const out = [];
+  if (!n) return out;
+  collectArtwork(n, out);
+  collectArtwork(n.song || n.track || n.artistProfile || n.user, out);
+  return out;
+}
+
+// Average colour of the artwork, lifted a little — tints the glow and accents.
+// Cross-origin images taint the canvas; that's fine, we just fall back to the
+// theme colour (the image itself still shows).
+function dominantColor(img) {
+  try {
+    const SIZE = 20;
+    const canvas = document.createElement('canvas');
+    canvas.width = SIZE;
+    canvas.height = SIZE;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(img, 0, 0, SIZE, SIZE);
+    const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
+
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let n = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 125) continue;
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+      n += 1;
+    }
+    if (n === 0) return null;
+
+    let R = r / n;
+    let G = g / n;
+    let B = b / n;
+    const avg = (R + G + B) / 3;
+    const lift = 1.28;
+    R = Math.max(0, Math.min(255, avg + (R - avg) * lift));
+    G = Math.max(0, Math.min(255, avg + (G - avg) * lift));
+    B = Math.max(0, Math.min(255, avg + (B - avg) * lift));
+    return [Math.round(R), Math.round(G), Math.round(B)];
+  } catch (e) {
+    return null;
+  }
+}
+
+// -------------------------------------------------------------------------
+// Name check helpers.
+//
+// The forward/backward check must accept exactly what a person can type:
+//   - iPhones turn ' into ’ and - into — ("Smart Punctuation"), so an artist
+//     named "Don't" could never be voted for from an iPhone. Quotes and dashes
+//     are folded to plain ASCII before comparing.
+//   - Extra/leading/trailing spaces don't count.
+//   - Reversal is done per visible character (grapheme), so emoji and accented
+//     letters reverse correctly instead of turning into garbage (QA Finding 7).
+// -------------------------------------------------------------------------
+function normalizeName(s) {
+  return String(s || '')
+    .normalize('NFC')
+    .replace(/[‘’‚‛′`´]/g, "'")
+    .replace(/[“”„‟″]/g, '"')
+    .replace(/[‐-―−]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function reverseGraphemes(s) {
+  const str = String(s || '');
+  if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+    const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+    return Array.from(seg.segment(str), (part) => part.segment).reverse().join('');
+  }
+  return Array.from(str).reverse().join('');
+}
+
+// -------------------------------------------------------------------------
+// Intervals — built from the help center's definition (INTERVAL_WEIGHTS) so
+// every defined interval is offered. Midterm was missing before: opening the
+// wizard from a Midterm leaderboard showed "Day" in the dropdown while the
+// vote was actually sent as Midterm.
+// -------------------------------------------------------------------------
+const INTERVAL_LABEL = {
+  daily: 'Day',
+  weekly: 'Week',
+  monthly: 'Month',
+  quarterly: 'Quarter',
+  midterm: 'Midterm',
+  annual: 'Year',
+};
+
+const INTERVAL_OPTIONS = INTERVAL_WEIGHTS
+  .filter((w) => INTERVAL_IDS[w.key])
+  .map((w) => ({ value: w.key, label: INTERVAL_LABEL[w.key] || w.label }));
+
+const INTERVAL_ALIASES = {
+  day: 'daily',
+  week: 'weekly',
+  month: 'monthly',
+  quarter: 'quarterly',
+  'semi-annual': 'midterm',
+  year: 'annual',
+  yearly: 'annual',
+};
+
+function normalizeInterval(value) {
+  const k = String(value || '').toLowerCase();
+  const key = INTERVAL_ALIASES[k] || k;
+  return INTERVAL_IDS[key] ? key : 'daily';
+}
+
+// Interval → the noun the copy reads naturally with ("for the week").
+const INTERVAL_NOUN = {
+  daily: 'day',
+  weekly: 'week',
+  monthly: 'month',
+  quarterly: 'quarter',
+  midterm: 'half-year',
+  annual: 'year',
+};
+
+// The nominee's home jurisdiction UUID, from whatever shape the page passed.
+function nomineeHomeJurisdictionId(n) {
+  if (!n) return null;
+  if (n.jurisdictionId) return n.jurisdictionId;
+  if (n.jurisdiction && typeof n.jurisdiction === 'object' && n.jurisdiction.jurisdictionId) {
+    return n.jurisdiction.jurisdictionId;
+  }
+  if (typeof n.jurisdiction === 'string') {
+    const slug = n.jurisdiction.toLowerCase().trim().replace(/\s+/g, '-');
+    return JURISDICTION_IDS[slug] || null;
+  }
+  return null;
+}
+
+const formatText = (str) =>
+  str ? String(str).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '';
+
+const readThemePrimary = () => {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--unis-primary').trim();
+    return v || '#163387';
+  } catch (e) {
+    return '#163387';
+  }
+};
 
 // --- ANIMATION VARIANTS ---------------------------------------------------
 
@@ -129,97 +295,66 @@ const iconDraw = {
   visible: { pathLength: 1, opacity: 1, transition: { duration: 0.7, ease: 'easeInOut' } },
 };
 
-
-
 // --- COMPONENT ------------------------------------------------------------
 
-// Points a single vote awards the user. Kept as a named constant so the
-// takeover, the score math, and any future backend echo stay in one place.
-// NOTE: the points doc lists user votes at +2 — reconcile with backend.
-const VOTE_POINTS = 25;
-
-// Interval → the noun the takeover headline reads naturally with
-// ("for the week", "for the day"). Falls back to the raw interval.
-const INTERVAL_NOUN = {
-  daily: 'day',
-  weekly: 'week',
-  monthly: 'month',
-  quarterly: 'quarter',
-  midterm: 'half-year',
-  'semi-annual': 'half-year',
-  yearly: 'year',
-  annual: 'year',
-};
+const EMPTY_EXTRAS = { genreId: null, artwork: null, pending: false };
 
 const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }) => {
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
   const [currentFilters, setCurrentFilters] = useState({
-    selectedGenre: 'rap-hiphop',
+    selectedGenre: 'rap',
     selectedType: 'artist',
     selectedInterval: 'daily',
-  }); // ★ ironclad: jurisdiction moved to selectedJurisdictionId (real UUID)
+  });
   const { setScoreTotal, displayedScore } = useReward();
-  const { theme, user } = useAuth();
+  const { theme, user, isGuest, refreshUser } = useAuth();
+  const navigate = useNavigate();
   const activeLogo = LOGO_MAP[theme] || logoblue;
 
   const [artistNameForward, setArtistNameForward] = useState('');
   const [artistNameBackward, setArtistNameBackward] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  // ★ ironclad: the dropdown is built from real API jurisdiction objects
-  //   ({jurisdictionId, name}) instead of a hardcoded 3-slug map, and the
-  //   selection is the UUID itself — no slug→UUID re-mapping at submit time.
+  // Synchronous guard — state updates are async, so a fast double-tap or
+  // Enter-then-click could otherwise fire two submits.
+  const submittingRef = useRef(false);
+
+  // Jurisdiction dropdown = the nominee's chain ∩ where THIS user can vote.
+  //   loading → ready | unresolved (couldn't load) | none (no overlap)
   const [jurisdictionOptions, setJurisdictionOptions] = useState([]);
   const [selectedJurisdictionId, setSelectedJurisdictionId] = useState('');
-  const [isFetchingJurisdictions, setIsFetchingJurisdictions] = useState(false);
-  const [voteResult, setVoteResult] = useState({ status: 'idle', message: '', details: '' });
+  const [jurisdictionStatus, setJurisdictionStatus] = useState('loading');
+  const [reloadKey, setReloadKey] = useState(0);
+  // Jurisdictions the page context points at (e.g. the leaderboard the user
+  // was browsing) — used to pick the default selection.
+  const preferredJurisdictionsRef = useRef([]);
 
-  // Dominant color pulled from the artwork — tints the ambient glow, the
-  // thumbnail ring, and the modal accent. "R, G, B"; null → theme fallback.
+  // Anything the page didn't pass that we fetched from the nominee itself.
+  const [nomineeExtras, setNomineeExtras] = useState(EMPTY_EXTRAS);
+
+  const [voteResult, setVoteResult] = useState({ status: 'idle', message: '', details: '' });
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+
+  // The artwork URL that actually LOADED (null until one does).
+  const [artworkSrc, setArtworkSrc] = useState(null);
+  // Dominant colour "R, G, B" from the artwork; null → theme fallback.
   const [artRGB, setArtRGB] = useState(null);
-  // Whether the artwork actually loaded (false → hide thumb/ambient cleanly).
-  const [artworkFailed, setArtworkFailed] = useState(false);
+
   const prevShowRef = useRef(false);
   const latestRef = useRef({ nominee, filters });
   latestRef.current = { nominee, filters };
 
   const selectedNominee = nominee;
-
-  // Resolve the artwork URL once per nominee, regardless of field name.
-  const artworkUrl = useMemo(() => resolveArtwork(selectedNominee), [selectedNominee]);
-
+  const nomineeName = (selectedNominee?.name || '').trim();
   const reversedNomineeName = useMemo(
-    () => (selectedNominee ? selectedNominee.name.split('').reverse().join('') : ''),
-    [selectedNominee]
+    () => reverseGraphemes(nomineeName.normalize('NFC')),
+    [nomineeName]
   );
-
-
-  // --- DIAGNOSTIC ---------------------------------------------------------
-  // If the wizard is open with a nominee but we couldn't resolve any
-  // artwork, log exactly what keys the nominee DOES have so the missing
-  // field can be added (to the payload or to ARTWORK_KEYS above).
-  useEffect(() => {
-    if (show && selectedNominee && !artworkUrl) {
-      console.warn(
-        '[VotingWizard] No artwork could be resolved for this nominee. ' +
-          'The ambient background and thumbnail need an image URL. ' +
-          'Nominee keys present:',
-        Object.keys(selectedNominee),
-        '\nFull nominee object:',
-        selectedNominee
-      );
-    } else if (show && artworkUrl) {
-      console.debug('[VotingWizard] Resolved artwork URL:', artworkUrl);
-    }
-  }, [show, selectedNominee, artworkUrl]);
 
   // --- RESET STATE ONLY ON OPEN TRANSITION --------------------------------
   useEffect(() => {
     if (show && !prevShowRef.current) {
       const { nominee: n, filters: f } = latestRef.current;
-      const homeKey = n?.jurisdiction && typeof n.jurisdiction === 'string'
-        ? n.jurisdiction.toLowerCase().replace(/\s+/g, '-')
-        : null; // ★ ironclad: slug only used as a bootstrap map key below
 
       setStep(1);
       setDirection(1);
@@ -227,210 +362,193 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       setArtistNameForward('');
       setArtistNameBackward('');
       setSubmitting(false);
-      setJurisdictionOptions([]); // ★ ironclad
-      // ★ ironclad: prefer the nominee's REAL jurisdiction UUID; hardcoded map
-      //   only as a bootstrap fallback until the breadcrumb fetch resolves.
-      setSelectedJurisdictionId(
-        n?.jurisdictionId
-          || n?.jurisdiction?.jurisdictionId
-          || JURISDICTION_IDS[homeKey]
-          || JURISDICTION_IDS[f?.selectedJurisdiction]
-          || ''
-      );
+      submittingRef.current = false;
+      setShowPhoneModal(false);
+      setArtworkSrc(null);
+      setArtRGB(null);
+      setJurisdictionOptions([]);
+      setSelectedJurisdictionId('');
+      setJurisdictionStatus('loading');
+
+      preferredJurisdictionsRef.current = [
+        JURISDICTION_IDS[f?.selectedJurisdiction],
+        nomineeHomeJurisdictionId(n),
+      ].filter(Boolean);
+
       setCurrentFilters({
-        selectedGenre: n?.genreKey || f?.selectedGenre || 'rap-hiphop',
+        selectedGenre: n?.genreKey || f?.selectedGenre || 'rap',
         selectedType: n?.type || f?.selectedType || 'artist',
-        selectedInterval: f?.selectedInterval || 'daily',
+        selectedInterval: normalizeInterval(f?.selectedInterval),
       });
     }
     prevShowRef.current = show;
   }, [show]); // ← only `show` — DO NOT add `nominee` or `filters` here
 
-  // --- LOAD ARTWORK + EXTRACT DOMINANT COLOR ------------------------------
+  // --- RESOLVE NOMINEE CONTEXT + ELIGIBLE JURISDICTIONS --------------------
+  // 1. If the page didn't hand us the nominee's jurisdiction, genre, or any
+  //    image, fetch the nominee itself (one request) to fill the gaps.
+  // 2. Load the nominee's jurisdiction chain AND the voter's eligible list in
+  //    parallel, and offer only the overlap. The breadcrumb endpoint has no
+  //    votingEnabled flag, so on its own it listed areas where voting is off
+  //    and areas the voter can't vote in — both always rejected by the server
+  //    after the user had already typed the name forward and backward.
   useEffect(() => {
-    setArtworkFailed(false);
-
-    if (!show || !artworkUrl) {
-      setArtRGB(null);
-      return;
-    }
-
-    let active = true;
-    const img = new Image();
-
-    img.onload = () => {
-      if (!active) return;
-
-      try {
-        const SIZE = 20;
-        const canvas = document.createElement('canvas');
-        canvas.width = SIZE;
-        canvas.height = SIZE;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, SIZE, SIZE);
-
-        const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
-
-        let r = 0;
-        let g = 0;
-        let b = 0;
-        let n = 0;
-
-        for (let i = 0; i < data.length; i += 4) {
-          if (data[i + 3] < 125) continue;
-
-          r += data[i];
-          g += data[i + 1];
-          b += data[i + 2];
-          n += 1;
-        }
-
-        if (n === 0) {
-          setArtRGB(null);
-          return;
-        }
-
-        let R = r / n;
-        let G = g / n;
-        let B = b / n;
-
-        const avg = (R + G + B) / 3;
-        const lift = 1.28;
-
-        R = Math.max(0, Math.min(255, avg + (R - avg) * lift));
-        G = Math.max(0, Math.min(255, avg + (G - avg) * lift));
-        B = Math.max(0, Math.min(255, avg + (B - avg) * lift));
-
-        setArtRGB([Math.round(R), Math.round(G), Math.round(B)]);
-      } catch (e) {
-        // This can happen when the image loads visually but the canvas is tainted.
-        // Keep the artwork visible and simply fall back to the theme color.
-        setArtRGB(null);
-      }
-    };
-
-    img.onerror = () => {
-      if (!active) return;
-
-      setArtworkFailed(true);
-      setArtRGB(null);
-      console.warn('[VotingWizard] Artwork failed to load:', artworkUrl);
-    };
-
-    img.src = artworkUrl;
-
-    return () => {
-      active = false;
-    };
-  }, [show, artworkUrl]);
-
-  // --- FETCH ELIGIBLE JURISDICTIONS (BREADCRUMB) --------------------------
-  useEffect(() => {
-    if (!show || !nominee) return;
+    if (!show || !nominee) return undefined;
 
     let cancelled = false;
 
-    const fetchEligibleJurisdictions = async () => {
-      setIsFetchingJurisdictions(true);
+    const run = async () => {
+      setJurisdictionStatus('loading');
 
-      let nomineeJurisdictionId = null;
+      let homeId = nomineeHomeJurisdictionId(nominee);
+      const hasArtwork = artworkCandidatesFor(nominee).length > 0;
+      const canFetchDetails =
+        Boolean(nominee.id) && (nominee.type === 'artist' || nominee.type === 'song');
+      const needDetails = canFetchDetails && (!homeId || !nominee.genreId || !hasArtwork);
 
-      // ★ ironclad: real UUID from the nominee first
-      if (nominee.jurisdictionId) {
-        nomineeJurisdictionId = nominee.jurisdictionId;
-      } else if (nominee.jurisdiction) {
-        if (typeof nominee.jurisdiction === 'object' && nominee.jurisdiction.jurisdictionId) {
-          nomineeJurisdictionId = nominee.jurisdiction.jurisdictionId;
-        } else if (typeof nominee.jurisdiction === 'string') {
-          const slug = nominee.jurisdiction.toLowerCase().replace(/\s+/g, '-');
-          nomineeJurisdictionId = JURISDICTION_IDS[slug];
-        }
-      }
+      setNomineeExtras({ ...EMPTY_EXTRAS, pending: needDetails });
 
-      if (!nomineeJurisdictionId && nominee.id && nominee.type) {
+      if (needDetails) {
         try {
-          const endpoint =
+          const url =
             nominee.type === 'artist'
-              ? `/v1/users/${nominee.id}`
+              ? `/v1/users/profile/${nominee.id}`
               : `/v1/media/song/${nominee.id}`;
-          const response = await apiCall({ method: 'get', url: endpoint });
-          const fetchedJurisdiction = response.data.jurisdiction;
-          if (fetchedJurisdiction?.jurisdictionId) {
-            nomineeJurisdictionId = fetchedJurisdiction.jurisdictionId;
-          }
+          const res = await apiCall({ method: 'get', url });
+          if (cancelled) return;
+          const d = res?.data || {};
+          homeId = homeId || d.jurisdiction?.jurisdictionId || null;
+          setNomineeExtras({
+            genreId: d.genre?.genreId || null,
+            artwork: toImageSrc(nominee.type === 'artist' ? d.photoUrl : d.artworkUrl),
+            pending: false,
+          });
         } catch (err) {
-          console.error('Failed to fetch nominee details for jurisdiction:', err);
+          if (cancelled) return;
+          console.error('[VotingWizard] Could not load nominee details:', { nomineeId: nominee.id, err });
+          setNomineeExtras(EMPTY_EXTRAS);
         }
       }
 
-      if (cancelled) return;
-
-      // ★ ironclad: shared fallback — options come from the bootstrap map,
-      //   with real names via formatText, so the select is never empty.
-      const mapFallbackOptions = Object.entries(JURISDICTION_IDS).map(([slug, id]) => ({
-        jurisdictionId: id,
-        name: formatText(slug),
-      }));
-
-      if (!nomineeJurisdictionId) {
-        console.warn('[VotingWizard] Could not resolve nominee jurisdiction; using bootstrap options.'); // ★ checklist: logging
-        setJurisdictionOptions(mapFallbackOptions);
-        setSelectedJurisdictionId((prev) => prev || mapFallbackOptions[0]?.jurisdictionId || '');
-        setIsFetchingJurisdictions(false);
+      if (!homeId) {
+        console.error('[VotingWizard] Nominee jurisdiction unresolved — refusing to guess.', {
+          nomineeId: nominee.id,
+          type: nominee.type,
+        });
+        setJurisdictionOptions([]);
+        setJurisdictionStatus('unresolved');
         return;
       }
 
-      try {
-        const response = await apiCall({
-          method: 'get',
-          url: `/v1/jurisdictions/${nomineeJurisdictionId}/breadcrumb`,
-        });
-        if (cancelled) return;
+      const [crumbRes, eligibleRes] = await Promise.allSettled([
+        apiCall({ method: 'get', url: `/v1/jurisdictions/${homeId}/breadcrumb` }),
+        apiCall({ method: 'get', url: '/v1/vote/eligible-jurisdictions' }),
+      ]);
+      if (cancelled) return;
 
-        // ★ ironclad: the option list IS the API's voting-enabled breadcrumb —
-        //   any jurisdiction the backend deems eligible is selectable, with its
-        //   real name and real UUID. Nothing outside it ever reaches submit.
-        const options = (response.data || [])
-          .filter((j) => j.votingEnabled !== false)
-          .map((j) => ({ jurisdictionId: j.jurisdictionId, name: j.name }));
-
-        if (options.length === 0) {
-          console.warn('[VotingWizard] Breadcrumb returned no voting-enabled jurisdictions.'); // ★
-          setJurisdictionOptions(mapFallbackOptions);
-          setSelectedJurisdictionId((prev) => prev || mapFallbackOptions[0]?.jurisdictionId || '');
-          return;
-        }
-
-        setJurisdictionOptions(options);
-        setSelectedJurisdictionId((prev) =>
-          options.some((o) => o.jurisdictionId === prev)
-            ? prev
-            : (options.find((o) => o.jurisdictionId === nomineeJurisdictionId)?.jurisdictionId
-              || options[0].jurisdictionId)
-        );
-      } catch (err) {
-        if (cancelled) return;
-        console.error('Failed to fetch eligible jurisdictions:', err);
-        setJurisdictionOptions(mapFallbackOptions);
-        setSelectedJurisdictionId((prev) =>
-          mapFallbackOptions.some((o) => o.jurisdictionId === prev)
-            ? prev
-            : mapFallbackOptions[0]?.jurisdictionId || ''
-        );
-      } finally {
-        if (!cancelled) setIsFetchingJurisdictions(false);
+      if (crumbRes.status !== 'fulfilled') {
+        console.error('[VotingWizard] Failed to load nominee jurisdiction chain:', crumbRes.reason);
+        setJurisdictionOptions([]);
+        setJurisdictionStatus('unresolved');
+        return;
       }
+
+      // Breadcrumb is root → leaf; show most local first.
+      const chain = (Array.isArray(crumbRes.value?.data) ? crumbRes.value.data : [])
+        .filter((j) => j && j.jurisdictionId && j.votingEnabled !== false)
+        .map((j) => ({ jurisdictionId: j.jurisdictionId, name: j.name }))
+        .reverse();
+
+      let options = chain;
+      if (eligibleRes.status === 'fulfilled' && Array.isArray(eligibleRes.value?.data)) {
+        const eligible = new Set(
+          eligibleRes.value.data.map((j) => j?.jurisdictionId).filter(Boolean)
+        );
+        options = chain.filter((o) => eligible.has(o.jurisdictionId));
+      } else {
+        // Degraded mode: offer the nominee's chain; the server still validates
+        // and returns a clear reason if this voter can't vote there.
+        console.warn(
+          '[VotingWizard] Could not load your eligible jurisdictions; server will validate.',
+          eligibleRes.reason
+        );
+      }
+
+      if (options.length === 0) {
+        setJurisdictionOptions([]);
+        setJurisdictionStatus(chain.length > 0 ? 'none' : 'unresolved');
+        return;
+      }
+
+      setJurisdictionOptions(options);
+      const preferred = [...preferredJurisdictionsRef.current, homeId];
+      setSelectedJurisdictionId((prev) => {
+        if (options.some((o) => o.jurisdictionId === prev)) return prev;
+        const match = preferred.find((id) => options.some((o) => o.jurisdictionId === id));
+        return match || options[0].jurisdictionId;
+      });
+      setJurisdictionStatus('ready');
     };
 
-    fetchEligibleJurisdictions();
+    run();
     return () => {
       cancelled = true;
     };
-  }, [show, nominee?.id]);
+  }, [show, nominee?.id, nominee?.type, reloadKey]);
 
-  // ★ ironclad: isJurisdictionEligible removed — jurisdictionOptions IS the
-  //   pre-filtered eligible set straight from the API.
+  // --- ARTWORK: TRY EACH CANDIDATE UNTIL ONE LOADS ------------------------
+  const artCandidates = useMemo(() => {
+    const list = artworkCandidatesFor(selectedNominee);
+    if (nomineeExtras.artwork && !list.includes(nomineeExtras.artwork)) {
+      list.push(nomineeExtras.artwork);
+    }
+    // Hold the placeholder back while the details fetch might still find the
+    // real image, so the user doesn't see the placeholder flash first.
+    if (!nomineeExtras.pending && !list.includes(fallbackArtwork)) {
+      list.push(fallbackArtwork);
+    }
+    return list;
+  }, [selectedNominee, nomineeExtras.artwork, nomineeExtras.pending]);
+
+  const artKey = JSON.stringify(artCandidates);
+
+  useEffect(() => {
+    if (!show) return undefined;
+
+    let active = true;
+    const list = JSON.parse(artKey);
+    let i = 0;
+
+    const tryNext = () => {
+      if (!active) return;
+      if (i >= list.length) {
+        setArtworkSrc(null);
+        setArtRGB(null);
+        return;
+      }
+      const src = list[i];
+      i += 1;
+      const img = new Image();
+      img.onload = () => {
+        if (!active) return;
+        setArtworkSrc(src);
+        setArtRGB(dominantColor(img));
+      };
+      img.onerror = () => {
+        if (!active) return;
+        if (src !== fallbackArtwork) {
+          console.warn('[VotingWizard] Artwork failed to load, trying next source:', src);
+        }
+        tryNext();
+      };
+      img.src = src;
+    };
+
+    tryNext();
+    return () => {
+      active = false;
+    };
+  }, [show, artKey]);
 
   // --- CONFETTI ON SUCCESS ------------------------------------------------
   useEffect(() => {
@@ -440,9 +558,10 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   const triggerFireworks = () => {
     const duration = 2200;
     const animationEnd = Date.now() + duration;
+    const themePrimary = readThemePrimary();
     const palette = artRGB
-      ? [`rgb(${artRGB.join(',')})`, '#ffffff', '#C0C0C0', '#163387']
-      : ['#163387', '#3a5fcf', '#C0C0C0', '#ffffff'];
+      ? [`rgb(${artRGB.join(',')})`, '#ffffff', '#C0C0C0', themePrimary]
+      : [themePrimary, '#ffffff', '#C0C0C0'];
     const defaults = {
       startVelocity: 28,
       spread: 360,
@@ -461,8 +580,100 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     }, 220);
   };
 
+  // --- CLOSE (never mid-submit) -------------------------------------------
+  // Closing while the request is in flight would hide the result — the vote
+  // could count with the user never knowing, then a retry hits "Already Voted".
+  const handleClose = () => {
+    if (submittingRef.current) return;
+    onClose?.();
+  };
+
+  useEffect(() => {
+    if (!show) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !showPhoneModal) handleClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  // --- DERIVED ------------------------------------------------------------
+  // Genre: the nominee's real UUID first, then fetched details, then the
+  // page's filter. The label is derived from the SAME id that gets submitted,
+  // so what the user sees is always what they vote in.
+  const resolvedGenreId =
+    selectedNominee?.genreId ||
+    nomineeExtras.genreId ||
+    GENRE_IDS[currentFilters.selectedGenre] ||
+    GENRE_IDS[String(currentFilters.selectedGenre || '').toLowerCase()] ||
+    null;
+  const genreLabel = formatText(GENRE_NAMES[resolvedGenreId] || currentFilters.selectedGenre);
+
+  const typeWord = formatText(currentFilters.selectedType); // "Song"
+  const intervalKey = currentFilters.selectedInterval;
+  const intervalNoun = INTERVAL_NOUN[intervalKey] || formatText(intervalKey);
+  const category = `${typeWord} of the ${intervalNoun}`; // "Song of the week"
+
+  const selectedJurisdictionName =
+    jurisdictionOptions.find((o) => o.jurisdictionId === selectedJurisdictionId)?.name || '…';
+
+  // Problems the user should learn about on step 1 — before typing anything.
+  let issue = null;
+  if (isGuest) {
+    issue = {
+      kind: 'guest',
+      title: 'Sign in to vote',
+      body: 'Voting is for Unis members. Sign in or create a free account to cast your vote.',
+      actionLabel: 'Sign in',
+      onAction: () => {
+        onClose?.();
+        navigate('/login');
+      },
+    };
+  } else if (user && !user.phoneVerified) {
+    issue = {
+      kind: 'phone',
+      title: 'Verify your phone to vote',
+      body: 'A quick phone check keeps voting fair — one person, one vote. It takes about a minute.',
+      actionLabel: 'Verify phone',
+      onAction: () => setShowPhoneModal(true),
+    };
+  } else if (jurisdictionStatus === 'unresolved') {
+    issue = {
+      kind: 'load',
+      title: 'Couldn’t load this race',
+      body: `We couldn’t confirm where ${nomineeName || 'this nominee'} can be voted on, so we won’t guess. Check your connection and try again.`,
+      actionLabel: 'Try again',
+      onAction: () => setReloadKey((k) => k + 1),
+    };
+  } else if (jurisdictionStatus === 'none') {
+    issue = {
+      kind: 'area',
+      title: 'Outside your voting area',
+      body: `${nomineeName || 'This nominee'} isn’t on the ballot anywhere you can vote. You can vote in your home area and the areas above it.`,
+    };
+  }
+
+  const canProceed =
+    !issue &&
+    jurisdictionStatus === 'ready' &&
+    Boolean(selectedJurisdictionId) &&
+    Boolean(resolvedGenreId) &&
+    Boolean(INTERVAL_IDS[intervalKey]);
+
+  const forwardMatches =
+    artistNameForward.trim().length > 0 &&
+    normalizeName(artistNameForward) === normalizeName(nomineeName);
+  const backwardMatches =
+    artistNameBackward.trim().length > 0 &&
+    normalizeName(artistNameBackward) === normalizeName(reversedNomineeName);
+  const canSubmit = forwardMatches && backwardMatches && !submitting;
+
+  const showArtwork = Boolean(artworkSrc);
+
   // --- NAV ----------------------------------------------------------------
   const handleNext = () => {
+    if (step === 1 && !canProceed) return;
     setVoteResult({ status: 'idle', message: '' });
     if (step < TOTAL_STEPS) {
       setDirection(1);
@@ -480,9 +691,10 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   // --- SUBMIT -------------------------------------------------------------
   const handleConfirmVote = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     setVoteResult({ status: 'idle', message: '' });
 
-    if (artistNameForward.toLowerCase() !== selectedNominee.name.toLowerCase()) {
+    if (!forwardMatches) {
       setVoteResult({
         status: 'error',
         message: 'Name Forward Invalid',
@@ -490,7 +702,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       });
       return;
     }
-    if (artistNameBackward.toLowerCase() !== reversedNomineeName.toLowerCase()) {
+    if (!backwardMatches) {
       setVoteResult({
         status: 'error',
         message: 'Name Backward Invalid',
@@ -499,32 +711,39 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       return;
     }
 
-    setSubmitting(true);
+    if (!user?.phoneVerified) {
+      setVoteResult({
+        status: 'ineligible',
+        message: isGuest ? 'Sign In Required' : 'Phone Not Verified',
+        details: isGuest ? 'Sign in to vote.' : 'Verify your phone number to vote.',
+      });
+      return;
+    }
 
-    // ★ ironclad: resolve every ID up front — real UUIDs first, bootstrap map
-    //   as fallback — and refuse to send a doomed request. Each missing piece
-    //   gets its own named message instead of a mystery failure downstream.
-    const genreId =
-      selectedNominee.genreId
-      || GENRE_IDS[currentFilters.selectedGenre]
-      || GENRE_IDS[(currentFilters.selectedGenre || '').toLowerCase()];
-    const jurisdictionId = selectedJurisdictionId;
-    const intervalId = INTERVAL_IDS[currentFilters.selectedInterval];
+    // Resolve every ID up front and refuse to send a doomed request. Each
+    // missing piece gets its own named message.
+    const genreId = resolvedGenreId;
+    const jurisdictionId = jurisdictionOptions.some((o) => o.jurisdictionId === selectedJurisdictionId)
+      ? selectedJurisdictionId
+      : null;
+    const intervalId = INTERVAL_IDS[intervalKey];
 
     const missing =
       (!genreId && 'genre') || (!jurisdictionId && 'jurisdiction') || (!intervalId && 'interval');
     if (missing) {
-      console.error(`[VotingWizard] Vote blocked — unresolved ${missing}:`, { // ★ checklist: logging
-        genreId, jurisdictionId, intervalId, filters: currentFilters, nominee: selectedNominee,
+      console.error(`[VotingWizard] Vote blocked — unresolved ${missing}:`, {
+        genreId, jurisdictionId, intervalId, filters: currentFilters, nomineeId: selectedNominee?.id,
       });
       setVoteResult({
         status: 'error',
         message: 'Vote Not Sent',
         details: `We couldn't identify this vote's ${missing}. Please close and reopen the wizard — if it keeps happening, contact support.`,
       });
-      setSubmitting(false);
       return;
     }
+
+    submittingRef.current = true;
+    setSubmitting(true);
 
     try {
       const voteData = {
@@ -534,26 +753,12 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         genreId,
         jurisdictionId,
         intervalId,
-        // ★ ironclad: voteDate removed — the server now stamps the date in the
-        //   platform timezone. The old client-side UTC date rolled to
-        //   "tomorrow" after ~8pm New York time, causing phantom duplicate
-        //   rejections and window mismatches.
+        // No voteDate — the server stamps the date in the platform timezone.
       };
-
-      if (!user?.phoneVerified) {
-        setVoteResult({
-          status: 'ineligible',
-          message: 'Phone Not Verified',
-          details: 'Verify your phone number to vote.',
-        });
-        return;
-      }
 
       await apiCall({ method: 'post', url: '/v1/vote/submit', data: voteData });
 
       // Capture the EXACT running score for the takeover (before → after).
-      // No floating reward pill on the vote path anymore — the takeover owns
-      // the "+N pts" moment, so the two no longer stack/overlap.
       const rawBefore =
         displayedScore ??
         user?.score ??
@@ -569,6 +774,13 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         setScoreTotal(scoreAfter); // keep the app-wide running total in sync
       }
 
+      console.info('[VotingWizard] Vote recorded', {
+        targetType: voteData.targetType,
+        targetId: voteData.targetId,
+        jurisdictionId,
+        intervalId,
+      });
+
       setVoteResult({
         status: 'success',
         message: 'Vote Recorded',
@@ -580,17 +792,16 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       const resp = err.response;
       const status = resp?.status;
       const data = resp?.data;
-      // ★ ironclad: the backend now always sends {code, message} JSON, but we
-      //   also accept legacy plain-string bodies so no message is ever lost.
+      // The backend sends {code, message} JSON; legacy plain-string bodies are
+      // accepted too so no message is ever lost.
       const serverMsg =
         (data && typeof data === 'object' && (data.message || data.error))
         || (typeof data === 'string' && data.trim() ? data.trim() : '');
 
-      console.error('Vote submission failed:', { status, serverMsg, data, err }); // ★ checklist: logging
+      console.error('Vote submission failed:', { status, serverMsg, data, err });
 
       if (!resp) {
-        // ★ ironclad: ONLY a request that never reached the server is called a
-        //   connection problem. Every server response shows the server's words.
+        // ONLY a request that never reached the server is a connection problem.
         setVoteResult({
           status: 'network',
           message: 'Connection Failed',
@@ -624,52 +835,19 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         });
       }
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
-  const formatText = (str) =>
-    str ? str.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '';
-
-  // ★ ironclad: display name comes from the selected option itself
-  const selectedJurisdictionName =
-    jurisdictionOptions.find((o) => o.jurisdictionId === selectedJurisdictionId)?.name || '…';
-
-  const forwardMatches =
-    artistNameForward.length > 0 &&
-    artistNameForward.toLowerCase() === (selectedNominee?.name || '').toLowerCase();
-  const backwardMatches =
-    artistNameBackward.length > 0 &&
-    artistNameBackward.toLowerCase() === reversedNomineeName.toLowerCase();
-  const canSubmit = forwardMatches && backwardMatches && !submitting;
-
-  const showArtwork = Boolean(artworkUrl) && !artworkFailed;
-
-  // --- RESULT RENDER ------------------------------------------------------
+  // --- RESULT RENDER (errors) ---------------------------------------------
   const renderResult = () => {
     const { status, message, details } = voteResult;
 
-    let iconColor = '#163387';
+    let iconColor = '#D85A3B';
     let IconSVG = null;
 
     switch (status) {
-      case 'success':
-        iconColor = artRGB ? `rgb(${artRGB.join(',')})` : '#163387';
-        IconSVG = (
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
-            <motion.path
-              d="M20 6L9 17l-5-5"
-              stroke={iconColor}
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              variants={iconDraw}
-              initial="hidden"
-              animate="visible"
-            />
-          </svg>
-        );
-        break;
       case 'duplicate':
         iconColor = '#E0A93C';
         IconSVG = (
@@ -688,7 +866,6 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         );
         break;
       case 'ineligible':
-        iconColor = '#D85A3B';
         IconSVG = (
           <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
             <motion.g variants={iconDraw} initial="hidden" animate="visible">
@@ -699,7 +876,6 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         );
         break;
       default:
-        iconColor = '#D85A3B';
         IconSVG = (
           <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
             <motion.path
@@ -716,56 +892,33 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         );
     }
 
+    // "Already voted" / "not eligible" won't change by retrying the same
+    // race — send the user back to step 1 to pick another interval or area.
+    const changeSelection = status === 'duplicate' || status === 'ineligible';
+
     return (
-      <div className={`vw-result vw-result--${status}`}>
+      <div className={`vw-result vw-result--${status}`} role="alert">
         <div className="vw-result__icon" style={{ borderColor: iconColor }}>
           {IconSVG}
         </div>
         <h2 className="vw-result__heading" style={{ color: iconColor }}>
           {message}
         </h2>
-
-        {status === 'success' ? (
-          <div className="vw-receipt">
-            <span className="vw-receipt__label">Confirmed Nominee</span>
-            <h3 className="vw-receipt__name">{selectedNominee.name}</h3>
-            <div className="vw-receipt__rule" />
-            <div className="vw-receipt__grid">
-              <div>
-                <span>Type</span>
-                <strong>{formatText(currentFilters.selectedType)}</strong>
-              </div>
-              <div>
-                <span>Interval</span>
-                <strong>{formatText(currentFilters.selectedInterval)}</strong>
-              </div>
-              <div>
-                <span>Genre</span>
-                <strong>{formatText(currentFilters.selectedGenre)}</strong>
-              </div>
-              <div>
-                <span>Jurisdiction</span>
-                <strong>{selectedJurisdictionName}</strong>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="vw-result__details">{details}</p>
-        )}
+        <p className="vw-result__details">{details}</p>
 
         <div className="vw-actions vw-actions--center">
-          {status === 'success' ? (
-            <button className="vw-btn vw-btn--primary" onClick={() => onVoteSuccess(selectedNominee.id)}>
-              Done
-            </button>
-          ) : (
-            <button
-              className="vw-btn vw-btn--ghost"
-              onClick={() => setVoteResult({ status: 'idle' })}
-            >
-              Try Again
-            </button>
-          )}
+          <button
+            className="vw-btn vw-btn--ghost"
+            onClick={() => {
+              setVoteResult({ status: 'idle' });
+              if (changeSelection) {
+                setDirection(-1);
+                setStep(1);
+              }
+            }}
+          >
+            {changeSelection ? 'Change Selection' : 'Try Again'}
+          </button>
         </div>
       </div>
     );
@@ -774,14 +927,9 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   // --- SUCCESS TAKEOVER ---------------------------------------------------
   // Full-bleed result: the nominee's artwork consumes the whole modal, a
   // themed points tag states the exact score gained (before → after), and a
-  // single pill dismisses. Replaces the old receipt card + floating pill.
+  // single pill dismisses.
   const renderSuccessTakeover = () => {
     const { points = VOTE_POINTS, scoreBefore, scoreAfter } = voteResult;
-
-    const typeWord = formatText(currentFilters.selectedType);          // "Song"
-    const intervalKey = (currentFilters.selectedInterval || '').toLowerCase();
-    const intervalNoun = INTERVAL_NOUN[intervalKey] || formatText(currentFilters.selectedInterval);
-    const category = `${typeWord} of the ${intervalNoun}`;             // "Song of the week"
     const hasScore =
       typeof scoreBefore === 'number' && typeof scoreAfter === 'number';
 
@@ -795,7 +943,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         {showArtwork && (
           <div
             className="vw-win__bg"
-            style={{ backgroundImage: `url("${artworkUrl}")` }}
+            style={{ backgroundImage: `url("${artworkSrc}")` }}
             aria-hidden="true"
           />
         )}
@@ -805,7 +953,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
         <div className="vw-win__frame">
           <header className="vw-win__top">
             <img src={activeLogo} alt="UNIS" className="vw-win__logo" />
-            <button className="vw-win__close" onClick={onClose} aria-label="Close">
+            <button className="vw-win__close" onClick={handleClose} aria-label="Close">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
@@ -835,15 +983,15 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
           {showArtwork && (
             <img
-              src={artworkUrl}
-              alt={selectedNominee.name}
+              src={artworkSrc}
+              alt={nomineeName}
               className="vw-win__cover"
             />
           )}
 
           <p className="vw-win__eyebrow">Vote locked in</p>
           <h2 className="vw-win__head">
-            You backed <em>{selectedNominee.name}</em> for the {intervalNoun}
+            You backed <em>{nomineeName}</em> for the {intervalNoun}
           </h2>
           <p className="vw-win__body">
             Your vote counted toward {category} in {selectedJurisdictionName}. One
@@ -853,12 +1001,12 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
           <button
             className="vw-btn vw-win__cta"
-            onClick={() => onVoteSuccess(selectedNominee.id)}
+            onClick={() => onVoteSuccess?.(selectedNominee?.id)}
           >
             Done
           </button>
           <p className="vw-win__sub">
-            +{points} points added to your score. Come back tomorrow to vote again.
+            +{points} points added to your score.
           </p>
         </div>
       </motion.div>
@@ -866,6 +1014,24 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   };
 
   // --- STEP RENDER --------------------------------------------------------
+  const renderIssue = () => {
+    if (!issue) return null;
+    return (
+      <div className={`vw-notice vw-notice--${issue.kind}`} role="status">
+        <span className="vw-notice__dot" aria-hidden="true" />
+        <div className="vw-notice__text">
+          <strong>{issue.title}</strong>
+          <p>{issue.body}</p>
+        </div>
+        {issue.actionLabel && (
+          <button type="button" className="vw-notice__btn" onClick={issue.onAction}>
+            {issue.actionLabel}
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const renderStepContent = () => {
     if (!selectedNominee) return null;
 
@@ -877,61 +1043,59 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
               <div className="vw-step__head-main">
                 <span className="vw-eyebrow">Step 1 — Review</span>
                 <h2 className="vw-title">Confirm your vote for</h2>
-                <h1 className="vw-nominee">{selectedNominee.name}</h1>
+                <h1 className="vw-nominee">{nomineeName}</h1>
               </div>
-              {showArtwork && (
-                <div className="vw-thumb">
-                  <img
-                    src={artworkUrl}
-                    alt={selectedNominee.name}
-                    onError={() => setArtworkFailed(true)}
-                  />
-                </div>
-              )}
+              <div className={`vw-thumb ${showArtwork ? '' : 'vw-thumb--loading'}`}>
+                {showArtwork && <img src={artworkSrc} alt={nomineeName} />}
+              </div>
             </div>
+
+            {renderIssue()}
 
             <div className="vw-fields">
               <div className="vw-field">
                 <label>Genre</label>
-                <div className="vw-chip vw-chip--locked">{formatText(currentFilters.selectedGenre)}</div>
+                <div className="vw-chip vw-chip--locked">{genreLabel}</div>
               </div>
               <div className="vw-field">
                 <label>Category</label>
-                <div className="vw-chip vw-chip--locked">{formatText(currentFilters.selectedType)}</div>
+                <div className="vw-chip vw-chip--locked">{typeWord}</div>
               </div>
               <div className="vw-field">
-                <label>Interval</label>
+                <label htmlFor="vw-interval">Interval</label>
                 <select
+                  id="vw-interval"
                   className="vw-select"
                   value={currentFilters.selectedInterval}
                   onChange={(e) =>
                     setCurrentFilters({ ...currentFilters, selectedInterval: e.target.value })
                   }
                 >
-                  <option value="daily">Day</option>
-                  <option value="weekly">Week</option>
-                  <option value="monthly">Month</option>
-                  <option value="quarterly">Quarter</option>
-                  <option value="annual">Year</option>
+                  {INTERVAL_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="vw-field">
-                <label>Jurisdiction</label>
+                <label htmlFor="vw-jurisdiction">Jurisdiction</label>
                 <select
+                  id="vw-jurisdiction"
                   className="vw-select"
                   value={selectedJurisdictionId}
                   onChange={(e) => setSelectedJurisdictionId(e.target.value)}
-                  disabled={isFetchingJurisdictions}
+                  disabled={jurisdictionStatus !== 'ready'}
                 >
-                  {isFetchingJurisdictions ? (
-                    <option>Loading…</option>
-                  ) : (
-                    jurisdictionOptions.map((o) => ( // ★ ironclad: real names + UUIDs from the API
-                      <option key={o.jurisdictionId} value={o.jurisdictionId}>
-                        {o.name}
-                      </option>
-                    ))
+                  {jurisdictionStatus === 'loading' && <option value="">Loading…</option>}
+                  {jurisdictionStatus !== 'loading' && jurisdictionOptions.length === 0 && (
+                    <option value="">Unavailable</option>
                   )}
+                  {jurisdictionOptions.map((o) => (
+                    <option key={o.jurisdictionId} value={o.jurisdictionId}>
+                      {o.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -947,13 +1111,11 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
             <div className="vw-summary">
               <div className="vw-summary__row">
                 <span>Nominee</span>
-                <strong>{selectedNominee.name}</strong>
+                <strong>{nomineeName}</strong>
               </div>
               <div className="vw-summary__row">
                 <span>As</span>
-                <strong>
-                  {formatText(currentFilters.selectedType)} of the {formatText(currentFilters.selectedInterval)}
-                </strong>
+                <strong>{category}</strong>
               </div>
               <div className="vw-summary__row">
                 <span>In</span>
@@ -961,7 +1123,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
               </div>
               <div className="vw-summary__row">
                 <span>Genre</span>
-                <strong>{formatText(currentFilters.selectedGenre)}</strong>
+                <strong>{genreLabel}</strong>
               </div>
             </div>
 
@@ -984,18 +1146,22 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
             <form onSubmit={handleConfirmVote} className="vw-form">
               <div className={`vw-input-group ${forwardMatches ? 'vw-input-group--match' : ''}`}>
                 <div className="vw-input-meta">
-                  <label>Forward</label>
-                  <span className="vw-ref">{selectedNominee.name}</span>
+                  <label htmlFor="vw-name-forward">Forward</label>
+                  <span className="vw-ref">{nomineeName}</span>
                 </div>
                 <div className="vw-input-wrap">
                   <input
+                    id="vw-name-forward"
                     type="text"
                     value={artistNameForward}
                     onChange={(e) => setArtistNameForward(e.target.value)}
                     placeholder="Type the name…"
                     disabled={submitting}
                     autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
                     spellCheck="false"
+                    enterKeyHint="next"
                   />
                   {forwardMatches && (
                     <span className="vw-check" aria-hidden="true">
@@ -1015,18 +1181,22 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
               <div className={`vw-input-group ${backwardMatches ? 'vw-input-group--match' : ''}`}>
                 <div className="vw-input-meta">
-                  <label>Backward</label>
+                  <label htmlFor="vw-name-backward">Backward</label>
                   <span className="vw-ref vw-ref--reverse">{reversedNomineeName}</span>
                 </div>
                 <div className="vw-input-wrap">
                   <input
+                    id="vw-name-backward"
                     type="text"
                     value={artistNameBackward}
                     onChange={(e) => setArtistNameBackward(e.target.value)}
                     placeholder="Type the name reversed…"
                     disabled={submitting}
                     autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
                     spellCheck="false"
+                    enterKeyHint="done"
                   />
                   {backwardMatches && (
                     <span className="vw-check" aria-hidden="true">
@@ -1066,141 +1236,170 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   const modalStyle = artRGB ? { '--vw-art': artRGB.join(', ') } : undefined;
 
   return (
-    <AnimatePresence>
-      {show && (
-        <motion.div
-          className="vw-overlay"
-          key="vw-overlay"
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          onClick={onClose}
-        >
+    <>
+      <AnimatePresence>
+        {show && (
           <motion.div
-            className={`vw-modal ${voteResult.status === 'success' ? 'vw-modal--success' : ''}`}
-            style={modalStyle}
-            variants={modalVariants}
+            className="vw-overlay"
+            key="vw-overlay"
+            variants={overlayVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleClose}
           >
-            {voteResult.status === 'success' ? (
-              renderSuccessTakeover()
-            ) : (
-              <>
-            {/* Ambient artwork wash — blurred copy of the cover/photo */}
-            {showArtwork && (
-              <div
-                className="vw-ambient"
-                style={{ backgroundImage: `url("${artworkUrl}")` }}
-                aria-hidden="true"
-              />
-            )}
-
-            <div className="vw-modal__inner">
-              {/* Header */}
-              <header className="vw-header">
-                <div className="vw-brand">
-                  <img src={activeLogo} alt="UNIS" className="vw-brand__logo" />
-                  <span className="vw-brand__step">
-                    {isResult ? 'Result' : `${step} of ${TOTAL_STEPS}`}
-                  </span>
-                </div>
-                <button className="vw-close" onClick={onClose} aria-label="Close">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                </button>
-              </header>
-
-              {/* Progress rail */}
-              {!isResult && (
-                <div
-                  className="vw-progress"
-                  role="progressbar"
-                  aria-valuenow={step}
-                  aria-valuemin={1}
-                  aria-valuemax={TOTAL_STEPS}
-                >
-                  {[1, 2, 3].map((n) => (
+            <motion.div
+              className={`vw-modal ${voteResult.status === 'success' ? 'vw-modal--success' : ''}`}
+              style={modalStyle}
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label={nomineeName ? `Vote for ${nomineeName}` : 'Vote'}
+            >
+              {voteResult.status === 'success' ? (
+                renderSuccessTakeover()
+              ) : (
+                <>
+                  {/* Ambient artwork wash — blurred copy of the cover/photo */}
+                  {showArtwork && (
                     <div
-                      key={n}
-                      className={`vw-progress__seg ${n <= step ? 'vw-progress__seg--active' : ''}`}
-                    >
-                      <motion.div
-                        className="vw-progress__fill"
-                        initial={false}
-                        animate={{ scaleX: n <= step ? 1 : 0 }}
-                        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                        style={{ transformOrigin: 'left center' }}
-                      />
+                      className="vw-ambient"
+                      style={{ backgroundImage: `url("${artworkSrc}")` }}
+                      aria-hidden="true"
+                    />
+                  )}
+
+                  <div className="vw-modal__inner">
+                    {/* Header */}
+                    <header className="vw-header">
+                      <div className="vw-brand">
+                        <img src={activeLogo} alt="UNIS" className="vw-brand__logo" />
+                        <span className="vw-brand__step">
+                          {isResult ? 'Result' : `${step} of ${TOTAL_STEPS}`}
+                        </span>
+                      </div>
+                      <button
+                        className="vw-close"
+                        onClick={handleClose}
+                        aria-label="Close"
+                        disabled={submitting}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    </header>
+
+                    {/* Progress rail */}
+                    {!isResult && (
+                      <div
+                        className="vw-progress"
+                        role="progressbar"
+                        aria-valuenow={step}
+                        aria-valuemin={1}
+                        aria-valuemax={TOTAL_STEPS}
+                      >
+                        {[1, 2, 3].map((n) => (
+                          <div
+                            key={n}
+                            className={`vw-progress__seg ${n <= step ? 'vw-progress__seg--active' : ''}`}
+                          >
+                            <motion.div
+                              className="vw-progress__fill"
+                              initial={false}
+                              animate={{ scaleX: n <= step ? 1 : 0 }}
+                              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                              style={{ transformOrigin: 'left center' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Body */}
+                    <div className="vw-body">
+                      <AnimatePresence mode="wait" custom={direction}>
+                        {isResult ? (
+                          <motion.div
+                            key="result"
+                            variants={stepVariantsForward}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                          >
+                            {renderResult()}
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key={`step-${step}`}
+                            variants={stepVariants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                          >
+                            {renderStepContent()}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-                  ))}
-                </div>
-              )}
 
-              {/* Body */}
-              <div className="vw-body">
-                <AnimatePresence mode="wait" custom={direction}>
-                  {isResult ? (
-                    <motion.div
-                      key="result"
-                      variants={stepVariantsForward}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                    >
-                      {renderResult()}
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key={`step-${step}`}
-                      variants={stepVariants}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                    >
-                      {renderStepContent()}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                    {/* Footer */}
+                    {!isResult && step < 3 && (
+                      <footer className="vw-footer">
+                        {step > 1 ? (
+                          <button onClick={handleBack} className="vw-btn vw-btn--ghost" disabled={submitting}>
+                            Back
+                          </button>
+                        ) : (
+                          <div />
+                        )}
+                        <button
+                          onClick={handleNext}
+                          className="vw-btn vw-btn--primary"
+                          disabled={step === 1 && !canProceed}
+                        >
+                          Next
+                        </button>
+                      </footer>
+                    )}
 
-              {/* Footer */}
-              {!isResult && step < 3 && (
-                <footer className="vw-footer">
-                  {step > 1 ? (
-                    <button onClick={handleBack} className="vw-btn vw-btn--ghost" disabled={submitting}>
-                      Back
-                    </button>
-                  ) : (
-                    <div />
-                  )}
-                  <button onClick={handleNext} className="vw-btn vw-btn--primary">
-                    Next
-                  </button>
-                </footer>
+                    {!isResult && step === 3 && (
+                      <footer className="vw-footer">
+                        <button onClick={handleBack} className="vw-btn vw-btn--ghost" disabled={submitting}>
+                          Back
+                        </button>
+                        <span className="vw-footer__hint">
+                          {!forwardMatches || !backwardMatches ? 'Type both names exactly to enable' : 'Ready to cast'}
+                        </span>
+                      </footer>
+                    )}
+                  </div>
+                </>
               )}
-
-              {!isResult && step === 3 && (
-                <footer className="vw-footer">
-                  <button onClick={handleBack} className="vw-btn vw-btn--ghost" disabled={submitting}>
-                    Back
-                  </button>
-                  <span className="vw-footer__hint">
-                    {!forwardMatches || !backwardMatches ? 'Type both names exactly to enable' : 'Ready to cast'}
-                  </span>
-                </footer>
-              )}
-            </div>
-              </>
-            )}
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+
+      {/* Rendered OUTSIDE the animated modal: the modal's transform would
+          otherwise trap this fixed-position sheet inside the wizard's box. */}
+      <PhoneVerificationModal
+        show={showPhoneModal}
+        onClose={() => setShowPhoneModal(false)}
+        onVerified={async () => {
+          setShowPhoneModal(false);
+          try {
+            await refreshUser?.();
+          } catch (e) {
+            console.error('[VotingWizard] refreshUser after phone verification failed:', e);
+          }
+        }}
+      />
+    </>
   );
 };
 

@@ -72,7 +72,7 @@ describe('VotingWizard — success takeover', () => {
         ])
       ),
       // A phone-verified listener with a real score so the takeover can show
-      // an exact before→after (7,325 → 7,350) and pass the submit gate.
+      // an exact before→after (7,325 → 7,327) and pass the submit gate.
       http.get(`${API}/v1/users/profile/:userId`, () =>
         HttpResponse.json({
           ...fixtures.users.listener,
@@ -99,7 +99,10 @@ describe('VotingWizard — success takeover', () => {
     );
 
     await screen.findByText(/Tony Fadd/);
-    await user.click(screen.getByRole('button', { name: /next/i }));
+    // Next stays disabled until the voter + eligible race have loaded.
+    const next = screen.getByRole('button', { name: /next/i });
+    await waitFor(() => expect(next).toBeEnabled());
+    await user.click(next);
     await screen.findByText(/Final Confirmation/i);
     await user.click(screen.getByRole('button', { name: /next/i }));
     await screen.findByText(/Type the name/i);
@@ -116,14 +119,15 @@ describe('VotingWizard — success takeover', () => {
 
     // Category badge derived from type + interval (also echoed in the body).
     expect(screen.getAllByText(/Artist of the week/i).length).toBeGreaterThan(0);
-    // Themed points tag (+25 also echoed in the sub-line).
-    expect(screen.getAllByText(/\+25/).length).toBeGreaterThan(0);
+    // Themed points tag — the SAME value the backend awards (+2), echoed in
+    // the sub-line. It used to say +25 while the server gave +2.
+    expect(screen.getAllByText(/\+2\b/).length).toBeGreaterThan(0);
     expect(screen.getByText(/pts/i)).toBeInTheDocument();
     // Headline names the nominee.
     expect(screen.getByText(/You backed/i)).toBeInTheDocument();
     // EXACT score line — the whole point. Not "7.3K → 7.3K".
     expect(screen.getByText(/7,325/)).toBeInTheDocument();
-    expect(screen.getByText(/7,350/)).toBeInTheDocument();
+    expect(screen.getByText(/7,327/)).toBeInTheDocument();
     // Single dismiss pill.
     expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument();
   });

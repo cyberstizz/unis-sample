@@ -73,6 +73,13 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
   width: 100%;
   max-width: 460px;
+  // Never taller than the screen. Before this, a short phone (or landscape)
+  // pushed the Done / Cast Vote buttons off-screen with no way to scroll.
+  // The inner content scrolls instead (see .vw-modal__inner / .vw-win__frame).
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(180deg, $vw-surface-2 0%, $vw-surface-1 100%);
   border: 1px solid $vw-line;
   border-radius: 18px;
@@ -139,6 +146,11 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
 .vw-modal__inner {
   position: relative;
   z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 // -------------------------------------------------------------------------
@@ -186,10 +198,15 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 
-  &:hover {
+  &:hover:not(:disabled) {
     color: $vw-text;
     border-color: $vw-line-strong;
     background: rgba(255, 255, 255, 0.06);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 }
 
@@ -266,6 +283,105 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
     height: 100%;
     object-fit: cover;
     display: block;
+    animation: vwFadeIn 0.25s $vw-ease;
+  }
+
+  // Holds its space while the artwork loads, so nothing jumps when it arrives.
+  &--loading {
+    background:
+      linear-gradient(110deg,
+        rgba(255, 255, 255, 0.03) 30%,
+        rgba(255, 255, 255, 0.09) 50%,
+        rgba(255, 255, 255, 0.03) 70%);
+    background-size: 220% 100%;
+    animation: vwShimmer 1.2s linear infinite;
+  }
+}
+
+@keyframes vwFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes vwShimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+
+// -------------------------------------------------------------------------
+// Notice (step 1) — guest, phone not verified, race couldn't load, or the
+// nominee isn't on any ballot this user can vote in. Shown BEFORE the user
+// types anything, instead of failing after step 3.
+// -------------------------------------------------------------------------
+.vw-notice {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(224, 169, 60, 0.10);
+  border: 1px solid rgba(224, 169, 60, 0.28);
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    margin-top: 6px;
+    border-radius: 50%;
+    background: $vw-warn;
+    box-shadow: 0 0 8px $vw-warn;
+    flex-shrink: 0;
+  }
+
+  &__text {
+    flex: 1 1 200px;
+    min-width: 0;
+
+    strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 650;
+      color: $vw-text;
+    }
+
+    p {
+      margin: 4px 0 0;
+      font-size: 12px;
+      line-height: 1.45;
+      color: $vw-text-mute;
+    }
+  }
+
+  &__btn {
+    margin-left: auto;
+    align-self: center;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: none;
+    background: $vw-primary;
+    color: #fff;
+    font-family: $vw-body;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.15s $vw-ease, box-shadow 0.15s $vw-ease;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px -6px $vw-primary-glow;
+    }
+  }
+
+  &--area {
+    background: rgba(216, 90, 59, 0.10);
+    border-color: rgba(216, 90, 59, 0.28);
+
+    .vw-notice__dot {
+      background: $vw-error;
+      box-shadow: 0 0 8px $vw-error;
+    }
   }
 }
 
@@ -834,6 +950,19 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
   .vw-receipt__grid {
     grid-template-columns: 1fr 1fr;
   }
+  // iOS zooms the whole page when a field under 16px is focused, which left
+  // the wizard zoomed-in and mis-sized after typing the name.
+  .vw-input-wrap input,
+  .vw-select {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vw-thumb img,
+  .vw-thumb--loading {
+    animation: none;
+  }
 }
 // =========================================================================
 // SUCCESS TAKEOVER (.vw-win)
@@ -843,7 +972,11 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
 // =========================================================================
 .vw-win {
   position: relative;
-  min-height: min(560px, 82vh);
+  flex: 1 1 auto;
+  // Tall on a phone, but never taller than the screen — the frame scrolls if
+  // the copy runs long, so the Done pill is always reachable.
+  min-height: min(560px, calc(100vh - 32px));
+  min-height: min(560px, calc(100dvh - 32px));
   display: flex;
   flex-direction: column;
   color: $vw-text;
@@ -903,7 +1036,10 @@ $vw-ease: cubic-bezier(0.22, 1, 0.36, 1);
 .vw-win__frame {
   position: relative;
   z-index: 2;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   padding: 22px 22px 26px;

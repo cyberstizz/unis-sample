@@ -19,11 +19,21 @@
 
 .reward-pulse {
   position: fixed;
-  left: 50%;
   bottom: calc(92px + (var(--reward-stack-index, 0) * 62px));
-  transform: translateX(-50%);
 
-  display: inline-flex;
+  // CENTERING WITHOUT `transform`. This used `left: 50%` + translateX(-50%),
+  // but framer-motion animates y/scale by writing its own inline `transform`,
+  // which silently wiped out the translateX. The tag's left edge sat at the
+  // middle of the screen, so it only had HALF the screen width to fit in —
+  // that's why it came out squeezed / an odd size, worst on phones.
+  // left + right + auto margins + max-content width centers it with no
+  // transform for framer-motion to overwrite.
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  width: max-content;
+
+  display: flex;
   align-items: center;
   gap: 11px;
   max-width: min(360px, calc(100vw - 32px));
@@ -122,10 +132,12 @@
 // Type is no longer a color switch (the tag always wears the theme color) —
 // the label copy carries the context ("Play counted", "Vote counted", …).
 // Anchors still control where the tag appears.
+// Vertical centering uses the same auto-margin trick (no transform).
 .reward-pulse--center {
-  top: 50%;
-  bottom: auto;
-  transform: translate(-50%, -50%);
+  top: 0;
+  bottom: 0;
+  height: max-content;
+  margin-block: auto;
 }
 
 .reward-pulse--player {

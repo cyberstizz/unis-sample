@@ -3,7 +3,7 @@
 // renders every point with thousands grouping.
 
 import { describe, it, expect } from 'vitest';
-import { formatScore } from './RewardContext';
+import { formatScore } from './context/RewardContext';
 
 describe('formatScore (exact)', () => {
   it('groups thousands with commas, no abbreviation', () => {

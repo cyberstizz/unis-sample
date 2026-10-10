@@ -901,6 +901,11 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       name: artist.username,
       type: 'artist',
       jurisdiction: artist.jurisdiction,
+      // ★ The wizard had no image for artist votes from this page — the photo
+      //   was never passed. Real UUIDs too, so nothing depends on name lookups.
+      jurisdictionId: artist.jurisdiction?.jurisdictionId || null,
+      genreId: artist.genre?.genreId || null,
+      photoUrl: artist.photoUrl || null,
     });
     setShowVotingWizard(true);
   };
