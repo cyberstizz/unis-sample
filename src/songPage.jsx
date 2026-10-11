@@ -99,6 +99,15 @@ const SongPage = () => {
         ]);
 
         const songData = songRes.data;
+
+        // A removed song keeps its place in award history, so links to it
+        // still arrive here. It can't be played, liked or commented on.
+        if (songData.removed) {
+          setSong(null);
+          setError(`"${songData.title}" was removed from Unis. It stays in the winners history, but it can't be played anymore.`);
+          return;
+        }
+
         const normalized = {
           id: songData.songId,
           title: songData.title,
@@ -130,7 +139,7 @@ const SongPage = () => {
         if (normalized.artwork) extractColor(normalized.artwork);
       } catch (err) {
         console.error('Failed to load song:', err);
-        setError('Failed to load song details');
+        setError(err?.response?.status === 404 ? 'Song not found' : 'Failed to load song details');
       } finally {
         setLoading(false);
       }

@@ -224,14 +224,14 @@ const PrizeTable = () => (
 
 export const POINT_ACTIONS = [
   { key: 'play', label: 'Play a track', you: '+1', they: 'Track +1, artist +1' },
-  { key: 'like', label: 'Like a track', you: '+1', they: 'Track +2, artist +1' },
+  { key: 'like', label: 'Like a track (once per track)', you: '+1', they: 'Track +2, artist +1' },
   { key: 'vote', label: 'Cast a vote', you: `+${2}`, they: 'Nominee +3, artist +3' },
   { key: 'refer', label: 'Refer someone', you: '+5', they: '—' },
   { key: 'playlist', label: 'Start a community playlist', you: '+5', they: '—' },
-  { key: 'suggest', label: 'Get a suggestion approved', you: '+2', they: '—' },
-  { key: 'plvote', label: 'Vote on someone else\u2019s suggestion (first vote)', you: '+1', they: '—' },
+  { key: 'suggest', label: 'Get a suggestion approved (once per song)', you: '+2', they: '—' },
+  { key: 'plvote', label: 'Vote on someone else\u2019s suggestion (once per song)', you: '+1', they: '—' },
   { key: 'milestone', label: 'Your playlist reaches 10 followers (once)', you: '+10', they: '—' },
-  { key: 'supported', label: 'Someone picks you to support', you: '+5', they: '—' },
+  { key: 'supported', label: 'Someone picks you to support (once per fan)', you: '+5', they: '—' },
   { key: 'award', label: 'Win an award', you: '+50 to +5,000', they: '—' },
   { key: 'month', label: 'Every month on Unis', you: '+1', they: '—' },
 ];
@@ -812,11 +812,20 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              Only in one case: deleting a playlist you made. That takes back
-              the points the playlist itself earned you — the 5 for starting a
+              Only in two cases. Deleting a playlist you made takes back the
+              points the playlist itself earned you — the 5 for starting a
               community playlist, and the 10 if it reached 10 followers. Unis
-              shows you the amount before you confirm, and it can lower your
-              level if it takes you below that level&rsquo;s threshold.
+              shows you the amount before you confirm.
+            </p>
+            <p>
+              And if someone you referred, or someone who picked you to
+              support, deletes their account within 30 days of joining, the
+              points their sign-up gave you come off. Otherwise joining and
+              deleting over and over would pay without limit.
+            </p>
+            <p>
+              Either can lower your level if it takes you below that
+              level&rsquo;s threshold.
             </p>
             <p>
               Nothing else lowers your score. Unfollowing, unliking, switching
@@ -1450,6 +1459,12 @@ export const HELP_SECTIONS = [
               the artist&rsquo;s.
             </p>
             <p>
+              Liking it again later doesn&rsquo;t pay again. A like pays once
+              per track, ever, and keeps the date of your first like — so it
+              counts toward the award period you first liked it in, not a new
+              one.
+            </p>
+            <p>
               Points are a record of what happened, not a running tally of what
               you currently feel. You liked it at the time, and the score keeps
               that.
@@ -1976,7 +1991,7 @@ export const HELP_SECTIONS = [
             </p>
             <p>
               Your username is reserved from that moment. Nobody else can take
-              it while you wait.
+              it while you wait, in any capitalization.
             </p>
             <p className="help-note">
               If your city is not in the list, choose <b>Other</b> and type it
@@ -2219,6 +2234,10 @@ export const HELP_SECTIONS = [
               can earn outside of curating, because bringing a real person into
               a local scene is worth more than any single play.
             </p>
+            <p className="help-note">
+              If they delete their account within 30 days of joining, those
+              points come off again.
+            </p>
           </>
         ),
       },
@@ -2349,8 +2368,9 @@ export const HELP_SECTIONS = [
           <>
             <p>
               Points immediately, and income for as long as they stay. Each new
-              supporter adds to your score, and from then on every ad they see
-              signed in pays you a share.
+              supporter adds 5 to your score — once per person, so someone who
+              leaves and comes back doesn&rsquo;t pay it twice — and from then
+              on every ad they see signed in pays you a share.
             </p>
             <p>
               This is the most durable income on Unis. A play is one moment; a
@@ -2370,9 +2390,14 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              You will be asked to pick a new one. Some share of your ad revenue
-              always goes to an artist — that part of the split never lapses back
-              to the platform the way an unclaimed referral does.
+              Your support ends the moment they leave. If you had already picked
+              your next artist for the 1st, that switch happens right away.
+              Otherwise pick a new one whenever you&rsquo;re ready — it starts
+              immediately, with no wait for the 1st.
+            </p>
+            <p>
+              Until you pick, the supporter share of the ads you see goes to
+              Unis. It starts going to your new artist as soon as you choose.
             </p>
           </>
         ),
@@ -2427,7 +2452,7 @@ export const HELP_SECTIONS = [
           <>
             <p>
               The artist who earns from your listening. You choose one when you
-              sign up, and you always have one — this is the mechanism that keeps
+              sign up, and you keep one from then on — this is the mechanism that keeps
               money circulating locally instead of pooling at the top.
             </p>
             <p>
@@ -2437,8 +2462,9 @@ export const HELP_SECTIONS = [
               earned.
             </p>
             <p className="help-note">
-              If your supported artist leaves Unis, you will be asked to pick a
-              new one. Some share of your ad revenue always goes to an artist.
+              If your supported artist leaves Unis, your support ends and you
+              pick a new one — it starts right away, with no wait for the end of
+              the pay period. Until you do, that share goes to Unis.
             </p>
           </>
         ),
@@ -2449,9 +2475,9 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              Their share stays with Unis. It does not transfer to anyone else
-              and it is not redistributed — the referral chain simply stops
-              there.
+              Their own share goes to Unis from then on. It isn&rsquo;t passed
+              to anyone else. Everyone else in the chain keeps theirs: the
+              people above them still earn their levels from your viewing.
             </p>
             <p>
               Your supported artist keeps earning either way. That part of the
@@ -2474,6 +2500,112 @@ export const HELP_SECTIONS = [
               You will need a verified phone number for earnings to be
               attributed to you at all, so add one before you start building a
               balance.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'deleting',
+    title: 'Deleting things',
+    blurb: 'What happens to your account, your money, songs and usernames when something is deleted.',
+    status: 'published',
+    articles: [
+      {
+        id: 'deleting-account',
+        q: 'What happens when I delete my account?',
+        a: (
+          <>
+            <p>
+              Your profile comes down, and your songs, videos, photos, likes,
+              follows, comments and playlists are removed. Your contact details
+              are wiped, so you can come back later with the same email — as a
+              new account.
+            </p>
+            <p>
+              Some things stay, because they belong to other people too. Votes
+              and plays you already made stay in results decided before you
+              left, without your details; they stop counting in any race that
+              is still open. Messages you sent stay in the other person&rsquo;s
+              inbox. Songs of yours that won awards stay in the winners history.
+            </p>
+            <p>
+              If people support you, their support ends and they pick a new
+              artist. If you joined less than 30 days ago, the points your
+              sign-up gave others come off: your referrer&rsquo;s bonus and the
+              5 points your supported artist got.
+            </p>
+            <p className="help-note">
+              There is no undo. Deleting is permanent.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'deleting-money',
+        q: 'What happens to money I am owed?',
+        a: (
+          <>
+            <p>
+              Nothing is lost by accident. While a payout is on its way to your
+              bank, you can&rsquo;t delete your account. If you have $50 or more
+              waiting, cash it out from Earnings first.
+            </p>
+            <p>
+              A balance under $50 can&rsquo;t be paid out, so deleting your
+              account gives it up. Unis shows you the exact amount and asks you
+              to confirm before anything happens.
+            </p>
+            <p>
+              Money you earned for other people stays theirs. The ads you saw
+              are kept as earnings records for your supported artist and the
+              people who referred you.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'deleting-song',
+        q: 'What happens when a song is removed?',
+        a: (
+          <>
+            <p>
+              An artist can remove their own songs, and Unis removes songs for
+              copyright takedowns. A removed song leaves the artist&rsquo;s page,
+              the charts, every playlist and every open vote straight away.
+              Nobody can play, like, comment on, vote for or buy it.
+            </p>
+            <p>
+              It stays in the history. If it won an award, the winners history
+              still shows it by title and artist, and a past leaderboard shows
+              its race as it stood when it closed. It no longer counts toward
+              the artist&rsquo;s trophy count.
+            </p>
+            <p>
+              If it&rsquo;s waiting in your queue, Unis skips it when it gets
+              there and takes it out of the queue.
+            </p>
+            <p className="help-note">
+              Titles aren&rsquo;t reserved — another song can use the same name,
+              and the artist can upload the song again.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'deleting-username',
+        q: 'Can someone take a username after its owner leaves?',
+        a: (
+          <>
+            <p>
+              No. A username belongs to one account forever, including after
+              that account is deleted, so nobody can pose as a past winner.
+            </p>
+            <p>
+              Capitalization doesn&rsquo;t make a new name: if
+              &ldquo;Kingpin&rdquo; exists, &ldquo;kingpin&rdquo; is taken. Names
+              reserved on the waitlist count too.
             </p>
           </>
         ),

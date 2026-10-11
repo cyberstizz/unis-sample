@@ -20,7 +20,10 @@
 //       - "Delete Forever" disabled while loading
 //       - Happy path: DELETE /v1/users/me → logout() → navigate('/login')
 //                     → alert success message
-//       - Error path: alert failure message, logout/navigate NOT called
+//       - Error path: inline failure message, logout/navigate NOT called
+//   • On open it loads GET /v1/users/me/deletion-check (balance + money rule).
+//     "Continue" waits for it. mockApi() below answers that call and routes
+//     every other call to the test's own implementation.
 //       - Cancel button calls onClose
 //       - Close (×) calls onClose
 //
@@ -66,9 +69,32 @@ const USERNAME_BACKWARDS = 'tsitratset';  // 'testartist' reversed
 // ---------------------------------------------------------------------------
 // LIFECYCLE
 // ---------------------------------------------------------------------------
+// No balance, no payout in flight: deletion allowed with no extra step.
+const CLEAR_CHECK = {
+  availableBalance: 0,
+  payoutThreshold: 50,
+  payoutProcessing: false,
+  mustCashOut: false,
+  mustConfirmForfeit: false,
+  canDelete: true,
+};
+
+const isCheckCall = (config) => config?.url === '/v1/users/me/deletion-check';
+
+// Answers the deletion check; everything else goes to `impl`.
+function mockApi(impl = async () => ({ data: {} })) {
+  return vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
+    if (isCheckCall(config)) return { data: CLEAR_CHECK };
+    return impl(config);
+  });
+}
+
+const deleteCalls = (spy) => spy.mock.calls.filter(([config]) => !isCheckCall(config));
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(window, 'alert').mockImplementation(() => {});
+  mockApi();
 });
 
 afterEach(() => {
@@ -90,9 +116,12 @@ function renderWizard({
   };
 }
 
-// Helper — advance from step 1 to step 2
+// Helper — advance from step 1 to step 2 (Continue enables once the
+// deletion check has loaded)
 async function advanceToStep2(user) {
-  await user.click(screen.getByRole('button', { name: /i understand.*continue/i }));
+  const continueBtn = screen.getByRole('button', { name: /i understand.*continue/i });
+  await waitFor(() => expect(continueBtn).not.toBeDisabled());
+  await user.click(continueBtn);
   expect(screen.getByText(/final confirmation required/i)).toBeInTheDocument();
 }
 
@@ -147,12 +176,13 @@ describe('DeleteAccountWizard — step 1 warning screen', () => {
     expect(screen.getByText(/permanent and cannot be undone/i)).toBeInTheDocument();
   });
 
-  it('lists all five consequence bullet points', () => {
+  it('lists the consequence bullet points', () => {
     renderWizard();
-    expect(screen.getByText(/all your songs and videos will be deleted/i)).toBeInTheDocument();
-    expect(screen.getByText(/all votes and awards will be removed/i)).toBeInTheDocument();
-    expect(screen.getByText(/your profile will disappear from leaderboards/i)).toBeInTheDocument();
-    expect(screen.getByText(/supporters will no longer see your content/i)).toBeInTheDocument();
+    expect(screen.getByText(/your songs are removed and your videos are deleted/i)).toBeInTheDocument();
+    expect(screen.getByText(/likes, follows, comments and playlists are removed/i)).toBeInTheDocument();
+    expect(screen.getByText(/votes you already cast stay/i)).toBeInTheDocument();
+    expect(screen.getByText(/your username stays reserved/i)).toBeInTheDocument();
+    expect(screen.getByText(/will pick a new artist/i)).toBeInTheDocument();
     expect(screen.getByText(/there is no recovery.*ever/i)).toBeInTheDocument();
   });
 
@@ -390,7 +420,7 @@ describe('DeleteAccountWizard — input border colour feedback', () => {
 describe('DeleteAccountWizard — submit happy path', () => {
   it('fires DELETE /v1/users/me', async () => {
     let capturedConfig = null;
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
+    mockApi(async (config) => {
       capturedConfig = config;
       return { data: {} };
     });
@@ -408,7 +438,7 @@ describe('DeleteAccountWizard — submit happy path', () => {
   });
 
   it('calls logout() after a successful delete', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
+    mockApi();
 
     renderWizard();
     const user = userEvent.setup();
@@ -420,7 +450,7 @@ describe('DeleteAccountWizard — submit happy path', () => {
   });
 
   it('navigates to /login after a successful delete', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
+    mockApi();
 
     renderWizard();
     const user = userEvent.setup();
@@ -432,7 +462,7 @@ describe('DeleteAccountWizard — submit happy path', () => {
   });
 
   it('alerts the success message after a successful delete', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
+    mockApi();
 
     renderWizard();
     const user = userEvent.setup();
@@ -450,7 +480,7 @@ describe('DeleteAccountWizard — submit happy path', () => {
   it('shows "Deleting..." and disables the button while in-flight', async () => {
     let resolveFn;
     const pending = new Promise((r) => { resolveFn = r; });
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
+    mockApi(async () => {
       await pending;
       return { data: {} };
     });
@@ -469,7 +499,7 @@ describe('DeleteAccountWizard — submit happy path', () => {
 
   it('only makes one API call per submit', async () => {
     let callCount = 0;
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
+    mockApi(async () => {
       callCount++;
       return { data: {} };
     });
@@ -487,7 +517,7 @@ describe('DeleteAccountWizard — submit happy path', () => {
     const callOrder = [];
     mockLogout.mockImplementation(() => callOrder.push('logout'));
     mockNavigate.mockImplementation(() => callOrder.push('navigate'));
-    vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
+    mockApi();
 
     renderWizard();
     const user = userEvent.setup();
@@ -503,8 +533,8 @@ describe('DeleteAccountWizard — submit happy path', () => {
 // SUBMIT — ERROR PATH
 // ===========================================================================
 describe('DeleteAccountWizard — submit error path', () => {
-  it('alerts the failure message when the API throws', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockRejectedValue(new Error('Server error'));
+  it('shows the failure message when the API throws', async () => {
+    mockApi(async () => { throw new Error('Server error'); });
 
     renderWizard();
     const user = userEvent.setup();
@@ -512,15 +542,11 @@ describe('DeleteAccountWizard — submit error path', () => {
     await fillAllGuards(user);
     await user.click(screen.getByRole('button', { name: /delete forever/i }));
 
-    await waitFor(() =>
-      expect(window.alert).toHaveBeenCalledWith(
-        expect.stringMatching(/failed to delete account/i)
-      )
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(/failed to delete account/i);
   });
 
   it('does NOT call logout() when the API throws', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockRejectedValue(new Error('boom'));
+    mockApi(async () => { throw new Error('boom'); });
 
     renderWizard();
     const user = userEvent.setup();
@@ -532,7 +558,7 @@ describe('DeleteAccountWizard — submit error path', () => {
   });
 
   it('does NOT navigate when the API throws', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockRejectedValue(new Error('boom'));
+    mockApi(async () => { throw new Error('boom'); });
 
     renderWizard();
     const user = userEvent.setup();
@@ -544,7 +570,7 @@ describe('DeleteAccountWizard — submit error path', () => {
   });
 
   it('re-enables "Delete Forever" after a failed request', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockRejectedValue(new Error('Flaky'));
+    mockApi(async () => { throw new Error('Flaky'); });
 
     renderWizard();
     const user = userEvent.setup();
@@ -557,8 +583,8 @@ describe('DeleteAccountWizard — submit error path', () => {
     });
   });
 
-  it('does not call the API at all when canProceed is false', async () => {
-    const apiSpy = vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
+  it('does not send the delete when canProceed is false', async () => {
+    const apiSpy = mockApi();
 
     renderWizard();
     const user = userEvent.setup();
@@ -566,9 +592,9 @@ describe('DeleteAccountWizard — submit error path', () => {
     // Only fill username — backwards and checkbox still wrong/empty
     const [usernameInput] = screen.getAllByRole('textbox');
     await user.type(usernameInput, USERNAME);
-    // Button should be disabled; verify no API call
+    // Button should be disabled; verify no delete call (only the balance check)
     expect(screen.getByRole('button', { name: /delete forever/i })).toBeDisabled();
-    expect(apiSpy).not.toHaveBeenCalled();
+    expect(deleteCalls(apiSpy)).toHaveLength(0);
   });
 });
 
@@ -592,13 +618,13 @@ describe('DeleteAccountWizard — close and cancel', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('Cancel does not trigger an API call', async () => {
-    const apiSpy = vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
-    const { onClose } = renderWizard();
+  it('Cancel does not send the delete', async () => {
+    const apiSpy = mockApi();
+    renderWizard();
     const user = userEvent.setup();
     await advanceToStep2(user);
     await user.click(screen.getByRole('button', { name: /cancel/i }));
-    expect(apiSpy).not.toHaveBeenCalled();
+    expect(deleteCalls(apiSpy)).toHaveLength(0);
   });
 
   it('Cancel does not call logout or navigate', async () => {

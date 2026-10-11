@@ -452,10 +452,15 @@ const Player = () => {
         setIsLiked(nextLiked);
         setLikeCount((prev) => (wasLiked ? Math.max(0, prev - 1) : prev + 1));
 
-        // Only reward adding a like, not removing one.
-        if (nextLiked) {
+        // Only reward adding a like, not removing one — and only when points
+        // were really added. A like pays once per person per track, ever, so
+        // a re-like comes back with pointsAwarded: 0 and shows no pill.
+        const earned = res.data.pointsAwarded;
+        if (nextLiked && (earned === undefined || earned > 0)) {
           showReward({
-            points: 2,
+            // Matches the backend: ScoreUpdateService.onLike gives the liker +1
+            // (the +2 goes to the song itself, not the listener).
+            points: earned || 1,
             label: 'Like counted',
             type: 'like',
             anchor: 'player',

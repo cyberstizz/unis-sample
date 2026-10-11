@@ -158,6 +158,15 @@ export const PlayerProvider = ({ children }) => {
   // and refreshed live via the 'unis:blocked-songs-changed' event that
   // songPage dispatches whenever the user toggles the button.
   const [blockedSongIds, setBlockedSongIds] = useState(() => new Set());
+
+  // ── Removed songs ──────────────────────────────────────────────────────
+  // songIds the server says were removed (by their artist, an account
+  // deletion or a DMCA takedown). A saved queue can hold one for up to 7
+  // days; its file is gone, so the audio element errors. When that happens
+  // we ask the server, and if the song really was removed it is skipped and
+  // dropped from the queue (see the REMOVED SONGS effects below). Session
+  // only — the queue itself no longer holds the song once it's dropped.
+  const [removedSongIds, setRemovedSongIds] = useState(() => new Set());
   const [loading, setLoading] = useState(false);
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
 
@@ -422,9 +431,15 @@ export const PlayerProvider = ({ children }) => {
   };
 
   /** True if the user has this track on their do-not-play list. */
+  // Queue advancement skips both songs the user blocked and songs that were
+  // removed from Unis.
   const isTrackBlocked = useCallback(
-    (track) => !!track && blockedSongIds.has(track.id || track.songId),
-    [blockedSongIds]
+    (track) => {
+      if (!track) return false;
+      const id = track.id || track.songId;
+      return blockedSongIds.has(id) || removedSongIds.has(id);
+    },
+    [blockedSongIds, removedSongIds]
   );
 
   // ── next(): advance to the first track the user hasn't blocked ──────────
@@ -1033,6 +1048,53 @@ export const PlayerProvider = ({ children }) => {
       audio.removeEventListener('ended', handleEnded);
     };
   }, [next]);
+
+  // ========================================================================
+  // REMOVED SONGS — a saved queue reaching a song that's gone
+  // ========================================================================
+  //
+  // When the audio fails to load, ask the server about the song. Only a
+  // confirmed removal (removed: true, or 404 for a song that no longer
+  // exists) skips it — a network blip or a slow file is left alone, so a
+  // good song is never dropped by mistake.
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleError = async () => {
+      const media = currentMedia;
+      const songId = media && (media.id || media.songId);
+      if (!songId || media.type === 'video') return;
+      try {
+        const res = await axiosInstance.get(`/v1/media/song/${songId}`);
+        if (!res.data?.removed) return;
+      } catch (err) {
+        if (err?.response?.status !== 404) return;
+      }
+      console.info(`[player] "${media.title || songId}" was removed from Unis — skipping it`);
+      setRemovedSongIds(prev => (prev.has(songId) ? prev : new Set(prev).add(songId)));
+    };
+
+    audio.addEventListener('error', handleError);
+    return () => audio.removeEventListener('error', handleError);
+  }, [currentMedia]);
+
+  // Once a song is known to be removed: move past it if it's playing, and
+  // drop every other copy of it from the queue (removeQueueItems never
+  // removes the current entry, so the playing copy goes on the next pass).
+  useEffect(() => {
+    if (removedSongIds.size === 0) return;
+    const currentId = currentMedia && (currentMedia.id || currentMedia.songId);
+    if (currentId && removedSongIds.has(currentId)) {
+      next();
+      return;
+    }
+    const stale = queue
+      .filter(t => removedSongIds.has(t.id || t.songId))
+      .map(t => t.qid);
+    if (stale.length > 0) removeQueueItems(stale);
+  }, [removedSongIds, currentMedia]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleKeyDown = (e) => {

@@ -218,6 +218,13 @@ const LastWonNotification = () => {
               const award = awards[0];
               let displayData = null;
 
+              // A winner that has since been removed (song) or deleted (artist)
+              // stays in the winners history, but this card asks people to play
+              // and vote, so it skips them.
+              const songGone = award.song && (award.song.removed || award.song.deletedAt);
+              const artistGone = award.user && (award.user.deleted || award.user.deletedAt);
+              if (songGone || artistGone) return null;
+
               if (cat.type === 'song' && award.song) {
                 const isWeekly = cat.key === 'song-weekly';
 

@@ -29,7 +29,8 @@ const DeleteSongModal = ({ show, songTitle, onConfirm, onCancel, isDeleting }) =
         </p>
 
         <p className="modal-warning">
-          This action cannot be undone. The song will be permanently removed from your catalog.
+          This action cannot be undone. The song will be permanently removed from your catalog,
+          everyone&rsquo;s playlists and the charts. If it won an award, it stays in the winners history.
         </p>
 
         <div className="modal-actions">
