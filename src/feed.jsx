@@ -364,14 +364,6 @@ const getDummyNew = () => [
   { id: 'dummy10', title: 'New Track', artistData: { userId: '10', username: 'Artist Ten' }, artworkUrl: songArtOne, mediaUrl: song1, type: 'song', score: 10, createdAt: new Date().toISOString(), duration: 220000, explicit: true }
 ].slice(0, 5);
 
-const getDummyAwards = () => [
-  { id: 'a1', name: 'Best Rap Song', winner: { id: 'w1', username: 'Tony Fadd' } },
-  { id: 'a2', name: 'Top Video', winner: { id: 'w2', username: 'SD Boomin' } },
-  { id: 'a3', name: 'Rising Artist', winner: { id: 'w3', username: 'Artist Three' } },
-  { id: 'a4', name: 'Fan Favorite', winner: { id: 'w4', username: 'Artist Four' } },
-  { id: 'a5', name: 'Breakthrough Track', winner: { id: 'w5', username: 'Artist Five' } }
-].slice(0, 5);
-
 const getDummyArtists = () => [
   { userId: 'art1', username: 'Tony Fadd', photoUrl: songArtOne, score: 100 },
   { userId: 'art2', username: 'SD Boomin', photoUrl: songArtTwo, score: 80 },
@@ -400,7 +392,6 @@ const Feed = () => {
   const [trendingToday, setTrendingToday] = useState([]);
   const [topRated, setTopRated] = useState([]);
   const [newMedia, setNewMedia] = useState([]);
-  const [awards, setAwards] = useState([]);
   const [popularArtists, setPopularArtists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -561,21 +552,21 @@ const Feed = () => {
       try {
         const jId = selectedJurisdictionId;
 
-        const [trendingTodayRes, topRatedRes, newRes, songAwardsRes, artistAwardsRes, popularRes] = await Promise.all([
+        // The two /v1/awards/leaderboards calls that used to be in this list
+        // were removed: nothing on the feed shows their result, and when the
+        // backend was slow to answer them (over axios's 10s limit) this whole
+        // Promise.all failed and the feed dropped to demo content. Winners on
+        // the feed come from /v1/awards/past above.
+        const [trendingTodayRes, topRatedRes, newRes, popularRes] = await Promise.all([
           apiCall({ method: 'get', url: `/v1/media/trending/today?jurisdictionId=${jId}&limit=10` }),
           apiCall({ method: 'get', url: `/v1/media/trending?jurisdictionId=${jId}&limit=5` }),
           apiCall({ method: 'get', url: `/v1/media/new?jurisdictionId=${jId}&limit=5` }),
-          apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=song&jurisdictionId=${jId}` }),
-          apiCall({ method: 'get', url: `/v1/awards/leaderboards?type=artist&jurisdictionId=${jId}` }),
           apiCall({ method: 'get', url: `/v1/users/artist/top?jurisdictionId=${jId}&limit=5` })
         ]);
 
         setTrendingToday(normalizeMedia(trendingTodayRes.data || []));
         setTopRated(normalizeMedia(topRatedRes.data || []));
         setNewMedia(normalizeMedia(newRes.data || []));
-        
-        const combinedAwards = [...(songAwardsRes.data || []), ...(artistAwardsRes.data || [])].slice(0, 5);
-        setAwards(combinedAwards);
 
         const normalizedArtists = (popularRes.data || []).map(artist => ({
           ...artist,
@@ -790,7 +781,6 @@ const Feed = () => {
   const trendingTodayList = trendingToday.length ? trendingToday.slice(0, 10) : getDummyTrending();
   const topRatedList = topRated.length ? topRated.slice(0, 5) : getDummyTrending();
   const newMediaList = newMedia.length ? newMedia.slice(0, 5) : getDummyNew();
-  const awardsList = awards.length ? awards.slice(0, 5) : getDummyAwards();
   const artistsList = popularArtists.length ? popularArtists.slice(0, 5) : getDummyArtists();
   // Charts NEVER falls back to demo content — an honest empty state
   // builds more trust at launch than fake rankings.

@@ -635,7 +635,7 @@ describe('Feed — LastWonNotification rendering', () => {
 });
 
 describe('Feed — data fetch with correct params', () => {
-  it('calls all 6 feed endpoints on mount', async () => {
+  it('calls the 4 feed endpoints on mount (and not the unused leaderboards)', async () => {
     renderWithProviders(<Feed />, { as: 'guest' });
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
 
@@ -643,10 +643,11 @@ describe('Feed — data fetch with correct params', () => {
       expect(callsMatching(/\/trending\/today/).length).toBeGreaterThan(0);
       expect(callsMatching(/\/v1\/media\/trending(?!\/today)/).length).toBeGreaterThan(0);
       expect(callsMatching(/\/media\/new/).length).toBeGreaterThan(0);
-      expect(callsMatching(/\/awards\/leaderboards\?type=song/).length).toBeGreaterThan(0);
-      expect(callsMatching(/\/awards\/leaderboards\?type=artist/).length).toBeGreaterThan(0);
       expect(callsMatching(/\/users\/artist\/top/).length).toBeGreaterThan(0);
     });
+    // Nothing on the feed shows leaderboard data, and a slow answer used to
+    // knock the whole feed down to demo content.
+    expect(callsMatching(/\/awards\/leaderboards/).length).toBe(0);
   });
 
   it('limits trending today to 10 items', async () => {
