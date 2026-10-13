@@ -477,6 +477,36 @@ $transition-ambient: 1.2s ease;
   padding: 8px 40px 40px;
 }
 
+// ── Subgenre + mood chips (under the meta line) ──
+.sp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.sp-tag {
+  padding: 4px 11px;
+  border-radius: $radius-full;
+  border: 1px solid $border-hover;
+  background: $bg-surface;
+  color: $text-secondary;
+  font-family: $font-body;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color $transition-fast, border-color $transition-fast, background $transition-fast;
+
+  &:hover { color: $text-primary; border-color: var(--unis-primary, #{$unis-fallback}); }
+  &:focus-visible { outline: 2px solid var(--unis-primary, #{$unis-fallback}); outline-offset: 2px; }
+
+  &--subgenre {
+    color: $text-primary;
+    background: $accent-blue-dim;
+    border-color: transparent;
+  }
+}
+
 // ── Loading / Error ──
 .sp-loading, .sp-error {
   display: flex;
@@ -689,6 +719,7 @@ $transition-ambient: 1.2s ease;
   .sp-title { font-size: 28px; }
   .sp-artist-row { justify-content: center; }
   .sp-meta { justify-content: center; }
+  .sp-tags { justify-content: center; }
   .sp-primary-actions { padding: 20px 20px 16px; justify-content: center; }
   .sp-stats-row { padding: 0 20px 12px; justify-content: center; }
   .sp-secondary-actions { padding: 0 20px 20px; justify-content: center; }

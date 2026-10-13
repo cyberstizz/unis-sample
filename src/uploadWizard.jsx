@@ -3,6 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { X, Upload, Music, Video, FileText, CheckCircle } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
+import SoundDiscoveryFields from './SoundDiscoveryFields';
+import {
+  EMPTY_DISCOVERY, isDiscoveryComplete, discoveryProblem, toDiscoveryPayload,
+  describeDiscovery, useTaxonomy,
+} from './utils/taxonomy';
 import './uploadWizard.scss';
 
 // Media uploads can be up to 50 MB; the shared axios instance times out at
@@ -29,6 +34,10 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
   const [explicit, setExplicit] = useState(false);
   const [downloadPolicy, setDownloadPolicy] = useState('free');
   const [downloadPrice, setDownloadPrice] = useState('');
+  // Subgenre / mood / language — songs only
+  const [discovery, setDiscovery] = useState(EMPTY_DISCOVERY);
+  const [showDiscoveryErrors, setShowDiscoveryErrors] = useState(false);
+  const { taxonomy } = useTaxonomy();
 
   // Clean version state
   const [uploadedSong, setUploadedSong] = useState(null);
@@ -56,9 +65,19 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
     setIsrc(''); setExplicit(false); setUploadedSong(null);
     setCleanVersionChoice(null); setCleanFile(null); setCleanPreview(null);
     setCleanLoading(false); setDownloadPolicy('free'); setDownloadPrice('');
+    setDiscovery(EMPTY_DISCOVERY); setShowDiscoveryErrors(false);
   };
 
-  const handleNext = () => { setError(''); if (step < 3) setStep(step + 1); };
+  const handleNext = () => {
+    setError('');
+    // A song can't reach review without a subgenre and a mood.
+    if (step === 2 && mediaType === 'song' && !isDiscoveryComplete(discovery)) {
+      setShowDiscoveryErrors(true);
+      setError(discoveryProblem(discovery));
+      return;
+    }
+    if (step < 3) setStep(step + 1);
+  };
   const handleBack = () => { if (step > 1) setStep(step - 1); };
 
   const handleFileChange = (e) => {
@@ -124,6 +143,11 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
       setLoading(false);
       return;
     }
+    if (mediaType === 'song' && !isDiscoveryComplete(discovery)) {
+      setError(discoveryProblem(discovery));
+      setLoading(false);
+      return;
+    }
     if (downloadPolicy === 'paid' && (!downloadPrice || parseFloat(downloadPrice) < 1.99)) {
       setError('Minimum download price is $1.99');
       setLoading(false);
@@ -144,6 +168,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
             isrc: isrc || null,
             downloadPolicy,
             downloadPrice: downloadPolicy === 'paid' ? parseInt(downloadPrice) : null,
+            ...toDiscoveryPayload(discovery),
           }
         : baseMetadata;
 
@@ -188,6 +213,8 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
         title: title + ' (Clean)', description, genreId, artistId,
         jurisdictionId, explicit: false, isrc: null,
         isCleanVersion: true,
+        // Same song, same sound — the clean version carries the same tags.
+        ...toDiscoveryPayload(discovery),
       };
       cleanFormData.append('song', JSON.stringify(cleanMetadata));
       cleanFormData.append('file', cleanFile);
@@ -298,6 +325,17 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
           12-character International Standard Recording Code. You can add this later from your dashboard.
         </span>
       </div>
+
+      {/* Subgenre, mood, language — songs only */}
+      {mediaType === 'song' && (
+        <SoundDiscoveryFields
+          idPrefix="uw-sdf"
+          genreId={genreId}
+          value={discovery}
+          onChange={(next) => { setDiscovery(next); if (error) setError(''); }}
+          showErrors={showDiscoveryErrors}
+        />
+      )}
 
       {/* Explicit toggle — songs only */}
       {mediaType === 'song' && (
@@ -434,6 +472,16 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
         <div className="uw__summary-row"><dt>ISRC</dt><dd>{isrc || '—'}</dd></div>
         {mediaType === 'song' && (
           <>
+            {(() => {
+              const d = describeDiscovery(discovery, taxonomy);
+              return (
+                <>
+                  <div className="uw__summary-row"><dt>Subgenre</dt><dd>{d.subgenres}</dd></div>
+                  <div className="uw__summary-row"><dt>Mood</dt><dd>{d.moods}</dd></div>
+                  <div className="uw__summary-row"><dt>Language</dt><dd>{d.language}</dd></div>
+                </>
+              );
+            })()}
             <div className="uw__summary-row">
               <dt>Explicit</dt><dd>{explicit ? 'Yes' : 'No'}</dd>
             </div>
@@ -542,7 +590,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
 
           <div className="uw__clean-info">
             The clean version will inherit the title ("{title} (Clean)"), artwork, genre,
-            and jurisdiction from the explicit version.
+            subgenre, mood, language and jurisdiction from the explicit version.
           </div>
 
           <button

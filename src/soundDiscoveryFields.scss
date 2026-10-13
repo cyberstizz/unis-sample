@@ -1,0 +1,166 @@
+// src/soundDiscoveryFields.scss — "Sound & discovery" block (sdf-)
+// Used inside three different wizards, so it styles itself from the shared
+// --unis tokens and doesn't depend on any wizard's classes.
+
+.sdf {
+  margin: 18px 0 6px;
+  padding: 16px 16px 6px;
+  border: 1px solid var(--unis-border-hi);
+  border-radius: var(--unis-radius, 14px);
+  background: rgba(255, 255, 255, 0.025);
+  min-width: 0; // fieldsets otherwise refuse to shrink on phones
+  font-family: var(--unis-font-sans);
+}
+
+.sdf__legend {
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--unis-primary-2, var(--unis-text-2));
+}
+
+.sdf__intro {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--unis-text-3);
+}
+
+.sdf__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.sdf__label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--unis-text-3);
+}
+
+.sdf__req,
+.sdf__opt {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.sdf__req { color: var(--unis-primary-2, var(--unis-text-2)); }
+.sdf__opt { color: var(--unis-text-4); }
+
+.sdf__select,
+.sdf__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border-radius: var(--unis-radius-sm, 10px);
+  border: 1px solid var(--unis-border-hi);
+  background: rgba(0, 0, 0, 0.38);
+  color: var(--unis-text);
+  font-family: var(--unis-font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--unis-primary);
+    box-shadow: 0 0 0 3px var(--unis-primary-soft, rgba(255, 255, 255, 0.08));
+  }
+  &.is-invalid { border-color: #e5484d; }
+}
+
+.sdf__select {
+  appearance: none;
+  -webkit-appearance: none;
+  color-scheme: dark;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C0C0C0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  padding-right: 36px;
+  cursor: pointer;
+
+  &:hover { border-color: var(--unis-primary); }
+}
+
+.sdf__hint {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--unis-text-4);
+}
+
+.sdf__error {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ff8a8d;
+}
+
+.sdf__moods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sdf__mood {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--unis-border-hi);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--unis-text-2);
+  font-family: var(--unis-font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+
+  &:hover { border-color: var(--unis-primary); color: var(--unis-text); }
+  &:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 2px; }
+
+  &.is-on {
+    color: var(--unis-text);
+    border-color: var(--unis-primary);
+    background: var(--unis-primary-soft, rgba(255, 255, 255, 0.1));
+  }
+}
+
+.sdf__mood-num {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--unis-primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.sdf__status {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--unis-text-3);
+
+  &--error { color: #ff8a8d; }
+}
+
+.sdf__retry {
+  margin-bottom: 12px;
+  padding: 8px 14px;
+  border-radius: var(--unis-radius-sm, 10px);
+  border: 1px solid var(--unis-border-hi);
+  background: transparent;
+  color: var(--unis-text);
+  font-family: var(--unis-font-sans);
+  font-weight: 700;
+  cursor: pointer;
+}

@@ -5,6 +5,7 @@ import { apiCall } from "./components/axiosInstance";
 import { PlayerContext } from "./context/playercontext"; // requestPlay → PlayChoiceModal. Discover NEVER counts plays; Player.jsx owns the 15s/25% gate.
 import { useAuth } from "./context/AuthContext";
 import { JURISDICTION_IDS } from "./utils/idMappings";
+import { useTaxonomy, GENRE_ORDER } from "./utils/taxonomy";
 import Layout from "./layout";
 
 import "./DiscoverPage.scss";
@@ -61,6 +62,10 @@ const scopeById = (id) => (id ? SCOPE_OPTIONS.find((o) => o.id === id) || null :
 const CLIENT_PAGED = new Set(["video"]);
 
 const EMPTY_BUCKETS = { user: [], playlist: [], song: [], video: [] };
+
+// A subgenre gets a chip only once it holds this many songs in the chosen
+// area, so nobody opens an empty or one-song shelf.
+const MIN_SONGS_FOR_CHIP = 3;
 
 // ----------------------------------------------------------------------------
 // helpers
@@ -402,6 +407,35 @@ const DiscoverPage = () => {
 
   const scopeId = scope?.id || null;
 
+  // -- subgenre chips ("Browse by sound") --
+  const { taxonomy } = useTaxonomy();
+  const [subgenreCounts, setSubgenreCounts] = useState([]);
+  useEffect(() => {
+    if (!scopeResolved || !scopeId) { setSubgenreCounts([]); return; }
+    let active = true;
+    apiCall({
+      method: "get",
+      url: `/v1/taxonomy/counts?jurisdictionId=${scopeId}&min=${MIN_SONGS_FOR_CHIP}`,
+      useCache: false,
+    })
+      .then((res) => { if (active) setSubgenreCounts(Array.isArray(res.data) ? res.data : []); })
+      .catch((err) => {
+        console.error("[Discover] subgenre counts failed:", err);
+        if (active) setSubgenreCounts([]);
+      });
+    return () => { active = false; };
+  }, [scopeId, scopeResolved]);
+
+  const soundChips = useMemo(() => {
+    if (!taxonomy) return [];
+    const counts = new Map(subgenreCounts.map((c) => [c.subgenreId, c.songs]));
+    return taxonomy.subgenres
+      .filter((sg) => (counts.get(sg.subgenreId) || 0) >= MIN_SONGS_FOR_CHIP)
+      .sort((a, b) => GENRE_ORDER.indexOf(a.genreId) - GENRE_ORDER.indexOf(b.genreId) || a.sortOrder - b.sortOrder)
+      .map((sg) => ({ ...sg, songs: counts.get(sg.subgenreId) }));
+  }, [taxonomy, subgenreCounts]);
+  const showSoundChips = !query && (activeType === "all" || activeType === "song") && soundChips.length > 0;
+
   // -- main fetch: rails for "all", a single grid otherwise --
   useEffect(() => {
     if (!scopeResolved) return;
@@ -689,6 +723,27 @@ const DiscoverPage = () => {
             </div>
           </div>
         </div>
+
+        {/* subgenre chips — only subgenres with enough songs here */}
+        {showSoundChips && (
+          <nav className="dsc-sounds" aria-label="Browse by sound">
+            <span className="dsc-sounds-label">Browse by sound</span>
+            <div className="dsc-sounds-row">
+              {soundChips.map((sg) => (
+                <button
+                  key={sg.subgenreId}
+                  type="button"
+                  className="dsc-sound"
+                  onClick={() => navigate(`/browse/subgenre/${sg.slug}${scopeId ? `?jid=${scopeId}` : ""}`)}
+                  aria-label={`${sg.name}, ${sg.songs} songs`}
+                >
+                  {sg.name}
+                  <span className="n" aria-hidden="true">{sg.songs}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+        )}
 
         {/* results */}
         <div id="dsc-results" role="tabpanel" aria-labelledby={`dsc-tab-${activeType}`} aria-busy={loading}>

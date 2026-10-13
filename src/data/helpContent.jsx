@@ -1236,6 +1236,127 @@ export const HELP_SECTIONS = [
     ],
   },
   {
+    id: 'sounds',
+    title: 'Genres, subgenres and moods',
+    blurb: 'How songs are tagged, how that helps people find them, and why it never changes the awards.',
+    status: 'published',
+    articles: [
+      {
+        id: 'sounds-what',
+        q: 'What is the difference between a genre, a subgenre and a mood?',
+        a: (
+          <>
+            <p>
+              Unis has three <b>genres</b>: Rap, Rock and Pop. Those are the
+              awards races. Every song competes in exactly one of them, and
+              voting, rankings and awards only ever look at the genre.
+            </p>
+            <p>
+              A <b>subgenre</b> is a closer description of the sound, such as
+              Drill, Conscious, Punk / Emo or Afrobeats. A <b>mood</b> describes
+              how the song feels, such as Hype, Chill or Heartbreak. Subgenres
+              and moods exist only to help listeners find music. They never move
+              a song into a different awards race, and they never add or take
+              away points or votes.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'sounds-tagging',
+        q: 'How do I tag my song?',
+        a: (
+          <>
+            <p>
+              When you upload a song, the <b>Sound &amp; discovery</b> section asks
+              for four things:
+            </p>
+            <ul>
+              <li>
+                <b>Subgenre</b> (required). Pick the one that fits best from your
+                own genre. Each choice shows a few artists it sounds like. If
+                none fits, choose <b>None of these fit</b> and describe the sound
+                in a few words.
+              </li>
+              <li>
+                <b>Second subgenre</b> (optional). Use it if the song also leans
+                another way. It can come from any genre, so a rap song can also
+                be tagged R&amp;B / Soul.
+              </li>
+              <li>
+                <b>Mood</b>. Pick one or two. Your first pick is the main mood.
+              </li>
+              <li>
+                <b>Language</b>. The main language of the vocals. It starts on
+                English.
+              </li>
+            </ul>
+            <p>
+              A clean version you upload right after an explicit song gets the
+              same tags automatically.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'sounds-change',
+        q: 'Can I change my song’s tags later, or tag a song I uploaded before?',
+        a: (
+          <>
+            <p>
+              Yes. Open your <b>Artist Dashboard</b>, find the song in your
+              song list, tap the pencil icon next to it, and change the Sound
+              &amp; discovery section. Then tap <b>Save Changes</b>. Songs uploaded
+              before subgenres existed have no tags until you add them, and they
+              will not show up on subgenre or mood shelves until you do.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'sounds-find',
+        q: 'Where do subgenres and moods show up for listeners?',
+        a: (
+          <>
+            <p>
+              On a song’s page, its subgenres and moods appear as chips under
+              the title. Tapping one opens a shelf of songs with that same tag.
+              Songs from your own area come first, then everywhere else.
+            </p>
+            <p>
+              On <b>Discover</b>, a <b>Browse by sound</b> row lists the
+              subgenres in the area you are exploring. A subgenre appears there
+              once at least three songs in that area carry it, so you never open
+              an empty shelf.
+            </p>
+            <p>
+              The <b>Recommended</b> row on a song’s page suggests what to hear
+              next. It looks first for songs with the same subgenre from the
+              same neighborhood, keeps one spot for another song by the same
+              artist, and widens the search when there are not enough close
+              matches. Playing a recommended song gives you the usual Play now
+              or Add to queue choice.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'sounds-other',
+        q: 'My sound is not on the list. What happens to what I write in?',
+        a: (
+          <>
+            <p>
+              We read every description written in under <b>None of these
+              fit</b> and use them to decide which subgenres to add next. Until
+              then, the song still competes in its genre and can still be found
+              by its moods.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
     id: 'verification',
     title: 'Phone verification',
     blurb: 'Why Unis asks for a number and what it unlocks.',

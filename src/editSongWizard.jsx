@@ -3,6 +3,10 @@ import { X, Upload, Type, Music, Image, ShieldCheck, Download, AlertCircle } fro
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl'; // ★ item 7: checklist — buildUrl everywhere
 import useModalA11y from './hooks/useModalA11y'; // ★ item 7: same a11y as the other modals
+import SoundDiscoveryFields from './SoundDiscoveryFields';
+import {
+  discoveryFromSong, isDiscoveryComplete, discoveryProblem, toDiscoveryPayload,
+} from './utils/taxonomy';
 import './editSongWizard.scss';
 
 // =============================================================================
@@ -11,6 +15,7 @@ import './editSongWizard.scss';
 // API contract unchanged:
 //   PATCH /v1/media/song/:songId          — artwork, description, isrc (multipart)
 //   PUT   /v1/songs/:songId/download-settings — policy + price (integer cents)
+//   PATCH /v1/media/song/:songId/discovery — subgenre, mood, language (JSON)
 // =============================================================================
 const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
   const [description, setDescription] = useState(song?.description || '');
@@ -23,6 +28,8 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
   const [downloadPrice, setDownloadPrice] = useState(
     song?.downloadPrice ? (song.downloadPrice / 100).toFixed(2) : ''
   );
+  const [discovery, setDiscovery] = useState(() => discoveryFromSong(song));
+  const [showDiscoveryErrors, setShowDiscoveryErrors] = useState(false);
   const modalRef = useRef(null);
 
   useModalA11y({ active: show, onClose, modalRef }); // ★ item 7
@@ -37,6 +44,8 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
       setError(null);
       setDownloadPolicy(song?.downloadPolicy || 'free');
       setDownloadPrice(song?.downloadPrice ? (song.downloadPrice / 100).toFixed(2) : '');
+      setDiscovery(discoveryFromSong(song));
+      setShowDiscoveryErrors(false);
     }
   }, [show, song?.songId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -51,7 +60,12 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
     }
   };
 
+  // Songs uploaded before subgenres existed have none; saving here tags them.
+  const discoveryChanged =
+    JSON.stringify(toDiscoveryPayload(discovery)) !== JSON.stringify(toDiscoveryPayload(discoveryFromSong(song)));
+
   const hasChanges = artworkFile
+    || discoveryChanged
     || description !== song?.description
     || isrc !== (song?.isrc || '')
     || downloadPolicy !== (song?.downloadPolicy || 'free')
@@ -66,6 +80,12 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
     // Validate price if paid
     if (downloadPolicy === 'paid' && (!downloadPrice || parseFloat(downloadPrice) < 1.99)) {
       setError('Minimum download price is $1.99.'); // ★ item 7: inline, not alert()
+      return;
+    }
+
+    if (discoveryChanged && !isDiscoveryComplete(discovery)) {
+      setShowDiscoveryErrors(true);
+      setError(discoveryProblem(discovery));
       return;
     }
 
@@ -92,7 +112,16 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
         });
       }
 
-      // 2. Save download settings via the dedicated endpoint
+      // 2. Save subgenre / mood / language
+      if (discoveryChanged) {
+        await apiCall({
+          method: 'patch',
+          url: `/v1/media/song/${song.songId}/discovery`,
+          data: toDiscoveryPayload(discovery),
+        });
+      }
+
+      // 3. Save download settings via the dedicated endpoint
       const downloadPolicyChanged = downloadPolicy !== (song?.downloadPolicy || 'free');
       const downloadPriceChanged = downloadPolicy === 'paid'
         && downloadPrice !== ((song?.downloadPrice || 0) / 100).toFixed(2);
@@ -115,7 +144,7 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
       onClose();
     } catch (err) {
       console.error('Failed to update song:', err);
-      setError(err?.response?.data?.error || 'Failed to update the song. Please try again.'); // ★ item 7
+      setError(err?.response?.data?.error || err?.response?.data?.message || 'Failed to update the song. Please try again.'); // ★ item 7
     } finally {
       setLoading(false);
     }
@@ -221,6 +250,15 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
             />
             <p className="esw__hint">12-character International Standard Recording Code</p>
           </div>
+
+          {/* Subgenre, mood, language */}
+          <SoundDiscoveryFields
+            idPrefix="esw-sdf"
+            genreId={song.genre?.genreId}
+            value={discovery}
+            onChange={(next) => { setDiscovery(next); setError(null); }}
+            showErrors={showDiscoveryErrors}
+          />
 
           {/* Download policy */}
           <div className="esw__field">

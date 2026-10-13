@@ -39,6 +39,7 @@ import RewardScoreSync from './RewardScoreSync';
 import ThemeDocumentSync from "./ThemeDocumentSync";
 import VerifyEmail from './pages/VerifyEmail';   
 import DiscoverPage from './DiscoverPage';   
+import BrowseTagPage from './BrowseTagPage';
 import ListenerPage from './ListenerPage';   
 import MessagesPage from './MessagePage';
 import HelpPage from './HelpPage';
@@ -132,6 +133,7 @@ const AppLayout = () => {
           <Route path="/leaderboards" element={<Leaderboards />} />
           <Route path="/findpage" element={<FindPage />} />
           <Route path="/discover" element={<DiscoverPage />} />        
+          <Route path="/browse/:kind/:slug" element={<BrowseTagPage />} />
           <Route path="/user/:userId" element={<ListenerPage />} />    
           <Route path="/search" element={<SearchRedirect />} />        
           <Route path="/voteawards" element={<VoteAwards />} />   

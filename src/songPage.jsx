@@ -11,6 +11,8 @@ import VotingWizard from './votingWizard';
 import CommentSection from './commentSection';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
+import RecommendedSongs from './RecommendedSongs';
+import { useTaxonomy } from './utils/taxonomy';
 
 const SongPage = () => {
   const { songId } = useParams();
@@ -19,6 +21,7 @@ const SongPage = () => {
   const { requestPlay, currentMedia, isPlaying, togglePlayPause } = useContext(PlayerContext);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { taxonomy } = useTaxonomy(); // language names for the details panel
   const userId = user?.userId;
 
   const [song, setSong] = useState(null);
@@ -128,6 +131,10 @@ const SongPage = () => {
           createdAt: songData.createdAt,
           genre: songData.genre?.name || 'Unknown',
           genreId: songData.genre?.genreId || null, // ★ carry the real UUID so votes never depend on name lookup
+          // Discovery tags — each chip opens a browse shelf. Write-ins aren't browsable.
+          subgenres: [songData.primarySubgenre, songData.secondarySubgenre].filter(Boolean),
+          moods: [songData.primaryMood, songData.secondaryMood].filter(Boolean),
+          language: songData.language || null,
           credits: { producer: 'N/A', writer: 'N/A', mix: 'N/A' },
           photos: [],
           videos: [],
@@ -421,6 +428,32 @@ const SongPage = () => {
                     <span>{formatDate(song.createdAt)}</span>
                     <span className="sp-genre-pill">{song.genre}</span>
                   </div>
+                  {(song.subgenres.length > 0 || song.moods.length > 0) && (
+                    <div className="sp-tags" aria-label="Subgenres and moods">
+                      {song.subgenres.map((sg) => (
+                        <button
+                          key={sg.subgenreId}
+                          type="button"
+                          className="sp-tag sp-tag--subgenre"
+                          onClick={() => navigate(`/browse/subgenre/${sg.slug}`)}
+                          aria-label={`More ${sg.name} songs`}
+                        >
+                          {sg.name}
+                        </button>
+                      ))}
+                      {song.moods.map((m) => (
+                        <button
+                          key={m.moodId}
+                          type="button"
+                          className="sp-tag sp-tag--mood"
+                          onClick={() => navigate(`/browse/mood/${m.slug}`)}
+                          aria-label={`More ${m.name} songs`}
+                        >
+                          {m.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -488,6 +521,9 @@ const SongPage = () => {
               </div>
             )}
 
+            {/* ── RECOMMENDED ── */}
+            <RecommendedSongs songId={song.id} />
+
             {/* ── COMMENTS ── */}
             <div className="sp-comments">
               <CommentSection songId={song.id} userId={userId} songArtistId={song.artistId} />
@@ -505,6 +541,14 @@ const SongPage = () => {
                 <div className="sp-detail"><div className="sp-detail-label">Uploaded</div><div className="sp-detail-value">{formatDate(song.createdAt)}</div></div>
                 <div className="sp-detail"><div className="sp-detail-label">Plays</div><div className="sp-detail-value">{formatNumber(song.playCount)}</div></div>
                 <div className="sp-detail"><div className="sp-detail-label">Likes</div><div className="sp-detail-value">{formatNumber(likeCount)}</div></div>
+                {song.language && (
+                  <div className="sp-detail">
+                    <div className="sp-detail-label">Language</div>
+                    <div className="sp-detail-value">
+                      {taxonomy?.languages.find((l) => l.code === song.language)?.name || song.language}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

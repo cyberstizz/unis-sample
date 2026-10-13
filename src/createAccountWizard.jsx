@@ -11,6 +11,11 @@ import { apiCall } from './components/axiosInstance';
 import { JURISDICTION_IDS, GENRE_IDS } from './utils/idMappings';
 import useModalA11y from './hooks/useModalA11y'; // ★ a11y: Escape close, focus trap, focus restore
 import buildUrl from './utils/buildUrl';         // ★ canonical media URL builder (R2→CDN rewrite)
+import SoundDiscoveryFields from './SoundDiscoveryFields';
+import {
+  EMPTY_DISCOVERY, isDiscoveryComplete, discoveryProblem, toDiscoveryPayload,
+  describeDiscovery, useTaxonomy,
+} from './utils/taxonomy';
 import './createAccountWizard.scss';
 import UnisLogo from './assets/unisLogoThree.svg';
 
@@ -229,6 +234,9 @@ const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false }) =>
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [songIsrc, setSongIsrc] = useState('');
+  // Debut song's subgenre / mood / language (required by the backend)
+  const [songDiscovery, setSongDiscovery] = useState(EMPTY_DISCOVERY);
+  const { taxonomy } = useTaxonomy();
   const contentRef = useRef(null);                           
   const [showScrollCue, setShowScrollCue] = useState(false);  
 
@@ -664,7 +672,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false }) =>
       case 'artistProfile':
         return formData.artistPhotoFile && formData.genreId;
       case 'songUpload':
-        return formData.songTitle.trim() && formData.songFile && formData.songArtworkFile;
+        return formData.songTitle.trim() && formData.songFile && formData.songArtworkFile
+          && isDiscoveryComplete(songDiscovery);
       case 'listenerProfile':
         return !!formData.listenerPhotoFile;
       case 'listenerBio':
@@ -827,6 +836,7 @@ const handleSubmit = async () => {
             genreId: formData.genreId,
             jurisdictionId: formData.jurisdictionId,
             isrc: songIsrc || null,
+            ...toDiscoveryPayload(songDiscovery),
           };
           const songFormData = new FormData();
           songFormData.append('song', JSON.stringify(songData));
@@ -1525,6 +1535,18 @@ const handleSubmit = async () => {
               />
               <small>You can add this later from your dashboard.</small>
             </div>
+
+            <SoundDiscoveryFields
+              idPrefix="caw-sdf"
+              genreId={formData.genreId}
+              value={songDiscovery}
+              onChange={setSongDiscovery}
+            />
+            {formData.songTitle.trim() && !isDiscoveryComplete(songDiscovery) && (
+              <small className="caw-sdf-missing" style={{ display: 'block', marginBottom: 12, opacity: 0.8 }}>
+                {discoveryProblem(songDiscovery)}
+              </small>
+            )}
             
             <div className="file-upload">
               <label htmlFor="wizard-song-file">Audio File</label>
@@ -1886,6 +1908,16 @@ const handleSubmit = async () => {
                   <h4>Artist Details</h4>
                   <div className="review-item"><span className="item-label">Debut Song</span><span className="item-value">{formData.songTitle}</span></div>
                   <div className="review-item"><span className="item-label">Genre</span><span className="item-value">{Object.entries(GENRE_IDS).find(([k, v]) => v === formData.genreId)?.[0]}</span></div>
+                  {(() => {
+                    const d = describeDiscovery(songDiscovery, taxonomy);
+                    return (
+                      <>
+                        <div className="review-item"><span className="item-label">Subgenre</span><span className="item-value">{d.subgenres}</span></div>
+                        <div className="review-item"><span className="item-label">Mood</span><span className="item-value">{d.moods}</span></div>
+                        <div className="review-item"><span className="item-label">Language</span><span className="item-value">{d.language}</span></div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
               
