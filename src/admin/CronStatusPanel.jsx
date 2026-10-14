@@ -75,6 +75,9 @@ const CronStatusPanel = () => {
       'QUARTERLY_AWARDS': 'Quarterly Awards',
       'MIDTERM_AWARDS': 'Midterm Awards',
       'ANNUAL_AWARDS': 'Annual Awards',
+      'METRICS_NIGHTLY': 'Metrics (nightly)',
+      'METRICS_MONTHLY_CLOSE': 'Metrics (month lock)',
+      'METRICS_REBUILD': 'Metrics (rebuild)',
     };
     return labels[jobName] || jobName;
   };
@@ -87,8 +90,18 @@ const CronStatusPanel = () => {
       'QUARTERLY_AWARDS': 'Jan/Apr/Jul/Oct 1st',
       'MIDTERM_AWARDS': 'Jan 1st & Jul 1st',
       'ANNUAL_AWARDS': 'January 1st',
+      'METRICS_NIGHTLY': 'Every night at 1:15 AM',
+      'METRICS_MONTHLY_CLOSE': '1st of month at 2:00 AM',
+      'METRICS_REBUILD': 'When a super admin starts it',
     };
     return schedules[jobName] || 'Unknown';
+  };
+
+  // What the job's count means: awards created, days computed, months locked.
+  const getCountUnit = (jobName) => {
+    if (jobName === 'METRICS_NIGHTLY' || jobName === 'METRICS_REBUILD') return 'days';
+    if (jobName === 'METRICS_MONTHLY_CLOSE') return 'months';
+    return 'awards';
   };
 
   if (loading) {
@@ -198,7 +211,7 @@ const CronStatusPanel = () => {
                         <div style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>
                           {exec.awardsCreated}
                         </div>
-                        <div style={{ color: '#6b7280', fontSize: '10px' }}>awards</div>
+                        <div style={{ color: '#6b7280', fontSize: '10px' }}>{getCountUnit(exec.jobName)}</div>
                       </div>
                     )}
 
@@ -268,7 +281,7 @@ const CronStatusPanel = () => {
                           </div>
                           <div style={{ display: 'flex', gap: '16px' }}>
                             <span style={{ color: '#A9A9A9', fontSize: '12px' }}>
-                              {h.awardsCreated} awards
+                              {h.awardsCreated} {getCountUnit(exec.jobName)}
                             </span>
                             <span style={{ color: '#6b7280', fontSize: '12px' }}>
                               {formatDuration(h.durationMs)}

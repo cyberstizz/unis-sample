@@ -93,6 +93,12 @@ const AdminDashboard = () => {
             Full Analytics
           </button>
           {(user?.adminRole === 'admin' || user?.adminRole === 'super_admin') && (
+            <button onClick={() => navigate('/admin/metrics')}
+              style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer' }}>
+              Metrics &amp; Reports
+            </button>
+          )}
+          {(user?.adminRole === 'admin' || user?.adminRole === 'super_admin') && (
             <button onClick={() => navigate('/admin/users')}
               style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer' }}>
               User Management
@@ -226,9 +232,12 @@ const AdminDashboard = () => {
           </ResponsiveContainer>
         </div>
 
-         <div style={{ marginTop: '24px' }}>
-          <CronStatusPanel />
-        </div>
+        {/* Job status needs the admin role; moderators would only see an error. */}
+        {(user?.adminRole === 'admin' || user?.adminRole === 'super_admin') && (
+          <div style={{ marginTop: '24px' }}>
+            <CronStatusPanel />
+          </div>
+        )}
         
       </div>
     </Layout>

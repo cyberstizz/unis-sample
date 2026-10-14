@@ -9,6 +9,7 @@ import PlaylistManager from './playlistManager';
 import VotingWizard from './votingWizard';
 import CommentSection from './commentSection'; // ★ comments: reuse the songPage comment section
 import { apiCall } from './components/axiosInstance';
+import { getVisitorId } from './utils/visitorId';
 import { useReward } from './context/RewardContext';
 import QueuePanel from './QueuePanel';
 import DownloadModal from './DownloadModal';
@@ -134,6 +135,8 @@ const Player = () => {
   // lastPercentRef tracks how far through the song the listener got.
   const currentPlayIdRef = useRef(null);
   const lastPercentRef = useRef(0);
+  // True when currentPlayIdRef holds a logged-out play (anonymous_plays).
+  const currentPlayIsAnonRef = useRef(false);
 
   const navigate = useNavigate();
 
@@ -162,12 +165,22 @@ const Player = () => {
     const playId = currentPlayIdRef.current;
     if (!playId) return;
     currentPlayIdRef.current = null; // guard against double-send
+    const percentPlayed = Math.round(lastPercentRef.current * 100) / 100;
+    if (currentPlayIsAnonRef.current) {
+      currentPlayIsAnonRef.current = false;
+      apiCall({
+        method: 'post',
+        url: '/v1/media/anonymous-play/complete',
+        data: { playId, visitorId: getVisitorId(), percentPlayed },
+      }).catch((err) => console.error('Logged-out play completion failed:', err));
+      return;
+    }
     apiCall({
       method: 'post',
       url: '/v1/media/play/complete',
       data: {
         playId,
-        percentPlayed: Math.round(lastPercentRef.current * 100) / 100,
+        percentPlayed,
       },
     }).catch((err) => console.error('Play completion failed:', err));
   };
@@ -233,7 +246,10 @@ const Player = () => {
   }, [currentMedia?.id, currentMedia?.songId]);
 
   useEffect(() => {
-    if (!currentMedia || isGuest || !userId) return;
+    if (!currentMedia) return;
+    // Logged-out listeners pass the same 15s/25% gate, but their play goes to
+    // anonymous_plays: no points, no play count, no awards — metrics only.
+    const loggedOut = isGuest || !userId;
 
     const mediaIsVideo = currentMedia.type === 'video';
     if (mediaIsVideo) return;
@@ -249,6 +265,25 @@ const Player = () => {
 
     playRewardedRef.current = true;
 
+    const trackLoggedOutPlay = async () => {
+      try {
+        const res = await apiCall({
+          method: 'post',
+          url: `/v1/media/song/${songId}/anonymous-play?visitorId=${encodeURIComponent(getVisitorId())}&source=${encodeURIComponent(currentMedia.source || 'player')}`,
+        });
+        currentPlayIdRef.current = res?.data?.playId || null;
+        currentPlayIsAnonRef.current = Boolean(res?.data?.playId);
+      } catch (err) {
+        // Never interrupts listening; this play just isn't counted.
+        console.error('Failed to record logged-out play:', err);
+      }
+    };
+
+    if (loggedOut) {
+      trackLoggedOutPlay();
+      return;
+    }
+
     const trackRealPlay = async () => {
       try {
         // ★ PLAY-FLOW (change 2 of 3): send `source` and capture the returned
@@ -260,6 +295,7 @@ const Player = () => {
         });
 
         currentPlayIdRef.current = res?.data?.playId || null; // ★ PLAY-FLOW
+        currentPlayIsAnonRef.current = false;
 
         showReward({
           points: 1,

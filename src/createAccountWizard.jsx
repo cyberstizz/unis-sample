@@ -12,6 +12,7 @@ import { JURISDICTION_IDS, GENRE_IDS } from './utils/idMappings';
 import useModalA11y from './hooks/useModalA11y'; // ★ a11y: Escape close, focus trap, focus restore
 import buildUrl from './utils/buildUrl';         // ★ canonical media URL builder (R2→CDN rewrite)
 import SoundDiscoveryFields from './SoundDiscoveryFields';
+import { getSignupCampaign } from './utils/signupCampaign';
 import {
   EMPTY_DISCOVERY, isDiscoveryComplete, discoveryProblem, toDiscoveryPayload,
   describeDiscovery, useTaxonomy,
@@ -789,6 +790,7 @@ const handleSubmit = async () => {
         dateOfBirth: formData.dateOfBirth || null,
         gender: formData.gender || null,                      // ★ now collected
         themePreference: formData.themePreference || 'blue',  // ★ honors the picker
+        signupCampaign: getSignupCampaign(),                  // campaign link this visitor came from, if any
       };
 
       let reg;

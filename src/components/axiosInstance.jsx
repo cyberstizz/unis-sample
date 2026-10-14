@@ -25,6 +25,10 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    // Tells the backend which app the request came from (web, ios, android),
+    // for the platform split in the admin metrics.
+    config.headers['X-Unis-Platform'] = 'web';
+
     // Let browser set Content-Type for FormData
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];

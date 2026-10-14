@@ -60,6 +60,7 @@ import UserDetail from './admin/UserDetail';
 import AnalyticsPage from './admin/AnalyticsPage';
 import AuditLog from './admin/AuditLog';
 import RoleManagement from './admin/RoleManagement';
+import MetricsPage from './admin/metrics/MetricsPage';
 
 /**
  * AuthRequiredRoute — hard gate for pages that genuinely need a logged-in user.
@@ -161,6 +162,7 @@ const AppLayout = () => {
           <Route path="/admin/users" element={<UserManagement />} />
           <Route path="/admin/users/:userId" element={<UserDetail />} />
           <Route path="/admin/moderation/dmca/:claimId" element={<DmcaClaimDetail />} />
+          <Route path="/admin/metrics" element={<MetricsPage />} />
         </Route>
 
         {/* Admin routes — super admin only */}

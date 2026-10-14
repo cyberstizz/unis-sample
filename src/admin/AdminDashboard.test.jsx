@@ -123,10 +123,17 @@ describe('dashboard renders after fetch', () => {
     await waitFor(() => expect(screen.getByTestId('line-chart')).toBeInTheDocument());
   });
 
-  it('renders the CronStatusPanel', async () => {
+  it('renders the CronStatusPanel for admins', async () => {
     setupApiMocks();
-    renderDashboard();
+    renderDashboard('admin');
     await waitFor(() => expect(screen.getByTestId('cron-status-panel')).toBeInTheDocument());
+  });
+
+  it('hides the CronStatusPanel from moderators (the job status API is admin-only)', async () => {
+    setupApiMocks();
+    renderDashboard('moderator');
+    await waitFor(() => expect(screen.getByTestId('line-chart')).toBeInTheDocument());
+    expect(screen.queryByTestId('cron-status-panel')).not.toBeInTheDocument();
   });
 });
 

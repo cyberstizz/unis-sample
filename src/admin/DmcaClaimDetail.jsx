@@ -47,6 +47,7 @@ const DmcaClaimDetail = () => {
       setNotes('');
     } catch (err) {
       alert('Action failed: ' + (err.response?.data?.error || err.message));
+      fetchClaim(); // the status may have changed even if the takedown step failed
     } finally {
       setActionLoading(false);
     }
@@ -104,6 +105,9 @@ const DmcaClaimDetail = () => {
           {fieldRow('Work Description', claim.workDescription)}
           {fieldRow('Original Work URL', claim.originalWorkUrl)}
           {fieldRow('Infringing URL on Unis', claim.infringingUrl)}
+          {fieldRow('Song this claim is about', claim.infringSong
+            ? `${claim.infringSong.title}${claim.infringSong.artist?.username ? ` by ${claim.infringSong.artist.username}` : ''}`
+            : 'Not linked. If the link above is a Unis song page, Uphold will find and remove that song. If it is not, Uphold removes nothing; contact the platform owner.')}
           {fieldRow('Status', claim.status)}
           {fieldRow('Submitted', new Date(claim.createdAt).toLocaleString())}
           {claim.resolvedAt && fieldRow('Resolved', new Date(claim.resolvedAt).toLocaleString())}

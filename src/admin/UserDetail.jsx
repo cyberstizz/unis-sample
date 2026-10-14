@@ -62,6 +62,26 @@ const UserDetail = () => {
     }
   };
 
+  // Staff or test account: left out of every metric from the next nightly run.
+  const handleMetricsExclusion = async (exclude) => {
+    const question = exclude
+      ? 'Mark this as a staff or test account? It will be left out of every metric from tonight on.'
+      : 'Count this account in the metrics again from tonight on?';
+    if (!window.confirm(question)) return;
+    setActionLoading(true);
+    try {
+      await apiCall({
+        url: `/v1/admin/users/${userId}/metrics-exclusion`, method: 'patch',
+        data: { exclude },
+      });
+      fetchUser();
+    } catch (err) {
+      alert('Could not update: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!window.confirm('PERMANENTLY delete this user? This cannot be undone.')) return;
     setActionLoading(true);
@@ -82,6 +102,9 @@ const UserDetail = () => {
   const isSuspended = data.isSuspended;
   const suspensions = data.suspensionHistory || [];
   const adminRole = data.adminRole;
+  const excludedFromMetrics = Boolean(data.excludeFromMetrics);
+  const SOURCE_LABELS = { referral: 'Referral code', waitlist: 'Waitlist', campaign: 'Campaign link', organic: 'On their own' };
+  const PLATFORM_LABELS = { web: 'Web', ios: 'iPhone', android: 'Android' };
 
   return (
     <Layout>
@@ -108,6 +131,15 @@ const UserDetail = () => {
               <span style={{ color: '#A9A9A9', fontSize: '13px' }}>Level: {u.level || 'silver'}</span>
               {adminRole && <span style={{ color: '#163387', fontSize: '13px', fontWeight: '600' }}>Admin: {adminRole.roleLevel}</span>}
             </div>
+            {(data.signupSource || data.signupPlatform) && (
+              <div style={{ color: '#A9A9A9', fontSize: '13px', marginTop: '6px' }}>
+                Signed up {data.signupSource ? `via ${SOURCE_LABELS[data.signupSource] || data.signupSource}` : ''}
+                {data.signupPlatform ? ` on ${PLATFORM_LABELS[data.signupPlatform] || data.signupPlatform}` : ''}
+              </div>
+            )}
+            {excludedFromMetrics && (
+              <div style={{ color: '#f59e0b', fontWeight: '600', marginTop: '8px' }}>Staff or test account: left out of metrics</div>
+            )}
             {isSuspended && (
               <div style={{ color: '#ef4444', fontWeight: '600', marginTop: '8px' }}>⚠ ACCOUNT SUSPENDED</div>
             )}
@@ -138,6 +170,18 @@ const UserDetail = () => {
                 Permanently Delete
               </button>
             )}
+          </div>
+
+          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ color: '#fff', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>Metrics</div>
+            <p style={{ color: '#A9A9A9', fontSize: '13px', margin: '0 0 10px' }}>
+              Staff and test accounts are left out of every number on the Metrics pages and in the reports.
+              The change applies from the next nightly run; days already counted stay as they are.
+            </p>
+            <button onClick={() => handleMetricsExclusion(!excludedFromMetrics)} disabled={actionLoading}
+              style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer' }}>
+              {excludedFromMetrics ? 'Count this account in metrics again' : 'Mark as staff or test account'}
+            </button>
           </div>
 
           {showSuspendForm && (
