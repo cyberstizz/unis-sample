@@ -1,14 +1,19 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
-import { apiCall } from './components/axiosInstance';
 import './leaderboardsPage.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
-import buildUrl from './utils/buildUrl';
-import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
+import { JURISDICTION_IDS } from './utils/idMappings';
+import RankMove from './components/RankMove';
+import { fetchStandings, describeBoard, playEntry } from './utils/standings';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DATA — /v1/awards/standings via utils/standings.js: the same formula that
+// decides awards, with the midnight rule. Before anyone scores in a new
+// period the board shows how the last one finished, and the status line and
+// leader plate say so ("Yesterday's final", "Won").
+//
 // PLAY TRACKING — deliberately absent from this page.
 // The Player component owns play tracking (★ PLAY-FLOW in player.jsx): it
 // POSTs /v1/media/song/{id}/play only after 15s of real listening (or 25% of
@@ -92,7 +97,10 @@ const ChaseRow = ({ item, share, index, onOpen, onPlay }) => {
 
   return (
     <li className="lb-chase-row" style={{ '--row-delay': `${index * 45}ms` }}>
-      <span className="lb-chase-rank" aria-hidden="true">{item.rank}</span>
+      <span className="lb-chase-rank" aria-hidden="true">
+        {item.rank}
+        {hasPoints && <RankMove movement={item.movement} isNew={item.isNew} className="lb-chase-move" />}
+      </span>
 
       <button
         type="button"
@@ -157,111 +165,60 @@ const LeaderboardsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [boardState, setBoardState] = useState('LIVE');
+  const [shownPeriodKey, setShownPeriodKey] = useState('daily');
 
-  const handlePlay = async (media) => {
-    // Song row with a real file → play it directly.
-    if (media.fileUrl) {
-      requestPlay({
-        type: 'song',
-        id: media.id,
-        songId: media.id,
-        url: media.fileUrl,
-        fileUrl: media.fileUrl,
-        title: media.title,
-        artist: media.artist,
-        artistId: media.artistId,
-        artwork: media.artwork,
-        artworkUrl: media.artwork,
-        source: 'leaderboards',
-      });
-      return;
-    }
-
-    // Artist row → fetch their default song, then play it.
-    if (media.type === 'artist' && media.id) {
-      try {
-        const response = await apiCall({
-          method: 'get',
-          url: `/v1/users/${media.id}/default-song`,
-        });
-        const defaultSong = response.data;
-
-        if (!defaultSong?.fileUrl) return; // artist has no playable song
-
-        const fullUrl = buildUrl(defaultSong.fileUrl);
-        const fullArtwork = buildUrl(defaultSong.artworkUrl) || media.artwork;
-
-        requestPlay({
-          type: 'song',
-          id: defaultSong.songId,
-          songId: defaultSong.songId,
-          url: fullUrl,
-          fileUrl: fullUrl,
-          title: defaultSong.title,
-          artist: media.name,
-          artistId: media.id,
-          artwork: fullArtwork,
-          artworkUrl: fullArtwork,
-          source: 'leaderboards',
-        });
-      } catch (err) {
-        console.error('Leaderboards: default song fetch failed:', err);
-      }
-    }
-    // No fileUrl and not an artist → nothing playable; do nothing rather
-    // than falling back to a bundled sample MP3 (removed for production).
-  };
+  const handlePlay = (media) => playEntry({
+    type: media.type,
+    id: media.id,
+    name: media.title,
+    artistName: media.artist,
+    artistId: media.artistId,
+    fileUrl: media.fileUrl,
+    artwork: media.artwork === backimage ? null : media.artwork,
+  }, requestPlay, 'leaderboards');
 
   const handleView = () => {
     setIsLoading(true);
     setError(null);
     setResults([]);
+    setStatus(null);
     setHasSearched(true);
 
-    const jurId = JURISDICTION_IDS[jurisdiction];
-    const genreId = GENRE_IDS[genre];
-    const intervalId = INTERVAL_IDS[intervalKey];
-    const type = category;
-
-    apiCall({
-      method: 'get',
-      url: `/v1/vote/leaderboards?jurisdictionId=${jurId}&genreId=${genreId}&targetType=${type}&intervalId=${intervalId}&limit=50`,
+    fetchStandings({
+      type: category,
+      jurisdictionId: JURISDICTION_IDS[jurisdiction],
+      genre,
+      period: intervalKey,
+      limit: 50,
     })
-      .then((response) => {
-        const rawResults = response.data;
+      .then((board) => {
+        setStatus(describeBoard(board));
+        setBoardState(board.state);
+        setShownPeriodKey(board.periodKey);
 
-        if (!rawResults || rawResults.length === 0) {
-          setError('Nothing has scored in this scope yet. Try a wider jurisdiction or a longer period.');
+        const scored = board.entries.filter((e) => e.points > 0);
+        if (scored.length === 0) {
+          setError('Nothing has scored in this scope yet. Plays, likes and votes put entries on the board.');
           return;
         }
 
-        const normalized = rawResults.map((item, i) => {
-          if (type === 'artist') {
-            return {
-              id: item.targetId,
-              type: 'artist',
-              rank: item.rank || (i + 1),
-              name: item.name || 'Unknown Artist',
-              title: item.name || 'Unknown Artist',
-              artist: item.name || 'Unknown Artist',
-              votes: item.votes || 0,
-              artwork: item.artwork ? buildUrl(item.artwork) : backimage,
-              fileUrl: null,
-            };
-          }
-          return {
-            id: item.targetId,
-            type: 'song',
-            rank: item.rank || (i + 1),
-            title: item.name || 'Unknown Song',
-            artist: item.artist || 'Unknown',
-            votes: item.votes || 0,
-            fileUrl: item.fileUrl ? buildUrl(item.fileUrl) : null,
-            artwork: item.artwork ? buildUrl(item.artwork) : backimage,
-          };
-        });
-
-        setResults(normalized);
+        setResults(scored.map((e) => ({
+          id: e.id,
+          type: e.type,
+          rank: e.rank,
+          name: e.name,
+          title: e.name,
+          artist: e.type === 'song' ? e.artistName : e.name,
+          artistId: e.artistId,
+          votes: e.points,
+          artwork: e.artwork || backimage,
+          fileUrl: e.fileUrl,
+          movement: e.movement,
+          isNew: e.isNew,
+          winner: e.winner,
+        })));
       })
       .catch((err) => {
         console.error('Leaderboards fetch error:', err);
@@ -282,17 +239,21 @@ const LeaderboardsPage = () => {
   const runnerUp = results[1] || null;
 
   // The margin is the live board's whole point — how safe is the lead.
+  const finished = boardState === 'PREVIOUS_FINAL';
   let marginLabel = null;
   if (leader) {
     if (!runnerUp) {
-      marginLabel = 'Uncontested so far';
+      marginLabel = finished ? 'Uncontested' : 'Uncontested so far';
     } else if (leader.votes === runnerUp.votes) {
-      marginLabel = `Tied with ${runnerUp.title}`;
+      marginLabel = `Tied with ${runnerUp.title}, ahead on the tiebreak`;
     } else {
       const gap = leader.votes - runnerUp.votes;
-      marginLabel = `Ahead by ${formatNumber(gap)} ${gap === 1 ? 'point' : 'points'}`;
+      marginLabel = `${finished ? 'Finished' : 'Ahead'} by ${formatNumber(gap)} ${gap === 1 ? 'point' : 'points'}`;
     }
   }
+  const leaderWord = finished
+    ? (leader?.winner ? 'Won' : 'Finished first')
+    : boardState === 'PREVIOUS_CLOSING' ? 'Leading, still counting' : 'Leading';
 
   const scopeLabel = [
     JURISDICTIONS.find((o) => o.value === jurisdiction)?.label,
@@ -354,6 +315,13 @@ const LeaderboardsPage = () => {
             </div>
           </section>
 
+          {status && !isLoading && (
+            <p className={`lb-status lb-status--${status.tone}`} role="status">
+              <span className="lb-status-dot" aria-hidden="true" />
+              <strong>{status.title}.</strong> {status.detail}
+            </p>
+          )}
+
           {/* ── Results ──────────────────────────────────────────────────── */}
           {isLoading ? (
             <div className="lb-state" role="status" aria-live="polite">
@@ -381,7 +349,7 @@ const LeaderboardsPage = () => {
 
                 <div className="lb-leader-body">
                   <p className="lb-leader-eyebrow">
-                    Leading · {scopeLabel}
+                    {leaderWord} · {scopeLabel}
                   </p>
                   <h2 className="lb-leader-title">{leader.title}</h2>
                   {leader.type === 'song' && (
@@ -441,6 +409,14 @@ const LeaderboardsPage = () => {
                   </ol>
                 </section>
               )}
+
+              <button
+                type="button"
+                className="lb-fullchart"
+                onClick={() => navigate(`/charts?type=${category}&period=${shownPeriodKey}&genre=${genre}&place=${jurisdiction}`)}
+              >
+                See the full chart
+              </button>
             </>
           ) : (
             <div className="lb-state">

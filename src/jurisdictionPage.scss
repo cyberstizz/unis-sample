@@ -613,11 +613,35 @@
 }
 
 .jp-row-rank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
   color: var(--unis-text-4);
   font-size: 15px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   text-align: center;
+}
+
+.jp-row-move { font-size: 10px; }
+
+// "See the full … chart" — opens /charts for this place.
+.jp-fullchart {
+  display: block;
+  margin: 16px auto 0;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--unis-border);
+  background: color-mix(in srgb, var(--unis-text) 5%, transparent);
+  color: var(--unis-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover { border-color: var(--unis-primary-border, var(--unis-border)); }
+  &:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 2px; }
 }
 
 .jp-row-main {

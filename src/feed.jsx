@@ -5,7 +5,6 @@ import { apiCall } from './components/axiosInstance';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
 import Layout from './layout';
-import ArtistCard from './artistCard';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
 import randomRapper from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
@@ -22,6 +21,8 @@ import songArtTen from './assets/albumartten.jpeg';
 import songArtEleven from './assets/rapperphotoOne.jpg';
 import { JURISDICTION_NAMES, INTERVAL_IDS } from './utils/idMappings';
 import LastWonNotification from './LastWonNotification';
+import RankMove from './components/RankMove';
+import { fetchStandings, describeBoard, formatCount, playEntry } from './utils/standings';
 import './feed.scss';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -207,20 +208,6 @@ const LensIcon = ({ type }) => {
   }
 };
 
-// ─── Rank movement badge for chart rows ───
-const MovementBadge = ({ movement }) => {
-  if (movement === null || movement === undefined) {
-    return <span className="chart-movement chart-movement--new">NEW</span>;
-  }
-  if (movement > 0) {
-    return <span className="chart-movement chart-movement--up">&#9650; {movement}</span>;
-  }
-  if (movement < 0) {
-    return <span className="chart-movement chart-movement--down">&#9660; {Math.abs(movement)}</span>;
-  }
-  return <span className="chart-movement chart-movement--flat">&mdash;</span>;
-};
-
 // ─── Playlist cover (image or mosaic fallback) ───
 const PlaylistCover = ({ playlist, className }) => {
   const cover = playlist.coverImageUrl ? buildUrl(playlist.coverImageUrl) : null;
@@ -364,19 +351,7 @@ const getDummyNew = () => [
   { id: 'dummy10', title: 'New Track', artistData: { userId: '10', username: 'Artist Ten' }, artworkUrl: songArtOne, mediaUrl: song1, type: 'song', score: 10, createdAt: new Date().toISOString(), duration: 220000, explicit: true }
 ].slice(0, 5);
 
-const getDummyArtists = () => [
-  { userId: 'art1', username: 'Tony Fadd', photoUrl: songArtOne, score: 100 },
-  { userId: 'art2', username: 'SD Boomin', photoUrl: songArtTwo, score: 80 },
-  { userId: 'art3', username: 'Artist Three', photoUrl: songArtThree, score: 60 },
-  { userId: 'art4', username: 'Artist Four', photoUrl: songArtFour, score: 50 },
-  { userId: 'art5', username: 'Artist Five', photoUrl: songArtFive, score: 40 }
-].slice(0, 5);
 
-const getJurisdictionDisplayName = (id, fallbackId) => {
-  const key = JURISDICTION_NAMES[id || fallbackId];
-  if (!key) return 'Your Area';
-  return key.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-};
 
 // ═══════════════════════════════════════════════════════════════════
 //  FEED
@@ -392,7 +367,6 @@ const Feed = () => {
   const [trendingToday, setTrendingToday] = useState([]);
   const [topRated, setTopRated] = useState([]);
   const [newMedia, setNewMedia] = useState([]);
-  const [popularArtists, setPopularArtists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -405,7 +379,12 @@ const Feed = () => {
   const lastWinner = weeklyWinners.length ? weeklyWinners[0] : null;
 
   // ─── Charts lens ───
-  const [chart, setChart] = useState(null); // { totalPlaysThisWeek, entries: [] }
+  // A standings board (utils/standings.js): this week's songs, ranked by the
+  // same formula that decides awards. Replaces the old plays-only chart.
+  const [chart, setChart] = useState(null);
+
+  // ─── Top 5 artists this week (All lens) ───
+  const [topFive, setTopFive] = useState(null);
   // ★ feed #7: playlist opened as an overlay (no /playlist/:id route exists)
   const [chartLoading, setChartLoading] = useState(false);
 
@@ -557,23 +536,16 @@ const Feed = () => {
         // backend was slow to answer them (over axios's 10s limit) this whole
         // Promise.all failed and the feed dropped to demo content. Winners on
         // the feed come from /v1/awards/past above.
-        const [trendingTodayRes, topRatedRes, newRes, popularRes] = await Promise.all([
+        const [trendingTodayRes, topRatedRes, newRes] = await Promise.all([
           apiCall({ method: 'get', url: `/v1/media/trending/today?jurisdictionId=${jId}&limit=10` }),
           apiCall({ method: 'get', url: `/v1/media/trending?jurisdictionId=${jId}&limit=5` }),
           apiCall({ method: 'get', url: `/v1/media/new?jurisdictionId=${jId}&limit=5` }),
-          apiCall({ method: 'get', url: `/v1/users/artist/top?jurisdictionId=${jId}&limit=5` })
         ]);
 
         setTrendingToday(normalizeMedia(trendingTodayRes.data || []));
         setTopRated(normalizeMedia(topRatedRes.data || []));
         setNewMedia(normalizeMedia(newRes.data || []));
 
-        const normalizedArtists = (popularRes.data || []).map(artist => ({
-          ...artist,
-          photoUrl: pickPhoto(artist)
-        }));
-
-        setPopularArtists(normalizedArtists);
       } catch (err) {
         console.error('Media load error:', err);
         setError('Feed unavailable—showing demo content.');
@@ -596,13 +568,16 @@ const Feed = () => {
     const fetchChart = async () => {
       setChartLoading(true);
       try {
-        const res = await apiCall({
-          method: 'get',
-          url: `/v1/charts?jurisdictionId=${selectedJurisdictionId}&limit=10`,
+        const board = await fetchStandings({
+          type: 'song',
+          jurisdictionId: selectedJurisdictionId,
+          genre: 'all',
+          period: 'weekly',
+          limit: 10,
         });
-        setChart(res.data || null);
+        setChart(board);
         chartFetchedFor.current = selectedJurisdictionId;
-        console.info(`[Feed] chart loaded: ${res.data?.entries?.length ?? 0} entries, ${res.data?.totalPlaysThisWeek ?? 0} plays this week`);
+        console.info(`[Feed] chart loaded: ${board.entries.length} entries, state=${board.state}`);
       } catch (err) {
         console.error('[Feed] chart fetch failed (empty state shown):', err);
         setChart(null);
@@ -614,6 +589,20 @@ const Feed = () => {
 
     fetchChart();
   }, [activeLens, selectedJurisdictionId]);
+
+  // ─── Top 5 artists this week — kept out of the main Promise.all so a slow
+  //     ranking query can never drop the whole feed to demo content.
+  useEffect(() => {
+    if (!selectedJurisdictionId) return undefined;
+    let cancelled = false;
+    fetchStandings({ type: 'artist', jurisdictionId: selectedJurisdictionId, genre: 'all', period: 'weekly', limit: 5 })
+      .then((board) => { if (!cancelled) setTopFive(board); })
+      .catch((err) => {
+        console.error('[Feed] top five fetch failed (section hidden):', err?.message || err);
+        if (!cancelled) setTopFive(null);
+      });
+    return () => { cancelled = true; };
+  }, [selectedJurisdictionId]);
 
   // ─── Fetch playlists — lazy, when Playlists lens is active ───
   const playlistsFetchedFor = React.useRef(null);
@@ -738,24 +727,14 @@ const Feed = () => {
     requestPlay(playMediaObj);
   }, [isGuest, requestPlay]);
 
-  // Play a chart entry (ChartsDto shape → player shape)
+  // Play a board entry (song, or an artist's default song). Plays are counted
+  // by the Player after real listening, never here.
   const handlePlayChartEntry = useCallback((e, entry) => {
     e.stopPropagation();
     if (isGuest) {
       incrementGateSongCount();
     }
-    requestPlay({
-      type: 'song',
-      id: entry.songId,
-      songId: entry.songId,
-      url: buildUrl(entry.fileUrl),
-      fileUrl: buildUrl(entry.fileUrl),
-      title: entry.title,
-      artist: entry.artistName,
-      artistId: entry.artistId,
-      artwork: buildUrl(entry.artworkUrl),
-      artworkUrl: buildUrl(entry.artworkUrl),
-    });
+    playEntry(entry, requestPlay, 'feed');
   }, [isGuest, requestPlay]);
 
   const handleJurisdictionChange = useCallback((e) => {
@@ -781,10 +760,15 @@ const Feed = () => {
   const trendingTodayList = trendingToday.length ? trendingToday.slice(0, 10) : getDummyTrending();
   const topRatedList = topRated.length ? topRated.slice(0, 5) : getDummyTrending();
   const newMediaList = newMedia.length ? newMedia.slice(0, 5) : getDummyNew();
-  const artistsList = popularArtists.length ? popularArtists.slice(0, 5) : getDummyArtists();
   // Charts NEVER falls back to demo content — an honest empty state
-  // builds more trust at launch than fake rankings.
-  const chartData = (chart && chart.entries && chart.entries.length) ? chart : null;
+  // builds more trust at launch than fake rankings. Only entries that scored.
+  const chartEntries = chart ? chart.entries.filter((e) => e.points > 0) : [];
+  const chartData = chartEntries.length ? chart : null;
+  const chartStatus = chart ? describeBoard(chart) : null;
+  const topFiveEntries = topFive ? topFive.entries.filter((e) => e.points > 0) : [];
+  const topFiveStatus = topFive ? describeBoard(topFive) : null;
+  const placeKey = JURISDICTION_NAMES[selectedJurisdictionId] || 'harlem';
+  const openChart = (type) => navigate(`/charts?type=${type}&period=weekly&genre=all&place=${placeKey}`);
 
   if (loading) return (
     <Layout backgroundImage={randomRapper}>
@@ -1004,54 +988,61 @@ const Feed = () => {
                 </section>
               )}
 
-              {/* ═══════ POPULAR ARTISTS ═══════ */}
-              <section className={`feed-section artist-cards ${animate ? "animate" : ""}`}>
-                <div className="section-header">
-                  <h2 className="section-title">
-                    Popular Artists 
-                  </h2>
-                </div>
-                <div className="artist-cards-grid">
-                  {(() => {
-                    const artistMap = new Map();
-                    const allMedia = [...trendingToday, ...topRated, ...newMedia];
-                    
-                    allMedia.forEach(media => {
-                      if (media.artistData && !artistMap.has(media.artistData.userId)) {
-                        artistMap.set(media.artistData.userId, {
-                          userId: media.artistData.userId,
-                          username: media.artistData.username,
-                          // Raw path or null — ArtistCard applies buildUrl and
-                          // falls back to a placeholder. encodeURI(undefined)
-                          // produced the literal string "undefined", which
-                          // defeated the fallback and rendered a blank card.
-                          photoUrl: media.artistData.photoUrl || null,
-                          jurisdictionId: media.artistData.jurisdiction?.jurisdictionId,
-                          jurisdictionName: getJurisdictionDisplayName(
-                            media.artistData.jurisdiction?.jurisdictionId,
-                            selectedJurisdictionId
-                          ),
-                          score: media.artistData.score || 0
-                        });
-                      }
-                    });
-                    
-                    const artists = Array.from(artistMap.values())
-                      .sort((a, b) => b.score - a.score)
-                      .slice(0, 5);
-                    
-                    return artists.map((artist, i) => (
-                      <ArtistCard
-                        key={artist.userId}
-                        artist={artist}
-                        index={i}
-                        onPress={() => handleArtistNav(artist.userId)}
-                        onViewPress={() => handleArtistNav(artist.userId)}
-                      />
-                    ));
-                  })()}
-                </div>
-              </section>
+              {/* ═══════ TOP 5 THIS WEEK (ranked, same formula as awards) ═══════ */}
+              {topFiveEntries.length > 0 && (
+                <section className={`feed-section ${animate ? 'animate' : ''}`}>
+                  <div className="section-header section-header--stacked">
+                    <h2 className="section-title">Top 5 artists in {selectedJurisdictionName}</h2>
+                    {topFiveStatus && (
+                      <div className="chart-caption">
+                        {topFiveStatus.title}
+                      </div>
+                    )}
+                  </div>
+                  <div className="chart-list">
+                    {topFiveEntries.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className={`chart-row ${entry.rank === 1 ? 'chart-row--first' : ''}`}
+                        onClick={() => handleArtistNav(entry.id)}
+                      >
+                        {entry.artwork && (
+                          <div className="chart-row-ambient" aria-hidden="true">
+                            <img src={entry.artwork} alt="" />
+                          </div>
+                        )}
+                        <span className="chart-rank">{entry.rank}</span>
+                        <div className="chart-artwork chart-artwork--round">
+                          <img
+                            src={entry.artwork || randomRapper}
+                            alt={entry.name}
+                            onError={(e) => { e.target.src = randomRapper; }}
+                          />
+                        </div>
+                        <div className="chart-info">
+                          <div className="chart-song-title">{entry.name}</div>
+                          <div className="chart-song-artist">
+                            {formatCount(entry.points)} pts
+                            {entry.votes > 0 && <> &middot; {formatCount(entry.votes)} vote{entry.votes === 1 ? '' : 's'}</>}
+                          </div>
+                        </div>
+                        <RankMove movement={entry.movement} isNew={entry.isNew} className="chart-movement" />
+                        <button
+                          type="button"
+                          className="chart-play"
+                          aria-label={`Play ${entry.name}`}
+                          onClick={(e) => handlePlayChartEntry(e, entry)}
+                        >
+                          <CardPlayIcon />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" className="chart-fullchart" onClick={() => openChart('artist')}>
+                    See the full chart
+                  </button>
+                </section>
+              )}
             </>
           )}
 
@@ -1061,13 +1052,12 @@ const Feed = () => {
           {activeLens === 'charts' && (
             <section className={`feed-section ${animate ? 'animate' : ''}`}>
               <div className="section-header section-header--stacked">
-                <h2 className="section-title">Most Played This Week</h2>
-                <div className="chart-caption">
-                  Voting closes Sunday 11:59 PM
-                  {chartData && (
-                    <> &middot; {formatPlayCount(chartData.totalPlaysThisWeek)} play{chartData.totalPlaysThisWeek !== 1 ? 's' : ''} this week</>
-                  )}
-                </div>
+                <h2 className="section-title">This Week&rsquo;s Chart in {selectedJurisdictionName}</h2>
+                {chartStatus && (
+                  <div className="chart-caption">
+                    {chartStatus.title}. {chartStatus.detail}
+                  </div>
+                )}
               </div>
 
               {chartLoading ? (
@@ -1076,30 +1066,32 @@ const Feed = () => {
                 </div>
               ) : !chartData ? (
                 <div className="lens-empty">
-                  No plays counted yet this week in {selectedJurisdictionName}. Be the
-                  first &mdash; press play on any track.
+                  Nothing has scored yet this week in {selectedJurisdictionName}. Plays,
+                  likes and votes put songs on the chart.
                 </div>
               ) : (
                 <div className="chart-list">
-                  {chartData.entries.map((entry) => (
+                  {chartEntries.map((entry) => (
                     <div
-                      key={entry.songId}
+                      key={entry.id}
                       className={`chart-row ${entry.rank === 1 ? 'chart-row--first' : ''}`}
-                      onClick={() => handleSongNav(entry.songId, 'song')}
+                      onClick={() => handleSongNav(entry.id, 'song')}
                     >
-                      <div className="chart-row-ambient" aria-hidden="true">
-                        <img src={buildUrl(entry.artworkUrl) || randomRapper} alt="" />
-                      </div>
+                      {entry.artwork && (
+                        <div className="chart-row-ambient" aria-hidden="true">
+                          <img src={entry.artwork} alt="" />
+                        </div>
+                      )}
                       <span className="chart-rank">{entry.rank}</span>
                       <div className="chart-artwork">
                         <img
-                          src={buildUrl(entry.artworkUrl) || entry.artworkUrl || randomRapper}
-                          alt={entry.title}
+                          src={entry.artwork || randomRapper}
+                          alt={entry.name}
                           onError={(e) => { e.target.src = randomRapper; }}
                         />
                       </div>
                       <div className="chart-info">
-                        <div className="chart-song-title">{entry.title}</div>
+                        <div className="chart-song-title">{entry.name}</div>
                         <div
                           className="chart-song-artist"
                           onClick={(e) => {
@@ -1107,14 +1099,14 @@ const Feed = () => {
                             if (entry.artistId) handleArtistNav(entry.artistId);
                           }}
                         >
-                          {entry.artistName} &middot; {formatPlayCount(entry.plays)} play{entry.plays !== 1 ? 's' : ''}
+                          {entry.artistName} &middot; {formatCount(entry.points)} pts
                         </div>
                       </div>
-                      <MovementBadge movement={entry.movement} />
+                      <RankMove movement={entry.movement} isNew={entry.isNew} className="chart-movement" />
                       <button
                         type="button"
                         className="chart-play"
-                        aria-label={`Play ${entry.title}`}
+                        aria-label={`Play ${entry.name}`}
                         onClick={(e) => handlePlayChartEntry(e, entry)}
                       >
                         <CardPlayIcon />
@@ -1123,6 +1115,10 @@ const Feed = () => {
                   ))}
                 </div>
               )}
+
+              <button type="button" className="chart-fullchart" onClick={() => openChart('song')}>
+                See the full chart
+              </button>
 
               {lastWinner && (
                 <div

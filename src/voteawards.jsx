@@ -9,6 +9,14 @@ import VotingWizard from './votingWizard';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 import { Search, X } from 'lucide-react';
 import { buildUrl } from './utils/buildUrl';
+import RankMove from './components/RankMove';
+import { fetchStandings, describeBoard, playEntry, formatCount, periodByKey } from './utils/standings';
+
+// Nominees come from /v1/awards/standings (utils/standings.js), ranked by the
+// same formula that decides the award, for the period this voter's vote counts
+// toward. Before anyone scores in a new period they're ordered by how the last
+// one finished — the status line above the grid says which.
+const NOMINEE_PAGE = 48;
 
 const VoteAwards = () => {
   const navigate = useNavigate();
@@ -21,6 +29,8 @@ const VoteAwards = () => {
   const [selectedInterval, setSelectedInterval] = useState('daily');
   const [selectedJurisdiction, setSelectedJurisdiction] = useState('harlem');
   const [nominees, setNominees] = useState([]);
+  const [board, setBoard] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showVotingWizard, setShowVotingWizard] = useState(false);
@@ -289,58 +299,70 @@ const VoteAwards = () => {
     );
   };
 
+  const toNominee = (e) => ({
+    id: e.id,
+    name: e.name,
+    type: e.type,
+    genreKey: selectedGenre,
+    artist: e.type === 'song' ? (e.artistName || 'Unknown Artist') : undefined,
+    artistId: e.artistId,
+    imageUrl: e.artwork || backimage,
+    artwork: e.artwork,
+    mediaUrl: e.fileUrl,
+    fileUrl: e.fileUrl,
+    rank: e.rank,
+    points: e.points,
+    votes: e.votes,
+    plays: e.plays,
+    movement: e.movement,
+    isNew: e.isNew,
+    jurisdiction: e.homeJurisdictionName || '',
+    jurisdictionId: e.homeJurisdictionId || null,
+  });
+
   const fetchNominees = async () => {
     setLoading(true);
     setError('');
     try {
-      const genreId = GENRE_IDS[selectedGenre];
-      const jurisdictionId = JURISDICTION_IDS[selectedJurisdiction];
-      const intervalId = INTERVAL_IDS[selectedInterval];
-
-      const response = await apiCall({
-        method: 'get',
-        url: `/v1/vote/nominees?targetType=${selectedType}&genreId=${genreId}&jurisdictionId=${jurisdictionId}&intervalId=${intervalId}&limit=20`
+      const b = await fetchStandings({
+        type: selectedType,
+        jurisdictionId: JURISDICTION_IDS[selectedJurisdiction],
+        genre: selectedGenre,
+        period: selectedInterval,
+        limit: NOMINEE_PAGE,
+        offset: 0,
       });
-
-      const nomineesData = response.data || [];
-
-      const normalized = nomineesData.map((nominee) => {
-        if (selectedType === 'artist') {
-          return {
-            id: nominee.userId,
-            name: nominee.username,
-            type: 'artist',
-            genreKey: selectedGenre,
-            imageUrl: buildUrl(nominee.photoUrl),
-            votes: nominee.voteCount || 0,
-            totalLifetimeVotes: nominee.totalVotes || 0,
-            jurisdiction: nominee.jurisdiction?.name || 'Unknown',
-            genre: nominee.genre?.name || 'Unknown',
-          };
-        } else {
-          return {
-            id: nominee.songId,
-            name: nominee.title,
-            type: 'song',
-            genreKey: selectedGenre,
-            artist: nominee.artist?.username || 'Unknown Artist',
-            artistId: nominee.artist?.userId,
-            imageUrl: buildUrl(nominee.artworkUrl),
-            mediaUrl: buildUrl(nominee.fileUrl),
-            votes: nominee.voteCount || 0,
-            plays: nominee.playCount || nominee.totalPlays || 0,
-            jurisdiction: nominee.jurisdiction?.name || 'Unknown',
-            genre: nominee.genre?.name || 'Unknown',
-          };
-        }
-      });
-
-      setNominees(normalized);
+      setBoard(b);
+      setNominees(b.entries.map(toNominee));
     } catch (err) {
       console.error('Failed to fetch nominees:', err);
       setError('Failed to load nominees. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreNominees = async () => {
+    if (!board || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const b = await fetchStandings({
+        type: selectedType,
+        jurisdictionId: JURISDICTION_IDS[selectedJurisdiction],
+        genre: selectedGenre,
+        period: selectedInterval,
+        limit: NOMINEE_PAGE,
+        offset: nominees.length,
+      });
+      setNominees((prev) => {
+        const seen = new Set(prev.map((n) => n.id));
+        return [...prev, ...b.entries.filter((e) => !seen.has(e.id)).map(toNominee)];
+      });
+      setBoard((prev) => ({ ...prev, total: b.total }));
+    } catch (err) {
+      console.error('Failed to load more nominees:', err);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -424,30 +446,16 @@ const VoteAwards = () => {
     await fetchNominees();
   };
 
-  const handlePlaySong = async (nominee) => {
-    if (nominee.type === 'song' && nominee.mediaUrl) {
-      requestPlay({
-        type: 'song',
-        id: nominee.id,
-        songId: nominee.id,
-        url: nominee.mediaUrl,
-        fileUrl: nominee.mediaUrl,
-        title: nominee.name,
-        artist: nominee.artist,
-        artistId: nominee.artistId,
-        artwork: nominee.imageUrl,
-        artworkUrl: nominee.imageUrl,
-      });
-
-      if (nominee.id && userId) {
-        try {
-          await apiCall({ method: 'post', url: `/v1/media/song/${nominee.id}/play?userId=${userId}` });
-        } catch (err) {
-          console.error('Failed to track song play:', err);
-        }
-      }
-    }
-  };
+  // Plays are counted by the Player after real listening — never here.
+  const handlePlaySong = (nominee) => playEntry({
+    type: 'song',
+    id: nominee.id,
+    name: nominee.name,
+    artistName: nominee.artist,
+    artistId: nominee.artistId,
+    fileUrl: nominee.mediaUrl,
+    artwork: nominee.artwork,
+  }, requestPlay, 'voteawards');
 
   const handleNomineeClick = (nominee) => {
     if (nominee.type === 'artist') {
@@ -468,44 +476,13 @@ const VoteAwards = () => {
   };
 
   const handlePlayArtistDefault = async (nominee) => {
-    try {
-      const response = await apiCall({
-        method: 'get',
-        url: `/v1/users/${nominee.id}/default-song`,
-      });
-      const defaultSong = response.data;
-
-      if (defaultSong?.fileUrl) {
-        const fullUrl = buildUrl(defaultSong.fileUrl);
-        const fullArtwork = buildUrl(defaultSong.artworkUrl);
-
-        requestPlay({
-          type: 'song',
-          id: defaultSong.songId,
-          songId: defaultSong.songId,
-          url: fullUrl,
-          fileUrl: fullUrl,
-          title: defaultSong.title || `${nominee.name}'s Default Track`,
-          artist: nominee.name,
-          artistId: nominee.id,
-          artwork: fullArtwork,
-          artworkUrl: fullArtwork,
-        });
-
-        if (defaultSong.songId && userId) {
-          try {
-            await apiCall({ method: 'post', url: `/v1/media/song/${defaultSong.songId}/play?userId=${userId}` });
-          } catch (err) {
-            console.error('Failed to track artist default song play:', err);
-          }
-        }
-      } else {
-        alert(`${nominee.name} has not set a default song yet.`);
-      }
-    } catch (err) {
-      console.error('Failed to fetch/play default song:', err);
-      alert('Could not load artist\'s song.');
-    }
+    const played = await playEntry({
+      type: 'artist',
+      id: nominee.id,
+      name: nominee.name,
+      artwork: nominee.artwork,
+    }, requestPlay, 'voteawards');
+    if (!played) alert(`${nominee.name} has not set a default song yet.`);
   };
 
   const jurisdictionLabel = jurisdictions.find(j => j.value === selectedJurisdiction)?.label || 'Unknown';
@@ -514,6 +491,10 @@ const VoteAwards = () => {
   const typeLabel = selectedType.charAt(0).toUpperCase() + selectedType.slice(1);
 
   const pad = (n) => String(n).padStart(2, '0');
+  const boardStatus = board ? describeBoard(board) : null;
+  const pointsLabel = board?.state === 'LIVE'
+    ? `Points ${periodByKey(selectedInterval).current}`
+    : `Points ${periodByKey(selectedInterval).previous.toLowerCase()}`;
 
   // ── Memoize the filters object passed to VotingWizard ─────────────────
   // Without this, the inline object literal `{ selectedGenre, selectedType, ... }`
@@ -693,6 +674,13 @@ const VoteAwards = () => {
 
         {/* ── Nominees grid ── */}
         <section className="va-grid-section">
+          {boardStatus && !loading && !error && (
+            <p className={`va-board-status va-board-status--${boardStatus.tone}`} role="status">
+              <span className="va-board-dot" aria-hidden="true" />
+              <strong>{boardStatus.title}.</strong> {boardStatus.detail}
+              {board?.state !== 'LIVE' && ' Nominees are in that order until then.'}
+            </p>
+          )}
           {loading && (
             <div className="va-loading">Loading nominees...</div>
           )}
@@ -712,6 +700,12 @@ const VoteAwards = () => {
                         style={{ backgroundImage: `url(${nominee.imageUrl})` }}
                         onClick={() => handleNomineeClick(nominee)}
                       />
+                      {nominee.points > 0 && (
+                        <span className="va-card-rank" aria-label={`Ranked ${nominee.rank}`}>
+                          <span className="va-card-rank-num">#{nominee.rank}</span>
+                          <RankMove movement={nominee.movement} isNew={nominee.isNew} />
+                        </span>
+                      )}
                       <div className="va-card-overlay" onClick={() => handleNomineeClick(nominee)}>
                         <h3 className="va-card-name">{nominee.name}</h3>
                         {nominee.type === 'song' && (
@@ -727,27 +721,17 @@ const VoteAwards = () => {
                     <div className="va-card-footer">
                      <div className="va-card-ambient" style={{ backgroundImage: `url(${nominee.imageUrl})` }} />
                       <div className="va-card-stats">
-                        {nominee.type === 'artist' ? (
-                          <div className="va-stat">
-                            <span className="va-stat-label">Total Votes</span>
-                            <span className="va-stat-value">
-                              {nominee.totalLifetimeVotes.toLocaleString()}
-                              {nominee.votes > 0 && (
-                                <span className="va-stat-badge">+{nominee.votes}</span>
-                              )}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="va-stat">
-                            <span className="va-stat-label">Plays</span>
-                            <span className="va-stat-value">
-                              {nominee.plays.toLocaleString()}
-                              {nominee.votes > 0 && (
-                                <span className="va-stat-badge">+{nominee.votes}</span>
-                              )}
-                            </span>
-                          </div>
-                        )}
+                        <div className="va-stat">
+                          <span className="va-stat-label">{pointsLabel}</span>
+                          <span className="va-stat-value">
+                            {formatCount(nominee.points)}
+                            {nominee.votes > 0 && (
+                              <span className="va-stat-badge">
+                                {formatCount(nominee.votes)} vote{nominee.votes === 1 ? '' : 's'}
+                              </span>
+                            )}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="va-card-buttons">
@@ -784,6 +768,14 @@ const VoteAwards = () => {
                     : `No ${genreLabel} ${selectedType}s in ${jurisdictionLabel} yet.`}
                 </p>
               )}
+            </div>
+          )}
+
+          {!loading && !error && board && nominees.length < board.total && (
+            <div className="va-more">
+              <button type="button" className="va-more-btn" onClick={loadMoreNominees} disabled={loadingMore}>
+                {loadingMore ? 'Loading…' : `Show more nominees (${formatCount(board.total - nominees.length)} more)`}
+              </button>
             </div>
           )}
         </section>

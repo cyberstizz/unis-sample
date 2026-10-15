@@ -4,11 +4,11 @@ import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';
-import sampleSong from './assets/tonyfadd_paranoidbuy1get1free.mp3';
 import { apiCall } from './components/axiosInstance';
-import { buildUrl } from './utils/buildUrl';
 import UnisMap from './map/UnisMap';
-import { CANONICAL_GENRES, GENRE_IDS } from './utils/idMappings';
+import { CANONICAL_GENRES } from './utils/idMappings';
+import RankMove from './components/RankMove';
+import { fetchStandings, describeBoard, playEntry } from './utils/standings';
 import './findpage.scss';
 
 /**
@@ -44,33 +44,30 @@ const titleCase = (k) => k.charAt(0).toUpperCase() + k.slice(1);
 // key returns undefined. The label comes from the key itself.
 const GENRES = CANONICAL_GENRES.map((key) => ({ value: key, label: titleCase(key) }));
 
-// KNOWN GAP — the genre control is currently inert on this page.
-// /v1/jurisdictions/{id}/tops takes no genre parameter; both callers (here and
-// jurisdictionPage) hit it bare. Genre filtering exists on
-// /v1/vote/leaderboards, which does accept genreId. Until /tops grows the same
-// parameter, changing the genre pill updates local state and nothing else.
-// To wire it once the backend supports it: add `?genreId=${getGenreId(genre)}`
-// to the tops URL and add `genre` to fetchTopResultsById's dependency array.
+// Top results come from /v1/awards/standings (utils/standings.js): this
+// week, in the selected genre, ranked by the same formula that decides
+// awards. Changing the genre pill refetches for the place on screen.
 
 const FindPage = () => {
   const navigate = useNavigate();
   const { requestPlay } = useContext(PlayerContext);
   const { user } = useAuth();
-
   const userId = user?.userId || null;
+
 
   const [navigationStack, setNavigationStack] = useState([ROOT_CRUMB]);
   const [currentJurisdictions, setCurrentJurisdictions] = useState([]);
   const [selectedJurisdiction, setSelectedJurisdiction] = useState(null);
   const [focusState, setFocusState] = useState(null);
 
-  // The API returns up to 30 per jurisdiction. Hold all of them and derive the
-  // visible three below, so switching genre is free rather than a refetch.
-  const [rawTops, setRawTops] = useState({ artists: [], songs: [] });
+  // The top three songs and artists for the place on screen, this week.
+  const [rawTops, setRawTops] = useState({ artists: [], songs: [], status: null });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasSelectedJurisdiction, setHasSelectedJurisdiction] = useState(false);
   const [genre, setGenre] = useState(CANONICAL_GENRES[0]);
+  const genreRef = useRef(genre);
+  const lastTopsIdRef = useRef(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [toast, setToast] = useState(null);
   const [spotlight, setSpotlight] = useState(null); // state lit during a random spin
@@ -147,44 +144,59 @@ const FindPage = () => {
       setError(null);
       setHasSelectedJurisdiction(true);
 
+      lastTopsIdRef.current = jurisdictionId;
+      const wanted = genreRef.current;
       try {
-        const res = await apiCall({
-          method: 'get',
-          url: `/v1/jurisdictions/${jurisdictionId}/tops`,
-        });
-        const raw = res.data || {};
+        const [artistBoard, songBoard] = await Promise.all([
+          fetchStandings({ type: 'artist', jurisdictionId, genre: wanted, period: 'weekly', limit: 3 }),
+          fetchStandings({ type: 'song', jurisdictionId, genre: wanted, period: 'weekly', limit: 3 }),
+        ]);
+        // A newer place or genre was asked for while this was loading.
+        if (lastTopsIdRef.current !== jurisdictionId || genreRef.current !== wanted) return;
 
-        // No slice here — filtering by genre happens downstream, and slicing
-        // first would throw away the very rows the selected genre needs.
         setRawTops({
-          artists: (raw.topArtists || []).map((a, i) => ({
-            id: a.userId || i,
-            name: a.username,
-            votes: a.score || 0,
-            genreId: a.genre?.genreId || null,
-            artwork: buildUrl(a.photoUrl),
+          status: describeBoard(songBoard),
+          artists: artistBoard.entries.filter((e) => e.points > 0).map((a) => ({
+            id: a.id,
+            rank: a.rank,
+            name: a.name,
+            votes: a.points,
+            movement: a.movement,
+            isNew: a.isNew,
+            artwork: a.artwork,
           })),
-          songs: (raw.topSongs || []).map((s, i) => ({
-            id: s.songId || i,
-            title: s.title,
-            artist: s.artist?.username || 'Unknown',
-            artistId: s.artist?.userId,
-            votes: s.score || 0,
-            genreId: s.genre?.genreId || null,
-            fileUrl: buildUrl(s.fileUrl),
-            artwork: buildUrl(s.artworkUrl),
+          songs: songBoard.entries.filter((e) => e.points > 0).map((t) => ({
+            id: t.id,
+            rank: t.rank,
+            title: t.name,
+            artist: t.artistName || 'Unknown',
+            artistId: t.artistId,
+            votes: t.points,
+            movement: t.movement,
+            isNew: t.isNew,
+            fileUrl: t.fileUrl,
+            artwork: t.artwork,
           })),
         });
       } catch (err) {
-        console.error('[findpage] tops fetch failed:', err?.message || err);
+        console.error('[findpage] standings fetch failed:', err?.message || err);
         setError('Top results are unavailable right now. Try again in a moment.');
-        setRawTops({ artists: [], songs: [] });
+        setRawTops({ artists: [], songs: [], status: null });
       } finally {
         setLoading(false);
       }
     },
     []
   );
+
+  // Genre changed: refetch the place on screen in the new genre.
+  useEffect(() => {
+    genreRef.current = genre;
+    if (lastTopsIdRef.current && hasSelectedJurisdiction) {
+      fetchTopResultsById(lastTopsIdRef.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [genre]);
 
   /** Name-based lookup, for paths where only a name survived (back, crumbs). */
   const fetchTopResultsByName = useCallback(
@@ -268,7 +280,7 @@ const FindPage = () => {
         setSelectedJurisdiction(jurisdiction);
 
         if (!isLive) {
-          setRawTops({ artists: [], songs: [] });
+          setRawTops({ artists: [], songs: [], status: null });
           setLoading(false);
         }
       } catch (err) {
@@ -326,7 +338,8 @@ const FindPage = () => {
     setSelectedJurisdiction(null);
     setFocusState(null);
     setHasSelectedJurisdiction(false);
-    setRawTops({ artists: [], songs: [] });
+    setRawTops({ artists: [], songs: [], status: null });
+    lastTopsIdRef.current = null;
     setError(null);
   }, []);
 
@@ -400,101 +413,25 @@ const FindPage = () => {
   const handleArtistView = (id) => navigate(`/artist/${id}`);
   const handleSongView = (id) => navigate(`/song/${id}`);
 
+  // Plays are counted by the Player after real listening — never here.
   const handlePlay = useCallback(
-    async (media) => {
-      let trackingId = null;
-
-      if (media.fileUrl) {
-        requestPlay({
-          type: 'song',
-          id: media.id,
-          songId: media.id,
-          url: media.fileUrl,
-          fileUrl: media.fileUrl,
-          title: media.title || media.name,
-          artist: media.artist || media.name,
-          artistId: media.artistId,
-          artwork: media.artwork,
-          artworkUrl: media.artwork,
-        });
-        trackingId = media.id;
-      } else if (media.id && media.name) {
-        try {
-          const res = await apiCall({ method: 'get', url: `/v1/users/${media.id}/default-song` });
-          const song = res.data;
-          if (!song?.fileUrl) return;
-
-          const fullUrl = buildUrl(song.fileUrl);
-          const fullArtwork = buildUrl(song.artworkUrl) || media.artwork;
-
-          requestPlay({
-            type: 'song',
-            id: song.songId,
-            songId: song.songId,
-            url: fullUrl,
-            fileUrl: fullUrl,
-            title: song.title,
-            artist: media.name,
-            artistId: media.id,
-            artwork: fullArtwork,
-            artworkUrl: fullArtwork,
-          });
-          trackingId = song.songId;
-        } catch (err) {
-          console.error('[findpage] default song fetch failed:', err?.message || err);
-          return;
-        }
-      } else {
-        requestPlay({
-          type: 'song',
-          id: media.id,
-          songId: media.id,
-          url: sampleSong,
-          fileUrl: sampleSong,
-          title: media.title || media.name,
-          artist: media.artist || media.name,
-          artistId: media.artistId,
-          artwork: media.artwork,
-          artworkUrl: media.artwork,
-        });
-        return;
-      }
-
-      if (trackingId && userId) {
-        try {
-          await apiCall({
-            method: 'post',
-            url: `/v1/media/song/${trackingId}/play?userId=${userId}`,
-          });
-        } catch (err) {
-          console.error('[findpage] play tracking failed:', err?.message || err);
-        }
-      }
-    },
-    [requestPlay, buildUrl, userId]
+    (item, kind) => playEntry(
+      kind === 'song'
+        ? { type: 'song', id: item.id, name: item.title, artistName: item.artist, artistId: item.artistId, fileUrl: item.fileUrl, artwork: item.artwork }
+        : { type: 'artist', id: item.id, name: item.name, artwork: item.artwork },
+      requestPlay,
+      'findpage'
+    ),
+    [requestPlay]
   );
 
   /* ------------------------------------------------------------- derived */
 
-  /**
-   * The visible three, filtered by the selected genre.
-   *
-   * /tops takes no genre parameter, but it does return each item's genre
-   * relation, so the filter happens here — no extra request when the pill
-   * changes. Matching is on genreId rather than genre.name: the genres table
-   * has drifted from idMappings by name before, and a UUID cannot drift.
-   *
-   * An item with no genre set is excluded rather than shown under whichever
-   * pill happens to be active, which would be a quiet lie.
-   */
-  const topResults = useMemo(() => {
-    const wantedGenreId = GENRE_IDS[genre] || null;
-    const pick = (list) => {
-      if (!wantedGenreId) return list.slice(0, 3);
-      return list.filter((x) => x.genreId === wantedGenreId).slice(0, 3);
-    };
-    return { artists: pick(rawTops.artists), songs: pick(rawTops.songs) };
-  }, [rawTops, genre]);
+  // The visible three. Genre filtering happens on the server now.
+  const topResults = useMemo(
+    () => ({ artists: rawTops.artists.slice(0, 3), songs: rawTops.songs.slice(0, 3) }),
+    [rawTops]
+  );
 
   const genreLabel = titleCase(genre);
 
@@ -515,6 +452,12 @@ const FindPage = () => {
     selectedJurisdiction && !isInHarlemChain(selectedJurisdiction.name);
 
   const { artists, songs } = topResults;
+
+  const chartPlace = (() => {
+    const key = String(displayTerritory || '').trim().toLowerCase().replace(/\s+/g, '-');
+    return ['harlem', 'uptown-harlem', 'downtown-harlem'].includes(key) ? key : 'harlem';
+  })();
+  const openChart = () => navigate(`/charts?type=song&period=weekly&genre=${genre}&place=${chartPlace}`);
 
   /**
    * Artwork that is missing or fails to load falls back to a monogram, not to
@@ -562,7 +505,10 @@ const FindPage = () => {
         <div className="ambient-bg" style={{ backgroundImage: `url(${item.artwork})` }} />
       )}
       <div className="glass-content">
-        <div className="rank">{index + 1}</div>
+        <div className="rank">
+          {item.rank || index + 1}
+          <RankMove movement={item.movement} isNew={item.isNew} className="rank-move" />
+        </div>
         {renderArtwork(item, kind)}
         <div className="item-info">
           <div className="item-title">{kind === 'song' ? item.title : item.name}</div>
@@ -570,7 +516,7 @@ const FindPage = () => {
         </div>
         <button
           type="button"
-          onClick={() => handlePlay(item)}
+          onClick={() => handlePlay(item, kind)}
           className="findpage-play-button"
           aria-label={`Play ${kind === 'song' ? item.title : item.name}`}
         >
@@ -591,7 +537,7 @@ const FindPage = () => {
     <div className="column">
       <h2>
         <button type="button" className="column-link" onClick={handleJurisdictionNavigate}>
-          {heading} in {displayTerritory}
+          {heading} {rawTops.status?.tone === 'final' ? 'last week' : 'this week'} in {displayTerritory}
         </button>
       </h2>
       <ul className="results-list">
@@ -807,6 +753,9 @@ const FindPage = () => {
             <>
               {renderColumn('Top songs', songs, 'song', `No ${genreLabel} songs charted here yet.`)}
               {renderColumn('Top artists', artists, 'artist', `No ${genreLabel} artists charted here yet.`)}
+              <button type="button" className="findpage-fullchart" onClick={openChart}>
+                See the full {genreLabel} chart for {displayTerritory}
+              </button>
             </>
           )}
         </div>

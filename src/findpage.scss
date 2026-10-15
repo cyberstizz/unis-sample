@@ -448,6 +448,7 @@ $bg-black: #000000;
 
 .results-section {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
   width: 100%;
   max-width: 960px;
@@ -581,11 +582,17 @@ $bg-black: #000000;
       }
 
       .rank {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
         font: 400 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
         color: rgba(255, 255, 255, 0.32);
         flex-shrink: 0;
-        min-width: 20px;
+        min-width: 24px;
         text-align: center;
+
+        .rank-move { font-size: 9px; }
       }
 
       &:first-child {
@@ -786,4 +793,21 @@ $bg-black: #000000;
       }
     }
   }
+}
+// "See the full … chart" — sits on its own row under both columns.
+.findpage-fullchart {
+  flex-basis: 100%;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.12));
+  background: color-mix(in srgb, var(--unis-text, #fff) 5%, transparent);
+  color: var(--unis-text, #fff);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+
+  &:hover { border-color: color-mix(in srgb, var(--unis-primary), transparent 45%); }
+  &:focus-visible { outline: 2px solid var(--unis-primary-2, #fff); outline-offset: 2px; }
 }

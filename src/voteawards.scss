@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double&display=swap');
 // ═══════════════════════════════════════════════════════════════
 //  UNIS — Vote & Awards Page
 //  Typography: DM Sans (body) + Playfair Display (accent)
@@ -446,18 +447,26 @@ $green-badge: #22c55e;
 .va-card-rank {
   position: absolute;
   top: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
-  color: $text-gray;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 3px 9px;
-  border-radius: 4px;
-  letter-spacing: 0.5px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  left: 10px;
   z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px 4px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+
+  .rk-move--new { padding: 1px 5px; }
+}
+
+.va-card-rank-num {
+  font-family: 'Bitcount Grid Double', ui-monospace, monospace;
+  font-size: 15px;
+  line-height: 1;
+  color: #fff;
 }
 
 .va-card-image {
@@ -655,6 +664,52 @@ $green-badge: #22c55e;
     background: $unis-blue-light;
     box-shadow: 0 0 12px $unis-blue-glow;
   }
+}
+
+// Live / final / still-closing note above the grid (utils/standings.js).
+.va-board-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.68));
+
+  strong { color: var(--unis-text, #fff); font-weight: 600; }
+}
+
+.va-board-dot {
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: #34d399;
+}
+.va-board-status--final .va-board-dot { background: color-mix(in srgb, var(--unis-primary, #163387), white 40%); }
+.va-board-status--closing .va-board-dot { background: #fbbf24; }
+
+.va-more {
+  display: flex;
+  justify-content: center;
+  padding: 22px 0 8px;
+}
+
+.va-more-btn {
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.12));
+  background: color-mix(in srgb, var(--unis-text, #fff) 6%, transparent);
+  color: var(--unis-text, #fff);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover { background: color-mix(in srgb, var(--unis-text, #fff) 10%, transparent); }
+  &:disabled { opacity: 0.6; cursor: default; }
 }
 
 .va-no-nominees {

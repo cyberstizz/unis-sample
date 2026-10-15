@@ -1,0 +1,37 @@
+// RankMove — movement since the previous period. Shared by Charts, the feed,
+// the voting page, leaderboards, and the jurisdiction and find pages.
+// Up/down colours are fixed (they carry meaning in every theme); "New" takes
+// the active theme's accent.
+
+.rk-move {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--unis-font-sans, 'Inter', system-ui, sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  svg path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &--up     { color: #34d399; }
+  &--down   { color: #f87171; }
+  &--steady { color: var(--unis-text-3, rgba(255, 255, 255, 0.4)); }
+
+  &--new {
+    padding: 2px 6px;
+    border-radius: 999px;
+    color: var(--unis-text, #fff);
+    background: color-mix(in srgb, var(--unis-primary, #163387), transparent 55%);
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+}

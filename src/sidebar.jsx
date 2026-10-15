@@ -43,6 +43,12 @@ const ICONS = {
       <path d="M7 5.6H4.8A2 2 0 0 0 7 8.4M17 5.6h2.2A2 2 0 0 1 17 8.4M12 13v3.4M9 20h6M9.4 20a2.6 2.6 0 0 1 5.2 0" />
     </svg>
   ),
+  charts: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path className="fs" d="M4.5 5h3v3h-3z" />
+      <path d="M4.5 5h3v3h-3zM10.5 6.5h9M4.5 11h3M10.5 12.5h9M4.5 17h3M10.5 18.5h6" />
+    </svg>
+  ),
   messages: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path className="fs" d="M5 5.6h14a1.5 1.5 0 0 1 1.5 1.5v7.8A1.5 1.5 0 0 1 19 16.4h-9l-4 3.2v-3.2H5A1.5 1.5 0 0 1 3.5 14.9V7.1A1.5 1.5 0 0 1 5 5.6z" />
@@ -199,6 +205,7 @@ const Sidebar = () => {
       items: [
         { key: 'vote',         label: 'Vote',         icon: 'vote',         onClick: () => handleNav('/voteawards'),   match: (p) => p.startsWith('/voteawards') },
         { key: 'leaderboards', label: 'Leaderboards', icon: 'leaderboards', onClick: () => handleNav('/leaderboards'), match: (p) => p.startsWith('/leaderboards') },
+        { key: 'charts',       label: 'Charts',       icon: 'charts',       onClick: () => handleNav('/charts'),       match: (p) => p.startsWith('/charts') },
         { key: 'messages',     label: 'Messages',     icon: 'messages',     onClick: onMessages, badge: unreadCount,  match: (p) => p.startsWith('/messages') },
       ],
     },

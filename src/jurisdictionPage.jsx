@@ -14,17 +14,18 @@
 //      each repeated content that already lives in the hero or the boards
 //    • Hero pills + stats are now 100% data-derived (no hardcoded "Harlem" /
 //      "Invite-Only" / "Active Poll: Live" literals)
-//    • userId comes from useAuth() instead of hand-rolled JWT atob
 //    • alert() → inline toast (same pattern as findpage)
-//    • Play tracking is effect-based off PlayerContext.currentMedia, so a
-//      cancelled PlayChoiceModal never credits a play, and a QUEUED song is
-//      credited when it actually starts playing (same fix as findpage/songPage)
 //    • Theme contract: jurisdictionPage.scss resolves every colour from the
 //      token layer (theme.scss + unis-design-tokens.scss)
 //
-//  Known, deliberate debt (tracked): play tracking still sends the
-//  client-supplied ?userId= — backend must derive it from the JWT before this
-//  can change. Same as the other 13 call sites.
+//  Rankings (Oct 2026): the boards and hero stats come from
+//  /v1/awards/standings (utils/standings.js) — this week, all genres, ranked
+//  by the same formula that decides awards, with movement since last week.
+//  Before anyone scores in a new week they show last week's final, and the
+//  labels say so. The old /tops endpoint ranked by all-time numbers.
+//
+//  Play tracking is deliberately absent: the Player counts plays after real
+//  listening. The page-level POST that used to live here raced it.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import React, {
@@ -36,7 +37,6 @@ import React, {
 } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
-import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
 import './jurisdictionPage.scss';
 import Layout from './layout';
@@ -46,6 +46,8 @@ import heroHarlem from './assets/apollopic.jpg';
 import heroDefault from './assets/biglpic.jpg';
 import { buildUrl } from './utils/buildUrl';
 import WinnersTimeline from './winnersTimeline';
+import RankMove from './components/RankMove';
+import { fetchStandings, describeBoard } from './utils/standings';
 
 const TOAST_MS = 4500;
 
@@ -99,9 +101,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
   const { jurisdiction: jurNameFromParams } = useParams();
   const jurName = jurNameFromParams || jurisdiction;
   const navigate = useNavigate();
-  const { requestPlay, currentMedia } = useContext(PlayerContext);
-  const { user } = useAuth();
-  const userId = user?.userId || null;
+  const { requestPlay } = useContext(PlayerContext);
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -111,7 +111,6 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
   const toastTimer = useRef(null);
   // songId the user asked this page to play, awaiting confirmation that it
   // actually became the current track (see the tracking effect below).
-  const pendingTrackRef = useRef(null);
 
   const showToast = useCallback((message) => {
     setToast(message);
@@ -151,15 +150,16 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
 
         if (!jurId) throw new Error('Jurisdiction not found');
 
-        const topsResponse = await apiCall({
-          method: 'get',
-          url: `/v1/jurisdictions/${jurId}/tops`,
-        });
-
-        const rawData = { ...topsResponse.data, jurisdiction: jurDetails };
-
-        const topArtist = rawData.topArtist || (rawData.topArtists || [])[0];
-        const topSong = rawData.topSong || (rawData.topSongs || [])[0];
+        // This week's boards, ranked by the same formula as awards. Before
+        // anyone scores in a new week they show last week's final.
+        const [artistBoard, songBoard] = await Promise.all([
+          fetchStandings({ type: 'artist', jurisdictionId: jurId, genre: 'all', period: 'weekly', limit: 25 }),
+          fetchStandings({ type: 'song', jurisdictionId: jurId, genre: 'all', period: 'weekly', limit: 10 }),
+        ]);
+        const scoredArtists = artistBoard.entries.filter((e) => e.points > 0);
+        const scoredSongs = songBoard.entries.filter((e) => e.points > 0);
+        const topArtist = scoredArtists[0];
+        const topSong = scoredSongs[0];
 
         const normalized = {
           description:
@@ -175,39 +175,48 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           // Backend-supplied art wins; otherwise the local stock photo.
           heroImage: buildUrl(jurDetails.symbolUrl) || heroImageFor(jurName),
 
-          topArtistName: topArtist?.username || null,
+          status: describeBoard(artistBoard),
+          finished: artistBoard.state !== 'LIVE',
+
+          topArtistName: topArtist?.name || null,
 
           songOfWeek: topSong
             ? {
-                id: topSong.songId,
-                title: topSong.title,
-                artist: topSong.artist?.username || 'Unknown',
-                artistId: topSong.artist?.userId,
-                image: buildUrl(topSong.artworkUrl) || albumArt,
-                fileUrl: buildUrl(topSong.fileUrl),
+                id: topSong.id,
+                title: topSong.name,
+                artist: topSong.artistName || 'Unknown',
+                artistId: topSong.artistId,
+                image: topSong.artwork || albumArt,
+                fileUrl: topSong.fileUrl,
               }
             : null,
 
-          topArtists: (rawData.topArtists || []).map((artist, i) => ({
-            id: artist.userId,
-            rank: i + 1,
-            name: artist.username,
-            genre: artist.genre?.name || '',
-            score: artist.score || 0,
-            thumbnail: buildUrl(artist.photoUrl) || prominentArtistBg,
+          artistsCharting: scoredArtists.length,
+          artistsChartingMore: scoredArtists.length === 25 && artistBoard.total > 25,
+          pointsThisWeek: scoredArtists.reduce((sum, a) => sum + a.points, 0),
+
+          topArtists: scoredArtists.slice(0, 10).map((artist) => ({
+            id: artist.id,
+            rank: artist.rank,
+            name: artist.name,
+            genre: artist.homeJurisdictionName || '',
+            score: artist.points,
+            movement: artist.movement,
+            isNew: artist.isNew,
+            thumbnail: artist.artwork || prominentArtistBg,
           })),
 
-          // Songs are ranked by the same weighted-vote scoring as artists,
-          // so both boards display the score as "pts" — no fake "plays".
-          topSongs: (rawData.topSongs || []).map((song, i) => ({
-            id: song.songId,
-            rank: i + 1,
-            title: song.title,
-            artist: song.artist?.username || 'Unknown',
-            artistId: song.artist?.userId,
-            score: song.score ?? song.plays ?? 0,
-            thumbnail: buildUrl(song.artworkUrl) || prominentArtistBg,
-            fileUrl: buildUrl(song.fileUrl),
+          topSongs: scoredSongs.map((song) => ({
+            id: song.id,
+            rank: song.rank,
+            title: song.name,
+            artist: song.artistName || 'Unknown',
+            artistId: song.artistId,
+            score: song.points,
+            movement: song.movement,
+            isNew: song.isNew,
+            thumbnail: song.artwork || prominentArtistBg,
+            fileUrl: song.fileUrl,
           })),
         };
 
@@ -224,24 +233,9 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
     fetchData();
   }, [jurName]);
 
-  // ── Play tracking — effect-based off currentMedia ─────────────────────────
-  // handlePlay only REQUESTS playback (requestPlay may open PlayChoiceModal).
-  // A play is credited only once the requested song actually becomes the
-  // current track: cancel → never credited; queue → credited when it starts.
-  useEffect(() => {
-    const playingId = currentMedia?.id || currentMedia?.songId;
-    if (!playingId || !userId) return;
-    if (pendingTrackRef.current !== playingId) return;
-
-    pendingTrackRef.current = null;
-
-    apiCall({
-      method: 'post',
-      url: `/v1/media/song/${playingId}/play?userId=${userId}`,
-    }).catch((err) =>
-      console.error('[jurisdiction] play tracking failed:', err?.message || err)
-    );
-  }, [currentMedia?.id, currentMedia?.songId, userId]);
+  // ── Play tracking — deliberately absent. The Player counts a play after
+  //    real listening (15s / 25%, with source and playId). A page-level POST
+  //    here raced it and credited skips, which now move rankings.
 
   // ── Play handlers — everything funnels through requestPlay ────────────────
 
@@ -263,9 +257,8 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
         artistId: song.artistId,
         artwork: song.thumbnail || song.image,
         artworkUrl: song.thumbnail || song.image,
+        source: 'jurisdiction',
       });
-
-      pendingTrackRef.current = song.id;
     },
     [requestPlay, showToast]
   );
@@ -299,9 +292,8 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           artistId: artist.id,
           artwork: fullArtwork,
           artworkUrl: fullArtwork,
+          source: 'jurisdiction',
         });
-
-        pendingTrackRef.current = defaultSong.songId;
       } catch (err) {
         console.error('[jurisdiction] default song fetch failed:', err?.message || err);
         showToast(`Couldn't load ${artist.name}'s song. Try again in a moment.`);
@@ -339,8 +331,11 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
     );
   }
 
-  const artistsCharting = data.topArtists.length;
-  const pointsThisWeek = data.topArtists.reduce((sum, a) => sum + (a.score || 0), 0);
+  const artistsCharting = `${data.artistsCharting}${data.artistsChartingMore ? '+' : ''}`;
+  const pointsThisWeek = data.pointsThisWeek;
+  const placeKey = jurName.trim().toLowerCase().replace(/\s+/g, '-');
+  const chartPlace = ['harlem', 'uptown-harlem', 'downtown-harlem'].includes(placeKey) ? placeKey : 'harlem';
+  const openChart = (type) => navigate(`/charts?type=${type}&period=weekly&genre=all&place=${chartPlace}`);
 
   return (
     <Layout>
@@ -394,7 +389,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
               </div>
 
               <div className="jp-stat">
-                <dt>Points this week</dt>
+                <dt>{data.finished ? 'Points last week' : 'Points this week'}</dt>
                 <dd>{pointsThisWeek.toLocaleString()}</dd>
               </div>
             </dl>
@@ -434,7 +429,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
               />
 
               <div className="jp-featured-overlay">
-                <span className="jp-featured-kicker">Song of the week</span>
+                <span className="jp-featured-kicker">{data.finished ? 'Last week\u2019s number one' : 'Number one this week'}</span>
                 <h2>{data.songOfWeek.title}</h2>
                 <p>{data.songOfWeek.artist}</p>
 
@@ -458,7 +453,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
         {/* ═══════ 2 · THIS WEEK'S CHART ═══════ */}
         <section className="jp-section jp-chart">
           <header className="jp-section-head">
-            <span className="jp-eyebrow">This week&rsquo;s chart</span>
+            <span className="jp-eyebrow">{data.status?.title || 'This week\u2019s chart'}</span>
             <h2 className="jp-chart-title">
               Who {jurName} is <em>backing</em>
             </h2>
@@ -484,6 +479,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                     >
                       <span className="jp-row-rank">
                         {String(artist.rank).padStart(2, '0')}
+                        <RankMove movement={artist.movement} isNew={artist.isNew} className="jp-row-move" />
                       </span>
 
                       <img src={artist.thumbnail} alt="" />
@@ -513,10 +509,13 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                   ))
                 ) : (
                   <p className="jp-empty">
-                    No artists charting yet in {jurName}. The first vote starts the chart.
+                    No artists charting yet in {jurName}. The first play, like or vote starts the chart.
                   </p>
                 )}
               </div>
+              <button type="button" className="jp-fullchart" onClick={() => openChart('artist')}>
+                See the full artist chart
+              </button>
             </div>
 
             <div className="jp-board">
@@ -538,6 +537,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                     >
                       <span className="jp-row-rank">
                         {String(song.rank).padStart(2, '0')}
+                        <RankMove movement={song.movement} isNew={song.isNew} className="jp-row-move" />
                       </span>
 
                       <img src={song.thumbnail} alt="" />
@@ -571,6 +571,9 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
                   </p>
                 )}
               </div>
+              <button type="button" className="jp-fullchart" onClick={() => openChart('song')}>
+                See the full song chart
+              </button>
             </div>
           </div>
         </section>

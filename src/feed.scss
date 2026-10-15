@@ -1326,6 +1326,31 @@ $chart-down: #e2564b;
   }
 }
 
+// Round portraits for the Top 5 artists rows.
+.chart-artwork--round { border-radius: 50%; }
+
+// "See the full chart" — opens /charts for this jurisdiction.
+.chart-fullchart {
+  display: block;
+  margin: 14px auto 0;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid $border-subtle;
+  background: $bg-surface;
+  color: var(--unis-text, #fff);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+
+  &:hover { border-color: var(--unis-primary-border, rgba(255, 255, 255, 0.2)); }
+  &:focus-visible { outline: 2px solid var(--unis-primary-2, #fff); outline-offset: 2px; }
+}
+
+// RankMove sits in the old badge slot; keep it right-aligned and quiet.
+.chart-movement.rk-move { justify-content: flex-end; min-width: 38px; }
+
 .chart-movement {
   flex-shrink: 0;
   font-family: 'Plus Jakarta Sans', sans-serif;

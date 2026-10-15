@@ -14,6 +14,7 @@ import VoteAwards from './voteawards';
 import Profile from './profile';
 import MilestonesPage from './milestonesPage';
 import Leaderboards from './leaderboardsPage';
+import ChartsPage from './chartsPage';
 import Earnings from './earnings';
 import FindPage from './findpage';
 import PrivacyPolicy from './privacyPolicy';
@@ -132,6 +133,7 @@ const AppLayout = () => {
           <Route path="/jurisdiction/:jurisdiction" element={<JurisdictionPage />} />
           <Route path="/milestones" element={<MilestonesPage />} />
           <Route path="/leaderboards" element={<Leaderboards />} />
+          <Route path="/charts" element={<ChartsPage />} />
           <Route path="/findpage" element={<FindPage />} />
           <Route path="/discover" element={<DiscoverPage />} />        
           <Route path="/browse/:kind/:slug" element={<BrowseTagPage />} />
