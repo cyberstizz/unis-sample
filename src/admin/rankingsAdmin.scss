@@ -1,0 +1,141 @@
+// Admin → Rankings & Sunday email. Builds on the Metrics page tokens (.mx)
+// for the header, controls and buttons; this file adds the boards and the
+// email preview.
+
+.rka {
+  --rka-gold: #f5c242;
+  --rka-live: #34d399;
+  --rka-closing: #fab219;
+}
+
+.rka-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+// ── A board ──
+.rka-board {
+  background: var(--mx-surface);
+  border: 1px solid var(--mx-border);
+  border-radius: 14px;
+  padding: 16px 16px 12px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+
+  &__head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--mx-ink); }
+  }
+  &__detail { margin: 0 0 10px; font-size: 13px; color: var(--mx-muted); }
+  &__foot {
+    margin-top: auto; padding-top: 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    font-size: 12px; color: var(--mx-muted);
+  }
+}
+
+.rka-pill {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0;
+  font-size: 12px; font-weight: 600; color: var(--mx-ink-2);
+  &::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--mx-muted); }
+  &--live::before { background: var(--rka-live); }
+  &--closing::before { background: var(--rka-closing); }
+  &--final::before { background: var(--rka-gold); }
+}
+
+.rka-link {
+  flex: 0 0 auto; font-size: 13px; font-weight: 600; color: var(--mx-series-1); text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
+
+// ── The table ──
+.rka-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+
+  th {
+    text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--mx-muted); padding: 6px 6px; border-bottom: 1px solid var(--mx-border);
+  }
+  td { padding: 8px 6px; border-bottom: 1px solid var(--mx-grid); color: var(--mx-ink-2); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  .num { text-align: right; white-space: nowrap; }
+  tr.is-first .rka-rank { color: var(--rka-gold); }
+
+  // Narrow screens: drop the breakdown, keep rank, name and points.
+  @media (max-width: 560px) {
+    th:nth-child(n + 4), td:nth-child(n + 4) { display: none; }
+  }
+}
+
+.rka-rank { font-weight: 800; color: var(--mx-ink); width: 28px; }
+.rka-points { font-weight: 700; color: var(--mx-ink) !important; }
+
+.rka-who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rka-thumb {
+  flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%; overflow: hidden;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--mx-surface-2); color: var(--mx-muted); font-size: 13px; font-weight: 700;
+  &[data-shape='song'] { border-radius: 6px; }
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+.rka-names {
+  display: flex; flex-direction: column; min-width: 0;
+  a {
+    color: var(--mx-ink); font-weight: 600; text-decoration: none;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    &:hover { text-decoration: underline; }
+  }
+}
+.rka-sub { font-size: 12px; color: var(--mx-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rka-win {
+  flex: 0 0 auto; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+  color: #1a1400; background: var(--rka-gold); border-radius: 999px; padding: 2px 7px;
+}
+
+// ── Sunday email ──
+.rka-email {
+  border-top: 1px solid var(--mx-border);
+  padding-top: 24px;
+
+  &__head {
+    margin-bottom: 14px;
+    h2 { margin: 0 0 6px; font-size: 20px; font-weight: 700; color: var(--mx-ink); }
+    p { margin: 0; font-size: 14px; color: var(--mx-ink-2); max-width: 720px; line-height: 1.5; }
+  }
+
+  .mx-select input { min-width: min(100%, 340px); }
+}
+
+.rka-msg {
+  font-size: 14px; margin: 0 0 14px;
+  &--good { color: var(--mx-good); }
+  &--bad { color: var(--mx-bad); }
+}
+
+.rka-inbox {
+  max-width: 680px;
+  border: 1px solid var(--mx-border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #07080c;
+
+  &__meta {
+    display: grid; gap: 2px; padding: 14px 16px;
+    background: var(--mx-surface-2); border-bottom: 1px solid var(--mx-border);
+  }
+  &__from { font-size: 13px; font-weight: 700; color: var(--mx-ink); }
+  &__subject { font-size: 15px; font-weight: 600; color: var(--mx-ink); }
+  &__pre { font-size: 13px; color: var(--mx-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &__to { font-size: 12px; color: var(--mx-muted); margin-top: 4px; }
+
+  &__frame {
+    display: block; width: 100%; height: 1900px; border: 0; background: #07080c;
+    @media (max-width: 620px) { height: 2300px; }
+  }
+}
