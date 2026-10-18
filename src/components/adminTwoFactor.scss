@@ -1,0 +1,137 @@
+// AdminTwoFactor — lives inside the Login card and inherits its form styles
+// (.login-form, .login-error, .forgot-password-btn). Only the extras here.
+
+$text:       #f4f6fb;
+$text-muted: #9aa3b2;
+$border:     rgba(255, 255, 255, 0.10);
+$glass:      rgba(255, 255, 255, 0.045);
+$blue:       #6b8aff;
+
+.tfa {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+
+  .forgot-password-btn { align-self: center; }
+}
+
+.tfa-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: $text;
+  text-align: center;
+}
+
+.tfa-text {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: $text-muted;
+  text-align: center;
+}
+
+.tfa-steps {
+  margin: 0.2rem 0 0.8rem;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: $text;
+}
+
+.tfa-qr {
+  display: block;
+  width: 232px;
+  height: 232px;
+  margin: 0 auto 0.9rem;
+  padding: 10px;
+  background: #fff;          // QR codes need a light background to scan
+  border-radius: 14px;
+  box-sizing: content-box;
+}
+
+.tfa-manual {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: $text-muted;
+
+  summary {
+    cursor: pointer;
+    text-align: center;
+    color: $blue;
+  }
+}
+
+.tfa-key {
+  display: block;
+  margin: 0.6rem 0 0.3rem;
+  padding: 0.7rem 0.8rem;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  word-break: break-all;
+  color: $text;
+  background: $glass;
+  border: 1px solid $border;
+  border-radius: 10px;
+  user-select: all;
+}
+
+.tfa-hint {
+  display: block;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.tfa-codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 1rem;
+  margin: 0 0 0.9rem;
+  padding: 0.9rem 1rem 0.9rem 2rem;
+  background: $glass;
+  border: 1px solid $border;
+  border-radius: 12px;
+  color: $text-muted;
+  font-size: 0.8rem;
+
+  code {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.95rem;
+    color: $text;
+    letter-spacing: 0.03em;
+  }
+}
+
+.tfa-row {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+
+.tfa-secondary {
+  flex: 1;
+  height: 44px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $text;
+  background: $glass;
+  border: 1px solid $border;
+  border-radius: 10px;
+  cursor: pointer;
+
+  &:hover { border-color: rgba(255, 255, 255, 0.22); }
+}
+
+.tfa-check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+  color: $text;
+  cursor: pointer;
+
+  input { width: 18px; height: 18px; accent-color: #2952cc; }
+}

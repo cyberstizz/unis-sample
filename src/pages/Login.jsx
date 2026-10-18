@@ -6,6 +6,7 @@ import spaceVideo from '../assets/space-bg.mp4';
 import CreateAccountWizard from '../createAccountWizard'; 
 import ForgotPasswordWizard from '../forgotPasswordWizard';
 import { apiCall } from '../components/axiosInstance'; 
+import AdminTwoFactor from '../components/AdminTwoFactor';
 import './Login.scss';
 
 const Login = () => {
@@ -13,7 +14,8 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, completeLogin } = useAuth();
+  const [mfa, setMfa] = useState(null);   // staff accounts: { setupRequired, mfaToken }
   const [showWizard, setShowWizard] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [waitlistInfo, setWaitlistInfo] = useState(null);
@@ -34,6 +36,8 @@ const Login = () => {
 
     if (result.success) {
       navigate('/');
+    } else if (result.mfa) {
+      setMfa(result.mfa);
     } else {
       const data = result.data;
       if (data?.unverified) {                          
@@ -66,6 +70,23 @@ const Login = () => {
     }
   };
 
+  // The authenticator code was accepted: start the session.
+  const handleTwoFactorDone = async (token) => {
+    const result = await completeLogin(token);
+    if (result.success) {
+      navigate('/');
+    } else {
+      setMfa(null);
+      setError(result.error || 'Sign-in failed. Please try again.');
+    }
+  };
+
+  const handleTwoFactorCancel = () => {
+    setMfa(null);
+    setPassword('');
+    setError('');
+  };
+
   const waitlistProgress = waitlistInfo
     ? Math.min(100, Math.round((waitlistInfo.regionSignupCount / waitlistInfo.regionThreshold) * 100))
     : 0;
@@ -93,9 +114,13 @@ const Login = () => {
         <p className="login-subtitle">
           Harlems Finest
         </p>
-        {error && !showWaitlistModal && <p className="login-error">{error}</p>}
+        {error && !showWaitlistModal && !mfa && <p className="login-error">{error}</p>}
 
-        {!showWaitlistModal && (
+        {mfa && (
+          <AdminTwoFactor mfa={mfa} onComplete={handleTwoFactorDone} onCancel={handleTwoFactorCancel} />
+        )}
+
+        {!showWaitlistModal && !mfa && (
           <>
             <form onSubmit={handleSubmit} className="login-form">
               <input

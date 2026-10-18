@@ -200,9 +200,34 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await axiosInstance.post('/auth/login', credentials);
-      localStorage.setItem('token', response.data.token);
 
-      const userId = decodeToken(response.data.token);
+      // Staff accounts need their authenticator code before there's a session.
+      // The Login page shows the code step and then calls completeLogin.
+      if (response.data?.mfaRequired) {
+        return { success: false, mfa: response.data };
+      }
+
+      return await completeLogin(response.data.token);
+    } catch (error) {
+      localStorage.removeItem('token');
+      return {
+        success: false,
+        error: typeof error.response?.data === 'string' ? error.response.data : error.response?.data?.message || 'Login failed',
+        data: error.response?.data,
+      };
+    }
+  };
+
+  /**
+   * Starts the session from a token: stores it, loads the profile and admin
+   * role, and tells the rest of the app. Used by login, and by the two-factor
+   * step once the code is accepted.
+   */
+  const completeLogin = async (token) => {
+    try {
+      localStorage.setItem('token', token);
+
+      const userId = decodeToken(token);
       if (userId) {
         const profileRes = await axiosInstance.get(`/v1/users/profile/${userId}`, { useCache: false });
         const profileData = profileRes.data;
@@ -260,6 +285,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     login,
+    completeLogin,
     logout,
     loading,
     authLoaded,
