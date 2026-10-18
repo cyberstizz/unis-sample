@@ -1,9 +1,31 @@
-// VoteHistorySection.scss -- premium preview, theme-aware (unis tokens)
+// =============================================================================
+// VoteHistorySection.scss -- the in-page preview (2 most recent votes) that
+// sits inside the "Vote history" collapsible on profile, the artist dashboard
+// and a listener's own page.
+//
+// Built entirely on the token layer (theme.scss + unis-design-tokens.scss).
+//
+// ★ WHAT CHANGED AND WHY
+//    The rows, placeholder and skeleton were painted with literal
+//    rgba(255,255,255,…) / rgba(0,0,0,…) washes. Those are theme-NEUTRAL, so
+//    the preview read as flat grey next to the themed cards around it, and
+//    it no longer matched the sheet it opens. Every surface here is now
+//    `color-mix(... var(--unis-primary) N%, var(--unis-bg))`, using the same
+//    local-token approach as voteHistoryModal.scss so the two read as one
+//    component.
+// =============================================================================
 
 .vhs {
+  // Theme-derived surfaces, mirrored from voteHistoryModal.scss so the preview
+  // and the full sheet stay visually identical.
+  --vhs-row:    color-mix(in srgb, var(--unis-primary) 9%,  var(--unis-bg));
+  --vhs-row-hi: color-mix(in srgb, var(--unis-primary) 17%, var(--unis-bg));
+  --vhs-line:   color-mix(in srgb, var(--unis-primary) 28%, transparent);
+
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  font-family: var(--unis-font-sans);
 }
 
 .vhs-count {
@@ -17,7 +39,7 @@
     letter-spacing: -0.03em;
     color: var(--unis-text);
     font-variant-numeric: tabular-nums;
-    background: linear-gradient(135deg, var(--unis-primary), var(--unis-primary-2));
+    background: linear-gradient(135deg, var(--unis-primary-2), var(--unis-text));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -42,15 +64,14 @@
   align-items: center;
   gap: 0.85rem;
   padding: 0.7rem 0.85rem;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
-    rgba(0, 0, 0, 0.14);
+  background: var(--vhs-row);
   border: 1px solid var(--unis-border);
   border-radius: var(--unis-radius-sm);
-  transition: border-color 0.16s ease, transform 0.16s ease;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
 
   &:hover {
-    border-color: var(--unis-border-hi);
+    background: var(--vhs-row-hi);
+    border-color: var(--vhs-line);
     transform: translateX(3px);
   }
 
@@ -60,15 +81,16 @@
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    border: 2px solid var(--unis-primary);
+    border: 2px solid var(--unis-primary-2);
     box-shadow: 0 0 0 3px var(--unis-primary-soft);
 
     &--ph {
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--unis-text-3);
-      background: linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.04));
+      border: 1px solid var(--vhs-line);
+      color: var(--unis-primary-2);
+      background: var(--unis-primary-soft);
     }
   }
 
@@ -76,6 +98,7 @@
   &__name {
     font-size: 0.92rem;
     font-weight: 700;
+    letter-spacing: -0.01em;
     color: var(--unis-text);
     white-space: nowrap;
     overflow: hidden;
@@ -104,17 +127,22 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem 0.9rem;
+  font-family: var(--unis-font-sans);
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--unis-primary-2);
   background: var(--unis-primary-soft);
-  border: 1px solid var(--unis-primary-glow);
+  border: 1px solid var(--vhs-line);
   border-radius: 999px;
   cursor: pointer;
-  transition: transform 0.16s ease, background 0.16s ease;
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
 
-  &:hover { transform: translateX(2px); }
-  &:focus-visible { outline: 2px solid var(--unis-primary-glow); outline-offset: 2px; }
+  &:hover {
+    transform: translateX(2px);
+    background: color-mix(in srgb, var(--unis-primary) 20%, transparent);
+    border-color: color-mix(in srgb, var(--unis-primary) 45%, transparent);
+  }
+  &:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 2px; }
 }
 
 .vhs-empty {
@@ -126,7 +154,8 @@
   padding: 2rem 1rem;
   color: var(--unis-text-3);
 
-  svg { opacity: 0.5; color: var(--unis-primary-2); margin-bottom: 0.4rem; }
+  svg { opacity: 0.55; color: var(--unis-primary-2); margin-bottom: 0.4rem;
+        filter: drop-shadow(0 0 14px var(--unis-primary-glow)); }
   &__title { margin: 0; font-size: 1rem; font-weight: 700; color: var(--unis-text-2); }
   &__sub { font-size: 0.82rem; }
 }
@@ -134,14 +163,21 @@
 .vhs-retry {
   margin-top: 0.5rem;
   padding: 0.45rem 1rem;
+  font-family: var(--unis-font-sans);
   font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--unis-text);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--unis-border);
-  border-radius: var(--unis-radius-sm);
+  font-weight: 700;
+  color: var(--unis-primary-2);
+  background: var(--unis-primary-soft);
+  border: 1px solid var(--vhs-line);
+  border-radius: 999px;
   cursor: pointer;
-  &:hover { background: rgba(255, 255, 255, 0.1); }
+  transition: background 0.16s ease, border-color 0.16s ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--unis-primary) 20%, transparent);
+    border-color: color-mix(in srgb, var(--unis-primary) 45%, transparent);
+  }
+  &:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 2px; }
 }
 
 .vhs-skeleton {
@@ -152,11 +188,12 @@
   &__row {
     height: 58px;
     border-radius: var(--unis-radius-sm);
+    border: 1px solid var(--unis-border);
     background: linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.04) 25%,
-      rgba(255, 255, 255, 0.08) 37%,
-      rgba(255, 255, 255, 0.04) 63%
+      var(--vhs-row) 25%,
+      var(--vhs-row-hi) 37%,
+      var(--vhs-row) 63%
     );
     background-size: 400% 100%;
     animation: vhsShimmer 1.4s ease infinite;
@@ -166,4 +203,10 @@
 @keyframes vhsShimmer {
   0% { background-position: 100% 50%; }
   100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vhs-skeleton__row { animation: none; }
+  .vhs-row:hover,
+  .vhs-viewall:hover { transform: none; }
 }

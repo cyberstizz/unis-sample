@@ -1,22 +1,27 @@
 // =============================================================================
 // visual-fixes.scss
 //
-// TWO FIXES IN ONE FILE -- both small, both surgical.
+// Small, surgical cross-cutting fixes that don't belong to any one component.
 //
 // 1. CollapsibleSection: kill the orange tap-highlight on section toggles.
 //    Affects mobile Safari and Chrome on touch devices. Applied to the
 //    toggle button so neither tap nor active states flash any color.
 //
-// 2. VoteHistoryModal: give it a real, opaque background so it doesn't
-//    look invisible. The previous version layered a translucent gradient
-//    over var(--unis-panel) which is rgba(255,255,255,0.025) -- effectively
-//    transparent. Now we paint a solid dark base FIRST, then layer the
-//    subtle theme tint on top so the theme still reads but the modal is
-//    readable.
+// 2. SupportedArtistPicker: give it a real, opaque background. Its own
+//    stylesheet layers a translucent gradient over var(--unis-panel), which
+//    is rgba(255,255,255,0.025) -- effectively transparent.
 //
-// HOW TO USE: import this file once in App.jsx after the other styles, or
-// paste these rules into profile.scss / voteHistoryModal.scss directly.
-// Recommended: keep them isolated here so it's obvious what they do.
+// HOW TO USE: imported once in App.jsx after the other styles (already wired).
+//
+// ★ REMOVED IN THIS PASS: the VoteHistoryModal opacity override. It forced
+//    `background: ... #0a0e16 !important` on .vote-history-modal and
+//    `rgba(0,0,0,0.85) !important` on .vote-history-modal-overlay. #0a0e16 is
+//    a blue-black, so the sheet read as a stray Unis-Blue panel on every
+//    non-blue theme -- and because this file is imported LAST, those
+//    !important rules beat anything voteHistoryModal.scss tried to do.
+//    voteHistoryModal.scss now solves opacity the theme-aware way
+//    (color-mix over the opaque --unis-bg), so the override is dead weight
+//    and had to go for the new styles to apply at all.
 // =============================================================================
 
 // -----------------------------------------------------------------------------
@@ -52,46 +57,33 @@
 }
 
 // -----------------------------------------------------------------------------
-// FIX 2 -- Make the VoteHistoryModal actually opaque.
+// FIX 2 -- Make the SupportedArtistPicker actually opaque, WITHOUT a hardcoded
+//          color.
 // -----------------------------------------------------------------------------
-// The bug: the modal's background was
+// Same root cause the vote-history sheet had: the modal's background was
 //   linear-gradient(..., var(--unis-primary-soft), ..., transparent ...),
-//   var(--unis-panel)   <-- this is rgba(255,255,255,0.025), basically air
-// So the whole modal was effectively transparent and the page bled through.
+//   var(--unis-panel)   <-- rgba(255,255,255,0.025), basically air
+// so the page bled straight through it.
 //
-// The fix: paint a solid dark base FIRST as the bottom layer. The gradient
-// stays on top as a subtle theme tint. The user sees a proper modal with
-// a hint of theme color, not a floating outline.
+// The old fix painted a literal #0a0e16 underneath. That is a blue-black, so
+// it looked correct on the blue theme and out of place on orange / red /
+// green / yellow / purple / dianna.
 //
-// Note the order in the `background` shorthand: TOP layer first, BOTTOM
-// layer last. The opaque #0a0e16 is last, so it sits behind everything
-// else and guarantees the modal can't be see-through.
-.vote-history-modal {
-  background:
-    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.02) 42%, transparent 68%),
-    #0a0e16 !important;
-}
-
-// Same fix for the backdrop overlay -- it was also too transparent, letting
-// the underlying page show through enough to compete with the modal.
-.vote-history-modal-overlay {
-  background:
-    radial-gradient(circle at 50% 18%, var(--unis-primary-soft), transparent 74%),
-    rgba(0, 0, 0, 0.85) !important;
-}
-
-// And apply the same opacity treatment to the SupportedArtistPicker so the
-// two modals stay visually consistent (they were already paired by design;
-// might as well pair them by opacity too). If picker already looks fine to
-// you, you can delete these two rules -- they don't break anything either way.
+// This version mixes a little of the ACTIVE theme colour into the opaque
+// --unis-bg token instead. --unis-bg is a solid hex, so the result is fully
+// opaque (the transparency bug is still fixed) and it now follows whatever
+// theme the user picked.
+//
+// Note the order in the `background` shorthand: TOP layer first, BOTTOM layer
+// last, so the opaque mix sits behind everything else.
 .sap-modal {
   background:
-    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.02) 42%, transparent 68%),
-    #0a0e16 !important;
+    linear-gradient(135deg, var(--unis-primary-soft), transparent 68%),
+    color-mix(in srgb, var(--unis-primary) 9%, var(--unis-bg)) !important;
 }
 
 .sap-overlay {
   background:
     radial-gradient(circle at 50% 18%, var(--unis-primary-soft), transparent 74%),
-    rgba(0, 0, 0, 0.85) !important;
+    color-mix(in srgb, var(--unis-bg) 86%, transparent) !important;
 }

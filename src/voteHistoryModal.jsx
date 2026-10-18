@@ -13,14 +13,22 @@ import './voteHistoryModal.scss';
 //   .artist-collapsible section. That section carries `animation: artist-rise
 //   ... both`, whose final keyframe applies `transform: translateY(0)`, plus
 //   `overflow: hidden`. A transformed ancestor becomes the containing block for
-//   `position: fixed` descendants — so the overlay was never viewport-fixed at
+//   `position: fixed` descendants -- so the overlay was never viewport-fixed at
 //   all. It was a box trapped inside the section, clipped by its overflow, with
 //   the close button scrolled out of reach.
 //
-//   We now render through a portal straight into <body>, which makes the modal
-//   independent of whatever ancestor it's invoked from. It is also a true
+//   We render through a portal to escape that ancestor. It is also a true
 //   full-screen sheet on mobile with a sticky header close button AND a sticky
 //   footer Done button, so there is always a visible way out.
+//
+// ★ FIX (theming): the portal target is now #root, NOT document.body -- the
+//   same target QueuePanel already uses. AuthContext applies the active theme
+//   as `data-theme` on <div id="root"> (see AuthContext.jsx), so anything
+//   portaled to <body> sits OUTSIDE that scope and resolves every
+//   `var(--unis-primary)` against the :root fallback, which is Unis Blue.
+//   That is why this sheet stayed blue on every theme while the rest of the
+//   page followed the user's choice. #root is still above the transformed
+//   .artist-collapsible ancestor, so the containment fix above is preserved.
 // =============================================================================
 const VoteHistoryModal = ({ show, onClose, votes = [] }) => {
   const modalRef = useRef(null);
@@ -84,7 +92,10 @@ const VoteHistoryModal = ({ show, onClose, votes = [] }) => {
             matter how far down the list you scroll. */}
         <div className="modal-header">
           <div className="modal-header__text">
-            <h2 id="vh-title">Vote history</h2>
+            {/* ★ Instrument Serif <em> accent — matches the collapsible section
+                titles this modal opens from ("Vote <em>history</em>"). The
+                accessible name is still "Vote history". */}
+            <h2 id="vh-title">Vote <em>history</em></h2>
             <p className="modal-subtitle">
               <span className="modal-subtitle__count">{count}</span>
               <span className="modal-subtitle__label">{countLabel}</span>
@@ -149,8 +160,10 @@ const VoteHistoryModal = ({ show, onClose, votes = [] }) => {
     </div>
   );
 
-  // ★ portal out of any transformed / overflow-hidden ancestor.
-  return createPortal(modal, document.body);
+  // ★ portal out of any transformed / overflow-hidden ancestor, but STAY inside
+  //    #root so the [data-theme] scope still applies. Falls back to <body> only
+  //    if #root is missing (e.g. an isolated test render).
+  return createPortal(modal, document.getElementById('root') || document.body);
 };
 
 export default VoteHistoryModal;

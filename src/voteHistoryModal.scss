@@ -1,16 +1,39 @@
 // =============================================================================
 // VoteHistoryModal.scss
 //
-// ★ Rebuilt as a true overlay:
-//    - portaled to <body> (see voteHistoryModal.jsx), so no ancestor transform
-//      or overflow:hidden can trap or clip it.
-//    - full-screen sheet on mobile (100dvh) with a sticky header close button
-//      and a sticky footer "Done" button — you can always get out.
-//    - centered glass dialog on desktop.
-//    - z-index sits above the welcome popup (9000) and the persistent player.
+// Built entirely on the token layer (theme.scss + unis-design-tokens.scss),
+// so every theme works without changes here.
+//
+// ★ WHAT CHANGED AND WHY
+//    The old sheet painted its base with a literal `#0a0e16` (forced from
+//    visual-fixes.scss with !important) because `var(--unis-panel)` is
+//    rgba(255,255,255,0.025) -- effectively air -- and the modal looked
+//    see-through. That hex is a blue-black, so on orange/red/green/yellow/
+//    purple/dianna the sheet read as a stray Unis-Blue panel sitting on top
+//    of a themed page.
+//
+//    The opacity problem is now solved WITHOUT a hardcoded color: every
+//    surface below is `color-mix(... var(--unis-primary) N%, var(--unis-bg))`.
+//    --unis-bg is an opaque hex, so the result is fully opaque, and the N% of
+//    --unis-primary means the sheet picks up the active theme the way the
+//    rest of the app does. The !important overrides in visual-fixes.scss are
+//    removed in the same change -- they would otherwise beat everything here.
+//
+//    Structure is unchanged: portaled overlay, sticky header close button,
+//    sticky footer Done button, full-screen sheet on mobile.
 // =============================================================================
 
 .vote-history-modal-overlay {
+  // ---- local, theme-derived palette ------------------------------------
+  // Declared on the overlay so every descendant inherits them, and so they
+  // re-evaluate whenever [data-theme] on #root changes --unis-primary.
+  --vhm-scrim:     color-mix(in srgb, var(--unis-bg) 86%, transparent);
+  --vhm-surface:   color-mix(in srgb, var(--unis-primary) 7%,  var(--unis-bg));
+  --vhm-surface-2: color-mix(in srgb, var(--unis-primary) 13%, var(--unis-bg));
+  --vhm-row:       color-mix(in srgb, var(--unis-primary) 9%,  var(--unis-bg));
+  --vhm-row-hi:    color-mix(in srgb, var(--unis-primary) 17%, var(--unis-bg));
+  --vhm-line:      color-mix(in srgb, var(--unis-primary) 28%, transparent);
+
   position: fixed;
   inset: 0;
   z-index: 12000; // ★ above welcome popup + player + header
@@ -19,8 +42,8 @@
   justify-content: center;
   padding: 24px;
   background:
-    radial-gradient(circle at 50% 18%, var(--unis-primary-soft), transparent 74%),
-    rgba(0, 0, 0, 0.78);
+    radial-gradient(circle at 50% 16%, var(--unis-primary-soft), transparent 70%),
+    var(--vhm-scrim);
   backdrop-filter: blur(10px);
   font-family: var(--unis-font-sans);
   animation: vhmFade 0.2s ease;
@@ -29,6 +52,7 @@
 
 .vote-history-modal {
   position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -37,13 +61,15 @@
   overflow: hidden;
   border: 1px solid var(--unis-border);
   border-radius: var(--unis-radius-lg);
+  // Opaque base (--unis-bg) tinted by the active theme, plus a soft wash from
+  // the top. No literal hex anywhere, no !important needed.
   background:
-    linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.01) 42%, transparent 68%),
-    var(--unis-panel);
+    radial-gradient(120% 62% at 50% 0%, var(--unis-primary-soft), transparent 64%),
+    linear-gradient(180deg, var(--vhm-surface-2), var(--vhm-surface) 46%, var(--unis-bg));
   box-shadow:
     0 30px 90px rgba(0, 0, 0, 0.62),
-    0 0 0 1px rgba(255, 255, 255, 0.035),
-    0 0 44px -20px var(--unis-primary-glow);
+    0 0 0 1px var(--vhm-line),
+    0 0 60px -26px var(--unis-primary-glow);
   animation: vhmSlide 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 
   // ---- grab handle (mobile only) --------------------------------------
@@ -54,7 +80,7 @@
     height: 4px;
     margin: 10px auto 0;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.28);
+    background: var(--unis-border-hi);
   }
 
   // ---- HEADER (sticky — close is always reachable) ----------------------
@@ -69,7 +95,11 @@
     gap: 14px;
     padding: 1.5rem 1.5rem 1.15rem;
     border-bottom: 1px solid var(--unis-border);
-    background: linear-gradient(180deg, var(--unis-panel), rgba(0, 0, 0, 0.35));
+    background: linear-gradient(
+      180deg,
+      var(--vhm-surface-2),
+      color-mix(in srgb, var(--vhm-surface) 88%, transparent)
+    );
     backdrop-filter: blur(12px);
     text-align: left;
   }
@@ -89,6 +119,16 @@
     font-weight: 800;
     letter-spacing: -0.025em;
     color: var(--unis-text);
+
+    // House accent: Instrument Serif italic in the theme's light primary,
+    // matching the "Vote history" collapsible titles on profile + dashboard.
+    em {
+      font-family: var(--unis-font-italic);
+      font-style: italic;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      color: var(--unis-primary-2);
+    }
   }
 
   .modal-subtitle {
@@ -102,8 +142,9 @@
       vertical-align: -2px;
       font-size: 1.55rem;
       font-weight: 800;
+      font-variant-numeric: tabular-nums;
       letter-spacing: -0.025em;
-      background: linear-gradient(135deg, var(--unis-primary), var(--unis-primary-2));
+      background: linear-gradient(135deg, var(--unis-primary-2), var(--unis-text));
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -118,8 +159,8 @@
     }
   }
 
-  // Close button now lives IN the sticky header flow (not absolutely
-  // positioned against a container that may be off-screen).
+  // Close button lives IN the sticky header flow (not absolutely positioned
+  // against a container that may be off-screen).
   .close-button {
     flex: none;
     display: grid;
@@ -128,19 +169,20 @@
     height: 40px;
     border-radius: var(--unis-radius-sm);
     border: 1px solid var(--unis-border-hi);
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--unis-panel-2);
     color: var(--unis-text-2);
     cursor: pointer;
-    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
 
     &:hover {
+      border-color: var(--vhm-line);
       background: var(--unis-primary-soft);
       color: var(--unis-text);
       transform: scale(1.04);
     }
 
     &:focus-visible {
-      outline: 2px solid var(--unis-primary);
+      outline: 2px solid var(--unis-primary-2);
       outline-offset: 2px;
     }
   }
@@ -160,11 +202,11 @@
     padding: 0.9rem 1.25rem 1rem;
 
     scrollbar-width: thin;
-    scrollbar-color: var(--unis-border-hi) transparent;
+    scrollbar-color: var(--vhm-line) transparent;
 
     &::-webkit-scrollbar { width: 6px; }
     &::-webkit-scrollbar-thumb {
-      background: var(--unis-border-hi);
+      background: var(--vhm-line);
       border-radius: 999px;
     }
     &::-webkit-scrollbar-track { background: transparent; }
@@ -178,13 +220,12 @@
     padding: 0.7rem 0.8rem;
     border: 1px solid var(--unis-border);
     border-radius: var(--unis-radius-sm);
-    background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
-      rgba(0, 0, 0, 0.14);
-    transition: border-color 0.16s ease, transform 0.16s ease;
+    background: var(--vhm-row);
+    transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
 
     &:hover {
-      border-color: var(--unis-border-hi);
+      background: var(--vhm-row-hi);
+      border-color: var(--vhm-line);
       transform: translateX(3px);
     }
   }
@@ -204,7 +245,7 @@
     height: 44px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid var(--unis-primary);
+    border: 2px solid var(--unis-primary-2);
     box-shadow: 0 0 0 3px var(--unis-primary-soft);
   }
 
@@ -215,9 +256,9 @@
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    border: 1px solid var(--unis-border);
-    background: linear-gradient(135deg, var(--unis-primary-soft), rgba(255, 255, 255, 0.04));
-    color: var(--unis-text-3);
+    border: 1px solid var(--vhm-line);
+    background: var(--unis-primary-soft);
+    color: var(--unis-primary-2);
   }
 
   .nominee-info {
@@ -262,7 +303,7 @@
   .vote-interval {
     padding: 2px 8px;
     border-radius: 999px;
-    border: 1px solid var(--unis-primary-glow);
+    border: 1px solid var(--vhm-line);
     background: var(--unis-primary-soft);
     color: var(--unis-primary-2);
     font-size: 0.62rem;
@@ -308,7 +349,11 @@
     flex: none;
     padding: 0.9rem 1.25rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--unis-border);
-    background: linear-gradient(0deg, var(--unis-panel), rgba(0, 0, 0, 0.28));
+    background: linear-gradient(
+      0deg,
+      var(--vhm-surface-2),
+      color-mix(in srgb, var(--vhm-surface) 88%, transparent)
+    );
     backdrop-filter: blur(12px);
   }
 
@@ -328,7 +373,7 @@
     box-shadow: 0 12px 30px -14px var(--unis-primary-glow);
     transition: background 0.18s ease, transform 0.14s ease;
 
-    &:hover { background: var(--unis-primary-2); }
+    &:hover { background: var(--unis-primary-hover); }
     &:active { transform: translateY(1px); }
     &:focus-visible {
       outline: 2px solid var(--unis-primary-2);
@@ -405,4 +450,16 @@
 @keyframes vhmSheet {
   from { opacity: 0; transform: translateY(28px); }
   to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vote-history-modal-overlay,
+  .vote-history-modal {
+    animation: none;
+  }
+
+  .vote-history-modal .vote-row:hover,
+  .vote-history-modal .close-button:hover {
+    transform: none;
+  }
 }
