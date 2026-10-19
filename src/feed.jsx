@@ -23,6 +23,9 @@ import { JURISDICTION_NAMES, INTERVAL_IDS } from './utils/idMappings';
 import LastWonNotification from './LastWonNotification';
 import RankMove from './components/RankMove';
 import { fetchStandings, describeBoard, formatCount, playEntry } from './utils/standings';
+import { toLocalISO } from './utils/periodBounds';
+import { useReward } from './context/RewardContext';
+import { FeedSpotlight, TodayRace, DayTiles, MoversCard, FollowingDrops } from './feedModules';
 import './feed.scss';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -396,6 +399,17 @@ const Feed = () => {
   // ─── Fresh lens: upcoming (hidden until scheduling exists on backend) ───
   const [upcoming, setUpcoming] = useState([]);
 
+  // ─── FOMO-style cards (spotlight + race + tiles + movers + drops) ───
+  // Daily boards use the same standings formula as everything else.
+  const [dailySongBoard, setDailySongBoard] = useState(null);
+  const [dailyArtistBoard, setDailyArtistBoard] = useState(null);
+  const [raceCategory, setRaceCategory] = useState('song');
+  const [moversPeriod, setMoversPeriod] = useState('daily');
+  const [weeklyMoversBoard, setWeeklyMoversBoard] = useState(null);
+  const [voteHistory, setVoteHistory] = useState([]);
+  const [followingDrops, setFollowingDrops] = useState([]);
+  const { displayedScore } = useReward() || {};
+
   const userId = user?.userId;
   const userJurisdictionId = user?.jurisdiction?.jurisdictionId || DEFAULT_JURISDICTION_ID;
 
@@ -604,6 +618,85 @@ const Feed = () => {
     return () => { cancelled = true; };
   }, [selectedJurisdictionId]);
 
+  // ─── Today's song race — feeds the spotlight leader, the race bubbles,
+  //     the countdown tile and the "Today" movers. Its own effect so a slow
+  //     ranking query never holds up the rest of the feed.
+  useEffect(() => {
+    if (!selectedJurisdictionId) return undefined;
+    let cancelled = false;
+    setDailySongBoard(null);
+    fetchStandings({ type: 'song', jurisdictionId: selectedJurisdictionId, genre: 'all', period: 'daily', limit: 50 })
+      .then((board) => {
+        if (cancelled) return;
+        setDailySongBoard(board);
+        console.info(`[Feed] daily song race loaded: ${board.entries.length} entries, state=${board.state}`);
+      })
+      .catch((err) => {
+        console.error('[Feed] daily song race fetch failed (race shows empty):', err?.message || err);
+        if (!cancelled) setDailySongBoard({ state: 'LIVE', entries: [], closesAt: null });
+      });
+    return () => { cancelled = true; };
+  }, [selectedJurisdictionId]);
+
+  // ─── Today's artist race — only once someone flips the race to Artists ───
+  useEffect(() => {
+    if (raceCategory !== 'artist' || !selectedJurisdictionId) return undefined;
+    let cancelled = false;
+    setDailyArtistBoard(null);
+    fetchStandings({ type: 'artist', jurisdictionId: selectedJurisdictionId, genre: 'all', period: 'daily', limit: 50 })
+      .then((board) => { if (!cancelled) setDailyArtistBoard(board); })
+      .catch((err) => {
+        console.error('[Feed] daily artist race fetch failed (race shows empty):', err?.message || err);
+        if (!cancelled) setDailyArtistBoard({ state: 'LIVE', entries: [], closesAt: null });
+      });
+    return () => { cancelled = true; };
+  }, [raceCategory, selectedJurisdictionId]);
+
+  // ─── This week's movers — only once someone flips Movers to Week ───
+  useEffect(() => {
+    if (moversPeriod !== 'weekly' || !selectedJurisdictionId) return undefined;
+    let cancelled = false;
+    setWeeklyMoversBoard(null);
+    fetchStandings({ type: 'song', jurisdictionId: selectedJurisdictionId, genre: 'all', period: 'weekly', limit: 50 })
+      .then((board) => { if (!cancelled) setWeeklyMoversBoard(board); })
+      .catch((err) => {
+        console.error('[Feed] weekly movers fetch failed (empty state shown):', err?.message || err);
+        if (!cancelled) setWeeklyMoversBoard({ state: 'LIVE', entries: [] });
+      });
+    return () => { cancelled = true; };
+  }, [moversPeriod, selectedJurisdictionId]);
+
+  // ─── Your votes — marks "Your vote" in the race and fills the votes tile ───
+  useEffect(() => {
+    if (!userId) { setVoteHistory([]); return undefined; }
+    let cancelled = false;
+    apiCall({ method: 'get', url: '/v1/vote/history?limit=20', useCache: false })
+      .then((res) => { if (!cancelled) setVoteHistory(Array.isArray(res.data) ? res.data : []); })
+      .catch((err) => {
+        console.error('[Feed] vote history fetch failed (vote marks hidden):', err?.message || err);
+        if (!cancelled) setVoteHistory([]);
+      });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  // ─── New songs from artists you follow (last 7 days, newest per artist) ───
+  useEffect(() => {
+    if (!userId) { setFollowingDrops([]); return undefined; }
+    let cancelled = false;
+    apiCall({ method: 'get', url: '/v1/media/following/new?days=7&limit=12', useCache: false })
+      .then((res) => {
+        if (cancelled) return;
+        const raw = Array.isArray(res.data) ? res.data : [];
+        const songs = normalizeMedia(raw).map((song, i) => ({ ...song, artistPhoto: pickPhoto(raw[i]?.artist) }));
+        setFollowingDrops(songs);
+      })
+      .catch((err) => {
+        console.error('[Feed] following drops fetch failed (row hidden):', err?.message || err);
+        if (!cancelled) setFollowingDrops([]);
+      });
+    return () => { cancelled = true; };
+  }, [userId, normalizeMedia]);
+
   // ─── Fetch playlists — lazy, when Playlists lens is active ───
   const playlistsFetchedFor = React.useRef(null);
   useEffect(() => {
@@ -770,6 +863,26 @@ const Feed = () => {
   const placeKey = JURISDICTION_NAMES[selectedJurisdictionId] || 'harlem';
   const openChart = (type) => navigate(`/charts?type=${type}&period=weekly&genre=all&place=${placeKey}`);
 
+  // ─── Today's votes in this jurisdiction (daily races, voter's local day).
+  //     Rows written before the history carried a jurisdiction count anywhere.
+  const todayIso = toLocalISO(new Date());
+  const todaysVotes = voteHistory.filter((v) =>
+    v?.voteDate === todayIso
+    && /^(dai|day)/i.test(v?.interval || 'day')
+    && (!v?.jurisdictionId || v.jurisdictionId === selectedJurisdictionId));
+  const isVoteType = (v, type) => String(v?.targetType || '').toLowerCase() === type;
+  const votedSongToday = todaysVotes.some((v) => isVoteType(v, 'song'));
+  const votedArtistToday = todaysVotes.some((v) => isVoteType(v, 'artist'));
+  const votedTargetIds = new Set(
+    todaysVotes.filter((v) => isVoteType(v, raceCategory)).map((v) => v.targetId)
+  );
+  const moversBoard = moversPeriod === 'weekly' ? weeklyMoversBoard : dailySongBoard;
+  const raceClosesAt = (dailySongBoard?.state || 'LIVE') === 'LIVE' ? dailySongBoard?.closesAt : null;
+  const openRaceEntry = (entry) => (
+    entry.type === 'artist' ? handleArtistNav(entry.id) : handleSongNav(entry.id, 'song')
+  );
+  const openStandings = () => navigate(`/charts?type=${raceCategory}&period=daily&genre=all&place=${placeKey}`);
+
   if (loading) return (
     <Layout backgroundImage={randomRapper}>
       <div className="feed-loading">
@@ -785,51 +898,19 @@ const Feed = () => {
         {error && <div className="feed-error">{error}</div>}
         <main className="feed">
 
-          {/* ═══════ HERO BANNER (static across all lenses) ═══════ */}
-          <div className="hero-banner" onClick={handleVoteClick}>
-            <div className="hero-gradient" />
-        {lastWinner ? (
-          <div
-            className="hero-winner"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleSongNav(lastWinner.songId, 'song');
-            }}
-          >
-            <div className="hero-winner-label">Song of the Week</div>
-            <div className="hero-winner-thumb">
-              <img
-                src={lastWinner.artworkUrl || randomRapper}
-                alt={lastWinner.title}
-                onError={(e) => { e.target.src = randomRapper; }}
-              />
-              <div className="hero-winner-tooltip">
-                <div className="hero-winner-title">{lastWinner.title}</div>
-                <div className="hero-winner-artist">{lastWinner.artistName}</div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="hero-particles">
-            <div className="hero-particle hero-particle--1" />
-            <div className="hero-particle hero-particle--2" />
-            <div className="hero-particle hero-particle--3" />
-          </div>
-        )}
-            <div className="hero-content">
-              <span className="hero-label">Featured in {selectedJurisdictionName}</span>
-              <h1 className="hero-title">Vote for This Week's Top Track</h1>
-              <p className="hero-subtitle">
-                Your vote decides who tops the neighborhood leaderboard. Listen, discover, and support local artists.
-              </p>
-              <button type="button" className="hero-cta" onClick={handleVoteClick}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                Vote Now
-              </button>
-            </div>
-          </div>
+          {/* ═══════ SPOTLIGHT (static across all lenses) ═══════
+              Replaced the "Vote for This Week's Top Track" banner (Oct 2026).
+              Slides: today's race leader → Song of the Week → Artist of the
+              Week; a plain vote slide when none of those exist yet. */}
+          <FeedSpotlight
+            jurisdictionName={selectedJurisdictionName}
+            dailyBoard={dailySongBoard}
+            weeklyWinner={lastWinner}
+            artistOfWeek={artistOfWeek}
+            onVote={handleVoteClick}
+            onSongNav={handleSongNav}
+            onArtistNav={handleArtistNav}
+          />
 
           {/* ═══════ LENS BAR ═══════ */}
           <div className="lens-bar" role="tablist" aria-label="Feed views">
@@ -1043,6 +1124,46 @@ const Feed = () => {
                   </button>
                 </section>
               )}
+
+              {/* ═══════ TODAY'S RACE · YOUR DAY · MOVERS (Oct 2026) ═══════ */}
+              <div className="fm-grid">
+                <TodayRace
+                  jurisdictionName={selectedJurisdictionName}
+                  songBoard={dailySongBoard}
+                  artistBoard={dailyArtistBoard}
+                  category={raceCategory}
+                  onCategoryChange={setRaceCategory}
+                  votedTargetIds={votedTargetIds}
+                  onVote={handleVoteClick}
+                  onOpenEntry={openRaceEntry}
+                  onOpenStandings={openStandings}
+                />
+                <div className="fm-grid__side">
+                  <DayTiles
+                    isGuest={isGuest}
+                    jurisdictionName={selectedJurisdictionName}
+                    votedSongToday={votedSongToday}
+                    votedArtistToday={votedArtistToday}
+                    score={displayedScore ?? user?.score}
+                    level={user?.level}
+                    closesAt={raceClosesAt}
+                  />
+                  <MoversCard
+                    jurisdictionName={selectedJurisdictionName}
+                    board={moversBoard}
+                    period={moversPeriod}
+                    onPeriodChange={setMoversPeriod}
+                    onOpenEntry={openRaceEntry}
+                    fallbackArt={randomRapper}
+                  />
+                </div>
+              </div>
+
+              {/* ═══════ NEW FROM ARTISTS YOU FOLLOW ═══════ */}
+              <FollowingDrops
+                drops={followingDrops}
+                onOpen={(song) => handleSongNav(song.id, 'song')}
+              />
             </>
           )}
 

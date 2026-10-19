@@ -1,7 +1,7 @@
 // src/feed.test.jsx
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { screen, waitFor, fireEvent, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from './test/mocks/server';
@@ -228,7 +228,7 @@ describe('Feed — initial render', () => {
     await waitFor(() => {
       expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument();
     });
-    expect(screen.getByText(/Vote for This Week's Top Track/i)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /Spotlight/i })).toBeInTheDocument();
   });
 
   it('replaces loading state with feed content once data loads (listener)', async () => {
@@ -236,7 +236,7 @@ describe('Feed — initial render', () => {
     await waitFor(() => {
       expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument();
     });
-    expect(screen.getByText(/Vote for This Week's Top Track/i)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /Spotlight/i })).toBeInTheDocument();
   });
 
   it('renders all three section headers after load', async () => {
@@ -248,32 +248,45 @@ describe('Feed — initial render', () => {
   });
 });
 
-describe('Feed — hero banner', () => {
-  it('renders the hero banner with title and subtitle', async () => {
+describe('Feed — spotlight (replaced the hero banner)', () => {
+  const spotlight = () => screen.getByRole('region', { name: /Spotlight/i });
+
+  it('renders the headline for the default jurisdiction', async () => {
     renderWithProviders(<Feed />, { as: 'guest' });
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
-    expect(screen.getByText(/Vote for This Week's Top Track/i)).toBeInTheDocument();
-    expect(screen.getByText(/Your vote decides who tops/i)).toBeInTheDocument();
+    expect(within(spotlight()).getByRole('heading', { level: 1, name: /in Harlem/i })).toBeInTheDocument();
   });
 
-  it('renders "Featured in Harlem" label (default jurisdiction)', async () => {
+  it('falls back to the vote slide when nothing has scored yet', async () => {
     renderWithProviders(<Feed />, { as: 'guest' });
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
-    expect(screen.getByText(/Featured in Harlem/i)).toBeInTheDocument();
+    expect(within(spotlight()).getByText(/Who runs Harlem today\?/i)).toBeInTheDocument();
   });
 
-  it('renders the "Vote Now" CTA button', async () => {
+  it("features today's race leader when the daily board has one", async () => {
+    server.use(
+      http.get(`${API}/v1/awards/standings`, () => HttpResponse.json({
+        type: 'song',
+        state: 'LIVE',
+        interval: 'Daily',
+        entries: [
+          { targetId: 'lead-1', targetType: 'song', rank: 1, name: 'Lenox Nights', artistName: 'Kai Monroe', totalPoints: 90, votes: 6 },
+          { targetId: 'two-2', targetType: 'song', rank: 2, name: 'Uptown Static', artistName: 'Jaylen', totalPoints: 40, votes: 4 },
+        ],
+      }))
+    );
     renderWithProviders(<Feed />, { as: 'guest' });
-    await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
-    expect(screen.getByRole('button', { name: /Vote Now/i })).toBeInTheDocument();
+    await waitFor(() => expect(within(spotlight()).getByText('Lenox Nights')).toBeInTheDocument());
+    expect(within(spotlight()).getByText(/Leading today's race/i)).toBeInTheDocument();
+    expect(within(spotlight()).getByText('60% share')).toBeInTheDocument();
   });
 
-  it('triggers auth gate with "vote" context when guest clicks Vote Now', async () => {
+  it('triggers auth gate with "vote" context when a guest taps Vote', async () => {
     renderWithProviders(<Feed />, { as: 'guest' });
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /Vote Now/i }));
+    await user.click(within(spotlight()).getByRole('button', { name: /^Vote$/ }));
 
     await waitFor(() => {
       expect(screen.getByTestId('auth-gate-sheet')).toBeInTheDocument();
@@ -281,12 +294,12 @@ describe('Feed — hero banner', () => {
     });
   });
 
-  it('navigates to /voteawards when authenticated listener clicks Vote Now', async () => {
+  it('navigates to /voteawards when an authenticated listener taps Vote', async () => {
     renderWithProviders(<Feed />, { as: 'listener' });
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /Vote Now/i }));
+    await user.click(within(spotlight()).getByRole('button', { name: /^Vote$/ }));
 
     expect(navigateSpy).toHaveBeenCalledWith('/voteawards');
   });
