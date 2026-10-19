@@ -266,7 +266,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Tell the server first, so this sign-in token stops working right away
+    // instead of staying valid until it expires. Short timeout, and errors are
+    // ignored: signing out on this device must never get stuck.
+    if (localStorage.getItem('token')) {
+      try {
+        await axiosInstance.post('/auth/logout', null, { timeout: 3000 });
+      } catch (e) {
+        // Offline or already signed out: nothing more to do.
+      }
+    }
+
     localStorage.removeItem('token');
     localStorage.removeItem('unis-theme');            // ★ feed #2
     document.getElementById('root')?.setAttribute('data-theme', 'blue'); // ★ feed #2

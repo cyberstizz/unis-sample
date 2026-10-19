@@ -27,10 +27,16 @@ const ChangePasswordWizard = ({ show, onClose }) => {
     setLoading(true);
 
     try {
-      await axiosInstance.put(`/v1/users/profile/${user.userId}/password`, {
+      const res = await axiosInstance.put(`/v1/users/profile/${user.userId}/password`, {
         oldPassword: currentPassword,
         newPassword: newPassword
       });
+      // Changing the password signs out every device, this one included. The
+      // server hands back a fresh session for this device; keep it so the
+      // person stays signed in here.
+      if (res?.data?.token) {
+        localStorage.setItem('token', res.data.token);
+      }
       setStep(2);
     } catch (err) {
       const msg = err.response?.data;
@@ -155,7 +161,7 @@ const ChangePasswordWizard = ({ show, onClose }) => {
           <>
             <h2 style={{ color: '#fff', marginBottom: '8px' }}>Password Changed</h2>
             <p style={{ color: '#A9A9A9', marginBottom: '24px', fontSize: '14px' }}>
-              Your password has been updated successfully.
+              Your password has been updated successfully. You've been signed out on your other devices.
             </p>
             <button onClick={handleClose}
               style={{
