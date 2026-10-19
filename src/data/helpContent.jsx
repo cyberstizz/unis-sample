@@ -1615,18 +1615,14 @@ export const HELP_SECTIONS = [
     ],
   },
   {
-    // ⚠ PUBLISH AFTER DEPLOY. Rule 1 of this file is that nothing describes
-    // intended behaviour. Every article below is true of the new messaging
-    // backend and NOT of what is running in production right now. Change
-    // `status` to 'published' in the same PR that ships the migration and the
-    // new MessagingService — that one word is the only edit needed.
-    //
-    // (Was 'publishedh' — a typo, which the page treated as a draft. Set to
-    // 'draft' explicitly so the intent is unambiguous.)
+    // Published with the messaging lanes backend (Oct 2026): MessagingService
+    // + sql/V2026_10f__messaging_lanes.sql. Every article below matches that
+    // code. Photo messages were removed from the copy — they aren't built, and
+    // rule 1 of this file is that nothing describes intended behaviour.
     id: 'messaging',
     title: 'Messages',
     blurb: 'Who can reach you, how requests work, and messaging artists directly.',
-    status: 'draft',
+    status: 'published',
     articles: [
       {
         id: 'messaging-who',
@@ -1742,7 +1738,7 @@ export const HELP_SECTIONS = [
         q: 'What can I do inside a conversation?',
         a: (
           <>
-            <p>Four things, beyond typing:</p>
+            <p>Three things, beyond typing:</p>
             <ul>
               <li>
                 <b>Share a track.</b> It arrives as a playable card with the
@@ -1758,13 +1754,10 @@ export const HELP_SECTIONS = [
                 <b>React.</b> One emoji per message. Tapping the same one again
                 removes it.
               </li>
-              <li>
-                <b>Send a photo.</b> Once a conversation is accepted.
-              </li>
             </ul>
             <p className="help-note">
-              Tracks, support, and photos are not available in a request. They
-              unlock once the other person accepts.
+              Tracks, support, and reactions are not available in a request.
+              They unlock once the other person accepts.
             </p>
           </>
         ),
@@ -1774,7 +1767,10 @@ export const HELP_SECTIONS = [
         q: 'Can I control who messages me?',
         a: (
           <>
-            <p>Yes, in Settings under Messages. There are three choices:</p>
+            <p>
+              Yes — open Messages and tap the settings button at the top. There
+              are three choices:
+            </p>
             <ul>
               <li>
                 <b>Everyone.</b> Anyone can write; people you do not know land

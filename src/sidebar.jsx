@@ -107,11 +107,13 @@ const Sidebar = () => {
     let alive = true;
     const load = async () => {
       try {
-        const res = await apiCall({ url: '/v1/conversations', useCache: false });
+        // Chats only — a message request never adds to the badge.
+        const res = await apiCall({ url: '/v1/conversations/summary', useCache: false });
         if (!alive) return;
-        const total = (res.data || []).reduce((n, c) => n + (c.unreadCount || 0), 0);
-        setUnreadCount(total);
-      } catch (_) { /* ignore */ }
+        setUnreadCount(Number(res.data?.unread) || 0);
+      } catch (err) {
+        console.error('[Sidebar] message count failed (badge hidden):', err?.message || err);
+      }
     };
     load();
     const onUpdate = () => load();
