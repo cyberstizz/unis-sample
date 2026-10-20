@@ -75,7 +75,6 @@ let apiSpy;
 
 function defaultApiHandler(config) {
   const { url, method = 'get' } = config;
-  if (url === '/v1/earnings/track-view' && method === 'post') return { data: { ok: true } };
 
   if (url.startsWith('/v1/jurisdictions/byName/')) {
     const name = decodeURIComponent(url.split('/v1/jurisdictions/byName/')[1]);
@@ -165,18 +164,14 @@ describe('FindPage — initial render', () => {
   });
 });
 
-describe('FindPage — ad view tracking is auth-gated', () => {
-  it('does NOT call track-view for guests (SecurityConfig requires auth: guaranteed 403)', async () => {
-    renderWithProviders(<FindPage />);
+describe('FindPage — no ad-view tracking', () => {
+  // Earnings follow listening through the monthly Community Share; no page
+  // reports ad views any more.
+  it('never calls track-view, signed in or not', async () => {
+    renderWithProviders(<FindPage />, { as: 'listener' });
     await screen.findByTestId('unis-map');
     await new Promise((r) => setTimeout(r, 30));
     expect(callsTo('/v1/earnings/track-view')).toHaveLength(0);
-  });
-
-  it('calls track-view once for authenticated users', async () => {
-    renderWithProviders(<FindPage />, { as: 'listener' });
-    await screen.findByTestId('unis-map');
-    await waitFor(() => expect(callsTo('/v1/earnings/track-view')).toHaveLength(1));
   });
 });
 

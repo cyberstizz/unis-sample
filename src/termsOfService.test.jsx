@@ -16,7 +16,7 @@ describe('TermsOfService', () => {
 
   it('shows the effective date', () => {
     render(<MemoryRouter><TermsOfService /></MemoryRouter>);
-    expect(screen.getAllByText(/March 31, 2026/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/October 19, 2026/).length).toBeGreaterThan(0);
   });
 
   it('renders all 16 section headings', () => {
@@ -33,8 +33,8 @@ describe('TermsOfService', () => {
       '9. Disclaimers & Limitation of Liability',
       '10. Indemnification',
       '11. Artist Revenue Sharing',
-      '12. Supporter Ad Revenue Program',
-      '13. Referral Income Program',
+      '12. Community Share',
+      '13. Referral Program',
       '14. Jurisdiction Expansion',
       '15. Governing Law & Dispute Resolution',
       '16. Changes & Miscellaneous',
@@ -54,6 +54,14 @@ describe('TermsOfService', () => {
     expect(screen.getByText(/Level 1.*10%/i)).toBeInTheDocument();
     expect(screen.getByText(/Level 2.*5%/i)).toBeInTheDocument();
     expect(screen.getByText(/Level 3.*2%/i)).toBeInTheDocument();
+  });
+
+  it('describes the Community Share and never pays for viewing ads', () => {
+    const { container } = render(<MemoryRouter><TermsOfService /></MemoryRouter>);
+    expect(screen.getByText(/No payment for viewing ads\./i)).toBeInTheDocument();
+    expect(screen.getByText(/fifty \(50\) plays per day/i)).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/supporter ad revenue|passive ad revenue|ad revenue attributable to that referred user/i);
+    expect(container.textContent).not.toMatch(/\$600/);
   });
 
   it('renders the DMCA agent contact info', () => {

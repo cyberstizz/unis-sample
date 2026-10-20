@@ -60,17 +60,6 @@ const VoteAwards = () => {
     { value: 'harlem', label: 'Harlem' },
   ];
 
-  useEffect(() => {
-    const trackAdView = async () => {
-      try {
-        await apiCall({ url: '/v1/earnings/track-view', method: 'post' });
-      } catch (err) {
-        // Silent
-      }
-    };
-    trackAdView();
-  }, []);
-
   // Countdown timer — follows the selected poll interval in America/New_York.
   // This re-renders VoteAwards every second, which is exactly why the
   // VotingWizard filters prop MUST be memoized below — otherwise the wizard

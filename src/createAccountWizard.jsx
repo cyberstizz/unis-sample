@@ -1415,7 +1415,7 @@ const handleSubmit = async () => {
               >
                 <Mic2 className="role-icon" size={48} />
                 <div className="role-title">Artist</div>
-                <div className="role-description">Upload music, compete for awards, earn 50% revenue</div>
+                <div className="role-description">Upload music, compete for awards, earn from sales and supporters</div>
               </div>
             </div>
             
@@ -1705,7 +1705,7 @@ const handleSubmit = async () => {
           <>
             <div className="step-header">
               <h2>Support an Artist</h2>
-              <p>They'll receive 15% of ad revenue from your activity.</p>
+              <p>Every month, 15% of your share of the Community Share goes to the artist you support.</p>
             </div>
             
             <div className="artist-selection">
@@ -1964,7 +1964,7 @@ const handleSubmit = async () => {
                   <ol>
                     <li>You own 100% of master and publishing rights.</li>
                     <li>You grant Unis a non-exclusive license.</li>
-                    <li>You'll receive 50% of net ad revenue.</li>
+                    <li>You'll receive 60% of net revenue from audio ads on your songs (coming soon), as set out in the Terms.</li>
                     <li>Terminable with 30 days notice.</li>
                   </ol>
                 </div>

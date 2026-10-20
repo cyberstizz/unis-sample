@@ -293,6 +293,7 @@ $tone-gold: #f59e0b;
   &.level-dot-1 { background: $tone-blue; }
   &.level-dot-2 { background: $tone-violet; }
   &.level-dot-3 { background: $tone-cyan; }
+  &.level-dot-artist { background: $tone-purple; }
 }
 .level-name { color: #d1d5db; font-size: 0.88rem; font-weight: 500; }
 .level-pct { color: $text-muted; font-size: 0.75rem; background: rgba(255, 255, 255, 0.06); padding: 2px 8px; border-radius: 4px; }
@@ -314,6 +315,9 @@ $tone-gold: #f59e0b;
 .chart-bar { width: 100%; min-height: 4px; background: $unis-blue; border-radius: 2px 2px 0 0; transition: all 0.2s; }
 .chart-date { color: $text-dim; font-size: 0.62rem; text-align: center; margin-top: 4px; display: none; }
 .chart-bar-wrap:nth-child(5n) .chart-date { display: block; }
+// Community Share: 12 monthly bars, so every month gets its label.
+.mini-chart-months { gap: 6px; .chart-date { display: block; } }
+.chart-card .how-note { margin-top: 14px; }
 .empty-chart { text-align: center; padding: 40px 20px; color: $text-muted; font-size: 0.9rem; }
 
 .split-card {

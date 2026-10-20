@@ -416,18 +416,9 @@ const Feed = () => {
   // ─── Jurisdiction selector state ───
   const [selectedJurisdictionId, setSelectedJurisdictionId] = useState(userJurisdictionId);
 
-  // Simulated ad impression — only for logged-in users (guest ad revenue goes to Unis)
-  useEffect(() => {
-    if (!userId) return;
-    const trackAdView = async () => {
-      try {
-        await apiCall({ url: '/v1/earnings/track-view', method: 'post' });
-      } catch (err) {
-        // Silent
-      }
-    };
-    trackAdView();
-  }, [userId]);
+  // No ad-view tracking here any more. Earnings come from the monthly
+  // Community Share, which follows listening, never ad views (Google's ad
+  // rules forbid paying anyone because ads were seen).
 
   // Update selected jurisdiction when user data loads
   useEffect(() => {

@@ -14,7 +14,7 @@
 //   • handleRequestPayout success path + error path with response.data.error
 //   • handleOpenStripeDashboard opens new tab via window.open
 //   • Tab switching (Overview / Referrals / Payouts / How It Works)
-//   • Referrals list renders with photo fallback + ad views + earnings
+//   • Referrals list renders with photo fallback + plays this month + earnings
 //   • Empty referrals state
 //   • Payouts list renders with status dots + date formatting
 //   • Empty payouts state (stripe ready vs not ready)
@@ -22,7 +22,9 @@
 //     tab; ?stripe=refresh surfaces an error message
 //   • formatMoney edge cases (null, undefined, 0, tiny numbers, large numbers)
 //   • Promise.allSettled resilience — partial endpoint failures don't crash UI
-//   • How It Works tab static content (revenue split visuals)
+//   • How It Works tab static content (Community Share split, chain, rules)
+//   • Community Share: no running "this month" money; last closed month,
+//     network listening so far this month, 12-month history
 //
 // Pattern notes:
 //   • Earnings uses Promise.allSettled so partial failures are SUPPOSED to be
@@ -62,23 +64,35 @@ import Earnings from './earnings';
 // ---------------------------------------------------------------------------
 const API = 'http://localhost:8080/api';
 
+// Shape of GET /v1/earnings/my-summary under the Community Share.
 const richSummary = {
+  model: 'community_share',
   currentBalance: 42.5,
   payoutThreshold: 50.0,
   payoutReady: false,
-  totalEarnings: { lifetime: 95.0, thisMonth: 12.5 },
+  totalEarnings: { lifetime: 95.0, lastMonth: 12.5, thisMonth: 0 },
   referralEarnings: {
     lifetime: 25.0,
-    thisMonth: 8.0,
-    level1: { lifetime: 18.0, thisMonth: 5.0 },
-    level2: { lifetime: 5.0,  thisMonth: 2.0 },
-    level3: { lifetime: 2.0,  thisMonth: 1.0 },
+    lastMonth: 8.0,
+    thisMonth: 0,
+    level1: { lifetime: 18.0, lastMonth: 5.0, thisMonth: 0 },
+    level2: { lifetime: 5.0,  lastMonth: 2.0, thisMonth: 0 },
+    level3: { lifetime: 2.0,  lastMonth: 1.0, thisMonth: 0 },
   },
-  supporterEarnings: { lifetime: 17.0, thisMonth: 4.5 },
+  supporterEarnings: { lifetime: 17.0, lastMonth: 4.5, thisMonth: 0 },
+  lastClosedMonth: '2026-03',
+  listeningThisMonth: {
+    month: '2026-04',
+    level1: { people: 7, plays: 350 },
+    level2: { people: 3, plays: 90 },
+    level3: { people: 1, plays: 12 },
+    networkPlays: 452,
+    supporterPlays: 610,
+  },
   referralCount: 7,
   supporterCount: 4,
   referralViewsThisMonth: 350,
-  cpm: 3.5,
+  rates: { supporter: 15, level1: 10, level2: 5, level3: 2, dailyPlayCap: 50 },
 };
 
 const readyForPayoutSummary = {
@@ -88,15 +102,15 @@ const readyForPayoutSummary = {
 };
 
 const refFixtures = [
-  { userId: 'ref-1', username: 'referredOne',  photoUrl: '/uploads/r1.jpg', adViews: 120, earnings: 4.25 },
-  { userId: 'ref-2', username: 'referredTwo',  photoUrl: null,              adViews: 40,  earnings: 1.10 },
-  { userId: 'ref-3', username: 'referredThree',photoUrl: '/uploads/r3.jpg', adViews: 10,  earnings: 0.35 },
+  { userId: 'ref-1', username: 'referredOne',  photoUrl: '/uploads/r1.jpg', leftUnis: false, playsThisMonth: 120, earnings: 4.25 },
+  { userId: 'ref-2', username: 'referredTwo',  photoUrl: null,              leftUnis: false, playsThisMonth: 1,   earnings: 1.10 },
+  { userId: 'ref-3', username: 'referredThree',photoUrl: '/uploads/r3.jpg', leftUnis: true,  playsThisMonth: 0,   earnings: 0.35 },
 ];
 
 const historyFixtures = [
-  { date: '2026-04-01', total: 1.25 },
-  { date: '2026-04-02', total: 2.10 },
-  { date: '2026-04-03', total: 0.50 },
+  { month: '2026-02', date: '2026-02-01', closed: true,  referralEarnings: 1.0, supporterEarnings: 0.25, adjustments: 0, total: 1.25 },
+  { month: '2026-03', date: '2026-03-01', closed: true,  referralEarnings: 2.1, supporterEarnings: 0,    adjustments: 0, total: 2.10 },
+  { month: '2026-04', date: '2026-04-01', closed: false, referralEarnings: 0,   supporterEarnings: 0,    adjustments: 0, total: 0 },
 ];
 
 const payoutFixtures = [
@@ -293,7 +307,7 @@ describe('Earnings — header and basic render', () => {
 
   it('excludes "supporters" in the header copy for listeners', async () => {
     await renderEarnings({ as: 'listener' });
-    const headerText = screen.getByText(/track your revenue from referrals/i);
+    const headerText = screen.getByText(/your monthly community share from your referrals/i);
     expect(headerText.textContent).not.toMatch(/supporters/i);
   });
 
@@ -306,10 +320,11 @@ describe('Earnings — header and basic render', () => {
     expect(callsMatching('/v1/stripe/payouts')).toHaveLength(1);
   });
 
-  it('history endpoint includes ?days=30 query param', async () => {
+  it('history endpoint asks for 12 months (?months=12)', async () => {
     await renderEarnings();
     const hist = callsMatching('/v1/earnings/my-history')[0];
-    expect(hist.url).toContain('days=30');
+    expect(hist.url).toContain('months=12');
+    expect(hist.url).not.toContain('days=');
   });
 
   it('Refresh button re-fires all 5 endpoints', async () => {
@@ -338,16 +353,21 @@ describe('Earnings — summary cards', () => {
     expect(screen.getAllByText('$42.50').length).toBeGreaterThan(0);
   });
 
-  it('Current Balance card shows "This month" subtext', async () => {
+  it('Current Balance card shows what the last closed month paid', async () => {
     await renderEarnings({ config: { summary: richSummary } });
-    expect(screen.getByText(/this month:/i)).toBeInTheDocument();
-    // $12.50 comes from totalEarnings.thisMonth
-    expect(screen.getByText(/this month:.*\$12\.50/i)).toBeInTheDocument();
+    // $12.50 comes from totalEarnings.lastMonth; there is no running "this month" amount.
+    expect(screen.getByText(/march 2026: \$12\.50/i)).toBeInTheDocument();
+    expect(screen.queryByText(/this month:/i)).not.toBeInTheDocument();
   });
 
-  it('Referral Earnings card shows referral count and views', async () => {
+  it('Current Balance card explains monthly closing before any month has closed', async () => {
+    await renderEarnings({ config: { summary: { ...richSummary, lastClosedMonth: null } } });
+    expect(screen.getByText(/added once a month, after each month closes/i)).toBeInTheDocument();
+  });
+
+  it('Referral Earnings card shows referral count and network plays this month', async () => {
     await renderEarnings({ config: { summary: richSummary } });
-    expect(screen.getByText(/7 referrals · 350 views this month/i)).toBeInTheDocument();
+    expect(screen.getByText(/7 referrals · 452 plays in your network this month/i)).toBeInTheDocument();
   });
 
   it('Supporter Earnings card is VISIBLE for artists', async () => {
@@ -646,7 +666,7 @@ describe('Earnings — tab switching', () => {
     const user = userEvent.setup();
     await renderEarnings();
     await user.click(screen.getByRole('tab', { name: /how it works/i }));
-    expect(await screen.findByRole('heading', { name: /display ad revenue split/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /the community share/i })).toBeInTheDocument();
   });
 
   it('tab buttons show counts in parentheses', async () => {
@@ -666,8 +686,9 @@ describe('Earnings — Overview tab content', () => {
     expect(screen.getByText(/level 2 — your referrals' referrals/i)).toBeInTheDocument();
     expect(screen.getByText(/level 3 — third degree/i)).toBeInTheDocument();
     // Percentages are duplicated elsewhere (e.g. "Referral Income (up to 17%)"
-    // copy, ad-revenue split diagram). Scope to the three level-pct spans.
-    const pcts = document.querySelectorAll('.level-breakdown .level-pct');
+    // copy). Scope to the first level breakdown (earnings by level); the second
+    // one is this month's listening.
+    const pcts = document.querySelector('.level-breakdown').querySelectorAll('.level-pct');
     const pctTexts = Array.from(pcts).map((el) => el.textContent);
     expect(pctTexts).toEqual(['10%', '5%', '2%']);
   });
@@ -679,15 +700,50 @@ describe('Earnings — Overview tab content', () => {
     expect(screen.getByText('$2.00')).toBeInTheDocument();   // level3
   });
 
-  it('renders the mini chart with one bar per history day', async () => {
+  it('renders the monthly chart with one bar per month', async () => {
     await renderEarnings({ config: { history: historyFixtures } });
+    expect(screen.getByRole('heading', { name: /last 12 months/i })).toBeInTheDocument();
     const bars = document.querySelectorAll('.chart-bar');
     expect(bars).toHaveLength(historyFixtures.length);
+    const labels = Array.from(document.querySelectorAll('.chart-date')).map((el) => el.textContent);
+    expect(labels).toEqual(['Feb', 'Mar', 'Apr']);
+  });
+
+  it('marks months that are not closed yet in the bar tooltip', async () => {
+    await renderEarnings({ config: { history: historyFixtures } });
+    const wraps = document.querySelectorAll('.chart-bar-wrap');
+    expect(wraps[1].getAttribute('title')).toBe('March 2026: $2.10');
+    expect(wraps[2].getAttribute('title')).toMatch(/april 2026: \$0\.00 \(not closed yet\)/i);
   });
 
   it('shows empty chart message when history is empty', async () => {
     await renderEarnings({ config: { history: [] } });
-    expect(screen.getByText(/no earnings activity yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no earnings yet/i)).toBeInTheDocument();
+  });
+
+  it('shows empty chart message when every month is $0', async () => {
+    await renderEarnings({ config: { history: [{ month: '2026-04', closed: false, total: 0 }] } });
+    expect(screen.getByText(/after the first month is closed/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('.chart-bar')).toHaveLength(0);
+  });
+
+  it('shows this month\'s listening by level, as plays (not money)', async () => {
+    await renderEarnings({ as: 'listener', config: { summary: richSummary } });
+    const card = screen.getByRole('heading', { name: /april 2026 so far/i }).closest('.chart-card');
+    expect(within(card).getByText('7 people')).toBeInTheDocument();
+    expect(within(card).getByText('350 plays')).toBeInTheDocument();
+    expect(within(card).getByText('1 person')).toBeInTheDocument();
+    expect(within(card).getByText('12 plays')).toBeInTheDocument();
+    expect(within(card).getByText(/up to 50 a day per person/i)).toBeInTheDocument();
+    expect(within(card).queryByText(/fans who support you/i)).not.toBeInTheDocument();
+    expect(within(card).queryByText(/\$/)).not.toBeInTheDocument();
+  });
+
+  it('shows supporter plays this month for artists', async () => {
+    await renderEarnings({ as: 'artist', config: { summary: richSummary } });
+    const card = screen.getByRole('heading', { name: /april 2026 so far/i }).closest('.chart-card');
+    expect(within(card).getByText(/fans who support you/i)).toBeInTheDocument();
+    expect(within(card).getByText('610 plays')).toBeInTheDocument();
   });
 
   it('shows "Supporter Income" stream only for artists', async () => {
@@ -714,13 +770,14 @@ describe('Earnings — Referrals tab', () => {
     expect(screen.getByText('referredThree')).toBeInTheDocument();
   });
 
-  it('renders ad view counts', async () => {
+  it('renders plays this month, and "Left Unis" for people who left', async () => {
     const user = userEvent.setup();
     await renderEarnings({ config: { referrals: refFixtures } });
     await user.click(screen.getByRole('tab', { name: /my referrals/i }));
-    expect(await screen.findByText(/120 ad views/i)).toBeInTheDocument();
-    expect(screen.getByText(/40 ad views/i)).toBeInTheDocument();
-    expect(screen.getByText(/10 ad views/i)).toBeInTheDocument();
+    expect(await screen.findByText(/120 plays this month/i)).toBeInTheDocument();
+    expect(screen.getByText(/^1 play this month$/i)).toBeInTheDocument();
+    expect(screen.getByText(/left unis/i)).toBeInTheDocument();
+    expect(screen.queryByText(/ad views/i)).not.toBeInTheDocument();
   });
 
   it('falls back to backimage when referral photoUrl is null', async () => {
@@ -801,26 +858,26 @@ describe('Earnings — Payouts tab', () => {
 // HOW IT WORKS TAB
 // ===========================================================================
 describe('Earnings — How It Works tab', () => {
-  it('renders the Display Ad Revenue split (68/15/10/5/2)', async () => {
+  it('renders the Community Share split (68/15/10/5/2)', async () => {
     const user = userEvent.setup();
     await renderEarnings();
     await user.click(screen.getByRole('tab', { name: /how it works/i }));
-    // Display Ad + Audio Ad both contain "L1 10%", so scope to the Display
-    // Ad Revenue Split section specifically.
-    const displayHeading = await screen.findByRole('heading', { name: /display ad revenue split/i });
-    const displaySection = displayHeading.closest('.how-section');
-    expect(within(displaySection).getByText(/unis 68%/i)).toBeInTheDocument();
-    expect(within(displaySection).getByText(/artist 15%/i)).toBeInTheDocument();
-    expect(within(displaySection).getByText(/l1 10%/i)).toBeInTheDocument();
+    const heading = await screen.findByRole('heading', { name: /the community share/i });
+    const section = heading.closest('.how-section');
+    expect(within(section).getByText(/unis 68%/i)).toBeInTheDocument();
+    expect(within(section).getByText(/artist 15%/i)).toBeInTheDocument();
+    expect(within(section).getByText(/l1 10%/i)).toBeInTheDocument();
+    expect(within(section).getByText(/up to 50 plays\s+a day/i)).toBeInTheDocument();
   });
 
-  it('renders the Audio Ad split (coming soon — 60/23/10/5/2)', async () => {
+  it('never tells people they earn from seeing ads', async () => {
     const user = userEvent.setup();
     await renderEarnings();
     await user.click(screen.getByRole('tab', { name: /how it works/i }));
-    expect(await screen.findByRole('heading', { name: /audio ad revenue split/i })).toBeInTheDocument();
-    expect(screen.getByText(/artist 60%/i)).toBeInTheDocument();
-    expect(screen.getByText(/unis 23%/i)).toBeInTheDocument();
+    await screen.findByRole('heading', { name: /the community share/i });
+    const panel = document.getElementById('earnings-panel-how');
+    expect(panel.textContent).not.toMatch(/ad view|sees ads|display ad revenue/i);
+    expect(panel.textContent).toMatch(/you don.t earn from your own listening or from seeing ads/i);
   });
 
   it('renders the 3-level referral chain visualization', async () => {
@@ -828,9 +885,9 @@ describe('Earnings — How It Works tab', () => {
     await renderEarnings();
     await user.click(screen.getByRole('tab', { name: /how it works/i }));
     expect(await screen.findByText(/^you$/i)).toBeInTheDocument();
-    expect(screen.getByText(/you earn 10%/i)).toBeInTheDocument();
-    expect(screen.getByText(/you earn 5%/i)).toBeInTheDocument();
-    expect(screen.getByText(/you earn 2%/i)).toBeInTheDocument();
+    expect(screen.getByText(/you get 10% of their share/i)).toBeInTheDocument();
+    expect(screen.getByText(/you get 5% of their share/i)).toBeInTheDocument();
+    expect(screen.getByText(/you get 2% of their share/i)).toBeInTheDocument();
   });
 
   it('renders payout rules with the $50 minimum', async () => {
@@ -843,6 +900,9 @@ describe('Earnings — How It Works tab', () => {
     const rulesList = document.querySelector('.how-rules');
     expect(rulesList).not.toBeNull();
     expect(within(rulesList).getByText('$50.00')).toBeInTheDocument();
+    expect(rulesList.textContent).toMatch(/once a month/i);
+    expect(rulesList.textContent).toMatch(/\$2,000/);
+    expect(rulesList.textContent).not.toMatch(/\$600/);
   });
 });
 
@@ -886,7 +946,7 @@ describe('Earnings — formatMoney edge cases', () => {
   it('renders $0.00 when currentBalance is 0', async () => {
     await renderEarnings({
       config: {
-        summary: { ...richSummary, currentBalance: 0, totalEarnings: { lifetime: 0, thisMonth: 0 } },
+        summary: { ...richSummary, currentBalance: 0, totalEarnings: { lifetime: 0, lastMonth: 0, thisMonth: 0 } },
       },
     });
     expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
@@ -898,7 +958,7 @@ describe('Earnings — formatMoney edge cases', () => {
         summary: {
           ...richSummary,
           currentBalance: 0.054,
-          totalEarnings: { lifetime: 0.054, thisMonth: 0.054 },
+          totalEarnings: { lifetime: 0.054, lastMonth: 0.054, thisMonth: 0 },
         },
       },
     });
@@ -912,7 +972,7 @@ describe('Earnings — formatMoney edge cases', () => {
         summary: {
           ...richSummary,
           currentBalance: 0.001234,
-          totalEarnings: { lifetime: 0.001234, thisMonth: 0.001234 },
+          totalEarnings: { lifetime: 0.001234, lastMonth: 0.001234, thisMonth: 0 },
         },
       },
     });
@@ -1203,14 +1263,14 @@ describe('Earnings — accessibility semantics', () => {
     });
   });
 
-  it('gives the audio-ad split a text legend, not colour alone', async () => {
+  it('gives the Community Share split a text legend, not colour alone', async () => {
     const user = userEvent.setup();
     await renderEarnings();
     await user.click(screen.getByRole('tab', { name: /how it works/i }));
-    const audioHeading = await screen.findByRole('heading', { name: /audio ad revenue split/i });
-    const audioSection = audioHeading.closest('.how-section');
-    expect(within(audioSection).getByText(/artist \(60%\)/i)).toBeInTheDocument();
-    expect(within(audioSection).getByText(/level 3 referrer \(2%\)/i)).toBeInTheDocument();
+    const heading = await screen.findByRole('heading', { name: /the community share/i });
+    const section = heading.closest('.how-section');
+    expect(within(section).getByText(/their supported artist \(15%\)/i)).toBeInTheDocument();
+    expect(within(section).getByText(/level 3 referrer \(2%\)/i)).toBeInTheDocument();
   });
 });
 
@@ -1219,7 +1279,7 @@ describe('Earnings — list scalability caps', () => {
     userId: `ref-${i}`,
     username: `referred${i}`,
     photoUrl: null,
-    adViews: i,
+    playsThisMonth: i,
     earnings: i / 10,
   }));
 

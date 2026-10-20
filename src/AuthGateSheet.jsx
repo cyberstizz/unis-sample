@@ -10,11 +10,15 @@ const GATE_CONTEXTS = {
     headline: 'Sign up to vote',
     subtext: 'Voting decides which artists and songs win daily and weekly awards in your community.',
   },
+  // Community Share wording: nobody is paid for seeing ads or for their own
+  // listening. Unis shares its monthly income by listening; part of each
+  // member's share goes to their supported artist and the people who invited
+  // them (Google's ad policies forbid paying users to view ads).
   earnings: {
     icon: '💰',
     accent: 'start earning',
-    headline: 'Earn while you listen',
-    subtext: 'Unis members earn passive ad revenue just by listening — even when the music isn\'t playing.',
+    headline: 'Share in what Unis earns',
+    subtext: 'Every month Unis shares its income with the community. Invite people with your code and part of their share comes to you, three levels deep.',
   },
   wallet: {
     icon: '👛',
@@ -40,8 +44,8 @@ const GATE_CONTEXTS = {
 const PERKS = [
   {
     icon: '🎧',
-    title: 'Earn passively',
-    detail: 'Ad revenue flows to you just for being a member',
+    title: 'Back your artist',
+    detail: 'Your listening sends part of the Community Share to the artist you support',
   },
   {
     icon: '🏆',
@@ -50,8 +54,8 @@ const PERKS = [
   },
   {
     icon: '🤝',
-    title: 'Refer & earn more',
-    detail: 'Earn 10% of your referrals\' ad revenue',
+    title: 'Refer & earn',
+    detail: 'Get 10% of the monthly share of everyone you invite',
   },
 ];
 
@@ -184,7 +188,7 @@ const AuthGateSheet = ({ isOpen, context = 'generic', onClose }) => {
           {songCount > 0 && (
             <div className="ags-stat">
               <span className="ags-stat-number">{songCount}</span>
-              song{songCount !== 1 ? 's' : ''} listened to — sign up to start earning from every play
+              song{songCount !== 1 ? 's' : ''} listened to — sign up so your plays count for your artist
             </div>
           )}
 

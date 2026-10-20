@@ -12,8 +12,8 @@ const PrivacyPolicy = () => {
           <header className="policy-header">
             <h1>Unis Privacy Policy</h1>
             <div className="policy-meta">
-              <p><strong>Effective Date:</strong> March 31, 2026</p>
-              <p><strong>Last Updated:</strong> March 31, 2026</p>
+              <p><strong>Effective Date:</strong> October 19, 2026</p>
+              <p><strong>Last Updated:</strong> October 19, 2026</p>
             </div>
           </header>
 
@@ -61,8 +61,9 @@ const PrivacyPolicy = () => {
                 artwork) and files (stored securely via Cloudflare R2).
               </li>
               <li>
-                <strong>Behavioral Data:</strong> Plays (tracks listened), votes (on nominees), interactions (e.g., 
-                feed scrolls, leaderboard views)&mdash;tied to your userId for personalization.
+                <strong>Behavioral Data:</strong> Plays (tracks listened, with the artist you were supporting at the 
+                time), votes (on nominees), interactions (e.g., feed scrolls, leaderboard views)&mdash;tied to your 
+                userId for personalization and to calculate the monthly Community Share.
               </li>
               <li>
                 <strong>Financial Data:</strong> If you participate in our revenue sharing, supporter, or referral 
@@ -74,9 +75,9 @@ const PrivacyPolicy = () => {
               </li>
               <li>
                 <strong>Referral Data:</strong> If you participate in our referral program, we track your unique 
-                referral code, who you referred (and who they referred, up to three levels), and the ad revenue 
-                attributable to your referral chain. This data is used solely for revenue attribution and program 
-                administration.
+                referral code, who you referred (and who they referred, up to three levels), and the Community 
+                Share amounts credited through your referral chain. This data is used solely to calculate earnings 
+                and administer the program.
               </li>
             </ul>
 
@@ -123,9 +124,9 @@ const PrivacyPolicy = () => {
                 based on jurisdiction/genre), process votes/awards.
               </li>
               <li>
-                <strong>Process Payments:</strong> Calculate earnings from artist revenue sharing, supporter ad revenue, 
-                and referral income; attribute ad revenue across referral chains; issue payouts via Stripe Connect; 
-                generate tax forms (1099-NEC) as required by law.
+                <strong>Process Payments:</strong> Calculate earnings from artist revenue sharing and the monthly 
+                Community Share (supported-artist and referral shares, based on counted listening); issue payouts via 
+                Stripe Connect; generate tax forms (Form 1099) as required by law.
               </li>
               <li>
                 <strong>Improve &amp; Engage:</strong> Analyze plays/votes for recommendations; send notifications 
@@ -256,7 +257,7 @@ const PrivacyPolicy = () => {
               collect personal information from children under 13. If you believe a child under 13 has provided us 
               with personal information, please contact us at{' '}
               <a href="mailto:support@unis.com">support@unis.com</a> and we will promptly delete it. Features 
-              involving monetary earnings (revenue sharing, referral income, supporter ad revenue) require users to 
+              involving monetary earnings (revenue sharing, the Community Share, referral income) require users to 
               be at least 18 years old, or to have verifiable parental or guardian consent as described in our Terms 
               of Service.
             </p>

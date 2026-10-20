@@ -3,6 +3,16 @@
 // Earnings dashboard — referral income, supporter income (artists), Stripe
 // Connect onboarding, and payouts.
 //
+// COMMUNITY SHARE (replaces per-ad-view earnings):
+//   Once a month has ended and Unis has been paid for it, an admin closes the
+//   month. Unis's income for that month is divided by counted listening
+//   (signed in, someone else's song, at most 50 plays a day per person), and
+//   15% of each listener's part goes to the artist they supported when they
+//   played, 10/5/2% to the three people above them in the referral chain.
+//   Nothing is earned per ad seen, so this page never shows a running "this
+//   month" amount: it shows what closed months paid, and how much listening
+//   your network has done so far this month.
+//
 // QA PASS NOTES (production-readiness checklist):
 //   • buildUrl        — now imports the SHARED src/utils/buildUrl.js. The old
 //                       local copy only prefixed API_BASE_URL and could not
@@ -47,7 +57,7 @@ import './earnings.scss';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
-const HISTORY_DAYS = 30;
+const HISTORY_MONTHS = 12;
 
 // Fallback only. The authoritative threshold comes from the API
 // (summary.payoutThreshold) so a backend policy change does not require a
@@ -64,23 +74,18 @@ const PAYOUTS_PAGE_SIZE = 12;
 // treated as an open-redirect attempt and refused.
 const ALLOWED_STRIPE_HOSTS = ['stripe.com'];
 
-// Revenue split copy lives in one place so the marketing numbers can't drift
-// between the bar, the legend, and the prose.
-const DISPLAY_AD_SPLIT = [
-  { key: 'unis',    label: 'Unis 68%',   legend: 'Unis (68%)',                 width: 68, tone: 'brand' },
-  { key: 'artist',  label: 'Artist 15%', legend: 'Supported Artist (15%)',     width: 15, tone: 'purple' },
-  { key: 'level1',  label: 'L1 10%',     legend: 'Level 1 Referrer (10%)',     width: 10, tone: 'blue' },
-  { key: 'level2',  label: 'L2',         legend: 'Level 2 Referrer (5%)',      width: 5,  tone: 'violet' },
-  { key: 'level3',  label: '',           legend: 'Level 3 Referrer (2%)',      width: 2,  tone: 'cyan' },
+// How each listener's part of a month's revenue is divided. The copy lives in
+// one place so the bar, the legend, and the prose can't drift apart.
+const COMMUNITY_SPLIT = [
+  { key: 'unis',    label: 'Unis 68%',   legend: 'Unis (68%)',                    width: 68, tone: 'brand' },
+  { key: 'artist',  label: 'Artist 15%', legend: 'Their Supported Artist (15%)',  width: 15, tone: 'purple' },
+  { key: 'level1',  label: 'L1 10%',     legend: 'Level 1 Referrer (10%)',        width: 10, tone: 'blue' },
+  { key: 'level2',  label: 'L2',         legend: 'Level 2 Referrer (5%)',         width: 5,  tone: 'violet' },
+  { key: 'level3',  label: '',           legend: 'Level 3 Referrer (2%)',         width: 2,  tone: 'cyan' },
 ];
 
-const AUDIO_AD_SPLIT = [
-  { key: 'artist',  label: 'Artist 60%', legend: 'Artist (60%)',               width: 60, tone: 'green' },
-  { key: 'unis',    label: 'Unis 23%',   legend: 'Unis (23%)',                 width: 23, tone: 'brand' },
-  { key: 'level1',  label: 'L1 10%',     legend: 'Level 1 Referrer (10%)',     width: 10, tone: 'blue' },
-  { key: 'level2',  label: 'L2',         legend: 'Level 2 Referrer (5%)',      width: 5,  tone: 'violet' },
-  { key: 'level3',  label: '',           legend: 'Level 3 Referrer (2%)',      width: 2,  tone: 'cyan' },
-];
+// Fallback only; the server sends the real cap in summary.rates.dailyPlayCap.
+const DEFAULT_DAILY_PLAY_CAP = 50;
 
 const TABS = [
   { id: 'overview',  label: 'Overview' },
@@ -122,6 +127,17 @@ const toNumber = (value, fallback = 0) => {
   const num = typeof value === 'number' ? value : parseFloat(value);
   return Number.isFinite(num) ? num : fallback;
 };
+
+/** "2026-11" → "November 2026" (or "Nov" with short). */
+const monthName = (ym, short = false) => {
+  const [y, m] = String(ym || '').split('-').map(Number);
+  if (!y || !m) return '';
+  return new Date(y, m - 1, 1).toLocaleDateString(
+    'en-US', short ? { month: 'short' } : { month: 'long', year: 'numeric' }
+  );
+};
+
+const plural = (n, word) => `${n.toLocaleString('en-US')} ${word}${n === 1 ? '' : 's'}`;
 
 const Earnings = () => {
   const { user, authLoaded } = useAuth();
@@ -191,7 +207,7 @@ const Earnings = () => {
    * @param {'full'|'financial'} scope
    *   'full'      — all five endpoints (mount, manual refresh)
    *   'financial' — balance, Stripe status and payout list only. Referrals and
-   *                 30-day history cannot change as a result of a withdrawal,
+   *                 monthly history cannot change as a result of a withdrawal,
    *                 so a payout no longer costs five round trips.
    */
   const fetchAllData = useCallback(async (scope = 'full') => {
@@ -212,7 +228,7 @@ const Earnings = () => {
     if (scope === 'full') {
       requests.push(
         { key: 'referrals', url: '/v1/earnings/my-referrals', apply: (d) => setReferrals(d || []) },
-        { key: 'history',   url: `/v1/earnings/my-history?days=${HISTORY_DAYS}`, apply: (d) => setHistory(d || []) },
+        { key: 'history',   url: `/v1/earnings/my-history?months=${HISTORY_MONTHS}`, apply: (d) => setHistory(d || []) },
       );
     }
 
@@ -295,9 +311,9 @@ const Earnings = () => {
   // ── Formatting ────────────────────────────────────────────────────────────
 
   /**
-   * Micro-earnings are real on this platform — a single ad view can be worth a
-   * fraction of a cent — so the precision scales with the magnitude rather than
-   * rounding small balances to $0.00.
+   * Micro-earnings are real on this platform — one listener's monthly share can
+   * be a fraction of a cent — so the precision scales with the magnitude rather
+   * than rounding small balances to $0.00.
    */
   const formatMoney = (amount) => {
     if (amount === null || amount === undefined) return '$0.00';
@@ -360,7 +376,7 @@ const Earnings = () => {
         setPayoutMessage(`Payout of ${amount} initiated successfully!`);
         setPayoutStatus('success');
         // Balance, Stripe status and the payout list changed. Referrals and the
-        // 30-day history did not — 3 calls instead of 5.
+        // monthly history did not — 3 calls instead of 5.
         fetchAllData('financial');
       } else {
         // A 200 with success:false previously produced no feedback at all.
@@ -423,11 +439,22 @@ const Earnings = () => {
   const stripeReady = stripeStatus?.onboardingComplete && stripeStatus?.payoutsEnabled;
   const canWithdraw = stripeReady && availableBalance >= payoutThreshold;
 
+  const hasHistory = history.some((m) => toNumber(m.total, 0) !== 0);
+
   const chartSummary = useMemo(() => {
     if (!history.length) return '';
-    const total = history.reduce((sum, day) => sum + toNumber(day.total, 0), 0);
-    return `Daily earnings for the last ${history.length} days. Total ${formatMoney(total)}.`;
+    const total = history.reduce((sum, m) => sum + toNumber(m.total, 0), 0);
+    return `Monthly earnings for the last ${history.length} months. Total ${formatMoney(total)}.`;
   }, [history]);
+
+  // Listening so far this month, in your network (and, for artists, by the
+  // fans who support you). Shown as plays, not money: the month's money is
+  // only known once the month is closed.
+  const listening = summary?.listeningThisMonth || null;
+  const networkPlays = toNumber(listening?.networkPlays, toNumber(summary?.referralViewsThisMonth, 0));
+  const currentMonth = monthName(listening?.month) || 'This month';
+  const lastClosed = summary?.lastClosedMonth || null;
+  const dailyPlayCap = toNumber(summary?.rates?.dailyPlayCap, DEFAULT_DAILY_PLAY_CAP);
 
   // ── Tab keyboard navigation (WAI-ARIA tabs pattern) ───────────────────────
 
@@ -476,7 +503,7 @@ const Earnings = () => {
         <div className="earnings-header">
           <div className="earnings-header-text">
             <h1>Earnings</h1>
-            <p>Track your revenue from referrals{isArtist ? ', supporters,' : ''} and community engagement.</p>
+            <p>Your monthly Community Share from your referrals{isArtist ? ' and supporters' : ''}.</p>
           </div>
           <button
             className="refresh-btn"
@@ -513,7 +540,11 @@ const Earnings = () => {
             <div className="card-body">
               <p className="card-label" id="card-label-balance">Current Balance</p>
               <h2 className="card-value" aria-describedby="card-label-balance">{formatMoney(summary?.currentBalance)}</h2>
-              <p className="card-sub">This month: {formatMoney(summary?.totalEarnings?.thisMonth)}</p>
+              <p className="card-sub">
+                {lastClosed
+                  ? `${monthName(lastClosed)}: ${formatMoney(summary?.totalEarnings?.lastMonth)}`
+                  : 'Added once a month, after each month closes'}
+              </p>
             </div>
           </div>
 
@@ -524,7 +555,7 @@ const Earnings = () => {
             <div className="card-body">
               <p className="card-label" id="card-label-referral">Referral Earnings</p>
               <h2 className="card-value" aria-describedby="card-label-referral">{formatMoney(summary?.referralEarnings?.lifetime)}</h2>
-              <p className="card-sub">{summary?.referralCount || 0} referrals · {summary?.referralViewsThisMonth || 0} views this month</p>
+              <p className="card-sub">{summary?.referralCount || 0} referrals · {networkPlays.toLocaleString('en-US')} plays in your network this month</p>
             </div>
           </div>
 
@@ -715,26 +746,55 @@ const Earnings = () => {
               </div>
 
               <div className="chart-card">
-                <h3>Last {HISTORY_DAYS} Days</h3>
-                {history.length > 0 ? (
-                  <div className="mini-chart" role="img" aria-label={chartSummary}>
+                <h3>{currentMonth} So Far</h3>
+                <div className="level-breakdown">
+                  {[1, 2, 3].map((lvl) => {
+                    const row = listening?.[`level${lvl}`] || {};
+                    return (
+                      <div className="level-row" key={lvl}>
+                        <div className="level-label">
+                          <span className={`level-dot level-dot-${lvl}`} aria-hidden="true" />
+                          <span className="level-name">Level {lvl}</span>
+                          <span className="level-pct">{toNumber(row.people, 0) === 1 ? '1 person' : `${toNumber(row.people, 0).toLocaleString('en-US')} people`}</span>
+                        </div>
+                        <span className="level-amount">{plural(toNumber(row.plays, 0), 'play')}</span>
+                      </div>
+                    );
+                  })}
+                  {isArtist && (
+                    <div className="level-row">
+                      <div className="level-label">
+                        <span className="level-dot level-dot-artist" aria-hidden="true" />
+                        <span className="level-name">Fans who support you</span>
+                      </div>
+                      <span className="level-amount">{plural(toNumber(listening?.supporterPlays, 0), 'play')}</span>
+                    </div>
+                  )}
+                </div>
+                <p className="how-note">
+                  Counted plays: signed in, someone else&apos;s song, up to {dailyPlayCap} a day per person.
+                  Your share for {currentMonth} is worked out after the month ends and Unis has been paid for it.
+                </p>
+              </div>
+
+              <div className="chart-card">
+                <h3>Last {HISTORY_MONTHS} Months</h3>
+                {hasHistory ? (
+                  <div className="mini-chart mini-chart-months" role="img" aria-label={chartSummary}>
                     {(() => {
-                      const values = history.map((d) => toNumber(d.total, 0));
-                      const maxVal = Math.max(...values);
-                      const minVal = Math.min(...values);
-                      const range = maxVal - minVal;
-                      return history.map((day, i) => {
-                        const val = toNumber(day.total, 0);
-                        const height = range === 0 ? 50 : Math.max(6, ((val - minVal) / range) * 90 + 10);
+                      const maxVal = Math.max(0, ...history.map((m) => toNumber(m.total, 0)));
+                      return history.map((m, i) => {
+                        const val = toNumber(m.total, 0);
+                        const height = maxVal > 0 ? Math.max(val > 0 ? 6 : 2, (val / maxVal) * 100) : 2;
                         return (
                           <div
-                            key={day.date || i}
+                            key={m.month || i}
                             className="chart-bar-wrap"
-                            title={`${day.date}: ${formatMoney(day.total)}`}
+                            title={`${monthName(m.month)}: ${formatMoney(m.total)}${m.closed ? '' : ' (not closed yet)'}`}
                             aria-hidden="true"
                           >
                             <div className="chart-bar" style={{ height: `${height}%` }} />
-                            <span className="chart-date">{String(day.date || '').slice(5)}</span>
+                            <span className="chart-date">{monthName(m.month, true)}</span>
                           </div>
                         );
                       });
@@ -742,7 +802,7 @@ const Earnings = () => {
                   </div>
                 ) : (
                   <div className="empty-chart">
-                    <p>No earnings activity yet. Share your referral code to start earning!</p>
+                    <p>No earnings yet. Your first share shows up here after the first month is closed. Share your referral code to grow your network.</p>
                   </div>
                 )}
               </div>
@@ -754,7 +814,7 @@ const Earnings = () => {
                     <div className="split-dot split-dot-blue" aria-hidden="true" />
                     <div className="split-info">
                       <strong>Referral Income (up to 17%)</strong>
-                      <p>Level 1: 10% from users you directly referred. Level 2: 5% from their referrals. Level 3: 2% from their referrals' referrals. Lifetime passive income — forever.</p>
+                      <p>Every month, Unis shares what it earned with the community, based on listening. You get 10% of the share from each person you invited, 5% from the people they invite, and 2% from the level after that. Your place in the chain is permanent.</p>
                     </div>
                   </div>
                   {isArtist && (
@@ -762,15 +822,15 @@ const Earnings = () => {
                       <div className="split-dot split-dot-purple" aria-hidden="true" />
                       <div className="split-info">
                         <strong>Supporter Income (15%)</strong>
-                        <p>Users who chose to support you contribute 15% of their ad revenue to your career.</p>
+                        <p>15% of each supporter&apos;s monthly share goes to you, for every month they support you and listen.</p>
                       </div>
                     </div>
                   )}
                   <div className="split-item">
                     <div className="split-dot split-dot-gold" aria-hidden="true" />
                     <div className="split-info">
-                      <strong>Audio Ad Revenue (Coming Soon)</strong>
-                      <p>Pre-roll ads on songs. Artists earn 60% of net revenue. Referral pool splits 10/5/2% across 3 levels.</p>
+                      <strong>Audio Ads on Songs (Coming Soon)</strong>
+                      <p>When audio ads arrive, artists will earn 60% of the net revenue from ads played before their own songs. Unis&apos;s part joins the monthly Community Share.</p>
                     </div>
                   </div>
                 </div>
@@ -802,7 +862,9 @@ const Earnings = () => {
                         />
                         <div className="referral-info">
                           <span className="referral-name">{ref.username}</span>
-                          <span className="referral-views">{ref.adViews || 0} ad views</span>
+                          <span className="referral-views">
+                            {ref.leftUnis ? 'Left Unis' : `${plural(toNumber(ref.playsThisMonth, 0), 'play')} this month`}
+                          </span>
                         </div>
                         <div className="referral-earnings">
                           <span className="referral-amount">{formatMoney(ref.earnings)}</span>
@@ -825,7 +887,7 @@ const Earnings = () => {
                 <div className="empty-referrals">
                   <Users size={48} aria-hidden="true" />
                   <h3>No Referrals Yet</h3>
-                  <p>Share your referral code to invite friends. Every person you bring earns you passive income — for life.</p>
+                  <p>Share your referral code to invite friends. Every month, part of the Community Share from each person you bring — and the people they bring — comes to you.</p>
                 </div>
               )}
             </div>
@@ -903,12 +965,16 @@ const Earnings = () => {
               tabIndex={0}
             >
               <div className="how-section">
-                <h3>Display Ad Revenue Split</h3>
+                <h3>The Community Share</h3>
+                <p className="how-note">
+                  Every month, Unis adds up what it took in — ad income, other income, and its fees on song
+                  sales and artist support — and divides it by listening. Each listener&apos;s part is split like this:
+                </p>
                 <div className="how-visual">
                   {/* The bar is decorative — the legend below carries the same
                       information as text, so meaning is never colour-only. */}
                   <div className="how-bar" aria-hidden="true">
-                    {DISPLAY_AD_SPLIT.map((seg) => (
+                    {COMMUNITY_SPLIT.map((seg) => (
                       <div
                         key={seg.key}
                         className={`how-segment how-segment-${seg.tone}`}
@@ -919,41 +985,19 @@ const Earnings = () => {
                     ))}
                   </div>
                   <div className="how-legend">
-                    {DISPLAY_AD_SPLIT.map((seg) => (
+                    {COMMUNITY_SPLIT.map((seg) => (
                       <span key={seg.key}>
                         <span className={`legend-dot legend-dot-${seg.tone}`} aria-hidden="true" /> {seg.legend}
                       </span>
                     ))}
                   </div>
                 </div>
-                <p className="how-note">Every ad view is tracked and attributed. If any referral level doesn't exist, that share goes to Unis.</p>
-              </div>
-
-              <div className="how-section">
-                <h3>Audio Ad Revenue Split (Coming Soon)</h3>
-                <div className="how-visual">
-                  <div className="how-bar" aria-hidden="true">
-                    {AUDIO_AD_SPLIT.map((seg) => (
-                      <div
-                        key={seg.key}
-                        className={`how-segment how-segment-${seg.tone}`}
-                        style={{ width: `${seg.width}%` }}
-                      >
-                        <span>{seg.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {/* Added — the audio bar previously had no text equivalent at
-                      all, so its breakdown was invisible to screen readers. */}
-                  <div className="how-legend">
-                    {AUDIO_AD_SPLIT.map((seg) => (
-                      <span key={seg.key}>
-                        <span className={`legend-dot legend-dot-${seg.tone}`} aria-hidden="true" /> {seg.legend}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <p className="how-note">Pre-roll audio ads before songs. After compulsory royalty payments, net revenue splits across the artist, Unis, and the 3-level referral chain.</p>
+                <p className="how-note">
+                  A play counts when you&apos;re signed in and listening to someone else&apos;s song, up to {dailyPlayCap} plays
+                  a day. You don&apos;t earn from your own listening or from seeing ads; you earn when the people you
+                  brought listen, and artists earn when their supporters listen. If a referral level is empty, or the
+                  person can&apos;t be paid, that share stays with Unis.
+                </p>
               </div>
 
               <div className="how-section">
@@ -961,23 +1005,23 @@ const Earnings = () => {
                 <div className="chain-visual">
                   <div className="chain-node chain-you">YOU</div>
                   <div className="chain-arrow" aria-hidden="true">↓ refers</div>
-                  <div className="chain-node chain-l1">User A <span className="chain-tag">You earn 10%</span></div>
+                  <div className="chain-node chain-l1">User A <span className="chain-tag">You get 10% of their share</span></div>
                   <div className="chain-arrow" aria-hidden="true">↓ refers</div>
-                  <div className="chain-node chain-l2">User B <span className="chain-tag">You earn 5%</span></div>
+                  <div className="chain-node chain-l2">User B <span className="chain-tag">You get 5% of their share</span></div>
                   <div className="chain-arrow" aria-hidden="true">↓ refers</div>
-                  <div className="chain-node chain-l3">User C <span className="chain-tag">You earn 2%</span></div>
+                  <div className="chain-node chain-l3">User C <span className="chain-tag">You get 2% of their share</span></div>
                 </div>
-                <p className="how-note">When anyone in your 3-level chain browses Unis and sees ads, you earn. This is lifetime passive income.</p>
+                <p className="how-note">Your place in the chain is permanent. Every month that anyone in your 3 levels listens on Unis, part of their share comes to you.</p>
               </div>
 
               <div className="how-section">
                 <h3>Payout Rules</h3>
                 <ul className="how-rules">
-                  <li>Minimum payout: <strong>{formatMoney(payoutThreshold)}</strong></li>
-                  <li>Payout frequency: <strong>Monthly</strong> (first week of following month)</li>
-                  <li>Earnings under {formatMoney(payoutThreshold)} roll over — nothing is lost</li>
+                  <li>Earnings are added <strong>once a month</strong>, after the month ends and Unis has been paid for it (usually in the second half of the following month)</li>
+                  <li>Minimum payout: <strong>{formatMoney(payoutThreshold)}</strong> — withdraw any time once your balance reaches it</li>
+                  <li>Balances under {formatMoney(payoutThreshold)} roll over — nothing is lost</li>
                   <li>Payment via Stripe Connect (direct bank deposit)</li>
-                  <li>1099-NEC issued for US users earning over $600/year</li>
+                  <li>Unis sends a 1099 tax form when US tax law requires it (for 2026, once you&apos;re paid $2,000 or more in the year)</li>
                 </ul>
               </div>
             </div>

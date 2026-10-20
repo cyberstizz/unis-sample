@@ -319,13 +319,14 @@ const WaitlistTiers = () => {
   );
 };
 
-// ── Revenue split ───────────────────────────────────────────────────────────
-// Mirrors EarningsService.SUPPORTER_RATE / LEVEL1_RATE / LEVEL2_RATE /
-// LEVEL3_RATE and the DISPLAY_AD_SPLIT array in earnings.jsx. Three copies of
-// these numbers now exist; they must be changed together.
+// ── Community Share split ───────────────────────────────────────────────────
+// How each listener's part of a month's Community Share is divided. Mirrors
+// CommunityShareService.SUPPORTER_RATE / LEVEL_RATES on the server and the
+// COMMUNITY_SPLIT array in earnings.jsx. Three copies of these numbers exist;
+// they must be changed together.
 
-export const DISPLAY_AD_SPLIT = [
-  { key: 'unis', label: 'Unis', pct: 68, note: 'Runs the platform' },
+export const COMMUNITY_SPLIT = [
+  { key: 'unis', label: 'Unis', pct: 68, note: 'Runs the platform, plus any empty share' },
   { key: 'artist', label: 'Your artist', pct: 15, note: 'The artist you support' },
   { key: 'level1', label: 'Who invited you', pct: 10, note: 'Your referrer' },
   { key: 'level2', label: 'Who invited them', pct: 5, note: 'One step further back' },
@@ -333,13 +334,13 @@ export const DISPLAY_AD_SPLIT = [
 ];
 
 const RevenueSplit = () => (
-  <div className="help-ladder" role="table" aria-label="How ad revenue is divided">
+  <div className="help-ladder" role="table" aria-label="How each listener's share is divided">
     <div className="help-ladder__head" role="row">
       <span role="columnheader">Goes to</span>
       <span role="columnheader">Who that is</span>
       <span role="columnheader">Share</span>
     </div>
-    {DISPLAY_AD_SPLIT.map((s) => (
+    {COMMUNITY_SPLIT.map((s) => (
       <div className="help-ladder__row" role="row" key={s.key}>
         <span className="help-ladder__name" role="cell">{s.label}</span>
         <span className="help-ladder__cadence" role="cell">{s.note}</span>
@@ -1408,13 +1409,14 @@ export const HELP_SECTIONS = [
               <li><b>Voting</b> — in every jurisdiction and every interval.</li>
               <li><b>Commenting</b> — on songs, videos, and artist pages.</li>
               <li><b>Messaging</b> — sending direct messages to other users.</li>
-              <li><b>Earnings</b> — ad revenue is only attributed to verified accounts.</li>
+              <li><b>Earnings</b> — the Community Share only pays verified accounts.</li>
             </ul>
             <p>
               That last one is worth reading twice. If you are an artist with
               supporters, or you referred people to Unis,{' '}
               <b>you do not earn anything until your phone is verified</b>. The
-              views still happen; the money does not reach you.
+              listening still counts, but your part of any month that closes
+              before you verify stays with Unis. It is not held for you.
             </p>
           </>
         ),
@@ -2318,15 +2320,17 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              Referrals pay three steps down, not one. When somebody sees an ad
-              on Unis, money reaches the person who invited them, the person who
-              invited <em>that</em> person, and one step further back again.
+              Referrals pay three steps down, not one. Every month Unis shares
+              what it took in with the community, divided by listening. Part of
+              each person&rsquo;s share goes to the person who invited them, the
+              person who invited <em>that</em> person, and one step further back
+              again.
             </p>
             <RevenueSplit />
             <p>
               So you earn from people you have never met. Invite one person who
-              turns out to be a connector, and their whole branch pays you
-              quietly for as long as it keeps growing.
+              turns out to be a connector, and their whole branch adds to your
+              monthly share for as long as they keep listening.
             </p>
             <p className="help-note">
               The chain stops at three. Nothing reaches a fourth step, and there
@@ -2343,8 +2347,8 @@ export const HELP_SECTIONS = [
           <>
             <p>
               Yes, the moment they sign up — separate from any money their
-              viewing later earns you. Points land immediately; earnings build
-              over time as they use Unis.
+              listening later brings you. Points land immediately; money arrives
+              once a month, when each month is closed.
             </p>
             <p>
               A referral is one of the largest single point awards a listener
@@ -2364,14 +2368,20 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              As soon as they are signed in and seeing ads. There is no waiting
-              period and no threshold they have to cross first.
+              From the day they start listening. Their plays count straight
+              away, and your part of their share arrives when that month is
+              closed — usually in the second half of the following month, once
+              Unis has been paid for it.
             </p>
             <p>
               Two things can stop it. <b>They have to be signed in</b> — a
-              signed-out visitor earns nobody anything. And{' '}
-              <b>your phone has to be verified</b>, or the money is calculated
-              and simply never attributed to you.
+              signed-out visitor&rsquo;s plays count for nobody. And{' '}
+              <b>your phone has to be verified</b>, or your part stays with Unis.
+            </p>
+            <p className="help-note">
+              Plays of their own songs don&rsquo;t count, and each person counts
+              for at most 50 plays a day, so nobody can inflate a share by
+              leaving music running.
             </p>
           </>
         ),
@@ -2407,9 +2417,10 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              One artist earns from your presence on Unis. Every ad you see
-              signed in sends a share to them — not to you, not to the platform
-              alone, to a specific artist you picked.
+              One artist shares in your presence on Unis. Every month, 15% of
+              your part of the Community Share — based on your signed-in
+              listening — goes to them. Not to you, not to the platform alone,
+              to a specific artist you picked.
             </p>
             <p>
               You choose when you sign up and you always have one. It costs you
@@ -2471,9 +2482,9 @@ export const HELP_SECTIONS = [
             </p>
             <p>
               Nothing you have already earned for an artist is ever taken back.
-              Every ad view is stamped with whoever was effective at that moment,
-              so a departing artist keeps every cent from the time they were
-              yours. The switch changes the future, never the past.
+              Every play is stamped with whoever was effective at that moment,
+              so a departing artist keeps their share of every play from the
+              time they were yours. The switch changes the future, never the past.
             </p>
           </>
         ),
@@ -2487,16 +2498,17 @@ export const HELP_SECTIONS = [
               Points immediately, and income for as long as they stay. Each new
               supporter adds 5 to your score — once per person, so someone who
               leaves and comes back doesn&rsquo;t pay it twice — and from then
-              on every ad they see signed in pays you a share.
+              on 15% of their monthly share comes to you, based on their
+              listening.
             </p>
             <p>
               This is the most durable income on Unis. A play is one moment; a
-              supporter is somebody quietly earning for you every time they open
-              the app.
+              supporter is somebody quietly adding to your monthly share every
+              time they listen.
             </p>
             <p className="help-note">
               Your phone has to be verified for any of it to reach you. Without
-              it the views are recorded and the money is not attributed.
+              it the listening still counts, but your part stays with Unis.
             </p>
           </>
         ),
@@ -2513,7 +2525,7 @@ export const HELP_SECTIONS = [
               immediately, with no wait for the 1st.
             </p>
             <p>
-              Until you pick, the supporter share of the ads you see goes to
+              Until you pick, the supporter share of your listening goes to
               Unis. It starts going to your new artist as soon as you choose.
             </p>
           </>
@@ -2533,31 +2545,34 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              Advertisers. When you are signed in and an ad appears on Unis, that
-              view earns real money — and Unis splits it out immediately, to a
-              fixed formula, every single time.
+              From what Unis earns: advertising, other income such as
+              sponsorships, and Unis&rsquo;s own fees on song sales and artist
+              support. Once a month, after the month ends and Unis has actually
+              been paid for it, Unis adds it up and shares it with the community
+              — the Community Share — divided by listening, to a fixed formula.
             </p>
             <p>
-              You have to be signed in for a view to earn anything. Browsing
-              signed out costs the artist you support real income.
+              You have to be signed in for your listening to count. Listening
+              signed out costs the artist you support real income. Nobody is
+              paid for seeing or clicking ads.
             </p>
           </>
         ),
       },
       {
         id: 'payouts-split',
-        q: 'Who gets paid when I see an ad?',
+        q: 'Who gets paid from my listening?',
         a: (
           <>
             <p>
-              Two people, neither of them you: the artist you support, and
-              whoever invited you to Unis.
+              Never you: the artist you support, whoever invited you to Unis,
+              and the two people above them in the chain.
             </p>
             <RevenueSplit />
             <p>
-              You cannot earn from your own viewing. That is deliberate — it
-              removes any reason to farm your own ad views, and it means the
-              money moves outward through the community instead of in a circle.
+              You cannot earn from your own listening. That is deliberate — it
+              removes any reason to farm your own plays, and it means the money
+              moves outward through the community instead of in a circle.
             </p>
           </>
         ),
@@ -2594,7 +2609,7 @@ export const HELP_SECTIONS = [
             <p>
               Their own share goes to Unis from then on. It isn&rsquo;t passed
               to anyone else. Everyone else in the chain keeps theirs: the
-              people above them still earn their levels from your viewing.
+              people above them still earn their levels from your listening.
             </p>
             <p>
               Your supported artist keeps earning either way. That part of the
@@ -2609,9 +2624,15 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              Through Stripe. Connect a Stripe account from the Earnings page,
-              and once your balance reaches <b>$50</b> you can request a payout.
-              Below that it keeps accruing.
+              Through Stripe. Your balance grows once a month, when the month is
+              closed. Connect a Stripe account from the Earnings page, and once
+              your balance reaches <b>$50</b> you can request a payout. Below
+              that it keeps accruing.
+            </p>
+            <p className="help-note">
+              A month is closed after Unis has been paid for it. Ad networks pay
+              in the second half of the following month, so October&rsquo;s share
+              usually lands in late November.
             </p>
             <p>
               You will need a verified phone number for earnings to be
@@ -2675,9 +2696,9 @@ export const HELP_SECTIONS = [
               to confirm before anything happens.
             </p>
             <p>
-              Money you earned for other people stays theirs. The ads you saw
-              are kept as earnings records for your supported artist and the
-              people who referred you.
+              Money you earned for other people stays theirs. Shares already
+              paid to your supported artist and the people who referred you are
+              not taken back.
             </p>
           </>
         ),

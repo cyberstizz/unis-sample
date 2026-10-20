@@ -27,6 +27,15 @@ const toCents = (dollars) => Math.round(Number(dollars || 0) * 100);
 
 const plural = (n, one, many) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
 
+// Community Share: referral and supporter money is added once a month, when
+// the month is closed, so there's no running "this month" amount. Show what
+// the last closed month paid, and this month's listening as plays.
+const monthName = (ym) => {
+  const [y, m] = String(ym || '').split('-').map(Number);
+  if (!y || !m) return '';
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+};
+
 // ---------------------------------------------------------------------------
 // A single labelled value row inside an expanded stream detail.
 // ---------------------------------------------------------------------------
@@ -88,16 +97,20 @@ const RevenueSection = ({
 
   const ref = earningsSummary?.referralEarnings || {};
   const referralCents = toCents(ref.lifetime);
-  const referralMonthCents = toCents(ref.thisMonth);
+  const referralLastMonthCents = toCents(ref.lastMonth);
   const l1 = ref.level1 || {};
   const l2 = ref.level2 || {};
   const l3 = ref.level3 || {};
   const referralCount = Number(earningsSummary?.referralCount || 0);
-  const referralViews = Number(earningsSummary?.referralViewsThisMonth || 0);
+  const listening = earningsSummary?.listeningThisMonth || {};
+  const networkPlays = Number(listening.networkPlays ?? earningsSummary?.referralViewsThisMonth ?? 0);
+  const supporterPlays = Number(listening.supporterPlays || 0);
+  const lastClosed = monthName(earningsSummary?.lastClosedMonth);
+  const lastClosedLabel = lastClosed ? `Last closed month · ${lastClosed}` : 'Last closed month';
 
   const sup = earningsSummary?.supporterEarnings || {};
   const supporterCents = toCents(sup.lifetime);
-  const supporterMonthCents = toCents(sup.thisMonth);
+  const supporterLastMonthCents = toCents(sup.lastMonth);
   const supporterCount = Number(earningsSummary?.supporterCount || 0);
 
   const balanceCents = toCents(earningsSummary?.currentBalance);
@@ -201,12 +214,12 @@ const RevenueSection = ({
         <div className="rev-detail">
           <DetailRow
             label="Tier 1 · direct"
-            sub="10% of referred ad revenue"
+            sub="10% of their monthly share"
             value={money(toCents(l1.lifetime))}
           />
           <DetailRow
             label="Tier 2"
-            sub="5% of their referrals"
+            sub="5%, the people they invite"
             value={money(toCents(l2.lifetime))}
           />
           <DetailRow
@@ -214,11 +227,11 @@ const RevenueSection = ({
             sub="2%, one level deeper"
             value={money(toCents(l3.lifetime))}
           />
-          <DetailRow label="This month" value={money(referralMonthCents)} accent />
+          <DetailRow label={lastClosedLabel} value={money(referralLastMonthCents)} accent />
           <p className="rev-detail__note">
             <ArrowUpRight size={13} />
-            {plural(referralCount, 'person in your network', 'people in your network')}
-            {referralViews > 0 ? ` · ${referralViews.toLocaleString()} ad-views this month` : ''}
+            {plural(referralCount, 'person you invited', 'people you invited')}
+            {networkPlays > 0 ? ` · ${plural(networkPlays, 'play', 'plays')} in your network this month` : ''}
           </p>
         </div>
       )}
@@ -226,11 +239,12 @@ const RevenueSection = ({
       {openStream === 'supporters' && (
         <div className="rev-detail">
           <DetailRow label="Lifetime" value={money(supporterCents)} />
-          <DetailRow label="This month" value={money(supporterMonthCents)} accent />
+          <DetailRow label={lastClosedLabel} value={money(supporterLastMonthCents)} accent />
           <DetailRow label="Backed by" value={plural(supporterCount, 'supporter', 'supporters')} />
           <p className="rev-detail__note">
             <Heart size={13} />
-            You earn 15% of the ad revenue from listeners who name you as their artist.
+            You get 15% of each supporter&apos;s monthly Community Share, based on their listening
+            {supporterPlays > 0 ? ` (${plural(supporterPlays, 'play', 'plays')} so far this month)` : ''}.
           </p>
         </div>
       )}

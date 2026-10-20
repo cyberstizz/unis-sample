@@ -246,7 +246,7 @@ export function sectionMetrics(data) {
       { name: 'Gross payments volume', value: cents(v('gpv_cents')), unit: 'usd',
         sub: `${fmtUsd(cents(get('gpv_cents', 'kind', 'download')))} downloads · ${fmtUsd(cents(get('gpv_cents', 'kind', 'support')))} support` },
       { name: 'Net revenue', value: cents(v('net_revenue_cents')), unit: 'usd',
-        sub: `${fmtUsd(cents(v('platform_fee_cents')))} fees · ${fmtUsd(cents(v('ad_unis_share_cents')))} ads (estimated)` },
+        sub: `${fmtUsd(cents(v('platform_fee_cents')))} fees · ${fmtUsd(cents(v('ad_unis_share_cents')))} ads and other income, less the Community Share` },
       { name: 'Revenue per user', value: ratio(cents(v('net_revenue_cents')), v('mau_avg')), unit: 'usd' },
       { name: 'Take rate', value: ratio(v('platform_fee_cents'), v('gpv_cents')), unit: 'percent' },
       { name: 'Paying fans', value: v('paying_users'), unit: 'count',
@@ -254,8 +254,10 @@ export function sectionMetrics(data) {
       { name: 'Average payment', value: ratio(cents(v('gpv_cents')), v('payments')), unit: 'usd' },
       { name: 'Refunded or disputed', value: ratio(v('refunded_payments'), v('payments_made')), unit: 'percent',
         sub: `${fmtUsd(cents(v('refunded_cents')))} of ${fmtUsd(cents(v('payments_made_cents')))}` },
-      { name: 'Ad views', value: v('ad_views'), unit: 'count',
-        sub: isNum(ratio(v('ad_views'), mau)) ? `${ratio(v('ad_views'), mau).toFixed(1)} per MAU · ${fmtUsd(cents(v('ad_revenue_cents')))} estimated revenue` : null },
+      // Community Share (closed months only). The row keys keep their ad-view-era
+      // names: ad_views = counted plays, ad_revenue_cents = ad income received.
+      { name: 'Community Share plays', value: v('ad_views'), unit: 'count',
+        sub: isNum(ratio(v('ad_views'), mau)) ? `${ratio(v('ad_views'), mau).toFixed(1)} per MAU · ${fmtUsd(cents(v('ad_revenue_cents')))} ad income · closed months` : null },
       { name: 'Artist earnings', value: cents(v('artist_earnings_cents')), unit: 'usd' },
       { name: 'Payouts sent', value: cents(v('payouts_sent_cents')), unit: 'usd',
         sub: `${fmtInt(v('payouts_sent'))} payouts · ${fmtInt(v('payouts_failed'))} failed` },

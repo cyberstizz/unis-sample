@@ -598,38 +598,14 @@ describe('Feed — popular artists section', () => {
   });
 });
 
-describe('Feed — ad tracking', () => {
-  it('fires POST /v1/earnings/track-view for authenticated users', async () => {
+describe('Feed — no ad-view tracking', () => {
+  // Earnings follow listening through the monthly Community Share; the page
+  // must never report ad views (Google's ad rules forbid paying for them).
+  it('never calls /v1/earnings/track-view, signed in or not', async () => {
     renderWithProviders(<Feed />, { as: 'listener' });
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
-
-    await waitFor(() => {
-      const trackCalls = callsMatching('/v1/earnings/track-view', 'post');
-      expect(trackCalls.length).toBe(1);
-    });
-  });
-
-  it('does NOT fire track-view for guests (guest ad revenue goes to Unis)', async () => {
-    renderWithProviders(<Feed />, { as: 'guest' });
-    await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
-
-    // Wait a bit to ensure any racing calls would have fired
-    await new Promise(r => setTimeout(r, 300));
-
-    const trackCalls = callsMatching('/v1/earnings/track-view', 'post');
-    expect(trackCalls.length).toBe(0);
-  });
-
-  it('swallows track-view errors silently (does not break the page)', async () => {
-    server.use(
-      http.post(`${API}/v1/earnings/track-view`, () => new HttpResponse(null, { status: 500 }))
-    );
-
-    renderWithProviders(<Feed />, { as: 'listener' });
-    await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
-
-    // Page still renders content despite 500
-    await waitFor(() => expect(screen.getByText('Trending Track')).toBeInTheDocument());
+    await new Promise((r) => setTimeout(r, 300));
+    expect(callsMatching('/v1/earnings/track-view', 'post').length).toBe(0);
   });
 });
 

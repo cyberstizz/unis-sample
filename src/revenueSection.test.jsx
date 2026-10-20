@@ -27,11 +27,13 @@ const API = 'http://localhost:8080/api';
 const EARNINGS = {
   currentBalance: '50.00',
   payoutThreshold: '50.00',
-  referralEarnings: { lifetime: 12, thisMonth: 3, level1: {}, level2: {}, level3: {} },
+  referralEarnings: { lifetime: 12, lastMonth: 3, thisMonth: 0, level1: {}, level2: {}, level3: {} },
   referralCount: 4,
   referralViewsThisMonth: 100,
-  supporterEarnings: { lifetime: 40, thisMonth: 10 },
+  supporterEarnings: { lifetime: 40, lastMonth: 10, thisMonth: 0 },
   supporterCount: 6,
+  lastClosedMonth: '2026-09',
+  listeningThisMonth: { month: '2026-10', networkPlays: 140, supporterPlays: 75 },
 };
 
 function installRevenue({ salesTotal = { copies: 3, grossCents: 3000, netCents: 2700 }, onboardResp = {}, payoutResp = { success: true } } = {}) {
@@ -129,9 +131,24 @@ describe('RevenueSection', () => {
     renderRevenue();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: /Referrals/i }));
-    expect(await screen.findByText('This month')).toBeInTheDocument();
+    expect(await screen.findByText(/last closed month · september 2026/i)).toBeInTheDocument();
+    expect(screen.getByText('$3.00')).toBeInTheDocument();
+    expect(screen.getByText(/140 plays in your network this month/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Supporters/i }));
     expect(await screen.findByText('Backed by')).toBeInTheDocument();
+    expect(screen.getByText('$10.00')).toBeInTheDocument();
+    expect(screen.getByText(/75 plays so far this month/i)).toBeInTheDocument();
+  });
+
+  it('describes the Community Share, never per-ad earnings', async () => {
+    renderRevenue();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /Referrals/i }));
+    await screen.findByText(/10% of their monthly share/i);
+    expect(document.body.textContent).not.toMatch(/ad revenue|ad-views/i);
+    await user.click(screen.getByRole('button', { name: /Supporters/i }));
+    expect(await screen.findByText(/monthly community share/i)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/ad revenue|ad-views/i);
   });
 
 });

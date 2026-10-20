@@ -12,8 +12,8 @@ const TermsOfService = () => {
           <header className="terms-header">
             <h1>Unis Terms of Service</h1>
             <div className="terms-meta">
-              <p><strong>Effective Date:</strong> March 31, 2026</p>
-              <p><strong>Last Updated:</strong> March 31, 2026</p>
+              <p><strong>Effective Date:</strong> October 19, 2026</p>
+              <p><strong>Last Updated:</strong> October 19, 2026</p>
             </div>
           </header>
 
@@ -52,7 +52,7 @@ const TermsOfService = () => {
             <h3>Monetized Accounts</h3>
             <p>
               To participate in any feature that involves earning, receiving, or withdrawing money&mdash;including 
-              but not limited to artist revenue sharing, supporter ad revenue, and the referral income 
+              but not limited to artist revenue sharing, the Community Share, and the referral 
               program&mdash;you must be at least 18 years old, or have verifiable parental or legal guardian consent 
               documented through our designated process. Users under 18 with guardian consent are subject to 
               additional restrictions as outlined in Sections 11, 12, and 13.
@@ -416,10 +416,12 @@ const TermsOfService = () => {
 
             <h3>11.2 Payment Schedule &amp; Thresholds</h3>
             <p>
-              Earnings are calculated on a monthly basis. Payments will be issued within 45 days of the end of 
-              each calendar month in which earnings accrue. A minimum payout threshold of $50.00 USD applies; 
-              earnings below this threshold will roll over to the following month. Unis reserves the right to 
-              adjust the minimum threshold with 30 days&rsquo; written notice.
+              Earnings are calculated on a monthly basis and credited to your Unis balance once Unis closes 
+              the month, which happens after Unis has received that month&rsquo;s revenue and in any case 
+              within 45 days of the end of the month. You may request a payout at any time once your available 
+              balance is at least $50.00 USD (the minimum payout threshold); a balance below this threshold rolls 
+              over to the following month. Unis reserves the right to adjust the minimum threshold with 30 
+              days&rsquo; written notice.
             </p>
 
             <h3>11.3 Payment Method</h3>
@@ -431,8 +433,9 @@ const TermsOfService = () => {
 
             <h3>11.4 Tax Obligations</h3>
             <p>
-              You are solely responsible for all taxes associated with your earnings. For U.S.-based artists 
-              earning $600 or more in a calendar year, Unis will issue an IRS Form 1099-NEC. You may be required 
+              You are solely responsible for all taxes associated with your earnings. Unis will issue an IRS 
+              Form 1099 to U.S. recipients when federal law requires it (for payments made in 2026, when you are 
+              paid $2,000 or more in the calendar year). You may be required 
               to submit a W-9 (or W-8BEN for non-U.S. persons, if applicable) before payments can be processed. 
               Failure to provide required tax documentation may result in payment withholding as required by law.
             </p>
@@ -460,8 +463,8 @@ const TermsOfService = () => {
               subject to a minimum price of $1.99 USD. Track purchases are processed via Stripe
               and are subject to a platform fee of 10% of the sale price. The remaining 90%, less
               Stripe processing fees, is deposited directly into the artist&rsquo;s connected Stripe
-              account, typically within 2 business days. Track sale revenue is separate from ad-based
-              earnings and is not subject to the $50.00 minimum payout threshold described in
+              account, typically within 2 business days. Track sale revenue is separate from Community
+              Share earnings and is not subject to the $50.00 minimum payout threshold described in
               Section 11.2.
             </p>
             <p>
@@ -480,89 +483,116 @@ const TermsOfService = () => {
           </section>
 
           {/* ═══════════════════════════════════════════ */}
-          {/* SECTION 12: SUPPORTER AD REVENUE           */}
+          {/* SECTION 12: COMMUNITY SHARE                */}
           {/* ═══════════════════════════════════════════ */}
           <section className="terms-section">
-            <h2>12. Supporter Ad Revenue Program</h2>
+            <h2>12. Community Share</h2>
             <p>
-              Unis offers a passive ad revenue program for qualifying listeners (&ldquo;Supporters&rdquo;). This 
-              program is unique to Unis and operates as follows:
+              Each month, Unis shares part of the revenue it has received with its community (the &ldquo;Community 
+              Share&rdquo;). The Community Share is how supported artists and referrers are paid. It operates as 
+              follows:
             </p>
 
             <h3>12.1 How It Works</h3>
             <p>
-              When you use the Services and advertisements are displayed or played during your session, a portion 
-              of the resulting ad revenue is allocated to the artist you have chosen to support, regardless of 
-              which specific music is playing at the time. The current supporter allocation is 15% of display ad 
-              revenue attributable to your session. The amount allocated is determined by Unis and may be adjusted 
-              from time to time based on factors including available ad inventory and platform economics.
+              After the end of each calendar month, once Unis has received that month&rsquo;s revenue, Unis adds 
+              up the revenue it actually received for that month (advertising revenue, other revenue such as 
+              sponsorships or subscriptions, and Unis&rsquo;s platform fees on track sales and artist support) and 
+              divides it among listeners in proportion to their counted listening during the month (each 
+              listener&rsquo;s &ldquo;share&rdquo;). Of each listener&rsquo;s share: fifteen percent (15%) goes to 
+              the artist the listener was supporting when each counted play was made (Section 12.3); ten percent 
+              (10%), five percent (5%) and two percent (2%) go to the listener&rsquo;s Level 1, Level 2 and Level 3 
+              referrers (Section 13); and Unis retains the remainder. A listener does not receive any part of 
+              their own share.
+            </p>
+            <p className="note">
+              <strong>No payment for viewing ads.</strong> No one is paid, credited, or otherwise compensated for 
+              viewing, clicking, or interacting with advertisements. Advertising revenue is one of several sources 
+              of Unis&rsquo;s revenue; the Community Share is calculated from total revenue and listening, not 
+              from any user&rsquo;s exposure to ads.
             </p>
 
-            <h3>12.2 Eligibility</h3>
+            <h3>12.2 Counted Listening</h3>
             <p>
-              To participate in the Supporter Ad Revenue Program, you must: (a) maintain an active account in 
-              good standing; (b) be at least 18 years old (or have documented guardian consent per Section 1); 
-              (c) have selected an artist to support; and (d) meet any minimum activity thresholds established 
-              by Unis from time to time.
+              A play counts toward the Community Share only if the listener is signed in to an account in good 
+              standing and the song is not the listener&rsquo;s own. Each listener counts for no more than fifty 
+              (50) plays per day (Eastern Time); if a listener exceeds that limit, their plays that day are 
+              counted proportionally up to the limit. Plays that Unis determines to be automated, fraudulent, or 
+              manipulated do not count. Unis may exclude staff and test accounts. Unis may change these rules 
+              prospectively with notice on the Earnings page.
             </p>
 
-            <h3>12.3 Payment Terms</h3>
+            <h3>12.3 Supported Artists</h3>
             <p>
-              Supporter ad revenue directed to artists is subject to the same payment schedule, minimum payout 
-              threshold ($50.00 USD), tax obligations, unclaimed earnings policy, and withholding provisions 
-              described in Sections 11.2 through 11.6.
+              Each listener chooses one artist to support. The supported artist in effect at the time of each 
+              play is recorded with that play, so a change of supported artist affects only later plays. To 
+              receive a Community Share, an artist (or referrer) must maintain an active account in good standing, 
+              have a verified phone number, and be at least 18 years old (or have documented guardian consent per 
+              Section 1). A share whose recipient does not exist or does not meet these requirements when the 
+              month is closed is retained by Unis and is not reassigned.
             </p>
 
-            <h3>12.4 No Guarantee of Revenue</h3>
+            <h3>12.4 Payment Terms</h3>
             <p>
-              Ad revenue depends on third-party advertiser demand, ad fill rates, and market conditions. Unis does 
-              not guarantee any minimum level of revenue. Actual amounts may be zero in periods of low ad inventory. 
-              Unis reserves the right to modify, suspend, or discontinue this program at any time with 30 
-              days&rsquo; written notice to participants.
+              Community Share earnings are subject to the payment schedule, minimum payout threshold ($50.00 USD), 
+              tax obligations, unclaimed earnings policy, and withholding provisions described in Sections 11.2 
+              through 11.6. Unis may correct a month&rsquo;s amounts if an error is discovered, including by 
+              adjusting a later balance.
             </p>
 
-            <h3>12.5 Not Employment</h3>
+            <h3>12.5 No Guarantee of Revenue</h3>
             <p>
-              Participation in the Supporter Ad Revenue Program does not create an employment, partnership, joint 
-              venture, or agency relationship between you and Unis. You are an independent participant and are 
-              responsible for your own taxes.
+              The Community Share depends on the revenue Unis actually receives, which depends on advertiser 
+              demand, other income, and market conditions. Unis does not guarantee any minimum amount, and the 
+              Community Share for a month may be zero. Unis reserves the right to modify, suspend, or discontinue 
+              the Community Share at any time with 30 days&rsquo; written notice to participants.
+            </p>
+
+            <h3>12.6 Not Employment</h3>
+            <p>
+              Participation in the Community Share does not create an employment, partnership, joint venture, or 
+              agency relationship between you and Unis. You are an independent participant and are responsible for 
+              your own taxes.
             </p>
           </section>
 
           {/* ═══════════════════════════════════════════ */}
-          {/* SECTION 13: REFERRAL INCOME PROGRAM        */}
+          {/* SECTION 13: REFERRAL PROGRAM               */}
           {/* ═══════════════════════════════════════════ */}
           <section className="terms-section">
-            <h2>13. Referral Income Program</h2>
+            <h2>13. Referral Program</h2>
             <p>
               Unis offers a referral program that rewards users for inviting new participants to the platform.
             </p>
 
             <h3>13.1 Structure</h3>
             <p>
-              When you refer a new user who creates an account using your unique referral code, you earn a 
-              percentage of the ad revenue attributable to that referred user&rsquo;s activity across up to three 
-              levels: Level 1 (direct referrals) &mdash; 10%; Level 2 (your referrals&rsquo; referrals) &mdash; 5%; 
-              Level 3 (third-degree referrals) &mdash; 2%. These percentages and tiers may be updated from time 
-              to time and will be reflected on our Earnings page.
+              When a new user creates an account using your unique referral code, you become their Level 1 
+              referrer; the person who referred you becomes their Level 2 referrer, and that person&rsquo;s referrer 
+              becomes their Level 3 referrer. Each month, you receive part of the Community Share (Section 12) of 
+              the users you referred, up to three levels: Level 1 (direct referrals) &mdash; 10% of their share; 
+              Level 2 (your referrals&rsquo; referrals) &mdash; 5%; Level 3 (third-degree referrals) &mdash; 2%. 
+              These percentages and tiers may be updated from time to time and will be reflected on our Earnings 
+              page.
             </p>
 
             <h3>13.2 Important Clarifications</h3>
             <ul>
               <li>
-                The referral program is funded entirely from advertising revenue generated by the platform. No 
-                user is required to pay money to participate, and no user&rsquo;s earnings come from other 
-                users&rsquo; payments.
+                The referral program is funded entirely from Unis&rsquo;s own revenue through the Community Share. 
+                No user is required to pay money to participate, and no one is paid for signing up others or for 
+                viewing or clicking ads.
               </li>
               <li>
                 There is no requirement to recruit other users in order to use Unis or earn revenue as an artist 
                 or supporter.
               </li>
               <li>
-                Referral income is passive and incidental. It is not the primary purpose of the platform.
+                Referral income is incidental. It is not the primary purpose of the platform.
               </li>
               <li>
-                If any level in a referral chain is unoccupied, that share reverts to Unis.
+                If any level in a referral chain is unoccupied, or its referrer is not eligible under Section 
+                12.3, that share is retained by Unis.
               </li>
               <li>
                 Unis reserves the right to cap, modify, or terminate referral tiers and percentages at any time 

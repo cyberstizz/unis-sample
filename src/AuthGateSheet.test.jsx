@@ -105,9 +105,17 @@ describe('AuthGateSheet — context variants', () => {
 
   it('renders EARNINGS context messaging', () => {
     renderSheet({ isOpen: true, context: 'earnings', onClose: vi.fn() });
-    expect(screen.getByText('Earn while you listen')).toBeInTheDocument();
+    expect(screen.getByText('Share in what Unis earns')).toBeInTheDocument();
     expect(screen.getByText('start earning')).toBeInTheDocument();
-    expect(screen.getByText(/earn passive ad revenue/i)).toBeInTheDocument();
+    expect(screen.getByText(/shares its income with the community/i)).toBeInTheDocument();
+  });
+
+  it('never promises money for listening or for seeing ads', () => {
+    for (const context of ['earnings', 'wallet', 'vote', 'profile', 'generic']) {
+      const { container, unmount } = renderSheet({ isOpen: true, context, onClose: vi.fn() });
+      expect(container.textContent).not.toMatch(/ad revenue|earn while you listen|just by listening|earn passively|earning from every play/i);
+      unmount();
+    }
   });
 
   it('renders WALLET context messaging', () => {
@@ -149,14 +157,14 @@ describe('AuthGateSheet — context variants', () => {
 describe('AuthGateSheet — perks list', () => {
   it('renders all three perks on every gate', () => {
     renderSheet({ isOpen: true, context: 'vote', onClose: vi.fn() });
-    expect(screen.getByText(/Earn passively/i)).toBeInTheDocument();
+    expect(screen.getByText(/Back your artist/i)).toBeInTheDocument();
     expect(screen.getByText(/Vote on winners/i)).toBeInTheDocument();
-    expect(screen.getByText(/Refer & earn more/i)).toBeInTheDocument();
+    expect(screen.getByText(/Refer & earn/i)).toBeInTheDocument();
   });
 
   it('renders the referral percentage detail', () => {
     renderSheet({ isOpen: true, context: 'generic', onClose: vi.fn() });
-    expect(screen.getByText(/Earn 10% of your referrals/i)).toBeInTheDocument();
+    expect(screen.getByText(/10% of the monthly share of everyone you invite/i)).toBeInTheDocument();
   });
 });
 
@@ -333,7 +341,7 @@ describe('useAuthGate hook', () => {
     await user.click(screen.getByText('trigger-earnings'));
 
     await waitFor(() => {
-      expect(screen.getByText('Earn while you listen')).toBeInTheDocument();
+      expect(screen.getByText('Share in what Unis earns')).toBeInTheDocument();
     });
   });
 

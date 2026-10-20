@@ -172,7 +172,7 @@ export function EconomyTab({ data, daily }) {
         <Card title="Payments split">
           <BarList rows={breakdown(data, 'gpv_cents', 'kind').map((r) => ({ ...r, value: isNum(r.value) ? r.value / 100 : null }))} unit="usd" showShare />
         </Card>
-        <Card title="Estimated ad revenue split" note="Modeled at $3.50 per 1,000 views until an ad network pays real revenue.">
+        <Card title="Community Share split" note="Closed months only. Unis is ad and other income left after paying the share; Unis's fees are counted separately.">
           <BarList rows={adSplit} unit="usd" />
         </Card>
         <Card title="Revenue per user by area" note="People 18 and over, or with no birth date.">

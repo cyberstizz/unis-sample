@@ -21,7 +21,7 @@
 //   • Successful vote: closes wizard, refetches nominees
 //   • Card click navigates: artist → /artist/:id, song → /song/:id
 //   • Empty states: no nominees, no search results, error fetching
-//   • track-view fires on mount (ad attribution)
+//   • no ad-view tracking (earnings follow listening, not ad views)
 //   • Loading state shows "Loading nominees..."
 //   • Error state shows "Failed to load nominees…"
 //
@@ -358,23 +358,12 @@ describe('VoteAwards — Concern B: guest visibility', () => {
     });
   });
 // ===========================================================================
-// AD-VIEW TRACKING
+// NO AD-VIEW TRACKING
 // ===========================================================================
-describe('VoteAwards — ad view tracking', () => {
-  it('POSTs /v1/earnings/track-view on mount', async () => {
+describe('VoteAwards — no ad-view tracking', () => {
+  it('never POSTs /v1/earnings/track-view', async () => {
     await renderAndWait();
-    await waitFor(() => {
-      expect(callsTo('/v1/earnings/track-view', 'post').length).toBeGreaterThan(0);
-    });
-  });
-
-  it('does not block rendering when track-view fails', async () => {
-    server.use(
-      http.post(`${API}/v1/earnings/track-view`, () => HttpResponse.error())
-    );
-    await renderAndWait();
-    // Page still renders despite ad-tracking failure
-    expect(screen.getByText(/active poll/i)).toBeInTheDocument();
+    expect(callsTo('/v1/earnings/track-view', 'post').length).toBe(0);
   });
 });
 

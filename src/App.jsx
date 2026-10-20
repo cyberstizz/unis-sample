@@ -63,6 +63,7 @@ import AuditLog from './admin/AuditLog';
 import RoleManagement from './admin/RoleManagement';
 import MetricsPage from './admin/metrics/MetricsPage';
 import RankingsAdmin from './admin/RankingsAdmin';
+import CommunityShareAdmin from './admin/CommunityShareAdmin';
 
 /**
  * AuthRequiredRoute — hard gate for pages that genuinely need a logged-in user.
@@ -167,6 +168,7 @@ const AppLayout = () => {
           <Route path="/admin/moderation/dmca/:claimId" element={<DmcaClaimDetail />} />
           <Route path="/admin/metrics" element={<MetricsPage />} />
           <Route path="/admin/rankings" element={<RankingsAdmin />} />
+          <Route path="/admin/community-share" element={<CommunityShareAdmin />} />
         </Route>
 
         {/* Admin routes — super admin only */}

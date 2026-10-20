@@ -16,7 +16,7 @@ describe('PrivacyPolicy', () => {
 
   it('shows the effective date', () => {
     render(<MemoryRouter><PrivacyPolicy /></MemoryRouter>);
-    expect(screen.getAllByText(/March 31, 2026/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/October 19, 2026/).length).toBeGreaterThan(0);
   });
 
   it('renders all 10 section headings', () => {

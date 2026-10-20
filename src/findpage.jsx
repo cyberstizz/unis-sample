@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import { PlayerContext } from './context/playercontext';
-import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
 import UnisMap from './map/UnisMap';
 import { CANONICAL_GENRES } from './utils/idMappings';
@@ -51,9 +50,6 @@ const GENRES = CANONICAL_GENRES.map((key) => ({ value: key, label: titleCase(key
 const FindPage = () => {
   const navigate = useNavigate();
   const { requestPlay } = useContext(PlayerContext);
-  const { user } = useAuth();
-  const userId = user?.userId || null;
-
 
   const [navigationStack, setNavigationStack] = useState([ROOT_CRUMB]);
   const [currentJurisdictions, setCurrentJurisdictions] = useState([]);
@@ -93,26 +89,6 @@ const FindPage = () => {
     },
     []
   );
-
-  /* --------------------------------------------------------- ad tracking */
-  // SecurityConfig maps POST /api/v1/earnings/track-view to .authenticated(),
-  // so calling it as a guest is a guaranteed 403 in the console on every visit.
-  // An ad view cannot be credited to an anonymous user anyway — there is no
-  // account to attribute the earning to — so skip it when logged out.
-  useEffect(() => {
-    if (!userId) return undefined;
-    let cancelled = false;
-    (async () => {
-      try {
-        await apiCall({ url: '/v1/earnings/track-view', method: 'post' });
-      } catch (err) {
-        if (!cancelled) console.warn('[findpage] track-view failed:', err?.message || err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
 
   /* ------------------------------------------------------------- the API */
 
