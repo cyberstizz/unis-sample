@@ -1,16 +1,18 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Sponsor Harlem — /sponsor (public, no account, no app chrome)
+// Sponsor Harlem, the booking form — /sponsor/book (public, no account, no
+// app chrome). The pitch page at /sponsor (SponsorLanding) comes first; its
+// "Book a week" button opens this, carrying ?ref, ?name and ?line.
 //
-// Where the QR code on a street-team card or a store poster lands. A shop
-// owner picks Uptown, Downtown or all of Harlem and a week (up to four), adds
+// A shop owner picks Uptown, Downtown or all of Harlem and a week (up to four), adds
 // a logo, one line of text and a link, sees exactly how it will look, and pays
 // by card on Stripe's checkout page. Unis reviews it within a day; if it can't
 // run, the full amount is refunded automatically. While its weeks run it shows
 // in Unis's ad spaces for people in that area, labeled "Sponsored · Local".
 //
-//   /sponsor?ref=CODE     the crew member's code from the QR, kept with the booking
-//   /sponsor?status=paid  back from Stripe after paying
-//   /sponsor?status=canceled
+//   /sponsor/book?ref=CODE        the crew member's code from the QR, kept with the booking
+//   /sponsor/book?name=…&line=…   what they typed into the live preview on /sponsor
+//   /sponsor/book?status=paid     back from Stripe after paying (Stripe returns to
+//   /sponsor/book?status=canceled /sponsor?status=…, which forwards here)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -56,9 +58,15 @@ const SponsorPage = () => {
 
   const [options, setOptions] = useState(null);
   const [loadError, setLoadError] = useState('');
-  const [form, setForm] = useState({
-    businessName: '', contactEmail: '', headline: '', link: '', area: 'uptown', weekStart: '', weeks: 1,
-  });
+  const [form, setForm] = useState(() => ({
+    businessName: (params.get('name') || '').slice(0, 60),
+    contactEmail: '',
+    headline: (params.get('line') || '').slice(0, HEADLINE_MAX),
+    link: '',
+    area: 'uptown',
+    weekStart: '',
+    weeks: 1,
+  }));
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [agree, setAgree] = useState(false);
@@ -158,7 +166,7 @@ const SponsorPage = () => {
         <img src={logo} alt="" width="36" height="36" />
         <span>UNIS</span>
       </Link>
-      <span className="sp-top__tag">Sponsor Harlem</span>
+      <Link to="/sponsor" className="sp-top__tag">Sponsor Harlem</Link>
     </header>
   );
 
@@ -177,7 +185,7 @@ const SponsorPage = () => {
               If we can&rsquo;t run it, we refund the full amount to your card, and we&rsquo;ll tell you why.
               Questions? Reply to the email we sent you.
             </p>
-            <Link className="sp-btn sp-btn--ghost" to="/sponsor">Book another week</Link>
+            <Link className="sp-btn sp-btn--ghost" to="/sponsor/book">Book another week</Link>
           </section>
         </main>
       </div>
@@ -189,18 +197,12 @@ const SponsorPage = () => {
       {header}
       <main className="sp-main">
         <section className="sp-hero">
-          <h1>Put your business in front of Harlem listeners</h1>
+          <h1>Book your week</h1>
           <p>
-            Unis is where Harlem finds its local artists. Sponsor a week and your shop shows up for people
-            listening in your neighborhood, labeled <strong>Sponsored · Local</strong>. From{' '}
-            {dollars(options?.areas?.[0]?.weekPriceCents || 2500)} a week.
+            Pick where and when, add your details, and pay once by card. We review every booking within one
+            business day; if we can&rsquo;t run it, you get a full refund.{' '}
+            <Link to="/sponsor" className="sp-back">How it works</Link>
           </p>
-          <ol className="sp-steps">
-            <li><strong>Pick</strong> your neighborhood and week.</li>
-            <li><strong>Add</strong> your logo, one line and a link.</li>
-            <li><strong>Pay</strong> by card. We review it within a day.</li>
-            <li><strong>Go live</strong> on Monday of your week. Not approved? Full refund.</li>
-          </ol>
         </section>
 
         {returned === 'canceled' && (

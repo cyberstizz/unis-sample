@@ -8,6 +8,8 @@
 //
 // "Sign up" opens the real CreateAccountWizard in place. Closing it (X, Escape,
 // or the Done button) leaves the visitor right here — never on the login page.
+// "How Unis works" opens the help center (/help is open before launch), and
+// the waitlist link opens the pitch page for people outside Harlem.
 // =============================================================================
 
 import { useMemo, useState, useEffect } from 'react';
@@ -101,6 +103,7 @@ export default function ComingSoon() {
       <header className="cs-top">
         <img className="cs-logo" src={activeLogo} alt="UNIS" draggable="false" />
         <nav className="cs-legal" aria-label="Legal">
+          <Link to="/help">Help</Link>
           <Link to="/terms">Terms</Link>
           <Link to="/privacy">Privacy</Link>
         </nav>
@@ -150,10 +153,18 @@ export default function ComingSoon() {
               >
                 Sign up
               </button>
+              <Link to="/help" className="cs-help">
+                How Unis works
+              </Link>
               <Link to="/waitlist" className="cs-waitlist">
                 Not in Harlem? Join the waitlist
               </Link>
             </>
+          )}
+          {(user || justSignedUp) && (
+            <Link to="/help" className="cs-help">
+              How Unis works
+            </Link>
           )}
         </div>
       </main>

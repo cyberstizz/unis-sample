@@ -5,6 +5,7 @@ import SearchBar from './components/SearchBar';
 import { useAuth } from './context/AuthContext';
 import { PlayerContext } from './context/playercontext';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
+import { isPrelaunch, canEnterApp } from './prelaunch/prelaunchConfig';
 import { buildUrl } from './utils/buildUrl';
 import { attachMediaElement, subscribeBeat, ensureRunning, isPulseEnabled } from './utils/bassReactor';
 import { createLogoMotionState, stepLogoMotion, logoStyle } from './utils/logoMotion';
@@ -353,19 +354,24 @@ const Header = () => {
     }
   };
 
+  // Before launch, the pages anyone can open (Help, Terms, Privacy…) show only
+  // the logo here: no search (it would list songs and artists), no app links,
+  // no sign-in. Admins, who are let into the app, see the full header.
+  const locked = isPrelaunch() && !canEnterApp(user);
+
   return (
     <header className={`app-header ${isGuest ? 'app-header--guest' : ''}`}>
       <div className="header-inner">
         {/* Left: Hamburger + Logo */}
         <div className="header-left">
-          <button
+          {!locked && <button
             type="button"
             className="header-hamburger"
             onClick={() => window.dispatchEvent(new CustomEvent('unis:toggle-sidebar'))}
             aria-label="Toggle navigation menu"
           >
             <Menu size={18} strokeWidth={1.75} />
-          </button>
+          </button>}
 
           <button
             ref={logoBtnRef}
@@ -390,12 +396,12 @@ const Header = () => {
         </div>
 
         {/* Center: Search */}
-        <div className="header-center">
+        {!locked && <div className="header-center">
           <SearchBar />
-        </div>
+        </div>}
 
         {/* Right: Nav items + User/Guest buttons */}
-        <div className="header-right">
+        {!locked && <div className="header-right">
           {/* Mobile-only search trigger */}
           <button
             className="mobile-search-trigger"
@@ -494,7 +500,7 @@ const Header = () => {
               <span className="header-signin-btn__label">Sign In</span>
             </button>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Auth gate bottom sheet */}

@@ -1,9 +1,34 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import Layout from './layout';
 import US_STATES_AND_METROS from './data/Usstatesandmetros';
 
+// The waitlist form — /waitlist/join. The pitch page at /waitlist
+// (WaitlistLanding) comes first and passes along what the visitor already
+// chose: ?ref (a friend's code from a share link), ?state and ?metro (the city
+// they checked), ?type=artist.
+const initialForm = (params) => {
+  const state = (params.get('state') || '').toUpperCase();
+  const stateCode = US_STATES_AND_METROS[state] ? state : '';
+  const metro = params.get('metro') || '';
+  const metroRegion = stateCode && US_STATES_AND_METROS[stateCode].metros.includes(metro) ? metro : '';
+  return {
+    email: '',
+    username: '',
+    password: '',
+    confirmPassword: '',
+    displayName: '',
+    userType: params.get('type') === 'artist' ? 'ARTIST' : 'LISTENER',
+    stateCode,
+    metroRegion,
+    cityFreetext: '',
+    referredByCode: (params.get('ref') || '').replace(/[^A-Za-z0-9_-]/g, '').toUpperCase().slice(0, 40),
+  };
+};
+
 const WaitlistPage = () => {
+  const [params] = useSearchParams();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -15,18 +40,7 @@ const WaitlistPage = () => {
   const [regionStats, setRegionStats] = useState(null);
   const [regionStatsLoading, setRegionStatsLoading] = useState(false);
 
-  const [form, setForm] = useState({
-    email: '',
-    username: '',
-    password: '',
-    confirmPassword: '',
-    displayName: '',
-    userType: 'LISTENER',
-    stateCode: '',
-    metroRegion: '',
-    cityFreetext: '',
-    referredByCode: '',
-  });
+  const [form, setForm] = useState(() => initialForm(params));
 
   const [result, setResult] = useState(null);
 
@@ -65,6 +79,13 @@ const WaitlistPage = () => {
     } finally {
       setReferralChecking(false);
     }
+  }, []);
+
+  // A code that arrived in the link is checked right away, as if typed.
+  useEffect(() => {
+    if (form.referredByCode) checkReferral(form.referredByCode);
+    // Only once, for the code the page opened with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // FIX #10: Live region stats fetch

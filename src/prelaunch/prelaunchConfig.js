@@ -27,8 +27,9 @@ export const OPEN_PATHS = [
   '/terms',
   '/cookie',
   '/report',
-  '/waitlist',
+  '/waitlist',  // and /waitlist/join (sub-paths are open too)
   '/sponsor',   // Sponsor Harlem: shop owners book from a QR code, before and after launch
+  '/help',      // the help center, linked from the Coming Soon page
 ];
 
 export function isPrelaunch() {

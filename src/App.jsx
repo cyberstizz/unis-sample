@@ -67,6 +67,8 @@ import CommunityShareAdmin from './admin/CommunityShareAdmin';
 import SponsorsAdmin from './admin/SponsorsAdmin';
 import PlusPage from './PlusPage';
 import SponsorPage from './SponsorPage';
+import SponsorLanding from './SponsorLanding';
+import WaitlistLanding from './WaitlistLanding';
 
 /**
  * AuthRequiredRoute — hard gate for pages that genuinely need a logged-in user.
@@ -106,10 +108,12 @@ const AppLayout = () => {
     );
   }
   // 'open' = signup-support pages (verify email, reset password, legal, report,
-  // waitlist, sponsor) rendered on their own: no sidebar, player or notifications.
-  // The Sponsor Harlem page (QR codes for shop owners) is always standalone.
+  // help, waitlist, sponsor) rendered on their own: no sidebar, player or
+  // notifications. The two pitch pages (/sponsor for shop owners, /waitlist
+  // for people outside Harlem) and the booking form are always standalone.
   const isSponsorPage = pathname === '/sponsor' || pathname.startsWith('/sponsor/');
-  const chromeless = gate === 'open' || isSponsorPage;
+  const isWaitlistPitch = pathname === '/waitlist' || pathname === '/waitlist/';
+  const chromeless = gate === 'open' || isSponsorPage || isWaitlistPitch;
 
   return (
     <div className="app-wrapper">
@@ -128,8 +132,10 @@ const AppLayout = () => {
         <Route path="/cookie" element={<CookiePolicy />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/report" element={<ReportInfringement />} />
-        <Route path="/waitlist" element={<WaitlistPage />} />
-        <Route path="/sponsor" element={<SponsorPage />} />
+        <Route path="/waitlist" element={<WaitlistLanding />} />
+        <Route path="/waitlist/join" element={<WaitlistPage />} />
+        <Route path="/sponsor" element={<SponsorLanding />} />
+        <Route path="/sponsor/book" element={<SponsorPage />} />
 
         {/* Browsable routes — guests can view these freely */}
         <Route element={<PrivateRoute />}>

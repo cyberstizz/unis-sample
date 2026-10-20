@@ -1,0 +1,417 @@
+// Bring Unis to your city, the pitch page (/waitlist). Same family as the
+// Coming Soon gate. The one loud moment is the city meter: the gate's
+// equalizer skyline, lit up to how close the visitor's city is to opening.
+
+.wl-page {
+  --wl-pad: clamp(20px, 5vw, 72px);
+  --wl-max: 1240px;
+  --wl-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --wl-tip: color-mix(in srgb, var(--unis-primary, #163387), white 58%);
+  --wl-serif: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+  --wl-sans: var(--unis-font-sans, 'Inter', system-ui, sans-serif);
+
+  min-height: 100vh;
+  background:
+    radial-gradient(110% 60% at 15% -5%, var(--unis-primary-soft, rgba(22, 51, 135, 0.16)), transparent 60%),
+    var(--unis-bg, #07090f);
+  color: var(--unis-text, #fff);
+  font-family: var(--wl-sans);
+  overflow-x: hidden;
+
+  // Zero-specificity resets, so every component class below wins.
+  :where(h1, h2, h3, p) { margin: 0; }
+  :where(a) { color: inherit; }
+
+  :is(a, button, select):focus-visible {
+    outline: 2px solid var(--wl-tip);
+    outline-offset: 3px;
+  }
+}
+
+// ---------------------------------------------------------------- top bar ---
+.wl-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: var(--wl-max);
+  margin: 0 auto;
+  padding: 14px var(--wl-pad) 0;
+
+  &__brand img {
+    display: block;
+    height: clamp(48px, 5vw, 72px);
+    width: auto;
+  }
+
+  &__nav {
+    display: flex;
+    align-items: center;
+    gap: clamp(14px, 2.4vw, 28px);
+    font-size: 15px;
+
+    a { text-decoration: none; color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }
+    a:hover { color: var(--unis-text, #fff); }
+  }
+
+  &__cta {
+    padding: 9px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+    color: var(--unis-text, #fff) !important;
+    font-weight: 600;
+
+    &:hover { border-color: var(--wl-tip); }
+  }
+}
+
+// ------------------------------------------------------------------- hero ---
+.wl-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  align-items: center;
+  gap: clamp(32px, 6vw, 88px);
+  max-width: var(--wl-max);
+  margin: 0 auto;
+  padding: clamp(36px, 8vh, 96px) var(--wl-pad) clamp(56px, 10vh, 120px);
+
+  &__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: clamp(18px, 3vh, 28px) !important;
+    padding: 7px 14px 7px 12px;
+    border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+    border-radius: 999px;
+    background: var(--unis-panel, rgba(255, 255, 255, 0.025));
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+    font-size: 14px;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--wl-tip);
+  }
+
+  &__headline {
+    font-family: var(--wl-serif);
+    font-weight: 400;
+    font-size: clamp(3.1rem, 6.2vw, 6.2rem);
+    line-height: 0.92;
+    letter-spacing: -0.015em;
+
+    span {
+      display: block;
+      animation: wl-line-in 1s var(--wl-ease) both;
+    }
+    span:nth-child(1) { animation-delay: 0.15s; }
+    span:nth-child(2) { animation-delay: 0.32s; }
+  }
+
+  &__lede {
+    max-width: 46ch;
+    margin-top: clamp(18px, 3vh, 28px) !important;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+    font-size: clamp(16px, 1.3vw, 19px);
+    line-height: 1.55;
+  }
+}
+
+.wl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 26px;
+  margin-top: 28px;
+}
+
+.wl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 54px;
+  padding: 0 34px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--unis-primary, #163387), white 30%);
+  background: var(--unis-primary, #163387);
+  color: #fff;
+  font: 600 16px/1 var(--wl-sans);
+  text-decoration: none;
+  box-shadow: 0 12px 40px -12px var(--unis-primary-glow, rgba(22, 51, 135, 0.65));
+  transition: background 0.2s, transform 0.2s var(--wl-ease);
+
+  &:hover { background: color-mix(in srgb, var(--unis-primary, #163387), white 12%); }
+  &:active { transform: scale(0.97); }
+
+  // On the colored band.
+  &--light {
+    background: #fff;
+    border-color: #fff;
+    color: var(--unis-primary, #163387);
+    box-shadow: none;
+
+    &:hover { background: rgba(255, 255, 255, 0.88); }
+  }
+}
+
+.wl-textlink {
+  font-size: 15px;
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  text-decoration: underline;
+  text-decoration-color: var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+  text-underline-offset: 5px;
+
+  &:hover { color: var(--unis-text, #fff); text-decoration-color: var(--wl-tip); }
+}
+
+.wl-ref {
+  margin-top: 16px !important;
+  font-size: 13px;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+
+  strong { color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); letter-spacing: 0.04em; }
+}
+
+// --------------------------------------------------------------- the meter ---
+.wl-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: clamp(20px, 2.6vw, 30px);
+  border-radius: var(--unis-radius-lg, 20px);
+  border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+  background:
+    radial-gradient(100% 60% at 50% 100%, var(--unis-primary-soft, rgba(22, 51, 135, 0.22)), transparent 70%),
+    var(--unis-panel, rgba(255, 255, 255, 0.025));
+  animation: wl-rise 1.1s var(--wl-ease) 0.4s both;
+
+  &__pickers {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 12px;
+
+    label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    span { font-size: 13px; color: var(--unis-text-3, rgba(255, 255, 255, 0.5)); }
+
+    select {
+      width: 100%;
+      min-height: 48px;
+      padding: 0 12px;
+      border-radius: 12px;
+      border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--unis-text, #fff);
+      font: 400 16px var(--wl-sans);
+
+      &:disabled { opacity: 0.5; }
+      option { color: #111; }
+    }
+  }
+
+  &__bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: clamp(150px, 22vh, 220px);
+    padding-top: 8px;
+  }
+
+  &__bar {
+    flex: 1 1 0;
+    height: calc(var(--h) * 100%);
+    border-radius: 999px 999px 0 0;
+    background: rgba(255, 255, 255, 0.09);
+    transition: background 0.5s var(--wl-ease) calc(var(--i) * 18ms);
+
+    &.is-lit {
+      background: linear-gradient(to top, var(--unis-primary, #163387) 0%, var(--unis-primary, #163387) 35%, var(--wl-tip) 100%);
+    }
+  }
+
+  &__readout {
+    min-height: 74px;
+    padding-top: 14px;
+    border-top: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+  }
+
+  &__headline {
+    font-family: var(--wl-serif);
+    font-size: clamp(1.7rem, 2.6vw, 2.2rem);
+    line-height: 1.1;
+  }
+
+  &__detail {
+    margin-top: 6px !important;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  }
+}
+
+// ---------------------------------------------------------- what it is ---
+.wl-section-title {
+  font-family: var(--wl-serif);
+  font-weight: 400;
+  font-size: clamp(2.2rem, 4.8vw, 3.8rem);
+  line-height: 1;
+}
+
+.wl-what,
+.wl-how {
+  max-width: var(--wl-max);
+  margin: 0 auto;
+  padding: clamp(40px, 7vh, 88px) var(--wl-pad);
+}
+
+.wl-what__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 40px);
+  margin-top: clamp(24px, 4vh, 44px);
+}
+
+.wl-what__item {
+  padding-top: 18px;
+  border-top: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+
+  h3 { font-family: var(--wl-serif); font-weight: 400; font-size: clamp(1.6rem, 2.4vw, 2.1rem); line-height: 1.1; }
+  p { margin-top: 10px !important; max-width: 38ch; font-size: 15px; line-height: 1.6; color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }
+}
+
+// ---------------------------------------------------------- how it opens ---
+.wl-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 36px);
+  margin: clamp(28px, 5vh, 48px) 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: wl-step;
+
+  li {
+    counter-increment: wl-step;
+    padding-top: 16px;
+    border-top: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+
+    &::before {
+      content: counter(wl-step);
+      display: block;
+      margin-bottom: 14px;
+      font-family: var(--wl-serif);
+      font-size: 56px;
+      line-height: 1;
+      color: var(--wl-tip);
+    }
+  }
+
+  h3 { font-size: 17px; font-weight: 600; line-height: 1.3; }
+  p { margin-top: 8px !important; font-size: 15px; line-height: 1.6; color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }
+}
+
+// --------------------------------------------------------------- artists ---
+.wl-artists {
+  margin-top: clamp(24px, 5vh, 56px);
+  background:
+    radial-gradient(90% 120% at 0% 0%, color-mix(in srgb, var(--unis-primary, #163387), white 14%), transparent 60%),
+    var(--unis-primary, #163387);
+  color: #fff;
+
+  &__inner {
+    max-width: var(--wl-max);
+    margin: 0 auto;
+    padding: clamp(56px, 10vh, 112px) var(--wl-pad);
+  }
+
+  &__title {
+    max-width: 16ch;
+    font-family: var(--wl-serif);
+    font-weight: 400;
+    font-size: clamp(2.6rem, 6vw, 5rem);
+    line-height: 0.95;
+  }
+
+  p {
+    max-width: 54ch;
+    margin: 22px 0 30px !important;
+    font-size: 17px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.84);
+  }
+}
+
+// ------------------------------------------------------------- final CTA ---
+.wl-final {
+  max-width: var(--wl-max);
+  margin: 0 auto;
+  padding: clamp(64px, 11vh, 128px) var(--wl-pad);
+
+  &__title {
+    font-family: var(--wl-serif);
+    font-weight: 400;
+    font-size: clamp(3rem, 7.6vw, 6.6rem);
+    line-height: 0.95;
+  }
+
+  p {
+    margin-top: 18px !important;
+    font-size: 17px;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  }
+}
+
+.wl-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px 24px;
+  max-width: var(--wl-max);
+  margin: 0 auto;
+  padding: 16px var(--wl-pad) 22px;
+  border-top: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+  font-size: 13px;
+  color: var(--unis-text-4, rgba(255, 255, 255, 0.32));
+
+  nav { display: flex; gap: 20px; }
+  a { text-decoration: none; color: var(--unis-text-3, rgba(255, 255, 255, 0.5)); }
+  a:hover { color: var(--unis-text, #fff); }
+}
+
+// ------------------------------------------------------------- keyframes ---
+@keyframes wl-line-in {
+  from { opacity: 0; transform: translateY(0.35em); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes wl-rise {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: none; }
+}
+
+// ------------------------------------------------------------- responsive ---
+@media (max-width: 980px) {
+  .wl-hero { grid-template-columns: 1fr; }
+  .wl-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .wl-what__list { grid-template-columns: 1fr; }
+  .wl-top__nav a:not(.wl-top__cta) { display: none; }
+  .wl-actions { flex-direction: column; align-items: stretch; text-align: center; }
+  .wl-meter__bar:nth-child(even) { display: none; }
+}
+
+@media (max-width: 520px) {
+  .wl-steps { grid-template-columns: 1fr; }
+  .wl-meter__pickers { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wl-page *,
+  .wl-page *::before,
+  .wl-page *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

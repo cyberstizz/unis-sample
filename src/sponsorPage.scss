@@ -29,6 +29,7 @@
   }
 
   &__tag {
+    text-decoration: none;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -50,40 +51,9 @@
   p { color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); font-size: 16px; line-height: 1.55; margin: 0 0 14px; }
 }
 
-.sp-steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: step;
-
-  li {
-    counter-increment: step;
-    padding: 12px 14px;
-    border-radius: var(--unis-radius, 14px);
-    border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
-    background: var(--unis-panel, rgba(255, 255, 255, 0.025));
-    font-size: 14px;
-    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
-
-    &::before {
-      content: counter(step);
-      display: inline-grid;
-      place-items: center;
-      width: 22px;
-      height: 22px;
-      margin-right: 8px;
-      border-radius: 50%;
-      background: var(--unis-primary, #3b82f6);
-      color: #fff;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    strong { color: var(--unis-text, #fff); }
-  }
+.sp-back {
+  color: var(--unis-primary-2, #9cc0ff);
+  text-underline-offset: 4px;
 }
 
 .sp-card {

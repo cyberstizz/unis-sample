@@ -73,6 +73,7 @@ vi.mock('./pages/Login',         () => ({ default: stub('Login') }));
 vi.mock('./pages/ResetPassword', () => ({ default: stub('ResetPassword') }));
 vi.mock('./winnersNotification', () => ({ default: stub('WinnersNotification') }));
 vi.mock('./WaitlistPage',        () => ({ default: stub('WaitlistPage') }));
+vi.mock('./WaitlistLanding',     () => ({ default: stub('WaitlistLanding') }));
 vi.mock('./pages/SearchResultsPage', () => ({ default: stub('SearchResultsPage') }));
 vi.mock('./PlayChoiceModal',     () => ({ default: stub('PlayChoiceModal') }));
 vi.mock('./admin/AdminDashboard',    () => ({ default: stub('AdminDashboard') }));
@@ -147,7 +148,8 @@ describe('App', () => {
       ['/terms',          'TermsOfService'],
       ['/cookie',         'CookiePolicy'],
       ['/report',         'ReportInfringement'],
-      ['/waitlist',       'WaitlistPage'],
+      ['/waitlist',       'WaitlistLanding'],
+      ['/waitlist/join',  'WaitlistPage'],
     ])('renders %s without authentication', (path, testId) => {
       renderAt(path);
       expect(screen.getByTestId(testId)).toBeInTheDocument();
