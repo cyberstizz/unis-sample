@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
 import Layout from './layout';
+import AdSlot from './components/AdSlot';
 import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
 import VotingWizard from './votingWizard';
@@ -1395,6 +1396,9 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                 </div>
               </div>
             </div>
+
+            {/* ===== AD SPACE (none for Unis Plus) ===== */}
+            <AdSlot placement="artist" />
 
             {/* ===== PHOTOS — Instagram-style gallery (renders only when the
                  artist has uploaded photos via the dashboard) ===== */}

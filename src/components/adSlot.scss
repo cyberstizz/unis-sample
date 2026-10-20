@@ -1,0 +1,154 @@
+// AdSlot — one ad space, the same look on every page. The space is reserved
+// (min-height) so pages don't jump when the ad arrives, and it keeps a clear
+// gap from players and vote buttons around it.
+
+.ad-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 20px 0;
+  clear: both;
+
+  &__label {
+    font-family: var(--unis-font-sans, inherit);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+    min-height: 14px;
+  }
+
+  &__body {
+    position: relative;
+    min-height: 96px;
+    border-radius: var(--unis-radius, 14px);
+    border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+    background: var(--unis-panel, rgba(255, 255, 255, 0.025));
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+
+    > * { flex: 1 1 auto; min-width: 0; }
+    ins.adsbygoogle { min-height: 90px; }
+  }
+
+  &__placeholder {
+    min-height: 96px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+  }
+
+  // Tall rail beside content (winners page on desktop).
+  &--rail {
+    margin: 0;
+    .ad-slot__body { min-height: 280px; }
+    .ad-slot__placeholder { min-height: 280px; }
+    .ad-sponsor { flex-direction: column; text-align: center; justify-content: center; padding: 24px 18px; }
+    .ad-sponsor__logo, .ad-sponsor__initial { width: 72px; height: 72px; font-size: 30px; }
+    .ad-sponsor__text { align-items: center; }
+    .ad-house { justify-content: center; text-align: center; align-items: center; }
+  }
+}
+
+// ── A local sponsor ──
+.ad-sponsor {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  color: var(--unis-text, #fff);
+  text-decoration: none;
+  background:
+    radial-gradient(circle at 100% 0%, var(--unis-glow-2, rgba(86, 140, 255, 0.18)), transparent 55%);
+  transition: background-color 0.15s ease;
+
+  &:hover, &:focus-visible { background-color: var(--unis-panel-hi, rgba(255, 255, 255, 0.07)); }
+  &:focus-visible { outline: 2px solid var(--unis-primary, #3b82f6); outline-offset: -2px; }
+
+  &__logo,
+  &__initial {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &__initial {
+    display: grid;
+    place-items: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--unis-primary-2, #9cc0ff);
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  &__name {
+    font-weight: 700;
+    font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__line {
+    font-size: 14px;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+    overflow-wrap: anywhere;
+  }
+
+  &__cta {
+    flex: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+    color: var(--unis-text, #fff);
+  }
+
+  &--preview { cursor: default; }
+}
+
+// ── Unis's own card (Plus, or "your business here") ──
+.ad-house {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 16px 18px;
+  color: var(--unis-text, #fff);
+  text-decoration: none;
+  background:
+    radial-gradient(circle at 0% 100%, var(--unis-glow-2, rgba(86, 140, 255, 0.18)), transparent 60%);
+
+  &:hover, &:focus-visible { background-color: var(--unis-panel-hi, rgba(255, 255, 255, 0.07)); }
+  &:focus-visible { outline: 2px solid var(--unis-primary, #3b82f6); outline-offset: -2px; }
+
+  &__title { font-weight: 700; font-size: 15px; }
+  &__body { font-size: 14px; color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }
+  &__cta {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--unis-primary-2, #9cc0ff);
+  }
+}
+
+@media (max-width: 520px) {
+  .ad-sponsor {
+    padding: 14px;
+    gap: 12px;
+    &__logo, &__initial { width: 44px; height: 44px; font-size: 20px; }
+    &__cta { display: none; }
+  }
+}

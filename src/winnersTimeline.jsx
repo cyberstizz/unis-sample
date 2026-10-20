@@ -477,8 +477,9 @@ const WinnersTimeline = ({
         )}/winners?interval=${activeInterval}&category=${activeCategory}`
       );
     } else {
-      // Ad-refresh hookup lives here (wt-page-ad-slot refreshes every
-      // pageSize winners revealed) — wire when the ad partner lands.
+      // The ad beside this list (AdSlot) deliberately does NOT refresh here:
+      // AdSense doesn't allow refreshing an ad on the same page view. It
+      // gets a new ad when the person moves to another page.
       setVisibleCount((c) => Math.min(c + pageSize, entries.length));
     }
   };

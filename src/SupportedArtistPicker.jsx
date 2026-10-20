@@ -224,7 +224,7 @@ const SupportedArtistPicker = ({
         </h3>
         <p className="sap-success__body">
           {immediate
-            ? `${selectedArtist?.username || 'Your artist'} now gets 15% of your monthly Community Share.`
+            ? `${selectedArtist?.username || 'Your artist'} now gets 15% of your monthly slice of the Community Share.`
             : `You'll start supporting ${selectedArtist?.username || 'them'}${effective ? ` on ${effective}` : ' next month'}. Your current artist keeps earning until then.`}
         </p>
         <button type="button" className="sap-btn sap-btn--primary" onClick={onClose}>

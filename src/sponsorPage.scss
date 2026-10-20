@@ -1,0 +1,245 @@
+// Sponsor Harlem (/sponsor) — a standalone page: no sidebar or player, since
+// most visitors are shop owners who scanned a QR code on their phone.
+
+.sponsor-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 85% -10%, var(--unis-glow-2, rgba(86, 140, 255, 0.22)), transparent 45%),
+    var(--unis-bg, #07090f);
+  color: var(--unis-text, #fff);
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
+}
+
+.sp-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 18px 16px 0;
+
+  &__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: inherit;
+    text-decoration: none;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+
+  &__tag {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--unis-primary-2, #9cc0ff);
+  }
+}
+
+.sp-main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 16px 64px;
+}
+
+.sp-hero {
+  padding: 18px 0 6px;
+
+  h1 { font-size: clamp(26px, 5vw, 40px); line-height: 1.12; margin: 0 0 12px; }
+  p { color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); font-size: 16px; line-height: 1.55; margin: 0 0 14px; }
+}
+
+.sp-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+
+  li {
+    counter-increment: step;
+    padding: 12px 14px;
+    border-radius: var(--unis-radius, 14px);
+    border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+    background: var(--unis-panel, rgba(255, 255, 255, 0.025));
+    font-size: 14px;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+
+    &::before {
+      content: counter(step);
+      display: inline-grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: var(--unis-primary, #3b82f6);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    strong { color: var(--unis-text, #fff); }
+  }
+}
+
+.sp-card {
+  margin: 18px 0;
+  padding: 20px;
+  border-radius: var(--unis-radius-lg, 20px);
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+  background: var(--unis-panel, rgba(255, 255, 255, 0.025));
+
+  h1, h2 { margin: 0 0 10px; }
+  p { line-height: 1.55; color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }
+}
+
+.sp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sp-areas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend { font-weight: 700; margin-bottom: 10px; font-size: 16px; }
+}
+
+.sp-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px;
+  border-radius: var(--unis-radius, 14px);
+  border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+  cursor: pointer;
+
+  input { position: absolute; opacity: 0; pointer-events: none; }
+  &__name { font-weight: 700; }
+  &__price { font-size: 14px; color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }
+
+  &.is-on {
+    border-color: var(--unis-primary, #3b82f6);
+    background: var(--unis-panel-2, rgba(255, 255, 255, 0.045));
+    box-shadow: 0 0 0 1px var(--unis-primary, #3b82f6) inset;
+  }
+  &:focus-within { outline: 2px solid var(--unis-primary, #3b82f6); outline-offset: 2px; }
+}
+
+.sp-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+
+.sp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+
+  > span { font-weight: 600; }
+  small { align-self: flex-end; color: var(--unis-text-3, rgba(255, 255, 255, 0.5)); font-size: 12px; }
+
+  input, select {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+    background: rgba(255, 255, 255, 0.04);
+    color: inherit;
+    font: inherit;
+    font-size: 16px; // no zoom on iPhone
+
+    &:focus { outline: 2px solid var(--unis-primary, #3b82f6); outline-offset: 1px; }
+  }
+
+  input[type='file'] { min-height: 0; padding: 10px; font-size: 14px; }
+  option { color: #111; }
+}
+
+.sp-preview {
+  &__title { display: block; font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .ad-slot { margin: 0; }
+}
+
+.sp-agree {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+
+  input { width: 20px; height: 20px; flex: none; margin-top: 1px; accent-color: var(--unis-primary, #3b82f6); }
+  a { color: var(--unis-primary-2, #9cc0ff); }
+}
+
+.sp-pay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+
+  &__total { display: block; font-size: 28px; font-weight: 800; }
+  &__note { font-size: 13px; color: var(--unis-text-3, rgba(255, 255, 255, 0.5)); }
+}
+
+.sp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--unis-primary, #3b82f6);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:disabled { opacity: 0.6; cursor: default; }
+  &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+  &--ghost { background: transparent; border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14)); }
+}
+
+.sp-msg {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: var(--unis-radius, 14px);
+  border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+  font-size: 14px;
+
+  &--bad { border-color: rgba(248, 113, 113, 0.55); }
+}
+
+.sp-ref {
+  font-size: 13px;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+}
+
+.sp-fine { margin: 0; font-size: 12px; color: var(--unis-text-3, rgba(255, 255, 255, 0.5)); }
+
+.sp-rules h2 { font-size: 18px; }
+
+@media (max-width: 520px) {
+  .sp-row { grid-template-columns: 1fr; }
+  .sp-pay { flex-direction: column; align-items: stretch; .sp-btn { width: 100%; } }
+}

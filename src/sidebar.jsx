@@ -67,6 +67,11 @@ const ICONS = {
       <path d="M12 7v10M14.6 9.3c0-1.2-1.2-1.9-2.6-1.9s-2.6.8-2.6 2 .9 1.7 2.6 2 2.6.9 2.6 2.1-1.2 2-2.6 2-2.6-.8-2.6-2" />
     </svg>
   ),
+  plus: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path className="fs" d="M12 3.6l2.5 5.1 5.6.8-4.05 3.95.95 5.6L12 16.4l-5 2.65.95-5.6L3.9 9.5l5.6-.8z" />
+    </svg>
+  ),
   settings: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path className="fs" d="M12 2.9c.5 0 1 .06 1.45.18l.5 1.86c.57.22 1.1.53 1.58.92l1.86-.55c.6.58 1.1 1.28 1.5 2.04l-1.36 1.38c.1.5.16 1.03.16 1.57s-.06 1.07-.16 1.57l1.36 1.38c-.4.76-.9 1.46-1.5 2.04l-1.86-.55c-.48.39-1 .7-1.58.92l-.5 1.86c-.46.12-.95.18-1.45.18s-1-.06-1.45-.18l-.5-1.86a7.2 7.2 0 0 1-1.58-.92l-1.86.55a7.9 7.9 0 0 1-1.5-2.04l1.36-1.38A7.5 7.5 0 0 1 5.3 12c0-.54.06-1.07.16-1.57L4.1 9.05c.4-.76.9-1.46 1.5-2.04l1.86.55c.48-.39 1-.7 1.58-.92l.5-1.86C9.99 2.96 10.5 2.9 12 2.9z" />
@@ -189,6 +194,7 @@ const Sidebar = () => {
   const onMessages = () => { if (isGuest) { triggerGate('profile'); return; } handleNav('/messages'); };
   const onEarnings = () => { if (isGuest) { triggerGate('earnings'); return; } handleNav('/earnings'); };
   const onSettings = () => { if (isGuest) { triggerGate('profile'); return; } handleProfile(); };
+  const onPlus = () => { if (isGuest) { triggerGate('plus'); return; } handleNav('/plus'); };
 
   const path = location?.pathname || '/';
 
@@ -216,6 +222,7 @@ const Sidebar = () => {
       items: [
         { key: 'playlists', label: 'Playlists', icon: 'playlists', onClick: handlePlaylists, match: () => false },
         { key: 'earnings',  label: 'Earnings',  icon: 'earnings',  onClick: onEarnings,      match: (p) => p.startsWith('/earnings') },
+        { key: 'plus',      label: 'Unis Plus', icon: 'plus',      onClick: onPlus,          match: (p) => p.startsWith('/plus') },
         { key: 'settings',  label: 'Settings',  icon: 'settings',  onClick: onSettings,      match: (p) => p === '/profile' || p === '/artistDashboard' },
         { key: 'help',      label: 'Help',      icon: 'help',      onClick: () => handleNav('/help'), match: (p) => p.startsWith('/help') }, 
         ...(user && user.adminRole

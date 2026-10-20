@@ -64,6 +64,9 @@ import RoleManagement from './admin/RoleManagement';
 import MetricsPage from './admin/metrics/MetricsPage';
 import RankingsAdmin from './admin/RankingsAdmin';
 import CommunityShareAdmin from './admin/CommunityShareAdmin';
+import SponsorsAdmin from './admin/SponsorsAdmin';
+import PlusPage from './PlusPage';
+import SponsorPage from './SponsorPage';
 
 /**
  * AuthRequiredRoute — hard gate for pages that genuinely need a logged-in user.
@@ -103,8 +106,10 @@ const AppLayout = () => {
     );
   }
   // 'open' = signup-support pages (verify email, reset password, legal, report,
-  // waitlist) rendered on their own: no sidebar, player or notifications.
-  const chromeless = gate === 'open';
+  // waitlist, sponsor) rendered on their own: no sidebar, player or notifications.
+  // The Sponsor Harlem page (QR codes for shop owners) is always standalone.
+  const isSponsorPage = pathname === '/sponsor' || pathname.startsWith('/sponsor/');
+  const chromeless = gate === 'open' || isSponsorPage;
 
   return (
     <div className="app-wrapper">
@@ -124,6 +129,7 @@ const AppLayout = () => {
         <Route path="/help" element={<HelpPage />} />
         <Route path="/report" element={<ReportInfringement />} />
         <Route path="/waitlist" element={<WaitlistPage />} />
+        <Route path="/sponsor" element={<SponsorPage />} />
 
         {/* Browsable routes — guests can view these freely */}
         <Route element={<PrivateRoute />}>
@@ -151,6 +157,7 @@ const AppLayout = () => {
           <Route path="/earnings" element={<Earnings />} />
           <Route path="/artistDashboard" element={<ArtistDashboard />} />
           <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/plus" element={<PlusPage />} />
         </Route>
 
         {/* Admin routes — all tiers */}
@@ -169,6 +176,7 @@ const AppLayout = () => {
           <Route path="/admin/metrics" element={<MetricsPage />} />
           <Route path="/admin/rankings" element={<RankingsAdmin />} />
           <Route path="/admin/community-share" element={<CommunityShareAdmin />} />
+          <Route path="/admin/sponsors" element={<SponsorsAdmin />} />
         </Route>
 
         {/* Admin routes — super admin only */}

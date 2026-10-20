@@ -65,9 +65,16 @@
     # sign-in token.
     #   Hosts: cdn.unismusic.com = songs/photos (R2), the Railway address =
     #   the API and live messages, Stripe/Link = the support payment form,
-    #   nominatim = city lookup at sign-up, Google Fonts + unpkg (map styles).
+    #   nominatim = city lookup at sign-up, Google Fonts + unpkg (map styles),
+    #   googlesyndication / doubleclick / adtrafficquality / google.com =
+    #   Google AdSense in the ad spaces (only loaded once VITE_ADSENSE_CLIENT
+    #   is set). NOTE: Google only supports AdSense under an enforced policy
+    #   that uses a per-page nonce (its ad addresses change), so before this
+    #   policy is enforced with AdSense live, it moves to a nonce-based policy
+    #   (a small Netlify edge function); the addresses here keep the
+    #   report-only reports quiet until then.
     #   A staging copy with its own API address must add that address to
     #   connect-src on its own branch.
     # To enforce: delete the narrow Content-Security-Policy line above, then
     # rename Content-Security-Policy-Report-Only below to Content-Security-Policy.
-    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://js.stripe.com https://*.js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.unismusic.com https://*.stripe.com https://*.link.com; media-src 'self' blob: https://cdn.unismusic.com; connect-src 'self' https://unismvp-production.up.railway.app wss://unismvp-production.up.railway.app https://cdn.unismusic.com https://nominatim.openstreetmap.org https://api.stripe.com https://link.com https://*.link.com; frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; report-uri https://unismvp-production.up.railway.app/api/csp-report"
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://js.stripe.com https://*.js.stripe.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.unismusic.com https://*.stripe.com https://*.link.com https://*.googlesyndication.com https://*.g.doubleclick.net https://*.google.com https://*.adtrafficquality.google; media-src 'self' blob: https://cdn.unismusic.com; connect-src 'self' https://unismvp-production.up.railway.app wss://unismvp-production.up.railway.app https://cdn.unismusic.com https://nominatim.openstreetmap.org https://api.stripe.com https://link.com https://*.link.com https://*.googlesyndication.com https://*.g.doubleclick.net https://*.google.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com; frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com https://*.googlesyndication.com https://*.g.doubleclick.net https://www.google.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; report-uri https://unismvp-production.up.railway.app/api/csp-report"

@@ -807,11 +807,12 @@ const ArtistDashboard = () => {
     // terms at artists.unismusic.com AND the reconciled EarningsService before
     // this document is distributed to any artist.
     const rows = [
-      ['Direct song sales & downloads', '85% to Artist'],
-      ['Paid subscription streaming pool', '50% to Artist'],
-      ['Audio advertising revenue', '60% to Artist'],
+      ['Direct song sales & downloads', '90% to Artist*'],
+      ['Unis Plus subscriptions, by plays (coming soon)', '60% to Artist'],
+      ['Audio ads on your songs (coming soon)', '60% to Artist'],
       ['Community Share from your supporters', '15% to Artist'],
     ];
+    // * The sales/support fee is PlatformFees on the backend (utils/platformFee.js here).
     const rowH = 18;
     need(rowH * rows.length + 10);
     rows.forEach((r, i) => {
@@ -829,13 +830,14 @@ const ArtistDashboard = () => {
       y += rowH;
     });
     y += 10;
-    p('Revenue-stream definitions and the methodology for allocating pooled revenue (such as the subscription streaming pool) are described in the then-current published terms at artists.unismusic.com, which are incorporated by reference. Where this Schedule and the published terms conflict, the published terms control.');
+    p('* On song sales and direct support, Unis\'s fee is 10% of the amount paid or, if higher, its card-processing cost for that payment plus $0.01, so on payments under about $4.35 you receive the amount less that cost and one cent. The minimum song price is $0.94, and buyers pay the listed price with no added fees.');
+    p('Revenue-stream definitions and the methodology for allocating pooled revenue (such as Unis Plus and the Community Share) are described in the then-current published terms at artists.unismusic.com, which are incorporated by reference. Where this Schedule and the published terms conflict, the published terms control.');
 
     h2('5. Referral Program');
     p('Each month Unis shares its income with members through the Community Share, divided by counted listening, as described in the Terms of Service. Where you refer new members using your referral code, you receive part of their monthly share: 10% for first-tier (direct) referrals, 5% for second-tier referrals, and 2% for third-tier referrals. If fans name you as the artist they support, you receive 15% of each supporter\'s monthly share. No one is paid for viewing or clicking ads. Rates may be adjusted prospectively on notice.');
 
     h2('6. Payments and Payouts');
-    p('Unis processes artist payouts through Stripe. You are responsible for completing Stripe onboarding and providing accurate payout information. Payouts are made periodically once your available balance meets the minimum payout threshold (currently $50.00). You are solely responsible for all taxes on amounts you receive. Unis may withhold or offset amounts subject to refund, chargeback, or fraud review.');
+    p('Unis processes artist payouts through Stripe. You are responsible for completing Stripe onboarding and providing accurate payout information. Song sales and direct support are credited to your Stripe account when they are paid. Community Share earnings can be withdrawn to your Stripe account once your balance reaches the minimum payout threshold (currently $50.00). Stripe pays your bank once a month, on or about the 1st, and Unis covers Stripe\'s payout fees. Unis files IRS Form 1099 information returns through Stripe where the law requires them. You are solely responsible for all taxes on amounts you receive. Unis may withhold or offset amounts subject to refund, chargeback, or fraud review.');
 
     h2('7. Your Representations and Warranties');
     p("You represent and warrant that: (a) you own or control all rights necessary to grant the license in Section 3; (b) your Content does not infringe any third party's copyright, trademark, publicity, privacy, or other rights; (c) you have paid or will pay any co-writers, producers, featured performers, or rights holders any share of the revenue you receive that is due to them; and (d) your Content complies with the Platform's content standards and applicable law.");

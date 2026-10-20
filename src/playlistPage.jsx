@@ -30,6 +30,7 @@ import {
   Lock, Globe, EyeOff, MapPin, Check, X, ListMusic,
 } from 'lucide-react';
 import Layout from './layout';
+import AdSlot from './components/AdSlot';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';
 import axiosInstance from './components/axiosInstance';
@@ -960,6 +961,9 @@ const PlaylistPage = () => {
             </div>
           )
         )}
+
+        {/* ── AD SPACE (none for Unis Plus) ── */}
+        <AdSlot placement="playlist" />
 
         {/* ── SUGGESTIONS (community) ── */}
         {section === 'suggestions' && isCommunity && (

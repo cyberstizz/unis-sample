@@ -6,9 +6,12 @@
 // close that month here:
 //
 //   1. Enter what Unis received for the month: ad income, other income
-//      (sponsors, Unis Plus) and Unis's fees on song sales and support (filled
-//      in from the database; change it if you want Stripe's fees taken off).
-//   2. Preview: the server divides the money by counted listening and shows
+//      (local sponsors are filled in from the database; add anything else)
+//      and what Unis kept from its fees on song sales and support after
+//      Stripe's card fees (filled in from the database).
+//   2. Preview: the server settles Unis Plus first (60% of each subscriber's
+//      payment, after Stripe's fees, to the artists they played; Unis's part
+//      joins the pot), then divides the pot by counted listening and shows
 //      what supported artists and each referral level would get, and what
 //      Unis keeps. Nothing is saved.
 //   3. Close the month (super admin): everyone's share lands in their Earnings
@@ -17,6 +20,10 @@
 // Adjustments (super admin) credit or take back money on one person's
 // balance, with a reason that's kept forever, for corrections and the
 // live-money payout test.
+//
+// Monthly payouts (super admin) put every Stripe account on one bank payout a
+// month (the 1st). Tax year report (super admin) lists what each person was
+// paid in a year, split the way the 1099 forms need it, as a CSV download.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -66,6 +73,7 @@ const CloseMonth = ({ canMoveMoney, onClosed }) => {
   const [otherIncome, setOtherIncome] = useState('');
   const [feeIncome, setFeeIncome] = useState('');
   const [feeTouched, setFeeTouched] = useState(false);
+  const [otherTouched, setOtherTouched] = useState(false);
   const [note, setNote] = useState('');
   const [previewed, setPreviewed] = useState(null); // { key, data }
   const [checked, setChecked] = useState(false);
@@ -77,15 +85,18 @@ const CloseMonth = ({ canMoveMoney, onClosed }) => {
   const inputsKey = `${month}|${adIncome.trim()}|${otherIncome.trim()}|${feeIncome.trim()}`;
   const preview = previewed && previewed.key === inputsKey ? previewed.data : null;
   useEffect(() => { setChecked(false); }, [inputsKey]);
-  useEffect(() => { setFeeTouched(false); setFeeIncome(''); }, [month]);
+  useEffect(() => {
+    setFeeTouched(false); setFeeIncome('');
+    setOtherTouched(false); setOtherIncome('');
+  }, [month]);
 
   const params = useCallback(() => {
     const p = new URLSearchParams({ month });
     if (adIncome.trim()) p.set('adIncome', adIncome.trim());
-    if (otherIncome.trim()) p.set('otherIncome', otherIncome.trim());
+    if (otherTouched && otherIncome.trim()) p.set('otherIncome', otherIncome.trim());
     if (feeTouched && feeIncome.trim()) p.set('feeIncome', feeIncome.trim());
     return p;
-  }, [month, adIncome, otherIncome, feeIncome, feeTouched]);
+  }, [month, adIncome, otherIncome, feeIncome, feeTouched, otherTouched]);
 
   const runPreview = async (e) => {
     e?.preventDefault();
@@ -93,10 +104,13 @@ const CloseMonth = ({ canMoveMoney, onClosed }) => {
     setMessage(null);
     try {
       const res = await apiCall({ method: 'get', url: `/v1/admin/earnings/preview?${params()}`, useCache: false });
-      // Left blank, the fee is the server's suggestion; show it in the box.
+      // Left blank, the fee and other income are the server's suggestions
+      // (fees after Stripe; local sponsors paid that month); show them in the boxes.
       const fee = feeTouched ? feeIncome.trim() : String(res.data?.feeIncome ?? '');
       if (!feeTouched) setFeeIncome(fee);
-      setPreviewed({ key: `${month}|${adIncome.trim()}|${otherIncome.trim()}|${fee}`, data: res.data });
+      const other = otherTouched ? otherIncome.trim() : String(res.data?.otherIncome ?? '');
+      if (!otherTouched) setOtherIncome(other);
+      setPreviewed({ key: `${month}|${adIncome.trim()}|${other}|${fee}`, data: res.data });
       console.log('[CommunityShare] preview', res.data?.month, res.data?.totalRevenue);
     } catch (err) {
       console.error('[CommunityShare] preview failed:', err?.response?.status, err?.message);
@@ -117,7 +131,7 @@ const CloseMonth = ({ canMoveMoney, onClosed }) => {
         data: {
           month,
           adIncome: adIncome.trim() || '0',
-          otherIncome: otherIncome.trim() || '0',
+          otherIncome: String(preview.otherIncome ?? '0'),
           feeIncome: String(preview.feeIncome ?? '0'),
           note: note.trim() || null,
         },
@@ -161,10 +175,11 @@ const CloseMonth = ({ canMoveMoney, onClosed }) => {
         </label>
         <label className="mx-select">
           <span>Other income ($)</span>
-          <input inputMode="decimal" placeholder="Sponsors, Unis Plus" value={otherIncome} onChange={(e) => setOtherIncome(e.target.value)} />
+          <input inputMode="decimal" placeholder="Local sponsors: filled in by Preview" value={otherIncome}
+            onChange={(e) => { setOtherIncome(e.target.value); setOtherTouched(true); }} />
         </label>
         <label className="mx-select">
-          <span>Unis fees on sales &amp; support ($)</span>
+          <span>Unis fees on sales &amp; support, after Stripe ($)</span>
           <input inputMode="decimal" placeholder="Filled in by Preview" value={feeIncome}
             onChange={(e) => { setFeeIncome(e.target.value); setFeeTouched(true); }} />
         </label>
@@ -189,7 +204,10 @@ const CloseMonth = ({ canMoveMoney, onClosed }) => {
           <div className="mx-tiles">
             <div className="mx-tile"><span className="mx-tile__label">Revenue for {monthLabel(preview.month)}</span>
               <span className="mx-tile__value">{usd(preview.totalRevenue)}</span>
-              <span className="mx-tile__sub">Ads {usd(preview.adIncome)} · other {usd(preview.otherIncome)} · fees {usd(preview.feeIncome)}</span></div>
+              <span className="mx-tile__sub">Ads {usd(preview.adIncome)} · other {usd(preview.otherIncome)} · fees {usd(preview.feeIncome)} · Plus {usd(preview.plusToPot)}</span></div>
+            <div className="mx-tile"><span className="mx-tile__label">Unis Plus</span>
+              <span className="mx-tile__value">{usd(preview.plusIncome)}</span>
+              <span className="mx-tile__sub">{count(preview.plusPayments)} payments after Stripe · {usd(preview.plusToArtists)} to artists played</span></div>
             <div className="mx-tile"><span className="mx-tile__label">Counted plays</span>
               <span className="mx-tile__value">{count(preview.countedPlays)}</span>
               <span className="mx-tile__sub">{count(preview.listeners)} listeners</span></div>
@@ -208,6 +226,7 @@ const CloseMonth = ({ canMoveMoney, onClosed }) => {
                 {Object.entries(STREAM_LABELS).map(([key, label]) => (
                   <tr key={key}><td>{label}</td><td>{usd(streams[key])}</td></tr>
                 ))}
+                <tr><td>Artists played by Unis Plus subscribers (60%)</td><td>{usd(preview.plusToArtists)}</td></tr>
               </tbody>
             </table>
           </div>
@@ -260,7 +279,7 @@ const ClosedMonths = ({ refreshKey }) => {
         <div className="mx-table-wrap">
           <table className="mx-table">
             <thead>
-              <tr><th>Month</th><th>Revenue</th><th>Counted plays</th><th>To the community</th><th>Unis kept</th><th>People paid</th><th>Closed</th></tr>
+              <tr><th>Month</th><th>Revenue</th><th>Counted plays</th><th>To the community</th><th>Unis Plus to artists</th><th>Unis kept</th><th>People paid</th><th>Closed</th></tr>
             </thead>
             <tbody>
               {rows.map((r) => (
@@ -269,6 +288,7 @@ const ClosedMonths = ({ refreshKey }) => {
                   <td>{usd(r.totalRevenue)}</td>
                   <td>{count(r.countedPlays)}</td>
                   <td>{usd(r.paidToCommunity)}</td>
+                  <td>{usd(r.plusToArtists)}</td>
                   <td>{usd(r.keptByUnis)}</td>
                   <td>{count(r.earners)}</td>
                   <td title={r.note || ''}>{r.closedAt ? new Date(r.closedAt).toLocaleDateString('en-US') : ''}{r.closedBy ? ` · ${r.closedBy}` : ''}</td>
@@ -367,6 +387,210 @@ const Adjustments = ({ canMoveMoney }) => {
   );
 };
 
+// ── Monthly payouts ─────────────────────────────────────────────────────────
+
+const MonthlyPayouts = ({ canMoveMoney }) => {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [message, setMessage] = useState(null);
+
+  const apply = async () => {
+    if (!window.confirm('Put every Stripe account on one bank payout a month (the 1st)?')) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await apiCall({ method: 'post', url: '/v1/admin/earnings/payout-schedule' });
+      setResult(res.data);
+      console.log('[CommunityShare] monthly payouts', res.data?.updated, 'of', res.data?.accounts);
+    } catch (err) {
+      console.error('[CommunityShare] monthly payouts failed:', err?.response?.status, err?.message);
+      setMessage({ tone: 'bad', text: errorText(err, 'Couldn’t reach Stripe. Nothing was changed.') });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="mx-card csa-card">
+      <h2 className="mx-card__title">Monthly payouts</h2>
+      <p className="mx-card__note">
+        Everyone&rsquo;s Stripe balance (song sales, support and Community Share withdrawals) goes to
+        their bank once a month, on the 1st. Stripe charges Unis $2 for each account it pays out to in
+        a month, plus about 0.5% + 25&cent; per payout, so one payout a month keeps that to one charge
+        per person. New Stripe accounts get this automatically. Press once to apply it to accounts
+        that already exist; pressing again is harmless.
+      </p>
+      {canMoveMoney ? (
+        <button className="mx-btn" type="button" onClick={apply} disabled={busy}>
+          {busy ? 'Applying…' : 'Apply monthly payouts'}
+        </button>
+      ) : (
+        <p className="mx-empty">Only a super admin can change payout schedules.</p>
+      )}
+      {message && <p className={`csa-msg csa-msg--${message.tone}`} role="status">{message.text}</p>}
+      {result && (
+        <div role="status">
+          <p className={`csa-msg csa-msg--${result.failed ? 'bad' : 'good'}`}>
+            {count(result.updated)} of {count(result.accounts)} accounts are on monthly payouts.
+            {result.failed ? ` ${count(result.failed)} couldn’t be changed:` : ''}
+          </p>
+          {result.failures?.length > 0 && (
+            <ul className="csa-list">
+              {result.failures.map((f) => <li key={f.username}>{f.username}: {f.error}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
+    </section>
+  );
+};
+
+// ── Tax year report ─────────────────────────────────────────────────────────
+
+// Columns of the CSV, in order: [header, row key, kind]
+const TAX_COLUMNS = [
+  ['Tax year', 'year', 'text'],
+  ['Username', 'username', 'text'],
+  ['Email', 'email', 'text'],
+  ['Stripe account', 'stripeAccountId', 'text'],
+  ['Account closed', 'accountClosed', 'bool'],
+  ['Community Share paid out', 'communitySharePaidOut', 'usd'],
+  ['Community Share payouts', 'communitySharePayouts', 'int'],
+  ['Supporter share credited', 'supporterCredited', 'usd'],
+  ['Referral share credited', 'referralCredited', 'usd'],
+  ['Adjustments credited', 'adjustmentsCredited', 'usd'],
+  ['Unis Plus share credited', 'plusCredited', 'usd'],
+  ['Song sales (count)', 'salesCount', 'int'],
+  ['Song sales gross', 'salesGross', 'usd'],
+  ['Song sales to artist', 'salesToArtist', 'usd'],
+  ['Support (count)', 'supportCount', 'int'],
+  ['Support gross', 'supportGross', 'usd'],
+  ['Support to artist', 'supportToArtist', 'usd'],
+  ['Card payments gross', 'paymentsGross', 'usd'],
+  ['Card payments (count)', 'paymentsCount', 'int'],
+  ['Needs 1099-MISC', 'form1099Misc', 'bool'],
+  ['Needs 1099-K', 'form1099K', 'bool'],
+  ['Unis Plus $10+ (royalties?)', 'plusRoyaltiesCheck', 'bool'],
+];
+
+const csvCell = (value) => {
+  const text = value == null ? '' : String(value);
+  // Quote everything; double any quotes. A leading = + - @ is neutralised so a
+  // spreadsheet never runs a username or email as a formula.
+  const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '""')}"`;
+};
+
+const toCsv = (report) => {
+  const lines = [TAX_COLUMNS.map(([h]) => csvCell(h)).join(',')];
+  for (const row of report.rows || []) {
+    lines.push(TAX_COLUMNS.map(([, key, kind]) => {
+      const v = key === 'year' ? report.year : row[key];
+      if (kind === 'usd') return csvCell(Number(v || 0).toFixed(2));
+      if (kind === 'bool') return csvCell(v ? 'yes' : 'no');
+      return csvCell(v);
+    }).join(','));
+  }
+  return lines.join('\r\n');
+};
+
+const TaxReport = ({ canMoveMoney }) => {
+  // In January–March the year to file is last year.
+  const now = new Date();
+  const defaultYear = now.getMonth() <= 2 ? now.getFullYear() - 1 : now.getFullYear();
+  const [year, setYear] = useState(String(defaultYear));
+  const [report, setReport] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  const load = async (e) => {
+    e?.preventDefault();
+    setBusy(true);
+    setMessage(null);
+    setReport(null);
+    try {
+      const res = await apiCall({ method: 'get', url: `/v1/admin/earnings/tax-report?year=${encodeURIComponent(year)}`, useCache: false });
+      setReport(res.data);
+      console.log('[CommunityShare] tax report', res.data?.year, res.data?.summary?.people);
+    } catch (err) {
+      console.error('[CommunityShare] tax report failed:', err?.response?.status, err?.message);
+      setMessage({ tone: 'bad', text: errorText(err, 'Couldn’t load the tax report.') });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const download = () => {
+    if (!report) return;
+    const blob = new Blob([toCsv(report)], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `unis-tax-report-${report.year}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  if (!canMoveMoney) {
+    return (
+      <section className="mx-card csa-card">
+        <h2 className="mx-card__title">Tax year report</h2>
+        <p className="mx-empty">Only a super admin can see the tax report.</p>
+      </section>
+    );
+  }
+
+  const s = report?.summary;
+  const years = [];
+  for (let y = now.getFullYear(); y >= 2026; y -= 1) years.push(String(y));
+
+  return (
+    <section className="mx-card csa-card">
+      <h2 className="mx-card__title">Tax year report</h2>
+      <p className="mx-card__note">
+        What Unis paid each person in a calendar year, for the 1099 forms Unis files in Stripe
+        (Connect &rarr; Tax reporting) each January. Community Share money paid out usually goes on a
+        1099-MISC once it reaches $2,000 for the year. Song sales and support go on a 1099-K above
+        $20,000 and 200 payments. Stripe counts Community Share payouts into the 1099-K by default, so
+        move those amounts onto a 1099-MISC with Stripe&rsquo;s CSV import. An artist&rsquo;s Unis Plus
+        share is paid for the use of their music and may count as royalties (1099-MISC box 2, from
+        $10); anyone credited $10 or more is flagged. Check the forms with a tax advisor. Opening this
+        report is recorded in the audit log.
+      </p>
+      <form className="csa-form" onSubmit={load}>
+        <label className="mx-select">
+          <span>Tax year</span>
+          <select value={year} onChange={(e) => setYear(e.target.value)}>
+            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </label>
+        <div className="csa-form__actions">
+          <button className="mx-btn mx-btn--ghost" type="submit" disabled={busy}>{busy ? 'Loading…' : 'Load report'}</button>
+          <button className="mx-btn" type="button" onClick={download} disabled={!report}>Download CSV</button>
+        </div>
+      </form>
+      {message && <p className={`csa-msg csa-msg--${message.tone}`} role="status">{message.text}</p>}
+      {s && (
+        <div className="mx-tiles">
+          <div className="mx-tile"><span className="mx-tile__label">People paid or credited in {report.year}</span>
+            <span className="mx-tile__value">{count(s.people)}</span></div>
+          <div className="mx-tile"><span className="mx-tile__label">Community Share paid out</span>
+            <span className="mx-tile__value">{usd(s.communitySharePaidOut)}</span>
+            <span className="mx-tile__sub">{count(s.needs1099Misc)} need a 1099-MISC ({usd(s.miscThreshold)}+)</span></div>
+          <div className="mx-tile"><span className="mx-tile__label">Song sales and support</span>
+            <span className="mx-tile__value">{usd(Number(s.salesGross || 0) + Number(s.supportGross || 0))}</span>
+            <span className="mx-tile__sub">{count(s.needs1099K)} need a 1099-K (over {usd(s.kGrossThreshold)} and {count(s.kCountThreshold)} payments)</span></div>
+          <div className="mx-tile"><span className="mx-tile__label">Unis Plus share credited</span>
+            <span className="mx-tile__value">{usd(s.plusCredited)}</span>
+            <span className="mx-tile__sub">{count(s.plusRoyaltiesCheck)} at {usd(s.royaltyThreshold)}+ (ask about royalties)</span></div>
+        </div>
+      )}
+    </section>
+  );
+};
+
 // ── Page ────────────────────────────────────────────────────────────────────
 
 const CommunityShareAdmin = () => {
@@ -388,7 +612,8 @@ const CommunityShareAdmin = () => {
               listener&rsquo;s part goes to the artist they supported when they played, and 10, 5 and
               2% to the three people above them in the referral chain. Unis keeps the rest,
               including any share whose earner is missing, has left, isn&rsquo;t phone-verified, or
-              is a staff or test account.
+              is a staff or test account. Unis Plus is settled in the same close: 60% of each
+              subscriber&rsquo;s payment, after Stripe&rsquo;s fees, goes to the artists they played.
             </p>
           </div>
         </header>
@@ -396,6 +621,8 @@ const CommunityShareAdmin = () => {
         <CloseMonth canMoveMoney={canMoveMoney} onClosed={onClosed} />
         <ClosedMonths refreshKey={refreshKey} />
         <Adjustments canMoveMoney={canMoveMoney} />
+        <MonthlyPayouts canMoveMoney={canMoveMoney} />
+        <TaxReport canMoveMoney={canMoveMoney} />
       </div>
     </Layout>
   );

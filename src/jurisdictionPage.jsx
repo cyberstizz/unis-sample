@@ -40,6 +40,7 @@ import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
 import './jurisdictionPage.scss';
 import Layout from './layout';
+import AdSlot from './components/AdSlot';
 import prominentArtistBg from './assets/songartworkfour.jpeg';
 import albumArt from './assets/songartworktwo.jpeg';
 import heroHarlem from './assets/apollopic.jpg';
@@ -577,6 +578,9 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
             </div>
           </div>
         </section>
+
+        {/* ═══════ AD SPACE (none for Unis Plus) ═══════ */}
+        <AdSlot placement="jurisdiction" />
 
         {/* ═══════ 3 · HALL OF FAME — one timeline, one instance ═══════ */}
         <section className="jp-section jp-winners">

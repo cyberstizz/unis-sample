@@ -13,7 +13,7 @@ const CookiePolicy = () => {
             <h1>Cookie Policy</h1>
             <div className="policy-meta">
               <p><strong>Effective Date:</strong> November 30, 2025</p>
-              <p><strong>Last Updated:</strong> November 30, 2025</p>
+              <p><strong>Last Updated:</strong> October 19, 2026</p>
             </div>
           </header>
 
@@ -88,6 +88,30 @@ const CookiePolicy = () => {
             </div>
 
             <div className="cookie-category">
+              <h4>Advertising Cookies (Google AdSense)</h4>
+              <ul>
+                <li>
+                  <strong>Google AdSense:</strong> Pages with an ad space may show ads from Google. Third-party vendors, 
+                  including Google, use cookies to serve ads based on your prior visits to Unis or other websites. 
+                  Google&rsquo;s use of advertising cookies enables it and its partners to serve ads based on your 
+                  visits to Unis and/or other sites on the Internet.
+                </li>
+                <li>
+                  <strong>Local sponsorships</strong> (labeled &ldquo;Sponsored &middot; Local&rdquo;) are shown by 
+                  Unis itself and set no advertising cookies. Unis counts how many times each is shown and tapped, 
+                  not who saw it.
+                </li>
+              </ul>
+              <p className="note">
+                You can opt out of personalized advertising in Google&rsquo;s{' '}
+                <a href="https://adssettings.google.com" target="_blank" rel="noopener noreferrer">Ads Settings</a>, or 
+                opt out of many vendors&rsquo; cookies at{' '}
+                <a href="https://www.aboutads.info/choices" target="_blank" rel="noopener noreferrer">aboutads.info</a>. 
+                Members on Unis Plus see no ads.
+              </p>
+            </div>
+
+            <div className="cookie-category">
               <h4>Third-Party Cookies</h4>
               <ul>
                 <li>
@@ -108,7 +132,6 @@ const CookiePolicy = () => {
             </p>
             <ul>
               <li>Personalized recommendations based on listening history</li>
-              <li>Advertising partnerships (anonymized, opt-in only)</li>
               <li>Advanced security features (fraud detection)</li>
             </ul>
             <p className="note">

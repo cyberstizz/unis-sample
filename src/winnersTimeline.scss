@@ -583,61 +583,20 @@ $wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
   min-width: 0;
 }
 
-.wt-page-ad-slot {
+// The ad space (components/AdSlot): a sticky rail beside the winners on
+// desktop, a banner above them on phones. Unis Plus members get no ad at all,
+// and the rail's column closes up.
+.wt-page-ad {
   grid-area: ad;
   position: sticky;
   top: 24px;
-  overflow: hidden;
-  min-height: 460px;
-  padding: 20px;
-  border-radius: $wt-radius-lg;
-  border: 1px dashed $wt-border-medium;
-  background:
-    radial-gradient(circle at 90% 0%, var(--unis-glow-2), transparent 46%),
-    rgba(255, 255, 255, 0.022);
-  backdrop-filter: blur(18px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
 }
 
-// Ambient theme wash — matches the winner cards and the Milestones plate, so
-// an empty ad slot still reads as part of the page rather than a hole in it.
-.wt-ad-glow {
-  position: absolute;
-  inset: -40%;
-  z-index: 0;
-  background:
-    radial-gradient(circle at 50% 35%,
-      color-mix(in srgb, var(--unis-primary), transparent 62%), transparent 62%);
-  filter: blur(58px) saturate(1.4);
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.wt-ad-inner {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.wt-ad-label {
-  color: $wt-text-muted;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.wt-ad-note {
-  max-width: 180px;
-  color: $wt-text-faint;
-  font-size: 11px;
-  line-height: 1.4;
+.wt-page:not(:has(.wt-page-ad)) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'back'
+    'main';
 }
 
 // ═════════════════════════════════════════════════
@@ -662,20 +621,30 @@ $wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
     padding: 24px 20px 68px;
   }
 
-  .wt-page-ad-slot {
+  .wt-page:not(:has(.wt-page-ad)) {
+    grid-template-areas:
+      'back'
+      'main';
+  }
+
+  // On phones the rail becomes a normal banner.
+  .wt-page-ad {
     position: static;
-    min-height: 100px;
-    padding: 14px 18px;
-  }
 
-  .wt-ad-inner {
-    flex-direction: row;
-    gap: 14px;
-  }
+    .ad-slot__body,
+    .ad-slot__placeholder { min-height: 96px; }
 
-  .wt-ad-note {
-    text-align: left;
-    max-width: 240px;
+    .ad-sponsor {
+      flex-direction: row;
+      text-align: left;
+      justify-content: flex-start;
+      padding: 14px 16px;
+    }
+
+    .ad-sponsor__logo,
+    .ad-sponsor__initial { width: 48px; height: 48px; font-size: 22px; }
+    .ad-sponsor__text { align-items: flex-start; }
+    .ad-house { align-items: flex-start; text-align: left; }
   }
 }
 
@@ -755,16 +724,6 @@ $wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
     min-height: 44px;
   }
 
-  .wt-page-ad-slot {
-    min-height: 80px;
-    padding: 12px 14px;
-  }
-
-  .wt-ad-inner {
-    flex-direction: column;
-    gap: 4px;
-    text-align: center;
-  }
 }
 
 // ═════════════════════════════════════════════════

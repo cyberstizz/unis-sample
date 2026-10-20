@@ -246,7 +246,8 @@ export function sectionMetrics(data) {
       { name: 'Gross payments volume', value: cents(v('gpv_cents')), unit: 'usd',
         sub: `${fmtUsd(cents(get('gpv_cents', 'kind', 'download')))} downloads · ${fmtUsd(cents(get('gpv_cents', 'kind', 'support')))} support` },
       { name: 'Net revenue', value: cents(v('net_revenue_cents')), unit: 'usd',
-        sub: `${fmtUsd(cents(v('platform_fee_cents')))} fees · ${fmtUsd(cents(v('ad_unis_share_cents')))} ads and other income, less the Community Share` },
+        // Fees are counted after Stripe's card fee, which Unis pays (fee gate).
+        sub: `${fmtUsd(cents(isNum(v('card_fees_cents')) ? v('platform_fee_cents') - v('card_fees_cents') : v('platform_fee_cents')))} fees after card costs · ${fmtUsd(cents(v('ad_unis_share_cents')))} ads and other income, less the Community Share` },
       { name: 'Revenue per user', value: ratio(cents(v('net_revenue_cents')), v('mau_avg')), unit: 'usd' },
       { name: 'Take rate', value: ratio(v('platform_fee_cents'), v('gpv_cents')), unit: 'percent' },
       { name: 'Paying fans', value: v('paying_users'), unit: 'count',

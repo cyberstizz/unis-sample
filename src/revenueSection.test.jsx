@@ -147,7 +147,7 @@ describe('RevenueSection', () => {
     await screen.findByText(/10% of their monthly share/i);
     expect(document.body.textContent).not.toMatch(/ad revenue|ad-views/i);
     await user.click(screen.getByRole('button', { name: /Supporters/i }));
-    expect(await screen.findByText(/monthly community share/i)).toBeInTheDocument();
+    expect(await screen.findByText(/slice of the community share/i)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/ad revenue|ad-views/i);
   });
 

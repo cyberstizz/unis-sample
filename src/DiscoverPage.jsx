@@ -7,6 +7,7 @@ import { useAuth } from "./context/AuthContext";
 import { JURISDICTION_IDS } from "./utils/idMappings";
 import { useTaxonomy, GENRE_ORDER } from "./utils/taxonomy";
 import Layout from "./layout";
+import AdSlot from "./components/AdSlot";
 
 import "./DiscoverPage.scss";
 
@@ -817,6 +818,9 @@ const DiscoverPage = () => {
               </div>
             )}
           </div>
+
+          {/* Ad space (none for Unis Plus) */}
+          <AdSlot placement="discover" />
         </div>
       </div>
     </Layout>

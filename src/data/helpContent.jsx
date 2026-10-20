@@ -1,4 +1,7 @@
 import React from 'react';
+import {
+  MIN_SONG_PRICE_CENTS, artistReceivesCents, formatCents,
+} from '../utils/platformFee';
 
 // ════════════════════════════════════════════════════════════════════════════
 // HELP CENTER CONTENT
@@ -318,6 +321,21 @@ const WaitlistTiers = () => {
     </div>
   );
 };
+
+// ── Song sale / support fee examples ────────────────────────────────────────
+// Worked out by utils/platformFee.js (the same rule as the backend's
+// PlatformFees), so the help center can't quote a different number.
+const FEE_EXAMPLE_CENTS = [MIN_SONG_PRICE_CENTS, 100, 199, 500, 1000];
+
+const FeeExamples = () => (
+  <ul>
+    {FEE_EXAMPLE_CENTS.map((c) => (
+      <li key={c}>
+        {formatCents(c)} paid &rarr; the artist gets <b>{formatCents(artistReceivesCents(c))}</b>
+      </li>
+    ))}
+  </ul>
+);
 
 // ── Community Share split ───────────────────────────────────────────────────
 // How each listener's part of a month's Community Share is divided. Mirrors
@@ -2418,8 +2436,8 @@ export const HELP_SECTIONS = [
           <>
             <p>
               One artist shares in your presence on Unis. Every month, 15% of
-              your part of the Community Share — based on your signed-in
-              listening — goes to them. Not to you, not to the platform alone,
+              your slice of the Community Share — your share of the pot, based
+              on your signed-in listening — goes to them. Not to you, not to the platform alone,
               to a specific artist you picked.
             </p>
             <p>
@@ -2498,8 +2516,8 @@ export const HELP_SECTIONS = [
               Points immediately, and income for as long as they stay. Each new
               supporter adds 5 to your score — once per person, so someone who
               leaves and comes back doesn&rsquo;t pay it twice — and from then
-              on 15% of their monthly share comes to you, based on their
-              listening.
+              on 15% of their monthly slice of the Community Share comes to
+              you, based on their listening.
             </p>
             <p>
               This is the most durable income on Unis. A play is one moment; a
@@ -2544,17 +2562,78 @@ export const HELP_SECTIONS = [
         q: 'Where does the money come from?',
         a: (
           <>
+            <p>Two places, and they never mix.</p>
             <p>
-              From what Unis earns: advertising, other income such as
-              sponsorships, and Unis&rsquo;s own fees on song sales and artist
-              support. Once a month, after the month ends and Unis has actually
-              been paid for it, Unis adds it up and shares it with the community
-              — the Community Share — divided by listening, to a fixed formula.
+              <b>Money that is already an artist&rsquo;s</b> &mdash; a song
+              someone buys from them, support someone sends them &mdash; goes
+              straight to that artist, minus Unis&rsquo;s fee. It is never
+              pooled or shared with anyone else.
             </p>
             <p>
-              You have to be signed in for your listening to count. Listening
-              signed out costs the artist you support real income. Nobody is
+              <b>Money that is Unis&rsquo;s own</b> &mdash; advertising,
+              sponsorships and anything else Unis earns, plus what Unis keeps
+              from its fees after the card company&rsquo;s cut &mdash; goes into
+              one pot each month. That pot is the Community Share. After the
+              month ends and Unis has actually been paid for it, the pot is
+              divided by listening, to a fixed formula.
+            </p>
+            <p>
+              You have to be signed in for your listening to count. Nobody is
               paid for seeing or clicking ads.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'payouts-slice',
+        q: 'What exactly is the 15% (or the 10%, 5% and 2%) a percentage of?',
+        a: (
+          <>
+            <p>Of a listener&rsquo;s <b>slice</b> of that month&rsquo;s pot. It works in two steps:</p>
+            <ul>
+              <li>
+                <b>Every listener gets a slice.</b> The pot is divided by
+                counted plays: your slice is the pot &times; your plays &divide;
+                everyone&rsquo;s plays that month.
+              </li>
+              <li>
+                <b>Each slice is split.</b> 15% goes to the artist that listener
+                supports; 10%, 5% and 2% go to the three people above them in
+                the referral chain; the rest stays with Unis.
+              </li>
+            </ul>
+            <p>
+              An example. Say the pot is $1,000 and Unis counted 100,000 plays
+              that month. Maya made 500 of them, so her slice is $5.00. Her
+              artist gets 75&cent;, whoever invited her gets 50&cent;, the next
+              two up get 25&cent; and 10&cent;, and Unis keeps $3.40. An artist
+              with 200 supporters who listen like Maya earns $150 that month.
+            </p>
+            <p className="help-note">
+              A play counts when you&rsquo;re signed in, it&rsquo;s someone
+              else&rsquo;s song, and you&rsquo;re under 50 counted plays for the
+              day. Unis staff and test accounts don&rsquo;t count.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'payouts-one-source',
+        q: 'If Unis only earned money from one thing, who does it go to?',
+        a: (
+          <>
+            <p>
+              Everyone in the Community Share, the same way. The pot doesn&rsquo;t
+              care where its money came from: if ads were Unis&rsquo;s only
+              income one month, the pot is the ad money; if it was a sponsor,
+              it&rsquo;s that.
+            </p>
+            <p>
+              Each person&rsquo;s slice depends on the whole pot and on
+              listening &mdash; not on what they personally bought, saw or did.
+              Buying a song from an artist doesn&rsquo;t pay that buyer&rsquo;s
+              referrers; the artist keeps their part, and only Unis&rsquo;s small
+              margin joins the pot.
             </p>
           </>
         ),
@@ -2573,6 +2652,38 @@ export const HELP_SECTIONS = [
               You cannot earn from your own listening. That is deliberate — it
               removes any reason to farm your own plays, and it means the money
               moves outward through the community instead of in a circle.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'payouts-sales-fee',
+        q: 'How much does Unis take when someone buys my song or supports me?',
+        a: (
+          <>
+            <p>
+              10% &mdash; or, on smaller amounts, just enough to cover the card
+              company&rsquo;s fee plus one cent, whichever is higher. The buyer
+              pays your price and nothing more; you get the rest.
+            </p>
+            <FeeExamples />
+            <p>
+              Why the floor? Card companies charge about 30&cent; on every
+              payment, whatever its size. On a $1.99 song, 10% is 20&cent;
+              &mdash; less than the card fee &mdash; so Unis would lose money on
+              every small sale. Under about $4.35, Unis takes the card fee plus
+              1&cent; and nothing more; from about $4.35 up it&rsquo;s a flat
+              10%.
+            </p>
+            <p className="help-note">
+              The lowest price you can set is {formatCents(MIN_SONG_PRICE_CENTS)} &mdash;
+              5&cent; under the iTunes Store&rsquo;s 99&cent; songs &mdash; so
+              your music can always be cheapest on Unis.
+            </p>
+            <p>
+              What Unis keeps after the card fee is Unis&rsquo;s own money, so
+              it joins the Community Share pot like the rest of Unis&rsquo;s
+              income. Your part never does.
             </p>
           </>
         ),
@@ -2624,10 +2735,24 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              Through Stripe. Your balance grows once a month, when the month is
-              closed. Connect a Stripe account from the Earnings page, and once
-              your balance reaches <b>$50</b> you can request a payout. Below
-              that it keeps accruing.
+              Through Stripe. Connect a Stripe account from the Earnings page.
+              Two kinds of money land there:
+            </p>
+            <ul>
+              <li>
+                <b>Song sales and support</b> go to your Stripe account the
+                moment someone pays.
+              </li>
+              <li>
+                <b>Community Share</b> builds up in your Unis balance once a
+                month, when a month is closed. Once it reaches <b>$50</b> you can
+                withdraw it to your Stripe account; below that it keeps
+                accruing.
+              </li>
+            </ul>
+            <p>
+              Stripe then pays everything in your Stripe account to your bank
+              once a month, on the 1st. Unis covers Stripe&rsquo;s payout fees.
             </p>
             <p className="help-note">
               A month is closed after Unis has been paid for it. Ad networks pay
@@ -2635,9 +2760,179 @@ export const HELP_SECTIONS = [
               usually lands in late November.
             </p>
             <p>
-              You will need a verified phone number for earnings to be
-              attributed to you at all, so add one before you start building a
+              You will need a verified phone number for Community Share money
+              to reach you at all, so add one before you start building a
               balance.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'payouts-taxes',
+        q: 'Will I get a tax form?',
+        a: (
+          <>
+            <p>
+              If you&rsquo;re paid enough in a year, yes. Unis files them through
+              Stripe, as the law requires:
+            </p>
+            <ul>
+              <li>
+                <b>Community Share money</b> you withdraw: usually a Form
+                1099-MISC once it reaches $2,000 in a calendar year.
+              </li>
+              <li>
+                <b>Song sales and support</b>: a Form 1099-K once they pass
+                $20,000 and 200 payments in a calendar year.
+              </li>
+            </ul>
+            <p>
+              Stripe collects your tax details (your SSN or EIN) when you set up
+              payouts, and may email you to confirm them and to deliver your
+              forms electronically early the following year. Some states report
+              at lower amounts.
+            </p>
+            <p className="help-note">
+              With or without a form, the money is income. Keep your own records,
+              and ask a tax professional if you&rsquo;re unsure what you owe.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'payouts-plus',
+        q: 'How does Unis Plus pay artists?',
+        a: (
+          <>
+            <p>
+              Unis Plus is the ad-free plan. Each month, 60% of a
+              subscriber&rsquo;s fee, after Stripe&rsquo;s card and billing
+              fees, goes to the artists that subscriber played, split by their
+              counted plays (the same 50-a-day rule as the Community Share; your
+              own songs don&rsquo;t count). On a $4.99 month that&rsquo;s $2.70
+              shared among the artists they played.
+            </p>
+            <p>
+              If a subscriber played nobody that month, their artists&rsquo;
+              part goes to the artist they support. Unis&rsquo;s 40% joins the
+              Community Share pot.
+            </p>
+            <p>
+              It&rsquo;s credited to your Earnings balance when the month is
+              closed, shown as &ldquo;Unis Plus&rdquo;, and paid out with the
+              rest of your balance. To be paid you need the same things as the
+              Community Share: a live account and a verified phone number.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'payouts-coming',
+        q: 'What about audio ads?',
+        a: (
+          <>
+            <p>
+              Audio ads aren&rsquo;t live yet. When they arrive, 60% of the net
+              revenue from ads played with your songs goes to you, and
+              Unis&rsquo;s 40% joins the Community Share pot.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'plus-ads',
+    title: 'Unis Plus, ads and sponsors',
+    blurb: 'The ad-free plan, what the ads on Unis are, and how a local business can sponsor Unis.',
+    status: 'published',
+    articles: [
+      {
+        id: 'plus-what',
+        q: 'What is Unis Plus?',
+        a: (
+          <>
+            <p>
+              Unis Plus removes every ad on Unis for your account, on every
+              device you sign in on. It&rsquo;s $4.99 a month, paid by card on
+              Stripe&rsquo;s secure page, and 60% of it (after Stripe&rsquo;s
+              fees) goes to the artists you play that month.
+            </p>
+            <p>
+              Get it from <b>Unis Plus</b> in the menu. It turns on as soon as
+              the payment goes through.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'plus-cancel',
+        q: 'How do I cancel, or change my card?',
+        a: (
+          <>
+            <p>
+              Open <b>Unis Plus</b> and press <b>Manage plan</b>. Stripe&rsquo;s
+              page lets you change your card, see receipts, or cancel.
+            </p>
+            <p>
+              Canceling stops the next payment. Plus stays on until the end of
+              the month you already paid for; there are no refunds for part of a
+              month. Deleting your Unis account cancels Plus too.
+            </p>
+            <p className="help-note">
+              If a payment fails, Stripe tries your card again over the next few
+              days and Plus stays on meanwhile. If it still can&rsquo;t be
+              charged, Plus ends and ads come back.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'ads-what',
+        q: 'What are the ads on Unis?',
+        a: (
+          <>
+            <p>
+              Some pages have one ad space, labeled so you always know what it
+              is:
+            </p>
+            <ul>
+              <li>
+                <b>Sponsored &middot; Local</b> &mdash; a Harlem business that
+                booked a week with Unis.
+              </li>
+              <li>
+                <b>Advertisement</b> &mdash; an ad from Google.
+              </li>
+              <li>
+                <b>From Unis</b> &mdash; Unis&rsquo;s own card, when there&rsquo;s
+                no ad to show.
+              </li>
+            </ul>
+            <p>
+              There are no ads in Messages, Earnings, Settings, Help, or while
+              you vote. Nobody is paid for seeing or tapping an ad; the money
+              Unis makes from ads joins the Community Share pot.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'sponsor-how',
+        q: 'How can my business sponsor Unis?',
+        a: (
+          <>
+            <p>
+              Go to the Sponsor Harlem page (or scan a Unis sponsor QR code).
+              Pick Uptown, Downtown or all of Harlem and a week, add your logo,
+              one line and a link, and pay by card. One neighborhood is $25 a
+              week; all of Harlem is $40.
+            </p>
+            <p>
+              Unis reviews every sponsorship within one business day. If it
+              can&rsquo;t run, you get a full refund. It runs from Monday of your
+              week, and the day after it ends we email you how many times it was
+              shown and tapped.
             </p>
           </>
         ),
@@ -2673,6 +2968,10 @@ export const HELP_SECTIONS = [
               artist. If you joined less than 30 days ago, the points your
               sign-up gave others come off: your referrer&rsquo;s bonus and the
               5 points your supported artist got.
+            </p>
+            <p>
+              If you have Unis Plus, it&rsquo;s canceled within the hour, so
+              you&rsquo;re never charged again.
             </p>
             <p className="help-note">
               There is no undo. Deleting is permanent.

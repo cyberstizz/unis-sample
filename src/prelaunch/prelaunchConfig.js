@@ -28,6 +28,7 @@ export const OPEN_PATHS = [
   '/cookie',
   '/report',
   '/waitlist',
+  '/sponsor',   // Sponsor Harlem: shop owners book from a QR code, before and after launch
 ];
 
 export function isPrelaunch() {

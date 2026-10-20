@@ -6,6 +6,7 @@ import LyricsWizard from './lyricsWizard';
 import { FileText, Heart } from 'lucide-react';
 import './songPage.scss';
 import Layout from './layout';
+import AdSlot from './components/AdSlot';
 import { PlayerContext } from './context/playercontext';
 import VotingWizard from './votingWizard';
 import CommentSection from './commentSection';
@@ -523,6 +524,9 @@ const SongPage = () => {
 
             {/* ── RECOMMENDED ── */}
             <RecommendedSongs songId={song.id} />
+
+            {/* ── AD SPACE (none for Unis Plus) ── */}
+            <AdSlot placement="song" />
 
             {/* ── COMMENTS ── */}
             <div className="sp-comments">

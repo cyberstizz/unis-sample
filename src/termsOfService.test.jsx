@@ -19,7 +19,7 @@ describe('TermsOfService', () => {
     expect(screen.getAllByText(/October 19, 2026/).length).toBeGreaterThan(0);
   });
 
-  it('renders all 16 section headings', () => {
+  it('renders all 18 section headings', () => {
     render(<MemoryRouter><TermsOfService /></MemoryRouter>);
     const headings = [
       '1. Eligibility',
@@ -38,6 +38,8 @@ describe('TermsOfService', () => {
       '14. Jurisdiction Expansion',
       '15. Governing Law & Dispute Resolution',
       '16. Changes & Miscellaneous',
+      '17. Unis Plus',
+      '18. Local Sponsorships',
     ];
     headings.forEach(heading => {
       expect(screen.getByText(heading)).toBeInTheDocument();

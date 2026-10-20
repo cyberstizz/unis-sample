@@ -49,3 +49,11 @@
 
   input { width: 18px; height: 18px; margin-top: 1px; accent-color: var(--mx-accent); flex: none; }
 }
+
+.csa-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--mx-ink-2);
+  li { margin: 2px 0; }
+}

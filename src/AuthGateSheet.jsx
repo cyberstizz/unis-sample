@@ -26,6 +26,12 @@ const GATE_CONTEXTS = {
     headline: 'Unlock your wallet',
     subtext: 'Track your earnings, withdraw funds, and see how your support flows to artists.',
   },
+  plus: {
+    icon: '✨',
+    accent: 'no ads, more for artists',
+    headline: 'Go ad-free with Unis Plus',
+    subtext: 'Create a free account, then add Unis Plus for $4.99 a month. 60% goes to the artists you play.',
+  },
   profile: {
     icon: '👤',
     accent: 'make it yours',

@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from './layout';
+import AdSlot from './components/AdSlot';
 import backimage from './assets/randomrapper.jpeg';
 import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
@@ -735,6 +736,9 @@ const FindPage = () => {
             </>
           )}
         </div>
+
+        {/* Ad space (none for Unis Plus) */}
+        <AdSlot placement="find" />
       </div>
     </Layout>
   );

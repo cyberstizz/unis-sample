@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import Layout from './layout';
 import WinnersTimeline from './winnersTimeline';
 import { apiCall } from './components/axiosInstance';
+import AdSlot from './components/AdSlot';
 import './winnersTimeline.scss';
 
 // ═══════════════════════════════════════════════════════════
@@ -93,23 +94,9 @@ const WinnersTimelinePage = () => {
           />
         </div>
 
-        {/*
-          Ad rail placeholder. Sticky on desktop so it stays visible
-          as the user scrolls through history. Becomes a top banner
-          on mobile. When AdSense is wired in, replace the inner
-          contents with the ad unit. Refreshes happen on each
-          "Load more" page reveal — that hookup lives inside
-          WinnersTimeline.handleLoadMore for now.
-        */}
-        <aside className="wt-page-ad-slot" aria-label="Sponsored">
-          <div className="wt-ad-glow" aria-hidden="true" />
-          <div className="wt-ad-inner">
-            <span className="wt-ad-label">Ad space</span>
-            <span className="wt-ad-note">
-              Partnership pending — refreshes every 5 winners loaded
-            </span>
-          </div>
-        </aside>
+        {/* The ad space: a local sponsor, AdSense, or a Unis card (none for
+            Unis Plus members). Sticky rail on desktop, banner on phones. */}
+        <AdSlot placement="winners" variant="rail" className="wt-page-ad" />
       </div>
     </Layout>
   );

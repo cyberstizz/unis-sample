@@ -10,7 +10,7 @@
 //   • Description — textarea, 500-char limit counter
 //   • ISRC — uppercased, alphanumeric-only, maxLength 15
 //   • Download policy — three toggle buttons: free / paid / unavailable
-//   • Paid download — minimum $1.99 enforced before any API call
+//   • Paid download — minimum $0.94 enforced before any API call
 //   • "Save Changes" disabled when nothing has changed
 //   • Two separate API calls:
 //       PATCH /v1/media/song/:songId  — artwork, description, isrc
@@ -200,7 +200,7 @@ describe('EditSongWizard — initial state pre-population', () => {
 
   it('pre-fills the price input in dollars for a paid song', () => {
     renderWizard({ song: PAID_SONG });
-    const priceInput = screen.getByPlaceholderText('1.99');
+    const priceInput = screen.getByPlaceholderText('0.94');
     // 299 cents → "2.99"
     expect(priceInput.value).toBe('2.99');
   });
@@ -312,23 +312,23 @@ describe('EditSongWizard — download policy', () => {
   it('switching to Paid reveals the price input', async () => {
     renderWizard();
     const user = userEvent.setup();
-    expect(screen.queryByPlaceholderText('1.99')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('0.94')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /paid download/i }));
-    expect(screen.getByPlaceholderText('1.99')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('0.94')).toBeInTheDocument();
   });
 
   it('switching from Paid back to Free hides the price input', async () => {
     renderWizard({ song: PAID_SONG });
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /free download/i }));
-    expect(screen.queryByPlaceholderText('1.99')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('0.94')).not.toBeInTheDocument();
   });
 
   it('switching to No Download hides the price input', async () => {
     renderWizard({ song: PAID_SONG });
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /no download/i }));
-    expect(screen.queryByPlaceholderText('1.99')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('0.94')).not.toBeInTheDocument();
   });
 
   it('shows the free-download hint copy when Free is active', () => {
@@ -336,11 +336,11 @@ describe('EditSongWizard — download policy', () => {
     expect(screen.getByText(/can download this track for free/i)).toBeInTheDocument();
   });
 
-  it('shows the 90% Stripe copy when Paid is active', async () => {
+  it('shows the minimum-price copy when Paid is active', async () => {
     renderWizard();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /paid download/i }));
-    expect(screen.getByText(/minimum \$1\.99/i)).toBeInTheDocument();
+    expect(screen.getByText(/minimum \$0\.94/i)).toBeInTheDocument();
   });
 
   it('shows the stream-only copy when No Download is active', async () => {
@@ -357,7 +357,7 @@ describe('EditSongWizard — download policy', () => {
     await user.click(screen.getByRole('button', { name: /free download/i }));
     // Switch back to paid — input should be empty (not carry old value)
     await user.click(screen.getByRole('button', { name: /paid download/i }));
-    const priceInput = screen.getByPlaceholderText('1.99');
+    const priceInput = screen.getByPlaceholderText('0.94');
     expect(priceInput.value).toBe('');
   });
 });
@@ -405,7 +405,7 @@ describe('EditSongWizard — save button disabled state', () => {
   it('"Save Changes" becomes enabled after download price is changed on a paid song', async () => {
     renderWizard({ song: PAID_SONG });
     const user = userEvent.setup();
-    const priceInput = screen.getByPlaceholderText('1.99');
+    const priceInput = screen.getByPlaceholderText('0.94');
     await user.clear(priceInput);
     await user.type(priceInput, '4.99');
     expect(screen.getByRole('button', { name: /save changes/i })).not.toBeDisabled();
@@ -457,29 +457,29 @@ describe('EditSongWizard — submit validation', () => {
     // policy changed → button enabled, but no price set
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/minimum download price is \$1\.99/i); // ★
+    expect(await screen.findByRole('alert')).toHaveTextContent(/minimum download price is \$0\.94/i); // ★
     expect(apiSpy).not.toHaveBeenCalled();
   });
 
-  it('shows an inline error when paid price is below $1.99', async () => { // ★ item 7
+  it('shows an inline error when paid price is below $0.94', async () => { // ★ item 7
     vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
 
     renderWizard();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /paid download/i }));
-    await user.type(screen.getByPlaceholderText('1.99'), '0.99');
+    await user.type(screen.getByPlaceholderText('0.94'), '0.90');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/minimum download price is \$1\.99/i); // ★
+    expect(await screen.findByRole('alert')).toHaveTextContent(/minimum download price is \$0\.94/i); // ★
   });
 
-  it('does NOT show a validation error when paid price is exactly $1.99', async () => { // ★ item 7
+  it('does NOT show a validation error when paid price is exactly $0.94', async () => { // ★ item 7
     vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
 
     renderWizard();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /paid download/i }));
-    await user.type(screen.getByPlaceholderText('1.99'), '1.99');
+    await user.type(screen.getByPlaceholderText('0.94'), '0.94');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument(); // ★
@@ -644,7 +644,7 @@ describe('EditSongWizard — PUT download settings', () => {
     renderWizard();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /paid download/i }));
-    await user.type(screen.getByPlaceholderText('1.99'), '4.99');
+    await user.type(screen.getByPlaceholderText('0.94'), '4.99');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
     await waitFor(() => {

@@ -1705,7 +1705,7 @@ const handleSubmit = async () => {
           <>
             <div className="step-header">
               <h2>Support an Artist</h2>
-              <p>Every month, 15% of your share of the Community Share goes to the artist you support.</p>
+              <p>Every month, 15% of your slice of the Community Share goes to the artist you support.</p>
             </div>
             
             <div className="artist-selection">

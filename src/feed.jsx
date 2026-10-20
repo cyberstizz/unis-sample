@@ -5,6 +5,7 @@ import { apiCall } from './components/axiosInstance';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
 import Layout from './layout';
+import AdSlot from './components/AdSlot';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
 import randomRapper from './assets/randomrapper.jpeg';
 import song1 from './assets/tonyfadd_paranoidbuy1get1free.mp3';
@@ -972,6 +973,9 @@ const Feed = () => {
                   ))}
                 </div>
               </section>
+
+              {/* ═══════ AD SPACE (none for Unis Plus) ═══════ */}
+              <AdSlot placement="feed" />
 
               {/* ═══════ SONGS OF THE WEEK TIMELINE ═══════ */}
               {weeklyWinners.length > 0 && (

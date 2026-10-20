@@ -7,6 +7,7 @@ import {
   ChevronDown,
   TrendingUp,
   ArrowUpRight,
+  Sparkles,
 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import CashoutPanel from './CashoutPanel';
@@ -113,6 +114,11 @@ const RevenueSection = ({
   const supporterLastMonthCents = toCents(sup.lastMonth);
   const supporterCount = Number(earningsSummary?.supporterCount || 0);
 
+  // Unis Plus: 60% of ad-free members' fees, by their plays of this artist.
+  const plusEarnings = earningsSummary?.plusEarnings || {};
+  const plusCents = toCents(plusEarnings.lifetime);
+  const plusLastMonthCents = toCents(plusEarnings.lastMonth);
+
   const balanceCents = toCents(earningsSummary?.currentBalance);
   const minimumPayoutCents = toCents(earningsSummary?.payoutThreshold) || 5000;
 
@@ -141,6 +147,14 @@ const RevenueSection = ({
       loading: false,
       sub: plural(supporterCount, 'supporter', 'supporters'),
     },
+    {
+      key: 'plus',
+      label: 'Unis Plus',
+      icon: Sparkles,
+      amount: plusCents,
+      loading: false,
+      sub: 'From ad-free members',
+    },
   ];
 
   const toggle = (key) => setOpenStream((cur) => (cur === key ? null : key));
@@ -168,7 +182,7 @@ const RevenueSection = ({
       </div>
 
       <p className="rev-intro">
-        Your three income streams at a glance. Tap any one to see how it breaks down.
+        Your income streams at a glance. Tap any one to see how it breaks down.
       </p>
 
       {/* ── the three top-level streams ── */}
@@ -207,6 +221,9 @@ const RevenueSection = ({
             <TrendingUp size={13} />
             Open any track in your catalog for its day-by-day sales trend.
           </p>
+          <p className="rev-detail__note">
+            Unis&apos;s fee is 10%, or just the card fee + 1&cent; on smaller sales. Stripe pays your bank on the 1st of each month.
+          </p>
         </div>
       )}
 
@@ -243,8 +260,20 @@ const RevenueSection = ({
           <DetailRow label="Backed by" value={plural(supporterCount, 'supporter', 'supporters')} />
           <p className="rev-detail__note">
             <Heart size={13} />
-            You get 15% of each supporter&apos;s monthly Community Share, based on their listening
+            You get 15% of each supporter&apos;s monthly slice of the Community Share (their part of Unis&apos;s pot, by listening)
             {supporterPlays > 0 ? ` (${plural(supporterPlays, 'play', 'plays')} so far this month)` : ''}.
+          </p>
+        </div>
+      )}
+
+      {openStream === 'plus' && (
+        <div className="rev-detail">
+          <DetailRow label="Lifetime" value={money(plusCents)} />
+          <DetailRow label={lastClosedLabel} value={money(plusLastMonthCents)} accent />
+          <p className="rev-detail__note">
+            <Sparkles size={13} />
+            Each month, 60% of every Unis Plus member&apos;s fee (after Stripe&apos;s fees) is split among the artists
+            they played, by plays. Members who played no one send it to the artist they support.
           </p>
         </div>
       )}

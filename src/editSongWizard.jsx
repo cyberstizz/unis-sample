@@ -4,6 +4,7 @@ import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl'; // ★ item 7: checklist — buildUrl everywhere
 import useModalA11y from './hooks/useModalA11y'; // ★ item 7: same a11y as the other modals
 import SoundDiscoveryFields from './SoundDiscoveryFields';
+import { MIN_SONG_PRICE_CENTS, dollarsToCents, formatCents, priceHint } from './utils/platformFee';
 import {
   discoveryFromSong, isDiscoveryComplete, discoveryProblem, toDiscoveryPayload,
 } from './utils/taxonomy';
@@ -78,8 +79,8 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
     }
 
     // Validate price if paid
-    if (downloadPolicy === 'paid' && (!downloadPrice || parseFloat(downloadPrice) < 1.99)) {
-      setError('Minimum download price is $1.99.'); // ★ item 7: inline, not alert()
+    if (downloadPolicy === 'paid' && !(dollarsToCents(downloadPrice) >= MIN_SONG_PRICE_CENTS)) {
+      setError(`Minimum download price is ${formatCents(MIN_SONG_PRICE_CENTS)}.`); // ★ item 7: inline, not alert()
       return;
     }
 
@@ -289,9 +290,9 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
                 <input
                   className="esw__price-input"
                   type="number"
-                  min="1.99"
+                  min={(MIN_SONG_PRICE_CENTS / 100).toFixed(2)}
                   step="0.01"
-                  placeholder="1.99"
+                  placeholder={(MIN_SONG_PRICE_CENTS / 100).toFixed(2)}
                   aria-label="Download price in dollars"
                   value={downloadPrice}
                   onChange={(e) => { setDownloadPrice(e.target.value); setError(null); }}
@@ -301,7 +302,7 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
 
             <p className="esw__hint">
               {downloadPolicy === 'free' && 'Listeners can download this track for free.'}
-              {downloadPolicy === 'paid' && 'Set your price (minimum $1.99). You receive 90% directly to your Stripe account.'}
+              {downloadPolicy === 'paid' && priceHint(downloadPrice)}
               {downloadPolicy === 'unavailable' && 'Listeners can stream but not download this track.'}
             </p>
           </div>

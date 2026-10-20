@@ -572,6 +572,19 @@ const Earnings = () => {
             </div>
           )}
 
+          {isArtist && (
+            <div className="summary-card">
+              <div className="card-icon-wrap card-icon-purple" aria-hidden="true">
+                <Shield size={24} />
+              </div>
+              <div className="card-body">
+                <p className="card-label" id="card-label-plus">Unis Plus</p>
+                <h2 className="card-value" aria-describedby="card-label-plus">{formatMoney(summary?.plusEarnings?.lifetime)}</h2>
+                <p className="card-sub">60% of ad-free members&rsquo; fees, by their plays of your songs</p>
+              </div>
+            </div>
+          )}
+
           <div className="summary-card">
             <div className="card-icon-wrap card-icon-gold" aria-hidden="true">
               {summary?.payoutReady ? <CheckCircle size={24} /> : <Clock size={24} />}
@@ -642,7 +655,7 @@ const Earnings = () => {
                 <Shield size={24} aria-hidden="true" />
                 <div>
                   <h3>Payouts Enabled</h3>
-                  <p>Your bank account is connected. Earnings above {formatMoney(payoutThreshold)} can be withdrawn.</p>
+                  <p>Your bank account is connected. Withdraw once your balance reaches {formatMoney(payoutThreshold)}; Stripe pays your bank on the 1st of each month.</p>
                 </div>
               </div>
               <div className="stripe-actions">
@@ -822,15 +835,15 @@ const Earnings = () => {
                       <div className="split-dot split-dot-purple" aria-hidden="true" />
                       <div className="split-info">
                         <strong>Supporter Income (15%)</strong>
-                        <p>15% of each supporter&apos;s monthly share goes to you, for every month they support you and listen.</p>
+                        <p>15% of each supporter&apos;s monthly slice of the Community Share goes to you, for every month they support you and listen.</p>
                       </div>
                     </div>
                   )}
                   <div className="split-item">
                     <div className="split-dot split-dot-gold" aria-hidden="true" />
                     <div className="split-info">
-                      <strong>Audio Ads on Songs (Coming Soon)</strong>
-                      <p>When audio ads arrive, artists will earn 60% of the net revenue from ads played before their own songs. Unis&apos;s part joins the monthly Community Share.</p>
+                      <strong>Unis Plus (60% to artists)</strong>
+                      <p>Each month, 60% of every Unis Plus member&apos;s fee, after Stripe&apos;s fees, goes to the artists that member played, divided by their plays (or to their supported artist if they played no one). Unis&apos;s part joins the monthly Community Share. Audio ads, when they arrive, will pay artists 60% the same way.</p>
                     </div>
                   </div>
                 </div>
@@ -967,8 +980,9 @@ const Earnings = () => {
               <div className="how-section">
                 <h3>The Community Share</h3>
                 <p className="how-note">
-                  Every month, Unis adds up what it took in — ad income, other income, and its fees on song
-                  sales and artist support — and divides it by listening. Each listener&apos;s part is split like this:
+                  Every month, Unis adds up what it kept — ad income, other income, and what&apos;s left of its fees on
+                  song sales and support after card costs — and divides that pot by listening. Each listener&apos;s
+                  slice is the pot × their plays ÷ everyone&apos;s plays, and each slice is split like this:
                 </p>
                 <div className="how-visual">
                   {/* The bar is decorative — the legend below carries the same
@@ -1020,8 +1034,8 @@ const Earnings = () => {
                   <li>Earnings are added <strong>once a month</strong>, after the month ends and Unis has been paid for it (usually in the second half of the following month)</li>
                   <li>Minimum payout: <strong>{formatMoney(payoutThreshold)}</strong> — withdraw any time once your balance reaches it</li>
                   <li>Balances under {formatMoney(payoutThreshold)} roll over — nothing is lost</li>
-                  <li>Payment via Stripe Connect (direct bank deposit)</li>
-                  <li>Unis sends a 1099 tax form when US tax law requires it (for 2026, once you&apos;re paid $2,000 or more in the year)</li>
+                  <li>Payment via Stripe Connect: Stripe pays your bank <strong>once a month, on the 1st</strong>, and Unis covers Stripe&apos;s payout fees</li>
+                  <li>Unis files 1099 tax forms through Stripe when US tax law requires it (for 2026: Community Share once you&apos;re paid $2,000 or more in the year; song sales and support over $20,000 and 200 payments)</li>
                 </ul>
               </div>
             </div>

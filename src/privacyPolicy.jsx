@@ -74,6 +74,13 @@ const PrivacyPolicy = () => {
                 on our servers.
               </li>
               <li>
+                <strong>Unis Plus &amp; Sponsorships:</strong> If you subscribe to Unis Plus, Stripe processes the 
+                payment; we keep your Stripe customer and subscription IDs, the plan&rsquo;s status and dates, and the 
+                amounts paid, to turn ads off for you and to calculate the artists&rsquo; shares. If you buy a local 
+                sponsorship, we keep the business name, contact email, logo, text, link, area, dates, payment status, 
+                and how many times it was shown and tapped.
+              </li>
+              <li>
                 <strong>Referral Data:</strong> If you participate in our referral program, we track your unique 
                 referral code, who you referred (and who they referred, up to three levels), and the Community 
                 Share amounts credited through your referral chain. This data is used solely to calculate earnings 
@@ -158,8 +165,8 @@ const PrivacyPolicy = () => {
                 payouts); Google (analytics, aggregated only).
               </li>
               <li>
-                <strong>Affiliates/Partners:</strong> For features (e.g., OAuth); future advertising partners 
-                (anonymized, consent-based).
+                <strong>Affiliates/Partners:</strong> For features (e.g., OAuth); Google AdSense, which shows ads on 
+                pages with an ad space (see Section 4).
               </li>
               <li>
                 <strong>Legal:</strong> Subpoenas, court orders; to protect rights (e.g., IP infringement reports, 
@@ -170,8 +177,9 @@ const PrivacyPolicy = () => {
                 information may be transferred. We will notify you of any such change.
               </li>
               <li>
-                <strong>Tax Authorities:</strong> We report earnings to the IRS as required by law (e.g., 1099-NEC 
-                for U.S. users earning $600 or more per calendar year).
+                <strong>Tax Authorities:</strong> We report earnings to the IRS as required by law (e.g., Form
+                1099-MISC or 1099-K when a U.S. user&rsquo;s payments for a calendar year reach the IRS reporting
+                thresholds).
               </li>
             </ul>
             <p className="note">
@@ -195,6 +203,18 @@ const PrivacyPolicy = () => {
               <li>
                 <strong>Analytics:</strong> Google Analytics (opt-out via browser settings or Google&rsquo;s opt-out 
                 add-on).
+              </li>
+              <li>
+                <strong>Advertising:</strong> Pages with an ad space may show ads from Google AdSense. Third-party 
+                vendors, including Google, use cookies to serve ads based on your prior visits to Unis or other 
+                websites. Google&rsquo;s use of advertising cookies enables it and its partners to serve ads to you 
+                based on your visits to Unis and/or other sites on the Internet. You can opt out of personalized 
+                advertising in Google&rsquo;s{' '}
+                <a href="https://adssettings.google.com" target="_blank" rel="noopener noreferrer">Ads Settings</a>, 
+                or opt out of many third-party vendors&rsquo; cookies at{' '}
+                <a href="https://www.aboutads.info/choices" target="_blank" rel="noopener noreferrer">aboutads.info</a>. 
+                Local sponsorships (&ldquo;Sponsored &middot; Local&rdquo;) are shown by Unis itself without 
+                advertising cookies. Unis Plus members see no ads, and no one is paid for viewing ads.
               </li>
               <li>
                 <strong>Do Not Track:</strong> We honor Do Not Track browser signals where possible.

@@ -406,12 +406,21 @@ const TermsOfService = () => {
             <h3>11.1 Revenue Share</h3>
             <p>
               Eligible artists will receive <strong>sixty percent (60%) of Net Streaming Revenue</strong> attributable 
-              to streams of their content. &ldquo;Net Streaming Revenue&rdquo; means gross advertising revenue 
-              and/or subscription revenue generated from streams of the artist&rsquo;s content, minus: (a) applicable 
-              ad-serving platform fees (e.g., Google AdSense fees, AdsWizz fees); (b) payment processing fees 
-              (e.g., Stripe transaction fees); (c) applicable taxes and government charges; and (d) refunds, 
-              chargebacks, and bad debt. No deductions will be made for Unis&rsquo;s general operating expenses, 
-              employee costs, or overhead.
+              to their content. &ldquo;Net Streaming Revenue&rdquo; means: (a) revenue from audio advertisements 
+              played immediately before or during streams of the artist&rsquo;s songs; and (b) when Unis offers its 
+              paid subscription (&ldquo;Unis Plus&rdquo;), the part of each subscriber&rsquo;s monthly fee attributable 
+              to the artist, found by dividing that subscriber&rsquo;s fee for the month among the artists whose 
+              songs the subscriber played that month, in proportion to the subscriber&rsquo;s counted plays 
+              (Section 12.2), or, if the subscriber played no eligible songs that month, to the artist the 
+              subscriber was supporting when the payment was made (Section 12.3); in each case minus: (i) applicable 
+              ad-serving and app-store fees (e.g., AdsWizz, Apple or Google fees); (ii) payment processing and 
+              billing fees (e.g., Stripe fees); (iii) applicable taxes and government charges; and (iv) refunds, 
+              chargebacks, and bad debt. A part owed to an artist who does not meet the requirements of Section 
+              12.3 when the month is closed is retained by Unis. Display and banner advertising and local 
+              sponsorships shown on Unis are not Net Streaming Revenue; Unis shares them with the community through 
+              the Community Share (Section 12). No deductions will be made for Unis&rsquo;s general operating 
+              expenses, employee costs, or overhead. Unis Plus terms are in Section 17. Audio advertising is not 
+              yet offered; this Section applies to it from the date Unis launches it.
             </p>
 
             <h3>11.2 Payment Schedule &amp; Thresholds</h3>
@@ -420,8 +429,10 @@ const TermsOfService = () => {
               the month, which happens after Unis has received that month&rsquo;s revenue and in any case 
               within 45 days of the end of the month. You may request a payout at any time once your available 
               balance is at least $50.00 USD (the minimum payout threshold); a balance below this threshold rolls 
-              over to the following month. Unis reserves the right to adjust the minimum threshold with 30 
-              days&rsquo; written notice.
+              over to the following month. Money in your connected Stripe account&mdash;from track sales, direct 
+              support, and payouts you request&mdash;is paid to your bank by Stripe once a month, on or about the 
+              1st. Unis pays Stripe&rsquo;s payout fees. Unis reserves the right to adjust the minimum threshold or 
+              the payout schedule with 30 days&rsquo; written notice.
             </p>
 
             <h3>11.3 Payment Method</h3>
@@ -433,9 +444,14 @@ const TermsOfService = () => {
 
             <h3>11.4 Tax Obligations</h3>
             <p>
-              You are solely responsible for all taxes associated with your earnings. Unis will issue an IRS 
-              Form 1099 to U.S. recipients when federal law requires it (for payments made in 2026, when you are 
-              paid $2,000 or more in the calendar year). You may be required 
+              You are solely responsible for all taxes associated with your earnings. Unis files IRS Form 1099 
+              information returns for U.S. recipients through Stripe when federal law requires it. Under the 
+              thresholds in effect for payments made in 2026: Community Share payouts (Section 12) are generally 
+              reported on Form 1099-MISC once they total $2,000 or more in a calendar year; track sales and direct 
+              support payments (Section 11.7) are reported on Form 1099-K once they exceed $20,000 and 200 payments 
+              in a calendar year. Some states require reporting at lower amounts. Stripe collects your taxpayer 
+              information (such as your SSN or EIN) during payout setup and may contact you to confirm it and to 
+              deliver your forms electronically; forms for a year are delivered by the IRS deadline early the next year. You may be required 
               to submit a W-9 (or W-8BEN for non-U.S. persons, if applicable) before payments can be processed. 
               Failure to provide required tax documentation may result in payment withholding as required by law.
             </p>
@@ -460,10 +476,13 @@ const TermsOfService = () => {
             <h3>11.7 Digital Track Purchases</h3>
             <p>
               Artists may offer individual tracks for sale as digital downloads at a price they set,
-              subject to a minimum price of $1.99 USD. Track purchases are processed via Stripe
-              and are subject to a platform fee of 10% of the sale price. The remaining 90%, less
-              Stripe processing fees, is deposited directly into the artist&rsquo;s connected Stripe
-              account, typically within 2 business days. Track sale revenue is separate from Community
+              subject to a minimum price of $0.94 USD. Track purchases and direct support payments
+              are processed via Stripe and are subject to a platform fee of ten percent (10%) of the
+              amount paid or, if higher, Unis&rsquo;s card-processing cost for that payment plus
+              $0.01. Unis pays the card-processing cost out of its fee; the artist receives the
+              rest, credited to the artist&rsquo;s connected Stripe account when the purchase is made and
+              paid to the artist&rsquo;s bank with the monthly payout (Section 11.2). Buyers pay the listed
+              price with no added fees. Track sale revenue is separate from Community
               Share earnings and is not subject to the $50.00 minimum payout threshold described in
               Section 11.2.
             </p>
@@ -496,10 +515,13 @@ const TermsOfService = () => {
             <h3>12.1 How It Works</h3>
             <p>
               After the end of each calendar month, once Unis has received that month&rsquo;s revenue, Unis adds 
-              up the revenue it actually received for that month (advertising revenue, other revenue such as 
-              sponsorships or subscriptions, and Unis&rsquo;s platform fees on track sales and artist support) and 
-              divides it among listeners in proportion to their counted listening during the month (each 
-              listener&rsquo;s &ldquo;share&rdquo;). Of each listener&rsquo;s share: fifteen percent (15%) goes to 
+              up the revenue it actually received and kept for that month: display advertising revenue; other 
+              revenue such as sponsorships; Unis&rsquo;s part of audio advertising and Unis Plus revenue after the 
+              artist shares in Section 11.1; and Unis&rsquo;s platform fees on track sales and direct support after 
+              card-processing costs. Money paid to an artist for their own track sales, support, or Net Streaming 
+              Revenue is never part of the Community Share. Unis divides the total among listeners in proportion to 
+              their counted listening during the month: each listener&rsquo;s &ldquo;share&rdquo; equals the total 
+              multiplied by that listener&rsquo;s counted plays and divided by all counted plays that month. Of each listener&rsquo;s share: fifteen percent (15%) goes to 
               the artist the listener was supporting when each counted play was made (Section 12.3); ten percent 
               (10%), five percent (5%) and two percent (2%) go to the listener&rsquo;s Level 1, Level 2 and Level 3 
               referrers (Section 13); and Unis retains the remainder. A listener does not receive any part of 
@@ -717,6 +739,112 @@ const TermsOfService = () => {
             <p>
               <strong>Email:</strong> <a href="mailto:support@unis.com">support@unis.com</a><br />
               <strong>Address:</strong> EasyCode LLC, 53 Lincoln Avenue, Brooklyn, NY 11208
+            </p>
+          </section>
+
+          {/* ═══════════════════════════════════════════ */}
+          {/* SECTION 17: UNIS PLUS                      */}
+          {/* ═══════════════════════════════════════════ */}
+          <section className="terms-section" id="unis-plus">
+            <h2>17. Unis Plus</h2>
+
+            <h3>17.1 The Plan</h3>
+            <p>
+              Unis Plus is an optional paid subscription that removes advertising, including local sponsorships, 
+              from the Services for the subscribed account on every device where it is signed in. The price is 
+              shown before you subscribe (currently $4.99 USD per month, plus any applicable tax). Payments are 
+              processed by Stripe; Unis does not receive or store your card details.
+            </p>
+
+            <h3>17.2 Automatic Renewal</h3>
+            <p>
+              Unis Plus renews automatically every month, and the payment method on file is charged the 
+              then-current price at the start of each monthly period, until you cancel. If the price changes, we 
+              will tell you at least 30 days before the new price applies to you, and you can cancel before then.
+            </p>
+
+            <h3>17.3 Cancellation &amp; Refunds</h3>
+            <p>
+              You can cancel at any time from the Unis Plus page (&ldquo;Manage plan&rdquo;). Cancellation stops 
+              the next renewal; Unis Plus stays active until the end of the period you have already paid for. 
+              Payments are not refunded and no credit is given for partial periods, except where required by law 
+              or where Unis decides to make a refund. Deleting your Unis account cancels your subscription; no 
+              further payments are taken.
+            </p>
+
+            <h3>17.4 Failed Payments</h3>
+            <p>
+              If a renewal payment fails, our payment processor will retry it over several days and Unis Plus 
+              stays active while it does. If the payment cannot be collected, your subscription ends and ads 
+              return. You can subscribe again at any time.
+            </p>
+
+            <h3>17.5 Where Your Fee Goes</h3>
+            <p>
+              Each month, 60% of your fee after payment processing and billing fees goes to the artists whose songs 
+              you played that month, in proportion to your counted plays, or to your supported artist if you played 
+              no eligible songs (Section 11.1). Unis&rsquo;s remaining part is added to that month&rsquo;s 
+              Community Share (Section 12.1). These amounts are credited when the month is closed. Subscribing does 
+              not buy any song, is not a donation, and does not change your own participation in the Community 
+              Share or the Referral Program. A refunded payment is excluded from these amounts; if it was already 
+              credited, Unis may correct the affected balances (Section 12.4).
+            </p>
+
+            <h3>17.6 App Stores</h3>
+            <p>
+              Unis Plus is sold on the Unis website. If Unis later offers it as an in-app purchase, that purchase 
+              is billed by the app store under its own payment and refund terms (Section 7), and the app store&rsquo;s 
+              fee is deducted before the shares in Section 17.5.
+            </p>
+          </section>
+
+          {/* ═══════════════════════════════════════════ */}
+          {/* SECTION 18: LOCAL SPONSORSHIPS             */}
+          {/* ═══════════════════════════════════════════ */}
+          <section className="terms-section" id="local-sponsorships">
+            <h2>18. Local Sponsorships</h2>
+
+            <h3>18.1 Buying a Sponsorship</h3>
+            <p>
+              Businesses (&ldquo;Sponsors&rdquo;) may buy a placement in Unis&rsquo;s advertising spaces for one or 
+              more weeks in a chosen area through the Sponsor page. The price is shown before payment. Payment is 
+              a one-time card payment processed by Stripe; it is not a subscription. A Sponsor does not need a Unis 
+              account. The person booking confirms they are authorized to act for the business.
+            </p>
+
+            <h3>18.2 Review &amp; Refunds</h3>
+            <p>
+              Every sponsorship is reviewed before it runs, and Unis may decline any sponsorship. If Unis declines 
+              a sponsorship before it starts, the full amount is refunded to the original payment method. Once a 
+              sponsorship has started it is not refundable, except that if Unis stops it for a reason other than a 
+              breach of this Section, Unis refunds the weeks that did not run.
+            </p>
+
+            <h3>18.3 Content Rules</h3>
+            <p>
+              Sponsorship content (business name, logo, text, and link) must be accurate, lawful, and about the 
+              Sponsor&rsquo;s own business, and the link must lead to the Sponsor&rsquo;s own website or page. 
+              Unis does not accept sponsorships for alcohol, tobacco, vaping or cannabis products, gambling, 
+              weapons, adult content, political or issue campaigns, payday or similar high-interest lending, or 
+              anything illegal. The Sponsor confirms it has the rights to everything it submits and grants Unis a 
+              non-exclusive, royalty-free license to display it in the Services for the booked weeks and to keep 
+              records of it.
+            </p>
+
+            <h3>18.4 Placement &amp; Delivery</h3>
+            <p>
+              Sponsorships are labeled &ldquo;Sponsored &middot; Local&rdquo; and shown to people using Unis in 
+              the chosen area, rotating with a limited number of other sponsors in that area each week. Members 
+              on Unis Plus do not see them. Unis does not guarantee any number of views or taps; the counts Unis 
+              provides are from its own records.
+            </p>
+
+            <h3>18.5 Where the Money Goes</h3>
+            <p>
+              Sponsorship payments are Unis revenue and are included in the Community Share as other revenue for 
+              the month they are paid (Section 12.1). No one is paid for seeing or tapping a sponsorship. A 
+              referral code on a sponsor QR code only records who introduced the Sponsor; it does not change the 
+              price.
             </p>
           </section>
 

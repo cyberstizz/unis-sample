@@ -21,7 +21,7 @@
 //   • ISRC is uppercased + alphanumeric-stripped, max 15 chars
 //   • Explicit toggle (only shown for songs)
 //   • Download policy: free / paid / unavailable
-//   • Paid download: minimum $1.99 validation
+//   • Paid download: minimum $0.94 validation
 //   • Confirmation step shows submitted values
 //   • Submit POSTs to /v1/media/song or /v1/media/video with FormData
 //   • Submit success (non-explicit): calls onUploadSuccess + onClose
@@ -162,7 +162,7 @@ async function fillStep2({
     await user.click(screen.getByRole('button', { name: labelMap[downloadPolicy] }));
   }
   if (downloadPrice) {
-    const priceInput = screen.getByPlaceholderText('1.99');
+    const priceInput = screen.getByPlaceholderText('0.94');
     await user.type(priceInput, downloadPrice);
   }
   if (file) {
@@ -391,9 +391,9 @@ describe('UploadWizard — download policy', () => {
     renderWizard();
     const user = userEvent.setup();
     await advanceToStep2(user);
-    expect(screen.queryByPlaceholderText('1.99')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('0.94')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /paid download/i }));
-    expect(screen.getByPlaceholderText('1.99')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('0.94')).toBeInTheDocument();
   });
 
   it('switching from Paid back to Free hides the price input', async () => {
@@ -402,7 +402,7 @@ describe('UploadWizard — download policy', () => {
     await advanceToStep2(user);
     await user.click(screen.getByRole('button', { name: /paid download/i }));
     await user.click(screen.getByRole('button', { name: /free download/i }));
-    expect(screen.queryByPlaceholderText('1.99')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('0.94')).not.toBeInTheDocument();
   });
 
   it('shows "free" hint copy when Free is selected', async () => {
@@ -412,12 +412,12 @@ describe('UploadWizard — download policy', () => {
     expect(screen.getByText(/can download this track for free/i)).toBeInTheDocument();
   });
 
-  it('shows "minimum $1.99" hint when Paid is selected', async () => {
+  it('shows "minimum $0.94" hint when Paid is selected', async () => {
     renderWizard();
     const user = userEvent.setup();
     await advanceToStep2(user);
     await user.click(screen.getByRole('button', { name: /paid download/i }));
-    expect(screen.getByText(/minimum \$1\.99/i)).toBeInTheDocument();
+    expect(screen.getByText(/minimum \$0\.94/i)).toBeInTheDocument();
   });
 
   it('shows "stream but not download" hint when Unavailable is selected', async () => {
@@ -633,18 +633,18 @@ describe('UploadWizard — submit validation', () => {
     expect(await screen.findByText(/all fields required/i)).toBeInTheDocument();
   });
 
-  it('shows "Minimum download price is $1.99" when paid + price below 1.99', async () => {
+  it('shows "Minimum download price is $0.94" when paid + price below 0.94', async () => {
     renderWizard();
     const user = userEvent.setup();
     await fillStep2({
       user,
       title: 'Cheap',
       downloadPolicy: 'paid',
-      downloadPrice: '0.99',
+      downloadPrice: '0.90',
     });
     await user.click(screen.getByRole('button', { name: /^next$/i }));
     await user.click(screen.getByRole('button', { name: /upload now/i }));
-    expect(await screen.findByText(/minimum download price is \$1\.99/i)).toBeInTheDocument();
+    expect(await screen.findByText(/minimum download price is \$0\.94/i)).toBeInTheDocument();
   });
 
   it('shows price error when paid + no price set', async () => {
@@ -657,7 +657,7 @@ describe('UploadWizard — submit validation', () => {
     });
     await user.click(screen.getByRole('button', { name: /^next$/i }));
     await user.click(screen.getByRole('button', { name: /upload now/i }));
-    expect(await screen.findByText(/minimum download price is \$1\.99/i)).toBeInTheDocument();
+    expect(await screen.findByText(/minimum download price is \$0\.94/i)).toBeInTheDocument();
   });
 });
 
@@ -761,7 +761,7 @@ describe('UploadWizard — submit success', () => {
       user,
       title: 'Premium',
       downloadPolicy: 'paid',
-      downloadPrice: '299',  // parseInt('299') = 299 (cents)
+      downloadPrice: '2.99',  // typed in dollars, sent in cents
     });
     await user.click(screen.getByRole('button', { name: /^next$/i }));
     await user.click(screen.getByRole('button', { name: /upload now/i }));

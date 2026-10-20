@@ -4,6 +4,7 @@ import { X, Upload, Music, Video, FileText, CheckCircle } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import SoundDiscoveryFields from './SoundDiscoveryFields';
+import { MIN_SONG_PRICE_CENTS, dollarsToCents, formatCents, priceHint } from './utils/platformFee';
 import {
   EMPTY_DISCOVERY, isDiscoveryComplete, discoveryProblem, toDiscoveryPayload,
   describeDiscovery, useTaxonomy,
@@ -148,8 +149,8 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
       setLoading(false);
       return;
     }
-    if (downloadPolicy === 'paid' && (!downloadPrice || parseFloat(downloadPrice) < 1.99)) {
-      setError('Minimum download price is $1.99');
+    if (downloadPolicy === 'paid' && !(dollarsToCents(downloadPrice) >= MIN_SONG_PRICE_CENTS)) {
+      setError(`Minimum download price is ${formatCents(MIN_SONG_PRICE_CENTS)}`);
       setLoading(false);
       return;
     }
@@ -167,7 +168,8 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
             explicit,
             isrc: isrc || null,
             downloadPolicy,
-            downloadPrice: downloadPolicy === 'paid' ? parseInt(downloadPrice) : null,
+            // In cents, like everywhere else (parseInt('1.99') used to send 1).
+            downloadPrice: downloadPolicy === 'paid' ? dollarsToCents(downloadPrice) : null,
             ...toDiscoveryPayload(discovery),
           }
         : baseMetadata;
@@ -395,9 +397,9 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
               <span>$</span>
               <input
                 type="number"
-                min="1.99"
+                min={(MIN_SONG_PRICE_CENTS / 100).toFixed(2)}
                 step="0.01"
-                placeholder="1.99"
+                placeholder={(MIN_SONG_PRICE_CENTS / 100).toFixed(2)}
                 value={downloadPrice}
                 onChange={(e) => setDownloadPrice(e.target.value)}
               />
@@ -405,8 +407,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
           )}
           <span className="uw__hint">
             {downloadPolicy === 'free' && 'Listeners can download this track for free.'}
-            {downloadPolicy === 'paid' &&
-              'Set your price (min $1.99). You receive 90% — paid directly to your Stripe account.'}
+            {downloadPolicy === 'paid' && priceHint(downloadPrice)}
             {downloadPolicy === 'unavailable' &&
               'Listeners can stream but not download this track.'}
           </span>
