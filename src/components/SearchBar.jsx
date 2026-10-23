@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { buildUrl } from "../utils/buildUrl";
+import { SearchIcon } from "../icons/UnisIcons";
 import "./SearchBar.scss";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
@@ -225,10 +226,7 @@ const SearchBar = ({
   return (
     <div className={`usb-container ${focused ? "usb-container--focused" : ""}`} ref={dropdownRef}>
       <div className="usb-input-wrap">
-        <svg className="usb-magnifier" width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3" />
-          <line x1="11.2" y1="11.2" x2="14.5" y2="14.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-        </svg>
+        <SearchIcon className="usb-magnifier" size={16} active={focused} />
         <input
           ref={inputRef}
           type="text"

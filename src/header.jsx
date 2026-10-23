@@ -12,7 +12,7 @@ import { createLogoMotionState, stepLogoMotion, logoStyle } from './utils/logoMo
 import {
   GESTURE_CONFIG, playLogoGesture, isGestureRunning, createPlaybackGestureTracker,
 } from './utils/logoGestures';
-import { DollarSign, House, Music, MapPin, Search, Menu, LogIn } from 'lucide-react';
+import { FindIcon, VoteIcon, AwardsIcon, EarningsIcon, MenuIcon, SearchIcon, SignInIcon } from './icons/UnisIcons';
 import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
 import logored from './assets/logo-red.png';
@@ -330,25 +330,18 @@ const Header = () => {
     return "U";
   };
 
-  const renderIcon = (type) => {
+  // Unis Glow icons — outline when idle, gradient-filled when the page is active.
+  const renderIcon = (type, isActive) => {
+    const iconProps = { className: "nav-icon", size: 15, active: isActive };
     switch (type) {
       case "vote":
-        return (
-          <svg className="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 1.2L8.6 4.9L12.6 5.3L9.5 8L10.4 12L7 10L3.6 12L4.5 8L1.4 5.3L5.4 4.9L7 1.2Z" fill="currentColor" />
-          </svg>
-        );
+        return <VoteIcon {...iconProps} />;
       case "awards":
-        return (
-          <svg className="nav-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="7" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.2" />
-            <path d="M5 10L4 13.5L7 12L10 13.5L9 10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        );
+        return <AwardsIcon {...iconProps} />;
       case "find":
-        return <MapPin height={15} />;
+        return <FindIcon {...iconProps} />;
       case "earnings":
-        return <DollarSign height={15} />;
+        return <EarningsIcon {...iconProps} />;
       default:
         return null;
     }
@@ -370,7 +363,7 @@ const Header = () => {
             onClick={() => window.dispatchEvent(new CustomEvent('unis:toggle-sidebar'))}
             aria-label="Toggle navigation menu"
           >
-            <Menu size={18} strokeWidth={1.75} />
+            <MenuIcon size={18} />
           </button>}
 
           <button
@@ -408,7 +401,7 @@ const Header = () => {
             onClick={() => setMobileSearchOpen(true)}
             aria-label="Search"
           >
-            <Search size={18} />
+            <SearchIcon size={18} />
           </button>
 
           {/* Fullscreen mobile search overlay */}
@@ -440,7 +433,7 @@ const Header = () => {
                 className={`nav-item ${currentPath === item.path ? "active" : ""}`}
                 onClick={item.handler}
               >
-                {renderIcon(item.icon)}
+                {renderIcon(item.icon, currentPath === item.path)}
                 <span>{item.label}</span>
               </button>
             ))}
@@ -496,7 +489,7 @@ const Header = () => {
               onClick={() => navigate('/login')}
               aria-label="Sign in to Unis"
             >
-              <LogIn size={14} strokeWidth={2} />
+              <SignInIcon size={14} tone="on" />
               <span className="header-signin-btn__label">Sign In</span>
             </button>
           )}
