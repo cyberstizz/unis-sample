@@ -272,22 +272,16 @@
 ---
 
 ### `ArtistDashboard.jsx`
-**Role:** Full management interface for artist-role users.
-
-**Capabilities:** Upload/edit/delete songs, view analytics, edit profile, manage featured song, view vote history and awards, download ownership contract (PDF).
-
-**Init:** 6 parallel API calls on mount (all `useCache: false`): profile, songs, supporter count, follower count, vote history, default song, awards.
+**Role:** Full management interface for artist-role users: six tabs (Home, Music, Fans, Races, Earnings, Profile) plus Settings, with the open tab in the URL hash (`/artistDashboard#fans`). Home (`ArtistHomeTab.jsx`) leads with a 7-step setup card (`utils/artistSetupSteps.js`), this week vs last week, where you stand, featured song, share balance and supporters. Full detail: `docs/FRONTEND_ARCHITECTURE.md`, "ArtistDashboard.jsx".
 
 **Key Logic:**
 
 | Function | Logic |
 |----------|-------|
 | `downloadOwnershipContract` | Uses `jsPDF` to generate a legal PDF client-side with artist name, date, and "UNIS" watermark |
-| `handleSocialMediaUpdate` | PUT `/v1/users/profile/{id}` on `onBlur` — triggered when social link input loses focus |
+| `handleSaveLinks` | One PUT `/v1/users/profile/{id}` with all five links; bare links get `https://` |
 | `loadMoreAwards` | Offset pagination — appends 10 items per page to `awards` array |
 | Delete song validation | Blocks deletion if it's the only song or the current featured song |
-
-**Child Wizards:** `LyricsWizard`, `UploadWizard`, `EditProfileWizard`, `EditSongWizard`, `DeleteAccountWizard`, `ChangeDefaultSongWizard`, `DeleteSongModal`
 
 ---
 
@@ -659,7 +653,7 @@ localStorage.getItem('token') exists? → render <Outlet /> (child route)
 | GET | `/v1/users/profile/{id}` | AuthContext, Feed, ArtistDashboard |
 | PUT | `/v1/users/profile/{id}/bio` | EditProfileWizard |
 | PATCH | `/v1/users/profile` | EditProfileWizard (photo) |
-| PUT | `/v1/users/profile/{id}` | ArtistDashboard (social links) |
+| PUT | `/v1/users/profile/{id}` | ArtistDashboard (all links in one save) |
 | GET | `/v1/users/artists/active` | CreateAccountWizard |
 | GET | `/v1/users/{id}/default-song` | ArtistPage, VoteAwards, JurisdictionPage |
 | PATCH | `/v1/users/default-song` | ChangeDefaultSongWizard |
@@ -690,7 +684,7 @@ localStorage.getItem('token') exists? → render <Outlet /> (child route)
 |--------|----------|---------|
 | POST | `/v1/vote/submit` | VotingWizard |
 | GET | `/v1/vote/nominees` | VoteAwards |
-| GET | `/v1/vote/history` | ArtistDashboard |
+| GET | `/v1/vote/history` | VoteHistorySection (dashboard Settings) |
 | GET | `/v1/awards/leaderboards` | Feed |
 | GET | `/v1/awards/past` | MilestonesPage |
 | GET | `/v1/awards/artist/{id}` | ArtistDashboard |

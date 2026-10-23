@@ -374,22 +374,38 @@ On `unis:logout`: clears all playlist, queue, and media state.
 
 ### `ArtistDashboard.jsx`
 
-**Role:** Full management interface for artist-role users.
+**Role:** Full management interface for artist-role users. Since the Oct 2026 redesign it is six tabs plus Settings instead of one long scroll.
 
-**Capabilities:** Upload/edit/delete songs, view analytics, edit profile, manage featured song, view vote history and awards, download ownership contract (PDF), color theme selection, referral code display, change password.
+**Tabs** (the open tab lives in the URL hash, e.g. `/artistDashboard#earnings`; Home has no hash):
 
-**Init:** Parallel API calls on mount (all uncached): profile, songs, supporter count, follower count, vote history, default song, awards.
+| Tab | What's on it | Components |
+|-----|--------------|------------|
+| Home | Setup card (7 steps, hidden when done) · this week vs last week · where you stand · featured song · share balance · supporters | `ArtistHomeTab.jsx` (+ `utils/artistSetupSteps.js`) |
+| Music | Songs (stats, sales, edit, lyrics, delete) · videos | inline + `SongStatsModal`, `SongSalesModal` |
+| Fans | Fan funnel · supporters · demographics | `fanbaseFunnle`, `SupporterSection`, `dempgraphicsSection` |
+| Races | Score / votes received / wins / level · rank in every place · trophy case | `TerritoryRankSection` + inline awards |
+| Earnings | Phone-verification banner · revenue · refer & earn | `revenueSection`, `ReferralCodeCard` in `VerificationGate` |
+| Profile | Your page (edit profile, featured song) · links (one Save) · photos · agreement PDF | `EditProfileWizard`, `artistPhotosManager` |
+| Settings (gear) | Color theme · who you support · your votes · change password / delete account | `ThemePicker`, `SupportedArtistPicker`, `VoteHistorySection` |
+
+**Init:** parallel uncached calls on mount: profile summary, songs, default song, supporter/follower/plays/votes counts, earnings summary, Stripe status and payouts, artist awards, song awards. Each tab's child sections fetch their own data when the tab opens. Home adds three reads of its own (fanbase `period=week`, territory rank, supporters), each failing quietly to its own card. Music adds GET `/v1/media/videos/artist/{id}`.
 
 **Key Logic:**
 
 | Function | Logic |
 |----------|-------|
-| `downloadOwnershipContract` | Uses `jsPDF` to generate a legal PDF client-side |
-| `handleSocialMediaUpdate` | PUT on `onBlur` when social link input loses focus |
-| `loadMoreAwards` | Offset pagination — appends items per page |
-| Delete song validation | Blocks deletion if it's the only song or the current featured song |
+| `goToTab` | `navigate({ hash })`, so Back returns to the previous tab; tab bar is ARIA tabs with Arrow/Home/End keys |
+| `buildSetupSteps` | Pure function (`utils/artistSetupSteps.js`): profile photo+bio, featured song, 2+ songs, a social link, phone verified, Stripe ready (artists only), `referralCount` ≥ 1 |
+| `handleSetupAction` | Each open step starts its flow: edit profile, featured-song wizard, upload, Profile tab, `PhoneVerificationModal`, Earnings tab, copy code |
+| `handleSaveLinks` | One PUT `/v1/users/profile/{id}` with all five fields; adds `https://` to bare links (backend requires http/https); server errors show in a toast |
+| `showToast` | Inline toast (`.ad-toast`, `role="status"`) replaces every `alert()` |
+| `downloadOwnershipContract` | Uses `jsPDF` to generate the agreement PDF client-side |
+| `loadMoreAwards` / `loadMoreSongAwards` | Offset pagination, 10 per page |
+| Delete song validation | Blocks deleting the only song or the featured song (with a toast) |
 
-**Child Components:** `LyricsWizard`, `UploadWizard`, `EditProfileWizard`, `EditSongWizard`, `DeleteAccountWizard`, `ChangeDefaultSongWizard`, `DeleteSongModal`, `ThemePicker`, `ReferralCodeCard`, `ChangePasswordWizard`
+**Removed in the redesign:** the every-visit "Thank You!" pop-up, the 14-button jump grid (its "Fanbase" button pointed at a missing id), collapsible sections, the unused vote-history fetch/modal and the dead inline lyrics modal.
+
+**Child Components:** `ArtistHomeTab`, `LyricsWizard`, `UploadWizard`, `EditProfileWizard`, `EditSongWizard`, `DeleteAccountWizard`, `ChangeDefaultSongWizard`, `DeleteSongModal`, `PhoneVerificationModal`, `ThemePicker`, `ReferralCodeCard`, `ChangePasswordWizard`, `SupportedArtistPicker`, `SongStatsModal`, `SongSalesModal`
 
 ---
 
@@ -1123,7 +1139,7 @@ if (!user) { triggerGate('vote'); return; }
 | Method | Endpoint | Used By |
 |--------|----------|---------|
 | GET | `/v1/users/profile/{id}` | AuthContext, Feed, ArtistDashboard, Profile |
-| PUT | `/v1/users/profile/{id}` | ArtistDashboard (social links, theme) |
+| PUT | `/v1/users/profile/{id}` | ArtistDashboard (all links in one save), theme |
 | PUT | `/v1/users/profile/{id}/bio` | EditProfileWizard |
 | PATCH | `/v1/users/profile` | EditProfileWizard (photo) |
 | PUT | `/v1/users/change-password` | ChangePasswordWizard |
@@ -1175,7 +1191,7 @@ if (!user) { triggerGate('vote'); return; }
 | POST | `/v1/vote/submit` | VotingWizard |
 | GET | `/v1/vote/nominees` | VoteAwards |
 | GET | `/v1/vote/leaderboards` | LeaderboardsPage, WinnersNotification, LastWonNotification |
-| GET | `/v1/vote/history` | ArtistDashboard, Profile |
+| GET | `/v1/vote/history` | VoteHistorySection (dashboard Settings), Profile |
 | GET | `/v1/awards/leaderboards` | Feed |
 | GET | `/v1/awards/past` | MilestonesPage, LastWonNotification |
 | GET | `/v1/awards/artist/{id}` | ArtistDashboard |
@@ -1275,8 +1291,6 @@ path parameter, so a client cannot request another user's financials.
 | `Hip-Hip` typo | `idMappings.js` | Uppercase typo key maps to rap UUID. Should clean up. |
 | Unicode reversal | `DeleteAccountWizard` | Username reversal breaks on emoji. Restrict usernames to alphanumeric on sign-up. |
 | Logout inconsistency | `AuthContext` vs `DeleteAccountWizard` | Auth uses hard redirect (`window.location.href`), Delete may use client routing. Standardize. |
-| Welcome popup | `ArtistDashboard` | `showWelcomePopup` may reset to `true` on every mount. Persist "seen" state. |
-| Duplicate lyrics UI | `ArtistDashboard` | May have both `LyricsWizard` import AND a raw JSX lyrics modal. Verify. |
 | Dashboard API load | `ArtistDashboard` | 6+ requests on load. Consider a single `/dashboard-summary` endpoint. |
 | Legacy `ResetPassword.jsx` | `/src/` root | Duplicate of `/src/pages/ResetPassword.jsx`. Verify which is active and delete the other. |
 | DMCA backend | `ReportInfringement.jsx` | Frontend complete but submission only logs to console. Needs backend POST endpoint. |

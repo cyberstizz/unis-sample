@@ -17,12 +17,14 @@ const formatSince = (value) => {
 };
 
 // ── Broadcast composer ───────────────────────────────────────
+// ★ dashboard redesign: exported so the dashboard's Home tab can open the same
+//   composer from its supporters card (one composer, one send path).
 // ★ FIX (containment): .sup carries `animation: artist-rise ... both`, whose
 //   final keyframe leaves a resolved `transform` on the section. A transformed
 //   ancestor becomes the containing block for `position: fixed` descendants —
 //   so this overlay was never viewport-fixed, it was a box trapped inside the
 //   supporters card. Portaled to <body> so it can't happen.
-const BroadcastComposer = ({ supporterCount, onClose }) => {
+export const BroadcastComposer = ({ supporterCount, onClose }) => {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
