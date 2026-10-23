@@ -106,13 +106,17 @@ $transition-ambient: 1.2s ease;
   min-height: calc(100vh - 56px);
 }
 
-.sp-main {
+.sp-song-main {
   min-width: 0;
   overflow: hidden;
 }
+// The song page's main column and hero are .sp-song-main / .sp-song-hero, not
+// .sp-main / .sp-hero: the sponsor booking page (sponsorPage.scss) uses those
+// two names, and all stylesheets share one global scope, so its centered,
+// fixed-width rules were landing here and pushing the page wider than phones.
 
 // ── Hero ──
-.sp-hero {
+.sp-song-hero {
   position: relative;
   padding: 48px 40px 0;
   overflow: hidden;
@@ -712,7 +716,7 @@ $transition-ambient: 1.2s ease;
 }
 
 @media (max-width: 768px) {
-  .sp-hero { padding: 32px 20px 0; }
+  .sp-song-hero { padding: 32px 20px 0; }
   .sp-hero-content { flex-direction: column; align-items: center; text-align: center; }
   .sp-album-art { width: 200px; height: 200px; }
   .sp-hero-info { display: flex; flex-direction: column; align-items: center; }
@@ -730,7 +734,7 @@ $transition-ambient: 1.2s ease;
 }
 
 @media (max-width: 480px) {
-  .sp-hero { padding: 24px 16px 0; }
+  .sp-song-hero { padding: 24px 16px 0; }
   .sp-album-art { width: 160px; height: 160px; }
   .sp-title { font-size: 24px; letter-spacing: -0.5px; }
   .sp-primary-actions { padding: 16px; gap: 8px; }

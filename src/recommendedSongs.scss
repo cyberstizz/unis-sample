@@ -24,10 +24,9 @@
   overflow-x: auto;
   padding-bottom: 6px;
   scroll-snap-type: x proximity;
-  scrollbar-width: thin;
-
-  &::-webkit-scrollbar { height: 6px; }
-  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+  // Still scrolls (swipe, trackpad, shift + wheel); the bar itself is hidden.
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 }
 
 .rec__card {

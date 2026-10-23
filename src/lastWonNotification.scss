@@ -62,6 +62,38 @@ $accent-glow: var(--unis-primary-glow);
 }
 
 // ═══════════════════════════════════════
+//  ARTWORK BLEND (same idea as .va-card-ambient on the vote awards cards)
+// ═══════════════════════════════════════
+// The winner's artwork, blurred and saturated, fills the card behind
+// everything; the hero image dissolves into it, so the bottom half takes the
+// art's colors. Oversized so the blur has no hard edges.
+.lwn-art-bg {
+  position: absolute;
+  inset: -25%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(42px) saturate(180%);
+  opacity: 0.6;
+  z-index: 0;
+  pointer-events: none;
+}
+
+// Darkens toward the bottom so white text and buttons stay readable on
+// light artwork.
+.lwn-art-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 10, 12, 0) 0%,
+    rgba(10, 10, 12, 0.28) 45%,
+    rgba(10, 10, 12, 0.55) 100%
+  );
+}
+
+// ═══════════════════════════════════════
 //  AMBIENT GLOW
 // ═══════════════════════════════════════
 .lwn-ambient-glow {
@@ -149,6 +181,9 @@ $accent-glow: var(--unis-primary-glow);
   height: 100%;
   object-fit: cover;
   display: block;
+  // Dissolves into the blurred art below instead of ending at a dark edge.
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
 }
 
 .lwn-hero-placeholder {
@@ -169,8 +204,7 @@ $accent-glow: var(--unis-primary-glow);
   height: 70%;
   background: linear-gradient(
     to top,
-    #0a0a0c 0%,
-    rgba(10, 10, 12, 0.6) 40%,
+    rgba(10, 10, 12, 0.3) 0%,
     transparent 100%
   );
   pointer-events: none;

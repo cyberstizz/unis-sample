@@ -397,13 +397,31 @@ const LastWonNotification = () => {
       <div
         className="lwn-card"
         style={
-          ambientColor
+          // With artwork, the card keeps its solid base and the blurred art
+          // layer supplies the color (this see-through gradient would let the
+          // page show through where the hero image fades out).
+          ambientColor && !notification.image
             ? {
                 background: `linear-gradient(180deg, rgba(${ambientColor}, 0.15) 0%, rgba(${ambientColor}, 0.08) 30%, #0a0a0c 70%, #0a0a0c 100%)`,
               }
             : undefined
         }
       >
+        {/* The artwork itself, blurred, behind the whole card — the same blend
+            as the vote awards cards — so the lower half carries the art's
+            colors instead of flat black. A plain CSS background, so it works
+            even when the color sampling below can't read the image. */}
+        {notification.image && (
+          <>
+            <div
+              className="lwn-art-bg"
+              style={{ backgroundImage: `url("${notification.image}")` }}
+              aria-hidden="true"
+            />
+            <div className="lwn-art-scrim" aria-hidden="true" />
+          </>
+        )}
+
         {/* Ambient glow layers — inline styles so rgb interpolation works */}
         {ambientColor && (
           <>
@@ -456,7 +474,7 @@ const LastWonNotification = () => {
             style={
               ambientColor
                 ? {
-                    background: `linear-gradient(to top, rgba(10, 12, 24, 0.95) 0%, rgba(${ambientColor}, 0.2) 50%, transparent 100%)`,
+                    background: `linear-gradient(to top, rgba(${ambientColor}, 0.18) 0%, transparent 100%)`,
                   }
                 : undefined
             }

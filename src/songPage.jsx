@@ -382,10 +382,10 @@ const SongPage = () => {
         <div className="sp-grid">
 
           {/* ━━━ LEFT / MAIN COLUMN ━━━ */}
-          <div className="sp-main">
+          <div className="sp-song-main">
 
             {/* ── HERO ── */}
-            <div className="sp-hero" style={{ '--ambient-r': ambientRGB.r, '--ambient-g': ambientRGB.g, '--ambient-b': ambientRGB.b }}>
+            <div className="sp-song-hero" style={{ '--ambient-r': ambientRGB.r, '--ambient-g': ambientRGB.g, '--ambient-b': ambientRGB.b }}>
               <div className="sp-hero-ambient" />
               <div className="sp-hero-content">
                 <div className="sp-album-art">
