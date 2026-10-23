@@ -33,8 +33,8 @@ const PrivacyPolicy = () => {
             </p>
             <p>
               If you have questions, contact us at{' '}
-              <a href="mailto:privacy@unis.com">privacy@unis.com</a> or{' '}
-              <a href="mailto:support@unis.com">support@unis.com</a>.
+              <a href="mailto:privacy@unismusic.com">privacy@unismusic.com</a> or{' '}
+              <a href="mailto:support@unismusic.com">support@unismusic.com</a>.
             </p>
           </section>
 
@@ -243,7 +243,7 @@ const PrivacyPolicy = () => {
             <ul>
               <li>
                 <strong>Access:</strong> Request a copy of your data (
-                <a href="mailto:privacy@unis.com">privacy@unis.com</a>).
+                <a href="mailto:privacy@unismusic.com">privacy@unismusic.com</a>).
               </li>
               <li>
                 <strong>Delete:</strong> Right to be forgotten (removes profile/uploads; votes anonymized; earnings 
@@ -263,7 +263,7 @@ const PrivacyPolicy = () => {
             <p>
               We verify requests via email and respond within 30 days (up to 45 days for California-specific requests 
               where permitted). Appeals:{' '}
-              <a href="mailto:support@unis.com">support@unis.com</a>.
+              <a href="mailto:support@unismusic.com">support@unismusic.com</a>.
             </p>
           </section>
 
@@ -276,7 +276,7 @@ const PrivacyPolicy = () => {
               The Services are intended for users aged 13 and older, in compliance with COPPA. We do not knowingly 
               collect personal information from children under 13. If you believe a child under 13 has provided us 
               with personal information, please contact us at{' '}
-              <a href="mailto:support@unis.com">support@unis.com</a> and we will promptly delete it. Features 
+              <a href="mailto:support@unismusic.com">support@unismusic.com</a> and we will promptly delete it. Features 
               involving monetary earnings (revenue sharing, the Community Share, referral income) require users to 
               be at least 18 years old, or to have verifiable parental or guardian consent as described in our Terms 
               of Service.
@@ -307,7 +307,7 @@ const PrivacyPolicy = () => {
               JWT-based authentication with server-side validation, and encryption at rest for media files. Financial 
               data is processed and stored by Stripe, which maintains PCI DSS Level 1 compliance. No system is 100% 
               secure&mdash;report vulnerabilities to{' '}
-              <a href="mailto:support@unis.com">support@unis.com</a>.
+              <a href="mailto:support@unismusic.com">support@unismusic.com</a>.
             </p>
           </section>
 
@@ -329,9 +329,9 @@ const PrivacyPolicy = () => {
           <section className="policy-section">
             <h2>10. Contact Us</h2>
             <p>
-              <strong>Email:</strong> <a href="mailto:privacy@unis.com">privacy@unis.com</a><br />
+              <strong>Email:</strong> <a href="mailto:privacy@unismusic.com">privacy@unismusic.com</a><br />
               <strong>Address:</strong> EasyCode LLC, 53 Lincoln Avenue, Brooklyn, NY 11208<br />
-              <strong>Support:</strong> <a href="mailto:support@unis.com">support@unis.com</a>
+              <strong>Support:</strong> <a href="mailto:support@unismusic.com">support@unismusic.com</a>
             </p>
           </section>
 

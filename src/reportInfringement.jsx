@@ -68,7 +68,7 @@ const handleSubmit = async (e) => {
       setSubmitted(true);
     } catch (error) {
       console.error('DMCA submission error:', error);
-      alert('Failed to submit DMCA notice. Please try again or contact dmca@unis.com directly.');
+      alert('Failed to submit DMCA notice. Please try again or contact dmca@unismusic.com directly.');
     }
   };
 
@@ -261,7 +261,7 @@ const handleSubmit = async (e) => {
                   value={formData.infringingUrl}
                   onChange={handleChange}
                   required
-                  placeholder="https://unis.com/song/12345"
+                  placeholder="https://unismusic.com/song/12345"
                 />
                 <small>Right-click the infringing song/page and copy the URL</small>
               </div>
@@ -356,7 +356,7 @@ const handleSubmit = async (e) => {
                 Submit DMCA Notice
               </button>
               <p className="submission-note">
-                Your notice will be sent to <strong>dmca@unis.com</strong> and reviewed within 24-48 hours.
+                Your notice will be sent to <strong>dmca@unismusic.com</strong> and reviewed within 24-48 hours.
               </p>
             </div>
 
@@ -366,7 +366,7 @@ const handleSubmit = async (e) => {
             <h2>Counter-Notification</h2>
             <p>
               If your content was removed due to a DMCA notice and you believe it was removed in error, you may file 
-              a counter-notification. Contact <a href="mailto:dmca@unis.com">dmca@unis.com</a> for the counter-notice 
+              a counter-notification. Contact <a href="mailto:dmca@unismusic.com">dmca@unismusic.com</a> for the counter-notice 
               process.
             </p>
           </section>
@@ -374,7 +374,7 @@ const handleSubmit = async (e) => {
           <section className="contact-section">
             <h2>Alternative Contact Methods</h2>
             <p>
-              <strong>Email:</strong> <a href="mailto:dmca@unis.com">dmca@unis.com</a><br />
+              <strong>Email:</strong> <a href="mailto:dmca@unismusic.com">dmca@unismusic.com</a><br />
               <strong>Mail:</strong> Unis Inc., DMCA Agent, 123 Harlem Ave, New York, NY 10026<br />
               <strong>Phone:</strong> For urgent matters only
             </p>

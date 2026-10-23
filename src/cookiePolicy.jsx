@@ -174,7 +174,7 @@ const CookiePolicy = () => {
             <ol>
               <li>Open browser Developer Tools (F12 or right-click → Inspect)</li>
               <li>Navigate to Application/Storage tab</li>
-              <li>Select Local Storage → unis.com</li>
+              <li>Select Local Storage → unismusic.com</li>
               <li>Delete stored items or clear all</li>
             </ol>
 
@@ -232,8 +232,8 @@ const CookiePolicy = () => {
               Questions about our use of cookies or storage technologies? Contact us:
             </p>
             <p>
-              <strong>Email:</strong> <a href="mailto:privacy@unis.com">privacy@unis.com</a><br />
-              <strong>Support:</strong> <a href="mailto:support@unis.com">support@unis.com</a><br />
+              <strong>Email:</strong> <a href="mailto:privacy@unismusic.com">privacy@unismusic.com</a><br />
+              <strong>Support:</strong> <a href="mailto:support@unismusic.com">support@unismusic.com</a><br />
               <strong>Address:</strong> Unis Inc., 123 Harlem Ave, New York, NY 10026
             </p>
           </section>

@@ -27,6 +27,12 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
+  // Files from other sites (Google Fonts, Stripe, the CDN, the API, ads) are
+  // left to the browser. A fetch made in here would be checked against the
+  // security policy's connect-src list instead of the page's own font, script
+  // and image lists, and the enforced policy would block it.
+  if (url.origin !== self.location.origin) return;
+
   // Never touch API calls, media, or external services
   if (
     url.pathname.startsWith('/v1/') ||

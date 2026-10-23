@@ -202,7 +202,7 @@ const HelpPage = () => {
         <footer className="help-foot">
           <p>
             Still stuck? Reach us at{' '}
-            <a href="mailto:support@unis.com">support@unis.com</a> and we will
+            <a href="mailto:support@unismusic.com">support@unismusic.com</a> and we will
             get back to you.
           </p>
           <p className="help-foot__links">

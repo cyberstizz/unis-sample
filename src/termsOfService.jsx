@@ -20,7 +20,7 @@ const TermsOfService = () => {
           <section className="terms-intro">
             <p>
               Welcome to Unis! These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of the Unis 
-              website (unis.com), mobile application, and all related services (collectively, the &ldquo;Services&rdquo;), 
+              website (unismusic.com), mobile application, and all related services (collectively, the &ldquo;Services&rdquo;), 
               operated by EasyCode LLC, a New York limited liability company (&ldquo;Unis,&rdquo; &ldquo;we,&rdquo; 
               &ldquo;us,&rdquo; or &ldquo;our&rdquo;). By registering for an account, uploading content, or otherwise 
               using the Services, you agree to be bound by these Terms and our Privacy Policy. If you do not agree, 
@@ -32,7 +32,7 @@ const TermsOfService = () => {
               Please review them carefully.
             </p>
             <p>
-              Questions? Contact us at <a href="mailto:support@unis.com">support@unis.com</a>.
+              Questions? Contact us at <a href="mailto:support@unismusic.com">support@unismusic.com</a>.
             </p>
           </section>
 
@@ -286,7 +286,7 @@ const TermsOfService = () => {
               Charles Lamb, DMCA Agent<br />
               EasyCode LLC<br />
               53 Lincoln Avenue, Brooklyn, NY 11208<br />
-              Email: <a href="mailto:dmca@unis.com">dmca@unis.com</a>
+              Email: <a href="mailto:dmca@unismusic.com">dmca@unismusic.com</a>
             </p>
 
             <h3>8.2 Filing a DMCA Notice</h3>
@@ -737,7 +737,7 @@ const TermsOfService = () => {
 
             <h3>Contact</h3>
             <p>
-              <strong>Email:</strong> <a href="mailto:support@unis.com">support@unis.com</a><br />
+              <strong>Email:</strong> <a href="mailto:support@unismusic.com">support@unismusic.com</a><br />
               <strong>Address:</strong> EasyCode LLC, 53 Lincoln Avenue, Brooklyn, NY 11208
             </p>
           </section>

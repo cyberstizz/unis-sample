@@ -116,11 +116,11 @@ describe('CookiePolicy', () => {
 
   it('renders privacy and support email links with correct hrefs', () => {
     render(<MemoryRouter><CookiePolicy /></MemoryRouter>);
-    const privacyLinks = screen.getAllByRole('link', { name: /privacy@unis\.com/i });
-    privacyLinks.forEach(link => expect(link).toHaveAttribute('href', 'mailto:privacy@unis.com'));
+    const privacyLinks = screen.getAllByRole('link', { name: /privacy@unismusic\.com/i });
+    privacyLinks.forEach(link => expect(link).toHaveAttribute('href', 'mailto:privacy@unismusic.com'));
 
-    const supportLinks = screen.getAllByRole('link', { name: /support@unis\.com/i });
-    supportLinks.forEach(link => expect(link).toHaveAttribute('href', 'mailto:support@unis.com'));
+    const supportLinks = screen.getAllByRole('link', { name: /support@unismusic\.com/i });
+    supportLinks.forEach(link => expect(link).toHaveAttribute('href', 'mailto:support@unismusic.com'));
   });
 
   it('renders the footer copyright notice', () => {

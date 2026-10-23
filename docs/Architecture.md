@@ -963,7 +963,7 @@ These files have been reviewed and confirmed as deprecated prototypes. Safe to d
 3. Generates reference number: `DMCA-{Date.now().toString(36).toUpperCase()}`
 4. Shows success screen with confirmation
 
-**Backend Status:** Not yet implemented. Currently logs to console only. Needs a POST endpoint (e.g., `/v1/dmca/submit`) and email dispatch to `dmca@unis.com`.
+**Backend Status:** Not yet implemented. Currently logs to console only. Needs a POST endpoint (e.g., `/v1/dmca/submit`) and email dispatch to `dmca@unismusic.com`.
 
 **Status:** Frontend complete. Needs route `/report` confirmed in `App.jsx` and backend integration.
 

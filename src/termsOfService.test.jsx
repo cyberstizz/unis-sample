@@ -74,14 +74,14 @@ describe('TermsOfService', () => {
 
   it('renders support email link with correct href', () => {
     render(<MemoryRouter><TermsOfService /></MemoryRouter>);
-    const links = screen.getAllByRole('link', { name: /support@unis.com/i });
-    links.forEach(link => expect(link).toHaveAttribute('href', 'mailto:support@unis.com'));
+    const links = screen.getAllByRole('link', { name: /support@unismusic.com/i });
+    links.forEach(link => expect(link).toHaveAttribute('href', 'mailto:support@unismusic.com'));
   });
 
   it('renders dmca email link with correct href', () => {
     render(<MemoryRouter><TermsOfService /></MemoryRouter>);
-    const links = screen.getAllByRole('link', { name: /dmca@unis.com/i });
-    links.forEach(link => expect(link).toHaveAttribute('href', 'mailto:dmca@unis.com'));
+    const links = screen.getAllByRole('link', { name: /dmca@unismusic.com/i });
+    links.forEach(link => expect(link).toHaveAttribute('href', 'mailto:dmca@unismusic.com'));
   });
 
   it('renders the $50 minimum payout threshold', () => {

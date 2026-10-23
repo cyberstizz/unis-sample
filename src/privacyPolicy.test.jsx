@@ -46,14 +46,14 @@ describe('PrivacyPolicy', () => {
 
   it('renders privacy email link with correct href', () => {
     render(<MemoryRouter><PrivacyPolicy /></MemoryRouter>);
-    const links = screen.getAllByRole('link', { name: /privacy@unis.com/i });
-    links.forEach(link => expect(link).toHaveAttribute('href', 'mailto:privacy@unis.com'));
+    const links = screen.getAllByRole('link', { name: /privacy@unismusic.com/i });
+    links.forEach(link => expect(link).toHaveAttribute('href', 'mailto:privacy@unismusic.com'));
   });
 
   it('renders support email link with correct href', () => {
     render(<MemoryRouter><PrivacyPolicy /></MemoryRouter>);
-    const links = screen.getAllByRole('link', { name: /support@unis.com/i });
-    links.forEach(link => expect(link).toHaveAttribute('href', 'mailto:support@unis.com'));
+    const links = screen.getAllByRole('link', { name: /support@unismusic.com/i });
+    links.forEach(link => expect(link).toHaveAttribute('href', 'mailto:support@unismusic.com'));
   });
 
   it('discloses Stripe as the payment processor', () => {
