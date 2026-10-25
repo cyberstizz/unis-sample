@@ -1,4 +1,4 @@
-//
+// src/useMessagingSocket.js
 // Real-time channel for direct messages. Sends still go over REST
 // (POST /v1/messages); this hook opens ONE STOMP-over-SockJS connection,
 // authenticates with the JWT in the CONNECT frame (matching the backend's

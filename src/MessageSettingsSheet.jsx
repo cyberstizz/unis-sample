@@ -5,12 +5,16 @@
 //   • supporters skip Requests · activity status · read receipts · spam filter
 //   • blocked accounts, with Unblock
 // Each change saves on its own (PUT /v1/messages/settings) and rolls back if
-// the save fails.
+// the save fails. Rendered into #root so the player bar can't cover it, and
+// it slides away when closed.
 
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import useModalA11y from './hooks/useModalA11y';
+import useLingering from './hooks/useLingering';
+import { haptic } from './utils/dmFeedback';
 
 const PRIVACY = [
   { key: 'EVERYONE', label: 'Everyone', sub: 'People you don’t know land in Requests.' },
@@ -36,6 +40,7 @@ export default function MessageSettingsSheet({ open, onClose, onChanged }) {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null);
   const sheetRef = useRef(null);
+  const { mounted, leaving } = useLingering(open, 240);
 
   useModalA11y({ active: open, onClose, modalRef: sheetRef });
 
@@ -53,6 +58,7 @@ export default function MessageSettingsSheet({ open, onClose, onChanged }) {
   }, [open]);
 
   const save = async (patch) => {
+    haptic('tap');
     const before = settings;
     setSettings((s) => ({ ...s, ...patch }));
     setBusy(Object.keys(patch)[0]);
@@ -85,10 +91,14 @@ export default function MessageSettingsSheet({ open, onClose, onChanged }) {
     }
   };
 
-  if (!open) return null;
+  if (!mounted) return null;
 
-  return (
-    <div className="udm-sheet" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+  return createPortal(
+    <div
+      className={`udm-sheet${leaving ? ' is-leaving' : ''}`}
+      role="presentation"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="udm-sheet__panel udm-settings" role="dialog" aria-modal="true" aria-label="Message settings" ref={sheetRef} tabIndex={-1}>
         <div className="udm-sheet__grab" aria-hidden="true" />
         <div className="udm-settings__head">
@@ -98,7 +108,13 @@ export default function MessageSettingsSheet({ open, onClose, onChanged }) {
 
         <div className="udm-settings__body">
           {error && <p className="udm-settings__error" role="alert">{error}</p>}
-          {!settings && !error && <p className="udm-sheet__hint">Loading…</p>}
+          {!settings && !error && (
+            <div className="udm-settings__skeleton" aria-hidden="true">
+              <span className="udm-skel udm-skel--block" />
+              <span className="udm-skel udm-skel--block" />
+              <span className="udm-skel udm-skel--block" />
+            </div>
+          )}
 
           {settings && (
             <>
@@ -163,7 +179,7 @@ export default function MessageSettingsSheet({ open, onClose, onChanged }) {
                       disabled={busy != null}
                       onClick={() => unblock(b)}
                     >
-                      Unblock
+                      {busy === `unblock-${b.userId}` ? <span className="udm-spin" aria-hidden="true" /> : 'Unblock'}
                     </button>
                   </div>
                 )) : <p className="udm-settings__note">You haven&rsquo;t blocked anyone.</p>}
@@ -172,6 +188,7 @@ export default function MessageSettingsSheet({ open, onClose, onChanged }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.getElementById('root') || document.body,
   );
 }

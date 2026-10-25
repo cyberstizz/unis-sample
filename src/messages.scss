@@ -1,28 +1,81 @@
 // src/messages.scss
-// Direct messages — FOMO-inspired restyle (Oct 2026 mockup), still built on
-// the --unis-* token layer so it themes across blue → dianna automatically.
+// Direct messages — FOMO-inspired look, rebuilt for feel (Oct 2026 premium
+// pass). Still built on the --unis-* token layer, so it themes across all
+// seven themes automatically.
 //
 // The look, in rules:
 //   • true black canvas; surfaces separate by tone, not borders
 //   • one loud accent (the theme colour, lifted with color-mix so the dark
-//     themes still glow): New button, unread badges, your bubbles, send
+//     themes still glow): New, unread badges, your bubbles, Send
 //   • big title / small muted labels, tabular figures, fully round pills
-//   • floating glass for the search pill and the composer
+//   • floating glass for search, the composer, menus and the reaction bar
+//
+// The feel, in rules:
+//   • EVERY tappable thing answers the moment a finger lands (@mixin press):
+//     it sinks quickly, then springs back on release. Hover styles only apply
+//     on devices that really hover, so phones never get "stuck" hovers.
+//   • things that appear spring in; things that leave animate out
+//   • phones: an open thread is a full-screen stage that slides over the inbox
+//   • "reduce motion" turns the movement off
 //
 // Layout note: .udm fills a fixed height. Adjust the calc() offset to match
 // your header + player chrome if needed (same numbers as before).
 
 $money: #2fd29a;
+$danger: #ff7a7a;
 
+// ── Mixins ────────────────────────────────────────────────────
+@mixin hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { @content; }
+  }
+}
+
+// Quick sink on press, springy release. @content adds pressed-only styles.
+@mixin press($scale: 0.95) {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    transform 0.46s var(--udm-spring),
+    background-color 0.22s ease,
+    opacity 0.22s ease,
+    filter 0.22s ease,
+    box-shadow 0.22s ease,
+    color 0.22s ease;
+
+  &:active:not(:disabled) {
+    transform: scale($scale);
+    transition:
+      transform 0.09s ease-out,
+      background-color 0.06s ease,
+      opacity 0.06s ease,
+      filter 0.06s ease,
+      box-shadow 0.06s ease,
+      color 0.06s ease;
+    @content;
+  }
+}
+
+@mixin glass($alpha: 0.82) {
+  background: rgba(28, 28, 34, $alpha);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+}
+
+// ── Tokens ────────────────────────────────────────────────────
 .udm,
-.udm-sheet {
+.udm-sheet,
+.udm-stage {
   --udm-accent-light: color-mix(in srgb, var(--unis-primary) 45%, white);
   --udm-accent-fill: linear-gradient(180deg, color-mix(in srgb, var(--unis-primary) 78%, white), var(--unis-primary));
   --udm-accent-glow: color-mix(in srgb, var(--unis-primary) 55%, transparent);
   --udm-accent-soft: color-mix(in srgb, var(--unis-primary) 30%, #0b0b0e);
   --udm-mono: linear-gradient(140deg, color-mix(in srgb, var(--unis-primary) 75%, #000), #121216);
   --udm-muted: rgba(255, 255, 255, 0.58);
-  --udm-glass: rgba(28, 28, 33, 0.78);
+  --udm-glass: rgba(28, 28, 34, 0.82);
+  --udm-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --udm-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --udm-ios: cubic-bezier(0.32, 0.72, 0, 1);
   font-family: var(--unis-font-sans);
   color: #fff;
   -webkit-font-smoothing: antialiased;
@@ -67,22 +120,44 @@ $money: #2fd29a;
   }
 }
 
-// Round 44px icon button (back, options)
+// Round 44px icon button (back, settings, options)
 .udm-round {
   width: 44px;
   height: 44px;
   flex: none;
   border-radius: 50%;
   border: 0;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.07);
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s ease;
-  &:hover { background: rgba(255, 255, 255, 0.11); }
+  @include press(0.88) { background: rgba(255, 255, 255, 0.16); }
+  @include hover { background: rgba(255, 255, 255, 0.12); }
   &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 2px; }
+  &[aria-expanded='true'] { background: rgba(255, 255, 255, 0.14); }
+}
+
+.udm-link {
+  border: 0;
+  padding: 0 0 0 8px;
+  background: none;
+  color: var(--udm-accent-light);
+  font: 700 14px var(--unis-font-sans);
+  cursor: pointer;
+  @include press(0.94);
+}
+
+.udm-spin {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: currentColor;
+  animation: udm-rot 0.7s linear infinite;
+  vertical-align: middle;
 }
 
 // ── Avatars ───────────────────────────────────────────────────
@@ -105,6 +180,42 @@ $money: #2fd29a;
   letter-spacing: -0.02em;
 }
 
+// Avatar wrapper: supporter ring + online dot
+.udm-face {
+  position: relative;
+  flex: none;
+  display: inline-block;
+  border-radius: 50%;
+
+  > .udm-avatar { width: 100%; height: 100%; }
+
+  &--ring {
+    padding: 2.5px;
+    box-sizing: border-box;
+    background: linear-gradient(140deg, var(--udm-accent-light), var(--unis-primary));
+
+    > .udm-avatar { box-shadow: 0 0 0 2.5px #000; }
+  }
+}
+
+.udm-online {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 27%;
+  height: 27%;
+  max-width: 15px;
+  max-height: 15px;
+  min-width: 9px;
+  min-height: 9px;
+  border-radius: 50%;
+  background: $money;
+  box-shadow: 0 0 0 3px #000;
+}
+
+.udm-check { flex: none; }
+.udm-check path:first-child { fill: var(--udm-accent-light); }
+
 .udm-badge {
   min-width: 20px;
   height: 20px;
@@ -119,11 +230,13 @@ $money: #2fd29a;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  animation: udm-pop 0.42s var(--udm-spring) backwards;
 }
 
+// ── Buttons ───────────────────────────────────────────────────
 .udm-new {
   height: 48px;
-  padding: 0 22px;
+  padding: 0 20px 0 18px;
   border: 0;
   border-radius: 16px;
   background: var(--udm-accent-fill);
@@ -135,16 +248,74 @@ $money: #2fd29a;
   gap: 8px;
   cursor: pointer;
   flex: none;
-  transition: transform 0.12s ease, filter 0.15s ease;
-  &:hover { filter: brightness(1.08); }
-  &:active { transform: scale(0.97); }
+  @include press(0.94) { filter: brightness(0.92); box-shadow: 0 4px 14px var(--udm-accent-glow); }
+  @include hover { filter: brightness(1.08); }
   &:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 
-  &--ghost {
-    height: 42px;
-    font-size: 14.5px;
-    box-shadow: 0 8px 22px var(--udm-accent-glow);
+  &--sm {
+    height: 44px;
+    padding: 0 18px 0 15px;
+    font-size: 15px;
+    border-radius: 15px;
   }
+}
+
+.udm-ghost {
+  height: 44px;
+  padding: 0 18px 0 15px;
+  border: 0;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font: 600 15px var(--unis-font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  @include press(0.95) { background: rgba(255, 255, 255, 0.13); }
+  @include hover { background: rgba(255, 255, 255, 0.11); }
+  &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 2px; }
+}
+
+// ── Skeletons ─────────────────────────────────────────────────
+.udm-skel {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.12) 40%, rgba(255, 255, 255, 0.055) 80%);
+  background-size: 240% 100%;
+  animation: udm-shimmer 1.3s ease-in-out infinite;
+
+  &--line { height: 11px; border-radius: 6px; }
+  &--faint { opacity: 0.55; }
+  &--circle { width: 56px; height: 56px; border-radius: 50%; flex: none; }
+  &--square { width: 48px; height: 48px; border-radius: 12px; flex: none; }
+  &--bubble { height: 40px; border-radius: 20px; }
+  &--block { height: 64px; border-radius: 16px; margin-top: 10px; }
+}
+
+.udm-skel-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 20px;
+
+  &__lines {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  &--sheet .udm-skel--circle { width: 48px; height: 48px; }
+}
+
+.udm-skel-line {
+  display: flex;
+  margin-top: 10px;
+  &.theirs { padding-left: 36px; }
+  &.mine { justify-content: flex-end; }
 }
 
 // ═════════════════════════════════════════════════════════════
@@ -160,6 +331,12 @@ $money: #2fd29a;
   &__head {
     position: relative;
     padding: 16px 20px 8px;
+  }
+
+  &__toprow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
   &__titlerow {
@@ -197,6 +374,7 @@ $money: #2fd29a;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overscroll-behavior-y: contain;
     padding: 10px 0 110px;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
@@ -204,14 +382,12 @@ $money: #2fd29a;
 
   &__hint { padding: 18px 20px; color: var(--udm-muted); font-size: 14px; }
 
-  &__empty {
-    text-align: center;
-    padding: 56px 28px;
+  &__note {
+    margin: 14px 20px 0;
+    font-size: 13px;
+    line-height: 1.5;
     color: var(--udm-muted);
-    svg { color: var(--udm-accent-light); margin-bottom: 12px; }
   }
-  &__empty-lead { font-size: 17px; font-weight: 700; color: #fff; margin: 4px 0; }
-  &__empty-sub { font-size: 14px; line-height: 1.55; margin: 0; }
 
   &__fade {
     position: absolute;
@@ -224,6 +400,133 @@ $money: #2fd29a;
   }
 }
 
+// Active now
+.udm-active {
+  padding: 4px 0 14px;
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 20px 12px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  &__pulse {
+    position: relative;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: $money;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: $money;
+      animation: udm-ping 2.2s var(--udm-out) infinite;
+    }
+  }
+
+  &__row {
+    display: flex;
+    gap: 16px;
+    padding: 0 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  &__item {
+    width: 66px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    padding: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    @include press(0.9);
+    &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 4px; border-radius: 12px; }
+  }
+
+  &__name {
+    max-width: 100%;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.86);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// Chats | Requests — the highlight slides between tabs
+.udm-tabs {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  margin: 2px 20px 10px;
+
+  &__ind {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 40px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.11);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.44s var(--udm-spring), width 0.44s var(--udm-spring), opacity 0.2s ease;
+    &.is-ready { opacity: 1; }
+  }
+}
+
+.udm-tab {
+  position: relative;
+  z-index: 1;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.6);
+  font: 600 14.5px var(--unis-font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  @include press(0.94);
+  @include hover { color: #fff; }
+
+  &.is-on { background: transparent; color: #fff; }
+  &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 2px; }
+
+  &__count {
+    min-width: 24px;
+    height: 24px;
+    margin-right: -10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    animation: udm-pop 0.42s var(--udm-spring) backwards;
+  }
+}
+
+// Conversation rows
 .udm-conv {
   width: 100%;
   display: flex;
@@ -236,9 +539,9 @@ $money: #2fd29a;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s ease;
+  @include press(0.985) { background: rgba(255, 255, 255, 0.065); }
+  @include hover { background: rgba(255, 255, 255, 0.035); }
 
-  &:hover { background: rgba(255, 255, 255, 0.035); }
   &.active { background: rgba(255, 255, 255, 0.06); }
   &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: -2px; }
 
@@ -251,9 +554,17 @@ $money: #2fd29a;
   }
 
   &__name {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
     font-size: 16px;
     font-weight: 600;
     letter-spacing: -0.01em;
+  }
+
+  &__name-text {
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -273,10 +584,11 @@ $money: #2fd29a;
     svg { flex: none; }
 
     &--money { color: $money; font-weight: 600; }
+    &--typing { color: var(--udm-accent-light); font-weight: 600; }
   }
 
   &.unread &__name { font-weight: 700; }
-  &.unread &__preview:not(.udm-conv__preview--money) { color: #fff; font-weight: 600; }
+  &.unread &__preview:not(.udm-conv__preview--money):not(.udm-conv__preview--typing) { color: #fff; font-weight: 600; }
 
   &__side {
     flex: none;
@@ -293,23 +605,143 @@ $money: #2fd29a;
   }
   &.unread &__time { color: var(--udm-accent-light); font-weight: 600; }
 
+  &__seen { display: inline-flex; }
   &__spacer { height: 20px; }
 }
 
-// Floating glass pill (search) — sits over the list
+.udm-dots {
+  display: inline-flex;
+  gap: 3px;
+
+  span {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: udm-blink 1.2s infinite ease-in-out;
+    &:nth-child(2) { animation-delay: 0.15s; }
+    &:nth-child(3) { animation-delay: 0.3s; }
+  }
+}
+
+// Filtered folder row + its back link
+.udm-folder {
+  width: calc(100% - 40px);
+  margin: 10px 20px 0;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.82);
+  font: 600 14.5px var(--unis-font-sans);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  @include press(0.97) { background: rgba(255, 255, 255, 0.09); }
+  @include hover { background: rgba(255, 255, 255, 0.07); }
+  &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 2px; }
+
+  &__count {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    color: var(--udm-muted);
+  }
+
+  &__chev {
+    transform: rotate(180deg);
+    color: var(--udm-muted);
+  }
+
+  &--back {
+    width: auto;
+    margin: 0 20px 6px;
+    background: none;
+    padding: 0;
+    min-height: 44px;
+    color: var(--udm-accent-light);
+    @include press(0.95) { background: none; }
+  }
+}
+
+// Empty states
+.udm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 44px 28px 24px;
+  text-align: center;
+  animation: udm-fade-up 0.5s var(--udm-out) backwards;
+
+  &__icon {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 8px;
+    border-radius: 24px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: radial-gradient(circle at 30% 18%, color-mix(in srgb, var(--unis-primary) 45%, transparent), rgba(255, 255, 255, 0.04) 72%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+      0 18px 44px color-mix(in srgb, var(--unis-primary) 26%, transparent);
+
+    &--lg { width: 96px; height: 96px; border-radius: 32px; }
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 25px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #fff;
+
+    em {
+      font-family: var(--unis-font-italic);
+      font-style: italic;
+      font-weight: 400;
+      letter-spacing: 0;
+      color: var(--udm-accent-light);
+    }
+  }
+
+  &__sub {
+    margin: 0;
+    max-width: 300px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--udm-muted);
+  }
+
+  &__actions {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  &--quiet &__icon {
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  }
+}
+
+// Floating glass search pill — sits over the list
 .udm-float {
   position: absolute;
   left: 50%;
   bottom: 22px;
-  transform: translateX(-50%);
+  translate: -50% 0;
   z-index: 2;
   height: 50px;
-  padding: 0 24px;
+  padding: 0 24px 0 20px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: var(--udm-glass);
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  @include glass(0.78);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
   color: #fff;
   font: 600 15px var(--unis-font-sans);
@@ -317,6 +749,8 @@ $money: #2fd29a;
   align-items: center;
   gap: 9px;
   cursor: pointer;
+  animation: udm-float-in 0.42s var(--udm-spring) backwards;
+  @include press(0.94);
   &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 3px; }
 
   &--input {
@@ -325,6 +759,7 @@ $money: #2fd29a;
     max-width: 420px;
     box-sizing: border-box;
     padding: 0 6px 0 18px;
+    &:active:not(:disabled) { transform: none; }
 
     input {
       flex: 1;
@@ -334,7 +769,7 @@ $money: #2fd29a;
       outline: none;
       background: transparent;
       color: #fff;
-      font: 500 15px var(--unis-font-sans);
+      font: 500 16px var(--unis-font-sans); // 16px+ stops iPhone zooming in
       &::placeholder { color: var(--udm-muted); }
       &::-webkit-search-cancel-button { display: none; }
     }
@@ -352,6 +787,7 @@ $money: #2fd29a;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    @include press(0.86) { background: rgba(255, 255, 255, 0.16); }
   }
 }
 
@@ -359,33 +795,45 @@ $money: #2fd29a;
 //  THREAD
 // ═════════════════════════════════════════════════════════════
 .udm-main {
+  --udm-thread-bg: #070709;
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: #070709;
+  background: var(--udm-thread-bg);
 }
 
 .udm-main__placeholder {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   align-items: center;
   justify-content: center;
-  color: var(--udm-muted);
-  svg { color: rgba(255, 255, 255, 0.25); }
-  p {
-    margin: 0;
-    font-family: var(--unis-font-italic);
-    font-style: italic;
-    font-size: 22px;
-    color: rgba(255, 255, 255, 0.6);
-  }
+  padding: 24px;
+  text-align: center;
+  animation: udm-fade-up 0.5s var(--udm-out) backwards;
+}
+
+.udm-placeholder__faces {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.udm-placeholder__face {
+  border: 0;
+  padding: 0;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  @include press(0.9);
+  &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 3px; }
 }
 
 .udm-thread {
+  --udm-composer-h: 76px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -394,11 +842,11 @@ $money: #2fd29a;
 
   &__head {
     position: relative;
-    z-index: 3;
+    z-index: 4;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 14px 16px 12px;
+    gap: 8px;
+    padding: 12px 14px 10px;
   }
 
   &__who {
@@ -408,13 +856,14 @@ $money: #2fd29a;
     align-items: center;
     gap: 11px;
     border: 0;
-    padding: 0;
+    padding: 2px 6px 2px 0;
     background: none;
     color: inherit;
     font: inherit;
     text-align: left;
     cursor: pointer;
-    border-radius: 14px;
+    border-radius: 16px;
+    @include press(0.97);
     &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 3px; }
   }
 
@@ -430,25 +879,52 @@ $money: #2fd29a;
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    max-width: 100%;
     font-size: 16.5px;
     font-weight: 700;
     letter-spacing: -0.01em;
+  }
+
+  &__name-text {
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+
+  &__active {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $money;
   }
 
   &__scroll {
     position: relative;
     flex: 1;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
-    padding: 6px 16px 120px;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    padding: 6px 14px calc(var(--udm-composer-h) + 22px);
     display: flex;
     flex-direction: column;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  }
+
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    margin-top: auto;
+    padding-bottom: 8px;
   }
 
   &__hint {
@@ -457,43 +933,17 @@ $money: #2fd29a;
     color: var(--udm-muted);
     font-size: 14px;
   }
-
-  &__empty {
-    margin: auto 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    text-align: center;
-    color: var(--udm-muted);
-    font-size: 15px;
-    p { margin: 0; }
-    strong { color: #fff; }
-  }
-
-  &__error {
-    position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: 96px;
-    z-index: 4;
-    padding: 10px 14px;
-    border-radius: 14px;
-    background: rgba(229, 75, 74, 0.16);
-    box-shadow: inset 0 0 0 1px rgba(229, 75, 74, 0.4);
-    color: #f6b2b1;
-    font-size: 13.5px;
-  }
 }
 
-.udm-check path:first-child { fill: var(--udm-accent-light); }
+// Back button only shows on the phone stage
+.udm-back { display: none; }
 
 .udm-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   height: 20px;
-  padding: 0 8px;
+  padding: 0 8px 0 6px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.07);
   color: rgba(255, 255, 255, 0.78);
@@ -501,8 +951,80 @@ $money: #2fd29a;
   font-weight: 600;
 }
 
-// Back button only shows in the single-pane (mobile) layout
-.udm-back { display: none; }
+// Now playing chip (phone header)
+.udm-np {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 4px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  animation: udm-pop 0.4s var(--udm-spring) backwards;
+
+  &__art {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border: 0;
+    padding: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--udm-mono);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    @include press(0.88);
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+  }
+
+  &__eq {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    i {
+      width: 3px;
+      height: 12px;
+      border-radius: 2px;
+      background: #fff;
+      transform-origin: 50% 100%;
+      animation: udm-eq 0.9s ease-in-out infinite alternate;
+      animation-play-state: paused;
+      &:nth-child(2) { animation-delay: -0.3s; }
+      &:nth-child(3) { animation-delay: -0.6s; }
+    }
+  }
+
+  &.is-playing &__eq { opacity: 1; }
+  &.is-playing &__eq i { animation-play-state: running; }
+
+  &__toggle {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    color: #000;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    @include press(0.84);
+    &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 2px; }
+  }
+}
 
 // ── Options menu ──────────────────────────────────────────────
 .udm-menu {
@@ -513,13 +1035,16 @@ $money: #2fd29a;
     position: absolute;
     right: 0;
     top: calc(100% + 8px);
+    z-index: 8;
     width: 230px;
     padding: 6px;
     border-radius: 18px;
-    background: var(--udm-glass);
-    backdrop-filter: blur(18px) saturate(1.4);
-    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    @include glass(0.86);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 18px 40px rgba(0, 0, 0, 0.55);
+    transform-origin: top right;
+    animation: udm-menu-in 0.28s var(--udm-spring) both;
+
+    &.is-leaving { animation: udm-menu-out 0.16s ease forwards; pointer-events: none; }
   }
 
   &__item {
@@ -533,8 +1058,10 @@ $money: #2fd29a;
     font: 600 14.5px var(--unis-font-sans);
     text-align: left;
     cursor: pointer;
-    &:hover, &:focus-visible { background: rgba(255, 255, 255, 0.08); outline: none; }
-    &--danger { color: #ff8a8a; }
+    @include press(0.97) { background: rgba(255, 255, 255, 0.12); }
+    @include hover { background: rgba(255, 255, 255, 0.08); }
+    &:focus-visible { background: rgba(255, 255, 255, 0.08); outline: none; }
+    &--danger { color: $danger; }
   }
 
   &__confirm {
@@ -544,6 +1071,7 @@ $money: #2fd29a;
   }
 
   &__btn {
+    min-width: 72px;
     height: 36px;
     padding: 0 14px;
     border: 0;
@@ -551,15 +1079,77 @@ $money: #2fd29a;
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
     font: 600 13.5px var(--unis-font-sans);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    @include press(0.93) { background: rgba(255, 255, 255, 0.18); }
+    &:disabled { opacity: 0.6; cursor: default; }
     &--danger { background: #e5484d; }
   }
 }
 
-// ── Time pills between sittings ───────────────────────────────
+// ── History ───────────────────────────────────────────────────
+.udm-older {
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--udm-muted);
+}
+
+// The start of a conversation
+.udm-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 26px 16px 14px;
+  text-align: center;
+  animation: udm-fade-up 0.45s var(--udm-out) backwards;
+
+  &__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  &__sub {
+    font-size: 13.5px;
+    color: var(--udm-muted);
+  }
+
+  &__btn {
+    margin-top: 8px;
+    height: 36px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font: 700 13.5px var(--unis-font-sans);
+    cursor: pointer;
+    @include press(0.94) { background: rgba(255, 255, 255, 0.18); }
+    @include hover { background: rgba(255, 255, 255, 0.14); }
+  }
+
+  &__hint {
+    margin: 12px 0 0;
+    max-width: 300px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--udm-muted);
+  }
+}
+
+// Time dividers between sittings
 .udm-pill {
   align-self: center;
-  margin: 10px 0 6px;
+  margin: 12px 0 6px;
   height: 26px;
   padding: 0 12px;
   border-radius: 999px;
@@ -570,23 +1160,73 @@ $money: #2fd29a;
   display: flex;
   align-items: center;
   font-variant-numeric: tabular-nums;
+  transition: opacity 0.25s ease;
 }
 
-// ── Message rows / bubbles ────────────────────────────────────
+// ── Lines, rows, bubbles ──────────────────────────────────────
+// A line is the full width of the thread; swiping left slides every line
+// (--udm-reveal) to uncover the time column on the right.
+.udm-line {
+  position: relative;
+  display: flex;
+  width: 100%;
+  margin-top: 3px;
+  transform: translateX(var(--udm-reveal, 0px));
+  transition: transform 0.55s var(--udm-spring), opacity 0.25s ease;
+
+  &.mine { justify-content: flex-end; }
+  &.is-first { margin-top: 14px; }
+  &.is-focus { z-index: 6; }
+
+  &__time {
+    position: absolute;
+    top: 50%;
+    right: -62px;
+    width: 54px;
+    translate: 0 -50%;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--udm-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  // New arrivals: yours rise from the composer, theirs slide in.
+  &.is-new.mine > .udm-row {
+    transform-origin: 100% 100%;
+    animation: udm-send-in 0.46s var(--udm-spring) backwards;
+  }
+  &.is-new.theirs > .udm-row {
+    transform-origin: 0 100%;
+    animation: udm-recv-in 0.4s var(--udm-out) backwards;
+  }
+  &.is-leaving > .udm-row { animation: udm-recv-out 0.18s ease forwards; }
+}
+
+.udm-thread__scroll.is-revealing .udm-line { transition: none; }
+
+// Long-press: everything but the chosen message steps back.
+.udm-thread__scroll.has-focus {
+  .udm-line:not(.is-focus),
+  .udm-pill,
+  .udm-intro,
+  .udm-seen { opacity: 0.3; }
+}
+
 .udm-row {
   display: flex;
   align-items: flex-end;
   gap: 8px;
+  min-width: 0;
   max-width: 82%;
-  margin-top: 3px;
 
-  &.is-first { margin-top: 14px; }
-  &.theirs { align-self: flex-start; }
-  &.mine { align-self: flex-end; max-width: 78%; }
+  &.mine { flex-direction: row-reverse; max-width: 80%; }
 
   &__face { width: 28px; flex: none; }
 
   &__stack {
+    position: relative;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -594,30 +1234,96 @@ $money: #2fd29a;
     align-items: flex-start;
   }
   &.mine &__stack { align-items: flex-end; }
+
+  &__tools {
+    align-self: center;
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  &.mine &__tools { flex-direction: row-reverse; }
+
+  &__stamp {
+    font-size: 11.5px;
+    color: var(--udm-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
 }
 
 .udm-bubble {
-  padding: 11px 15px;
-  font-size: 15px;
-  line-height: 1.4;
+  position: relative;
+  padding: 10px 15px;
+  font-size: 15.5px;
+  line-height: 1.38;
   border-radius: 22px;
   word-break: break-word;
   white-space: pre-wrap;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.46s var(--udm-spring), box-shadow 0.25s ease, background-color 0.2s ease;
 
   .theirs & {
-    background: #17171b;
-    border-bottom-left-radius: 8px;
-    &:not(.is-first) { border-top-left-radius: 8px; }
+    background: #1b1b21;
+    &:not(.is-first) { border-top-left-radius: 7px; }
+    &:not(.is-last) { border-bottom-left-radius: 7px; }
   }
 
   .mine & {
     background: var(--udm-accent-fill);
     color: #fff;
-    border-bottom-right-radius: 8px;
-    &:not(.is-first) { border-top-right-radius: 8px; }
+    &:not(.is-first) { border-top-right-radius: 7px; }
+    &:not(.is-last) { border-bottom-right-radius: 7px; }
   }
 
-  &.is-pending { opacity: 0.6; }
+  // Held: squeeze while the long-press builds.
+  &.is-pressing {
+    transform: scale(0.955);
+    transition: transform 0.32s cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+
+  &.is-failed {
+    .mine & {
+      background: #26161a;
+      box-shadow: inset 0 0 0 1.5px rgba(255, 110, 110, 0.55);
+      color: rgba(255, 255, 255, 0.86);
+    }
+  }
+}
+
+// Still sending after a beat? Dim a little (most sends land before this).
+.is-sending { animation: udm-dim 0.25s ease 0.6s forwards; }
+
+// The chosen message lifts while its reaction bar is open.
+.udm-line.is-focus {
+  .udm-bubble,
+  .udm-support,
+  .udm-track {
+    transform: scale(1.03);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  }
+}
+
+// Phones: bubbles are for holding, not selecting (Copy lives in the bar).
+@media (hover: none), (pointer: coarse) {
+  .udm-bubble,
+  .udm-support {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .udm-row__tools { display: none; }
+}
+
+// Desktop: hover shows the time and the react button; no swipe column.
+@media (hover: hover) and (pointer: fine) {
+  .udm-line:hover .udm-row__stamp,
+  .udm-line:hover .udm-react-btn { opacity: 1; }
+  .udm-line__time { display: none; }
 }
 
 .udm-seen {
@@ -628,6 +1334,43 @@ $money: #2fd29a;
   margin-top: 6px;
   font-size: 12px;
   color: var(--udm-muted);
+  animation: udm-fade-up 0.32s var(--udm-out) 0.08s backwards;
+}
+
+// Failed message
+.udm-failed {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+
+  &__retry {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 110, 110, 0.12);
+    color: $danger;
+    font: 600 12.5px var(--unis-font-sans);
+    cursor: pointer;
+    @include press(0.94) { background: rgba(255, 110, 110, 0.22); }
+  }
+
+  &__x {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--udm-muted);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    @include press(0.86);
+  }
 }
 
 // ── Support card (money = green, theme-independent) ───────────
@@ -642,9 +1385,13 @@ $money: #2fd29a;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  touch-action: manipulation;
+  transition: transform 0.46s var(--udm-spring), box-shadow 0.25s ease;
 
   .mine & { border-bottom-right-radius: 8px; }
   .theirs & { border-bottom-left-radius: 8px; }
+
+  &.is-pressing { transform: scale(0.96); transition: transform 0.32s cubic-bezier(0.2, 0.7, 0.3, 1); }
 
   &__top {
     display: flex;
@@ -686,6 +1433,7 @@ $money: #2fd29a;
   display: flex;
   align-items: center;
   gap: 10px;
+  transition: transform 0.46s var(--udm-spring), box-shadow 0.25s ease;
 
   &__open {
     flex: 1;
@@ -701,6 +1449,7 @@ $money: #2fd29a;
     text-align: left;
     cursor: pointer;
     border-radius: 14px;
+    @include press(0.97);
     &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 3px; }
   }
 
@@ -710,14 +1459,20 @@ $money: #2fd29a;
     border-radius: 14px;
     object-fit: cover;
     flex: none;
-    &--blank { display: block; background: var(--udm-mono); }
+
+    &--blank {
+      display: grid;
+      place-items: center;
+      background: var(--udm-mono);
+      color: rgba(255, 255, 255, 0.8);
+    }
   }
 
   &__meta {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 5px;
   }
 
   &__title {
@@ -738,7 +1493,7 @@ $money: #2fd29a;
   }
 
   &__chips {
-    margin-top: 4px;
+    margin-top: 2px;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -778,13 +1533,226 @@ $money: #2fd29a;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.12s ease;
-    &:active { transform: scale(0.94); }
+    @include press(0.86);
     &:disabled { opacity: 0.4; cursor: default; }
-    svg { margin-left: 2px; }
+    &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 2px; }
   }
 
-  &--loading { opacity: 0.7; }
+  &--loading { opacity: 0.8; }
+}
+
+// ── Reactions ─────────────────────────────────────────────────
+.udm-reacts {
+  display: flex;
+  gap: 4px;
+  margin-top: -9px;
+  padding: 0 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.udm-react {
+  height: 24px;
+  padding: 0 7px;
+  border: 2px solid var(--udm-thread-bg, #070709);
+  border-radius: 999px;
+  background: #1f1f25;
+  color: #fff;
+  font: 700 11.5px var(--unis-font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  @include press(0.86);
+
+  &.is-new { animation: udm-pop 0.45s var(--udm-spring) backwards; }
+  &.is-mine { background: var(--udm-accent-soft); }
+  &__n { font-variant-numeric: tabular-nums; }
+  &:disabled { cursor: default; }
+  &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 1px; }
+}
+
+// Double-tap heart burst
+.udm-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 7;
+  translate: -50% -50%;
+  font-size: 64px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
+  animation: udm-burst 0.82s var(--udm-out) forwards;
+}
+
+// Long-press / right-click: reactions + Copy
+.udm-actions {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+
+  .theirs & { left: 0; }
+  .mine & { right: 0; align-items: flex-end; }
+
+  &.is-below {
+    bottom: auto;
+    top: calc(100% + 10px);
+  }
+
+  &__emoji {
+    display: flex;
+    gap: 2px;
+    padding: 5px;
+    border-radius: 999px;
+    @include glass(0.9);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 18px 40px rgba(0, 0, 0, 0.55);
+    animation: udm-bar-in 0.36s var(--udm-spring) backwards;
+
+    .theirs & { transform-origin: 12% 100%; }
+    .mine & { transform-origin: 88% 100%; }
+  }
+
+  &__react {
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    animation: udm-emoji-in 0.42s var(--udm-spring) backwards;
+    animation-delay: calc(var(--i, 0) * 24ms + 40ms);
+    @include press(0.8) { background: rgba(255, 255, 255, 0.12); }
+    @include hover { transform: scale(1.2) translateY(-3px); }
+    &.is-mine { background: var(--udm-accent-soft); }
+    &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 1px; }
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 42px;
+    padding: 0 16px 0 13px;
+    border: 0;
+    border-radius: 999px;
+    @include glass(0.9);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 14px 30px rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font: 600 14px var(--unis-font-sans);
+    cursor: pointer;
+    animation: udm-bar-in 0.36s var(--udm-spring) 0.06s backwards;
+    @include press(0.93);
+    &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 2px; }
+  }
+}
+
+.udm-react-btn {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  @include press(0.86);
+  @include hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+  &:focus-visible, &[aria-expanded='true'] { opacity: 1; outline: none; background: rgba(255, 255, 255, 0.08); }
+}
+
+// ── Typing bubble ─────────────────────────────────────────────
+.udm-typing {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 22px 22px 22px 8px;
+  background: #1b1b21;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transform-origin: 0 100%;
+  animation: udm-typing-in 0.4s var(--udm-spring) backwards;
+
+  > span[aria-hidden] {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.75);
+    animation: udm-blink 1.2s infinite ease-in-out;
+    &:nth-of-type(3) { animation-delay: 0.15s; }
+    &:nth-of-type(4) { animation-delay: 0.3s; }
+  }
+}
+
+// ── Jump to latest + toast ────────────────────────────────────
+.udm-jump {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  bottom: calc(var(--udm-composer-h) + 14px);
+  z-index: 5;
+  height: 40px;
+  min-width: 40px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 999px;
+  @include glass(0.88);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 12px 30px rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font: 700 13.5px var(--unis-font-sans);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  animation: udm-chip-up 0.38s var(--udm-spring) backwards;
+  @include press(0.92);
+
+  span { padding-right: 4px; }
+
+  &.has-new {
+    background: var(--udm-accent-fill);
+    box-shadow: 0 10px 26px var(--udm-accent-glow);
+    padding: 0 14px 0 11px;
+  }
+
+  &.is-leaving { animation: udm-chip-down 0.18s ease forwards; pointer-events: none; }
+  &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+}
+
+.udm-toast {
+  position: absolute;
+  left: 50%;
+  top: 72px;
+  translate: -50% 0;
+  z-index: 9;
+  max-width: calc(100% - 40px);
+  box-sizing: border-box;
+  padding: 11px 16px;
+  border-radius: 16px;
+  @include glass(0.94);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 14px 36px rgba(0, 0, 0, 0.5);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  animation: udm-toast-in 0.4s var(--udm-spring) backwards;
+
+  &--error {
+    color: #ffc2c2;
+    box-shadow: inset 0 0 0 1px rgba(255, 110, 110, 0.38), 0 14px 36px rgba(0, 0, 0, 0.5);
+  }
+  &--info { color: #fff; }
+  &.is-leaving { animation: udm-toast-out 0.22s ease forwards; }
 }
 
 // ── Composer (floating glass bar) ─────────────────────────────
@@ -794,8 +1762,8 @@ $money: #2fd29a;
   right: 0;
   bottom: 0;
   z-index: 3;
-  padding: 40px 12px 18px;
-  background: linear-gradient(180deg, rgba(7, 7, 9, 0), #070709 45%);
+  padding: 36px 12px max(16px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, var(--udm-thread-bg, #070709) 45%);
   pointer-events: none;
 
   &__bar {
@@ -804,13 +1772,18 @@ $money: #2fd29a;
     box-sizing: border-box;
     padding: 7px;
     border-radius: 29px;
-    background: var(--udm-glass);
-    backdrop-filter: blur(18px) saturate(1.4);
-    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    @include glass(0.82);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 12px 30px rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: flex-end;
     gap: 6px;
+    transition: box-shadow 0.2s ease;
+
+    &:focus-within {
+      box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--udm-accent-light) 45%, transparent),
+        0 12px 30px rgba(0, 0, 0, 0.5);
+    }
   }
 
   &__icon {
@@ -825,31 +1798,34 @@ $money: #2fd29a;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.15s ease;
-    &:hover { background: rgba(255, 255, 255, 0.14); }
+    @include press(0.86) { background: rgba(255, 255, 255, 0.18); }
+    @include hover { background: rgba(255, 255, 255, 0.14); }
     &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 2px; }
   }
 
   &__support {
     background: rgba(47, 210, 154, 0.14);
     color: $money;
-    &:hover { background: rgba(47, 210, 154, 0.22); }
+    @include press(0.86) { background: rgba(47, 210, 154, 0.3); }
+    @include hover { background: rgba(47, 210, 154, 0.22); }
   }
 
   &__input {
     flex: 1;
     min-width: 0;
     min-height: 44px;
-    max-height: 120px;
+    max-height: 132px;
     box-sizing: border-box;
     resize: none;
-    padding: 12px 6px;
+    padding: 11px 6px;
     border: 0;
     outline: none;
     background: transparent;
     color: #fff;
-    font: 500 15px/1.35 var(--unis-font-sans);
+    font: 500 16px/1.38 var(--unis-font-sans); // 16px+ stops iPhone zooming in
     &::placeholder { color: rgba(255, 255, 255, 0.5); }
+
+    &--solo { padding-left: 14px; }
   }
 
   &__send {
@@ -865,15 +1841,72 @@ $money: #2fd29a;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.12s ease, opacity 0.15s ease;
-    &:active:not(:disabled) { transform: scale(0.92); }
-    &:disabled { opacity: 0.35; box-shadow: none; cursor: default; }
+    @include press(0.84) { filter: brightness(0.9); }
+
+    // Wakes up with a little pop the moment there's something to send.
+    &:not(:disabled) svg { animation: udm-send-ready 0.36s var(--udm-spring) backwards; }
+    &:disabled { opacity: 0.32; box-shadow: none; cursor: default; }
     &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  }
+
+  &__note {
+    pointer-events: auto;
+    padding: 14px 18px;
+    border-radius: 22px;
+    @include glass(0.82);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.78);
+    text-align: center;
+  }
+}
+
+// ── Request bar ───────────────────────────────────────────────
+.udm-request {
+  pointer-events: auto;
+  margin-bottom: 10px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  @include glass(0.82);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  animation: udm-fade-up 0.4s var(--udm-out) backwards;
+
+  &__lead { margin: 0; font-size: 15px; }
+  &__sub { margin: 4px 0 12px; font-size: 13px; line-height: 1.45; color: var(--udm-muted); }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  &__btn {
+    flex: 1;
+    height: 42px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font: 600 14px var(--unis-font-sans);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    @include press(0.95) { background: rgba(255, 255, 255, 0.16); }
+    &:disabled { opacity: 0.55; cursor: default; }
+    &--danger { color: $danger; }
+
+    &--accept {
+      background: var(--udm-accent-fill);
+      box-shadow: 0 8px 22px var(--udm-accent-glow);
+      font-weight: 700;
+      @include press(0.95) { filter: brightness(0.9); }
+    }
   }
 }
 
 // ═════════════════════════════════════════════════════════════
-//  PICKER SHEET (New message / Share a song)
+//  SHEETS (New message / Share a song / Settings)
 // ═════════════════════════════════════════════════════════════
 .udm-sheet {
   position: fixed;
@@ -885,7 +1918,12 @@ $money: #2fd29a;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  animation: udm-fade 0.18s ease both;
+  animation: udm-fade 0.2s ease both;
+
+  &.is-leaving {
+    animation: udm-fade-out 0.24s ease forwards;
+    pointer-events: none;
+  }
 
   &__panel {
     width: 100%;
@@ -896,10 +1934,12 @@ $money: #2fd29a;
     border-radius: 28px 28px 0 0;
     background: #0d0d10;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 -20px 50px rgba(0, 0, 0, 0.5);
-    padding: 8px 0 18px;
+    padding: 8px 0 max(18px, env(safe-area-inset-bottom));
     outline: none;
-    animation: udm-rise 0.26s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+    animation: udm-sheet-up 0.42s var(--udm-ios) both;
   }
+
+  &.is-leaving &__panel { animation: udm-sheet-down 0.24s cubic-bezier(0.4, 0, 1, 1) forwards; }
 
   &__grab {
     align-self: center;
@@ -928,6 +1968,7 @@ $money: #2fd29a;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.07);
     color: rgba(255, 255, 255, 0.7);
+    transition: box-shadow 0.2s ease;
 
     input {
       flex: 1;
@@ -937,8 +1978,9 @@ $money: #2fd29a;
       outline: none;
       background: transparent;
       color: #fff;
-      font: 500 15px var(--unis-font-sans);
+      font: 500 16px var(--unis-font-sans); // 16px+ stops iPhone zooming in
       &::placeholder { color: rgba(255, 255, 255, 0.5); }
+      &::-webkit-search-cancel-button { display: none; }
     }
 
     &:focus-within { box-shadow: inset 0 0 0 1.5px var(--udm-accent-light); }
@@ -952,6 +1994,7 @@ $money: #2fd29a;
     font: 700 14.5px var(--unis-font-sans);
     cursor: pointer;
     padding: 0 4px;
+    @include press(0.92) { opacity: 0.7; }
   }
 
   &__title {
@@ -965,6 +2008,7 @@ $money: #2fd29a;
 
   &__list {
     overflow-y: auto;
+    overscroll-behavior-y: contain;
     min-height: 120px;
   }
 
@@ -987,7 +2031,10 @@ $money: #2fd29a;
     font: inherit;
     text-align: left;
     cursor: pointer;
-    &:hover, &:focus-visible { background: rgba(255, 255, 255, 0.05); outline: none; }
+    animation: udm-fade-up 0.32s var(--udm-out) backwards;
+    @include press(0.985) { background: rgba(255, 255, 255, 0.07); }
+    @include hover { background: rgba(255, 255, 255, 0.05); }
+    &:focus-visible { background: rgba(255, 255, 255, 0.05); outline: none; }
   }
 
   &__avatar {
@@ -1032,469 +2079,16 @@ $money: #2fd29a;
 
 @media (min-width: 821px) {
   .udm-sheet { align-items: center; }
-  .udm-sheet__panel { border-radius: 28px; max-height: 70vh; }
+  .udm-sheet__panel {
+    border-radius: 28px;
+    max-height: 70vh;
+    animation-name: udm-dialog-in;
+    animation-duration: 0.34s;
+    animation-timing-function: var(--udm-spring);
+  }
+  .udm-sheet.is-leaving .udm-sheet__panel { animation-name: udm-dialog-out; animation-duration: 0.2s; }
   .udm-sheet__grab { display: none; }
 }
-
-@keyframes udm-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes udm-rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-
-// ── Profile "Message" button ─────────────────────────────────
-.udm-msg-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 16px;
-  font-family: var(--unis-font-sans); font-size: 14px; font-weight: 600;
-  color: var(--unis-text);
-  background: var(--unis-panel-2);
-  border: 1px solid var(--unis-border-hi);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-  &:hover { background: var(--unis-primary-subtle); border-color: var(--unis-primary-border); }
-  &:disabled { opacity: 0.6; cursor: default; }
-  svg { color: var(--unis-primary-2); }
-}
-
-// ── Mobile: single pane ──────────────────────────────────────
-@media (max-width: 820px) {
-  .udm {
-    grid-template-columns: 1fr;
-    max-width: none;
-    height: calc(100dvh - 11vh - 130px);
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  .udm-main { display: none; background: #000; }
-  .udm--thread-open {
-    .udm-list { display: none; }
-    .udm-main { display: flex; }
-  }
-  .udm-back { display: inline-flex; }
-  .udm-composer { background: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 45%); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .udm-sheet, .udm-sheet__panel { animation: none; }
-}
-
-// ═════════════════════════════════════════════════════════════
-//  LANES, PRESENCE, TYPING, REACTIONS, SETTINGS (Oct 2026 backend pass)
-// ═════════════════════════════════════════════════════════════
-
-// ── Avatar wrapper: supporter ring + online dot ───────────────
-.udm-face {
-  position: relative;
-  flex: none;
-  display: inline-block;
-  border-radius: 50%;
-
-  > .udm-avatar { width: 100%; height: 100%; }
-
-  &--ring {
-    padding: 2.5px;
-    box-sizing: border-box;
-    background: linear-gradient(140deg, var(--udm-accent-light), var(--unis-primary));
-
-    > .udm-avatar { box-shadow: 0 0 0 2.5px #000; }
-  }
-}
-
-.udm-online {
-  position: absolute;
-  right: 1px;
-  bottom: 1px;
-  width: 27%;
-  height: 27%;
-  max-width: 15px;
-  max-height: 15px;
-  min-width: 9px;
-  min-height: 9px;
-  border-radius: 50%;
-  background: $money;
-  box-shadow: 0 0 0 3px #000;
-}
-
-// ── Inbox header + active row ─────────────────────────────────
-.udm-list__toprow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.udm-active {
-  padding: 4px 0 14px;
-
-  &__label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 20px 12px;
-    font-size: 15px;
-    font-weight: 600;
-  }
-
-  &__pulse {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: $money;
-    box-shadow: 0 0 0 4px rgba(47, 210, 154, 0.18);
-  }
-
-  &__row {
-    display: flex;
-    gap: 16px;
-    padding: 0 20px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    &::-webkit-scrollbar { display: none; }
-  }
-
-  &__item {
-    width: 66px;
-    flex: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 7px;
-    border: 0;
-    padding: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-    &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 4px; border-radius: 12px; }
-  }
-
-  &__name {
-    max-width: 100%;
-    font-size: 12.5px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.86);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-// ── Chats | Requests pills ────────────────────────────────────
-.udm-tabs {
-  display: flex;
-  gap: 8px;
-  padding: 2px 20px 10px;
-}
-
-.udm-tab {
-  height: 40px;
-  padding: 0 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.62);
-  font: 600 14.5px var(--unis-font-sans);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-
-  &:hover { color: #fff; }
-  &.is-on { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.12); color: #fff; }
-  &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 2px; }
-
-  &__count {
-    min-width: 24px;
-    height: 24px;
-    margin-right: -10px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-// Filtered folder row + its back link
-.udm-folder {
-  width: calc(100% - 40px);
-  margin: 10px 20px 0;
-  min-height: 48px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.8);
-  font: 600 14.5px var(--unis-font-sans);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  text-align: left;
-  &:hover { background: rgba(255, 255, 255, 0.07); }
-  &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 2px; }
-
-  &__count {
-    margin-left: auto;
-    font-variant-numeric: tabular-nums;
-    color: var(--udm-muted);
-  }
-
-  &--back {
-    width: auto;
-    margin: 0 20px 6px;
-    background: none;
-    padding: 0;
-    min-height: 44px;
-    color: var(--udm-accent-light);
-  }
-}
-
-.udm-list__note {
-  margin: 14px 20px 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--udm-muted);
-}
-
-// ── Rows: name + check, typing, Seen face ─────────────────────
-.udm-conv__name {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  overflow: visible;
-  white-space: normal;
-}
-
-.udm-conv__name-text,
-.udm-thread__name-text {
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.udm-check { flex: none; }
-
-.udm-conv__preview--typing {
-  color: var(--udm-accent-light);
-  font-weight: 600;
-}
-
-.udm-dots {
-  display: inline-flex;
-  gap: 3px;
-
-  span {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: currentColor;
-    animation: udm-blink 1.2s infinite ease-in-out;
-    &:nth-child(2) { animation-delay: 0.15s; }
-    &:nth-child(3) { animation-delay: 0.3s; }
-  }
-}
-
-.udm-conv__seen { display: inline-flex; }
-
-// ── Thread header status ──────────────────────────────────────
-.udm-thread__name {
-  max-width: 100%;
-  overflow: visible;
-}
-
-.udm-thread__status {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-wrap: wrap;
-}
-
-.udm-thread__active {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: $money;
-}
-
-// ── Typing bubble ─────────────────────────────────────────────
-.udm-typing {
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 22px 22px 22px 8px;
-  background: #17171b;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-
-  > span[aria-hidden] {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.75);
-    animation: udm-blink 1.2s infinite ease-in-out;
-    &:nth-of-type(3) { animation-delay: 0.15s; }
-    &:nth-of-type(4) { animation-delay: 0.3s; }
-  }
-}
-
-@keyframes udm-blink {
-  0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
-  40% { opacity: 1; transform: translateY(-2px); }
-}
-
-// ── Reactions ─────────────────────────────────────────────────
-.udm-row {
-  position: relative;
-  &.mine { flex-direction: row-reverse; }
-
-  &__tools {
-    position: relative;
-    align-self: center;
-    flex: none;
-  }
-}
-
-.udm-react-btn {
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.5);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease, background 0.15s ease;
-  &:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
-  &:focus-visible, &[aria-expanded='true'] { opacity: 1; outline: none; background: rgba(255, 255, 255, 0.08); }
-}
-
-@media (hover: hover) {
-  .udm-row:hover .udm-react-btn { opacity: 1; }
-}
-
-.udm-picker {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  z-index: 5;
-  display: flex;
-  gap: 2px;
-  padding: 5px;
-  border-radius: 999px;
-  background: var(--udm-glass);
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 14px 32px rgba(0, 0, 0, 0.55);
-  animation: udm-rise 0.16s ease both;
-
-  .theirs & { left: -6px; }
-  .mine & { right: -6px; }
-
-  &__btn {
-    width: 40px;
-    height: 40px;
-    border: 0;
-    border-radius: 50%;
-    background: transparent;
-    font-size: 21px;
-    line-height: 1;
-    cursor: pointer;
-    transition: transform 0.12s ease, background 0.12s ease;
-    &:hover, &:focus-visible { transform: scale(1.18); background: rgba(255, 255, 255, 0.08); outline: none; }
-  }
-}
-
-.udm-reacts {
-  display: flex;
-  gap: 4px;
-  margin-top: -9px;
-  padding: 0 8px;
-  position: relative;
-  z-index: 1;
-}
-
-.udm-react {
-  height: 24px;
-  padding: 0 7px;
-  border: 2px solid #070709;
-  border-radius: 999px;
-  background: #1d1d22;
-  color: #fff;
-  font: 700 11.5px var(--unis-font-sans);
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  cursor: pointer;
-  &.is-mine { background: var(--udm-accent-soft); }
-  &__n { font-variant-numeric: tabular-nums; }
-  &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 1px; }
-}
-
-@media (max-width: 820px) {
-  .udm-react { border-color: #000; }
-}
-
-// ── Request bar + waiting note ────────────────────────────────
-.udm-request {
-  pointer-events: auto;
-  margin-bottom: 10px;
-  padding: 14px 16px;
-  border-radius: 22px;
-  background: var(--udm-glass);
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-
-  &__lead { margin: 0; font-size: 15px; }
-  &__sub { margin: 4px 0 12px; font-size: 13px; line-height: 1.45; color: var(--udm-muted); }
-
-  &__actions {
-    display: flex;
-    gap: 8px;
-  }
-
-  &__btn {
-    flex: 1;
-    height: 40px;
-    border: 0;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
-    font: 600 14px var(--unis-font-sans);
-    cursor: pointer;
-    &:disabled { opacity: 0.5; cursor: default; }
-    &--danger { color: #ff8a8a; }
-    &--accept {
-      background: var(--udm-accent-fill);
-      box-shadow: 0 8px 22px var(--udm-accent-glow);
-      font-weight: 700;
-    }
-  }
-}
-
-.udm-composer__note {
-  pointer-events: auto;
-  padding: 14px 18px;
-  border-radius: 22px;
-  background: var(--udm-glass);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  font-size: 13.5px;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.78);
-  text-align: center;
-}
-
-.udm-composer__input--solo { padding-left: 14px; }
 
 // ── Settings sheet ────────────────────────────────────────────
 .udm-settings {
@@ -1514,8 +2108,11 @@ $money: #2fd29a;
 
   &__body {
     overflow-y: auto;
+    overscroll-behavior-y: contain;
     padding: 4px 20px 8px;
   }
+
+  &__skeleton { padding-top: 6px; }
 
   &__group {
     margin: 14px 0 0;
@@ -1563,6 +2160,10 @@ $money: #2fd29a;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.46s var(--udm-spring), background-color 0.2s ease;
+
+  &:active { transform: scale(0.98); transition: transform 0.09s ease-out, background-color 0.06s ease; background: rgba(255, 255, 255, 0.09); }
 
   input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 
@@ -1573,6 +2174,7 @@ $money: #2fd29a;
     flex: none;
     border-radius: 50%;
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.3);
+    transition: box-shadow 0.3s var(--udm-spring), background 0.2s ease;
   }
 
   &.is-on { background: rgba(255, 255, 255, 0.08); }
@@ -1605,7 +2207,8 @@ $money: #2fd29a;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
   cursor: pointer;
-  transition: background 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.22s ease;
 
   span {
     position: absolute;
@@ -1613,14 +2216,19 @@ $money: #2fd29a;
     left: 3px;
     width: 24px;
     height: 24px;
-    border-radius: 50%;
+    border-radius: 999px;
     background: #fff;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-    transition: transform 0.18s ease;
+    transition: transform 0.38s var(--udm-spring), width 0.2s ease;
   }
 
   &.is-on { background: var(--unis-primary); }
   &.is-on span { transform: translateX(20px); }
+
+  // The knob stretches while held, like a native switch.
+  &:active:not(:disabled) span { width: 29px; }
+  &.is-on:active:not(:disabled) span { transform: translateX(15px); }
+
   &:disabled { opacity: 0.6; cursor: default; }
   &:focus-visible { outline: 2px solid var(--udm-accent-light); outline-offset: 2px; }
 }
@@ -1642,8 +2250,153 @@ $money: #2fd29a;
   }
 }
 
+// ── Profile "Message" button ─────────────────────────────────
+.udm-msg-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px;
+  font-family: var(--unis-font-sans); font-size: 14px; font-weight: 600;
+  color: var(--unis-text);
+  background: var(--unis-panel-2);
+  border: 1px solid var(--unis-border-hi);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  &:hover { background: var(--unis-primary-subtle); border-color: var(--unis-primary-border); }
+  &:disabled { opacity: 0.6; cursor: default; }
+  svg { color: var(--unis-primary-2); }
+}
+
+// ═════════════════════════════════════════════════════════════
+//  PHONE: single pane + full-screen thread stage
+// ═════════════════════════════════════════════════════════════
+.udm-stage { display: none; }
+
+@media (max-width: 820px) {
+  .udm {
+    grid-template-columns: 1fr;
+    max-width: none;
+    height: calc(100dvh - 11vh - 130px);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .udm-main { display: none; }
+
+  // The inbox eases back while a thread slides over it.
+  .udm-list {
+    transition: transform 0.34s var(--udm-ios), filter 0.34s var(--udm-ios);
+  }
+  .udm--stage-open .udm-list {
+    transform: translateX(-14%);
+    filter: brightness(0.5);
+  }
+
+  // The stage lives in #root (MessagePage portals it), above the header and
+  // the page; the player bar tucks away while it's open (body.udm-immersive).
+  // Its height follows the visible viewport so the composer rides the keyboard.
+  .udm-stage {
+    --udm-thread-bg: #000;
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--udm-vvt, 0px);
+    height: var(--udm-vvh, 100dvh);
+    z-index: 999;
+    background: var(--udm-thread-bg);
+    overflow: hidden;
+    overscroll-behavior: contain;
+    visibility: hidden;
+    transform: translateX(100%);
+    box-shadow: -24px 0 50px rgba(0, 0, 0, 0.55);
+    transition: transform 0.34s var(--udm-ios), visibility 0s linear 0.34s;
+
+    &.is-open {
+      visibility: visible;
+      transform: none;
+      transition: transform 0.34s var(--udm-ios), visibility 0s;
+    }
+
+    .udm-thread__head { padding-top: max(12px, env(safe-area-inset-top)); }
+    .udm-back { display: inline-flex; }
+    .udm-thread__who { gap: 9px; }
+  }
+}
+
+// Set on <body> by MessagePage while a phone thread is open.
+body.udm-immersive {
+  overflow: hidden;
+
+  .player:not(.expanded) {
+    transform: translateY(calc(100% + 24px));
+    pointer-events: none;
+  }
+}
+
+// ═════════════════════════════════════════════════════════════
+//  KEYFRAMES
+// ═════════════════════════════════════════════════════════════
+@keyframes udm-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes udm-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes udm-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes udm-rot { to { transform: rotate(360deg); } }
+@keyframes udm-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@keyframes udm-dim { to { opacity: 0.5; } }
+@keyframes udm-pop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes udm-ping { 0% { transform: scale(1); opacity: 0.55; } 80%, 100% { transform: scale(2.8); opacity: 0; } }
+@keyframes udm-blink {
+  0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+@keyframes udm-eq { from { transform: scaleY(0.3); } to { transform: scaleY(1); } }
+
+@keyframes udm-send-in {
+  from { opacity: 0; transform: translateY(26px) scale(0.86); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes udm-recv-in {
+  from { opacity: 0; transform: translateX(-12px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes udm-recv-out { to { opacity: 0; transform: scale(0.85); } }
+@keyframes udm-typing-in { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+
+@keyframes udm-burst {
+  0% { transform: scale(0.2); opacity: 0; }
+  18% { transform: scale(1.28); opacity: 1; }
+  34% { transform: scale(0.94); }
+  48% { transform: scale(1.06); }
+  70% { transform: scale(1) translateY(-6px); opacity: 1; }
+  100% { transform: scale(0.9) translateY(-36px); opacity: 0; }
+}
+
+@keyframes udm-bar-in { from { opacity: 0; transform: scale(0.6) translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes udm-emoji-in { from { opacity: 0; transform: scale(0.3) translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes udm-menu-in { from { opacity: 0; transform: scale(0.86) translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes udm-menu-out { to { opacity: 0; transform: scale(0.94) translateY(-4px); } }
+@keyframes udm-chip-up { from { opacity: 0; transform: translateY(12px) scale(0.8); } to { opacity: 1; transform: none; } }
+@keyframes udm-chip-down { to { opacity: 0; transform: translateY(10px) scale(0.85); } }
+@keyframes udm-toast-in { from { opacity: 0; transform: translateY(-14px) scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes udm-toast-out { to { opacity: 0; transform: translateY(-10px) scale(0.96); } }
+@keyframes udm-float-in { from { opacity: 0; transform: translateY(16px) scale(0.9); } to { opacity: 1; transform: none; } }
+@keyframes udm-send-ready { from { transform: scale(0.4) rotate(-20deg); } to { transform: none; } }
+@keyframes udm-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes udm-sheet-down { to { transform: translateY(100%); } }
+@keyframes udm-dialog-in { from { opacity: 0; transform: translateY(18px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes udm-dialog-out { to { opacity: 0; transform: translateY(10px) scale(0.97); } }
+
+// ── Reduce motion: keep the feedback, drop the movement ──────
 @media (prefers-reduced-motion: reduce) {
-  .udm-dots span,
-  .udm-typing > span[aria-hidden],
-  .udm-picker { animation: none; }
+  .udm *,
+  .udm-stage,
+  .udm-stage *,
+  .udm-sheet,
+  .udm-sheet * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .udm--stage-open .udm-list { transform: none; }
 }

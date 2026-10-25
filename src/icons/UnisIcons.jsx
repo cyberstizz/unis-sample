@@ -18,6 +18,8 @@
 // Usage:
 //   import { FindIcon } from './icons/UnisIcons';
 //   <FindIcon size={15} active={isActive} className="nav-icon" />
+//
+// Batches: navigation · header controls · messaging (Oct 2026).
 // ─────────────────────────────────────────────────────────────
 import React, { useId } from 'react';
 
@@ -181,5 +183,206 @@ export function SignOutIcon({ active = false, tone = 'default', size = 24, ...pr
       <circle cx="9.3" cy="13.4" r="1" fill={p.knob} stroke="none" />
       <path d="M13.6 12.6h6.6M17 9.4l3.2 3.2-3.2 3.2" fill="none" stroke={p.accent} />
     </IconFrame>
+  );
+}
+
+// ── Messaging (Oct 2026) ─────────────────────────────────────
+// Same rules as above. Icons that sit on a coloured button (Send, New,
+// the green support button, the track-card play) are used with tone="on".
+
+export function ArrowBackIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M19.5 12H5.2" fill="none" stroke={p.line} />
+      <path d="M11 5.6 4.6 12l6.4 6.4" fill="none" stroke={p.accent} />
+    </IconFrame>
+  );
+}
+
+export function ArrowDownIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M12 4.5v14" fill="none" stroke={p.line} />
+      <path d="M6.2 12.9 12 18.7l5.8-5.8" fill="none" stroke={p.accent} />
+    </IconFrame>
+  );
+}
+
+export function SlidersIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M3.8 7.4h9.4M18.9 7.4h1.3M3.8 16.6h2.6M11.6 16.6h8.6" fill="none" stroke={p.line} />
+      <circle cx="16" cy="7.4" r="2.6" fill={p.bodyFill} stroke={p.bodyStroke} />
+      <circle cx="9" cy="16.6" r="2.6" fill={p.heart} stroke="none" />
+    </IconFrame>
+  );
+}
+
+export function ComposeIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M11.2 4.4H7.3a3 3 0 0 0-3 3v9.4a3 3 0 0 0 3 3h9.4a3 3 0 0 0 3-3v-3.9" fill="none" stroke={p.line} />
+      <path d="M17.7 3.7a1.95 1.95 0 0 1 2.75 2.75l-7.2 7.2-3.7.95.95-3.7z" fill={p.bodyFill} stroke={p.bodyStroke} />
+      <path d="M15.9 5.5l2.7 2.7" fill="none" stroke={p.heart} />
+    </IconFrame>
+  );
+}
+
+/** Send: an up-arrow that ends in a note head — a message that rises. */
+export function SendIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M12 15.6V5.2" fill="none" stroke={p.line} />
+      <path d="M6.9 10.3 12 5.2l5.1 5.1" fill="none" stroke={p.accent} />
+      <circle cx="12" cy="18.6" r="2.1" fill={p.heart} stroke="none" />
+    </IconFrame>
+  );
+}
+
+/** Share a song: an eighth note with a plus. */
+export function ShareSongIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <ellipse cx="7.6" cy="17.4" rx="2.9" ry="2.4" fill={p.bodyFill} stroke={p.bodyStroke} />
+      <path d="M10.5 17.2V4.4c2.6.3 4.4 1.7 5 4" fill="none" stroke={p.line} />
+      <path d="M18.2 12.6v7M14.7 16.1h7" fill="none" stroke={p.accent} />
+    </IconFrame>
+  );
+}
+
+/** Note: a single eighth note (shared-song previews, empty track art). */
+export function NoteIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M13.6 17V4.2c3 .4 5 2 5.6 4.6" fill="none" stroke={p.line} />
+      <ellipse cx="10.3" cy="17.2" rx="3.3" ry="2.7" fill={p.heart} stroke="none" />
+    </IconFrame>
+  );
+}
+
+/** Support: a coin with a heart in it. */
+export function SupportIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <circle cx="12" cy="12" r="8.6" fill={p.bodyFill} stroke={p.bodyStroke} />
+      <path d="M12 16.3s-4-2.5-4-5.2a2.15 2.15 0 0 1 4-1.15 2.15 2.15 0 0 1 4 1.15c0 2.7-4 5.2-4 5.2z" fill={p.heart} stroke="none" />
+    </IconFrame>
+  );
+}
+
+export function ReactIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <circle cx="12" cy="12" r="8.6" fill={p.bodyFill} stroke={p.bodyStroke} />
+      <circle cx="9.1" cy="10" r="1.05" fill={p.knob} stroke="none" />
+      <circle cx="14.9" cy="10" r="1.05" fill={p.knob} stroke="none" />
+      <path d="M8.5 13.7c.9 1.45 2.05 2.2 3.5 2.2s2.6-.75 3.5-2.2" fill="none" stroke={p.heart} />
+    </IconFrame>
+  );
+}
+
+export function MoreIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <circle cx="5.2" cy="12" r="1.75" fill={p.line} stroke="none" />
+      <circle cx="12" cy="12" r="1.75" fill={p.accent} stroke="none" />
+      <circle cx="18.8" cy="12" r="1.75" fill={p.line} stroke="none" />
+    </IconFrame>
+  );
+}
+
+export function FilterIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M4.2 5.2h15.6l-6 7v5.9l-3.6 1.8v-7.7z" fill={p.bodyFill} stroke={p.bodyStroke} />
+      <path d="M8.6 8.6h6.8" fill="none" stroke={p.heart} />
+    </IconFrame>
+  );
+}
+
+export function CloseIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M6.4 6.4l11.2 11.2" fill="none" stroke={p.line} />
+      <path d="M17.6 6.4 6.4 17.6" fill="none" stroke={p.accent} />
+    </IconFrame>
+  );
+}
+
+export function CopyIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M8.6 8.4V6.3a2.2 2.2 0 0 1 2.2-2.2h7a2.2 2.2 0 0 1 2.2 2.2v7a2.2 2.2 0 0 1-2.2 2.2h-2.1" fill="none" stroke={p.line} />
+      <rect x="4" y="8.4" width="11.6" height="11.6" rx="2.2" fill={p.bodyFill} stroke={p.bodyStroke} />
+      <path d="M7.3 14.2h5" fill="none" stroke={p.heart} />
+    </IconFrame>
+  );
+}
+
+export function RetryIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M19.4 12.6a7.5 7.5 0 1 1-2.3-6" fill="none" stroke={p.line} />
+      <path d="M19.4 3.9v4.4H15" fill="none" stroke={p.accent} />
+    </IconFrame>
+  );
+}
+
+/** Messages: a chat bubble with an equalizer inside — music in a message. */
+export function MessagesIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M12 3.9c4.7 0 8.5 3.25 8.5 7.3s-3.8 7.3-8.5 7.3c-.95 0-1.85-.13-2.7-.37L4.9 19.9l1.25-3.65C4.5 14.95 3.5 13.15 3.5 11.2c0-4.05 3.8-7.3 8.5-7.3z" fill={p.bodyFill} stroke={p.bodyStroke} />
+      <path d="M8.4 10.2v2.2M10.8 8.6v5.4M13.2 9.7v3.2M15.6 10.5v1.6" fill="none" stroke={p.heart} />
+    </IconFrame>
+  );
+}
+
+// Transport glyphs for small solid buttons (now-playing chip, track cards).
+// Always solid in currentColor.
+export function PlayGlyph({ size = 24, ...props }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path d="M8.5 6.1c0-.95 1.05-1.55 1.87-1.05L18.6 10.9c.83.5.83 1.7 0 2.2l-8.23 5.85c-.82.5-1.87-.1-1.87-1.05z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function PauseGlyph({ size = 24, ...props }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <rect x="6.2" y="5" width="4.2" height="14" rx="1.4" fill="currentColor" />
+      <rect x="13.6" y="5" width="4.2" height="14" rx="1.4" fill="currentColor" />
+    </svg>
   );
 }
