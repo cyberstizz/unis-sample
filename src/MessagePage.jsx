@@ -199,7 +199,11 @@ export default function MessagesPage() {
   const [presence, setPresence] = useState({});      // userId → online (overrides the last fetch)
 
   const searchRef = useRef(null);
+  const udmRef = useRef(null);
   const stageRef = useRef(null);
+  // Where the phone thread screen is attached — found after the first render,
+  // once the page is in the document (see the comment by createPortal below).
+  const [stageHost, setStageHost] = useState(null);
   const tabRefs = useRef({});
   const typingTimers = useRef({});
   const refreshTimer = useRef(null);
@@ -491,6 +495,11 @@ export default function MessagesPage() {
       ? cur : { x: b.offsetLeft, w: b.offsetWidth }));
   }, [tab, requests.length, loading, activeNow.length]);
 
+  useLayoutEffect(() => {
+    const el = udmRef.current;
+    setStageHost(el?.closest('.app-wrapper') || document.getElementById('root') || document.body);
+  }, []);
+
   // PHONE: the open thread owns the screen — tuck the player bar away and
   // stop the page behind it from scrolling.
   useEffect(() => {
@@ -516,7 +525,7 @@ export default function MessagesPage() {
       vv.removeEventListener('resize', apply);
       vv.removeEventListener('scroll', apply);
     };
-  }, [isPhone]);
+  }, [isPhone, stageHost]);
 
   const closeSearch = () => { setSearchOpen(false); setFilter(''); };
 
@@ -579,13 +588,9 @@ export default function MessagesPage() {
     />
   ) : null;
 
-  const portalTarget = typeof document !== 'undefined'
-    ? (document.getElementById('root') || document.body)
-    : null;
-
   return (
     <Layout hideFooter>
-      <div className={`udm${isPhone && stageOpen ? ' udm--stage-open' : ''}`}>
+      <div ref={udmRef} className={`udm${isPhone && stageOpen ? ' udm--stage-open' : ''}`}>
         <aside className="udm-list" aria-label="Conversations">
           <div className="udm-glow" aria-hidden="true" />
 
@@ -821,7 +826,15 @@ export default function MessagesPage() {
         )}
       </div>
 
-      {isPhone && portalTarget && createPortal(
+      {/* PHONE thread screen. Attached to .app-wrapper (the app shell), not
+          inside the page and not straight into #root:
+            • inside the page it would sit under the header — the page's
+              .layout-container is its own z-index:1 layer
+            • straight into #root it would also cover the "Play now / Add to
+              queue" prompt and the expanded player, which live in the shell
+          In the shell it sits above the header, sidebar and song pop-ups, and
+          below the player and that prompt (z-index in messages.scss). */}
+      {isPhone && stageHost && createPortal(
         <div
           className={`udm-stage${stageOpen ? ' is-open' : ''}`}
           ref={stageRef}
@@ -829,7 +842,7 @@ export default function MessagesPage() {
         >
           {thread}
         </div>,
-        portalTarget,
+        stageHost,
       )}
 
       <MessagePickerSheet

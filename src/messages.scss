@@ -1181,7 +1181,7 @@ $danger: #ff7a7a;
   &__time {
     position: absolute;
     top: 50%;
-    right: -62px;
+    right: -74px; // fully past the thread's 14px side padding until swiped
     width: 54px;
     translate: 0 -50%;
     font-size: 11.5px;
@@ -2077,6 +2077,16 @@ $danger: #ff7a7a;
   }
 }
 
+// unis-design-tokens.scss has `#root > * { position: relative; z-index: 1; }`
+// — an ID rule, so it outranks every class rule here. The sheets are placed
+// directly in #root (so the player and sidebar can't cover them), which means
+// they must restate their full-screen positioning at the same strength.
+// Without this they fell to the bottom of the page and the page scrolled.
+#root > .udm-sheet {
+  position: fixed;
+  z-index: 1200;
+}
+
 @media (min-width: 821px) {
   .udm-sheet { align-items: center; }
   .udm-sheet__panel {
@@ -2291,8 +2301,11 @@ $danger: #ff7a7a;
     filter: brightness(0.5);
   }
 
-  // The stage lives in #root (MessagePage portals it), above the header and
-  // the page; the player bar tucks away while it's open (body.udm-immersive).
+  // The stage is attached to .app-wrapper (MessagePage explains why). 950 puts
+  // it above the header (whole page layer), sidebar (100) and song pop-ups
+  // (101), and below the player (1000) and the Play now / Add to queue
+  // prompt (1000) so both can still open over a thread. The player bar
+  // itself tucks away while a thread is open (body.udm-immersive).
   // Its height follows the visible viewport so the composer rides the keyboard.
   .udm-stage {
     --udm-thread-bg: #000;
@@ -2302,7 +2315,7 @@ $danger: #ff7a7a;
     right: 0;
     top: var(--udm-vvt, 0px);
     height: var(--udm-vvh, 100dvh);
-    z-index: 999;
+    z-index: 950;
     background: var(--udm-thread-bg);
     overflow: hidden;
     overscroll-behavior: contain;
@@ -2321,6 +2334,13 @@ $danger: #ff7a7a;
     .udm-back { display: inline-flex; }
     .udm-thread__who { gap: 9px; }
   }
+}
+
+// Fallback when there's no .app-wrapper and the stage lands in #root: same
+// ID-strength restatement as the sheets above.
+#root > .udm-stage {
+  position: fixed;
+  z-index: 950;
 }
 
 // Set on <body> by MessagePage while a phone thread is open.
