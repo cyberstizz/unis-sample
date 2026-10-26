@@ -78,7 +78,7 @@ const AccountSettings = ({ userId, settings: incomingSettings, onUpdated }) => {
 
         <SettingRow
           label="Public profile"
-          sub="Anyone on UNIS can find you"
+          sub="Anyone can see your photos. Turn off to show them only to people you follow back."
         >
           <Switch
             on={settings.publicProfile}

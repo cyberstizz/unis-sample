@@ -45,6 +45,11 @@ import ListenerPage from './ListenerPage';
 import MessagesPage from './MessagePage';
 import HelpPage from './HelpPage';
 import ComingSoon from './prelaunch/ComingSoon';
+import JoinPage from './JoinPage';
+import TeamLanding from './TeamLanding';
+import TeamJoin from './TeamJoin';
+import TeamHome from './TeamHome';
+import AwardPage from './AwardPage';
 import { resolveGate } from './prelaunch/prelaunchConfig';
 
 // Theme
@@ -62,6 +67,9 @@ import AnalyticsPage from './admin/AnalyticsPage';
 import AuditLog from './admin/AuditLog';
 import RoleManagement from './admin/RoleManagement';
 import MetricsPage from './admin/metrics/MetricsPage';
+import CodesAdmin from './admin/CodesAdmin';
+import TeamAdmin from './admin/TeamAdmin';
+import AnnouncementsAdmin from './admin/AnnouncementsAdmin';
 import RankingsAdmin from './admin/RankingsAdmin';
 import CommunityShareAdmin from './admin/CommunityShareAdmin';
 import SponsorsAdmin from './admin/SponsorsAdmin';
@@ -113,7 +121,10 @@ const AppLayout = () => {
   // for people outside Harlem) and the booking form are always standalone.
   const isSponsorPage = pathname === '/sponsor' || pathname.startsWith('/sponsor/');
   const isWaitlistPitch = pathname === '/waitlist' || pathname === '/waitlist/';
-  const chromeless = gate === 'open' || isSponsorPage || isWaitlistPitch;
+  // The street team pages and /join links stand alone too.
+  const isTeamPage = pathname === '/team' || pathname.startsWith('/team/');
+  const isJoinLink = pathname === '/join' || pathname.startsWith('/join/');
+  const chromeless = gate === 'open' || isSponsorPage || isWaitlistPitch || isTeamPage || isJoinLink;
 
   return (
     <div className="app-wrapper">
@@ -136,6 +147,11 @@ const AppLayout = () => {
         <Route path="/waitlist/join" element={<WaitlistPage />} />
         <Route path="/sponsor" element={<SponsorLanding />} />
         <Route path="/sponsor/book" element={<SponsorPage />} />
+        <Route path="/join" element={<JoinPage />} />
+        <Route path="/join/:code" element={<JoinPage />} />
+        <Route path="/team" element={<TeamLanding />} />
+        <Route path="/team/join" element={<TeamJoin />} />
+        <Route path="/team/me" element={<TeamHome />} />
 
         {/* Browsable routes — guests can view these freely */}
         <Route element={<PrivateRoute />}>
@@ -152,6 +168,7 @@ const AppLayout = () => {
           <Route path="/discover" element={<DiscoverPage />} />        
           <Route path="/browse/:kind/:slug" element={<BrowseTagPage />} />
           <Route path="/user/:userId" element={<ListenerPage />} />    
+          <Route path="/award/:awardId" element={<AwardPage />} />
           <Route path="/search" element={<SearchRedirect />} />        
           <Route path="/voteawards" element={<VoteAwards />} />   
           <Route path="/jurisdiction/:jurisdiction/winners" element={<WinnersTimelinePage />} />
@@ -183,6 +200,9 @@ const AppLayout = () => {
           <Route path="/admin/rankings" element={<RankingsAdmin />} />
           <Route path="/admin/community-share" element={<CommunityShareAdmin />} />
           <Route path="/admin/sponsors" element={<SponsorsAdmin />} />
+          <Route path="/admin/codes" element={<CodesAdmin />} />
+          <Route path="/admin/team" element={<TeamAdmin />} />
+          <Route path="/admin/announcements" element={<AnnouncementsAdmin />} />
         </Route>
 
         {/* Admin routes — super admin only */}

@@ -176,7 +176,7 @@ const ListenerPage = () => {
         </section>
 
         {/* PHOTOS — directly under Follow / Find similar. Who can see them is
-            decided server-side (under-18 safeguard + "Public profile" toggle). */}
+            decided server-side (under-17 safeguard + "Public profile" toggle). */}
         <ProfilePhotos ownerId={userId} ownerName={user.username} ownerAvatar={photo} isSelf={Boolean(isSelf)} />
 
         {/* "FREQUENCY" CTA (taste-match slot — real Discover loop; ★ personalized % is future backend) */}

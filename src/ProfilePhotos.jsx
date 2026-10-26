@@ -7,8 +7,8 @@
 //         DELETE /v1/users/{ownerId}/photos/{photoId}           (owner only)
 //         POST | DELETE /v1/users/{ownerId}/photos/{photoId}/like
 //
-// Visibility is decided by the server (ArtistPhotoService.canView — the under-18
-// safeguard + the "Public profile" toggle). `hidden: true` means this viewer may
+// Visibility is decided by the server (ArtistPhotoService.canView — the under-17
+// safeguard + the "Public profile" toggle; everyone else's photos are public). `hidden: true` means this viewer may
 // not see the gallery; the owner gets `visibility` so we can tell them who can.
 //
 // The open photo lives in the URL (?photo=<id>) so the phone's back gesture
@@ -33,10 +33,11 @@ const SKELETON_TILES = 6;
 const NOTICE_MS = 3200;
 
 // What the owner is told about who sees their photos (never shown to others).
+// The server decides (ArtistPhotoService: under 17, or Public profile off);
+// everyone else's photos are public.
 const VISIBILITY_NOTES = {
   private: "Your profile is set to private, so only people you follow back can see your photos.",
-  under18: "Because you're under 18, only people you follow back can see your photos.",
-  noBirthdate: "Only people you follow back can see your photos, because your account has no date of birth.",
+  minor: "Because you're under 17, only people you follow back can see your photos.",
 };
 
 const GridIcon = () => (

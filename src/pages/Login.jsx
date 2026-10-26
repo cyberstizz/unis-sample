@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import unisLogo from '../assets/unisLogoThree.svg';
 import spaceVideo from '../assets/space-bg.mp4';
 import CreateAccountWizard from '../createAccountWizard'; 
@@ -16,7 +16,10 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { login, completeLogin } = useAuth();
   const [mfa, setMfa] = useState(null);   // staff accounts: { setupRequired, mfaToken }
-  const [showWizard, setShowWizard] = useState(false);
+  // /login?signup=1 (where /join/CODE sends people after launch) opens sign-up
+  // straight away; the wizard fills in the code from the link.
+  const [searchParams] = useSearchParams();
+  const [showWizard, setShowWizard] = useState(searchParams.get('signup') === '1');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [waitlistInfo, setWaitlistInfo] = useState(null);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);

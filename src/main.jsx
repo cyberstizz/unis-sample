@@ -3,9 +3,12 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
 import { captureSignupCampaign } from './utils/signupCampaign';
+import { captureReferral } from './utils/referralLink';
 
-// Remember a campaign code (?c=...) from the link this visit arrived on.
+// Remember a campaign code (?c=...) and a referral code (?ref=...) from the
+// link this visit arrived on.
 captureSignupCampaign();
+captureReferral();
 
 // Register the service worker (public/sw.js) and check for a new version every
 // minute. This used to be an inline <script> in index.html; it lives here now

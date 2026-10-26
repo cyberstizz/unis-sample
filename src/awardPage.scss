@@ -1,0 +1,129 @@
+// /award/:id — a winner's share page. Theme tokens only, so it follows the
+// viewer's color.
+.aw-page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 20px 120px;
+  color: var(--unis-text, #fff);
+  font-family: var(--unis-font-sans, 'Inter', system-ui, sans-serif);
+}
+
+.aw-loading,
+.aw-error {
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  font-size: 15px;
+  padding: 40px 0;
+}
+
+.aw-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(24px, 4vw, 56px);
+  align-items: start;
+}
+
+.aw-card {
+  margin: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+
+  img { display: block; width: 100%; height: auto; }
+
+  &__placeholder {
+    aspect-ratio: 4 / 5;
+    background: linear-gradient(180deg, #07080c, #0c1430);
+  }
+}
+
+.aw-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 8px;
+
+  &__kicker {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--unis-primary-2, #8fa8ff);
+  }
+
+  &__name {
+    margin: 0;
+    font-family: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+    font-weight: 400;
+    font-size: clamp(40px, 6vw, 72px);
+    line-height: 1.02;
+    overflow-wrap: anywhere;
+  }
+
+  &__by,
+  &__period,
+  &__note {
+    margin: 0;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+    font-size: 16px;
+  }
+
+  &__photo {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 8px 0;
+    border: 2px solid var(--unis-primary, #163387);
+  }
+}
+
+.aw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.aw-btn {
+  min-height: 44px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.18));
+  background: transparent;
+  color: var(--unis-text, #fff);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:focus-visible { outline: 2px solid var(--unis-primary-2, #8fa8ff); outline-offset: 3px; }
+
+  &--primary {
+    background: var(--unis-primary, #163387);
+    border-color: var(--unis-primary, #163387);
+    color: #fff;
+  }
+}
+
+.aw-flash {
+  margin: 0;
+  font-size: 14px;
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+}
+
+.aw-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 14px;
+  font-size: 15px;
+
+  a { color: var(--unis-text, #fff); }
+}
+
+@media (max-width: 760px) {
+  .aw-layout { grid-template-columns: 1fr; }
+}

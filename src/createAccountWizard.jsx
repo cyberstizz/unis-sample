@@ -13,6 +13,7 @@ import useModalA11y from './hooks/useModalA11y'; // ★ a11y: Escape close, focu
 import buildUrl from './utils/buildUrl';         // ★ canonical media URL builder (R2→CDN rewrite)
 import SoundDiscoveryFields from './SoundDiscoveryFields';
 import { getSignupCampaign } from './utils/signupCampaign';
+import { cleanReferral, getStoredReferral } from './utils/referralLink';
 import {
   EMPTY_DISCOVERY, isDiscoveryComplete, discoveryProblem, toDiscoveryPayload,
   describeDiscovery, useTaxonomy,
@@ -148,7 +149,7 @@ const formatFileSize = (bytes) => {
 // page. It only changes the two finish screens — nobody can log in before
 // launch, so they say "we'll email you" and their button closes the wizard
 // (calling onSuccess) instead of sending people to /login.
-const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false }) => {
+const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false, initialReferralCode = '' }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [stepDirection, setStepDirection] = useState('forward');
   const navigate = useNavigate();
@@ -426,6 +427,17 @@ const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false }) =>
     }, 500),
     []
   );
+
+  // A code from the link they arrived on (/join/CODE or ?ref=CODE) is filled
+  // in and checked as soon as the form opens, so nobody has to type it.
+  useEffect(() => {
+    if (!show || formData.referralCode) return;
+    const code = cleanReferral(initialReferralCode) || getStoredReferral();
+    if (code.length < 3) return;
+    updateForm('referralCode', code);
+    validateReferralCode(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show, initialReferralCode]);
   
   const validateUsername = useCallback(
     debounce(async (username) => {
@@ -994,7 +1006,7 @@ const handleSubmit = async () => {
               <div className="alert-content">
                 <div className="alert-title">Don't have a code?</div>
                 <div className="alert-message">
-                  <strong>Find a Unis User and ask them for their referral code</strong>
+                  <strong>Ask anyone on Unis for theirs, or use the code on a Unis poster in a Harlem shop.</strong>
                 </div>
               </div>
             </div>

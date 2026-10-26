@@ -1,0 +1,46 @@
+// Admin → Codes, Street team, Announcements. Builds on the Metrics page's .mx
+// styles and Community Share's .csa styles.
+
+.tma-actions { flex-wrap: wrap; }
+
+.tma-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.tma-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--mx-surface-2);
+  border: 1px solid var(--mx-border);
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 0;
+
+  img,
+  &__placeholder {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    border-radius: 8px;
+    background: #0c1430;
+    object-fit: cover;
+  }
+
+  &__title { margin: 0; font-size: 14px; font-weight: 600; color: var(--mx-ink); }
+
+  textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    background: var(--mx-surface);
+    color: var(--mx-ink);
+    border: 1px solid var(--mx-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+}

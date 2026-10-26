@@ -846,6 +846,25 @@ No internal state or API logic — fully controlled by parent (`ArtistDashboard`
 
 ---
 
+### Launch marketing: codes, street team, winner announcements
+
+Sign-up requires a referral code, so every campaign hands one out, and every code has a link.
+
+| File | Route | What it does |
+|------|-------|--------------|
+| `JoinPage.jsx` | `/join`, `/join/:code` (open before launch) | Stores the code (`utils/referralLink`) and opens sign-up with it filled in: the Coming soon page with the form open before launch (`ComingSoon autoSignup`), `/login?signup=1` after. |
+| `utils/referralLink.js` | — | `?ref=CODE` on any page (captured in `main.jsx`) or `/join/CODE` is kept 30 days; `CreateAccountWizard` fills it in when it opens (`initialReferralCode` prop or the stored code). `joinLink(code)` builds the printable link. |
+| `admin/CodesAdmin.jsx` | `/admin/codes` (admin) | Short codes (HARLEM) tied to an owner account; link and QR for any code; sign-ups per code. |
+| `TeamLanding.jsx`, `TeamJoin.jsx`, `TeamHome.jsx` | `/team`, `/team/join`, `/team/me?t=TOKEN` (open before launch, no app chrome) | The street team: pitch page, join form (always answers "check your email"), and the member page reached from email links (confirm, I'm in / Can't make it, code + QR, emails on/off). No login; the token in the link identifies the member. 18+, no shifts or quotas. Styles: `sponsorLanding.scss` + `teamPages.scss`. |
+| `admin/TeamAdmin.jsx` | `/admin/team` (admin) | Post, edit and cancel meetups (Harlem time), invite matching or all members by email, see who's coming with phone numbers, mark who came, sign-ups during each meetup, member list. |
+| `AwardPage.jsx` | `/award/:awardId` (guests can view) | A winner's share page: the card, Share (phone share sheet with the image), Save image, Copy link. The link in every winner email. |
+| `utils/awardCard.js` | — | Draws the 1080×1350 share card on a canvas (wordmark and text only; photos stay off the canvas so it can be downloaded). |
+| `admin/AnnouncementsAdmin.jsx` | `/admin/announcements` (admin) | Every winner whose race ended on a chosen day, as card images and captions ready to post. |
+
+**Photo visibility (`ProfilePhotos.jsx`):** galleries are public to everyone, signed in or not, unless the owner is under 17 or turned **Public profile** off in Account Settings; then only mutual follows see them. The owner's note uses `visibility`: `private` or `minor`.
+
+---
+
 ## 13. Earnings & Monetization
 
 ### `Earnings.jsx`
@@ -1265,6 +1284,26 @@ path parameter, so a client cannot request another user's financials.
 | GET/POST/PUT/DELETE | `/v1/admin/playlists` | AdminPlaylistPage |
 | POST | `/v1/admin/playlists/{id}/tracks` | AdminPlaylistPage |
 | POST | `/v1/admin/playlists/{id}/cover` | AdminPlaylistPage |
+| GET/POST | `/v1/admin/referral-codes` | CodesAdmin |
+| PATCH | `/v1/admin/referral-codes/{code}` | CodesAdmin |
+| GET | `/v1/admin/referral-codes/report` | CodesAdmin |
+| GET | `/v1/admin/team/members`, PATCH `/v1/admin/team/members/{userId}` | TeamAdmin |
+| GET/POST | `/v1/admin/team/meetups` | TeamAdmin |
+| GET/PATCH | `/v1/admin/team/meetups/{id}` | TeamAdmin |
+| POST | `/v1/admin/team/meetups/{id}/invite` | TeamAdmin |
+| PATCH | `/v1/admin/team/meetups/{id}/attendance` | TeamAdmin |
+| GET | `/v1/admin/announcements?date=` | AnnouncementsAdmin |
+
+### Street team and winner cards (public)
+| Method | Endpoint | Used By |
+|--------|----------|---------|
+| GET | `/v1/team/info` | TeamJoin |
+| POST | `/v1/team/join` | TeamJoin |
+| POST | `/v1/team/confirm` | TeamHome |
+| GET | `/v1/team/me?t=` | TeamHome |
+| POST | `/v1/team/reply` | TeamHome |
+| POST | `/v1/team/emails` | TeamHome |
+| GET | `/v1/awards/{awardId}/card` | AwardPage |
 
 ---
 

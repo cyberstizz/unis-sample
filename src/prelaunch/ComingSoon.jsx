@@ -82,9 +82,11 @@ export function buildSkyline(count = BAR_COUNT) {
   });
 }
 
-export default function ComingSoon() {
+// autoSignup / initialReferralCode: set by /join/CODE (JoinPage), which opens
+// sign-up straight away with that code filled in.
+export default function ComingSoon({ autoSignup = false, initialReferralCode = '' }) {
   const { user, logout, isGuest, theme } = useAuth();
-  const [showSignup, setShowSignup] = useState(false);
+  const [showSignup, setShowSignup] = useState(autoSignup);
   const [justSignedUp, setJustSignedUp] = useState(false);
   const bars = useMemo(() => buildSkyline(), []);
 
@@ -190,6 +192,7 @@ export default function ComingSoon() {
       <CreateAccountWizard
         show={showSignup}
         prelaunch
+        initialReferralCode={initialReferralCode}
         onClose={() => setShowSignup(false)}
         onSuccess={() => {
           setShowSignup(false);
