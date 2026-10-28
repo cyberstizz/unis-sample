@@ -1376,6 +1376,122 @@ export const HELP_SECTIONS = [
     ],
   },
   {
+    id: 'upload-rights',
+    title: 'What you can upload',
+    blurb: 'Which songs can go on Unis for now, why, and what Unis gets when you upload.',
+    status: 'published',
+    articles: [
+      {
+        id: 'upload-rights-which',
+        q: 'Which songs can I upload?',
+        a: (
+          <>
+            <p>
+              For now, Unis can only take music you control yourself. Every
+              upload asks you to tick a box confirming four things about the
+              song, or about the music in your video:
+            </p>
+            <ul>
+              <li>
+                <b>You wrote it.</b> If someone co-wrote it or made the beat,
+                they&rsquo;re fine with it being on Unis.
+              </li>
+              <li>
+                <b>No publisher handles it.</b> That includes publishing
+                administrators such as Songtrust or TuneCore Publishing. If you
+                signed up for one, it counts, even if you never thought of it as
+                having a publisher.
+              </li>
+              <li>
+                <b>No one who wrote it is with SESAC or GMR.</b> ASCAP and BMI
+                writers can upload.
+              </li>
+              <li>
+                <b>It isn&rsquo;t a cover</b>, and any sample in it is cleared.
+              </li>
+            </ul>
+            <p>
+              If any of these isn&rsquo;t true, the song can&rsquo;t go on Unis
+              yet. The upload won&rsquo;t go through until the box is ticked.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'upload-rights-why',
+        q: 'Why can’t I upload a song with a publisher, or a cover?',
+        a: (
+          <>
+            <p>
+              Every song has two parts: the recording, and the song itself, its
+              music and lyrics. When you upload music you control, you license
+              both to Unis yourself.
+            </p>
+            <p>
+              When a publisher, a publishing administrator, SESAC or GMR handles
+              the song, or it&rsquo;s someone else&rsquo;s song, as a cover is,
+              Unis would need licenses from The Mechanical Licensing Collective
+              and the performing rights organizations to play it. Unis
+              doesn&rsquo;t have those yet, so those songs can&rsquo;t go up for
+              now.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'upload-rights-pro',
+        q: 'I’m with ASCAP or BMI. Can I still upload?',
+        a: (
+          <>
+            <p>
+              Yes. ASCAP and BMI hold only non-exclusive rights to their
+              writers&rsquo; songs, so you can license your own songs to Unis
+              directly.
+            </p>
+            <p>
+              Unis doesn&rsquo;t pay through ASCAP or BMI yet, so plays on Unis
+              won&rsquo;t appear on your statements from them. What you earn on
+              Unis comes from Unis itself: your supporters&rsquo; share, Unis
+              Plus, song sales and referrals.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'upload-rights-license',
+        q: 'What does Unis get when I upload?',
+        a: (
+          <>
+            <p>
+              A non-exclusive license to the recording and the song, so Unis can
+              stream it, show it on Unis, and sell or give away downloads if you
+              turn them on. Your share of Unis&rsquo;s income is what you get for
+              it.
+            </p>
+            <p>
+              You keep ownership of everything, you can put the song anywhere
+              else, and the license ends when you take the song down. Section 3
+              of the <a href="/terms">Terms of Service</a> has the full wording.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'upload-rights-change',
+        q: 'What if I sign with a publisher later?',
+        a: (
+          <>
+            <p>
+              Take the song down from your dashboard. A song can only stay on
+              Unis while you still control it. If Unis adds licenses for
+              published songs later, you&rsquo;ll be able to put it back.
+            </p>
+          </>
+        ),
+      },
+    ],
+  },
+  {
     id: 'verification',
     title: 'Phone verification',
     blurb: 'Why Unis asks for a number and what it unlocks.',

@@ -32,8 +32,9 @@ const ARTIST_PROFILE = {
   jurisdiction: { jurisdictionId: '52740de0-e4e9-4c9e-b68e-1e170f6788c4', name: 'Harlem' },
 };
 
-// Fields the backend's VideoUploadRequest actually declares.
-const VIDEO_ALLOWED_KEYS = ['title', 'description', 'genreId', 'artistId', 'jurisdictionId', 'duration'];
+// Fields the backend's VideoUploadRequest actually declares (rightsConfirmed:
+// the rights box, Terms 3.6, required on every upload).
+const VIDEO_ALLOWED_KEYS = ['title', 'description', 'genreId', 'artistId', 'jurisdictionId', 'duration', 'rightsConfirmed'];
 // Fields that exist only on SongUploadRequest.
 const SONG_ONLY_KEYS = ['explicit', 'isrc', 'downloadPolicy', 'downloadPrice'];
 
@@ -59,7 +60,7 @@ const captureRequest = () => {
 };
 
 /** Walk the wizard from step 1 to a submitted upload. */
-const submitUpload = async ({ mediaType, file }) => {
+const submitUpload = async ({ mediaType, file, confirmRights = true }) => {
   const onUploadSuccess = vi.fn();
   render(
     <UploadWizard
@@ -85,12 +86,15 @@ const submitUpload = async ({ mediaType, file }) => {
   await waitFor(() => expect(next()).not.toBeDisabled());
   await user.click(next());
 
-  // Step 3 — submit
+  // Step 3 — the rights box, then submit
   const uploadBtn = await waitFor(() => {
     const b = document.querySelector('.uw__btn--upload');
     expect(b).not.toBeNull();
     return b;
   });
+  if (confirmRights) {
+    await user.click(screen.getByRole('checkbox', { name: /all of this is true/i }));
+  }
   await user.click(uploadBtn);
 
   return { onUploadSuccess };
@@ -117,6 +121,8 @@ describe('UploadWizard — upload payload contract', () => {
 
     expect(captured.url).toBe('/v1/media/video');
     expect(captured.key).toBe('video');
+
+    expect(captured.metadata.rightsConfirmed).toBe(true);
 
     // This is the assertion that would have caught the production 500
     SONG_ONLY_KEYS.forEach((k) => expect(captured.metadata).not.toHaveProperty(k));
@@ -151,5 +157,21 @@ describe('UploadWizard — upload payload contract', () => {
 
     // 45 MB cannot transfer in 10s on a normal connection
     expect(captured.timeout).toBeGreaterThanOrEqual(60_000);
+  });
+
+  it('refuses to upload until the rights box is ticked, and says why', async () => {
+    const spy = vi.spyOn(axiosModule, 'apiCall').mockResolvedValue({ data: {} });
+    await submitUpload({
+      mediaType: 'video',
+      file: fakeFile({ name: 'clip.mp4', type: 'video/mp4' }),
+      confirmRights: false,
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/check the box to upload this video/i);
+    expect(spy).not.toHaveBeenCalledWith(expect.objectContaining({ url: '/v1/media/video' }));
+
+    // Ticking it clears the alert.
+    await userEvent.setup().click(screen.getByRole('checkbox', { name: /all of this is true/i }));
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });

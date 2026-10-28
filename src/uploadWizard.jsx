@@ -4,6 +4,7 @@ import { X, Upload, Music, Video, FileText, CheckCircle } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import SoundDiscoveryFields from './SoundDiscoveryFields';
+import RightsConfirm from './RightsConfirm';
 import { MIN_SONG_PRICE_CENTS, dollarsToCents, formatCents, priceHint } from './utils/platformFee';
 import {
   EMPTY_DISCOVERY, isDiscoveryComplete, discoveryProblem, toDiscoveryPayload,
@@ -39,6 +40,10 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
   const [discovery, setDiscovery] = useState(EMPTY_DISCOVERY);
   const [showDiscoveryErrors, setShowDiscoveryErrors] = useState(false);
   const { taxonomy } = useTaxonomy();
+  // The rights box on the review step (Terms 3.6). Required for every upload;
+  // the server refuses one without it.
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  const [showRightsAlert, setShowRightsAlert] = useState(false);
 
   // Clean version state
   const [uploadedSong, setUploadedSong] = useState(null);
@@ -67,6 +72,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
     setCleanVersionChoice(null); setCleanFile(null); setCleanPreview(null);
     setCleanLoading(false); setDownloadPolicy('free'); setDownloadPrice('');
     setDiscovery(EMPTY_DISCOVERY); setShowDiscoveryErrors(false);
+    setRightsConfirmed(false); setShowRightsAlert(false);
   };
 
   const handleNext = () => {
@@ -154,6 +160,11 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
       setLoading(false);
       return;
     }
+    if (!rightsConfirmed) {
+      setShowRightsAlert(true);
+      setLoading(false);
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -161,7 +172,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
       // Song-only fields (explicit / isrc / downloadPolicy / downloadPrice)
       // must NOT be sent on a video upload — VideoUploadRequest has no such
       // fields and the UI hides those controls for videos anyway.
-      const baseMetadata = { title, description, genreId, artistId, jurisdictionId };
+      const baseMetadata = { title, description, genreId, artistId, jurisdictionId, rightsConfirmed: true };
       const metadata = mediaType === 'song'
         ? {
             ...baseMetadata,
@@ -215,6 +226,8 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
         title: title + ' (Clean)', description, genreId, artistId,
         jurisdictionId, explicit: false, isrc: null,
         isCleanVersion: true,
+        // Same song as the explicit version, confirmed on the review step.
+        rightsConfirmed: true,
         // Same song, same sound — the clean version carries the same tags.
         ...toDiscoveryPayload(discovery),
       };
@@ -520,9 +533,15 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
         </div>
       )}
 
-      <p className="uw__warning">
-        This upload cannot be undone. Make sure this content is yours to upload.
-      </p>
+      <RightsConfirm
+        idPrefix="uw-rights"
+        mediaType={mediaType}
+        checked={rightsConfirmed}
+        onChange={(value) => { setRightsConfirmed(value); if (value) setShowRightsAlert(false); }}
+        showAlert={showRightsAlert}
+      />
+
+      <p className="uw__warning">This upload cannot be undone.</p>
 
       <form onSubmit={handleUpload} style={{ marginTop: 16 }}>
         <button

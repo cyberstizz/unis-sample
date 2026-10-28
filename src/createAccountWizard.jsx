@@ -12,6 +12,7 @@ import { JURISDICTION_IDS, GENRE_IDS } from './utils/idMappings';
 import useModalA11y from './hooks/useModalA11y'; // ★ a11y: Escape close, focus trap, focus restore
 import buildUrl from './utils/buildUrl';         // ★ canonical media URL builder (R2→CDN rewrite)
 import SoundDiscoveryFields from './SoundDiscoveryFields';
+import RightsConfirm from './RightsConfirm';
 import { getSignupCampaign } from './utils/signupCampaign';
 import { cleanReferral, getStoredReferral } from './utils/referralLink';
 import {
@@ -182,6 +183,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false, init
     songFileName: '',
     songArtworkFile: null,
     songArtworkPreview: null,
+    // The debut song's rights box (Terms 3.6). The server refuses the upload without it.
+    songRightsConfirmed: false,
     supportedArtistId: null,
     supportedArtistName: '',
     agreedToTerms: false,
@@ -702,8 +705,16 @@ const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false, init
     }
   };
   
+  // The debut song's rights box: Continue stays clickable so that pressing it
+  // unticked explains why the song can't go up, instead of a dead button.
+  const [showSongRightsAlert, setShowSongRightsAlert] = useState(false);
+
   // Navigation
   const goNext = () => {
+    if (currentStepData?.id === 'songUpload' && !formData.songRightsConfirmed) {
+      setShowSongRightsAlert(true);
+      return;
+    }
     if (currentStep < totalSteps) {
       setStepDirection('forward');
       setCurrentStep(prev => prev + 1);
@@ -851,6 +862,7 @@ const handleSubmit = async () => {
             jurisdictionId: formData.jurisdictionId,
             isrc: songIsrc || null,
             ...toDiscoveryPayload(songDiscovery),
+            rightsConfirmed: formData.songRightsConfirmed === true,
           };
           const songFormData = new FormData();
           songFormData.append('song', JSON.stringify(songData));
@@ -1613,6 +1625,13 @@ const handleSubmit = async () => {
               </div>
               {renderFileError('songArtwork')}
             </div>
+
+            <RightsConfirm
+              idPrefix="caw-rights"
+              checked={formData.songRightsConfirmed}
+              onChange={(value) => { updateForm('songRightsConfirmed', value); if (value) setShowSongRightsAlert(false); }}
+              showAlert={showSongRightsAlert}
+            />
           </>
         );
 
@@ -1974,8 +1993,8 @@ const handleSubmit = async () => {
                 <div className="agreement-section" style={{ marginTop: 16 }}>
                   <h4>Artist Upload Agreement</h4>
                   <ol>
-                    <li>You own 100% of master and publishing rights.</li>
-                    <li>You grant Unis a non-exclusive license.</li>
+                    <li>You control every song you upload: no publisher or publishing administrator, no SESAC or GMR writer, no covers, no uncleared samples.</li>
+                    <li>You grant Unis a non-exclusive license to both the recording and the song itself.</li>
                     <li>You'll receive 60% of net revenue from audio ads on your songs (coming soon), as set out in the Terms.</li>
                     <li>Terminable with 30 days notice.</li>
                   </ol>

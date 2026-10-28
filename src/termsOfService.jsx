@@ -12,8 +12,8 @@ const TermsOfService = () => {
           <header className="terms-header">
             <h1>Unis Terms of Service</h1>
             <div className="terms-meta">
-              <p><strong>Effective Date:</strong> October 19, 2026</p>
-              <p><strong>Last Updated:</strong> October 19, 2026</p>
+              <p><strong>Effective Date:</strong> October 28, 2026</p>
+              <p><strong>Last Updated:</strong> October 28, 2026</p>
             </div>
           </header>
 
@@ -110,13 +110,17 @@ const TermsOfService = () => {
               the platform and for a reasonable period thereafter necessary to remove it from our systems.
             </p>
 
-            <h3>3.2 Streaming Rights</h3>
+            <h3>3.2 Streaming Rights and Your Songs</h3>
             <p>
-              The license in Section 3.1 specifically includes the right to publicly perform and digitally transmit 
-              your audio content to users of the Services (public performance rights and digital audio transmission 
-              rights). Unis operates as a direct-upload platform; we do not claim mechanical rights to your 
-              compositions, and we do not distribute your content to third-party streaming services without your 
-              explicit written consent.
+              The license in Section 3.1 covers both the sound recording and the musical work (the song itself: its 
+              music and lyrics) in everything you upload, including the music in your videos. It specifically 
+              includes the rights to publicly perform, reproduce, digitally transmit and stream your content to users 
+              of the Services and, where you enable sales or downloads, to distribute it as downloads. You grant these 
+              rights directly, so Unis does not need a separate license from a music publisher, a performing rights 
+              organization, or The Mechanical Licensing Collective for content you upload. Your compensation for this 
+              license is the revenue share described in Sections 11, 12 and 17; no other royalty or fee is owed for 
+              it. The license is non-exclusive, so you remain free to license your songs to anyone else, and we do not 
+              distribute your content to third-party streaming services without your explicit written consent.
             </p>
 
             <h3>3.3 Your Ownership</h3>
@@ -155,6 +159,30 @@ const TermsOfService = () => {
                 content to Unis as described herein.
               </li>
             </ul>
+
+            <h3>3.6 Songs Unis Can Accept</h3>
+            <p>
+              Until Unis announces licenses with The Mechanical Licensing Collective and the performing rights 
+              organizations, Unis can only carry music you control yourself. You may upload a song, or a video that 
+              contains a song, only if all of the following are true:
+            </p>
+            <ul>
+              <li>You wrote it, and anyone who co-wrote it or produced the beat has agreed to it being on Unis.</li>
+              <li>
+                No music publisher or publishing administrator (for example Songtrust, TuneCore Publishing or CD Baby 
+                Pro) controls or administers any part of it.
+              </li>
+              <li>
+                No writer of it is affiliated with SESAC or Global Music Rights. Writers affiliated with ASCAP or BMI 
+                may upload, because those organizations hold only non-exclusive rights to their members&rsquo; songs.
+              </li>
+              <li>It is not a cover of someone else&rsquo;s song, and any sample in it is cleared.</li>
+            </ul>
+            <p>
+              You confirm these points with a checkbox each time you upload, and Unis records when you did. If any of 
+              them stops being true, for example because you sign a publishing deal, you must remove the song from 
+              Unis. Unis may remove any song that does not meet them.
+            </p>
           </section>
 
           {/* ═══════════════════════════════════════════ */}

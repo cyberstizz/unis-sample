@@ -1,0 +1,96 @@
+// RightsConfirm — the rights checkbox shown on every upload.
+// Theme-aware through the --unis-* token layer, with fallbacks for screens
+// that load before the theme (the signup wizard).
+
+.rights-confirm {
+  margin: 18px 0 0;
+  padding: 16px 16px 14px;
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.12));
+  border-radius: var(--unis-radius-sm, 10px);
+  background: var(--unis-primary-soft, rgba(22, 51, 135, 0.12));
+  text-align: left;
+  transition: border-color 0.2s ease;
+
+  &--alert {
+    border-color: rgba(248, 113, 113, 0.55);
+  }
+}
+
+.rights-confirm__title {
+  padding: 0 6px;
+  margin-left: -6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--unis-text, #fff);
+}
+
+.rights-confirm__intro {
+  margin: 4px 0 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.8));
+}
+
+.rights-confirm__list {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.8));
+
+  li + li {
+    margin-top: 4px;
+  }
+}
+
+.rights-confirm__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--unis-text, #fff);
+
+  input {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    margin: 1px 0 0;
+    accent-color: var(--unis-primary, #163387);
+    cursor: pointer;
+  }
+
+  input:focus-visible {
+    outline: 2px solid var(--unis-primary, #163387);
+    outline-offset: 2px;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: underline;
+  }
+}
+
+.rights-confirm__alert {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--unis-radius-sm, 10px);
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  color: #fca5a5;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.rights-confirm__why {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.6));
+  text-decoration: underline;
+
+  &:hover {
+    color: var(--unis-text, #fff);
+  }
+}

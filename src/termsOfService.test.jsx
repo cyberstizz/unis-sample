@@ -16,7 +16,7 @@ describe('TermsOfService', () => {
 
   it('shows the effective date', () => {
     render(<MemoryRouter><TermsOfService /></MemoryRouter>);
-    expect(screen.getAllByText(/October 19, 2026/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/October 28, 2026/).length).toBeGreaterThan(0);
   });
 
   it('renders all 18 section headings', () => {
@@ -97,5 +97,12 @@ describe('TermsOfService', () => {
   it('renders the footer copyright notice', () => {
     render(<MemoryRouter><TermsOfService /></MemoryRouter>);
     expect(screen.getByText(/© 2026 Unis Music/i)).toBeInTheDocument();
+  });
+
+  it('licenses the song itself and lists which songs Unis can accept', () => {
+    render(<MemoryRouter><TermsOfService /></MemoryRouter>);
+    expect(screen.getByText('3.2 Streaming Rights and Your Songs')).toBeInTheDocument();
+    expect(screen.getByText('3.6 Songs Unis Can Accept')).toBeInTheDocument();
+    expect(screen.queryByText(/do not claim mechanical rights/i)).toBeNull();
   });
 });

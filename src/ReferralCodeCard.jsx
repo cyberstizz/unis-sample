@@ -43,8 +43,13 @@ const ReferralCodeCard = ({ referralCode = '', username = '', isArtist = false }
         <p className="referral-card__desc">
           {isArtist
             ? <>Share this code with listeners and other artists. Earn <strong>+5 points</strong> for every listener and <strong>+2</strong> for every artist who joins with your code.</>
-            : <>Every month, Unis shares what it earns with the community, based on listening. <strong>Earn Cash</strong> when the people you invite listen: you get 10% of their monthly share, 5% from the people they invite, and 2% from the level after that.</>}
+            : <>Every month, Unis shares what it earns with the community, based on listening. <strong>Earn Cash</strong> when the people you invite listen: you get 10% of their monthly share, 5% from the people they invite, and 2% from the level after that.*</>}
         </p>
+        {!isArtist && (
+          <p className="referral-card__note">
+            *The people you invite need a verified phone number for their listening to count toward your share.
+          </p>
+        )}
 
         <div className="referral-card__code-row">
           <div className="referral-card__code" aria-label={`Your referral code: ${referralCode || 'not assigned'}`}>
