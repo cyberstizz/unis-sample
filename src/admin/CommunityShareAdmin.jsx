@@ -619,8 +619,9 @@ const CommunityShareAdmin = () => {
               listener&rsquo;s part goes to the artist they supported when they played, and 10, 5 and
               2% to the three people above them in the referral chain. Unis keeps the rest,
               including any share whose earner is missing, has left, isn&rsquo;t phone-verified, or
-              is a staff or test account. Unis Plus is settled in the same close: 60% of each
-              subscriber&rsquo;s payment, after Stripe&rsquo;s fees, goes to the artists they played.
+              is a staff or test account. Unis Plus is settled in the same close: of each
+              subscriber&rsquo;s payment after Stripe&rsquo;s fees, 15% goes to the artist they support
+              and 45% to the artists they played.
             </p>
           </div>
         </header>
