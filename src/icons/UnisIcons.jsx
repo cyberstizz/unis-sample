@@ -19,7 +19,7 @@
 //   import { FindIcon } from './icons/UnisIcons';
 //   <FindIcon size={15} active={isActive} className="nav-icon" />
 //
-// Batches: navigation · header controls · messaging (Oct 2026).
+// Batches: navigation · header controls · messaging · comments (Oct 2026).
 // ─────────────────────────────────────────────────────────────
 import React, { useId } from 'react';
 
@@ -364,6 +364,72 @@ export function MessagesIcon({ active = false, tone = 'default', size = 24, ...p
     <IconFrame gradientId={id} size={size} {...props}>
       <path d="M12 3.9c4.7 0 8.5 3.25 8.5 7.3s-3.8 7.3-8.5 7.3c-.95 0-1.85-.13-2.7-.37L4.9 19.9l1.25-3.65C4.5 14.95 3.5 13.15 3.5 11.2c0-4.05 3.8-7.3 8.5-7.3z" fill={p.bodyFill} stroke={p.bodyStroke} />
       <path d="M8.4 10.2v2.2M10.8 8.6v5.4M13.2 9.7v3.2M15.6 10.5v1.6" fill="none" stroke={p.heart} />
+    </IconFrame>
+  );
+}
+
+// ── Comments (Oct 2026) ──────────────────────────────────────
+// The comment section's action row and menus. Same rules as above.
+
+/**
+ * Like: a thumbs up. The cuff is the gradient detail; active fills the
+ * whole hand and cuff, so a liked comment reads as one solid glowing thumb.
+ * (Unis has no dislike, so there is no thumbs-down partner.)
+ */
+export function LikeIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <rect x="3.25" y="10.4" width="3.65" height="10.25" rx="1.35" fill={active && tone !== 'on' ? p.accent : 'none'} stroke={p.accent} />
+      <path d="M8.7 10.5 11.35 4.65C11.8 3.65 12.95 3.25 13.9 3.75c1 .55 1.35 1.7 1.05 2.75l-.7 2.85h4.5c1.35 0 2.3 1.25 2 2.55l-1.2 6.65c-.25 1.25-1.25 2.1-2.5 2.1H8.7z" fill={p.bodyFill} stroke={p.bodyStroke} />
+    </IconFrame>
+  );
+}
+
+/** Comment / reply: a squared speech bubble with two lines of text. */
+export function CommentIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M6.3 4.3h11.4a2.9 2.9 0 0 1 2.9 2.9v6.9a2.9 2.9 0 0 1-2.9 2.9h-6.5l-3.9 3.1V17h-1a2.9 2.9 0 0 1-2.9-2.9V7.2a2.9 2.9 0 0 1 2.9-2.9z" fill={p.bodyFill} stroke={p.bodyStroke} />
+      <path d="M7.7 9.2h8.6M7.7 12.3h5.5" fill="none" stroke={p.heart} />
+    </IconFrame>
+  );
+}
+
+export function TrashIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M4.3 6.7h15.4M9.5 6.7V5.2a1.4 1.4 0 0 1 1.4-1.4h2.2a1.4 1.4 0 0 1 1.4 1.4v1.5" fill="none" stroke={p.line} />
+      <path d="M6.2 6.7l.85 11.9a2 2 0 0 0 2 1.85h5.9a2 2 0 0 0 2-1.85l.85-11.9" fill={p.bodyFill} stroke={p.bodyStroke} />
+      <path d="M10.3 10.6v5.8M13.7 10.6v5.8" fill="none" stroke={p.heart} />
+    </IconFrame>
+  );
+}
+
+/** Chevron: show / hide replies. Rotate it with CSS for the "up" state. */
+export function ChevronDownIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <path d="M6.4 9.3 12 14.9l5.6-5.6" fill="none" stroke={p.accent} />
+    </IconFrame>
+  );
+}
+
+export function InfoIcon({ active = false, tone = 'default', size = 24, ...props }) {
+  const id = useGlowId();
+  const p = paints(active, tone, id);
+  return (
+    <IconFrame gradientId={id} size={size} {...props}>
+      <circle cx="12" cy="12" r="8.6" fill={p.bodyFill} stroke={p.bodyStroke} />
+      <path d="M12 11.1v5.1" fill="none" stroke={p.heart} />
+      <circle cx="12" cy="7.9" r="1.1" fill={p.heart} stroke="none" />
     </IconFrame>
   );
 }

@@ -1,40 +1,301 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { apiCall } from './components/axiosInstance';
-import {
-  MessageCircle,
-  Send,
-  Reply,
-  Trash2,
-  MoreHorizontal,
-  ChevronDown,
-  ChevronUp,
-  X,
-  Info,
-  SlidersHorizontal,
-} from 'lucide-react';
-import './commentSection.scss';
-import VerificationGate from './verificationGate';
-
-
+// src/commentSection.jsx
+// ─────────────────────────────────────────────────────────────
+// Comments for songs and videos, modeled on YouTube's comment section
+// (years of real-world use behind every pattern), in the Unis look:
+//
+//   • Thumbs-up like with a live count beside it. Unis has no dislikes.
+//     Likes are optimistic and "latest tap wins", so fast double taps
+//     never leave the count out of sync with the server.
+//   • A comment-bubble reply button on every comment AND reply. Threads
+//     stay one level deep (help center: comments-replies): replying to a
+//     reply posts under the original comment, starting with @username.
+//   • Long comments fold to four lines with Read more.
+//   • Top / Newest sort. Liking never reorders the list under your thumb;
+//     the order only changes when you pick a sort or the list reloads.
+//   • Custom Glow icons (src/icons/UnisIcons.jsx) that follow the theme.
+//   • Deleting asks first in an in-app dialog; failures show a toast.
+//
+// Desktop/tablet (>768px) renders an embedded panel. Phones get a
+// collapsed preview card that opens a bottom sheet — only one of the two
+// is ever mounted, so there is exactly one composer and one reply box.
+//
 // Supports both songs and videos. Pass either `songId` (+ optional
-// `songArtistId`) or `videoId` (+ optional `artistId`). All existing
-// call sites that pass songId continue to work unchanged.
+// `songArtistId`) or `videoId` (+ optional `artistId`).
+// ─────────────────────────────────────────────────────────────
+import React, {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  useId,
+} from 'react';
+import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
+import { apiCall } from './components/axiosInstance';
+import { buildUrl } from './utils/buildUrl';
+import { useAuth } from './context/AuthContext';
+import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
+import VerificationGate from './verificationGate';
+import { COMMENT_MAX_LENGTH } from './data/helpContent';
+import {
+  LikeIcon,
+  CommentIcon,
+  TrashIcon,
+  ChevronDownIcon,
+  InfoIcon,
+  MoreIcon,
+  CloseIcon,
+  SendIcon,
+} from './icons/UnisIcons';
+import './commentSection.scss';
+
+const MOBILE_QUERY = '(max-width: 768px)';
+const TOAST_MS = 3600;
+
+// ── Formatting ───────────────────────────────────────────────
+
+/** YouTube-style counts: 7, 999, 1.2K, 15K, 1.2M. Zero shows nothing. */
+function formatCount(n) {
+  const value = Number(n) || 0;
+  if (value <= 0) return '';
+  if (value < 1000) return String(value);
+  return new Intl.NumberFormat('en', {
+    notation: 'compact',
+    maximumFractionDigits: value < 10000 ? 1 : 0,
+  }).format(value);
+}
+
+const TIME_UNITS = [
+  ['year', 31536000],
+  ['month', 2592000],
+  ['week', 604800],
+  ['day', 86400],
+  ['hour', 3600],
+  ['minute', 60],
+];
+
+/** "just now", "5 minutes ago", "2 weeks ago", "1 year ago". */
+function timeAgo(dateString) {
+  const then = new Date(dateString).getTime();
+  if (!Number.isFinite(then)) return '';
+  const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  for (const [unit, size] of TIME_UNITS) {
+    const n = Math.floor(seconds / size);
+    if (n >= 1) return `${n} ${unit}${n === 1 ? '' : 's'} ago`;
+  }
+  return 'just now';
+}
+
+function fullDate(dateString) {
+  const d = new Date(dateString);
+  return Number.isFinite(d.getTime()) ? d.toLocaleString() : '';
+}
+
+/** "Top": likes plus replies, newest first on ties. Returns ids only. */
+function rankIds(list, mode) {
+  const cloned = [...list];
+  if (mode === 'newest') {
+    cloned.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  } else {
+    const score = (c) => (Number(c.likeCount) || 0) + (c.replies?.length || Number(c.replyCount) || 0);
+    cloned.sort((a, b) => {
+      const diff = score(b) - score(a);
+      return diff !== 0 ? diff : new Date(b.createdAt) - new Date(a.createdAt);
+    });
+  }
+  return cloned.map((c) => c.commentId);
+}
+
+/** Server message for a 4xx (e.g. the comment limit), otherwise the fallback. */
+function errorText(error, fallback) {
+  const status = error?.response?.status;
+  const data = error?.response?.data;
+  const message = data && (data.message || data.error);
+  return status && status < 500 && typeof message === 'string' && message ? message : fallback;
+}
+
+function growTextarea(event) {
+  const el = event.target;
+  el.style.height = 'auto';
+  el.style.height = `${Math.min(el.scrollHeight, 168)}px`;
+}
+
+function resetTextarea(el) {
+  if (el) el.style.height = '';
+}
+
+// ── Small building blocks ────────────────────────────────────
+
+function useIsMobile() {
+  const read = () =>
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia(MOBILE_QUERY).matches;
+
+  const [isMobile, setIsMobile] = useState(read);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined;
+    const mql = window.matchMedia(MOBILE_QUERY);
+    const onChange = () => setIsMobile(mql.matches);
+    onChange();
+    if (mql.addEventListener) mql.addEventListener('change', onChange);
+    else mql.addListener(onChange);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener('change', onChange);
+      else mql.removeListener(onChange);
+    };
+  }, []);
+
+  return isMobile;
+}
+
+/** Photo, or a theme-tinted initial when there's no photo (or it fails to load). */
+function Avatar({ name, photoUrl, size = 'md' }) {
+  const src = buildUrl(photoUrl);
+  const [broken, setBroken] = useState(false);
+
+  useEffect(() => setBroken(false), [src]);
+
+  if (src && !broken) {
+    return (
+      <img
+        className={`cmt-avatar cmt-avatar--${size}`}
+        src={src}
+        alt=""
+        loading="lazy"
+        onError={() => setBroken(true)}
+      />
+    );
+  }
+  return (
+    <span className={`cmt-avatar cmt-avatar--${size} cmt-avatar--initial`} aria-hidden="true">
+      {(name || '?').charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+/** Comment body: folds past four lines, highlights a leading @mention. */
+function CommentText({ text }) {
+  const ref = useRef(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || expanded) return undefined;
+    const measure = () => setOverflows(el.scrollHeight - el.clientHeight > 1);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text, expanded]);
+
+  const content = text || '';
+  const mention = content.match(/^@\S+/);
+
+  return (
+    <>
+      <p ref={ref} className={`cmt-comment__text ${expanded ? '' : 'is-clamped'}`}>
+        {mention ? (
+          <>
+            <span className="cmt-mention">{mention[0]}</span>
+            {content.slice(mention[0].length)}
+          </>
+        ) : (
+          content
+        )}
+      </p>
+      {(overflows || expanded) && (
+        <button
+          type="button"
+          className="cmt-more"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      )}
+    </>
+  );
+}
+
+/** YouTube-style "Delete comment?" dialog. Focuses Cancel, Esc closes. */
+function ConfirmDelete({ ownComment, onCancel, onConfirm }) {
+  const cancelRef = useRef(null);
+  const titleId = useId();
+  const textId = useId();
+
+  useEffect(() => {
+    cancelRef.current?.focus();
+    // Capture phase so Esc closes only this dialog, not the sheet behind it.
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [onCancel]);
+
+  return (
+    <div
+      className="cmt-confirm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onCancel();
+      }}
+    >
+      <div
+        className="cmt-confirm__card"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={textId}
+      >
+        <h3 id={titleId} className="cmt-confirm__title">Delete comment?</h3>
+        <p id={textId} className="cmt-confirm__text">
+          {ownComment
+            ? 'Delete your comment permanently?'
+            : 'Remove this comment from your release for everyone?'}
+        </p>
+        <div className="cmt-confirm__actions">
+          <button ref={cancelRef} type="button" className="cmt-btn cmt-btn--ghost" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="button" className="cmt-btn cmt-btn--danger" onClick={onConfirm}>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Comment section ──────────────────────────────────────────
+
 const CommentSection = ({ songId, videoId, userId, songArtistId, artistId }) => {
   // ── Media identity: exactly one of songId / videoId is expected ──
   const mediaType = videoId ? 'video' : 'song';
   const mediaId = videoId || songId;
   const mediaArtistId = songArtistId ?? artistId ?? null;
+  const mediaNoun = mediaType === 'video' ? 'video' : 'track';
+
+  const { user: viewer } = useAuth();
+  const { triggerGate, gateProps } = useAuthGate();
+  const isMobile = useIsMobile();
+  const sheetTitleId = useId();
 
   const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
-  const [replyingTo, setReplyingTo] = useState(null);
-  const [replyContent, setReplyContent] = useState('');
+  const [order, setOrder] = useState([]); // top-level ids in display order
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [expandedReplies, setExpandedReplies] = useState({});
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [sortMode, setSortMode] = useState('top');
   const [commentCount, setCommentCount] = useState({ totalCount: 0, topLevelCount: 0 });
-  const [activeMenu, setActiveMenu] = useState(null);
   const [commentLimit, setCommentLimit] = useState({
     count: 0,
     limit: 3,
@@ -42,155 +303,298 @@ const CommentSection = ({ songId, videoId, userId, songArtistId, artistId }) => 
     limitReached: false,
   });
 
-  // New UX state
-  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
-  const [sortMode, setSortMode] = useState('top');
+  const [newComment, setNewComment] = useState('');
+  const [composerFocused, setComposerFocused] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const textareaRef = useRef(null);
-  const sheetTextareaRef = useRef(null);
+  // replyTarget: { parentId, anchorId, username } — parentId is the thread
+  // the reply is posted under; anchorId is where the reply box renders.
+  const [replyTarget, setReplyTarget] = useState(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [expandedReplies, setExpandedReplies] = useState({});
+
+  const [activeMenu, setActiveMenu] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [justLiked, setJustLiked] = useState(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const composerRef = useRef(null);
   const replyInputRef = useRef(null);
+  const sheetPanelRef = useRef(null);
+  const previewRef = useRef(null);
+  const sheetBodyRef = useRef(null);
+  const sortModeRef = useRef(sortMode);
+  const toastTimer = useRef(null);
+  const mountedRef = useRef(true);
+  // commentId → { want, server, serverCount, busy } — see toggleLike.
+  const likeSync = useRef(new Map());
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  sortModeRef.current = sortMode;
+  const overlayOpen = !!pendingDelete || gateProps.isOpen;
+  const overlayOpenRef = useRef(overlayOpen);
+  overlayOpenRef.current = overlayOpen;
 
   useEffect(() => {
-    if (mediaId) {
-      fetchComments();
-      fetchCommentCount();
-      if (userId) fetchUserCommentCount();
-    }
-  }, [mediaId, userId]);
-
-  useEffect(() => {
-    if (replyingTo && replyInputRef.current) {
-      replyInputRef.current.focus();
-    }
-  }, [replyingTo]);
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => setActiveMenu(null);
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
   }, []);
 
-  // Mobile sheet scroll lock + Escape behavior
-  useEffect(() => {
-    if (!isMobileSheetOpen) return;
+  const showToast = useCallback((message) => {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), TOAST_MS);
+  }, []);
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+  // Closing hands focus back to the card that opened the sheet.
+  const closeSheet = useCallback(() => {
+    const panel = sheetPanelRef.current;
+    if (panel && panel.contains(document.activeElement)) {
+      previewRef.current?.focus?.({ preventScroll: true });
+    }
+    setIsSheetOpen(false);
+  }, []);
 
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setIsMobileSheetOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isMobileSheetOpen]);
-
-  // Optional: focus composer shortly after sheet opens
-  useEffect(() => {
-    if (!isMobileSheetOpen) return;
-
-    const timer = window.setTimeout(() => {
-      sheetTextareaRef.current?.focus?.();
-    }, 260);
-
-    return () => window.clearTimeout(timer);
-  }, [isMobileSheetOpen]);
-
-  const fetchUserCommentCount = async () => {
+  const fetchUserCommentCount = useCallback(async () => {
+    if (!userId || !mediaId) return;
     try {
       const response = await apiCall({
         method: 'get',
         url: `/v1/comments/${mediaType}/${mediaId}/user-count`,
       });
-      setCommentLimit(response.data);
+      if (mountedRef.current && response?.data) setCommentLimit(response.data);
     } catch (error) {
       // Silent failure — don't block commenting if this check fails
       console.warn('Failed to fetch comment limit:', error);
     }
+  }, [mediaType, mediaId, userId]);
+
+  // ── Load comments, the total, and this viewer's comment allowance ──
+  useEffect(() => {
+    if (!mediaId) return undefined;
+    let cancelled = false;
+
+    likeSync.current = new Map();
+    setComments([]);
+    setOrder([]);
+    setCommentCount({ totalCount: 0, topLevelCount: 0 });
+    setExpandedReplies({});
+    setLoading(true);
+    setLoadError(false);
+    setReplyTarget(null);
+    setActiveMenu(null);
+
+    (async () => {
+      try {
+        const response = await apiCall({
+          method: 'get',
+          url: `/v1/comments/${mediaType}/${mediaId}`,
+        });
+        if (cancelled) return;
+        const list = Array.isArray(response?.data) ? response.data : [];
+        setComments(list);
+        setOrder(rankIds(list, sortModeRef.current));
+      } catch (error) {
+        console.error('Failed to fetch comments:', error);
+        if (!cancelled) setLoadError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    (async () => {
+      try {
+        const response = await apiCall({
+          method: 'get',
+          url: `/v1/comments/${mediaType}/${mediaId}/count`,
+        });
+        if (!cancelled && response?.data) setCommentCount(response.data);
+      } catch (error) {
+        console.error('Failed to fetch comment count:', error);
+      }
+    })();
+
+    fetchUserCommentCount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mediaType, mediaId, userId, reloadKey, fetchUserCommentCount]);
+
+  // ── Phone ↔ desktop: never leave a sheet open on a wide screen ──
+  useEffect(() => {
+    if (!isMobile) setIsSheetOpen(false);
+  }, [isMobile]);
+
+  // ── Close the ⋯ menu on outside click / Esc ──
+  useEffect(() => {
+    if (!activeMenu) return undefined;
+    const close = () => setActiveMenu(null);
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        close();
+      }
+    };
+    document.addEventListener('click', close);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('click', close);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [activeMenu]);
+
+  // ── Mobile sheet: scroll lock + Esc + focus the dialog (not the input —
+  //    popping the keyboard would hide the comments people came to read) ──
+  useEffect(() => {
+    if (!isSheetOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKey = (event) => {
+      if (event.key === 'Escape' && !overlayOpenRef.current) closeSheet();
+    };
+    window.addEventListener('keydown', onKey);
+    const timer = window.setTimeout(() => sheetPanelRef.current?.focus?.(), 220);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKey);
+      window.clearTimeout(timer);
+    };
+  }, [isSheetOpen, closeSheet]);
+
+  // ── Focus the reply box when it opens, caret after any @mention ──
+  useEffect(() => {
+    if (!replyTarget) return;
+    const el = replyInputRef.current;
+    if (!el) return;
+    el.focus();
+    const end = el.value.length;
+    el.setSelectionRange?.(end, end);
+  }, [replyTarget]);
+
+  const displayed = useMemo(() => {
+    const byId = new Map(comments.map((c) => [c.commentId, c]));
+    return order.map((id) => byId.get(id)).filter(Boolean);
+  }, [comments, order]);
+
+  const previewComment = displayed[0];
+  const totalCount = Number(commentCount.totalCount) || 0;
+
+  const changeSort = (mode) => {
+    if (mode === sortMode) return;
+    setSortMode(mode);
+    setOrder(rankIds(comments, mode));
   };
 
-  const fetchComments = async () => {
-    try {
-      setLoading(true);
-      const response = await apiCall({
-        method: 'get',
-        url: `/v1/comments/${mediaType}/${mediaId}`,
-      });
-      setComments(response.data || []);
-    } catch (error) {
-      console.error('Failed to fetch comments:', error);
-    } finally {
-      setLoading(false);
+  // ── Likes ──────────────────────────────────────────────────
+
+  const applyLike = useCallback((commentId, liked, count) => {
+    const patch = (c) => (c.commentId === commentId ? { ...c, likedByMe: liked, likeCount: count } : c);
+    setComments((prev) =>
+      prev.map((c) => {
+        if (c.commentId === commentId) return patch(c);
+        if (c.replies?.some((r) => r.commentId === commentId)) {
+          return { ...c, replies: c.replies.map(patch) };
+        }
+        return c;
+      })
+    );
+  }, []);
+
+  // Sends requests until the server matches the latest tap. One request in
+  // flight per comment; taps made meanwhile just move `want`.
+  const flushLike = useCallback(
+    async (commentId) => {
+      const s = likeSync.current.get(commentId);
+      if (!s || s.busy) return;
+      s.busy = true;
+      try {
+        while (s.want !== s.server) {
+          const target = s.want;
+          const response = await apiCall({
+            method: target ? 'post' : 'delete',
+            url: `/v1/comments/${commentId}/like`,
+          });
+          s.server = target;
+          const n = Number(response?.data?.likeCount);
+          s.serverCount = Number.isFinite(n) ? n : Math.max(0, s.serverCount + (target ? 1 : -1));
+        }
+        if (mountedRef.current && likeSync.current.get(commentId) === s) {
+          applyLike(commentId, s.server, s.serverCount);
+        }
+      } catch (error) {
+        console.error('Failed to update comment like:', error);
+        s.want = s.server;
+        if (mountedRef.current && likeSync.current.get(commentId) === s) {
+          applyLike(commentId, s.server, s.serverCount);
+          showToast(errorText(error, "Couldn't save your like. Try again."));
+        }
+      } finally {
+        s.busy = false;
+      }
+    },
+    [applyLike, showToast]
+  );
+
+  const toggleLike = (comment) => {
+    if (!userId) {
+      triggerGate('generic');
+      return;
     }
+    const id = comment.commentId;
+    let s = likeSync.current.get(id);
+    if (!s) {
+      const liked = !!comment.likedByMe;
+      s = {
+        want: liked,
+        server: liked,
+        serverCount: Math.max(0, Number(comment.likeCount) || 0),
+        busy: false,
+      };
+      likeSync.current.set(id, s);
+    }
+    s.want = !s.want;
+    const delta = s.want === s.server ? 0 : s.want ? 1 : -1;
+    applyLike(id, s.want, Math.max(0, s.serverCount + delta));
+    setJustLiked(s.want ? id : null);
+    flushLike(id);
   };
 
-  const fetchCommentCount = async () => {
-    try {
-      const response = await apiCall({
-        method: 'get',
-        url: `/v1/comments/${mediaType}/${mediaId}/count`,
-      });
-      setCommentCount(response.data);
-    } catch (error) {
-      console.error('Failed to fetch comment count:', error);
-    }
-  };
+  // ── Posting ────────────────────────────────────────────────
 
-  const sortedComments = useMemo(() => {
-    const cloned = [...comments];
-
-    if (sortMode === 'newest') {
-      return cloned.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    }
-
-    // "Top" is future-friendly. If your backend later returns likes/upvotes/reply weight,
-    // this will automatically start to feel more meaningful.
-    return cloned.sort((a, b) => {
-      const aScore = (a.likeCount || a.likes || 0) + (a.replyCount || a.replies?.length || 0);
-      const bScore = (b.likeCount || b.likes || 0) + (b.replyCount || b.replies?.length || 0);
-
-      if (bScore !== aScore) return bScore - aScore;
-      return new Date(b.createdAt) - new Date(a.createdAt);
-    });
-  }, [comments, sortMode]);
-
-  const previewComment = sortedComments[0];
-
-  const handleSubmitComment = async (e) => {
-    e.preventDefault();
-
-    if (!newComment.trim() || !userId || submitting) return;
+  const handleSubmitComment = async (event) => {
+    event?.preventDefault?.();
+    const content = newComment.trim();
+    if (!content || !userId || submitting) return;
 
     setSubmitting(true);
-
     try {
       const response = await apiCall({
         method: 'post',
         url: '/v1/comments',
-        data: {
-          ...(videoId ? { videoId } : { songId }),
-          userId,
-          content: newComment.trim(),
-        },
+        data: { ...(videoId ? { videoId } : { songId }), content },
       });
+      const created = response.data;
 
-      setComments((prev) => [response.data, ...prev]);
+      // Your new comment goes to the top, whatever the sort (like YouTube).
+      setComments((prev) => [created, ...prev]);
+      setOrder((prev) => [created.commentId, ...prev.filter((id) => id !== created.commentId)]);
       setNewComment('');
+      setComposerFocused(false);
+      resetTextarea(composerRef.current);
+      composerRef.current?.blur?.();
+      sheetBodyRef.current?.scrollTo?.({ top: 0, behavior: 'smooth' });
 
       setCommentCount((prev) => ({
-        totalCount: prev.totalCount + 1,
-        topLevelCount: prev.topLevelCount + 1,
+        totalCount: (Number(prev.totalCount) || 0) + 1,
+        topLevelCount: (Number(prev.topLevelCount) || 0) + 1,
       }));
-
       setCommentLimit((prev) => ({
         ...prev,
         count: prev.count + 1,
@@ -199,51 +603,61 @@ const CommentSection = ({ songId, videoId, userId, songArtistId, artistId }) => 
       }));
     } catch (error) {
       console.error('Failed to post comment:', error);
-      alert('Failed to post comment. Please try again.');
+      showToast(errorText(error, "Couldn't post your comment. Try again."));
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleSubmitReply = async (parentCommentId) => {
-    if (!replyContent.trim() || !userId || submitting) return;
+  const openReply = (target, anchor) => {
+    if (!userId) {
+      triggerGate('generic');
+      return;
+    }
+    const isSame =
+      replyTarget && replyTarget.anchorId === anchor.commentId && replyTarget.parentId === target.commentId;
+    if (isSame) {
+      setReplyTarget(null);
+      return;
+    }
+    // Replying to a reply: same thread, opened with an @mention.
+    setReplyContent(anchor.commentId !== target.commentId && anchor.username ? `@${anchor.username} ` : '');
+    setReplyTarget({ parentId: target.commentId, anchorId: anchor.commentId, username: anchor.username });
+  };
+
+  const closeReply = () => {
+    setReplyTarget(null);
+    setReplyContent('');
+  };
+
+  const handleSubmitReply = async () => {
+    const content = replyContent.trim();
+    if (!replyTarget || !content || !userId || submitting) return;
+    const { parentId } = replyTarget;
 
     setSubmitting(true);
-
     try {
       const response = await apiCall({
         method: 'post',
         url: '/v1/comments',
-        data: {
-          ...(videoId ? { videoId } : { songId }),
-          userId,
-          parentCommentId,
-          content: replyContent.trim(),
-        },
+        data: { ...(videoId ? { videoId } : { songId }), parentCommentId: parentId, content },
       });
 
       setComments((prev) =>
-        prev.map((comment) => {
-          if (comment.commentId === parentCommentId) {
-            return {
-              ...comment,
-              replies: [...(comment.replies || []), response.data],
-              replyCount: (comment.replyCount || 0) + 1,
-            };
-          }
-          return comment;
-        })
+        prev.map((comment) =>
+          comment.commentId === parentId
+            ? {
+                ...comment,
+                replies: [...(comment.replies || []), response.data],
+                replyCount: (Number(comment.replyCount) || 0) + 1,
+              }
+            : comment
+        )
       );
+      setExpandedReplies((prev) => ({ ...prev, [parentId]: true }));
+      closeReply();
 
-      setExpandedReplies((prev) => ({ ...prev, [parentCommentId]: true }));
-      setReplyContent('');
-      setReplyingTo(null);
-
-      setCommentCount((prev) => ({
-        ...prev,
-        totalCount: prev.totalCount + 1,
-      }));
-
+      setCommentCount((prev) => ({ ...prev, totalCount: (Number(prev.totalCount) || 0) + 1 }));
       setCommentLimit((prev) => ({
         ...prev,
         count: prev.count + 1,
@@ -252,499 +666,563 @@ const CommentSection = ({ songId, videoId, userId, songArtistId, artistId }) => 
       }));
     } catch (error) {
       console.error('Failed to post reply:', error);
-      alert('Failed to post reply. Please try again.');
+      showToast(errorText(error, "Couldn't post your reply. Try again."));
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteComment = async (commentId, isReply = false, parentId = null) => {
-    if (!window.confirm('Delete this comment?')) return;
+  // ── Deleting ───────────────────────────────────────────────
+
+  const cancelDelete = useCallback(() => setPendingDelete(null), []);
+
+  const confirmDelete = async () => {
+    const target = pendingDelete;
+    setPendingDelete(null);
+    if (!target) return;
+    const { commentId, parentId } = target;
 
     try {
-      await apiCall({
-        method: 'delete',
-        url: `/v1/comments/${commentId}?userId=${userId}`,
-      });
+      await apiCall({ method: 'delete', url: `/v1/comments/${commentId}` });
 
-      if (isReply && parentId) {
+      if (parentId) {
         setComments((prev) =>
-          prev.map((comment) => {
-            if (comment.commentId === parentId) {
-              return {
-                ...comment,
-                replies: comment.replies.filter((reply) => reply.commentId !== commentId),
-                replyCount: Math.max(0, (comment.replyCount || 1) - 1),
-              };
-            }
-            return comment;
-          })
+          prev.map((comment) =>
+            comment.commentId === parentId
+              ? {
+                  ...comment,
+                  replies: (comment.replies || []).filter((reply) => reply.commentId !== commentId),
+                  replyCount: Math.max(0, (Number(comment.replyCount) || 1) - 1),
+                }
+              : comment
+          )
         );
+        setCommentCount((prev) => ({ ...prev, totalCount: Math.max(0, (Number(prev.totalCount) || 0) - 1) }));
       } else {
         setComments((prev) => prev.filter((comment) => comment.commentId !== commentId));
-
+        setOrder((prev) => prev.filter((id) => id !== commentId));
         setCommentCount((prev) => ({
-          totalCount: Math.max(0, prev.totalCount - 1),
-          topLevelCount: Math.max(0, prev.topLevelCount - 1),
+          totalCount: Math.max(0, (Number(prev.totalCount) || 0) - 1),
+          topLevelCount: Math.max(0, (Number(prev.topLevelCount) || 0) - 1),
         }));
       }
+      if (replyTarget && (replyTarget.anchorId === commentId || replyTarget.parentId === commentId)) {
+        closeReply();
+      }
+      // Deleting your own comment frees one of your slots on this track.
+      if (target.ownComment) fetchUserCommentCount();
+      showToast('Comment deleted');
     } catch (error) {
       console.error('Failed to delete comment:', error);
-      alert('Failed to delete comment.');
+      showToast(errorText(error, "Couldn't delete that comment. Try again."));
     }
   };
+
+  const canDelete = (comment) => !!userId && (comment.userId === userId || mediaArtistId === userId);
 
   const toggleReplies = (commentId) => {
-    setExpandedReplies((prev) => ({
-      ...prev,
-      [commentId]: !prev[commentId],
-    }));
+    setExpandedReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }));
   };
 
-  const formatTimeAgo = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now - date) / 1000);
+  // ── Rendering ──────────────────────────────────────────────
 
-    if (seconds < 60) return 'just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-
-    return date.toLocaleDateString();
-  };
-
-  const canDelete = (comment) => {
-    return userId && (comment.userId === userId || mediaArtistId === userId);
-  };
-
-  const getAvatarUrl = (photoUrl) => {
-    if (!photoUrl) return null;
-    return photoUrl.startsWith('http') ? photoUrl : `${API_BASE_URL}${photoUrl}`;
-  };
-
-  const autoGrowTextarea = (event) => {
-    event.target.style.height = 'auto';
-    event.target.style.height = `${Math.min(event.target.scrollHeight, 150)}px`;
-  };
-
-  const renderUserAvatar = (comment, sizeClass = '') => {
-    const avatarUrl = getAvatarUrl(comment.userPhotoUrl);
-
-    if (avatarUrl) {
-      return (
-        <img
-          src={avatarUrl}
-          alt={comment.username}
-          className={`user-avatar ${sizeClass}`}
-        />
-      );
-    }
-
-    return (
-      <div className={`user-avatar placeholder ${sizeClass}`}>
-        {comment.username?.charAt(0).toUpperCase() || '?'}
-      </div>
+  const viewerAvatar = (size) =>
+    userId ? (
+      <Avatar name={viewer?.username} photoUrl={viewer?.photoUrl} size={size} />
+    ) : (
+      <span className={`cmt-avatar cmt-avatar--${size} cmt-avatar--ghost`} aria-hidden="true">
+        <CommentIcon size={size === 'md' ? 18 : 14} />
+      </span>
     );
-  };
 
-  const renderComposer = ({ variant = 'desktop' } = {}) => {
-    const textareaReference = variant === 'sheet' ? sheetTextareaRef : textareaRef;
+  const remainingHint =
+    userId && commentLimit.remaining > 0 && commentLimit.remaining <= 2
+      ? `${commentLimit.remaining} ${commentLimit.remaining === 1 ? 'comment' : 'comments'} left on this ${mediaNoun}`
+      : null;
 
+  const renderComposer = (variant) => {
     if (!userId) {
       return (
-        <div className="login-prompt">
-          <p>Log in to join the conversation</p>
-        </div>
+        <button
+          type="button"
+          className={`cmt-composer-guest cmt-composer-guest--${variant}`}
+          onClick={() => triggerGate('generic')}
+        >
+          {viewerAvatar(variant === 'panel' ? 'md' : 'sm')}
+          <span className="cmt-composer-guest__text">Log in to join the conversation</span>
+        </button>
       );
     }
 
     if (commentLimit.limitReached) {
       return (
-        <div className="comment-limit-reached">
+        <div className={`cmt-limit cmt-limit--${variant}`}>
           <p>
-            You've used all {commentLimit.limit} comments on this track. You can still reply when someone responds to your comments.
+            You've used all {commentLimit.limit} comments on this {mediaNoun}. You can still reply when
+            someone responds to your comments.
           </p>
         </div>
       );
     }
 
+    const canSubmit = !!newComment.trim() && !submitting;
+
+    if (variant === 'sheet') {
+      return (
+        <VerificationGate compact title="Verify your phone to comment">
+          <form onSubmit={handleSubmitComment} className="cmt-composer cmt-composer--sheet">
+            {viewerAvatar('sm')}
+            <div className="cmt-composer__pill">
+              <textarea
+                ref={composerRef}
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                onInput={growTextarea}
+                placeholder="Add a comment..."
+                aria-label="Add a comment"
+                rows={1}
+                maxLength={COMMENT_MAX_LENGTH}
+                className="cmt-composer__input"
+              />
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="cmt-composer__send"
+                aria-label="Post comment"
+                title="Post comment"
+              >
+                <SendIcon size={18} tone="on" />
+              </button>
+            </div>
+          </form>
+          {remainingHint && <p className="cmt-composer__hint cmt-composer__hint--sheet">{remainingHint}</p>}
+        </VerificationGate>
+      );
+    }
+
+    const expanded = composerFocused || newComment.length > 0;
+
     return (
       <VerificationGate compact title="Verify your phone to comment">
-      <form onSubmit={handleSubmitComment} className={`new-comment-form new-comment-form--${variant}`}>
-        <div className="input-wrapper">
-          <textarea
-            ref={textareaReference}
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Share your thoughts..."
-            rows={1}
-            className="comment-textarea"
-            onInput={autoGrowTextarea}
-          />
-
-          <button
-            type="submit"
-            disabled={!newComment.trim() || submitting}
-            className="submit-button"
-            aria-label="Post comment"
-            title="Post comment"
-          >
-            <Send size={17} />
-          </button>
-        </div>
-
-        {commentLimit.remaining <= 2 && commentLimit.remaining > 0 && (
-          <div className="comment-limit-hint">
-            {commentLimit.remaining} {commentLimit.remaining === 1 ? 'comment' : 'comments'} remaining on this track
+        <form onSubmit={handleSubmitComment} className="cmt-composer cmt-composer--panel">
+          {viewerAvatar('md')}
+          <div className={`cmt-composer__field ${expanded ? 'is-expanded' : ''}`}>
+            <textarea
+              ref={composerRef}
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onInput={growTextarea}
+              onFocus={() => setComposerFocused(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmitComment(e);
+              }}
+              placeholder="Add a comment..."
+              aria-label="Add a comment"
+              rows={1}
+              maxLength={COMMENT_MAX_LENGTH}
+              className="cmt-composer__input"
+            />
+            <span className="cmt-composer__line" aria-hidden="true" />
+            {expanded && (
+              <div className="cmt-composer__footer">
+                <span className="cmt-composer__hint">{remainingHint}</span>
+                <div className="cmt-composer__actions">
+                  <button
+                    type="button"
+                    className="cmt-btn cmt-btn--ghost"
+                    onClick={() => {
+                      setNewComment('');
+                      setComposerFocused(false);
+                      resetTextarea(composerRef.current);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="cmt-btn cmt-btn--primary" disabled={!canSubmit}>
+                    Comment
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </form>
+        </form>
       </VerificationGate>
     );
   };
 
-  const renderComment = (comment, isReply = false, parentId = null) => {
-    const showReplies = expandedReplies[comment.commentId];
-    const hasReplies = comment.replies && comment.replies.length > 0;
-
+  const renderReplyBox = () => {
+    const canSubmit = !!replyContent.trim() && !submitting;
     return (
-      <div
-        key={comment.commentId}
-        className={`comment-item ${isReply ? 'reply' : ''}`}
-      >
-        <div className="comment-content">
-          <div className="avatar-container">
-            {renderUserAvatar(comment)}
-          </div>
-
-          <div className="comment-body">
-            <div className="comment-header">
-              <div className="user-info">
-                <span className="username">{comment.username}</span>
-
-                {comment.userJurisdictionName && (
-                  <span className="user-jurisdiction">{comment.userJurisdictionName}</span>
-                )}
-              </div>
-
-              <span className="timestamp">{formatTimeAgo(comment.createdAt)}</span>
-
-              {canDelete(comment) && (
-                <div className="comment-menu">
-                  <button
-                    type="button"
-                    className="menu-trigger"
-                    aria-label="Comment options"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenu(activeMenu === comment.commentId ? null : comment.commentId);
-                    }}
-                  >
-                    <MoreHorizontal size={16} />
-                  </button>
-
-                  {activeMenu === comment.commentId && (
-                    <div className="menu-dropdown" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteComment(comment.commentId, isReply, parentId)}
-                        className="menu-item delete"
-                      >
-                        <Trash2 size={14} />
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <p className="comment-text">{comment.content}</p>
-
-            {!isReply && userId && (!commentLimit.limitReached || comment.userId === userId) && (
-              <button
-                type="button"
-                className="reply-trigger"
-                onClick={() => setReplyingTo(replyingTo === comment.commentId ? null : comment.commentId)}
-              >
-                <Reply size={14} />
-                Reply
-              </button>
-            )}
-
-            {replyingTo === comment.commentId && (
-              <div className="reply-input-container">
-                <input
-                  ref={replyInputRef}
-                  type="text"
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  placeholder={`Reply to ${comment.username}...`}
-                  className="reply-input"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSubmitReply(comment.commentId);
-                    }
-                  }}
-                />
-
+      <div className="cmt-reply-box">
+        <VerificationGate compact title="Verify your phone to reply">
+          <div className="cmt-reply-box__row">
+            {viewerAvatar('xs')}
+            <div className="cmt-reply-box__field">
+              <textarea
+                ref={replyInputRef}
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                onInput={growTextarea}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmitReply();
+                  }
+                }}
+                placeholder={`Reply to ${replyTarget?.username || 'this comment'}...`}
+                aria-label={`Reply to ${replyTarget?.username || 'this comment'}`}
+                rows={1}
+                maxLength={COMMENT_MAX_LENGTH}
+                className="cmt-reply-box__input"
+              />
+              <span className="cmt-composer__line" aria-hidden="true" />
+              <div className="cmt-reply-box__actions">
+                <button type="button" className="cmt-btn cmt-btn--ghost cmt-btn--sm" onClick={closeReply}>
+                  Cancel
+                </button>
                 <button
                   type="button"
-                  onClick={() => handleSubmitReply(comment.commentId)}
-                  disabled={!replyContent.trim() || submitting}
-                  className="reply-submit"
-                  aria-label="Post reply"
+                  className="cmt-btn cmt-btn--primary cmt-btn--sm"
+                  onClick={handleSubmitReply}
+                  disabled={!canSubmit}
                 >
-                  <Send size={16} />
+                  Reply
+                </button>
+              </div>
+            </div>
+          </div>
+        </VerificationGate>
+      </div>
+    );
+  };
+
+  const renderComment = (comment, thread = null) => {
+    const isReply = !!thread;
+    const owner = thread || comment; // whose thread a reply lands in
+    const canReply = !!userId && (!commentLimit.limitReached || owner.userId === userId);
+    const showReplyButton = !userId || canReply;
+    const liked = !!comment.likedByMe;
+    const likeCount = Math.max(0, Number(comment.likeCount) || 0);
+    const replies = !isReply ? comment.replies || [] : [];
+    const repliesOpen = !!expandedReplies[comment.commentId];
+    const menuOpen = activeMenu === comment.commentId;
+
+    return (
+      <article
+        key={comment.commentId}
+        className={`cmt-comment ${isReply ? 'cmt-comment--reply' : ''}`}
+        aria-label={`Comment by ${comment.username || 'a listener'}`}
+      >
+        <Avatar name={comment.username} photoUrl={comment.userPhotoUrl} size={isReply ? 'sm' : 'md'} />
+
+        <div className="cmt-comment__body">
+          <header className="cmt-comment__meta">
+            <span className="cmt-comment__author">{comment.username}</span>
+            {comment.userJurisdictionName && (
+              <span className="cmt-comment__place">{comment.userJurisdictionName}</span>
+            )}
+            <time className="cmt-comment__time" dateTime={comment.createdAt} title={fullDate(comment.createdAt)}>
+              {timeAgo(comment.createdAt)}
+            </time>
+          </header>
+
+          <CommentText text={comment.content} />
+
+          <div className="cmt-actions">
+            <button
+              type="button"
+              className={`cmt-like ${liked ? 'is-liked' : ''} ${justLiked === comment.commentId ? 'is-pop' : ''}`}
+              aria-pressed={liked}
+              aria-label={`Like comment by ${comment.username || 'a listener'}${
+                likeCount ? `, ${likeCount} ${likeCount === 1 ? 'like' : 'likes'}` : ''
+              }`}
+              onClick={() => toggleLike(comment)}
+            >
+              <span
+                className="cmt-like__icon"
+                onAnimationEnd={() => setJustLiked((id) => (id === comment.commentId ? null : id))}
+              >
+                <LikeIcon size={18} active={liked} />
+              </span>
+              {likeCount > 0 && <span className="cmt-like__count">{formatCount(likeCount)}</span>}
+            </button>
+
+            {showReplyButton && (
+              <button
+                type="button"
+                className={`cmt-reply-btn ${replyTarget?.anchorId === comment.commentId ? 'is-active' : ''}`}
+                aria-label={`Reply to ${comment.username || 'this comment'}`}
+                onClick={() => openReply(owner, comment)}
+              >
+                <CommentIcon size={18} active={replyTarget?.anchorId === comment.commentId} />
+                {!isMobile && <span className="cmt-reply-btn__label">Reply</span>}
+              </button>
+            )}
+          </div>
+
+          {replyTarget?.anchorId === comment.commentId && renderReplyBox()}
+
+          {replies.length > 0 && (
+            <div className="cmt-thread">
+              <button
+                type="button"
+                className={`cmt-thread__toggle ${repliesOpen ? 'is-open' : ''}`}
+                aria-expanded={repliesOpen}
+                onClick={() => toggleReplies(comment.commentId)}
+              >
+                <ChevronDownIcon size={18} className="cmt-thread__chevron" />
+                <span>
+                  {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+                </span>
+              </button>
+
+              {repliesOpen && (
+                <div className="cmt-thread__list">{replies.map((reply) => renderComment(reply, comment))}</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {canDelete(comment) && (
+          <div className={`cmt-comment__menu ${menuOpen ? 'is-open' : ''}`}>
+            <button
+              type="button"
+              className="cmt-icon-btn cmt-icon-btn--sm"
+              aria-label="Comment options"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveMenu(menuOpen ? null : comment.commentId);
+              }}
+            >
+              <MoreIcon size={18} className="cmt-kebab" />
+            </button>
+
+            {menuOpen && (
+              <div className="cmt-menu" role="menu" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="cmt-menu__item cmt-menu__item--danger"
+                  onClick={() => {
+                    setActiveMenu(null);
+                    setPendingDelete({
+                      commentId: comment.commentId,
+                      parentId: isReply ? thread.commentId : null,
+                      ownComment: comment.userId === userId,
+                    });
+                  }}
+                >
+                  <TrashIcon size={17} />
+                  Delete
                 </button>
               </div>
             )}
           </div>
-        </div>
-
-        {hasReplies && !isReply && (
-          <div className="replies-section">
-            <button
-              type="button"
-              className="toggle-replies"
-              onClick={() => toggleReplies(comment.commentId)}
-            >
-              {showReplies ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              {showReplies ? 'Hide' : 'View'} {comment.replies.length} {comment.replies.length === 1 ? 'reply' : 'replies'}
-            </button>
-
-            {showReplies && (
-              <div className="replies-list">
-                {comment.replies.map((reply) => renderComment(reply, true, comment.commentId))}
-              </div>
-            )}
-          </div>
         )}
-      </div>
+      </article>
     );
   };
 
-  const renderCommentList = () => {
+  const renderList = () => {
     if (loading) {
       return (
-        <div className="loading-state">
-          <div className="loading-spinner" />
-          <p>Loading comments...</p>
+        <div className="cmt-skeleton" role="status">
+          <span className="cmt-sr-only">Loading comments...</span>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="cmt-skeleton__row" aria-hidden="true">
+              <span className="cmt-skeleton__avatar" />
+              <span className="cmt-skeleton__lines">
+                <span />
+                <span />
+              </span>
+            </div>
+          ))}
         </div>
       );
     }
 
-    if (sortedComments.length === 0) {
+    if (loadError) {
       return (
-        <div className="empty-state">
-          <MessageCircle size={48} strokeWidth={1} />
-          <p>Comment to earn points</p>
-          <span>share your thoughts</span>
+        <div className="cmt-state">
+          <p className="cmt-state__title">Couldn't load comments</p>
+          <button type="button" className="cmt-btn cmt-btn--ghost" onClick={() => setReloadKey((k) => k + 1)}>
+            Try again
+          </button>
         </div>
       );
     }
 
-    return sortedComments.map((comment) => renderComment(comment));
-  };
-
-  const renderSortTabs = () => {
-    return (
-      <div className="comments-sort-tabs" role="tablist" aria-label="Comment sort order">
-        <button
-          type="button"
-          className={`comments-sort-tab ${sortMode === 'top' ? 'active' : ''}`}
-          onClick={() => setSortMode('top')}
-          role="tab"
-          aria-selected={sortMode === 'top'}
-        >
-          Top
-        </button>
-
-        <button
-          type="button"
-          className={`comments-sort-tab ${sortMode === 'newest' ? 'active' : ''}`}
-          onClick={() => setSortMode('newest')}
-          role="tab"
-          aria-selected={sortMode === 'newest'}
-        >
-          Newest
-        </button>
-      </div>
-    );
-  };
-
-  const renderMobilePreview = () => {
-    return (
-      <button
-        type="button"
-        className="comments-mobile-preview"
-        onClick={() => setIsMobileSheetOpen(true)}
-        aria-label="Open comments"
-      >
-        <div className="comments-mobile-preview__header">
-          <div className="comments-mobile-preview__title">
-            <span>Comments</span>
-
-            {commentCount.totalCount > 0 && (
-              <span className="comments-mobile-preview__count">{commentCount.totalCount}</span>
-            )}
-          </div>
-
-          <MoreHorizontal size={20} />
+    if (displayed.length === 0) {
+      return (
+        <div className="cmt-state">
+          <span className="cmt-state__icon" aria-hidden="true">
+            <CommentIcon size={26} />
+          </span>
+          <p className="cmt-state__title">No comments yet</p>
+          <span className="cmt-state__text">Be the first to share your thoughts</span>
         </div>
+      );
+    }
 
-        <div className="comments-mobile-preview__body">
-          {previewComment ? (
-            <>
-              <div className="comments-mobile-preview__avatar">
-                {renderUserAvatar(previewComment, 'preview-avatar')}
-              </div>
-
-              <div className="comments-mobile-preview__text">
-                <span className="comments-mobile-preview__username">
-                  {previewComment.username}
-                </span>
-                <span className="comments-mobile-preview__snippet">
-                  {previewComment.content}
-                </span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="comments-mobile-preview__placeholder-icon">
-                <MessageCircle size={18} />
-              </div>
-
-              <div className="comments-mobile-preview__text">
-                <span className="comments-mobile-preview__snippet">
-                  Comment to earn points
-                </span>
-              </div>
-            </>
-          )}
-        </div>
-      </button>
-    );
+    return displayed.map((comment) => renderComment(comment));
   };
+
+  const renderSortChips = () => (
+    <div className="cmt-chips" role="group" aria-label="Sort comments">
+      {[
+        ['top', 'Top'],
+        ['newest', 'Newest'],
+      ].map(([mode, label]) => (
+        <button
+          key={mode}
+          type="button"
+          className={`cmt-chip ${sortMode === mode ? 'is-active' : ''}`}
+          aria-pressed={sortMode === mode}
+          onClick={() => changeSort(mode)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderMobilePreview = () => (
+    <button
+      ref={previewRef}
+      type="button"
+      className="cmt-preview"
+      onClick={() => setIsSheetOpen(true)}
+      aria-haspopup="dialog"
+      aria-expanded={isSheetOpen}
+    >
+      <span className="cmt-preview__head">
+        <span className="cmt-preview__title">Comments</span>
+        {totalCount > 0 && <span className="cmt-preview__count">{formatCount(totalCount)}</span>}
+        <ChevronDownIcon size={18} className="cmt-preview__chevron" />
+      </span>
+
+      <span className="cmt-preview__body">
+        {previewComment ? (
+          <>
+            <Avatar name={previewComment.username} photoUrl={previewComment.userPhotoUrl} size="xs" />
+            <span className="cmt-preview__text">{previewComment.content}</span>
+          </>
+        ) : (
+          <>
+            {viewerAvatar('xs')}
+            <span className="cmt-preview__placeholder">
+              {loading ? 'Loading comments...' : 'Add a comment...'}
+            </span>
+          </>
+        )}
+      </span>
+    </button>
+  );
+
+  // Portals go INTO #root, not <body>: the colour theme lives on #root
+  // ([data-theme]), so anything outside it falls back to default blue.
+  // Placed as direct children of #root they still sit above the player
+  // and layout (see `#root > .cmt-sheet` in the stylesheet). Falls back to
+  // <body> only when #root is missing (an isolated test render).
+  const portalTarget =
+    typeof document !== 'undefined' ? document.getElementById('root') || document.body : null;
 
   return (
-    <section className="comments-section-premium">
-      {/* Mobile collapsed YouTube-style preview */}
-      {renderMobilePreview()}
+    <section className="cmt" aria-label="Comments">
+      {isMobile ? (
+        renderMobilePreview()
+      ) : (
+        <div className="cmt-panel">
+          <header className="cmt-head">
+            <h2 className="cmt-head__title">
+              Comments
+              {totalCount > 0 && <span className="cmt-head__count">{totalCount.toLocaleString()}</span>}
+            </h2>
+            {renderSortChips()}
+          </header>
 
-      {/* Desktop/tablet embedded panel */}
-      <div className="comments-desktop-panel">
-        <div className="comments-header">
-          <h2>
-            <MessageCircle size={24} />
-            Comments
+          {renderComposer('panel')}
 
-            {commentCount.totalCount > 0 && (
-              <span className="comment-count">{commentCount.totalCount}</span>
-            )}
-          </h2>
-
-          {renderSortTabs()}
+          <div className="cmt-list">{renderList()}</div>
         </div>
-
-        {renderComposer({ variant: 'desktop' })}
-
-        <div className="comments-list-premium">
-          {renderCommentList()}
-        </div>
-      </div>
-
-      {/* Mobile full-screen / bottom-sheet panel.
-          ─────────────────────────────────────────────────────────────────
-          PORTALED TO document.body — this is load-bearing, not a style choice.
-
-          `.layout-container` sets `position: relative; z-index: 1`, which
-          creates a stacking context. <Player /> renders OUTSIDE Layout at
-          z-index 1000. Any element inside Layout is therefore painted below
-          the player no matter how high its own z-index climbs — this sheet's
-          `z-index: 9998 !important` was being compared against its siblings
-          inside a z-index:1 island, not against the player.
-
-          That is why comments opened from the player tray worked (that sheet
-          is a child of Player, at root level) while comments opened from the
-          song page were covered. Portaling to body puts this sheet in the
-          root stacking context, where 9998 genuinely beats 1000.
-
-          Fixes songPage and videoPage in one move — both render this same
-          component. Mirrors the portal pattern already used in
-          voteHistoryModal.jsx and SupporterSection.jsx. */}
-      {createPortal(
-        <div
-          className={`comments-mobile-sheet ${isMobileSheetOpen ? 'is-open' : ''}`}
-          aria-hidden={!isMobileSheetOpen}
-        >
-        <div
-          className="comments-mobile-sheet__scrim"
-          onClick={() => setIsMobileSheetOpen(false)}
-        />
-
-        <div
-          className="comments-mobile-sheet__panel"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="comments-mobile-sheet-title"
-        >
-          <div className="comments-mobile-sheet__handle" />
-
-          <div className="comments-mobile-sheet__header">
-            <div>
-              <h2 id="comments-mobile-sheet-title">
-                Comments
-
-                {commentCount.totalCount > 0 && (
-                  <span>{commentCount.totalCount}</span>
-                )}
-              </h2>
-            </div>
-
-            <div className="comments-mobile-sheet__actions">
-              <button
-                type="button"
-                className="comments-mobile-sheet__icon"
-                aria-label="Comment info"
-              >
-                <Info size={21} />
-              </button>
-
-              <button
-                type="button"
-                className="comments-mobile-sheet__icon"
-                aria-label="Close comments"
-                onClick={() => setIsMobileSheetOpen(false)}
-              >
-                <X size={24} />
-              </button>
-            </div>
-          </div>
-
-          <div className="comments-mobile-sheet__sort-row">
-            {renderSortTabs()}
-
-            <div className="comments-mobile-sheet__sort-icon" aria-hidden="true">
-              <SlidersHorizontal size={16} />
-            </div>
-          </div>
-
-          <div className="comments-mobile-sheet__body">
-            <div className="comments-list-premium">
-              {renderCommentList()}
-            </div>
-          </div>
-
-          <div className="comments-mobile-sheet__composer">
-            {renderComposer({ variant: 'sheet' })}
-          </div>
-          </div>
-        </div>,
-        document.body
       )}
+
+      {isMobile &&
+        portalTarget &&
+        createPortal(
+          <div className={`cmt-sheet ${isSheetOpen ? 'is-open' : ''}`} aria-hidden={!isSheetOpen} inert={!isSheetOpen}>
+            <div className="cmt-sheet__scrim" onClick={closeSheet} />
+
+            <div
+              ref={sheetPanelRef}
+              className="cmt-sheet__panel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={sheetTitleId}
+              tabIndex={-1}
+            >
+              <div className="cmt-sheet__grab" aria-hidden="true" />
+
+              <div className="cmt-sheet__head">
+                <h2 id={sheetTitleId} className="cmt-sheet__title">
+                  Comments
+                  {totalCount > 0 && <span className="cmt-sheet__count">{formatCount(totalCount)}</span>}
+                </h2>
+
+                <div className="cmt-sheet__tools">
+                  <Link
+                    to="/help#comments"
+                    className="cmt-icon-btn"
+                    aria-label="How comments work"
+                    title="How comments work"
+                    onClick={closeSheet}
+                  >
+                    <InfoIcon size={20} />
+                  </Link>
+                  <button
+                    type="button"
+                    className="cmt-icon-btn"
+                    aria-label="Close comments"
+                    onClick={closeSheet}
+                  >
+                    <CloseIcon size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="cmt-sheet__sort">{renderSortChips()}</div>
+
+              <div ref={sheetBodyRef} className="cmt-sheet__body">
+                <div className="cmt-list">{renderList()}</div>
+              </div>
+
+              <div className="cmt-sheet__composer">{renderComposer('sheet')}</div>
+            </div>
+          </div>,
+          portalTarget
+        )}
+
+      {/* Dialogs, the sign-in sheet and the toast sit above everything,
+          including the player and the comments sheet. */}
+      {portalTarget &&
+        createPortal(
+          <div className="cmt-overlay">
+            {pendingDelete && (
+              <ConfirmDelete
+                ownComment={pendingDelete.ownComment}
+                onCancel={cancelDelete}
+                onConfirm={confirmDelete}
+              />
+            )}
+            <div className={`cmt-toast ${toast ? 'is-visible' : ''}`} role="status" aria-live="polite">
+              {toast}
+            </div>
+            <AuthGateSheet {...gateProps} />
+          </div>,
+          portalTarget
+        )}
     </section>
   );
 };

@@ -1,1042 +1,1448 @@
+// =============================================================================
+// Comment section — YouTube-grade layout in the Unis token layer.
+//
+// Every colour comes from the theme tokens (--unis-*), so the accent, the
+// Glow icon gradient and the primary buttons follow the user's theme. The
+// mobile sheet and the overlays are portaled into #root (where [data-theme]
+// lives) — see the `#root > .cmt-…` rules near the bottom.
+//
+// Class prefix: cmt-  (cs- is taken by prelaunch/ComingSoon.scss)
+// =============================================================================
 
-$font-comment: var(
-  --unis-font-sans,
-  'Inter',
-  -apple-system,
-  BlinkMacSystemFont,
-  'Segoe UI',
-  Roboto,
-  sans-serif
-);
+$font: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+$spring: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-.comments-section-premium {
-  --comment-accent: var(--unis-primary, #e4b300);
-  --comment-accent-2: var(--unis-primary-2, color-mix(in srgb, var(--unis-primary, #e4b300), white 22%));
-  --comment-soft: var(--unis-primary-soft, color-mix(in srgb, var(--unis-primary, #e4b300), transparent 88%));
-  --comment-glow: var(--unis-primary-glow, color-mix(in srgb, var(--unis-primary, #e4b300), transparent 72%));
+// Tokens shared by the section and everything it portals out.
+.cmt,
+.cmt-sheet,
+.cmt-overlay {
+  --cmt-text: var(--unis-text, #ffffff);
+  --cmt-body: rgba(255, 255, 255, 0.88);
+  --cmt-muted: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+  --cmt-faint: var(--unis-text-4, rgba(255, 255, 255, 0.32));
+  --cmt-accent: var(--unis-primary-2, #4a6fd0);
+  --cmt-accent-soft: var(--unis-primary-soft, rgba(22, 51, 135, 0.14));
+  --cmt-line: var(--unis-border, rgba(255, 255, 255, 0.07));
+  --cmt-line-hi: var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+  --cmt-hover: rgba(255, 255, 255, 0.08);
+  --cmt-press: rgba(255, 255, 255, 0.14);
+  --cmt-chip: rgba(255, 255, 255, 0.09);
+  --cmt-surface: color-mix(in srgb, var(--unis-primary, #163387) 5%, #101116);
+  --cmt-raised: color-mix(in srgb, var(--unis-primary, #163387) 8%, #1a1b21);
+  --cmt-glow-a: color-mix(in srgb, var(--unis-primary, #163387), white 34%);
+  --cmt-glow-b: var(--unis-primary, #163387);
+  --cmt-danger: #ff7b7b;
 
-  --comment-bg: rgba(12, 13, 16, 0.96);
-  --comment-bg-2: rgba(25, 26, 30, 0.96);
-  --comment-bg-3: rgba(36, 37, 42, 0.96);
-  --comment-border: rgba(255, 255, 255, 0.09);
-  --comment-border-strong: rgba(255, 255, 255, 0.14);
-  --comment-text: var(--unis-text, #ffffff);
-  --comment-text-2: var(--unis-text-2, rgba(255, 255, 255, 0.72));
-  --comment-text-3: var(--unis-text-3, rgba(255, 255, 255, 0.5));
-  --comment-text-4: var(--unis-text-4, rgba(255, 255, 255, 0.34));
+  font-family: $font;
+}
 
+.cmt {
   width: 100%;
   margin-top: 2rem;
-  font-family: $font-comment;
-  color: var(--comment-text);
+  color: var(--cmt-text);
+}
+
+.cmt-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 // =============================================================================
-// Mobile preview card
+// Buttons
 // =============================================================================
 
-.comments-mobile-preview {
-  display: none;
-  width: 100%;
-  padding: 1rem;
-  border: 1px solid var(--comment-border);
-  border-radius: 18px;
-  text-align: left;
-  color: var(--comment-text);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.038)),
-    rgba(28, 29, 33, 0.94);
-  box-shadow:
-    0 16px 36px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+.cmt-btn {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  font-family: $font;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
   cursor: pointer;
   transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease,
-    box-shadow 0.18s ease;
+    background 0.16s ease,
+    color 0.16s ease,
+    opacity 0.16s ease,
+    transform 0.12s ease,
+    box-shadow 0.16s ease;
 
-  &:active {
-    transform: scale(0.985);
-  }
-}
-
-.comments-mobile-preview__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.8rem;
-}
-
-.comments-mobile-preview__title {
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 0.45rem;
-
-  span:first-child {
-    color: var(--comment-text);
-    font-size: 1.08rem;
-    font-weight: 850;
-    letter-spacing: -0.035em;
-  }
-}
-
-.comments-mobile-preview__count {
-  color: var(--comment-text-3);
-  font-size: 0.98rem;
-  font-weight: 750;
-  letter-spacing: -0.02em;
-}
-
-.comments-mobile-preview__body {
-  display: flex;
-  align-items: center;
-  gap: 0.72rem;
-  min-width: 0;
-}
-
-.comments-mobile-preview__avatar {
-  flex: 0 0 auto;
-}
-
-.comments-mobile-preview__placeholder-icon {
-  flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  color: var(--comment-accent-2);
-  background: color-mix(in srgb, var(--comment-accent) 14%, rgba(255, 255, 255, 0.06));
-  border: 1px solid color-mix(in srgb, var(--comment-accent) 24%, rgba(255, 255, 255, 0.08));
-}
-
-.comments-mobile-preview__text {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--comment-text-2);
-  font-size: 0.88rem;
-  line-height: 1.3;
-}
-
-.comments-mobile-preview__username {
-  flex: 0 0 auto;
-  max-width: 92px;
-  color: var(--comment-text);
-  font-weight: 800;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.comments-mobile-preview__snippet {
-  min-width: 0;
-  color: var(--comment-text-3);
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-// =============================================================================
-// Desktop embedded panel
-// =============================================================================
-
-.comments-desktop-panel {
-  position: relative;
-  overflow: hidden;
-  padding: 1.15rem;
-  border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.026)),
-    rgba(10, 12, 18, 0.84);
-  border: 1px solid var(--comment-border);
-  box-shadow:
-    0 22px 54px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(580px 240px at 12% 0%, var(--comment-soft), transparent 62%),
-      linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.035), transparent);
-    opacity: 0.75;
+  &:active:not(:disabled) {
+    transform: scale(0.96);
   }
 
-  > * {
-    position: relative;
-    z-index: 1;
+  &:focus-visible {
+    outline: 2px solid var(--cmt-accent);
+    outline-offset: 2px;
   }
-}
 
-// =============================================================================
-// Shared header + sort tabs
-// =============================================================================
+  &--sm {
+    min-height: 32px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
 
-.comments-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.9rem;
-  margin-bottom: 1rem;
+  &--ghost {
+    color: var(--cmt-text);
+    background: transparent;
 
-  h2 {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    margin: 0;
-    color: var(--comment-text);
-    font-size: 1.2rem;
-    font-weight: 900;
-    line-height: 1;
-    letter-spacing: -0.055em;
-
-    svg {
-      width: 32px;
-      height: 32px;
-      padding: 7px;
-      border-radius: 999px;
-      color: var(--comment-accent-2);
-      background: color-mix(in srgb, var(--comment-accent) 13%, rgba(255, 255, 255, 0.055));
-      border: 1px solid color-mix(in srgb, var(--comment-accent) 22%, rgba(255, 255, 255, 0.08));
+    &:hover:not(:disabled) {
+      background: var(--cmt-hover);
     }
   }
 
-  .comment-count {
-    color: var(--comment-text-3);
-    font-size: 1rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
+  &--primary {
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--cmt-glow-a), var(--cmt-glow-b));
+    box-shadow:
+      0 10px 22px -12px var(--unis-primary-glow, rgba(22, 51, 135, 0.6)),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.08);
+    }
+
+    // YouTube's flat grey until there's something to send.
+    &:disabled {
+      color: var(--cmt-faint);
+      background: var(--cmt-chip);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+  }
+
+  &--danger {
+    color: var(--cmt-danger);
+    background: transparent;
+
+    &:hover {
+      background: rgba(255, 92, 92, 0.12);
+    }
   }
 }
 
-.comments-sort-tabs {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.comments-sort-tab {
-  min-height: 36px;
-  padding: 0 0.95rem;
+.cmt-icon-btn {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
   border: 0;
-  border-radius: 11px;
-  color: var(--comment-text-2);
-  background: rgba(255, 255, 255, 0.065);
-  font-family: $font-comment;
-  font-size: 0.88rem;
-  font-weight: 850;
-  letter-spacing: -0.02em;
+  border-radius: 999px;
+  color: var(--cmt-text);
+  background: transparent;
+  text-decoration: none;
   cursor: pointer;
   transition:
-    color 0.16s ease,
     background 0.16s ease,
-    transform 0.16s ease,
-    box-shadow 0.16s ease;
+    transform 0.12s ease;
 
   &:hover {
-    color: var(--comment-text);
-    background: rgba(255, 255, 255, 0.095);
+    background: var(--cmt-hover);
+  }
+
+  &:active {
+    background: var(--cmt-press);
+    transform: scale(0.94);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--cmt-accent);
+    outline-offset: 1px;
+  }
+
+  &--sm {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+// =============================================================================
+// Avatars
+// =============================================================================
+
+.cmt-avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  object-fit: cover;
+  border-radius: 999px;
+  background: var(--cmt-chip);
+  user-select: none;
+
+  &--xs { width: 24px; height: 24px; font-size: 10.5px; }
+  &--sm { width: 28px; height: 28px; font-size: 12px; }
+  &--md { width: 40px; height: 40px; font-size: 15px; }
+
+  // No photo: the initial on a theme gradient (YouTube's coloured circles,
+  // in Unis colours).
+  &--initial {
+    color: #ffffff;
+    font-weight: 700;
+    background:
+      radial-gradient(circle at 30% 18%, rgba(255, 255, 255, 0.32), transparent 52%),
+      linear-gradient(140deg, var(--cmt-glow-a), var(--cmt-glow-b));
+  }
+
+  // Guests and placeholders.
+  &--ghost {
+    color: var(--cmt-muted);
+    background: var(--cmt-chip);
+  }
+}
+
+// =============================================================================
+// Desktop / tablet panel
+// =============================================================================
+
+.cmt-panel {
+  position: relative;
+  padding: 20px 22px 8px;
+  border-radius: var(--unis-radius-lg, 20px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
+    rgba(10, 12, 18, 0.72);
+  border: 1px solid var(--cmt-line);
+  box-shadow:
+    0 22px 54px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+// Inside the player's comments sheet the sheet is already the card.
+.player-comments-sheet__body .cmt {
+  margin-top: 4px;
+}
+
+.player-comments-sheet__body .cmt-panel {
+  padding: 4px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.cmt-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.cmt-head__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--cmt-text);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.cmt-head__count {
+  color: var(--cmt-muted);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+// ── Sort chips (YouTube: white when selected) ──
+.cmt-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cmt-chip {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--cmt-text);
+  background: var(--cmt-chip);
+  font-family: $font;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.12s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--cmt-accent);
+    outline-offset: 2px;
+  }
+
+  &.is-active {
+    color: #0f0f12;
+    background: #f1f1f3;
+  }
+}
+
+// =============================================================================
+// Composer — desktop ("Add a comment..." on an underline, YouTube-style)
+// =============================================================================
+
+.cmt-composer {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.cmt-composer--panel {
+  margin-bottom: 26px;
+}
+
+.cmt-composer__field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.cmt-composer__input,
+.cmt-reply-box__input {
+  display: block;
+  width: 100%;
+  min-height: 24px;
+  max-height: 168px;
+  margin: 0;
+  padding: 2px 0 6px;
+  resize: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--cmt-text);
+  font-family: $font;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  overflow-y: auto;
+
+  &::placeholder {
+    color: var(--cmt-muted);
+  }
+}
+
+// Underline: a hairline at rest; a 2px accent line grows from the centre
+// on focus.
+.cmt-composer__line {
+  position: relative;
+  display: block;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -0.5px;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--cmt-glow-a), var(--cmt-glow-b));
+    transform: scaleX(0);
+    transition: transform 0.28s $spring;
+  }
+}
+
+.cmt-composer__field:focus-within .cmt-composer__line::after,
+.cmt-reply-box__field:focus-within .cmt-composer__line::after {
+  transform: scaleX(1);
+}
+
+.cmt-composer__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  animation: cmtFadeIn 0.18s ease both;
+}
+
+.cmt-composer__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.cmt-composer__hint {
+  color: var(--cmt-accent);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+// ── Guests / limit reached ──
+.cmt-composer-guest {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cmt-muted);
+  font-family: $font;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+
+  &--panel {
+    margin-bottom: 26px;
+  }
+
+  &__text {
+    flex: 1;
+    padding: 8px 0 7px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    transition:
+      color 0.16s ease,
+      border-color 0.16s ease;
+  }
+
+  &:hover &__text {
+    color: var(--cmt-text);
+    border-color: var(--cmt-accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--cmt-accent);
+    outline-offset: 4px;
+    border-radius: 8px;
+  }
+}
+
+.cmt-limit {
+  margin-bottom: 22px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--cmt-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--unis-primary, #163387) 30%, transparent);
+
+  p {
+    margin: 0;
+    color: var(--cmt-body);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &--sheet {
+    margin-bottom: 0;
+  }
+}
+
+// =============================================================================
+// Comment list + a single comment
+// =============================================================================
+
+.cmt-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.cmt-comment {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 10px 0 12px;
+  animation: cmtFadeIn 0.22s ease both;
+
+  &--reply {
+    gap: 12px;
+    padding: 6px 0 8px;
+  }
+}
+
+.cmt-comment__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.cmt-comment__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  min-width: 0;
+  margin-bottom: 3px;
+  // Keep the menu's corner clear.
+  padding-right: 36px;
+}
+
+.cmt-comment__author {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--cmt-text);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// The commenter's home jurisdiction — Unis's hyperlocal twist on the handle.
+.cmt-comment__place {
+  max-width: 140px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--cmt-accent);
+  background: var(--cmt-accent-soft);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cmt-comment__time {
+  color: var(--cmt-muted);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.cmt-comment__text {
+  margin: 0;
+  color: var(--cmt-body);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  &.is-clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+  }
+}
+
+.cmt-mention {
+  color: var(--cmt-accent);
+  font-weight: 500;
+}
+
+.cmt-more {
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cmt-muted);
+  font-family: $font;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--cmt-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--cmt-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+// ── Action row: like + count, reply ──
+.cmt-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 0 -8px; // icons sit optically flush with the text
+}
+
+.cmt-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0 8px 0 0;
+  border: 0;
+  border-radius: 999px;
+  color: var(--cmt-muted);
+  background: transparent;
+  font-family: $font;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &:focus-visible {
+    outline: 2px solid var(--cmt-accent);
+    outline-offset: 1px;
+  }
+
+  &:hover {
+    color: var(--cmt-text);
+
+    .cmt-like__icon {
+      background: var(--cmt-hover);
+    }
+  }
+
+  &:active .cmt-like__icon {
+    background: var(--cmt-press);
+    transform: scale(0.88);
+  }
+
+  &.is-liked {
+    color: var(--cmt-text);
+  }
+
+  // Pop + a ring that bursts outward the moment you like.
+  &.is-pop .cmt-like__icon {
+    animation: cmtLikePop 0.42s $spring;
+
+    &::after {
+      animation: cmtLikeRing 0.42s ease-out;
+    }
+  }
+}
+
+.cmt-like__icon {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  transition:
+    background 0.16s ease,
+    transform 0.14s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: 999px;
+    border: 2px solid var(--cmt-accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.cmt-like__count {
+  min-width: 1ch;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.cmt-reply-btn {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--cmt-muted);
+  background: transparent;
+  font-family: $font;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.12s ease;
+
+  &:hover {
+    color: var(--cmt-text);
+    background: var(--cmt-hover);
+  }
+
+  &:active {
+    background: var(--cmt-press);
+    transform: scale(0.95);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--cmt-accent);
+    outline-offset: 1px;
+  }
+
+  &.is-active {
+    color: var(--cmt-text);
+  }
+
+  &__label {
+    padding-right: 5px;
+  }
+}
+
+// ── ⋮ menu ──
+.cmt-comment__menu {
+  position: absolute;
+  top: 4px;
+  right: -6px;
+  z-index: 2;
+  transition: opacity 0.16s ease;
+
+  // Mouse users see it on hover, like YouTube; touch screens always see it.
+  @media (hover: hover) {
+    opacity: 0;
+  }
+}
+
+.cmt-comment:hover > .cmt-comment__menu,
+.cmt-comment__menu:focus-within,
+.cmt-comment__menu.is-open {
+  opacity: 1;
+}
+
+// Hovering a reply shouldn't also light up its parent's menu.
+@supports selector(:has(a)) {
+  .cmt-comment:has(.cmt-comment--reply:hover) > .cmt-comment__menu:not(:focus-within):not(.is-open) {
+    @media (hover: hover) {
+      opacity: 0;
+    }
+  }
+}
+
+.cmt-kebab {
+  transform: rotate(90deg);
+}
+
+.cmt-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 168px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--cmt-raised);
+  border: 1px solid var(--cmt-line-hi);
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.5);
+  animation: cmtMenuIn 0.16s $spring both;
+  transform-origin: top right;
+}
+
+.cmt-menu__item {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--cmt-text);
+  background: transparent;
+  font-family: $font;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: var(--cmt-hover);
+  }
+
+  &--danger {
+    color: var(--cmt-danger);
+
+    &:hover,
+    &:focus-visible {
+      background: rgba(255, 92, 92, 0.12);
+    }
+  }
+}
+
+// ── Reply box ──
+.cmt-reply-box {
+  margin: 8px 0 6px;
+  animation: cmtFadeIn 0.18s ease both;
+}
+
+.cmt-reply-box__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.cmt-reply-box__field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.cmt-reply-box__input {
+  font-size: 13.5px;
+}
+
+.cmt-reply-box__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+// ── Replies thread ──
+.cmt-thread {
+  margin-top: 2px;
+}
+
+.cmt-thread__toggle {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: -10px;
+  padding: 0 14px 0 8px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--cmt-accent);
+  background: transparent;
+  font-family: $font;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    transform 0.12s ease;
+
+  &:hover {
+    background: var(--cmt-accent-soft);
   }
 
   &:active {
     transform: scale(0.97);
   }
 
-  &.active {
-    color: #07090f;
-    background: var(--comment-text);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  &:focus-visible {
+    outline: 2px solid var(--cmt-accent);
+    outline-offset: 1px;
+  }
+
+  &.is-open .cmt-thread__chevron {
+    transform: rotate(180deg);
   }
 }
 
-// =============================================================================
-// Composer
-// =============================================================================
-
-.new-comment-form {
-  margin-bottom: 1.1rem;
+.cmt-thread__chevron {
+  transition: transform 0.24s $spring;
 }
 
-.input-wrapper {
-  min-height: 50px;
-  display: flex;
-  align-items: center;
-  gap: 0.62rem;
-  padding: 0.48rem 0.48rem 0.48rem 0.82rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.075);
-  border: 1px solid var(--comment-border);
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease;
-
-  &:focus-within {
-    background: rgba(255, 255, 255, 0.095);
-    border-color: color-mix(in srgb, var(--comment-accent) 50%, rgba(255, 255, 255, 0.16));
-    box-shadow:
-      0 0 0 3px color-mix(in srgb, var(--comment-accent) 14%, transparent),
-      0 12px 28px rgba(0, 0, 0, 0.2);
-  }
+.cmt-thread__list {
+  margin-top: 2px;
+  animation: cmtFadeIn 0.2s ease both;
 }
 
-.comment-textarea {
-  flex: 1;
-  min-width: 0;
-  min-height: 25px;
-  max-height: 150px;
-  resize: none;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: var(--comment-text);
-  font-family: $font-comment;
-  font-size: 0.92rem;
-  font-weight: 650;
-  line-height: 1.4;
-
-  &::placeholder {
-    color: var(--comment-text-4);
-    font-weight: 650;
-  }
-}
-
-.submit-button {
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  color: #07090f;
-  background: var(--comment-accent-2);
-  cursor: pointer;
-  box-shadow:
-    0 12px 24px color-mix(in srgb, var(--comment-accent) 22%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
-  transition:
-    transform 0.16s ease,
-    opacity 0.16s ease,
-    filter 0.16s ease,
-    box-shadow 0.16s ease;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    filter: brightness(1.08);
-  }
-
-  &:active:not(:disabled) {
-    transform: scale(0.96);
-  }
-
-  &:disabled {
-    opacity: 0.38;
-    cursor: not-allowed;
-    box-shadow: none;
-    filter: grayscale(0.2);
-  }
-}
-
-.comment-limit-hint {
-  margin-top: 0.5rem;
-  padding-left: 0.35rem;
-  color: var(--comment-accent-2);
-  font-size: 0.76rem;
-  font-weight: 750;
-}
-
-.comment-limit-reached,
-.login-prompt {
-  margin-bottom: 1rem;
-  padding: 0.95rem 1rem;
-  border-radius: 16px;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px dashed color-mix(in srgb, var(--comment-accent) 28%, rgba(255, 255, 255, 0.12));
-
-  p {
-    margin: 0;
-    color: var(--comment-text-3);
-    font-size: 0.86rem;
-    font-weight: 650;
-    line-height: 1.45;
-  }
-}
-
-// =============================================================================
-// Comment list
-// =============================================================================
-
-.comments-list-premium {
+// ── Loading skeleton / empty / error ──
+.cmt-skeleton {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 22px;
+  padding: 8px 0 18px;
 }
 
-.comment-item {
-  position: relative;
-  padding: 0.72rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
-
-  &:last-child {
-    border-bottom: 0;
-  }
-
-  &.reply {
-    margin-left: 3.1rem;
-    padding: 0.62rem 0;
-    border-bottom-color: rgba(255, 255, 255, 0.035);
-
-    .user-avatar {
-      width: 30px;
-      height: 30px;
-      font-size: 0.74rem;
-    }
-
-    .comment-text {
-      font-size: 0.87rem;
-    }
-  }
-}
-
-.comment-content {
+.cmt-skeleton__row {
   display: flex;
   align-items: flex-start;
-  gap: 0.72rem;
+  gap: 16px;
 }
 
-.avatar-container {
+.cmt-skeleton__avatar,
+.cmt-skeleton__lines > span {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.12) 40%,
+    rgba(255, 255, 255, 0.06) 80%
+  );
+  background-size: 220% 100%;
+  animation: cmtShimmer 1.3s ease-in-out infinite;
+}
+
+.cmt-skeleton__avatar {
+  width: 40px;
+  height: 40px;
   flex: 0 0 auto;
-}
-
-.user-avatar {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  object-fit: cover;
   border-radius: 999px;
-  color: #07090f;
-  background:
-    radial-gradient(circle at 30% 15%, rgba(255, 255, 255, 0.45), transparent 36%),
-    var(--comment-accent-2);
-  border: 1px solid color-mix(in srgb, var(--comment-accent) 36%, rgba(255, 255, 255, 0.12));
-  font-size: 0.86rem;
-  font-weight: 900;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.025);
-
-  &.preview-avatar {
-    width: 36px;
-    height: 36px;
-  }
 }
 
-.comment-body {
+.cmt-skeleton__lines {
   flex: 1;
-  min-width: 0;
-}
-
-.comment-header {
   display: flex;
-  align-items: center;
-  gap: 0.48rem;
-  min-width: 0;
-  margin-bottom: 0.28rem;
-}
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 4px;
 
-.user-info {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
+  > span {
+    height: 11px;
+    border-radius: 6px;
 
-.username {
-  max-width: 150px;
-  color: var(--comment-text);
-  font-size: 0.86rem;
-  font-weight: 850;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.user-jurisdiction {
-  max-width: 112px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  color: var(--comment-accent-2);
-  background: color-mix(in srgb, var(--comment-accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--comment-accent) 18%, transparent);
-  font-size: 0.61rem;
-  font-weight: 850;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.timestamp {
-  flex: 0 0 auto;
-  color: var(--comment-text-4);
-  font-size: 0.74rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.comment-menu {
-  position: relative;
-  margin-left: auto;
-  flex: 0 0 auto;
-}
-
-.menu-trigger {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  color: var(--comment-text-3);
-  background: transparent;
-  cursor: pointer;
-  transition:
-    color 0.16s ease,
-    background 0.16s ease;
-
-  &:hover {
-    color: var(--comment-text);
-    background: rgba(255, 255, 255, 0.075);
+    &:first-child { width: 28%; }
+    &:last-child { width: 72%; }
   }
 }
 
-.menu-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 20;
-  min-width: 120px;
-  padding: 5px;
-  border-radius: 13px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035)),
-    rgba(17, 18, 22, 0.98);
-  border: 1px solid var(--comment-border-strong);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
-  animation: commentMenuIn 0.14s ease both;
-}
-
-.menu-item {
-  width: 100%;
-  min-height: 34px;
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0 0.58rem;
-  border: 0;
-  border-radius: 9px;
-  color: var(--comment-text-2);
-  background: transparent;
-  font-family: $font-comment;
-  font-size: 0.8rem;
-  font-weight: 800;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--comment-text);
-    background: rgba(255, 255, 255, 0.075);
-  }
-
-  &.delete {
-    color: #ff8a8a;
-
-    &:hover {
-      background: rgba(239, 68, 68, 0.13);
-      color: #ffc0c0;
-    }
-  }
-}
-
-.comment-text {
-  margin: 0 0 0.56rem;
-  color: var(--comment-text-2);
-  font-size: 0.93rem;
-  font-weight: 500;
-  line-height: 1.48;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.reply-trigger {
-  min-height: 30px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0 0.65rem;
-  border: 0;
-  border-radius: 999px;
-  color: var(--comment-text-3);
-  background: transparent;
-  font-family: $font-comment;
-  font-size: 0.78rem;
-  font-weight: 850;
-  cursor: pointer;
-  transition:
-    color 0.16s ease,
-    background 0.16s ease;
-
-  &:hover {
-    color: var(--comment-accent-2);
-    background: color-mix(in srgb, var(--comment-accent) 10%, transparent);
-  }
-}
-
-.reply-input-container {
-  margin-top: 0.72rem;
-  display: flex;
-  align-items: center;
-  gap: 0.48rem;
-  padding: 0.42rem 0.42rem 0.42rem 0.7rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid var(--comment-border);
-
-  &:focus-within {
-    border-color: color-mix(in srgb, var(--comment-accent) 45%, rgba(255, 255, 255, 0.14));
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--comment-accent) 10%, transparent);
-  }
-}
-
-.reply-input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--comment-text);
-  font-family: $font-comment;
-  font-size: 0.86rem;
-  font-weight: 650;
-
-  &::placeholder {
-    color: var(--comment-text-4);
-  }
-}
-
-.reply-submit {
-  flex: 0 0 auto;
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  color: #07090f;
-  background: var(--comment-accent-2);
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.38;
-    cursor: not-allowed;
-  }
-}
-
-.replies-section {
-  margin-top: 0.42rem;
-  margin-left: 3.1rem;
-}
-
-.toggle-replies {
-  min-height: 30px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0 0.55rem;
-  border: 0;
-  border-radius: 999px;
-  color: var(--comment-accent-2);
-  background: transparent;
-  font-family: $font-comment;
-  font-size: 0.78rem;
-  font-weight: 850;
-  cursor: pointer;
-
-  &:hover {
-    background: color-mix(in srgb, var(--comment-accent) 10%, transparent);
-  }
-}
-
-.replies-list {
-  margin-top: 0.35rem;
-  display: grid;
-  gap: 0.2rem;
-  animation: commentFadeIn 0.2s ease both;
-}
-
-// =============================================================================
-// Loading / empty
-// =============================================================================
-
-.loading-state,
-.empty-state {
-  min-height: 185px;
+.cmt-state {
+  min-height: 170px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 18px;
+  gap: 6px;
+  padding: 20px 16px 28px;
   text-align: center;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid var(--comment-border);
 
-  svg {
-    color: var(--comment-accent-2);
-    opacity: 0.82;
+  &__icon {
+    width: 56px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 6px;
+    border-radius: 999px;
+    color: var(--cmt-muted);
+    background: var(--cmt-accent-soft);
   }
 
-  p {
-    margin: 0.9rem 0 0.25rem;
-    color: var(--comment-text);
-    font-size: 0.96rem;
-    font-weight: 850;
-    letter-spacing: -0.025em;
+  &__title {
+    margin: 0;
+    color: var(--cmt-text);
+    font-size: 15px;
+    font-weight: 600;
   }
 
-  span {
-    color: var(--comment-text-4);
-    font-size: 0.84rem;
-    font-weight: 650;
+  &__text {
+    color: var(--cmt-muted);
+    font-size: 13px;
+  }
+
+  .cmt-btn {
+    margin-top: 6px;
   }
 }
 
-.loading-spinner {
-  width: 36px;
-  height: 36px;
+// =============================================================================
+// Phone — collapsed preview card (opens the sheet)
+// =============================================================================
+
+.cmt-preview {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border: 0;
+  border-radius: 14px;
+  text-align: left;
+  color: var(--cmt-text);
+  background: var(--cmt-chip);
+  font-family: $font;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background 0.16s ease,
+    transform 0.14s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.14);
+    transform: scale(0.985);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--cmt-accent);
+    outline-offset: 2px;
+  }
+}
+
+.cmt-preview__head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.cmt-preview__title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cmt-preview__count {
+  color: var(--cmt-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.cmt-preview__chevron {
+  align-self: center;
+  margin-left: auto;
+  color: var(--cmt-muted);
+}
+
+.cmt-preview__body {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cmt-preview__text,
+.cmt-preview__placeholder {
+  min-width: 0;
+  padding-top: 3px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.cmt-preview__text {
+  color: var(--cmt-body);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.cmt-preview__placeholder {
+  flex: 1;
+  padding: 4px 12px;
   border-radius: 999px;
-  border: 3px solid color-mix(in srgb, var(--comment-accent) 14%, rgba(255, 255, 255, 0.1));
-  border-top-color: var(--comment-accent-2);
-  animation: commentSpin 0.8s linear infinite;
+  color: var(--cmt-muted);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 // =============================================================================
-// Mobile full-screen / bottom sheet
+// Phone — bottom sheet
 // =============================================================================
 
-.comments-mobile-sheet {
+.cmt-sheet {
   position: fixed;
   inset: 0;
-  z-index: 9998 !important;
+  z-index: 9998;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.22s ease;
+  color: var(--cmt-text);
 
   &.is-open {
     pointer-events: auto;
-    opacity: 1;
 
-    .comments-mobile-sheet__scrim {
+    .cmt-sheet__scrim {
       opacity: 1;
     }
 
-    .comments-mobile-sheet__panel {
+    .cmt-sheet__panel {
       transform: translateY(0);
     }
   }
 }
 
-.comments-mobile-sheet__scrim {
+.cmt-sheet__scrim {
   position: absolute;
   inset: 0;
   opacity: 0;
-  background: rgba(0, 0, 0, 0.58);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: opacity 0.22s ease;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: opacity 0.24s ease;
 }
 
-.comments-mobile-sheet__panel {
+.cmt-sheet__panel {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-
   height: min(86dvh, 820px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-
-  border-radius: 22px 22px 0 0;
-  color: var(--comment-text);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 16%),
-    #0f1013;
-  border-top: 1px solid var(--comment-border-strong);
-  box-shadow:
-    0 -24px 70px rgba(0, 0, 0, 0.62),
-    0 -1px 0 color-mix(in srgb, var(--comment-accent) 18%, transparent);
-
+  border-radius: 20px 20px 0 0;
+  background: var(--cmt-surface);
+  border-top: 1px solid var(--cmt-line-hi);
+  box-shadow: 0 -24px 70px rgba(0, 0, 0, 0.6);
   transform: translateY(104%);
-  transition: transform 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
 }
 
-.comments-mobile-sheet__handle {
+.cmt-sheet__grab {
   flex: 0 0 auto;
-  width: 42px;
-  height: 5px;
-  margin: 9px auto 5px;
+  width: 36px;
+  height: 4px;
+  margin: 8px auto 2px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.24);
 }
 
-.comments-mobile-sheet__header {
+.cmt-sheet__head {
   flex: 0 0 auto;
-  min-height: 62px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.65rem 1.15rem 0.7rem;
-  border-bottom: 1px solid var(--comment-border);
-
-  h2 {
-    margin: 0;
-    display: flex;
-    align-items: baseline;
-    gap: 0.55rem;
-    color: var(--comment-text);
-    font-size: 1.65rem;
-    font-weight: 920;
-    letter-spacing: -0.06em;
-
-    span {
-      color: var(--comment-text-3);
-      font-size: 1rem;
-      font-weight: 800;
-      letter-spacing: -0.025em;
-    }
-  }
+  gap: 12px;
+  padding: 4px 8px 2px 16px;
 }
 
-.comments-mobile-sheet__actions {
-  flex: 0 0 auto;
+.cmt-sheet__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--cmt-text);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cmt-sheet__count {
+  color: var(--cmt-muted);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.cmt-sheet__tools {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 2px;
 }
 
-.comments-mobile-sheet__icon {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  color: var(--comment-text-2);
-  background: transparent;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--comment-text);
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  &:active {
-    transform: scale(0.95);
-  }
-}
-
-.comments-mobile-sheet__sort-row {
+.cmt-sheet__sort {
   flex: 0 0 auto;
-  min-height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 1.15rem;
-  border-bottom: 1px solid var(--comment-border);
+  padding: 6px 16px 12px;
+  border-bottom: 1px solid var(--cmt-line);
 }
 
-.comments-mobile-sheet__sort-icon {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  color: var(--comment-text-3);
-  background: rgba(255, 255, 255, 0.055);
-}
-
-.comments-mobile-sheet__body {
+.cmt-sheet__body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0.15rem 1.15rem 1rem;
   -webkit-overflow-scrolling: touch;
+  padding: 8px 16px 20px;
+
+  .cmt-comment {
+    gap: 12px;
+  }
+
+  .cmt-avatar--md {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+  }
+
+  .cmt-comment--reply .cmt-avatar--sm {
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+  }
+
+  .cmt-skeleton__avatar {
+    width: 34px;
+    height: 34px;
+  }
 }
 
-.comments-mobile-sheet__composer {
+.cmt-sheet__composer {
   flex: 0 0 auto;
-  padding: 0.72rem 1.15rem calc(0.72rem + env(safe-area-inset-bottom));
-  background:
-    linear-gradient(180deg, rgba(15, 16, 19, 0), rgba(15, 16, 19, 0.96) 22%),
-    #0f1013;
-  border-top: 1px solid var(--comment-border);
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--cmt-line);
+  background: var(--cmt-surface);
 
-  .new-comment-form {
-    margin-bottom: 0;
+  .cmt-composer {
+    align-items: center;
+    gap: 10px;
   }
 
-  .input-wrapper {
-    min-height: 52px;
-    background: rgba(255, 255, 255, 0.09);
+  .cmt-composer-guest {
+    gap: 10px;
+
+    &__text {
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--cmt-chip);
+    }
+  }
+}
+
+// Pill input with the send button inside it.
+.cmt-composer__pill {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 4px 4px 4px 14px;
+  border-radius: 22px;
+  background: var(--cmt-chip);
+  border: 1px solid transparent;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease;
+
+  &:focus-within {
+    background: rgba(255, 255, 255, 0.11);
+    border-color: color-mix(in srgb, var(--unis-primary, #163387) 55%, rgba(255, 255, 255, 0.2));
   }
 
-  .comment-limit-reached,
-  .login-prompt {
-    margin-bottom: 0;
+  .cmt-composer__input {
+    padding: 7px 0;
+    font-size: 15px;
+    line-height: 1.35;
+  }
+}
+
+.cmt-composer__send {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--cmt-glow-a), var(--cmt-glow-b));
+  box-shadow: 0 8px 18px -10px var(--unis-primary-glow, rgba(22, 51, 135, 0.6));
+  cursor: pointer;
+  transition:
+    opacity 0.16s ease,
+    transform 0.12s ease,
+    background 0.16s ease;
+
+  &:active:not(:disabled) {
+    transform: scale(0.92);
+  }
+
+  &:disabled {
+    color: var(--cmt-faint);
+    background: transparent;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--cmt-accent);
+    outline-offset: 2px;
+  }
+}
+
+.cmt-composer__hint--sheet {
+  margin: 6px 0 0 40px;
+}
+
+// =============================================================================
+// Overlays — delete dialog, toast, sign-in sheet
+// =============================================================================
+
+.cmt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+
+  // The sign-in sheet (AuthGateSheet) renders in here so it clears the
+  // player bar and the comments sheet.
+  .ags-backdrop,
+  .ags-sheet {
+    pointer-events: auto;
+  }
+}
+
+.cmt-confirm {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: cmtFadeIn 0.16s ease both;
+}
+
+.cmt-confirm__card {
+  width: min(100%, 360px);
+  padding: 22px 20px 14px 22px;
+  border-radius: 18px;
+  background: var(--cmt-raised);
+  border: 1px solid var(--cmt-line-hi);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.6);
+  animation: cmtDialogIn 0.24s $spring both;
+}
+
+.cmt-confirm__title {
+  margin: 0 0 8px;
+  color: var(--cmt-text);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cmt-confirm__text {
+  margin: 0;
+  color: var(--cmt-body);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.cmt-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 20px;
+}
+
+.cmt-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(104px + env(safe-area-inset-bottom));
+  max-width: min(92vw, 420px);
+  padding: 12px 18px;
+  border-radius: 14px;
+  color: var(--cmt-text);
+  background: color-mix(in srgb, var(--unis-bg, #07090f) 80%, var(--unis-primary, #163387));
+  border: 1px solid var(--unis-primary-border, rgba(22, 51, 135, 0.4));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 12px);
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s $spring,
+    visibility 0s linear 0.22s;
+
+  &.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+    transition:
+      opacity 0.22s ease,
+      transform 0.22s $spring,
+      visibility 0s;
   }
 }
 
 // =============================================================================
-// Responsive behavior
+// Portals live directly in #root, where unis-design-tokens.scss sets
+// `#root > * { position: relative; z-index: 1; }` — an ID rule that outranks
+// any class. Restate the fixed positioning at the same strength, or the sheet
+// drops to the bottom of the page and the overlays stop covering the player.
+// =============================================================================
+
+#root > .cmt-sheet {
+  position: fixed;
+  z-index: 9998;
+}
+
+#root > .cmt-overlay {
+  position: fixed;
+  z-index: 10000;
+}
+
+// =============================================================================
+// Responsive
 // =============================================================================
 
 @media (max-width: 768px) {
-  .comments-section-premium {
-    margin-top: 1.35rem;
+  .cmt {
+    margin-top: 1.25rem;
   }
 
-  .comments-mobile-preview {
-    display: block;
+  .cmt-comment__meta {
+    padding-right: 30px;
   }
 
-  .comments-desktop-panel {
-    display: none;
+  .cmt-comment__menu {
+    top: 2px;
+    right: -8px;
   }
 
-  .comments-mobile-sheet {
-    display: block;
+  .cmt-thread__toggle {
+    font-size: 13px;
   }
 
-  .comments-list-premium {
-    gap: 0.45rem;
-  }
-
-  .comment-item {
-    padding: 0.82rem 0;
-
-    &.reply {
-      margin-left: 2.6rem;
-    }
-  }
-
-  .comment-content {
-    gap: 0.68rem;
-  }
-
-  .user-avatar {
-    width: 38px;
-    height: 38px;
-  }
-
-  .username {
-    max-width: 128px;
-  }
-
-  .user-jurisdiction {
-    max-width: 96px;
-  }
-
-  .timestamp {
-    font-size: 0.72rem;
-  }
-
-  .comment-text {
-    font-size: 0.94rem;
-    line-height: 1.48;
-  }
-
-  .replies-section {
-    margin-left: 2.6rem;
-  }
-
-  .menu-trigger {
-    color: var(--comment-text-3);
-  }
-}
-
-@media (min-width: 769px) {
-  .comments-mobile-sheet {
-    display: none;
+  .cmt-toast {
+    bottom: calc(92px + env(safe-area-inset-bottom));
   }
 }
 
 @media (max-width: 420px) {
-  .comments-mobile-sheet__panel {
+  .cmt-sheet__panel {
     height: 88dvh;
-    border-radius: 20px 20px 0 0;
   }
 
-  .comments-mobile-sheet__header {
-    padding-left: 1rem;
-    padding-right: 1rem;
-
-    h2 {
-      font-size: 1.52rem;
-    }
-  }
-
-  .comments-mobile-sheet__sort-row,
-  .comments-mobile-sheet__body,
-  .comments-mobile-sheet__composer {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  .comments-sort-tab {
-    min-height: 34px;
-    padding: 0 0.85rem;
-  }
-
-  .username {
-    max-width: 112px;
-  }
-
-  .user-jurisdiction {
-    display: none;
+  .cmt-comment__place {
+    max-width: 96px;
   }
 }
 
 @media (max-height: 680px) and (max-width: 768px) {
-  .comments-mobile-sheet__panel {
+  .cmt-sheet__panel {
     height: 94dvh;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .comments-mobile-sheet,
-  .comments-mobile-sheet__scrim,
-  .comments-mobile-sheet__panel,
-  .comments-mobile-preview,
-  .comments-sort-tab,
-  .submit-button,
-  .reply-trigger,
-  .toggle-replies,
-  .menu-dropdown,
-  .replies-list,
-  .loading-spinner {
+  .cmt-comment,
+  .cmt-composer__footer,
+  .cmt-reply-box,
+  .cmt-thread__list,
+  .cmt-menu,
+  .cmt-confirm,
+  .cmt-confirm__card,
+  .cmt-skeleton__avatar,
+  .cmt-skeleton__lines > span,
+  .cmt-like.is-pop .cmt-like__icon,
+  .cmt-like.is-pop .cmt-like__icon::after {
     animation: none !important;
+  }
+
+  .cmt-sheet__scrim,
+  .cmt-sheet__panel,
+  .cmt-toast,
+  .cmt-composer__line::after,
+  .cmt-thread__chevron,
+  .cmt-like__icon,
+  .cmt-btn,
+  .cmt-chip,
+  .cmt-preview {
     transition: none !important;
   }
 }
@@ -1045,16 +1451,10 @@ $font-comment: var(
 // Animations
 // =============================================================================
 
-@keyframes commentSpin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes commentFadeIn {
+@keyframes cmtFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-5px);
+    transform: translateY(-4px);
   }
 
   to {
@@ -1063,14 +1463,66 @@ $font-comment: var(
   }
 }
 
-@keyframes commentMenuIn {
+@keyframes cmtMenuIn {
   from {
     opacity: 0;
-    transform: translateY(-5px) scale(0.97);
+    transform: translateY(-4px) scale(0.96);
   }
 
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cmtDialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cmtShimmer {
+  from {
+    background-position: 120% 0;
+  }
+
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@keyframes cmtLikePop {
+  0% {
+    transform: scale(1) rotate(0);
+  }
+
+  30% {
+    transform: scale(1.28) rotate(-14deg);
+  }
+
+  58% {
+    transform: scale(0.94) rotate(5deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes cmtLikeRing {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.45);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
   }
 }
