@@ -580,7 +580,7 @@ const Earnings = () => {
               <div className="card-body">
                 <p className="card-label" id="card-label-plus">Unis Plus</p>
                 <h2 className="card-value" aria-describedby="card-label-plus">{formatMoney(summary?.plusEarnings?.lifetime)}</h2>
-                <p className="card-sub">60% of ad-free members&rsquo; fees, by their plays of your songs</p>
+                <p className="card-sub">15% from ad-free members who support you, plus 45% by plays of your songs</p>
               </div>
             </div>
           )}
@@ -843,7 +843,7 @@ const Earnings = () => {
                     <div className="split-dot split-dot-gold" aria-hidden="true" />
                     <div className="split-info">
                       <strong>Unis Plus (60% to artists)</strong>
-                      <p>Each month, 60% of every Unis Plus member&apos;s fee, after Stripe&apos;s fees, goes to the artists that member played, divided by their plays (or to their supported artist if they played no one). Unis&apos;s part joins the monthly Community Share. Audio ads, when they arrive, will pay artists 60% the same way.</p>
+                      <p>Each month, 60% of every Unis Plus member&apos;s fee, after Stripe&apos;s fees, goes to artists: 15% to the artist that member supports, whatever they played, and 45% to the artists they played, divided by their plays (all of it to their supported artist if they played no one). Unis&apos;s 40% joins the monthly Community Share. Audio ads, when they arrive, will pay artists 60% of the ads played with their songs.</p>
                     </div>
                   </div>
                 </div>

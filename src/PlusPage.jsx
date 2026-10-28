@@ -2,8 +2,9 @@
 // Unis Plus — /plus (signed in)
 //
 // The ad-free plan: $4.99 a month through Stripe's hosted checkout (card
-// details never touch Unis). 60% of what's left after Stripe's card and billing
-// fees goes to the artists the member played that month, by plays (or to their
+// details never touch Unis). Of what's left after Stripe's card and billing
+// fees, 15% goes to the member's supported artist whatever they played, and
+// 45% to the artists they played that month, by plays (all 60% to the
 // supported artist if they played no one); Unis's 40% joins the Community
 // Share pot. "Manage plan" opens Stripe's customer portal (change card,
 // cancel). Canceling keeps Plus until the paid month ends.
@@ -34,15 +35,21 @@ const isSafeStripeUrl = (raw) => {
 
 const dollars = (cents) => `$${(Number(cents || 0) / 100).toFixed(2)}`;
 
-/** Where a month's fee goes: Stripe's card (2.9% + 30¢) and Billing (0.7%) fees, then 60/40. */
+/**
+ * Where a month's fee goes: Stripe's card (2.9% + 30¢) and Billing (0.7%)
+ * fees, then 15% to the supported artist, 45% to the artists played, and
+ * Unis's 40% to the Community Share. Mirrors CommunityShareService.
+ */
 export const plusSplit = (cents) => {
   const price = Math.max(0, Math.round(Number(cents) || 0));
   const card = Math.ceil((price * 29) / 1000) + 30;
   const billing = Math.ceil((price * 7) / 1000);
   const fees = Math.min(price, card + billing);
   const net = price - fees;
-  const artists = Math.floor(net * 0.6);
-  return { price, fees, net, artists, pot: net - artists };
+  const supported = Math.floor(net * 0.15);
+  const played = Math.floor(net * 0.45);
+  const artists = supported + played;
+  return { price, fees, net, supported, played, artists, pot: net - artists };
 };
 
 const longDate = (iso) => {
@@ -113,7 +120,7 @@ const PlusPage = () => {
           <h1>No ads. Your money backs the artists you play.</h1>
           <p>
             {dollars(price)} a month. Every month, 60% of what&rsquo;s left after Stripe&rsquo;s fees goes to
-            the artists you listened to, split by your plays.
+            artists: 15% to the artist you support, no matter what, and 45% to the artists you play.
           </p>
         </header>
 
@@ -167,7 +174,7 @@ const PlusPage = () => {
               <h2>Go ad-free</h2>
               <ul className="plus-list">
                 <li>No ads anywhere on Unis, on every device you sign in on.</li>
-                <li>{dollars(split.artists)} of each month goes to the artists you play, by plays.</li>
+                <li>{dollars(split.supported)} of each month goes to the artist you support, and {dollars(split.played)} to the artists you play.</li>
                 <li>Cancel any time. Plus stays on until the end of the month you paid for.</li>
               </ul>
               <button className="plus-btn" type="button" disabled={busy}
@@ -192,14 +199,16 @@ const PlusPage = () => {
           <table className="plus-split">
             <tbody>
               <tr><td>Stripe (card and billing fees)</td><td>{dollars(split.fees)}</td></tr>
-              <tr className="plus-split__hi"><td>Artists you played that month (60%)</td><td>{dollars(split.artists)}</td></tr>
+              <tr className="plus-split__hi"><td>The artist you support (15%)</td><td>{dollars(split.supported)}</td></tr>
+              <tr className="plus-split__hi"><td>Artists you played that month (45%)</td><td>{dollars(split.played)}</td></tr>
               <tr><td>Unis&rsquo;s part (40%), into the Community Share</td><td>{dollars(split.pot)}</td></tr>
             </tbody>
           </table>
           <p className="plus-muted">
-            Your artists&rsquo; part is split by how much you played each of them that month, with the
-            same rules as the Community Share (up to 50 plays a day count; your own songs don&rsquo;t).
-            If you didn&rsquo;t play anyone, it goes to the artist you support. Unis&rsquo;s part joins
+            The artist you support gets their 15% whatever you played. The 45% is split by how much you
+            played each artist that month, with the same rules as the Community Share (up to 50 plays a
+            day count; your own songs don&rsquo;t), so your supported artist gets part of that too when you
+            play them. If you didn&rsquo;t play anyone, all 60% goes to the artist you support. Unis&rsquo;s part joins
             the monthly Community Share, which is shared with supported artists and referrers by
             listening. Amounts are paid when each month closes.
           </p>

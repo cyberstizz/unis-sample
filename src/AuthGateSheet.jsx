@@ -30,7 +30,7 @@ const GATE_CONTEXTS = {
     icon: '✨',
     accent: 'no ads, more for artists',
     headline: 'Go ad-free with Unis Plus',
-    subtext: 'Create a free account, then add Unis Plus for $4.99 a month. 60% goes to the artists you play.',
+    subtext: 'Create a free account, then add Unis Plus for $4.99 a month. 60% goes to artists, starting with the one you support.',
   },
   profile: {
     icon: '👤',

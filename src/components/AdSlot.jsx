@@ -135,7 +135,7 @@ const HouseCard = ({ kind, priceCents }) => {
       <Link className="ad-house" to="/plus">
         <span className="ad-house__title">Go ad-free with Unis Plus</span>
         <span className="ad-house__body">
-          {formatPrice(priceCents)} a month. 60% goes to the artists you play.
+          {formatPrice(priceCents)} a month. 60% goes to artists, starting with the one you support.
         </span>
         <span className="ad-house__cta">See Unis Plus</span>
       </Link>

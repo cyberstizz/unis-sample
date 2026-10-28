@@ -409,10 +409,13 @@ const TermsOfService = () => {
               to their content. &ldquo;Net Streaming Revenue&rdquo; means: (a) revenue from audio advertisements 
               played immediately before or during streams of the artist&rsquo;s songs; and (b) when Unis offers its 
               paid subscription (&ldquo;Unis Plus&rdquo;), the part of each subscriber&rsquo;s monthly fee attributable 
-              to the artist, found by dividing that subscriber&rsquo;s fee for the month among the artists whose 
-              songs the subscriber played that month, in proportion to the subscriber&rsquo;s counted plays 
-              (Section 12.2), or, if the subscriber played no eligible songs that month, to the artist the 
-              subscriber was supporting when the payment was made (Section 12.3); in each case minus: (i) applicable 
+              to the artist: one quarter of each fee is attributable to the artist the subscriber was supporting 
+              when the payment was made (Section 12.3), and three quarters is divided among the artists whose songs 
+              the subscriber played that month, in proportion to the subscriber&rsquo;s counted plays (Section 12.2). 
+              If the subscriber played no eligible songs that month, all of it is attributable to the supported 
+              artist; if the supported artist does not meet the requirements of Section 12.3, their quarter is 
+              divided by counted plays with the rest. (Sixty percent of these amounts is fifteen percent (15%) and 
+              forty-five percent (45%) of the subscriber&rsquo;s fee.) In each case minus: (i) applicable 
               ad-serving and app-store fees (e.g., AdsWizz, Apple or Google fees); (ii) payment processing and 
               billing fees (e.g., Stripe fees); (iii) applicable taxes and government charges; and (iv) refunds, 
               chargebacks, and bad debt. A part owed to an artist who does not meet the requirements of Section 
@@ -484,7 +487,16 @@ const TermsOfService = () => {
               paid to the artist&rsquo;s bank with the monthly payout (Section 11.2). Buyers pay the listed
               price with no added fees. Track sale revenue is separate from Community
               Share earnings and is not subject to the $50.00 minimum payout threshold described in
-              Section 11.2.
+              Section 11.2. Artists cannot buy their own tracks.
+            </p>
+            <p>
+              <strong>Direct Support.</strong> Direct support is an optional gift from a fan to an artist. It
+              buys nothing, is not payment for anything on or off Unis, and can be sent only to artists. To send
+              support, your account must have a verified phone number and be at least seven (7) days old. Each
+              payment may be $1.00 to $100.00, and each person may send no more than $250.00 in any 24 hours and
+              $500.00 in any 7 days, across all artists. Notes sent with support may not contain links, phone
+              numbers, or payment handles. Unis may refuse, reverse, or report support payments that appear to be
+              fraudulent or to move money for purposes other than supporting an artist.
             </p>
             <p>
               Artists may configure each track as &ldquo;Free Download,&rdquo; &ldquo;Paid Download&rdquo;
@@ -537,7 +549,7 @@ const TermsOfService = () => {
             <h3>12.2 Counted Listening</h3>
             <p>
               A play counts toward the Community Share only if the listener is signed in to an account in good 
-              standing and the song is not the listener&rsquo;s own. Each listener counts for no more than fifty 
+              standing with a verified phone number, and the song is not the listener&rsquo;s own. Each listener counts for no more than fifty 
               (50) plays per day (Eastern Time); if a listener exceeds that limit, their plays that day are 
               counted proportionally up to the limit. Plays that Unis determines to be automated, fraudulent, or 
               manipulated do not count. Unis may exclude staff and test accounts. Unis may change these rules 
@@ -781,9 +793,10 @@ const TermsOfService = () => {
 
             <h3>17.5 Where Your Fee Goes</h3>
             <p>
-              Each month, 60% of your fee after payment processing and billing fees goes to the artists whose songs 
-              you played that month, in proportion to your counted plays, or to your supported artist if you played 
-              no eligible songs (Section 11.1). Unis&rsquo;s remaining part is added to that month&rsquo;s 
+              Each month, 60% of your fee after payment processing and billing fees goes to artists: 15% to the 
+              artist you were supporting when you paid, whatever you played, and 45% to the artists whose songs you 
+              played that month, in proportion to your counted plays. If you played no eligible songs, the whole 
+              60% goes to your supported artist (Section 11.1). Unis&rsquo;s remaining part is added to that month&rsquo;s 
               Community Share (Section 12.1). These amounts are credited when the month is closed. Subscribing does 
               not buy any song, is not a donation, and does not change your own participation in the Community 
               Share or the Referral Program. A refunded payment is excluded from these amounts; if it was already 

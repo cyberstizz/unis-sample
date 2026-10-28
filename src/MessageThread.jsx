@@ -1441,7 +1441,7 @@ export default function MessageThread({
               onBlur={stopTyping}
               onKeyDown={onKeyDown}
             />
-            {!textOnly && (
+            {!textOnly && isArtist && (
               <button
                 type="button"
                 className="udm-composer__icon udm-composer__support"

@@ -9,9 +9,10 @@
 //      (local sponsors are filled in from the database; add anything else)
 //      and what Unis kept from its fees on song sales and support after
 //      Stripe's card fees (filled in from the database).
-//   2. Preview: the server settles Unis Plus first (60% of each subscriber's
-//      payment, after Stripe's fees, to the artists they played; Unis's part
-//      joins the pot), then divides the pot by counted listening and shows
+//   2. Preview: the server settles Unis Plus first (of each subscriber's
+//      payment after Stripe's fees: 15% to their supported artist and 45% to
+//      the artists they played, by plays; Unis's 40% joins the pot), then
+//      divides the pot by counted listening and shows
 //      what supported artists and each referral level would get, and what
 //      Unis keeps. Nothing is saved.
 //   3. Close the month (super admin): everyone's share lands in their Earnings
@@ -33,6 +34,10 @@ import { apiCall } from '../components/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 import './metrics/metricsPage.scss';
 import './communityShareAdmin.scss';
+
+// Preview and close read a whole month of listening; at scale that takes longer than
+// the app's default 10-second request limit. The server finishes either way.
+const CLOSE_TIMEOUT_MS = 5 * 60 * 1000;
 
 const usd = (v) => {
   const n = Number(v);
@@ -103,7 +108,8 @@ const CloseMonth = ({ canMoveMoney, onClosed }) => {
     setBusy(true);
     setMessage(null);
     try {
-      const res = await apiCall({ method: 'get', url: `/v1/admin/earnings/preview?${params()}`, useCache: false });
+      // A big month takes the server a while; don't give up after the usual 10 seconds.
+      const res = await apiCall({ method: 'get', url: `/v1/admin/earnings/preview?${params()}`, useCache: false, timeout: CLOSE_TIMEOUT_MS });
       // Left blank, the fee and other income are the server's suggestions
       // (fees after Stripe; local sponsors paid that month); show them in the boxes.
       const fee = feeTouched ? feeIncome.trim() : String(res.data?.feeIncome ?? '');
@@ -128,6 +134,7 @@ const CloseMonth = ({ canMoveMoney, onClosed }) => {
       const res = await apiCall({
         method: 'post',
         url: '/v1/admin/earnings/close',
+        timeout: CLOSE_TIMEOUT_MS,
         data: {
           month,
           adIncome: adIncome.trim() || '0',
@@ -226,7 +233,7 @@ const CloseMonth = ({ canMoveMoney, onClosed }) => {
                 {Object.entries(STREAM_LABELS).map(([key, label]) => (
                   <tr key={key}><td>{label}</td><td>{usd(streams[key])}</td></tr>
                 ))}
-                <tr><td>Artists played by Unis Plus subscribers (60%)</td><td>{usd(preview.plusToArtists)}</td></tr>
+                <tr><td>Unis Plus to artists (15% supported + 45% by plays)</td><td>{usd(preview.plusToArtists)}</td></tr>
               </tbody>
             </table>
           </div>

@@ -530,3 +530,33 @@
     transition: none !important;
   }
 }
+// ── Paying inside the window (Stripe's card form) ───────────────────────────
+.download-modal__pay {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.download-modal__pay-error {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #ff8a80;
+}
+
+.download-modal__fine {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  color: color-mix(in srgb, var(--unis-text, #fff) 45%, transparent);
+}
+
+.download-modal__file-link {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--unis-text, #fff) 65%, transparent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

@@ -1766,9 +1766,11 @@ export const HELP_SECTIONS = [
                 sending a place on the board, not just a link.
               </li>
               <li>
-                <b>Send support.</b> Money and a note in the same message. It
-                appears in the thread as its own bubble, and it counts as
-                support exactly like sending it from a profile.
+                <b>Send support</b> (to artists). Money and a note in the same
+                message. It appears in the thread as its own bubble, and it
+                counts as support exactly like sending it from a profile. Up to
+                $100 a payment, and $250 a day or $500 a week in total; your
+                account needs a verified phone and to be at least a week old.
               </li>
               <li>
                 <b>React.</b> One emoji per message. Tapping the same one again
@@ -2392,9 +2394,12 @@ export const HELP_SECTIONS = [
               Unis has been paid for it.
             </p>
             <p>
-              Two things can stop it. <b>They have to be signed in</b> — a
-              signed-out visitor&rsquo;s plays count for nobody. And{' '}
-              <b>your phone has to be verified</b>, or your part stays with Unis.
+              Three things can stop it. <b>They have to be signed in</b> — a
+              signed-out visitor&rsquo;s plays count for nobody. <b>Their phone
+              has to be verified</b> — plays from accounts without a verified
+              phone don&rsquo;t count, which is what stops anyone from farming
+              the share with fake accounts. And <b>your phone has to be
+              verified</b>, or your part stays with Unis.
             </p>
             <p className="help-note">
               Plays of their own songs don&rsquo;t count, and each person counts
@@ -2578,8 +2583,8 @@ export const HELP_SECTIONS = [
               divided by listening, to a fixed formula.
             </p>
             <p>
-              You have to be signed in for your listening to count. Nobody is
-              paid for seeing or clicking ads.
+              You have to be signed in, with a verified phone number, for your
+              listening to count. Nobody is paid for seeing or clicking ads.
             </p>
           </>
         ),
@@ -2610,9 +2615,10 @@ export const HELP_SECTIONS = [
               with 200 supporters who listen like Maya earns $150 that month.
             </p>
             <p className="help-note">
-              A play counts when you&rsquo;re signed in, it&rsquo;s someone
-              else&rsquo;s song, and you&rsquo;re under 50 counted plays for the
-              day. Unis staff and test accounts don&rsquo;t count.
+              A play counts when you&rsquo;re signed in with a verified phone
+              number, it&rsquo;s someone else&rsquo;s song, and you&rsquo;re
+              under 50 counted plays for the day. Unis staff and test accounts
+              don&rsquo;t count.
             </p>
           </>
         ),
@@ -2807,15 +2813,26 @@ export const HELP_SECTIONS = [
             <p>
               Unis Plus is the ad-free plan. Each month, 60% of a
               subscriber&rsquo;s fee, after Stripe&rsquo;s card and billing
-              fees, goes to the artists that subscriber played, split by their
-              counted plays (the same 50-a-day rule as the Community Share; your
-              own songs don&rsquo;t count). On a $4.99 month that&rsquo;s $2.70
-              shared among the artists they played.
+              fees, goes to artists in two parts:
             </p>
+            <ul>
+              <li>
+                <b>15% to the artist they support</b>, whatever they played. On
+                a $4.99 month that&rsquo;s about 67&cent;, so ten supporters on
+                Plus is about $6.75 a month, guaranteed.
+              </li>
+              <li>
+                <b>45% to the artists they played</b>, split by their counted
+                plays (the same 50-a-day rule as the Community Share; your own
+                songs don&rsquo;t count). That&rsquo;s about $2.02 on a $4.99 month.
+                Their supported artist gets part of this too when they play
+                them.
+              </li>
+            </ul>
             <p>
-              If a subscriber played nobody that month, their artists&rsquo;
-              part goes to the artist they support. Unis&rsquo;s 40% joins the
-              Community Share pot.
+              If a subscriber played nobody that month, the whole 60% goes to
+              the artist they support. Unis&rsquo;s 40% joins the Community
+              Share pot.
             </p>
             <p>
               It&rsquo;s credited to your Earnings balance when the month is
@@ -2856,7 +2873,8 @@ export const HELP_SECTIONS = [
               Unis Plus removes every ad on Unis for your account, on every
               device you sign in on. It&rsquo;s $4.99 a month, paid by card on
               Stripe&rsquo;s secure page, and 60% of it (after Stripe&rsquo;s
-              fees) goes to the artists you play that month.
+              fees) goes to artists: 15% to the artist you support, no matter
+              what, and 45% to the artists you play that month.
             </p>
             <p>
               Get it from <b>Unis Plus</b> in the menu. It turns on as soon as

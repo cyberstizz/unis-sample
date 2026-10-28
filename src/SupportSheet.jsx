@@ -37,6 +37,7 @@ const getStripe = () => {
 };
 
 const PRESETS = [3, 5, 10, 25]; // dollars
+const MAX_SUPPORT_CENTS = 10000;  // $100 per payment (the server enforces this and the daily/weekly limits)
 
 // Map the live theme into Stripe Elements' appearance API.
 function themeAppearance() {
@@ -159,6 +160,7 @@ export default function SupportSheet({
 
   const startPayment = async () => {
     if (amountCents < 100) { setError('Minimum support is $1.00.'); return; }
+    if (amountCents > MAX_SUPPORT_CENTS) { setError('The most you can send at once is $100.'); return; }
     setBusy(true); setError(null);
     try {
       const res = await apiCall({
@@ -210,7 +212,7 @@ export default function SupportSheet({
             <div className="usp-custom">
               <span className="usp-custom__dollar">$</span>
               <input
-                type="number" min="1" step="1" inputMode="decimal"
+                type="number" min="1" max="100" step="1" inputMode="decimal"
                 className="usp-custom__input" placeholder="Custom amount"
                 value={custom}
                 onChange={(e) => setCustom(e.target.value)}
