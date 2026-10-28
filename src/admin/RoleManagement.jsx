@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
 import Layout from '../layout';
 import './admin.scss';
 
 const RoleManagement = () => {
+  const navigate = useNavigate();
   const [roles, setRoles] = useState([]);
   const [showGrant, setShowGrant] = useState(false);
   const [grantUserId, setGrantUserId] = useState('');
@@ -55,6 +57,7 @@ const RoleManagement = () => {
   return (
     <Layout>
         <div className="admin-page">
+        <button type="button" className="admin-back" onClick={() => navigate('/admin')}>← Admin dashboard</button>
         <h1 style={{ color: '#fff', marginBottom: '20px' }}>Role Management</h1>
 
         <button onClick={() => setShowGrant(!showGrant)}

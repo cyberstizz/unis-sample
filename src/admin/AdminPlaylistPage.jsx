@@ -302,6 +302,9 @@ const AdminPlaylistPage = () => {
   return (
     <Layout>
       <div className="admin-page">
+        {view === 'list' && (
+          <button type="button" className="admin-back" onClick={() => navigate('/admin')}>← Admin dashboard</button>
+        )}
 
         {/* HEADER */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '30px' }}>

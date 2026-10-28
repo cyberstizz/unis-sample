@@ -1,12 +1,72 @@
+// Admin pages.
+//
+// The older admin screens (dashboard, moderation, analytics, users, roles,
+// audit log, playlists) style themselves inline. These rules make every one
+// of them fit a phone:
+//   • the page can shrink inside the app layout instead of growing to the
+//     width of its longest line (min-width: 0), which is what pushed the
+//     content past the right edge;
+//   • rows that sit side by side on a computer wrap onto the next line;
+//   • long names, emails and links break instead of widening the page.
+// The newer screens (.mx, metrics/metricsPage.scss) already behave this way.
+
 .admin-page {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 1200px;
   margin-left: 20px;
   margin-top: 5px;
   padding: 30px 40px;
-  max-width: 1200px;
   min-height: 100vh;
+  overflow-wrap: anywhere;
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  img, video, canvas { max-width: 100%; }
+  input, select, textarea, button { max-width: 100%; }
 
   @media (max-width: 1024px) {
     margin-left: 0;
     padding: 20px;
+  }
+
+  @media (max-width: 640px) {
+    padding: 16px 12px 48px;
+
+    h1 { font-size: 24px !important; line-height: 1.2; }
+
+    // Inline flex rows (a name on the left, badges or a date on the right)
+    // wrap instead of running off the screen. The part that's meant to
+    // stretch keeps a real width, so the extras drop to the next line rather
+    // than squeezing a name into a narrow column.
+    [style*="display: flex"] { flex-wrap: wrap; }
+    [style*="display: flex"] > [style*="flex: 1"] { flex-basis: 180px !important; }
+
+    // A role or status label set right after a name moves to the next line
+    // whole instead of being split in two.
+    span[style*="margin-left"] { display: inline-block; }
+  }
+}
+
+// "← Admin dashboard" at the top of every admin page (the newer pages use the
+// matching .mx-back).
+.admin-back {
+  display: inline-block;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0 0 16px;
+  color: #898781;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover { color: #f0efec; }
+
+  &:focus-visible {
+    outline: 2px solid var(--unis-primary, #163387);
+    outline-offset: 3px;
+    border-radius: 4px;
   }
 }

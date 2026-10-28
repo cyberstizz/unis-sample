@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
 import Layout from '../layout';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './admin.scss';
 
 const AnalyticsPage = () => {
+  const navigate = useNavigate();
   const [dauData, setDauData] = useState([]);
   const [signupData, setSignupData] = useState([]);
   const [playData, setPlayData] = useState([]);
@@ -76,6 +78,7 @@ const AnalyticsPage = () => {
   return (
     <Layout>
       <div className="admin-page">
+        <button type="button" className="admin-back" onClick={() => navigate('/admin')}>← Admin dashboard</button>
         <h1 style={{ color: '#fff', marginBottom: '30px' }}>Analytics</h1>
 
         {/* ═══════════════════════════════════════════════════

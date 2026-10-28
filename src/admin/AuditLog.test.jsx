@@ -7,6 +7,8 @@ import AuditLog from './AuditLog';
 import { apiCall } from '../components/axiosInstance';
 
 vi.mock('../components/axiosInstance', () => ({ apiCall: vi.fn() }));
+// The page's back button uses the router; these tests render it on its own.
+vi.mock('react-router-dom', async (importOriginal) => ({ ...(await importOriginal()), useNavigate: () => vi.fn() }));
 vi.mock('../layout', () => ({ default: ({ children }) => <div data-testid="layout">{children}</div> }));
 
 // ─── fixtures ────────────────────────────────────────────────────────────────

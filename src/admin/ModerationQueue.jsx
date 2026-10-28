@@ -80,6 +80,7 @@ const ModerationQueue = () => {
   return (
     <Layout>
         <div className="admin-page">
+        <button type="button" className="admin-back" onClick={() => navigate('/admin')}>← Admin dashboard</button>
         <h1 style={{ color: '#fff', marginBottom: '20px' }}>Moderation Queue</h1>
 
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '20px' }}>

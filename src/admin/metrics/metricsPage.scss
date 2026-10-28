@@ -41,7 +41,7 @@
   .mx-menu { margin-left: auto; }
 }
 .mx-seg {
-  display: inline-flex; border: 1px solid var(--mx-border); border-radius: 10px; overflow: hidden;
+  display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--mx-border); border-radius: 10px; overflow: hidden;
   button {
     background: transparent; color: var(--mx-ink-2); border: 0; padding: 9px 14px; font: inherit; font-size: 14px; cursor: pointer;
     &.is-on { background: var(--mx-accent); color: #fff; }

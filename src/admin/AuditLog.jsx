@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
 import Layout from '../layout';
 import './admin.scss';
 
 const AuditLog = () => {
+  const navigate = useNavigate();
   const [actions, setActions] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -27,6 +29,7 @@ const AuditLog = () => {
   return (
     <Layout>
         <div className="admin-page">
+        <button type="button" className="admin-back" onClick={() => navigate('/admin')}>← Admin dashboard</button>
         <h1 style={{ color: '#fff', marginBottom: '20px' }}>Audit Log</h1>
 
         {loading ? <p style={{ color: '#A9A9A9' }}>Loading...</p> : (

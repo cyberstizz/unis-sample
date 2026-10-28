@@ -42,6 +42,7 @@ const UserManagement = () => {
   return (
     <Layout>
         <div className="admin-page">
+        <button type="button" className="admin-back" onClick={() => navigate('/admin')}>← Admin dashboard</button>
         <h1 style={{ color: '#fff', marginBottom: '20px' }}>User Management</h1>
 
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
