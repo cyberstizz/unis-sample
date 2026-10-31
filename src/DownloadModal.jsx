@@ -21,10 +21,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { loadStripe } from "@stripe/stripe-js";
+// '/pure' so Stripe's script downloads only when someone buys (see SupportSheet.jsx).
+import { loadStripe } from "@stripe/stripe-js/pure";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { apiCall } from "./components/axiosInstance";
-import { useFeedback } from "./context/FeedbackContext";
 import { buildUrl } from "./utils/buildUrl";
 import "./DownloadModal.scss";
 
@@ -182,7 +182,6 @@ export default function DownloadModal({
   const [message, setMessage] = useState("");   // error or note to show
   const [lastUrl, setLastUrl] = useState(null);
   const [animate, setAnimate] = useState(false);
-  const feedback = useFeedback();
 
   const {
     id,
@@ -288,8 +287,6 @@ export default function DownloadModal({
       await saveFile(rawUrl);
       console.info("[Download] saved", id);
       setStatus("complete");
-      // The modal closes itself shortly — the toast outlives it.
-      feedback.success(`Downloaded \u201C${title}\u201D`);
       window.setTimeout(handleClose, 1600);
     } catch (err) {
       console.error("[Download] save failed", id, err?.message);
@@ -324,7 +321,6 @@ export default function DownloadModal({
 
   const handlePaid = async (result) => {
     if (result?.downloadUrl) {
-      feedback.success(`Purchase complete \u2014 \u201C${title}\u201D is yours`);
       setInfo((prev) => ({ ...(prev || {}), alreadyPurchased: true, downloadUrl: result.downloadUrl }));
       await download(result.downloadUrl);
       return;

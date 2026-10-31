@@ -20,10 +20,16 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
 
-    <!-- Leaflet -->
+    <!-- Fonts: every Google font the app uses, in one stylesheet the browser
+         finds straight away. (Leaflet's map stylesheet used to load here too;
+         the map is src/map/UnisMap.jsx now and never used it.)
+         Adding a font: add its family and weights to this link. vite.config.js
+         removes the matching @import lines from the style files at build time. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=Instrument+Serif:ital@0;1&amp;family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&amp;family=Caveat:wght@700&amp;family=Playfair+Display:ital,wght@0,700;1,700&amp;family=Bitcount+Grid+Double&amp;display=swap"
     />
 
     <title>UNIS</title>

@@ -150,9 +150,10 @@ describe('App', () => {
       ['/report',         'ReportInfringement'],
       ['/waitlist',       'WaitlistLanding'],
       ['/waitlist/join',  'WaitlistPage'],
-    ])('renders %s without authentication', (path, testId) => {
+    ])('renders %s without authentication', async (path, testId) => {
       renderAt(path);
-      expect(screen.getByTestId(testId)).toBeInTheDocument();
+      // Pages load on demand (React.lazy), so they appear a moment after the first render.
+      expect(await screen.findByTestId(testId)).toBeInTheDocument();
     });
   });
  
@@ -166,9 +167,10 @@ describe('App', () => {
       ['/leaderboards','Leaderboards'],
       ['/findpage',   'FindPage'],
       ['/search',     'SearchResultsPage'],
-    ])('renders %s for a guest user', (path, testId) => {
+    ])('renders %s for a guest user', async (path, testId) => {
       renderAt(path);
-      expect(screen.getByTestId(testId)).toBeInTheDocument();
+      // Pages load on demand (React.lazy), so they appear a moment after the first render.
+      expect(await screen.findByTestId(testId)).toBeInTheDocument();
     });
   });
  

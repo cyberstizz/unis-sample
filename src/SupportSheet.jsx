@@ -12,7 +12,10 @@
 // Env:   VITE_STRIPE_PUBLISHABLE_KEY=pk_live_xxx (frontend publishable key)
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
+// '/pure': Stripe's script downloads only when a payment form opens. The
+// plain '@stripe/stripe-js' import adds it to the page as soon as this file
+// loads, which put Stripe.js (and its frames) on every visit, feed included.
+import { loadStripe } from '@stripe/stripe-js/pure';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Zap, X, Check } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';

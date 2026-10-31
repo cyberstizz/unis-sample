@@ -14,7 +14,7 @@ const apiCall = vi.fn();
 vi.mock('./components/axiosInstance', () => ({ apiCall: (...args) => apiCall(...args) }));
 
 const confirmPayment = vi.fn();
-vi.mock('@stripe/stripe-js', () => ({ loadStripe: vi.fn(() => Promise.resolve({})) }));
+vi.mock('@stripe/stripe-js/pure', () => ({ loadStripe: vi.fn(() => Promise.resolve({})) }));
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }) => <div data-testid="stripe-elements">{children}</div>,
   PaymentElement: () => <div data-testid="payment-element" />,
