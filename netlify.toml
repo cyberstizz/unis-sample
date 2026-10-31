@@ -3,19 +3,13 @@
   command = "npm run build"
   publish = "dist"
 
-# Cache static assets aggressively
+# Cache built files for a year. Vite puts every built script, stylesheet,
+# image and font under /assets/ with a content hash in its name, so a new
+# deploy always uses new names. (Two more rules, for /*.js and /*.css, were
+# removed: the build never puts files there, and /*.js also matched /sw.js,
+# which must never be cached; see its rule below.)
 [[headers]]
   for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/*.js"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/*.css"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
@@ -34,6 +28,16 @@
   for = "/sw.js"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
+
+# A file under /assets/ that doesn't exist (usually one from an older deploy,
+# asked for by a tab opened before it) gets a plain 404. Without this rule the
+# fallback below answered with the app's page and a 200, which the browser then
+# tried to run as a script. Netlify applies this only when no such file exists,
+# and it must stay ABOVE the fallback (the first matching rule wins).
+[[redirects]]
+  from = "/assets/*"
+  to = "/404.html"
+  status = 404
 
 # SPA fallback
 [[redirects]]
@@ -68,7 +72,7 @@
     #   Cloudflare Web Analytics (Cloudflare adds its script to the page),
     #   the Railway address =
     #   the API and live messages, Stripe/Link = payment forms, nominatim =
-    #   address lookup (sign-up, waitlist), Google Fonts + unpkg (map styles),
+    #   address lookup (sign-up, waitlist), Google Fonts,
     #   googlesyndication / doubleclick / adtrafficquality / google.com =
     #   Google AdSense in the ad spaces (only loaded once VITE_ADSENSE_CLIENT
     #   is set).
@@ -80,4 +84,4 @@
     #   fetches one itself, that address must be in connect-src too.
     #   A staging copy with its own API address must add that address to
     #   connect-src on its own branch.
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://js.stripe.com https://*.js.stripe.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.unismusic.com https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev https://*.stripe.com https://*.link.com https://*.googlesyndication.com https://*.g.doubleclick.net https://*.google.com https://*.adtrafficquality.google; media-src 'self' blob: https://cdn.unismusic.com https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev; connect-src 'self' https://unismvp-production.up.railway.app wss://unismvp-production.up.railway.app https://cdn.unismusic.com https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev https://cloudflareinsights.com https://nominatim.openstreetmap.org https://api.stripe.com https://link.com https://*.link.com https://*.googlesyndication.com https://*.g.doubleclick.net https://*.google.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com; frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com https://*.googlesyndication.com https://*.g.doubleclick.net https://www.google.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; report-uri https://unismvp-production.up.railway.app/api/csp-report"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://js.stripe.com https://*.js.stripe.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.unismusic.com https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev https://*.stripe.com https://*.link.com https://*.googlesyndication.com https://*.g.doubleclick.net https://*.google.com https://*.adtrafficquality.google; media-src 'self' blob: https://cdn.unismusic.com https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev; connect-src 'self' https://unismvp-production.up.railway.app wss://unismvp-production.up.railway.app https://cdn.unismusic.com https://pub-fdce5bcbb7b14f3ead9299d58be5fbe6.r2.dev https://cloudflareinsights.com https://nominatim.openstreetmap.org https://api.stripe.com https://link.com https://*.link.com https://*.googlesyndication.com https://*.g.doubleclick.net https://*.google.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com; frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com https://*.googlesyndication.com https://*.g.doubleclick.net https://www.google.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; report-uri https://unismvp-production.up.railway.app/api/csp-report"

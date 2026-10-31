@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axiosInstance from '../components/axiosInstance';
+import cacheService from '../services/cacheService';
 
 const AuthContext = createContext();
 
@@ -17,12 +18,35 @@ export const AuthProvider = ({ children }) => {
   const [authLoaded, setAuthLoaded] = useState(false);
   const [theme, setThemeState] = useState('blue');
 
-  const decodeToken = (token) => {
+  // The token's payload (its claims), or null if it can't be read. Tokens use
+  // base64url ("-" and "_"), which atob() rejects unless converted first.
+  const readToken = (token) => {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.userId;
+      const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, '=')));
     } catch (e) {
-      console.error('Token decode failed', e);
+      return null;
+    }
+  };
+
+  const decodeToken = (token) => {
+    const payload = readToken(token);
+    if (!payload) console.error('Token decode failed');
+    return payload?.userId ?? null;
+  };
+
+  // Staff role for the admin pages. Only sessions that passed two-factor
+  // sign-in carry "mfa" in the token, and only those get staff permissions on
+  // the server, so everyone else skips the request. (Every visit used to ask
+  // /v1/admin/roles, a super-admin-only list: everyone else got a 403, and
+  // admins and moderators never got their role, so they couldn't open the
+  // admin pages.)
+  const loadAdminRole = async (token) => {
+    if (readToken(token)?.mfa !== true) return null;
+    try {
+      const res = await axiosInstance.get('/v1/admin/my-role', { useCache: false });
+      return res.data?.roleLevel ?? null;
+    } catch (e) {
       return null;
     }
   };
@@ -36,14 +60,11 @@ export const AuthProvider = ({ children }) => {
   //   reports whether the token is already expired, so an expired token is
   //   treated as no session at all.
   const isTokenExpired = (token) => {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (!payload.exp) return false; // no exp claim → let the server decide
-      // exp is in seconds; Date.now() is ms. 10s skew guard.
-      return payload.exp * 1000 <= Date.now() + 10_000;
-    } catch (e) {
-      return true; // unparseable → treat as expired/invalid
-    }
+    const payload = readToken(token);
+    if (!payload) return true; // unparseable → treat as expired/invalid
+    if (!payload.exp) return false; // no exp claim → let the server decide
+    // exp is in seconds; Date.now() is ms. 10s skew guard.
+    return payload.exp * 1000 <= Date.now() + 10_000;
   };
 
   // ★ Single place that tears down a dead session in-app (no hard redirect).
@@ -53,6 +74,8 @@ export const AuthProvider = ({ children }) => {
   const clearSession = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('unis-theme');
+    // Saved API responses belong to the session that fetched them.
+    cacheService.clearAll();
     document.getElementById('root')?.setAttribute('data-theme', 'blue');
     setThemeState('blue');
     setUser(null);
@@ -129,13 +152,7 @@ export const AuthProvider = ({ children }) => {
               applyTheme(profileData.themePreference);
             }
 
-            try {
-              const roleCheck = await axiosInstance.get('/v1/admin/roles');
-              const myRole = roleCheck.data?.find(r => r.user?.userId === profileData.userId);
-              profileData.adminRole = myRole ? myRole.roleLevel : null;
-            } catch (e) {
-              profileData.adminRole = null;
-            }
+            profileData.adminRole = await loadAdminRole(token);
 
             setUser(profileData);
           })
@@ -225,6 +242,9 @@ export const AuthProvider = ({ children }) => {
    */
   const completeLogin = async (token) => {
     try {
+      // Start the new session with an empty cache: nothing saved for a guest
+      // or for whoever used this browser before is reused.
+      cacheService.clearAll();
       localStorage.setItem('token', token);
 
       const userId = decodeToken(token);
@@ -236,13 +256,7 @@ export const AuthProvider = ({ children }) => {
           applyTheme(profileData.themePreference);
         }
 
-        try {
-          const roleCheck = await axiosInstance.get('/v1/admin/roles');
-          const myRole = roleCheck.data?.find(r => r.user?.userId === profileData.userId);
-          profileData.adminRole = myRole ? myRole.roleLevel : null;
-        } catch (e) {
-          profileData.adminRole = null;
-        }
+        profileData.adminRole = await loadAdminRole(token);
 
         setUser(profileData);
         setAuthLoaded(true);
@@ -280,6 +294,9 @@ export const AuthProvider = ({ children }) => {
 
     localStorage.removeItem('token');
     localStorage.removeItem('unis-theme');            // ★ feed #2
+    // Saved API responses can include this account's private profile fields;
+    // the next person on this browser must never be shown them.
+    cacheService.clearAll();
     document.getElementById('root')?.setAttribute('data-theme', 'blue'); // ★ feed #2
     setThemeState('blue');                            // ★ feed #2
     setUser(null);
