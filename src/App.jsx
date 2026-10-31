@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation }
 import ScrollToTop from './components/ScrollToTop';
 import { PlayerProvider } from './context/playercontext';
 import { RewardProvider } from './context/RewardContext';
+import { FeedbackProvider } from './context/FeedbackContext';
 import Player from './player';
 import Sidebar from './sidebar';
 import Feed from './feed';
@@ -225,15 +226,19 @@ const AppLayout = () => {
 const App = () => {
   return (
   <RewardProvider>
-    <AuthProvider>
-      <ThemeDocumentSync />
-      <RewardScoreSync />
-      <PlayerProvider>
-        <Router>
-          <AppLayout />
-        </Router>
-      </PlayerProvider>
-    </AuthProvider>
+    {/* Feedback (toasts + confirm dialogs) wraps everything that can act,
+        including auth and the player, so any of them can confirm an action. */}
+    <FeedbackProvider>
+      <AuthProvider>
+        <ThemeDocumentSync />
+        <RewardScoreSync />
+        <PlayerProvider>
+          <Router>
+            <AppLayout />
+          </Router>
+        </PlayerProvider>
+      </AuthProvider>
+    </FeedbackProvider>
   </RewardProvider>
   );
 };

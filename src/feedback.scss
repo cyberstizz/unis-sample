@@ -1,0 +1,285 @@
+// =============================================================================
+// Unis feedback — toasts + confirm dialog (see context/FeedbackContext.jsx)
+//
+// Toasts drop in under the header, centered; the "+N pts" reward pill keeps
+// the bottom of the screen, so the two never collide. Colours come from the
+// theme tokens, so the success badge wears the user's theme.
+// Prefix: ufb-
+// =============================================================================
+
+$spring: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+.ufb-layer {
+  --ufb-text: var(--unis-text, #ffffff);
+  --ufb-body: rgba(255, 255, 255, 0.86);
+  --ufb-line: var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+  --ufb-surface: color-mix(in srgb, var(--unis-primary, #163387) 9%, #14151b);
+  --ufb-glow-a: color-mix(in srgb, var(--unis-primary, #163387), white 34%);
+  --ufb-glow-b: var(--unis-primary, #163387);
+  --ufb-danger: #ff6b6b;
+
+  position: fixed;
+  inset: 0;
+  z-index: 12500; // above the player, sheets, modals and the reward pill
+  pointer-events: none;
+  font-family: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+}
+
+// unis-design-tokens.scss sets `#root > * { position: relative; z-index: 1 }`
+// (an ID rule that beats any class). Restate the overlay at the same strength.
+#root > .ufb-layer {
+  position: fixed;
+  z-index: 12500;
+}
+
+// ── Toast stack ──────────────────────────────────────────────
+.ufb-stack {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 86px); // just under the 75px header
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.ufb-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(460px, 100%);
+  min-height: 46px;
+  padding: 8px 10px 8px 9px;
+  border-radius: 16px;
+  color: var(--ufb-text);
+  background: var(--ufb-surface);
+  border: 1px solid var(--ufb-line);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  animation: ufbIn 0.34s $spring both;
+
+  &.is-leaving {
+    animation: ufbOut 0.22s ease both;
+  }
+
+  &.is-bumped .ufb-toast__badge {
+    animation: ufbBump 0.36s $spring;
+  }
+}
+
+.ufb-toast__badge {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--ufb-glow-a), var(--ufb-glow-b));
+  box-shadow: 0 0 18px var(--unis-primary-glow, rgba(22, 51, 135, 0.45));
+
+  .ufb-toast--error & {
+    background: linear-gradient(135deg, #ff8a8a, #d63a3a);
+    box-shadow: 0 0 18px rgba(214, 58, 58, 0.4);
+  }
+
+  .ufb-toast--info & {
+    color: var(--ufb-text);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+  }
+}
+
+.ufb-toast__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 4px;
+  color: var(--ufb-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+  overflow-wrap: anywhere;
+}
+
+.ufb-toast__action {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ufb-text);
+  background: rgba(255, 255, 255, 0.1);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.12s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.18); }
+  &:active { transform: scale(0.95); }
+}
+
+.ufb-toast__close {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.6);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+
+  &:hover {
+    color: var(--ufb-text);
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.ufb-toast__action,
+.ufb-toast__close,
+.ufb-btn {
+  &:focus-visible {
+    outline: 2px solid var(--ufb-glow-a);
+    outline-offset: 2px;
+  }
+}
+
+// ── Confirm dialog ───────────────────────────────────────────
+.ufb-confirm {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: ufbFade 0.16s ease both;
+}
+
+.ufb-confirm__card {
+  width: min(100%, 380px);
+  padding: 22px 20px 14px 22px;
+  border-radius: 20px;
+  background: var(--ufb-surface);
+  border: 1px solid var(--ufb-line);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.6);
+  animation: ufbDialogIn 0.24s $spring both;
+}
+
+.ufb-confirm__title {
+  margin: 0 0 8px;
+  color: var(--ufb-text);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.ufb-confirm__text {
+  margin: 0;
+  color: var(--ufb-body);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.ufb-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 20px;
+}
+
+.ufb-btn {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.12s ease, filter 0.16s ease;
+
+  &:active:not(:disabled) { transform: scale(0.96); }
+  &:disabled { opacity: 0.55; cursor: default; }
+
+  &--ghost {
+    color: var(--ufb-text);
+    background: transparent;
+    &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
+  }
+
+  &--primary {
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--ufb-glow-a), var(--ufb-glow-b));
+    &:hover:not(:disabled) { filter: brightness(1.08); }
+  }
+
+  &--danger {
+    color: var(--ufb-danger);
+    background: transparent;
+    &:hover:not(:disabled) { background: rgba(255, 92, 92, 0.13); }
+  }
+}
+
+// ── Phones ───────────────────────────────────────────────────
+@media (max-width: 768px) {
+  .ufb-stack {
+    top: calc(env(safe-area-inset-top, 0px) + 72px);
+    padding: 0 12px;
+  }
+
+  .ufb-toast {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ufb-toast,
+  .ufb-toast.is-leaving,
+  .ufb-toast.is-bumped .ufb-toast__badge,
+  .ufb-confirm,
+  .ufb-confirm__card {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+// ── Motion ───────────────────────────────────────────────────
+@keyframes ufbIn {
+  from { opacity: 0; transform: translateY(-14px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes ufbOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-10px) scale(0.97); }
+}
+
+@keyframes ufbBump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+
+@keyframes ufbFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes ufbDialogIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}

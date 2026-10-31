@@ -1,11 +1,12 @@
 import React, { useContext, useState, useRef } from 'react';
 import { PlayerContext } from './context/playercontext';
 import {
-  X, Plus, Check, SkipForward, ListEnd, Users, Lock, Globe, EyeOff,
+  X, Plus, SkipForward, ListEnd, Users, Lock, Globe, EyeOff,
   Image as ImageIcon
 } from 'lucide-react';
 import axiosInstance from './components/axiosInstance';
 import { buildUrl } from './utils/buildUrl';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import './playlistWizard.scss';
 
 const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
@@ -14,6 +15,7 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
     playNext, playLater, suggestSong,
     loading
   } = useContext(PlayerContext);
+  const feedback = useFeedback();
 
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newVisibility, setNewVisibility] = useState('private');
@@ -22,8 +24,6 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [addingTo, setAddingTo] = useState(null);
   const [creating, setCreating] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [queuedMessage, setQueuedMessage] = useState('');
   const coverInputRef = useRef(null);
 
   if (!open || !selectedTrack) return null;
@@ -40,7 +40,8 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert('Cover image must be under 5MB');
+      feedback.error('Cover images must be under 5 MB. Pick a smaller one.');
+      e.target.value = '';
       return;
     }
     setCoverFile(file);
@@ -50,7 +51,8 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
   };
 
   const handleCreatePlaylist = async () => {
-    if (!newPlaylistName.trim()) return;
+    const name = newPlaylistName.trim();
+    if (!name) return;
     setCreating(true);
 
     try {
@@ -63,17 +65,16 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
         coverUrl = res.data.coverImageUrl;
       }
 
-      await createPlaylist(newPlaylistName.trim(), 'personal', {
+      await createPlaylist(name, 'personal', {
         visibility: newVisibility,
         coverImageUrl: coverUrl,
       });
 
       resetCreateForm();
-      setSuccessMessage('Playlist created!');
-      setTimeout(() => setSuccessMessage(''), 2000);
+      feedback.success(`Playlist \u201C${name}\u201D created \u2014 tap it to add this song`);
     } catch (error) {
       console.error('Failed to create playlist:', error);
-      alert('Failed to create playlist');
+      feedback.error(errorMessage(error, "Couldn't create the playlist. Try again."));
     } finally {
       setCreating(false);
     }
@@ -81,32 +82,37 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
 
   const handleAddToPlaylist = async (playlist) => {
     const songId = selectedTrack?.songId || selectedTrack?.id;
-    if (!songId) return alert('No track selected');
+    if (!songId) {
+      feedback.error("Couldn't find that song. Close this and try again.");
+      return;
+    }
 
     const playlistId = playlist.id || playlist.playlistId;
     setAddingTo(playlistId);
 
+    const songName = selectedTrack.title ? `\u201C${selectedTrack.title}\u201D` : 'Song';
+    const listName = `\u201C${playlist.name || 'your playlist'}\u201D`;
+
     try {
       if (playlist.type === 'community') {
         await suggestSong(playlistId, songId);
-        setSuccessMessage('Song suggested! The community will vote on it.');
+        feedback.success(`Suggested ${songName} to ${listName} \u2014 the community votes next`);
       } else {
         await addToPlaylist(playlistId, selectedTrack);
-        setSuccessMessage('Added to playlist!');
+        feedback.success(`Added ${songName} to ${listName}`);
       }
-
-      setTimeout(() => {
-        setSuccessMessage('');
-        onClose();
-      }, 1500);
+      onClose();
     } catch (error) {
-      const msg = error?.response?.data;
-      if (typeof msg === 'string' && msg.includes('already in')) {
-        alert('This song is already in that playlist');
-      } else if (typeof msg === 'string' && msg.includes('already in or suggested')) {
-        alert('This song has already been suggested for this playlist');
+      // The server explains duplicates in its message (it may arrive as a
+      // plain string or as { message }).
+      const data = error?.response?.data;
+      const msg = typeof data === 'string' ? data : (data?.message || data?.error || '');
+      if (msg.includes('already in or suggested')) {
+        feedback.info(`${songName} is already in or suggested for ${listName}`);
+      } else if (msg.includes('already in')) {
+        feedback.info(`${songName} is already in ${listName}`);
       } else {
-        alert('Failed to add track');
+        feedback.error(errorMessage(error, `Couldn't add ${songName} to ${listName}. Try again.`));
       }
     } finally {
       setAddingTo(null);
@@ -115,16 +121,14 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
 
   const handlePlayNext = (e) => {
     e.stopPropagation();
-    playNext(selectedTrack);
-    setQueuedMessage('Playing next');
-    setTimeout(() => { setQueuedMessage(''); onClose(); }, 1200);
+    playNext(selectedTrack); // the player confirms with a toast
+    onClose();
   };
 
   const handlePlayLater = (e) => {
     e.stopPropagation();
-    playLater(selectedTrack);
-    setQueuedMessage('Added to end of queue');
-    setTimeout(() => { setQueuedMessage(''); onClose(); }, 1200);
+    playLater(selectedTrack); // the player confirms with a toast
+    onClose();
   };
 
   const getPlaylistIcon = (pl) => {
@@ -146,17 +150,6 @@ const PlaylistWizard = ({ open, onClose, selectedTrack }) => {
             <X size={20} strokeWidth={2.5} />
           </button>
         </div>
-
-        {successMessage && (
-          <div className="pw-success">
-            <Check size={16} /> {successMessage}
-          </div>
-        )}
-        {queuedMessage && (
-          <div className="pw-success pw-queued">
-            <Check size={16} /> {queuedMessage}
-          </div>
-        )}
 
         <div className="pw-track-info">
           <img

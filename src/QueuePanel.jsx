@@ -12,6 +12,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';   // ★ real signed-in user
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import { buildUrl } from './utils/buildUrl';        // ★ R2-aware URL builder
 import {
   ChevronDown, GripVertical, Trash2, Bookmark, ListX, Shuffle,
@@ -233,6 +234,7 @@ const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth
   } = useContext(PlayerContext);
 
   const navigate = useNavigate();
+  const feedback = useFeedback();
   const [activeQid, setActiveQid] = useState(null);    // row currently being dragged
   // Inline confirmation in progress:
   //   { kind: 'item',  qid }               → one song
@@ -379,13 +381,17 @@ const QueuePanel = ({ open, onClose }) => { // ★ avatar now comes from useAuth
   const handleSaveAsPlaylist = async () => {
     if (!saveName.trim()) return;
     setSaving(true);
+    const name = saveName.trim();
     try {
-      await saveQueueAsPlaylist(saveName.trim());
+      const playlistId = await saveQueueAsPlaylist(name);
       setSaveModalOpen(false);
       setSaveName('');
+      feedback.success(`Saved your queue as \u201C${name}\u201D`, playlistId ? {
+        action: { label: 'View', onClick: () => openPlaylist(playlistId) },
+      } : undefined);
     } catch (error) {
       console.error('Failed to save queue:', error);
-      alert('Failed to save queue as playlist');
+      feedback.error(errorMessage(error, "Couldn't save your queue as a playlist. Try again."));
     } finally {
       setSaving(false);
     }

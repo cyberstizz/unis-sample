@@ -34,6 +34,7 @@ import AdSlot from './components/AdSlot';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';
 import axiosInstance from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import { buildUrl } from './utils/buildUrl';
 import './playlistPage.scss';
 
@@ -290,11 +291,9 @@ const PlaylistPage = () => {
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [toast, setToast] = useState('');
   const [activeKey, setActiveKey] = useState(null);
 
   const coverInputRef = useRef(null);
-  const toastTimer = useRef(null);
 
   // ── Load ──
   useEffect(() => {
@@ -353,13 +352,9 @@ const PlaylistPage = () => {
     };
   }, [menu, confirmRemoveKey]);
 
-  useEffect(() => () => clearTimeout(toastTimer.current), []);
-
-  const showToast = useCallback((msg) => {
-    setToast(msg);
-    clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(''), 2200);
-  }, []);
+  // Every action on this page answers through the app-wide feedback toasts.
+  const feedback = useFeedback();
+  const showToast = useCallback((msg, kind = 'success') => feedback[kind](msg), [feedback]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
@@ -435,7 +430,7 @@ const PlaylistPage = () => {
     }
 
     const startIndex = playable.indexOf(track);
-    if (startIndex < 0) { showToast('This song is unavailable right now'); return; }
+    if (startIndex < 0) { showToast('This song is unavailable right now', 'info'); return; }
     requestPlayCollection({ tracks: playable, playlist: playlistRef, startIndex });
   };
 
@@ -448,7 +443,7 @@ const PlaylistPage = () => {
       coverUrl: playlistRef.coverUrl,
       batchId: `single-${track.playlistItemId || track.id}-${Date.now()}`,
     });
-    showToast('Added to queue');
+    // The player confirms "Added … to your queue".
   };
 
   // ── Owner: reorder ──
@@ -470,9 +465,10 @@ const PlaylistPage = () => {
     setTracks(after);
     try {
       await reorderPlaylist(pid, after);
+      showToast('Order saved');
     } catch {
       setTracks(before);
-      showToast("Couldn't save the new order");
+      showToast("Couldn't save the new order. Try again.", 'error');
     }
   };
 
@@ -491,10 +487,10 @@ const PlaylistPage = () => {
     try {
       await removeFromPlaylist(pid, track.playlistItemId);
       setPlaylist(prev => prev ? { ...prev, songCount: Math.max(0, (prev.songCount || 1) - 1) } : prev);
-      showToast(`Removed \u201C${track.title}\u201D`);
+      showToast(`Removed \u201C${track.title}\u201D from this playlist`);
     } catch {
       setTracks(before);
-      showToast("Couldn't remove that song");
+      showToast("Couldn't remove that song. Try again.", 'error');
     }
   };
 
@@ -509,7 +505,7 @@ const PlaylistPage = () => {
     }));
     try {
       if (was) await unfollowPlaylist(pid); else await followPlaylist(pid);
-      showToast(was ? 'Removed from your library' : 'Added to your library');
+      showToast(was ? `Removed \u201C${playlist?.name || 'playlist'}\u201D from your library` : `Added \u201C${playlist?.name || 'playlist'}\u201D to your library`);
     } catch {
       setPlaylist(prev => ({
         ...prev,
@@ -517,7 +513,7 @@ const PlaylistPage = () => {
         following: was,
         followerCount: Math.max(0, (prev.followerCount || 0) + (was ? 1 : -1)),
       }));
-      showToast("Couldn't update follow");
+      showToast(was ? "Couldn't remove it from your library. Try again." : "Couldn't add it to your library. Try again.", 'error');
     }
   };
 
@@ -529,7 +525,7 @@ const PlaylistPage = () => {
       await navigator.clipboard.writeText(url);
       showToast('Link copied');
     } catch {
-      showToast(url);
+      showToast(`Copy this link: ${url}`, 'info');
     }
   };
 
@@ -547,16 +543,16 @@ const PlaylistPage = () => {
     if (editDescription !== (playlist.description || '')) updates.description = editDescription;
     if (!isCommunity && editVisibility !== playlist.visibility) updates.visibility = editVisibility;
 
-    if (Object.keys(updates).length === 0) { setEditOpen(false); return; }
+    if (Object.keys(updates).length === 0) { setEditOpen(false); showToast('No changes to save', 'info'); return; }
 
     setSaving(true);
     try {
       await updatePlaylist(pid, updates);
       setPlaylist(prev => ({ ...prev, ...updates }));
       setEditOpen(false);
-      showToast('Saved');
-    } catch {
-      showToast("Couldn't save changes");
+      showToast('Playlist details saved');
+    } catch (error) {
+      showToast(errorMessage(error, "Couldn't save your changes. Try again."), 'error');
     } finally {
       setSaving(false);
     }
@@ -571,7 +567,7 @@ const PlaylistPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      showToast('Cover image must be under 5MB');
+      showToast('Cover images must be under 5 MB. Pick a smaller one.', 'error');
       if (coverInputRef.current) coverInputRef.current.value = '';
       return;
     }
@@ -584,8 +580,8 @@ const PlaylistPage = () => {
       setCoverError(false);
       setPlaylist(prev => ({ ...prev, coverImageUrl: res.data.coverImageUrl }));
       showToast('Cover updated');
-    } catch {
-      showToast("Couldn't upload that image");
+    } catch (error) {
+      showToast(errorMessage(error, "Couldn't upload that image. Try again."), 'error');
     } finally {
       setUploadingCover(false);
       if (coverInputRef.current) coverInputRef.current.value = '';
@@ -596,11 +592,12 @@ const PlaylistPage = () => {
     setDeleting(true);
     try {
       await deletePlaylist(pid);
+      showToast(`Deleted \u201C${playlist?.name || 'playlist'}\u201D`);
       navigate('/', { replace: true });
     } catch {
       setDeleting(false);
       setDeleteOpen(false);
-      showToast("Couldn't delete the playlist");
+      showToast("Couldn't delete the playlist. Try again.", 'error');
     }
   };
 
@@ -620,24 +617,29 @@ const PlaylistPage = () => {
   };
 
   const handleVote = async (track, voteType) => {
-    if (!user) { showToast('Sign in to vote'); return; }
+    if (!user) { showToast('Sign in to vote on suggestions', 'info'); return; }
     // Already voted this way — the backend would refuse it, so don't send it.
-    if (track.myVote === voteType) return;
+    if (track.myVote === voteType) {
+      showToast(`You already voted ${voteType === 'up' ? 'for' : 'against'} \u201C${track.title}\u201D`, 'info');
+      return;
+    }
     try {
       const result = await voteOnSuggestion(pid, track.playlistItemId, voteType);
       if (result.status === 'active') {
         setPending(prev => prev.filter(t => t.playlistItemId !== track.playlistItemId));
         setTracks(prev => [...prev, normalizeTrack({ ...track, ...result, status: 'active' })]);
-        showToast(`\u201C${track.title}\u201D was voted in`);
+        showToast(`Your vote put \u201C${track.title}\u201D in the playlist`);
       } else if (result.status === 'removed') {
         setPending(prev => prev.filter(t => t.playlistItemId !== track.playlistItemId));
+        showToast(`Your vote took \u201C${track.title}\u201D off the suggestions`);
       } else {
+        showToast(voteType === 'up' ? `Voted for \u201C${track.title}\u201D` : `Voted against \u201C${track.title}\u201D`);
         setPending(prev => prev.map(t => t.playlistItemId === track.playlistItemId
           ? { ...t, upvotes: result.upvotes, downvotes: result.downvotes, myVote: voteType }
           : t));
       }
-    } catch {
-      showToast("Couldn't record your vote");
+    } catch (error) {
+      showToast(errorMessage(error, "Couldn't record your vote. Try again."), 'error');
     }
   };
 
@@ -1146,7 +1148,6 @@ const PlaylistPage = () => {
           </div>
         )}
 
-        {toast && <div className="plp-toast" role="status"><Check size={14} /> {toast}</div>}
       </div>
     </Layout>
   );

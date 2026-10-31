@@ -7,6 +7,7 @@ import {
   Image as ImageIcon, Lock, EyeOff
 } from 'lucide-react';
 import axiosInstance from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import { buildUrl } from './utils/buildUrl';
 import './playlistManager.scss';
 
@@ -31,6 +32,7 @@ const PlaylistManager = ({ open, onClose }) => {
     playlists, followedPlaylists, loading,
     refreshPlaylists, loadFollowedPlaylists, createPlaylist
   } = useContext(PlayerContext);
+  const feedback = useFeedback();
 
   const [activeTab, setActiveTab] = useState('mine');
   const navigate = useNavigate();
@@ -147,7 +149,8 @@ const PlaylistManager = ({ open, onClose }) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert('Cover image must be under 5MB');
+      feedback.error('Cover images must be under 5 MB. Pick a smaller one.');
+      e.target.value = '';
       return;
     }
     setPersonalCoverFile(file);
@@ -157,7 +160,8 @@ const PlaylistManager = ({ open, onClose }) => {
   };
 
   const handleCreatePersonal = async () => {
-    if (!personalName.trim()) return;
+    const name = personalName.trim();
+    if (!name) return;
     setCreatingPersonal(true);
     try {
       let coverUrl = null;
@@ -180,9 +184,10 @@ const PlaylistManager = ({ open, onClose }) => {
       setPersonalCoverFile(null);
       setPersonalCoverPreview(null);
       setShowCreatePersonal(false);
+      feedback.success(`Playlist \u201C${name}\u201D created`);
     } catch (error) {
       console.error('Failed to create playlist:', error);
-      alert('Failed to create playlist');
+      feedback.error(errorMessage(error, "Couldn't create the playlist. Try again."));
     } finally {
       setCreatingPersonal(false);
     }
@@ -193,7 +198,8 @@ const PlaylistManager = ({ open, onClose }) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert('Cover image must be under 5MB');
+      feedback.error('Cover images must be under 5 MB. Pick a smaller one.');
+      e.target.value = '';
       return;
     }
     setCommunityCoverFile(file);
@@ -203,7 +209,12 @@ const PlaylistManager = ({ open, onClose }) => {
   };
 
   const handleCreateCommunity = async () => {
-    if (!communityName.trim() || !userJurisdictionId) return;
+    const name = communityName.trim();
+    if (!name) return;
+    if (!userJurisdictionId) {
+      feedback.error('We need your home jurisdiction to start a community playlist. Refresh and try again.');
+      return;
+    }
     setCreatingCommunity(true);
     try {
       let coverUrl = null;
@@ -226,11 +237,12 @@ const PlaylistManager = ({ open, onClose }) => {
       setCommunityCoverFile(null);
       setCommunityCoverPreview(null);
       setShowCreateCommunity(false);
+      feedback.success(`Community playlist \u201C${name}\u201D is live`);
       await loadCommunityPlaylists();
       await refreshPlaylists();
     } catch (error) {
       console.error('Failed to create community playlist:', error);
-      alert('Failed to create community playlist');
+      feedback.error(errorMessage(error, "Couldn't create the community playlist. Try again."));
     } finally {
       setCreatingCommunity(false);
     }

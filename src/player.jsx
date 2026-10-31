@@ -11,6 +11,7 @@ import CommentSection from './commentSection'; // ★ comments: reuse the songPa
 import { apiCall } from './components/axiosInstance';
 import { getVisitorId } from './utils/visitorId';
 import { useReward } from './context/RewardContext';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import QueuePanel from './QueuePanel';
 import DownloadModal from './DownloadModal';
 import PocketLockOverlay from './PocketLockOverlay';
@@ -98,6 +99,7 @@ const Player = () => {
   const { isGuest } = useAuth();
   const { triggerGate, gateProps } = useAuthGate();
   const { showReward } = useReward();
+  const feedback = useFeedback();
 
   // --- LOCAL STATE ---
   const [isPlaying, setIsPlaying] = useState(false);
@@ -492,7 +494,9 @@ const Player = () => {
         // were really added. A like pays once per person per track, ever, so
         // a re-like comes back with pointsAwarded: 0 and shows no pill.
         const earned = res.data.pointsAwarded;
+        const title = currentMedia.title ? `\u201C${currentMedia.title}\u201D` : 'this song';
         if (nextLiked && (earned === undefined || earned > 0)) {
+          // The points pill is the confirmation here — no toast on top.
           showReward({
             // Matches the backend: ScoreUpdateService.onLike gives the liker +1
             // (the +2 goes to the song itself, not the listener).
@@ -501,10 +505,17 @@ const Player = () => {
             type: 'like',
             anchor: 'player',
           });
+        } else if (nextLiked) {
+          feedback.success(`Liked ${title}`, { id: 'player-like' });
+        } else {
+          feedback.info(`Removed ${title} from your likes`, { id: 'player-like' });
         }
+      } else {
+        feedback.error(wasLiked ? "Couldn't remove your like. Try again." : "Couldn't like this song. Try again.");
       }
     } catch (err) {
       console.error('Like toggle failed:', err);
+      feedback.error(errorMessage(err, wasLiked ? "Couldn't remove your like. Try again." : "Couldn't like this song. Try again."));
     }
   };
 
@@ -519,7 +530,8 @@ const Player = () => {
 
     if (!safeId) {
       console.error("Player Error: Current song has no ID.");
-      return alert("Cannot vote on this track (Missing ID).");
+      feedback.error("Can't vote on this track right now. Open its song page and vote from there.");
+      return;
     }
 
     setSpecificVoteData(null);

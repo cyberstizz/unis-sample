@@ -1,6 +1,7 @@
 // src/context/PlayerContext.js
 import React, { createContext, useState, useRef, useEffect, useCallback } from 'react';
 import axiosInstance from '../components/axiosInstance';
+import { useFeedback } from './FeedbackContext';
 import { saveQueueState, loadQueueState, clearAllQueueState } from '../utils/queuePersistence';
 
 // ============================================================================
@@ -61,6 +62,10 @@ const newQid = () =>
 
 const toQueueItem = (track, origin = null) => ({ ...track, qid: newQid(), origin });
 
+// “Song title” for toasts — falls back to a generic noun.
+const quoted = (title, fallback = 'Song') => (title ? `\u201C${title}\u201D` : fallback);
+const songsWord = (n) => `${n} ${n === 1 ? 'song' : 'songs'}`;
+
 const ensureQid = (track) => (track && track.qid ? track : { ...track, qid: newQid(), origin: track?.origin ?? null });
 
 // Upgrades a queue persisted before qids existed. Runs once at startup.
@@ -96,6 +101,10 @@ const buildUrl = (url) => {
 };
 
 export const PlayerProvider = ({ children }) => {
+  // Confirmation toasts for every queue change live HERE, so every surface
+  // that queues a song (song page, playlists, queue panel, wizards) gets the
+  // same "it went through" message without wiring it itself.
+  const feedback = useFeedback();
   // ========================================================================
   // QUEUE PERSISTENCE — restore
   // ========================================================================
@@ -143,9 +152,16 @@ export const PlayerProvider = ({ children }) => {
   const [originalQueue, setOriginalQueue] = useState(restored?.originalQueue ?? []);
   const [autoplay, setAutoplay] = useState(restored?.autoplay ?? false);
   const [repeatMode, setRepeatMode] = useState(restored?.repeatMode ?? 'off');
+  const repeatModeRef = useRef(repeatMode);
+  repeatModeRef.current = repeatMode;
   const cycleRepeat = useCallback(() => { // ★
-    setRepeatMode(m => (m === 'off' ? 'all' : m === 'all' ? 'one' : 'off'));
-  }, []);
+    const nextMode = repeatModeRef.current === 'off' ? 'all' : repeatModeRef.current === 'all' ? 'one' : 'off';
+    setRepeatMode(nextMode);
+    feedback.info(
+      nextMode === 'all' ? 'Repeating your queue' : nextMode === 'one' ? 'Repeating this song' : 'Repeat off',
+      { id: 'player-repeat' }
+    );
+  }, [feedback]);
 
   // --- Playlist library state ---
   const [playlists, setPlaylists] = useState([]);
@@ -678,6 +694,7 @@ export const PlayerProvider = ({ children }) => {
 
     if (pendingCollection) {
       insertCollection(pendingCollection, 'now');
+      feedback.success(`Playing ${quoted(pendingCollection.title, 'playlist')}`);
       return;
     }
     if (!pendingSong) return;
@@ -691,7 +708,7 @@ export const PlayerProvider = ({ children }) => {
     setCurrentIndex(insertAt);
     setCurrentMedia(item);
     startAudio(item);
-  }, [playChoiceModal, insertCollection, queue, originalQueue, currentIndex, isShuffled, startAudio]);
+  }, [playChoiceModal, insertCollection, queue, originalQueue, currentIndex, isShuffled, startAudio, feedback]);
 
   const confirmAddToQueue = useCallback(() => {
     const { pendingSong, pendingCollection } = playChoiceModal;
@@ -699,6 +716,8 @@ export const PlayerProvider = ({ children }) => {
 
     if (pendingCollection) {
       insertCollection(pendingCollection, 'end');
+      const n = pendingCollection.tracks?.length || 0;
+      feedback.success(`Added ${quoted(pendingCollection.title, 'playlist')} to your queue \u00B7 ${songsWord(n)}`);
       return;
     }
     if (!pendingSong) return;
@@ -706,7 +725,8 @@ export const PlayerProvider = ({ children }) => {
     const item = toQueueItem(pendingSong, null);
     setQueue(prev => [...prev, item]);
     setOriginalQueue(prev => [...prev, item]);
-  }, [playChoiceModal, insertCollection]);
+    feedback.success(`Added ${quoted(pendingSong.title)} to your queue`);
+  }, [playChoiceModal, insertCollection, feedback]);
 
   const cancelPlayChoice = useCallback(() => {
     closePlayChoice();
@@ -733,6 +753,7 @@ export const PlayerProvider = ({ children }) => {
     // Shuffle off: the return-to order mirrors the queue, so insert at the same
     // spot. Shuffle on: additions go to the end of the return-to order.
     setOriginalQueue(prev => (isShuffled ? [...prev, item] : insertInto(prev)));
+    feedback.success(`${quoted(song.title)} plays next`);
   };
 
   const playLater = (song, origin = null) => {
@@ -741,6 +762,7 @@ export const PlayerProvider = ({ children }) => {
     // Appending keeps both lists in step whether shuffle is on or off.
     setQueue(prev => [...prev, item]);
     setOriginalQueue(prev => [...prev, item]);
+    feedback.success(`Added ${quoted(song.title)} to your queue`);
   };
 
   /**
@@ -754,17 +776,28 @@ export const PlayerProvider = ({ children }) => {
     if (current) drop.delete(current.qid);
     if (drop.size === 0) return;
 
+    const removed = queue.filter(t => drop.has(t.qid));
     const nq = queue.filter(t => !drop.has(t.qid));
     const newIndex = current ? nq.findIndex(t => t.qid === current.qid) : 0;
     setQueue(nq);
     setOriginalQueue(prev => prev.filter(t => !drop.has(t.qid)));
     setCurrentIndex(newIndex >= 0 ? newIndex : 0);
+    return removed;
   }, [queue, currentIndex]);
+
+  // The queue panel's remove buttons: same as removeQueueItems, plus a toast.
+  // (Kept separate so automatic clean-ups — e.g. dropping a removed song —
+  // can't announce themselves as if the user had done it.)
+  const removeQueueItemsByUser = useCallback((qids) => {
+    const removed = removeQueueItems(qids) || [];
+    if (removed.length === 1) feedback.success(`Removed ${quoted(removed[0].title)} from your queue`);
+    else if (removed.length > 1) feedback.success(`Removed ${songsWord(removed.length)} from your queue`);
+  }, [removeQueueItems, feedback]);
 
   // Index-based removal kept for existing callers.
   const removeFromQueue = (index) => {
     const item = queue[index];
-    if (item) removeQueueItems([item.qid]);
+    if (item) removeQueueItemsByUser([item.qid]);
   };
 
   /** Replace the queue order. The current song is re-located by its entry id. */
@@ -786,7 +819,8 @@ export const PlayerProvider = ({ children }) => {
     reorderQueue(nq);
   };
 
-  const clearQueue = () => {
+  const clearQueue = ({ silent = false } = {}) => {
+    const hadSongs = queue.length > 0;
     setQueue([]);
     setOriginalQueue([]);
     setCurrentIndex(0);
@@ -798,6 +832,7 @@ export const PlayerProvider = ({ children }) => {
       audioRef.current.src = '';
     }
     setIsPlaying(false);
+    if (hadSongs && !silent) feedback.success('Queue cleared');
   };
 
   const saveQueueAsPlaylist = async (name) => {
@@ -807,15 +842,24 @@ export const PlayerProvider = ({ children }) => {
       const createRes = await axiosInstance.post('/v1/playlists', { name });
       const newPlaylistId = createRes.data.playlistId;
 
+      let failed = 0;
       for (const track of queue) {
         const songId = track.songId || track.id;
         if (songId) {
           try {
             await axiosInstance.post(`/v1/playlists/${newPlaylistId}/tracks`, { songId });
           } catch (err) {
+            // A song already added (queued twice) is rejected as a duplicate —
+            // that's expected, not a failure worth reporting.
+            const data = err?.response?.data;
+            const msg = typeof data === 'string' ? data : (data?.message || '');
+            if (!msg.includes('already in')) failed += 1;
             console.warn(`Failed to add track ${songId}:`, err);
           }
         }
+      }
+      if (failed > 0) {
+        feedback.error(`${songsWord(failed)} couldn\u2019t be added to \u201C${name}\u201D`);
       }
 
       await loadUserPlaylists();
@@ -838,6 +882,7 @@ export const PlayerProvider = ({ children }) => {
       setIsShuffled(false);
       const newIndex = current ? originalQueue.findIndex(t => t.qid === current.qid) : -1;
       setCurrentIndex(newIndex >= 0 ? newIndex : 0);
+      feedback.info('Shuffle off', { id: 'player-shuffle' });
     } else {
       const rest = queue.filter((_, i) => i !== currentIndex);
       const shuffledRest = fisherYatesShuffle(rest);
@@ -845,6 +890,7 @@ export const PlayerProvider = ({ children }) => {
       setQueue(current ? [current, ...shuffledRest] : shuffledRest);
       setIsShuffled(true);
       setCurrentIndex(0);
+      feedback.info('Shuffle on', { id: 'player-shuffle' });
     }
   };
 
@@ -1066,19 +1112,27 @@ export const PlayerProvider = ({ children }) => {
       const media = currentMedia;
       const songId = media && (media.id || media.songId);
       if (!songId || media.type === 'video') return;
+      // Clearing the queue or signing out sets src = '' on purpose, which
+      // fires an error event — that's not a failed song.
+      if (!audio.getAttribute('src')) return;
+      const failed = () => feedback.error(
+        `Couldn\u2019t play ${quoted(media.title, 'this song')}. Check your connection and try again.`,
+        { id: 'player-play-error' }
+      );
       try {
         const res = await axiosInstance.get(`/v1/media/song/${songId}`);
-        if (!res.data?.removed) return;
+        if (!res.data?.removed) { failed(); return; }
       } catch (err) {
-        if (err?.response?.status !== 404) return;
+        if (err?.response?.status !== 404) { failed(); return; }
       }
       console.info(`[player] "${media.title || songId}" was removed from Unis — skipping it`);
+      feedback.info(`${quoted(media.title, 'A song in your queue')} is no longer on Unis \u2014 skipped`);
       setRemovedSongIds(prev => (prev.has(songId) ? prev : new Set(prev).add(songId)));
     };
 
     audio.addEventListener('error', handleError);
     return () => audio.removeEventListener('error', handleError);
-  }, [currentMedia]);
+  }, [currentMedia, feedback]);
 
   // Once a song is known to be removed: move past it if it's playing, and
   // drop every other copy of it from the queue (removeQueueItems never
@@ -1323,7 +1377,7 @@ export const PlayerProvider = ({ children }) => {
       playNext,
       playLater,
       removeFromQueue,
-      removeQueueItems,
+      removeQueueItems: removeQueueItemsByUser,
       reorderQueue,
       moveQueueItem,
       clearQueue,

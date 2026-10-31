@@ -25,6 +25,20 @@ vi.mock('./components/axiosInstance', () => ({
   },
 }));
 
+// Toasts: every outcome is asserted through these spies.
+const feedback = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  dismiss: vi.fn(),
+  confirm: vi.fn(),
+}));
+
+vi.mock('./context/FeedbackContext', () => ({
+  useFeedback: () => feedback,
+  errorMessage: (_error, fallback) => fallback,
+}));
+
 // ---------------------------------------------------------------------------
 // FILE READER MOCK
 // ---------------------------------------------------------------------------
@@ -258,9 +272,8 @@ describe('PlaylistWizard — close behavior', () => {
 // ===========================================================================
 
 describe('PlaylistWizard — queue actions', () => {
-  it('Play Next calls playNext with the selected track and closes after timeout', () => {
-    vi.useFakeTimers();
-
+  // The player context shows the "plays next" / "added to your queue" toast.
+  it('Play Next calls playNext with the selected track and closes', () => {
     const onClose = vi.fn();
 
     const { contextValue } = renderPlaylistWizard({ onClose });
@@ -268,18 +281,10 @@ describe('PlaylistWizard — queue actions', () => {
     fireEvent.click(screen.getByRole('button', { name: /play next/i }));
 
     expect(contextValue.playNext).toHaveBeenCalledWith(selectedTrack);
-    expect(screen.getByText(/playing next/i)).toBeInTheDocument();
-
-    act(() => {
-      vi.advanceTimersByTime(1200);
-    });
-
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('Play Later calls playLater with the selected track and closes after timeout', () => {
-    vi.useFakeTimers();
-
+  it('Play Later calls playLater with the selected track and closes', () => {
     const onClose = vi.fn();
 
     const { contextValue } = renderPlaylistWizard({ onClose });
@@ -287,12 +292,6 @@ describe('PlaylistWizard — queue actions', () => {
     fireEvent.click(screen.getByRole('button', { name: /play later/i }));
 
     expect(contextValue.playLater).toHaveBeenCalledWith(selectedTrack);
-    expect(screen.getByText(/added to end of queue/i)).toBeInTheDocument();
-
-    act(() => {
-      vi.advanceTimersByTime(1200);
-    });
-
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
@@ -317,7 +316,7 @@ describe('PlaylistWizard — add to playlist', () => {
     });
 
     expect(contextValue.suggestSong).not.toHaveBeenCalled();
-    expect(screen.getByText(/added to playlist/i)).toBeInTheDocument();
+    expect(feedback.success).toHaveBeenCalledWith('Added \u201CTest Song\u201D to \u201CMy Playlist\u201D');
   });
 
   it('suggests the selected song for a community playlist', async () => {
@@ -335,7 +334,9 @@ describe('PlaylistWizard — add to playlist', () => {
     });
 
     expect(contextValue.addToPlaylist).not.toHaveBeenCalled();
-    expect(screen.getByText(/song suggested/i)).toBeInTheDocument();
+    expect(feedback.success).toHaveBeenCalledWith(
+      expect.stringMatching(/^Suggested \u201CTest Song\u201D to \u201CCommunity Playlist\u201D/)
+    );
   });
 
   it('uses selectedTrack.id when selectedTrack.songId is missing', async () => {
@@ -362,7 +363,7 @@ describe('PlaylistWizard — add to playlist', () => {
     });
   });
 
-  it('alerts when no track id exists', async () => {
+  it('shows an error when no track id exists', async () => {
     const user = userEvent.setup();
 
     const { contextValue } = renderPlaylistWizard({
@@ -374,12 +375,12 @@ describe('PlaylistWizard — add to playlist', () => {
 
     await user.click(screen.getByText('My Playlist'));
 
-    expect(window.alert).toHaveBeenCalledWith('No track selected');
+    expect(feedback.error).toHaveBeenCalledWith(expect.stringMatching(/couldn't find that song/i));
     expect(contextValue.addToPlaylist).not.toHaveBeenCalled();
     expect(contextValue.suggestSong).not.toHaveBeenCalled();
   });
 
-  it('shows duplicate playlist alert when backend says song is already in playlist', async () => {
+  it('says so when the backend reports the song is already in the playlist', async () => {
     const user = userEvent.setup();
 
     const { contextValue } = renderPlaylistWizard({
@@ -398,12 +399,10 @@ describe('PlaylistWizard — add to playlist', () => {
       expect(contextValue.addToPlaylist).toHaveBeenCalled();
     });
 
-    expect(window.alert).toHaveBeenCalledWith(
-      'This song is already in that playlist'
-    );
+    expect(feedback.info).toHaveBeenCalledWith('\u201CTest Song\u201D is already in \u201CMy Playlist\u201D');
   });
 
-  it('shows generic failure alert for unknown add errors', async () => {
+  it('shows a failure toast for unknown add errors', async () => {
     const user = userEvent.setup();
 
     renderPlaylistWizard({
@@ -415,11 +414,11 @@ describe('PlaylistWizard — add to playlist', () => {
     await user.click(screen.getByText('My Playlist'));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Failed to add track');
+      expect(feedback.error).toHaveBeenCalledWith(expect.stringMatching(/^Couldn't add/));
     });
   });
 
-  it('shows generic failure alert for unknown suggestion errors', async () => {
+  it('shows a failure toast for unknown suggestion errors', async () => {
     const user = userEvent.setup();
 
     const { contextValue } = renderPlaylistWizard({
@@ -434,12 +433,10 @@ describe('PlaylistWizard — add to playlist', () => {
       expect(contextValue.suggestSong).toHaveBeenCalled();
     });
 
-    expect(window.alert).toHaveBeenCalledWith('Failed to add track');
+    expect(feedback.error).toHaveBeenCalledWith(expect.stringMatching(/^Couldn't add/));
   });
 
-  it('closes after successful add timeout', async () => {
-    vi.useFakeTimers();
-
+  it('closes right after a successful add', async () => {
     const onClose = vi.fn();
 
     const { contextValue } = renderPlaylistWizard({ onClose });
@@ -454,12 +451,7 @@ describe('PlaylistWizard — add to playlist', () => {
       selectedTrack
     );
 
-    expect(screen.getByText(/added to playlist/i)).toBeInTheDocument();
-
-    act(() => {
-      vi.advanceTimersByTime(1500);
-    });
-
+    expect(feedback.success).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -520,7 +512,7 @@ describe('PlaylistWizard — create playlist', () => {
       );
     });
 
-    expect(screen.getByText(/playlist created/i)).toBeInTheDocument();
+    expect(feedback.success).toHaveBeenCalledWith(expect.stringMatching(/^Playlist \u201CNew Playlist\u201D created/));
   });
 
   it('trims playlist name before creating', async () => {
@@ -641,7 +633,7 @@ describe('PlaylistWizard — create playlist', () => {
     });
   });
 
-  it('shows an alert when playlist creation fails', async () => {
+  it('shows an error toast when playlist creation fails', async () => {
     const user = userEvent.setup();
 
     renderPlaylistWizard({
@@ -662,7 +654,7 @@ describe('PlaylistWizard — create playlist', () => {
     await user.click(screen.getByRole('button', { name: /^create$/i }));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Failed to create playlist');
+      expect(feedback.error).toHaveBeenCalledWith("Couldn't create the playlist. Try again.");
     });
   });
 });
@@ -749,7 +741,7 @@ describe('PlaylistWizard — create playlist cover upload', () => {
 
     await user.upload(fileInput, largeFile);
 
-    expect(window.alert).toHaveBeenCalledWith('Cover image must be under 5MB');
+    expect(feedback.error).toHaveBeenCalledWith('Cover images must be under 5 MB. Pick a smaller one.');
     expect(axiosInstance.post).not.toHaveBeenCalled();
     expect(contextValue.createPlaylist).not.toHaveBeenCalled();
   });
