@@ -1,21 +1,56 @@
-import React, { Suspense } from 'react';
-import lazyWithRetry from './utils/lazyWithRetry';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import { PlayerProvider } from './context/playercontext';
 import { RewardProvider } from './context/RewardContext';
+import { FeedbackProvider } from './context/FeedbackContext';
 import Player from './player';
 import Sidebar from './sidebar';
 import Feed from './feed';
+import ArtistPage from './artistpage';
+import SongPage from './songPage';
+import PlaylistPage from './playlistPage';
+import VideoPage from './videoPage';
+import VoteAwards from './voteawards';
+import Profile from './profile';
+import MilestonesPage from './milestonesPage';
+import Leaderboards from './leaderboardsPage';
+import ChartsPage from './chartsPage';
+import Earnings from './earnings';
+import FindPage from './findpage';
+import PrivacyPolicy from './privacyPolicy';
+import TermsOfService from './termsOfService';
+import CookiePolicy from './cookiePolicy';
+import ReportInfringement from './reportInfringement';
 import SongNotification from './songNotification';
+import ArtistDashboard from './artistDashboard';
+import JurisdictionPage from './jurisdictionPage';
+import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './AdminRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import WinnersNotification from './winnersNotification';
 import useActivityTracker from './hooks/useActivityTracker';
+import WaitlistPage from './WaitlistPage';
+import SearchResultsPage from './pages/SearchResultsPage';
+import AdminPlaylistPage from './admin/AdminPlaylistPage';
 import PlayChoiceModal from './PlayChoiceModal';
+import WinnersTimelinePage from './winnersTimelinePage';
 import RewardScoreSync from './RewardScoreSync';
 import ThemeDocumentSync from "./ThemeDocumentSync";
+import VerifyEmail from './pages/VerifyEmail';   
+import DiscoverPage from './DiscoverPage';   
+import BrowseTagPage from './BrowseTagPage';
+import ListenerPage from './ListenerPage';   
+import MessagesPage from './MessagePage';
+import HelpPage from './HelpPage';
+import ComingSoon from './prelaunch/ComingSoon';
+import JoinPage from './JoinPage';
+import TeamLanding from './TeamLanding';
+import TeamJoin from './TeamJoin';
+import TeamHome from './TeamHome';
+import AwardPage from './AwardPage';
 import { resolveGate } from './prelaunch/prelaunchConfig';
 
 // Theme
@@ -23,69 +58,26 @@ import './theme.scss';
 import './unis-design-tokens.scss';
 import './visual-fixes.scss';   
 
-// ─── Pages load on demand ──────────────────────────────────────────────────
-// Every page below is its own file in the build and downloads the first time
-// someone opens it (lazyWithRetry = React.lazy + one reload after a deploy).
-// Before, the whole app (admin pages, PDF export, charts, the help center,
-// legal text) came down with the first page: 2.6 MB of JavaScript, 800 KB
-// compressed, about three quarters of it unused on the feed. The feed, the
-// player, the sidebar and the notifications stay in the main file because
-// almost every visit needs them right away.
-const ArtistPage = lazyWithRetry(() => import('./artistpage'));
-const SongPage = lazyWithRetry(() => import('./songPage'));
-const PlaylistPage = lazyWithRetry(() => import('./playlistPage'));
-const VideoPage = lazyWithRetry(() => import('./videoPage'));
-const VoteAwards = lazyWithRetry(() => import('./voteawards'));
-const Profile = lazyWithRetry(() => import('./profile'));
-const MilestonesPage = lazyWithRetry(() => import('./milestonesPage'));
-const Leaderboards = lazyWithRetry(() => import('./leaderboardsPage'));
-const ChartsPage = lazyWithRetry(() => import('./chartsPage'));
-const Earnings = lazyWithRetry(() => import('./earnings'));
-const FindPage = lazyWithRetry(() => import('./findpage'));
-const PrivacyPolicy = lazyWithRetry(() => import('./privacyPolicy'));
-const TermsOfService = lazyWithRetry(() => import('./termsOfService'));
-const CookiePolicy = lazyWithRetry(() => import('./cookiePolicy'));
-const ReportInfringement = lazyWithRetry(() => import('./reportInfringement'));
-const ArtistDashboard = lazyWithRetry(() => import('./artistDashboard'));
-const JurisdictionPage = lazyWithRetry(() => import('./jurisdictionPage'));
-const Login = lazyWithRetry(() => import('./pages/Login'));
-const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'));
-const WaitlistPage = lazyWithRetry(() => import('./WaitlistPage'));
-const WinnersTimelinePage = lazyWithRetry(() => import('./winnersTimelinePage'));
-const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
-const DiscoverPage = lazyWithRetry(() => import('./DiscoverPage'));
-const BrowseTagPage = lazyWithRetry(() => import('./BrowseTagPage'));
-const ListenerPage = lazyWithRetry(() => import('./ListenerPage'));
-const MessagesPage = lazyWithRetry(() => import('./MessagePage'));
-const HelpPage = lazyWithRetry(() => import('./HelpPage'));
-const ComingSoon = lazyWithRetry(() => import('./prelaunch/ComingSoon'));
-const JoinPage = lazyWithRetry(() => import('./JoinPage'));
-const TeamLanding = lazyWithRetry(() => import('./TeamLanding'));
-const TeamJoin = lazyWithRetry(() => import('./TeamJoin'));
-const TeamHome = lazyWithRetry(() => import('./TeamHome'));
-const AwardPage = lazyWithRetry(() => import('./AwardPage'));
-const PlusPage = lazyWithRetry(() => import('./PlusPage'));
-const SponsorPage = lazyWithRetry(() => import('./SponsorPage'));
-const SponsorLanding = lazyWithRetry(() => import('./SponsorLanding'));
-const WaitlistLanding = lazyWithRetry(() => import('./WaitlistLanding'));
-
 // Admin pages
-const AdminPlaylistPage = lazyWithRetry(() => import('./admin/AdminPlaylistPage'));
-const AdminDashboard = lazyWithRetry(() => import('./admin/AdminDashboard'));
-const ModerationQueue = lazyWithRetry(() => import('./admin/ModerationQueue'));
-const DmcaClaimDetail = lazyWithRetry(() => import('./admin/DmcaClaimDetail'));
-const UserManagement = lazyWithRetry(() => import('./admin/UserManagement'));
-const UserDetail = lazyWithRetry(() => import('./admin/UserDetail'));
-const AnalyticsPage = lazyWithRetry(() => import('./admin/AnalyticsPage'));
-const AuditLog = lazyWithRetry(() => import('./admin/AuditLog'));
-const RoleManagement = lazyWithRetry(() => import('./admin/RoleManagement'));
-const MetricsPage = lazyWithRetry(() => import('./admin/metrics/MetricsPage'));
-const CodesAdmin = lazyWithRetry(() => import('./admin/CodesAdmin'));
-const TeamAdmin = lazyWithRetry(() => import('./admin/TeamAdmin'));
-const AnnouncementsAdmin = lazyWithRetry(() => import('./admin/AnnouncementsAdmin'));
-const RankingsAdmin = lazyWithRetry(() => import('./admin/RankingsAdmin'));
-const CommunityShareAdmin = lazyWithRetry(() => import('./admin/CommunityShareAdmin'));
-const SponsorsAdmin = lazyWithRetry(() => import('./admin/SponsorsAdmin'));
+import AdminDashboard from './admin/AdminDashboard';
+import ModerationQueue from './admin/ModerationQueue';
+import DmcaClaimDetail from './admin/DmcaClaimDetail';
+import UserManagement from './admin/UserManagement';
+import UserDetail from './admin/UserDetail';
+import AnalyticsPage from './admin/AnalyticsPage';
+import AuditLog from './admin/AuditLog';
+import RoleManagement from './admin/RoleManagement';
+import MetricsPage from './admin/metrics/MetricsPage';
+import CodesAdmin from './admin/CodesAdmin';
+import TeamAdmin from './admin/TeamAdmin';
+import AnnouncementsAdmin from './admin/AnnouncementsAdmin';
+import RankingsAdmin from './admin/RankingsAdmin';
+import CommunityShareAdmin from './admin/CommunityShareAdmin';
+import SponsorsAdmin from './admin/SponsorsAdmin';
+import PlusPage from './PlusPage';
+import SponsorPage from './SponsorPage';
+import SponsorLanding from './SponsorLanding';
+import WaitlistLanding from './WaitlistLanding';
 
 /**
  * AuthRequiredRoute — hard gate for pages that genuinely need a logged-in user.
@@ -98,15 +90,6 @@ const AuthRequiredRoute = () => {
   if (!user) return <Navigate to="/login" />;
   return <Outlet />;
 };
-
-// What the page area shows while a page's code downloads for the first time.
-// React Router 7 keeps the current page on screen during in-app navigation
-// until the next one is ready, so this mostly appears when someone opens a
-// shared link straight to a page. The height keeps the player and the
-// notifications from jumping while it loads.
-const PageFallback = () => (
-  <div className="route-loading" aria-busy="true" style={{ minHeight: '100vh' }} />
-);
 
 const SearchRedirect = () => {
   const { search } = useLocation();
@@ -125,19 +108,11 @@ const AppLayout = () => {
   const gate = resolveGate({ pathname, user, authLoaded });
   if (gate === 'wait') return null;                         // no flash while auth resolves
   if (gate === 'enter') return <Navigate to="/" replace />; // admin already signed in
-  if (gate === 'comingSoon') {
-    return (
-      <Suspense fallback={null}>
-        <ComingSoon />
-      </Suspense>
-    );
-  }
+  if (gate === 'comingSoon') return <ComingSoon />;
   if (gate === 'backstage') {
     return (
       <div className="app-wrapper">
-        <Suspense fallback={null}>
-          <Login />
-        </Suspense>
+        <Login />
       </div>
     );
   }
@@ -159,7 +134,6 @@ const AppLayout = () => {
       <ScrollToTop />
       {!isAuthPage && !chromeless && <Sidebar />}
 
-      <Suspense fallback={<PageFallback />}>
       <Routes>
         {/* Public routes — no auth needed at all */}
         <Route path="/login" element={<Login />} />
@@ -238,7 +212,6 @@ const AppLayout = () => {
           <Route path="/admin/roles" element={<RoleManagement />} />
         </Route>
       </Routes>
-      </Suspense>
 
       {/* Only show notifications for logged-in users */}
      {!isAuthPage && !chromeless && user && <WinnersNotification />}
@@ -253,15 +226,19 @@ const AppLayout = () => {
 const App = () => {
   return (
   <RewardProvider>
-    <AuthProvider>
-      <ThemeDocumentSync />
-      <RewardScoreSync />
-      <PlayerProvider>
-        <Router>
-          <AppLayout />
-        </Router>
-      </PlayerProvider>
-    </AuthProvider>
+    {/* Feedback (toasts + confirm dialogs) wraps everything that can act,
+        including auth and the player, so any of them can confirm an action. */}
+    <FeedbackProvider>
+      <AuthProvider>
+        <ThemeDocumentSync />
+        <RewardScoreSync />
+        <PlayerProvider>
+          <Router>
+            <AppLayout />
+          </Router>
+        </PlayerProvider>
+      </AuthProvider>
+    </FeedbackProvider>
   </RewardProvider>
   );
 };
