@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Eye } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import './AccountSettings.scss';
 
 const DEFAULTS = {
@@ -9,12 +10,20 @@ const DEFAULTS = {
   showVoteHistory: false,
 };
 
+// What the toast calls each switch. Keep in step with the labels below.
+const LABELS = {
+  emailNotifications: 'Email notifications',
+  publicProfile: 'Public profile',
+  showVoteHistory: 'Show vote history',
+};
+
 const AccountSettings = ({ userId, settings: incomingSettings, onUpdated }) => {
   const [settings, setSettings] = useState(() => ({
     ...DEFAULTS,
     ...(incomingSettings || {}),
   }));
   const [saving, setSaving] = useState({});
+  const feedback = useFeedback();
 
   // Re-sync when parent provides new settings (e.g., after reload()).
   useEffect(() => {
@@ -25,6 +34,7 @@ const AccountSettings = ({ userId, settings: incomingSettings, onUpdated }) => {
 
   const update = async (key, value) => {
     const prev = settings[key];
+    const label = LABELS[key] || 'That setting';
 
     // Optimistic
     setSettings(s => ({ ...s, [key]: value }));
@@ -39,11 +49,13 @@ const AccountSettings = ({ userId, settings: incomingSettings, onUpdated }) => {
       });
       const ms = Math.round(performance.now() - startedAt);
       console.log(`[AccountSettings] action=update key=${key} status=ok durationMs=${ms}`);
+      feedback.success(`${label} saved`, { id: `setting-${key}` });
       onUpdated?.();
     } catch (err) {
       const ms = Math.round(performance.now() - startedAt);
       console.error(`[AccountSettings] action=update key=${key} status=fail durationMs=${ms} err=`, err);
-      setSettings(s => ({ ...s, [key]: prev })); // revert
+      setSettings(s => ({ ...s, [key]: prev })); // revert — the switch flips back
+      feedback.error(errorMessage(err, `${label} didn't save. Try again.`));
     } finally {
       setSaving(s => ({ ...s, [key]: false }));
     }

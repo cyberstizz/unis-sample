@@ -5,6 +5,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AdminPlaylistPage from './AdminPlaylistPage';
 import { apiCall } from '../components/axiosInstance';
 
+// The app-wide toasts and confirm dialog.
+const feedback = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  dismiss: vi.fn(),
+  confirm: vi.fn(),
+}));
+
+vi.mock('../context/FeedbackContext', () => ({
+  useFeedback: () => feedback,
+  errorMessage: (_error, fallback) => fallback,
+}));
+
+
 vi.mock('../components/axiosInstance', () => ({ apiCall: vi.fn() }));
 vi.mock('../context/AuthContext', () => ({ useAuth: vi.fn(() => ({ user: { username: 'charleslamb', adminRole: 'super_admin' } })) }));
 vi.mock('../layout', () => ({ default: ({ children }) => <div>{children}</div> }));
@@ -59,7 +74,11 @@ const setupListLoad = (playlists = mockPlaylists) => {
 const renderPage = () =>
   render(<MemoryRouter><AdminPlaylistPage /></MemoryRouter>);
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Destructive actions ask through the in-app dialog; default to "yes".
+  feedback.confirm.mockResolvedValue(true);
+});
 
 // ─── loading state ────────────────────────────────────────────────────────────
 
@@ -217,8 +236,7 @@ describe('create view', () => {
     expect(screen.getByText(/0 songs/i)).toBeInTheDocument();
   });
 
-  it('alerts and stays on create view on API failure', async () => {
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('reports the failure and stays on the create view', async () => {
     setupListLoad();
     apiCall.mockImplementation(({ url }) => {
       if (url === '/v1/playlists/official') return Promise.resolve({ data: mockPlaylists });
@@ -232,13 +250,11 @@ describe('create view', () => {
     await userEvent.type(screen.getByPlaceholderText(/harlem's best/i), 'My Playlist');
     await userEvent.click(screen.getByRole('button', { name: /create & add songs/i }));
 
-    await waitFor(() => expect(alertMock).toHaveBeenCalledWith(expect.stringContaining('Failed to create playlist')));
+    await waitFor(() => expect(feedback.error).toHaveBeenCalledWith("Couldn't create that playlist. Try again."));
     expect(screen.getByText('Create Official Playlist')).toBeInTheDocument();
-    alertMock.mockRestore();
   });
 
   it('rejects cover images over 5MB', async () => {
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
     setupListLoad();
     renderPage();
     await waitFor(() => screen.getByRole('button', { name: /create new playlist/i }));
@@ -249,8 +265,7 @@ describe('create view', () => {
     const input = document.querySelector('input[type="file"]');
     await userEvent.upload(input, bigFile);
 
-    expect(alertMock).toHaveBeenCalledWith('Cover image must be under 5MB');
-    alertMock.mockRestore();
+    expect(feedback.error).toHaveBeenCalledWith('Cover images must be under 5 MB. Pick a smaller one.');
   });
 });
 
@@ -427,7 +442,7 @@ describe('song picker — search mode', () => {
 
 describe('remove track from playlist', () => {
   it('calls the delete endpoint and updates track list', async () => {
-    const confirmMock = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    feedback.confirm.mockResolvedValue(true);
     apiCall.mockImplementation(({ url, method }) => {
       if (url === '/v1/playlists/official') return Promise.resolve({ data: mockPlaylists });
       if (url === '/v1/playlists/1' && method === 'get') return Promise.resolve({ data: { playlistId: 1, name: 'Harlem Heat', tracks: mockTracks } });
@@ -453,11 +468,10 @@ describe('remove track from playlist', () => {
         method: 'delete',
       }));
     });
-    confirmMock.mockRestore();
   });
 
   it('does not call delete if confirm is cancelled', async () => {
-    const confirmMock = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    feedback.confirm.mockResolvedValue(false);
     apiCall.mockImplementation(({ url, method }) => {
       if (url === '/v1/playlists/official') return Promise.resolve({ data: mockPlaylists });
       if (url === '/v1/playlists/1' && method === 'get') return Promise.resolve({ data: { playlistId: 1, name: 'Harlem Heat', tracks: mockTracks } });
@@ -474,7 +488,6 @@ describe('remove track from playlist', () => {
     await userEvent.click(allTrashButtons[0]);
 
     expect(apiCall).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'delete', url: expect.stringContaining('/tracks/') }));
-    confirmMock.mockRestore();
   });
 });
 
@@ -482,7 +495,7 @@ describe('remove track from playlist', () => {
 
 describe('delete playlist from list view', () => {
   it('calls delete endpoint and refreshes list', async () => {
-    const confirmMock = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    feedback.confirm.mockResolvedValue(true);
     apiCall.mockImplementation(({ url, method }) => {
       if (url === '/v1/playlists/official') return Promise.resolve({ data: mockPlaylists });
       if (url === '/v1/playlists/1' && method === 'delete') return Promise.resolve({});
@@ -501,11 +514,10 @@ describe('delete playlist from list view', () => {
         method: 'delete',
       }));
     });
-    confirmMock.mockRestore();
   });
 
   it('does not delete when confirm is cancelled', async () => {
-    const confirmMock = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    feedback.confirm.mockResolvedValue(false);
     setupListLoad();
     renderPage();
     await waitFor(() => screen.getByText('Harlem Heat'));
@@ -514,7 +526,6 @@ describe('delete playlist from list view', () => {
     await userEvent.click(deleteButtons[0]);
 
     expect(apiCall).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'delete' }));
-    confirmMock.mockRestore();
   });
 });
 

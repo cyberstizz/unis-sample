@@ -3,6 +3,7 @@
 // nothing is recomputed from live tables except an unofficial custom range.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useFeedback, errorMessage } from '../../context/FeedbackContext';
 import Layout from '../../layout';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -73,6 +74,7 @@ const MetricsPage = () => {
   const [error, setError] = useState('');
   const [showDefs, setShowDefs] = useState(false);
   const [busyReport, setBusyReport] = useState('');
+  const feedback = useFeedback();
 
   // ── Load status and definitions once ──
   const loadStatus = useCallback(() => fetchStatus().then((s) => {
@@ -147,9 +149,10 @@ const MetricsPage = () => {
     try {
       const { generateReport } = await import('./pdf/metricsPdf');
       await generateReport(reportId, { data, prior, daily, definitions, mode, month, fetchMonth });
+      feedback.success('Report saved to your downloads');
     } catch (err) {
       console.error('[Metrics] report failed', err);
-      alert('The report could not be created. Please try again.');
+      feedback.error(errorMessage(err, "The report couldn't be created. Try again."));
     } finally {
       setBusyReport('');
     }

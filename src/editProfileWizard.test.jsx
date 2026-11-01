@@ -43,6 +43,21 @@ vi.mock('./editProfileWizard.scss', () => ({}));
 
 import EditProfileWizard from './editProfileWizard';
 
+// The app-wide toasts and confirm dialog.
+const feedback = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  dismiss: vi.fn(),
+  confirm: vi.fn(),
+}));
+
+vi.mock('./context/FeedbackContext', () => ({
+  useFeedback: () => feedback,
+  errorMessage: (_error, fallback) => fallback,
+}));
+
+
 // ---------------------------------------------------------------------------
 // FIXTURES
 // ---------------------------------------------------------------------------
@@ -292,8 +307,7 @@ describe('EditProfileWizard — Save photo flow', () => {
     resolveFn();
   });
 
-  it('shows alert and does not close on save failure', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('reports the failure and does not close on save failure', async () => {
     vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
       throw new Error('Network error');
     });
@@ -306,8 +320,8 @@ describe('EditProfileWizard — Save photo flow', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /save photo/i }));
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
-    expect(alertSpy.mock.calls[0][0]).toMatch(/failed to update photo/i);
+    await waitFor(() => expect(feedback.error).toHaveBeenCalled());
+    expect(feedback.error.mock.calls[0][0]).toMatch(/couldn't update your photo/i);
     expect(onClose).not.toHaveBeenCalled();
     expect(onSuccess).not.toHaveBeenCalled();
   });
@@ -437,8 +451,7 @@ describe('EditProfileWizard — Save bio flow', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('shows alert and does not close on bio save failure', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('reports the failure and does not close on bio save failure', async () => {
     vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
       throw new Error('Bio save failed');
     });
@@ -452,8 +465,8 @@ describe('EditProfileWizard — Save bio flow', () => {
     await user.type(screen.getByPlaceholderText(/musical journey/i), ' added');
     await user.click(screen.getByRole('button', { name: /save bio/i }));
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
-    expect(alertSpy.mock.calls[0][0]).toMatch(/failed to update bio/i);
+    await waitFor(() => expect(feedback.error).toHaveBeenCalled());
+    expect(feedback.error.mock.calls[0][0]).toMatch(/couldn't save your bio/i);
     expect(onClose).not.toHaveBeenCalled();
     expect(onSuccess).not.toHaveBeenCalled();
   });

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, AlertTriangle, Trash2 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import { useAuth } from './context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './deleteAccountWizard.scss';
@@ -23,6 +24,7 @@ const DeleteAccountWizard = ({ show, onClose }) => {
   const [check, setCheck] = useState(null);       // GET /v1/users/me/deletion-check
   const [checkError, setCheckError] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const feedback = useFeedback();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -71,7 +73,9 @@ const DeleteAccountWizard = ({ show, onClose }) => {
 
       logout();
       navigate('/login');
-      alert('Your account has been permanently deleted.');
+      // A browser pop-up on a page that's already navigating away was easy to
+      // miss and froze the redirect. The toast rides along to the login page.
+      feedback.success('Your account has been permanently deleted.');
     } catch (err) {
       console.error('[DeleteAccount] delete failed:', err);
       // 409 = refused for a reason the user can fix (balance, payout in

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Phone, ShieldCheck, ArrowRight } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import './phoneVerificationModal.scss';
 
 /**
@@ -15,6 +16,7 @@ const PhoneVerificationModal = ({ show, onClose, onVerified }) => {
   const [maskedPhone, setMaskedPhone] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const feedback = useFeedback();
   const [error, setError] = useState(null);
   const codeRef = useRef(null);
 
@@ -43,6 +45,7 @@ const PhoneVerificationModal = ({ show, onClose, onVerified }) => {
     try {
       const res = await apiCall({ method: 'post', url: '/v1/phone/start', data: { phoneNumber: phone } });
       if (res.data?.alreadyVerified) {
+        feedback.info('That number is already verified');
         onVerified?.();
         onClose?.();
         return;
@@ -63,6 +66,8 @@ const PhoneVerificationModal = ({ show, onClose, onVerified }) => {
     try {
       const res = await apiCall({ method: 'post', url: '/v1/phone/check', data: { code } });
       if (res.data?.verified) {
+        // The modal closes on success — the toast is what confirms it.
+        feedback.success('Phone verified — voting, commenting and earnings are unlocked');
         onVerified?.();
         onClose?.();
       } else {

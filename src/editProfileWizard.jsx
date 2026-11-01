@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Upload, Type, Camera } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import cacheService from './services/cacheService';
 import buildUrl from './utils/buildUrl';
 import './editProfileWizard.scss';
@@ -11,6 +12,7 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
   const [photoFile, setPhotoFile] = useState(null);
   const [preview, setPreview] = useState(buildUrl(userProfile?.photoUrl));
   const [loading, setLoading] = useState(false);
+  const feedback = useFeedback();
 
   if (!show) return null;
 
@@ -38,11 +40,12 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
       await apiCall({ method: 'patch', url: '/v1/users/profile', data: formData });
       cacheService.invalidate('user', userProfile.userId);
       cacheService.invalidate('artist', userProfile.userId);
+      feedback.success('Profile photo updated');
       onSuccess?.();
       onClose();
     } catch (err) {
       console.error(err);
-      alert('Failed to update photo. Please try again.');
+      feedback.error(errorMessage(err, "Couldn't update your photo. Try again."));
     } finally {
       setLoading(false);
     }
@@ -59,11 +62,12 @@ const EditProfileWizard = ({ show, onClose, userProfile, onSuccess }) => {
       });
       cacheService.invalidate('user', userProfile.userId);
       cacheService.invalidate('artist', userProfile.userId);
+      feedback.success('Bio saved');
       onSuccess?.();
       onClose();
     } catch (err) {
       console.error(err);
-      alert('Failed to update bio. Please try again.');
+      feedback.error(errorMessage(err, "Couldn't save your bio. Try again."));
     } finally {
       setLoading(false);
     }

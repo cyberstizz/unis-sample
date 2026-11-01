@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
 import './reportInfringement.scss'
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 
 const ReportInfringement = () => {
   // Pre-fill the infringing-content URL when arriving from a Report button
@@ -25,6 +26,7 @@ const ReportInfringement = () => {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const feedback = useFeedback();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -40,7 +42,7 @@ const handleSubmit = async (e) => {
     const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
     if (!formData.goodFaithStatement || !formData.accuracyStatement || !formData.authorizedStatement) {
-      alert('Please check all required statements to submit your DMCA notice.');
+      feedback.error('Please tick every required statement before you submit.');
       return;
     }
 
@@ -66,9 +68,10 @@ const handleSubmit = async (e) => {
       }
 
       setSubmitted(true);
+      feedback.success('DMCA notice submitted — we\u2019ll email you about it');
     } catch (error) {
       console.error('DMCA submission error:', error);
-      alert('Failed to submit DMCA notice. Please try again or contact dmca@unismusic.com directly.');
+      feedback.error(errorMessage(error, "Couldn't submit your notice. Try again, or email dmca@unismusic.com directly."));
     }
   };
 

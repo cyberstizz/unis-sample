@@ -19,6 +19,7 @@
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { apiCall } from './axiosInstance';
+import { useFeedback } from '../context/FeedbackContext';
 import './adminTwoFactor.scss';
 
 const errorText = (err, fallback) =>
@@ -34,6 +35,7 @@ const AdminTwoFactor = ({ mfa, onComplete, onCancel }) => {
   const [result, setResult] = useState(null);     // { token, recoveryCodes } after setup
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const feedback = useFeedback();
   const inputRef = useRef(null);
   const setupStarted = useRef(false);
 
@@ -111,10 +113,14 @@ const AdminTwoFactor = ({ mfa, onComplete, onCancel }) => {
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('[2FA] copy failed:', err?.message || err);
+      // These codes are the way back in if the phone is lost — never let a
+      // failed copy pass unnoticed.
+      feedback.error("Couldn't copy your recovery codes. Use Download instead.");
     }
   };
 
   const downloadCodes = () => {
+    feedback.success('Recovery codes saved to your downloads');
     const url = URL.createObjectURL(new Blob([codesText()], { type: 'text/plain' }));
     const a = document.createElement('a');
     a.href = url;

@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Layout from './layout';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import { refreshPlusStatus, DEFAULT_PLUS_STATUS } from './utils/plusStatus';
 import './plusPage.scss';
 
@@ -67,6 +68,7 @@ const PlusPage = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [waiting, setWaiting] = useState(returned === 'success');
+  const feedback = useFeedback();
 
   const load = useCallback(() => refreshPlusStatus().then((s) => { setStatus(s); return s; }), []);
 
@@ -82,12 +84,23 @@ const PlusPage = () => {
       const s = await load();
       tries += 1;
       if (stopped) return;
-      if (s.plus || tries >= POLL_TRIES) { setWaiting(false); return; }
+      if (s.plus) {
+        setWaiting(false);
+        feedback.success('Unis Plus is on — no more ads, and your artist earns more');
+        return;
+      }
+      if (tries >= POLL_TRIES) {
+        setWaiting(false);
+        // Stripe took the payment but its webhook hasn't landed yet. Saying
+        // so beats a page that just stops spinning.
+        feedback.info('Payment received — Plus will switch on here shortly.');
+        return;
+      }
       timer = setTimeout(tick, POLL_MS);
     };
     timer = setTimeout(tick, POLL_MS);
     return () => { stopped = true; clearTimeout(timer); };
-  }, [returned, load]);
+  }, [returned, load, feedback]);
 
   const go = async (path, fallback) => {
     setBusy(true);

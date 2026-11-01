@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import Layout from '../layout';
 import { apiCall } from '../components/axiosInstance';
+import { useFeedback } from '../context/FeedbackContext';
 import { useAuth } from '../context/AuthContext';
 import { buildUrl } from '../utils/buildUrl';
 import './metrics/metricsPage.scss';
@@ -217,6 +218,7 @@ const SponsorsAdmin = () => {
   const [error, setError] = useState('');
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
+  const feedback = useFeedback();
 
   const load = useCallback(() => {
     apiCall({ method: 'get', url: '/v1/admin/sponsors', useCache: false })
@@ -236,8 +238,13 @@ const SponsorsAdmin = () => {
       if (note === null) return;
       if (!note.trim()) { setMessage({ tone: 'bad', text: 'Write a short reason; the owner sees it.' }); return; }
       data = { note: note.trim() };
-    } else if (!window.confirm(`Approve "${row.businessName}" for ${row.areaLabel} from ${shortDate(row.weekStart)}?`)) {
-      return;
+    } else {
+      const ok = await feedback.confirm({
+        title: 'Approve this sponsor?',
+        message: `\u201C${row.businessName}\u201D will run in ${row.areaLabel} from ${shortDate(row.weekStart)}. The owner is emailed.`,
+        confirmLabel: 'Approve',
+      });
+      if (!ok) return;
     }
     setBusy(true);
     setMessage(null);

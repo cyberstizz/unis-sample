@@ -14,6 +14,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../layout';
 import { apiCall } from '../components/axiosInstance';
+import { useFeedback } from '../context/FeedbackContext';
 import { meetupWhen, toHarlemInput } from '../utils/teamTime';
 import './metrics/metricsPage.scss';
 import './communityShareAdmin.scss';
@@ -105,6 +106,7 @@ const TeamAdmin = () => {
   const [open, setOpen] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
+  const feedback = useFeedback();
 
   const load = useCallback(async () => {
     try {
@@ -159,7 +161,12 @@ const TeamAdmin = () => {
 
   const invite = async (m, scope) => {
     const who = scope === 'all' ? 'every active member' : 'active members whose side and usual times fit';
-    if (!window.confirm(`Email "${m.title}" to ${who}? People who already answered aren't emailed again.`)) return;
+    const ok = await feedback.confirm({
+      title: 'Send these invites?',
+      message: `\u201C${m.title}\u201D will be emailed to ${who}. People who already answered aren't emailed again.`,
+      confirmLabel: 'Send invites',
+    });
+    if (!ok) return;
     setBusy(true);
     setMessage(null);
     try {
@@ -175,7 +182,14 @@ const TeamAdmin = () => {
   };
 
   const cancel = async (m) => {
-    if (!window.confirm(`Cancel "${m.title}"? Everyone going gets an email.`)) return;
+    const ok = await feedback.confirm({
+      title: 'Cancel this meetup?',
+      message: `Everyone going to \u201C${m.title}\u201D gets an email.`,
+      confirmLabel: 'Cancel meetup',
+      cancelLabel: 'Keep it',
+      danger: true,
+    });
+    if (!ok) return;
     setBusy(true);
     setMessage(null);
     try {

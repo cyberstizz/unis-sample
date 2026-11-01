@@ -14,6 +14,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import { joinLink } from './utils/referralLink';
 import { meetupWhen as when } from './utils/teamTime';
 import logo from './assets/unisLogoThree.svg';
@@ -33,6 +34,7 @@ const TeamHome = () => {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
+  const feedback = useFeedback();
   const [qr, setQr] = useState('');
 
   useEffect(() => {
@@ -119,8 +121,9 @@ const TeamHome = () => {
     try {
       await navigator.clipboard.writeText(link);
       setNote('Link copied.');
+      feedback.success('Link copied');
     } catch {
-      window.prompt('Copy your link', link);
+      feedback.info(`Copy your link: ${link}`);
     }
   };
 

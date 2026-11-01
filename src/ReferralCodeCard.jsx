@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Copy, Check, Sparkles } from 'lucide-react';
 import './ReferralCodeCard.scss';
+import { useFeedback } from './context/FeedbackContext';
 
 // =============================================================================
 // ReferralCodeCard
@@ -20,6 +21,7 @@ import './ReferralCodeCard.scss';
 // =============================================================================
 
 const ReferralCodeCard = ({ referralCode = '', username = '', isArtist = false }) => {
+  const feedback = useFeedback();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -29,6 +31,9 @@ const ReferralCodeCard = ({ referralCode = '', username = '', isArtist = false }
       setTimeout(() => setCopied(false), 2000);
     }).catch(err => {
       console.error('[ReferralCodeCard] action=copy status=fail err=', err);
+      // Silence here meant the button looked broken. Show the code so it can
+      // still be copied by hand.
+      feedback.info(`Copy your code: ${referralCode}`);
     });
   };
 

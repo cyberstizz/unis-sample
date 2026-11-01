@@ -7,6 +7,7 @@ import CreateAccountWizard from '../createAccountWizard';
 import ForgotPasswordWizard from '../forgotPasswordWizard';
 import { apiCall } from '../components/axiosInstance'; 
 import AdminTwoFactor from '../components/AdminTwoFactor';
+import { useFeedback } from '../context/FeedbackContext';
 import './Login.scss';
 
 const Login = () => {
@@ -24,6 +25,7 @@ const Login = () => {
   const [waitlistInfo, setWaitlistInfo] = useState(null);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const feedback = useFeedback();
   const [unverifiedEmail, setUnverifiedEmail] = useState(''); 
   const [resendMsg, setResendMsg] = useState(''); 
   const navigate = useNavigate();
@@ -56,11 +58,13 @@ const Login = () => {
   };
 
   const handleCopyCode = () => {
-    if (waitlistInfo?.referralCode) {
-      navigator.clipboard.writeText(waitlistInfo.referralCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    if (!waitlistInfo?.referralCode) return;
+    navigator.clipboard.writeText(waitlistInfo.referralCode)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => feedback.info(`Copy your code: ${waitlistInfo.referralCode}`));
   };
 
   const handleResendVerification = async () => {      

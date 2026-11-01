@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
+import { useFeedback, errorMessage } from '../context/FeedbackContext';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../layout';
 import './admin.scss';
@@ -13,6 +14,7 @@ const DmcaClaimDetail = () => {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const feedback = useFeedback();
 
   useEffect(() => {
     fetchClaim();
@@ -43,10 +45,13 @@ const DmcaClaimDetail = () => {
           method: 'post'
         });
       }
+      feedback.success(
+        newStatus === 'upheld' ? 'Claim upheld and the media taken down' : `Claim marked ${newStatus}`
+      );
       fetchClaim();
       setNotes('');
     } catch (err) {
-      alert('Action failed: ' + (err.response?.data?.error || err.message));
+      feedback.error(errorMessage(err, "That action didn't go through. Try again."));
       fetchClaim(); // the status may have changed even if the takedown step failed
     } finally {
       setActionLoading(false);

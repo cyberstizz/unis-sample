@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
+import { useFeedback, errorMessage } from '../context/FeedbackContext';
 import Layout from '../layout';
 import './admin.scss';
 
@@ -9,6 +10,7 @@ const ModerationQueue = () => {
   const [activeTab, setActiveTab] = useState('dmca');
   const [claims, setClaims] = useState([]);
   const [comments, setComments] = useState([]);
+  const feedback = useFeedback();
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +45,13 @@ const ModerationQueue = () => {
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (!window.confirm('Delete this comment?')) return;
+    const ok = await feedback.confirm({
+      title: 'Delete this comment?',
+      message: 'It will be removed from the track for everyone.',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await apiCall({
         url: `/v1/admin/comments/${commentId}`,
@@ -51,8 +59,10 @@ const ModerationQueue = () => {
         data: { reason: 'Removed by moderator' }
       });
       setComments(prev => prev.filter(c => c.commentId !== commentId));
+      feedback.success('Comment deleted');
     } catch (err) {
-      alert('Failed to delete comment');
+      console.error('Failed to delete comment:', err);
+      feedback.error(errorMessage(err, "Couldn't delete that comment. Try again."));
     }
   };
 

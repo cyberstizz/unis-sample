@@ -31,6 +31,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../layout';
 import { apiCall } from '../components/axiosInstance';
+import { useFeedback } from '../context/FeedbackContext';
 import { useAuth } from '../context/AuthContext';
 import './metrics/metricsPage.scss';
 import './communityShareAdmin.scss';
@@ -312,6 +313,7 @@ const ClosedMonths = ({ refreshKey }) => {
 // ── Adjustments ─────────────────────────────────────────────────────────────
 
 const Adjustments = ({ canMoveMoney }) => {
+  const feedback = useFeedback();
   const [rows, setRows] = useState(null);
   const [username, setUsername] = useState('');
   const [amount, setAmount] = useState('');
@@ -333,7 +335,12 @@ const Adjustments = ({ canMoveMoney }) => {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!window.confirm(`Change ${username.trim()}'s balance by $${amount.trim()}?`)) return;
+    const ok = await feedback.confirm({
+      title: 'Adjust this balance?',
+      message: `${username.trim()}'s balance will change by $${amount.trim()}.`,
+      confirmLabel: 'Adjust balance',
+    });
+    if (!ok) return;
     setBusy(true);
     setMessage(null);
     try {
@@ -397,12 +404,18 @@ const Adjustments = ({ canMoveMoney }) => {
 // ── Monthly payouts ─────────────────────────────────────────────────────────
 
 const MonthlyPayouts = ({ canMoveMoney }) => {
+  const feedback = useFeedback();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [message, setMessage] = useState(null);
 
   const apply = async () => {
-    if (!window.confirm('Put every Stripe account on one bank payout a month (the 1st)?')) return;
+    const ok = await feedback.confirm({
+      title: 'Switch everyone to monthly payouts?',
+      message: 'Every Stripe account will be set to one bank payout a month, on the 1st.',
+      confirmLabel: 'Apply to all',
+    });
+    if (!ok) return;
     setBusy(true);
     setMessage(null);
     try {

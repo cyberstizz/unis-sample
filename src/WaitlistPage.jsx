@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import Layout from './layout';
 import US_STATES_AND_METROS from './data/Usstatesandmetros';
 
@@ -35,6 +36,7 @@ const WaitlistPage = () => {
   const [referralValid, setReferralValid] = useState(null);
   const [referralChecking, setReferralChecking] = useState(false);
   const [copied, setCopied] = useState(false);
+  const feedback = useFeedback();
 
   // FIX #10: Live region signup count (fetched when state+metro both selected)
   const [regionStats, setRegionStats] = useState(null);
@@ -191,6 +193,7 @@ const WaitlistPage = () => {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       setCopied(false);
+      feedback.info(`Copy your code: ${result.referralCode}`);
     }
   };
 

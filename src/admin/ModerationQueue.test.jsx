@@ -8,6 +8,21 @@ import { AuthProvider } from '../context/AuthContext';
 import ModerationQueue from './ModerationQueue';
 import { apiCall } from '../components/axiosInstance';
 
+// The app-wide toasts and confirm dialog.
+const feedback = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  dismiss: vi.fn(),
+  confirm: vi.fn(),
+}));
+
+vi.mock('../context/FeedbackContext', () => ({
+  useFeedback: () => feedback,
+  errorMessage: (_error, fallback) => fallback,
+}));
+
+
 vi.mock('../components/axiosInstance', () => ({ apiCall: vi.fn() }));
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
@@ -44,7 +59,7 @@ const makeCommentsResponse = (comments = []) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  window.confirm = vi.fn(() => true);
+  feedback.confirm.mockResolvedValue(true);
 });
 
 const renderWithProviders = () => {
@@ -151,7 +166,9 @@ describe('ModerationQueue', () => {
     const deleteButton = screen.getByRole('button', { name: /delete/i });
     await user.click(deleteButton);
 
-    expect(window.confirm).toHaveBeenCalledWith('Delete this comment?');
+    expect(feedback.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Delete this comment?', danger: true })
+    );
 
     await waitFor(() => {
       expect(apiCall).toHaveBeenCalledWith({

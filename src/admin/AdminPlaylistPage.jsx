@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
+import { useFeedback, errorMessage } from '../context/FeedbackContext';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../layout';
 import {
@@ -29,6 +30,7 @@ const AdminPlaylistPage = () => {
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
   const [creating, setCreating] = useState(false);
+  const feedback = useFeedback();
   const coverInputRef = useRef(null);
 
   // Song picker state
@@ -115,7 +117,8 @@ const AdminPlaylistPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert('Cover image must be under 5MB');
+      feedback.error('Cover images must be under 5 MB. Pick a smaller one.');
+      e.target.value = '';
       return;
     }
     setCoverFile(file);
@@ -125,7 +128,7 @@ const AdminPlaylistPage = () => {
   };
 
   const handleCreate = async () => {
-    if (!name.trim()) return alert('Playlist name is required');
+    if (!name.trim()) { feedback.error('A playlist name is required.'); return; }
     setCreating(true);
 
     try {
@@ -168,9 +171,10 @@ const AdminPlaylistPage = () => {
       setDescription('');
       setCoverFile(null);
       setCoverPreview(null);
+      feedback.success(`Official playlist \u201C${createRes.data?.name || 'playlist'}\u201D created`);
     } catch (err) {
       console.error('Failed to create playlist:', err);
-      alert('Failed to create playlist: ' + (err.response?.data?.message || err.message));
+      feedback.error(errorMessage(err, "Couldn't create that playlist. Try again."));
     } finally {
       setCreating(false);
     }
@@ -185,7 +189,7 @@ const AdminPlaylistPage = () => {
       setView('edit');
     } catch (err) {
       console.error('Failed to load playlist:', err);
-      alert('Failed to load playlist');
+      feedback.error(errorMessage(err, "Couldn't open that playlist. Try again."));
     }
   };
 
@@ -194,7 +198,9 @@ const AdminPlaylistPage = () => {
 
     const songId = song.songId || song.id;
     if (editingTracks.some(t => t.songId === songId)) {
-      return; // already added
+      // Used to do nothing at all — the click looked broken.
+      feedback.info(`\u201C${song.title}\u201D is already in this playlist`);
+      return;
     }
 
     try {
@@ -204,15 +210,22 @@ const AdminPlaylistPage = () => {
         data: { songId }
       });
       setEditingTracks(res.data.tracks || []);
+      feedback.success(`Added \u201C${song.title}\u201D`);
     } catch (err) {
       console.error('Failed to add song:', err);
-      alert('Failed to add song');
+      feedback.error(errorMessage(err, `Couldn't add \u201C${song.title}\u201D. Try again.`));
     }
   };
 
   const handleRemoveSong = async (track) => {
     if (!editingPlaylist) return;
-    if (!confirm(`Remove "${track.title}" from this playlist?`)) return;
+    const ok = await feedback.confirm({
+      title: 'Remove this song?',
+      message: `\u201C${track.title}\u201D will come off this playlist.`,
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
 
     try {
       const res = await apiCall({
@@ -220,17 +233,25 @@ const AdminPlaylistPage = () => {
         method: 'delete'
       });
       setEditingTracks(res.data.tracks || []);
+      feedback.success(`Removed \u201C${track.title}\u201D`);
     } catch (err) {
       console.error('Failed to remove song:', err);
-      alert('Failed to remove song');
+      feedback.error(errorMessage(err, "Couldn't remove that song. Try again."));
     }
   };
 
   const handleDeletePlaylist = async (playlistId, name) => {
-    if (!confirm(`Delete playlist "${name}"? This cannot be undone.`)) return;
+    const ok = await feedback.confirm({
+      title: 'Delete this playlist?',
+      message: `\u201C${name}\u201D will be deleted for everyone. This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
 
     try {
       await apiCall({ url: `/v1/playlists/${playlistId}`, method: 'delete' });
+      feedback.success(`Deleted \u201C${name}\u201D`);
       await loadOfficialPlaylists();
       if (editingPlaylist?.playlistId === playlistId) {
         setView('list');
@@ -238,7 +259,7 @@ const AdminPlaylistPage = () => {
       }
     } catch (err) {
       console.error('Failed to delete playlist:', err);
-      alert('Failed to delete playlist');
+      feedback.error(errorMessage(err, "Couldn't delete that playlist. Try again."));
     }
   };
 

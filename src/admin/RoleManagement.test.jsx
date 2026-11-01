@@ -8,6 +8,21 @@ import { AuthProvider } from '../context/AuthContext';
 import RoleManagement from './RoleManagement';
 import { apiCall } from '../components/axiosInstance';
 
+// The app-wide toasts and confirm dialog.
+const feedback = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  dismiss: vi.fn(),
+  confirm: vi.fn(),
+}));
+
+vi.mock('../context/FeedbackContext', () => ({
+  useFeedback: () => feedback,
+  errorMessage: (_error, fallback) => fallback,
+}));
+
+
 vi.mock('../components/axiosInstance', () => ({ apiCall: vi.fn() }));
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
@@ -25,7 +40,7 @@ const makeRolesResponse = (roles = []) => ({ data: roles });
 
 beforeEach(() => {
   vi.clearAllMocks();
-  window.confirm = vi.fn(() => true);
+  feedback.confirm.mockResolvedValue(true);
 });
 
 // Updated render helper with BOTH providers
@@ -129,7 +144,9 @@ describe('RoleManagement', () => {
     await waitFor(() => screen.getByText('Revoke'));
     await user.click(screen.getByText('Revoke'));
 
-    expect(window.confirm).toHaveBeenCalledWith('Revoke admin role from badmod?');
+    expect(feedback.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Revoke admin role?', danger: true })
+    );
   });
 
   it('does not show Revoke button for protected or super_admin roles', async () => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
+import { useFeedback, errorMessage } from '../context/FeedbackContext';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../layout';
 import './admin.scss';
@@ -15,6 +16,7 @@ const UserDetail = () => {
   const [suspendType, setSuspendType] = useState('temporary');
   const [showSuspendForm, setShowSuspendForm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const feedback = useFeedback();
 
   useEffect(() => { fetchUser(); }, [userId]);
 
@@ -30,7 +32,7 @@ const UserDetail = () => {
   };
 
   const handleSuspend = async () => {
-    if (!suspendReason.trim()) { alert('Reason is required'); return; }
+    if (!suspendReason.trim()) { feedback.error('A reason is required to suspend an account.'); return; }
     setActionLoading(true);
     try {
       await apiCall({
@@ -39,9 +41,10 @@ const UserDetail = () => {
       });
       setShowSuspendForm(false);
       setSuspendReason('');
+      feedback.success(`${data?.user?.username || 'Account'} suspended`);
       fetchUser();
     } catch (err) {
-      alert('Suspend failed: ' + (err.response?.data?.error || err.message));
+      feedback.error(errorMessage(err, "Couldn't suspend that account. Try again."));
     } finally {
       setActionLoading(false);
     }
@@ -54,9 +57,10 @@ const UserDetail = () => {
         url: `/v1/admin/users/${userId}/unsuspend`, method: 'post',
         data: { reason: 'Suspension lifted by admin' }
       });
+      feedback.success(`${data?.user?.username || 'Account'} is no longer suspended`);
       fetchUser();
     } catch (err) {
-      alert('Unsuspend failed: ' + (err.response?.data?.error || err.message));
+      feedback.error(errorMessage(err, "Couldn't lift that suspension. Try again."));
     } finally {
       setActionLoading(false);
     }
@@ -64,32 +68,45 @@ const UserDetail = () => {
 
   // Staff or test account: left out of every metric from the next nightly run.
   const handleMetricsExclusion = async (exclude) => {
-    const question = exclude
-      ? 'Mark this as a staff or test account? It will be left out of every metric from tonight on.'
-      : 'Count this account in the metrics again from tonight on?';
-    if (!window.confirm(question)) return;
+    const ok = await feedback.confirm({
+      title: exclude ? 'Exclude from metrics?' : 'Count in metrics again?',
+      message: exclude
+        ? 'This will be treated as a staff or test account and left out of every metric from tonight on.'
+        : 'This account will be counted in the metrics again from tonight on.',
+      confirmLabel: exclude ? 'Exclude' : 'Include',
+    });
+    if (!ok) return;
     setActionLoading(true);
     try {
       await apiCall({
         url: `/v1/admin/users/${userId}/metrics-exclusion`, method: 'patch',
         data: { exclude },
       });
+      feedback.success(exclude ? 'Excluded from metrics from tonight' : 'Counted in metrics from tonight');
       fetchUser();
     } catch (err) {
-      alert('Could not update: ' + (err.response?.data?.error || err.message));
+      feedback.error(errorMessage(err, "Couldn't update that setting. Try again."));
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('PERMANENTLY delete this user? This cannot be undone.')) return;
+    const name = data?.user?.username || 'this user';
+    const ok = await feedback.confirm({
+      title: 'Delete this account permanently?',
+      message: `${name} and their data will be removed. This cannot be undone.`,
+      confirmLabel: 'Delete permanently',
+      danger: true,
+    });
+    if (!ok) return;
     setActionLoading(true);
     try {
       await apiCall({ url: `/v1/admin/users/${userId}`, method: 'delete' });
+      feedback.success(`${name} deleted`);
       navigate('/admin/users');
     } catch (err) {
-      alert('Delete failed: ' + (err.response?.data?.error || err.message));
+      feedback.error(errorMessage(err, "Couldn't delete that account. Try again."));
     } finally {
       setActionLoading(false);
     }

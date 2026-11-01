@@ -8,6 +8,20 @@ import { AuthProvider, useAuth } from '../context/AuthContext';
 import UserDetail from './UserDetail';
 import { apiCall } from '../components/axiosInstance';
 
+// The app-wide toasts and confirm dialog.
+const feedback = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  dismiss: vi.fn(),
+  confirm: vi.fn(),
+}));
+
+vi.mock('../context/FeedbackContext', () => ({
+  useFeedback: () => feedback,
+  errorMessage: (_error, fallback) => fallback,
+}));
+
 vi.mock('../components/axiosInstance', () => ({ apiCall: vi.fn() }));
 
 vi.mock('../context/AuthContext', async (importOriginal) => {
@@ -46,7 +60,9 @@ beforeEach(() => {
     user: { adminRole: null },
   });
 
-  window.confirm = vi.fn(() => true);
+  // Destructive admin actions ask through the in-app dialog, not the
+  // browser's confirm box. Default to "yes" so the action under test runs.
+  feedback.confirm.mockResolvedValue(true);
 });
 
 const renderWithProviders = (userId = 'user-123') => {
@@ -171,9 +187,8 @@ describe('UserDetail', () => {
     });
   });
 
-  it('shows alert when suspend reason is empty', async () => {
+  it('refuses to suspend without a reason', async () => {
     const user = userEvent.setup();
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
     apiCall.mockResolvedValue({
       data: makeUserData(),
@@ -185,7 +200,7 @@ describe('UserDetail', () => {
     await user.click(screen.getByText('Suspend Account'));
     await user.click(screen.getByText('Confirm Suspension'));
 
-    expect(alertSpy).toHaveBeenCalledWith('Reason is required');
+    expect(feedback.error).toHaveBeenCalledWith('A reason is required to suspend an account.');
   });
 
   it('unsuspends a suspended user', async () => {
@@ -232,7 +247,9 @@ describe('UserDetail', () => {
     await waitFor(() => screen.getByText('Permanently Delete'));
     await user.click(screen.getByText('Permanently Delete'));
 
-    expect(window.confirm).toHaveBeenCalled();
+    expect(feedback.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ danger: true, confirmLabel: 'Delete permanently' })
+    );
   });
 
   it('shows suspension history when available', async () => {

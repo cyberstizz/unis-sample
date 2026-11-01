@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from '../components/axiosInstance';
+import { useFeedback, errorMessage } from '../context/FeedbackContext';
 import Layout from '../layout';
 import './admin.scss';
 
@@ -12,6 +13,7 @@ const RoleManagement = () => {
   const [grantLevel, setGrantLevel] = useState('moderator');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const feedback = useFeedback();
 
   useEffect(() => { fetchRoles(); }, []);
 
@@ -27,7 +29,7 @@ const RoleManagement = () => {
   };
 
   const handleGrant = async () => {
-    if (!grantUserId.trim()) { alert('User ID is required'); return; }
+    if (!grantUserId.trim()) { feedback.error('A user ID is required.'); return; }
     setActionLoading(true);
     try {
       await apiCall({
@@ -36,21 +38,29 @@ const RoleManagement = () => {
       });
       setShowGrant(false);
       setGrantUserId('');
+      feedback.success('Admin role granted');
       fetchRoles();
     } catch (err) {
-      alert('Grant failed: ' + (err.response?.data?.error || err.message));
+      feedback.error(errorMessage(err, "Couldn't grant that role. Check the user ID and try again."));
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleRevoke = async (adminRoleId, username) => {
-    if (!window.confirm(`Revoke admin role from ${username}?`)) return;
+    const ok = await feedback.confirm({
+      title: 'Revoke admin role?',
+      message: `${username} will lose admin access immediately.`,
+      confirmLabel: 'Revoke',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await apiCall({ url: `/v1/admin/roles/${adminRoleId}`, method: 'delete' });
+      feedback.success(`Admin role revoked from ${username}`);
       fetchRoles();
     } catch (err) {
-      alert('Revoke failed: ' + (err.response?.data?.error || err.message));
+      feedback.error(errorMessage(err, "Couldn't revoke that role. Try again."));
     }
   };
 

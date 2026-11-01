@@ -3,6 +3,7 @@ import { Play, Edit3, Trash2, ArrowRight, Clock, Heart } from 'lucide-react';
 import Layout from './layout';
 import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import { PlayerContext } from './context/playercontext';
 import buildUrl from './utils/buildUrl';
 import EditProfileWizard from './editProfileWizard';
@@ -74,6 +75,7 @@ const Profile = () => {
 
   // ---- Pending supported-artist cancel state ----------------------------
   const [cancellingPending, setCancellingPending] = useState(false);
+  const feedback = useFeedback();
 
   // -----------------------------------------------------------------------
   // Single consolidated fetch
@@ -120,11 +122,12 @@ const Profile = () => {
       });
       const ms = Math.round(performance.now() - startedAt);
       console.log(`[Profile] action=cancel_pending_artist status=ok durationMs=${ms}`);
+      feedback.success('Pending change cancelled — you keep your current artist');
       reload();
     } catch (err) {
       const ms = Math.round(performance.now() - startedAt);
       console.error(`[Profile] action=cancel_pending_artist status=fail durationMs=${ms} err=`, err);
-      alert('Failed to cancel the pending change. Please try again.');
+      feedback.error(errorMessage(err, "Couldn't cancel the pending change. Try again."));
     } finally {
       setCancellingPending(false);
     }

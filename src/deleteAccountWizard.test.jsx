@@ -60,6 +60,21 @@ vi.mock('react-router-dom', () => ({
 
 import DeleteAccountWizard from './deleteAccountWizard';
 
+// The app-wide toasts and confirm dialog.
+const feedback = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  dismiss: vi.fn(),
+  confirm: vi.fn(),
+}));
+
+vi.mock('./context/FeedbackContext', () => ({
+  useFeedback: () => feedback,
+  errorMessage: (_error, fallback) => fallback,
+}));
+
+
 // ---------------------------------------------------------------------------
 // CONSTANTS
 // ---------------------------------------------------------------------------
@@ -461,7 +476,7 @@ describe('DeleteAccountWizard — submit happy path', () => {
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/login'));
   });
 
-  it('alerts the success message after a successful delete', async () => {
+  it('confirms with a toast after a successful delete', async () => {
     mockApi();
 
     renderWizard();
@@ -471,7 +486,7 @@ describe('DeleteAccountWizard — submit happy path', () => {
     await user.click(screen.getByRole('button', { name: /delete forever/i }));
 
     await waitFor(() =>
-      expect(window.alert).toHaveBeenCalledWith(
+      expect(feedback.success).toHaveBeenCalledWith(
         expect.stringMatching(/permanently deleted/i)
       )
     );

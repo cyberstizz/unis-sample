@@ -3,6 +3,21 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import ReportInfringement from './reportInfringement';
 
+// The app-wide toasts and confirm dialog.
+const feedback = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  dismiss: vi.fn(),
+  confirm: vi.fn(),
+}));
+
+vi.mock('./context/FeedbackContext', () => ({
+  useFeedback: () => feedback,
+  errorMessage: (_error, fallback) => fallback,
+}));
+
+
 vi.mock('./assets/randomrapper.jpeg', () => ({ default: 'randomrapper.jpeg' }));
 vi.mock('./layout', () => ({
   default: ({ children }) => <div data-testid="layout">{children}</div>,
@@ -91,8 +106,7 @@ describe('form interaction', () => {
 // ─── submission — missing checkboxes ─────────────────────────────────────────
 
 describe('submission — missing statement checkboxes', () => {
-  it('alerts and does not submit when checkboxes are not all checked', async () => {
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('refuses to submit when the statements are not all ticked', async () => {
     global.fetch = vi.fn();
     render(<MemoryRouter><ReportInfringement /></MemoryRouter>);
 
@@ -111,10 +125,9 @@ describe('submission — missing statement checkboxes', () => {
     const form = screen.getByRole('button', { name: /submit dmca notice/i }).closest('form');
     fireEvent.submit(form);
 
-    expect(alertMock).toHaveBeenCalledWith('Please check all required statements to submit your DMCA notice.');
+    expect(feedback.error).toHaveBeenCalledWith('Please tick every required statement before you submit.');
     expect(global.fetch).not.toHaveBeenCalled();
 
-    alertMock.mockRestore();
   });
 });
 
@@ -165,8 +178,7 @@ describe('successful submission', () => {
 // ─── failed submission ───────────────────────────────────────────────────────
 
 describe('failed submission', () => {
-  it('alerts the user and does not show success state on API failure', async () => {
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('reports the failure and does not show the success state on API failure', async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({ ok: false });
     render(<MemoryRouter><ReportInfringement /></MemoryRouter>);
     fillRequiredFields();
@@ -174,17 +186,15 @@ describe('failed submission', () => {
     fireEvent.click(screen.getByRole('button', { name: /submit dmca notice/i }));
 
     await waitFor(() => {
-      expect(alertMock).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to submit DMCA notice')
+      expect(feedback.error).toHaveBeenCalledWith(
+        expect.stringContaining("Couldn't submit your notice")
       );
     });
     expect(screen.queryByText('✓ DMCA Notice Submitted')).not.toBeInTheDocument();
 
-    alertMock.mockRestore();
   });
 
-  it('alerts on network error', async () => {
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('reports a network error', async () => {
     global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
     render(<MemoryRouter><ReportInfringement /></MemoryRouter>);
     fillRequiredFields();
@@ -192,11 +202,9 @@ describe('failed submission', () => {
     fireEvent.click(screen.getByRole('button', { name: /submit dmca notice/i }));
 
     await waitFor(() => {
-      expect(alertMock).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to submit DMCA notice')
+      expect(feedback.error).toHaveBeenCalledWith(
+        expect.stringContaining("Couldn't submit your notice")
       );
     });
-
-    alertMock.mockRestore();
   });
 });
