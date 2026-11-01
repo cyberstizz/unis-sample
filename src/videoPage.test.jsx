@@ -143,7 +143,6 @@ describe('VideoPage', () => {
     });
 
     it('prompts guests to log in instead of calling the API', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       const user = userEvent.setup();
       renderWithProviders(<VideoPage />, { as: 'guest' });
 
@@ -151,9 +150,8 @@ describe('VideoPage', () => {
 
       await user.click(document.querySelector('.vp-chip-like'));
 
-      expect(alertSpy).toHaveBeenCalledWith('Please log in to like videos');
+      expect(await screen.findByText(/log in to like videos/i)).toBeInTheDocument();
       expect(callTracker.get('video-like:video-001')).toBe(0);
-      alertSpy.mockRestore();
     });
   });
 

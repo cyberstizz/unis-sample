@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Instagram, Twitter, Music2, Edit3, Check, X } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import './SocialLinksSection.scss';
 
 // =============================================================================
@@ -34,6 +35,8 @@ const SocialLinksSection = ({ userId, profile, onUpdated }) => {
     });
   }, [profile?.instagramUrl, profile?.twitterUrl, profile?.tiktokUrl]);
 
+  const feedback = useFeedback();
+
   const handleSave = async () => {
     setSaving(true);
     const startedAt = performance.now();
@@ -50,10 +53,11 @@ const SocialLinksSection = ({ userId, profile, onUpdated }) => {
       const ms = Math.round(performance.now() - startedAt);
       console.log(`[SocialLinks] action=save status=ok durationMs=${ms}`);
       setEditing(false);
+      feedback.success('Your links are saved');
       onUpdated?.();
     } catch (err) {
       console.error('[SocialLinks] action=save status=fail err=', err);
-      alert('Failed to save social links. Please try again.');
+      feedback.error(errorMessage(err, "Couldn't save your links. Try again."));
     } finally {
       setSaving(false);
     }

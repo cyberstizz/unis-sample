@@ -124,16 +124,14 @@ describe('SongPage', () => {
       );
     });
 
-    it('shows alert when guest tries to like', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    it('asks a guest to log in instead of liking', async () => {
       renderWithProviders(<SongPage />, { as: 'guest' });
 
       await screen.findByRole('heading', { name: /Track One/i });
       const user = userEvent.setup();
       await user.click(screen.getByRole('button', { name: /^like$/i }));
 
-      expect(alertSpy).toHaveBeenCalledWith(expect.stringMatching(/log in/i));
-      alertSpy.mockRestore();
+      expect(await screen.findByText(/log in to like songs/i)).toBeInTheDocument();
     });
   });
 

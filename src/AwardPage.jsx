@@ -14,6 +14,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Layout from './layout';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import { buildUrl } from './utils/buildUrl';
 import { cardBlob, cardFileName, drawAwardCard } from './utils/awardCard';
 import './awardPage.scss';
@@ -24,7 +25,7 @@ const AwardPage = () => {
   const [card, setCard] = useState(null);
   const [error, setError] = useState('');
   const [image, setImage] = useState('');
-  const [note, setNote] = useState('');
+  const feedback = useFeedback();
 
   useEffect(() => {
     let cancelled = false;
@@ -49,10 +50,7 @@ const AwardPage = () => {
     return () => { cancelled = true; };
   }, [card]);
 
-  const flash = (text) => {
-    setNote(text);
-    setTimeout(() => setNote(''), 2400);
-  };
+  const flash = (text) => feedback.success(text, { id: 'award-share' });
 
   const share = async () => {
     if (!card || !canvasRef.current) return;
@@ -71,7 +69,11 @@ const AwardPage = () => {
       await navigator.clipboard.writeText(card.pageUrl);
       flash('Link copied');
     } catch (err) {
-      if (err?.name !== 'AbortError') console.error('[Award] share failed:', err?.message);
+      // Closing the share sheet is not a failure.
+      if (err?.name !== 'AbortError') {
+        console.error('[Award] share failed:', err?.message);
+        feedback.error("Couldn't open sharing. Use Copy link instead.");
+      }
     }
   };
 
@@ -83,6 +85,7 @@ const AwardPage = () => {
     document.body.appendChild(a);
     a.click();
     a.remove();
+    flash('Award card saved to your downloads');
   };
 
   const copy = async () => {
@@ -90,7 +93,7 @@ const AwardPage = () => {
       await navigator.clipboard.writeText(card.pageUrl);
       flash('Link copied');
     } catch {
-      window.prompt('Copy this link', card.pageUrl);
+      feedback.info(`Copy this link: ${card.pageUrl}`);
     }
   };
 
@@ -134,7 +137,6 @@ const AwardPage = () => {
                 <button type="button" className="aw-btn" onClick={save} disabled={!image}>Save image</button>
                 <button type="button" className="aw-btn" onClick={copy}>Copy link</button>
               </div>
-              {note && <p className="aw-flash" role="status">{note}</p>}
 
               <div className="aw-links">
                 <Link to={winnerHref}>{card.targetType === 'song' ? 'Play the song' : `See ${card.username}’s page`}</Link>

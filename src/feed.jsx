@@ -26,6 +26,7 @@ import RankMove from './components/RankMove';
 import { fetchStandings, describeBoard, formatCount, playEntry } from './utils/standings';
 import { toLocalISO } from './utils/periodBounds';
 import { useReward } from './context/RewardContext';
+import { useFeedback } from './context/FeedbackContext';
 import { FeedSpotlight, TodayRace, DayTiles, MoversCard, FollowingDrops } from './feedModules';
 import './feed.scss';
 
@@ -410,6 +411,7 @@ const Feed = () => {
   const [voteHistory, setVoteHistory] = useState([]);
   const [followingDrops, setFollowingDrops] = useState([]);
   const { displayedScore } = useReward() || {};
+  const feedback = useFeedback();
 
   const userId = user?.userId;
   const userJurisdictionId = user?.jurisdiction?.jurisdictionId || DEFAULT_JURISDICTION_ID;
@@ -793,34 +795,28 @@ const Feed = () => {
         };
       } catch (err) {
         console.error('Default song fetch error:', err);
-
-        playMediaObj = {
-          type: 'song',
-          id: 'default-fallback',
-          songId: 'default-fallback',
-          url: song1,
-          fileUrl: song1,
-          title: 'Default Track',
-          artist: media.artistData?.username || media.artist,
-          artistId: media.artistData?.userId,
-          artwork: media.artworkUrl,
-          artworkUrl: media.artworkUrl,
-        };
+        // Nothing to play: say so rather than starting the placeholder track,
+        // which sounded like a bug ("why is this not their song?").
+        feedback.info(`${media.artistData?.username || media.artist || 'This artist'} hasn\u2019t picked a song to feature yet`);
+        return;
       }
     }
 
     requestPlay(playMediaObj);
-  }, [isGuest, requestPlay]);
+  }, [isGuest, requestPlay, feedback]);
 
   // Play a board entry (song, or an artist's default song). Plays are counted
   // by the Player after real listening, never here.
-  const handlePlayChartEntry = useCallback((e, entry) => {
+  const handlePlayChartEntry = useCallback(async (e, entry) => {
     e.stopPropagation();
     if (isGuest) {
       incrementGateSongCount();
     }
-    playEntry(entry, requestPlay, 'feed');
-  }, [isGuest, requestPlay]);
+    const played = await playEntry(entry, requestPlay, 'feed');
+    if (!played) {
+      feedback.info(`${entry?.name || 'This artist'} hasn\u2019t picked a song to feature yet`);
+    }
+  }, [isGuest, requestPlay, feedback]);
 
   const handleJurisdictionChange = useCallback((e) => {
     setSelectedJurisdictionId(e.target.value);

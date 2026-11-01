@@ -18,6 +18,7 @@ import React, {
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import buildUrl from './utils/buildUrl';
 import { useAuth } from './context/AuthContext';
 import { useMessagingSocket } from './useMessagingSocket';
@@ -177,6 +178,7 @@ export default function MessagesPage() {
   const navigate = useNavigate();
   const isPhone = useMediaQuery(PHONE_QUERY);
   const now = useNow(TICK_MS);
+  const feedback = useFeedback();
 
   const [conversations, setConversations] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -247,12 +249,15 @@ export default function MessagesPage() {
       return res.data || [];
     } catch (err) {
       console.error('[Messages] inbox load failed:', err?.message || err);
+      // Keeping the rows already on screen is right, but in silence it looked
+      // like nothing had changed — a refresh that quietly failed.
+      feedback.error("Couldn't refresh your messages. Check your connection.", { id: 'dm-inbox' });
       return conversationsRef.current;
     } finally {
       setLoading(false);
       pingUnread();
     }
-  }, []);
+  }, [feedback]);
 
   const scheduleRefresh = useCallback(() => {
     clearTimeout(refreshTimer.current);

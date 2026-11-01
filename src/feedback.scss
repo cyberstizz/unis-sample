@@ -25,9 +25,11 @@ $spring: cubic-bezier(0.2, 0.8, 0.2, 1);
   font-family: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
 }
 
-// unis-design-tokens.scss sets `#root > * { position: relative; z-index: 1 }`
-// (an ID rule that beats any class). Restate the overlay at the same strength.
-#root > .ufb-layer {
+// The layer lives in <body>, outside #root's stacking context, so it clears
+// the full-screen overlays that portal there (photo viewer, broadcast sheet,
+// date picker). It carries its own [data-theme], so the theme variables
+// resolve exactly as they do inside #root.
+body > .ufb-layer {
   position: fixed;
   z-index: 12500;
 }

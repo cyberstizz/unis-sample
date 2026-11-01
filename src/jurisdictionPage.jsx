@@ -33,11 +33,11 @@ import React, {
   useEffect,
   useContext,
   useCallback,
-  useRef,
 } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import './jurisdictionPage.scss';
 import Layout from './layout';
 import AdSlot from './components/AdSlot';
@@ -50,7 +50,6 @@ import WinnersTimeline from './winnersTimeline';
 import RankMove from './components/RankMove';
 import { fetchStandings, describeBoard } from './utils/standings';
 
-const TOAST_MS = 4500;
 
 // ── Hero backdrop imagery ────────────────────────────────────────────────────
 // One stock photo per jurisdiction, blended into the theme gradient so it
@@ -107,24 +106,13 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [toast, setToast] = useState(null);
+  const feedback = useFeedback();
 
-  const toastTimer = useRef(null);
   // songId the user asked this page to play, awaiting confirmation that it
   // actually became the current track (see the tracking effect below).
 
-  const showToast = useCallback((message) => {
-    setToast(message);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), TOAST_MS);
-  }, []);
-
-  useEffect(
-    () => () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    },
-    []
-  );
+  // Replaces this page's own toast — the app-wide one now carries it.
+  const showToast = useCallback((message) => feedback.info(message), [feedback]);
 
   // ── Fetch jurisdiction + weekly tops ──────────────────────────────────────
   useEffect(() => {
@@ -594,14 +582,6 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
           />
         </section>
 
-        {/* Toast — replaces the old alert() calls */}
-        <div
-          className={`jp-toast ${toast ? 'is-visible' : ''}`}
-          role="status"
-          aria-live="polite"
-        >
-          {toast}
-        </div>
       </div>
     </Layout>
   );

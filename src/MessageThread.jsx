@@ -23,6 +23,7 @@ import React, {
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import buildUrl from './utils/buildUrl';
 import { PlayerContext } from './context/playercontext';
 import { fetchStandings } from './utils/standings';
@@ -358,6 +359,13 @@ export default function MessageThread({
   }, []);
 
   // ── Toast ──────────────────────────────────────────────────────────────────
+  // Two layers on purpose:
+  //   showToast  — inside the thread, for things that only matter while you're
+  //                looking at it (a copy, a reaction that didn't save).
+  //   feedback   — the app-wide toast, for actions that CHANGE the thread or
+  //                close it (accept, delete, block, report). A local toast
+  //                would unmount with the thread before it could be read.
+  const feedback = useFeedback();
   const showToast = useCallback((text, kind = 'error') => {
     clearTimeout(toastTimer.current);
     setToast({ text, kind, n: Date.now() });
@@ -741,7 +749,9 @@ export default function MessageThread({
         setMessages((prev) => prev.map((m) => (
           m._key === temp._key ? { ...m, _status: 'failed', _error: reason } : m)));
         haptic('error');
-        if (reason) showToast(reason);
+        // The bubble shows a "failed" state, but on a dropped connection the
+        // server sends no reason, and the bubble alone was easy to miss.
+        showToast(reason || errorMessage(e, 'Message not sent. Tap it to try again.'));
       }
     });
   }, [post, isRequestForMe, onAccepted, onActivity, showToast]);
@@ -814,10 +824,11 @@ export default function MessageThread({
     try {
       await apiCall({ method: 'post', url: `/v1/conversations/${conversation.id}/accept` });
       haptic('success');
+      feedback.success(`You can now message ${otherName}`);
       onAccepted?.();
     } catch (e) {
       console.error('[Messages] accept failed:', e?.message || e);
-      showToast(e?.response?.data?.error || 'Couldn’t accept this request.');
+      feedback.error(errorMessage(e, 'Couldn’t accept this request. Try again.'));
     } finally {
       if (mountedRef.current) setRequestBusy(null);
     }
@@ -827,10 +838,11 @@ export default function MessageThread({
     setRequestBusy('delete');
     try {
       await apiCall({ method: 'post', url: `/v1/conversations/${conversation.id}/decline` });
+      feedback.success(`Request from ${otherName} deleted`);
       onRequestGone?.();
     } catch (e) {
       console.error('[Messages] delete request failed:', e?.message || e);
-      showToast(e?.response?.data?.error || 'Couldn’t delete this request.');
+      feedback.error(errorMessage(e, 'Couldn’t delete this request. Try again.'));
       if (mountedRef.current) setRequestBusy(null);
     }
   };
@@ -840,10 +852,11 @@ export default function MessageThread({
       await apiCall({ method: 'post', url: `/v1/users/${otherId}/block` });
       setMenuOpen(false);
       setMenuStep('main');
+      feedback.success(`${otherName} is blocked — they can't message you`);
       onRequestGone?.();
     } catch (e) {
       console.error('[Messages] block failed:', e?.message || e);
-      showToast(e?.response?.data?.error || `Couldn’t block ${otherName}.`);
+      feedback.error(errorMessage(e, `Couldn’t block ${otherName}. Try again.`));
       setMenuOpen(false);
       setMenuStep('main');
     }
@@ -853,9 +866,10 @@ export default function MessageThread({
     try {
       await apiCall({ method: 'post', url: '/v1/messages/report', data: { reportedUserId: otherId, reason } });
       setMenuStep('reported');
+      feedback.success('Report sent — our moderators will take it from here');
     } catch (e) {
       console.error('[Messages] report failed:', e?.message || e);
-      showToast(e?.response?.data?.error || 'Couldn’t send that report.');
+      feedback.error(errorMessage(e, 'Couldn’t send that report. Try again.'));
       setMenuOpen(false);
       setMenuStep('main');
     }

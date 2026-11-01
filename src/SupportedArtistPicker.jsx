@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Check, Clock, Sparkles, MapPin, ChevronLeft, Search } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import buildUrl from './utils/buildUrl';
 import './SupportedArtistPicker.scss';
 import useModalA11y from './hooks/useModalA11y';
@@ -56,6 +57,7 @@ const SupportedArtistPicker = ({
   const [selectedId, setSelectedId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const feedback = useFeedback();
   const [error, setError] = useState(null);
   // ★ item 12: artist search within the picker
   const [query, setQuery] = useState('');
@@ -194,10 +196,21 @@ const SupportedArtistPicker = ({
         url: `/v1/users/${userId}/supported-artist`,
         data: { artistId: selectedId },
       });
-      setResult(res.data || { status: isFirstPick ? 'immediate' : 'pending' });
+      const data = res.data || { status: isFirstPick ? 'immediate' : 'pending' };
+      setResult(data);
+      // The modal shows its own success panel; the toast is what the user
+      // still sees once they close it.
+      const who = selectedArtist?.username || 'your artist';
+      feedback.success(
+        data.status === 'immediate'
+          ? `You now support ${who}`
+          : `Switch saved \u2014 you'll support ${who} next month`
+      );
       onSuccess?.();
     } catch (err) {
-      setError(err.response?.data?.error || 'Could not update your supported artist. Please try again.');
+      const text = err.response?.data?.error || 'Could not update your supported artist. Please try again.';
+      setError(text);
+      feedback.error(text);
     } finally {
       setSubmitting(false);
     }

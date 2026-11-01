@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, FileText, AlertCircle } from 'lucide-react';
 import './lyricsWizard.scss';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import useModalA11y from './hooks/useModalA11y'; // ★ item 1: same focus-trap a11y as the other modals
 
 // =============================================================================
@@ -10,6 +11,7 @@ import useModalA11y from './hooks/useModalA11y'; // ★ item 1: same focus-trap 
 // API contract unchanged: PATCH /v1/media/song/:id with multipart `lyrics`.
 // =============================================================================
 const LyricsWizard = ({ show, onClose, song, onSuccess }) => {
+  const feedback = useFeedback();
   const [lyrics, setLyrics] = useState(song?.lyrics || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null); // ★ item 1: inline error replaces alert()
@@ -46,6 +48,8 @@ const LyricsWizard = ({ show, onClose, song, onSuccess }) => {
       });
 
       console.log('Lyrics saved for song:', song.songId || song.id); // ★ checklist: success logging
+      // The wizard closes on save — the toast is what's left to see.
+      feedback.success(lyrics.trim() ? `Lyrics saved for \u201C${song.title}\u201D` : `Lyrics cleared for \u201C${song.title}\u201D`);
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {

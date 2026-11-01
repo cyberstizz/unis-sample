@@ -11,6 +11,8 @@ import { PlayerContext } from './context/playercontext';
 import VotingWizard from './votingWizard';
 import CommentSection from './commentSection';
 import { useAuth } from './context/AuthContext';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
+import { useReward } from './context/RewardContext';
 import { buildUrl } from './utils/buildUrl';
 import RecommendedSongs from './RecommendedSongs';
 import { useTaxonomy } from './utils/taxonomy';
@@ -24,6 +26,11 @@ const SongPage = () => {
   const navigate = useNavigate();
   const { taxonomy } = useTaxonomy(); // language names for the details panel
   const userId = user?.userId;
+  const feedback = useFeedback();
+  const { showReward } = useReward();
+  // Guests get a toast with a way to sign in, instead of a browser pop-up.
+  const askToLogIn = (what) =>
+    feedback.info(`Log in to ${what}`, { action: { label: 'Log in', onClick: () => navigate('/login') } });
 
   const [song, setSong] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -278,46 +285,76 @@ const SongPage = () => {
   };
 
   const handleLike = async () => {
-    if (!userId) { alert('Please log in to like songs'); return; }
+    if (!userId) { askToLogIn('like songs'); return; }
     if (!song?.id) return;
+    const name = `\u201C${song.title}\u201D`;
     try {
       if (isLiked) {
         const res = await apiCall({ method: 'delete', url: `/v1/media/song/${song.id}/like?userId=${userId}` });
-        if (res.data.success) { setIsLiked(false); setLikeCount(prev => Math.max(0, prev - 1)); }
+        if (res.data.success) {
+          setIsLiked(false); setLikeCount(prev => Math.max(0, prev - 1));
+          feedback.info(`Removed ${name} from your likes`, { id: 'song-like' });
+        } else {
+          feedback.error("Couldn't remove your like. Try again.");
+        }
       } else {
         const res = await apiCall({ method: 'post', url: `/v1/media/song/${song.id}/like?userId=${userId}` });
-        if (res.data.success) { setIsLiked(true); setLikeCount(prev => prev + 1); }
+        if (res.data.success) {
+          setIsLiked(true); setLikeCount(prev => prev + 1);
+          // First like on a track pays a point — the points pill confirms it.
+          // A re-like pays nothing, so it gets a toast instead.
+          const earned = res.data.pointsAwarded;
+          if (earned === undefined || earned > 0) {
+            showReward({ points: earned || 1, label: 'Like counted', type: 'like', anchor: 'player' });
+          } else {
+            feedback.success(`Liked ${name}`, { id: 'song-like' });
+          }
+        } else {
+          feedback.error("Couldn't like this song. Try again.");
+        }
       }
-    } catch (error) { console.error('Failed to toggle like:', error); alert('Failed to update like. Please try again.'); }
+    } catch (error) {
+      console.error('Failed to toggle like:', error);
+      feedback.error(errorMessage(error, isLiked ? "Couldn't remove your like. Try again." : "Couldn't like this song. Try again."));
+    }
   };
 
   const handleFollow = async () => {
+    if (!userId) { askToLogIn('follow artists'); return; }
     const newStatus = !isFollowing;
+    const who = song?.artist || 'this artist';
     setIsFollowing(newStatus);
     try {
       if (newStatus) await apiCall({ method: 'post', url: `/v1/users/${song.artistId}/follow` });
       else await apiCall({ method: 'delete', url: `/v1/users/${song.artistId}/follow` });
-    } catch (err) { console.error('Failed to toggle follow:', err); setIsFollowing(!newStatus); }
+      feedback.success(newStatus ? `Following ${who}` : `Unfollowed ${who}`, { id: 'song-follow' });
+    } catch (err) {
+      console.error('Failed to toggle follow:', err);
+      setIsFollowing(!newStatus);
+      feedback.error(errorMessage(err, newStatus ? `Couldn't follow ${who}. Try again.` : `Couldn't unfollow ${who}. Try again.`));
+    }
   };
 
   // ── "Don't Play" — persists to the existing blocked_songs backend.
   //    PlayerContext listens for 'unis:blocked-songs-changed' and skips
   //    blocked tracks during playlist playback.
   const handleDontPlay = async () => {
-    if (!userId) { alert('Please log in to manage your do-not-play list.'); return; }
+    if (!userId) { askToLogIn('manage your Don\u2019t Play list'); return; }
     if (!song?.id) return;
     try {
       if (isBlocked) {
         await apiCall({ method: 'delete', url: `/v1/playlists/blocked-songs/${song.id}` });
         setIsBlocked(false);
+        feedback.success(`\u201C${song.title}\u201D can play again in your queue`);
       } else {
         await apiCall({ method: 'post', url: '/v1/playlists/blocked-songs', data: { songId: song.id } });
         setIsBlocked(true);
+        feedback.success(`Added \u201C${song.title}\u201D to Don\u2019t Play \u2014 your queue will skip it`);
       }
       window.dispatchEvent(new Event('unis:blocked-songs-changed'));
     } catch (err) {
       console.error('Failed to toggle do-not-play:', err);
-      alert('Failed to update your do-not-play list. Please try again.');
+      feedback.error(errorMessage(err, "Couldn't update your Don\u2019t Play list. Try again."));
     }
   };
 
@@ -327,8 +364,14 @@ const SongPage = () => {
   const handleShare = () => console.log('Share song');
 
   const handleCopyLink = async () => {
-    try { await navigator.clipboard.writeText(window.location.href); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2000); }
-    catch (err) { console.error('Failed to copy link:', err); }
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2000);
+      feedback.success('Link copied', { id: 'copy-link' });
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      feedback.info(`Copy this link: ${window.location.href}`);
+    }
   };
 
   const handleArtistClick = () => { if (song?.artistId) navigate(`/artist/${song.artistId}`); };

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Crown, Heart, MessageCircle, Megaphone, Send, X, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import buildUrl from './utils/buildUrl';
 import './supporterSection.scss';
 
@@ -29,6 +30,7 @@ export const BroadcastComposer = ({ supporterCount, onClose }) => {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const feedback = useFeedback();
 
   // ★ lock background scroll while open
   useEffect(() => {
@@ -56,8 +58,12 @@ export const BroadcastComposer = ({ supporterCount, onClose }) => {
     try {
       const res = await apiCall({ method: 'post', url: '/v1/messages/broadcast', data: { body } });
       setResult(res.data);
+      const sent = Number(res.data?.sent) || 0;
+      feedback.success(`Message sent to ${sent.toLocaleString()} ${sent === 1 ? 'supporter' : 'supporters'}`);
     } catch (e) {
-      setError(e?.response?.data?.error || 'Could not send the broadcast.');
+      const text = e?.response?.data?.error || 'Could not send the broadcast.';
+      setError(text);
+      feedback.error(errorMessage(e, text));
     } finally {
       setBusy(false);
     }

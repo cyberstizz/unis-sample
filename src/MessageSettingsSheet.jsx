@@ -11,6 +11,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import buildUrl from './utils/buildUrl';
 import useModalA11y from './hooks/useModalA11y';
 import useLingering from './hooks/useLingering';
@@ -40,6 +41,7 @@ export default function MessageSettingsSheet({ open, onClose, onChanged }) {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null);
   const sheetRef = useRef(null);
+  const feedback = useFeedback();
   const { mounted, leaving } = useLingering(open, 240);
 
   useModalA11y({ active: open, onClose, modalRef: sheetRef });
@@ -66,11 +68,14 @@ export default function MessageSettingsSheet({ open, onClose, onChanged }) {
     try {
       const res = await apiCall({ method: 'put', url: '/v1/messages/settings', data: patch });
       setSettings(res.data);
+      feedback.success('Setting saved', { id: 'dm-setting' });
       onChanged?.();
     } catch (err) {
       console.error('[Messages] settings save failed:', err?.message || err);
       setSettings(before);
-      setError(err?.response?.data?.error || 'That change didn’t save. Try again.');
+      const text = err?.response?.data?.error || 'That change didn’t save. Try again.';
+      setError(text);
+      feedback.error(text);
     } finally {
       setBusy(null);
     }
@@ -82,10 +87,13 @@ export default function MessageSettingsSheet({ open, onClose, onChanged }) {
     try {
       await apiCall({ method: 'delete', url: `/v1/users/${person.userId}/block` });
       setSettings((s) => ({ ...s, blocked: s.blocked.filter((b) => b.userId !== person.userId) }));
+      feedback.success(`${person.username || 'That account'} can message you again`);
       onChanged?.();
     } catch (err) {
       console.error('[Messages] unblock failed:', err?.message || err);
-      setError(`Couldn’t unblock ${person.username || 'that account'}.`);
+      const text = `Couldn’t unblock ${person.username || 'that account'}.`;
+      setError(text);
+      feedback.error(errorMessage(err, text));
     } finally {
       setBusy(null);
     }

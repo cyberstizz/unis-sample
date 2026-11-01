@@ -19,6 +19,7 @@ import { loadStripe } from '@stripe/stripe-js/pure';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Zap, X, Check } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import './support.scss';
 
 // ★ boot-safety: loadStripe(undefined) at module scope crashed the ENTIRE app
@@ -133,6 +134,7 @@ export default function SupportSheet({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [animate, setAnimate] = useState(false);
+  const feedback = useFeedback();
 
   const amountCents = useMemo(() => {
     const dollars = custom !== '' ? parseFloat(custom) : selected;
@@ -182,6 +184,8 @@ export default function SupportSheet({
 
   const handlePaid = (result) => {
     setStep('done');
+    // The sheet closes itself in a moment — the toast stays behind.
+    feedback.success(`Sent $${((result?.amount || amountCents) / 100).toFixed(2)} to ${artistName}. Thank you!`);
     onSuccess(result);
     window.setTimeout(close, 1700);
   };

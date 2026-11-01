@@ -38,6 +38,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import '../feedback.scss';
 
 const FeedbackContext = createContext(null);
@@ -224,6 +225,30 @@ function ConfirmDialog({ request, onAnswer }) {
   );
 }
 
+/**
+ * The theme name currently on #root, kept in step as the user switches
+ * themes (AuthContext writes [data-theme] straight to the DOM, so there is
+ * no React state to subscribe to — a MutationObserver is the live view).
+ */
+function useRootTheme() {
+  const read = () =>
+    (typeof document !== 'undefined' &&
+      document.getElementById('root')?.getAttribute('data-theme')) || null;
+
+  const [theme, setTheme] = useState(read);
+
+  useEffect(() => {
+    const root = document.getElementById('root');
+    if (!root || typeof MutationObserver === 'undefined') return undefined;
+    setTheme(root.getAttribute('data-theme'));
+    const observer = new MutationObserver(() => setTheme(root.getAttribute('data-theme')));
+    observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+
+  return theme;
+}
+
 // ── Provider ─────────────────────────────────────────────────
 export const FeedbackProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
@@ -291,18 +316,36 @@ export const FeedbackProvider = ({ children }) => {
   );
 
   const activeConfirm = confirmQueue[0];
+  const theme = useRootTheme();
+
+  // The layer goes in <body>, NOT inside #root.
+  //
+  // unis-design-tokens.scss gives #root `position: relative; z-index: 0`,
+  // which makes it a stacking context: anything inside it, at any z-index,
+  // is painted below a body-level sibling. Several full-screen overlays
+  // (the photo viewer, the broadcast sheet, the date picker) portal to
+  // <body> at z-index 3000+, so a toast inside #root would be hidden behind
+  // them. In <body> the layer's z-index is compared against theirs and wins.
+  //
+  // The cost of leaving #root is the theme: [data-theme] lives there, so the
+  // colour variables stop resolving. useRootTheme copies the attribute onto
+  // the layer, which is enough — theme.scss selects on [data-theme] itself,
+  // not on a descendant of #root.
+  const layer = (
+    <div className="ufb-layer" data-theme={theme || undefined}>
+      <div className="ufb-stack">
+        {toasts.map((toast) => (
+          <Toast key={toast.id} toast={toast} onDismiss={dismiss} />
+        ))}
+      </div>
+      {activeConfirm && <ConfirmDialog key={activeConfirm.key} request={activeConfirm} onAnswer={answer} />}
+    </div>
+  );
 
   return (
     <FeedbackContext.Provider value={api}>
       {children}
-      <div className="ufb-layer">
-        <div className="ufb-stack">
-          {toasts.map((toast) => (
-            <Toast key={toast.id} toast={toast} onDismiss={dismiss} />
-          ))}
-        </div>
-        {activeConfirm && <ConfirmDialog key={activeConfirm.key} request={activeConfirm} onAnswer={answer} />}
-      </div>
+      {typeof document !== 'undefined' ? createPortal(layer, document.body) : layer}
     </FeedbackContext.Provider>
   );
 };

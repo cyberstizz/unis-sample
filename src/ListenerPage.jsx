@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { buildUrl } from "./utils/buildUrl";
 import { apiCall } from "./components/axiosInstance";
 import { useAuth } from "./context/AuthContext";
+import { useFeedback, errorMessage } from "./context/FeedbackContext";
 import Layout from "./layout";
 import VoteHistorySection from "./VoteHistorySection"; // ★ read-only; fetches the logged-in user's votes (self-view only)
 import ProfilePhotos from "./ProfilePhotos"; // Instagram-style photo grid + full-screen viewer
@@ -59,6 +60,7 @@ const deriveBadges = ({ votes, supporting, level }) => {
 const ListenerPage = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const feedback = useFeedback();
   const { user: authUser } = useAuth();
 
   const [user, setUser] = useState(null);
@@ -102,11 +104,17 @@ const ListenerPage = () => {
 
   const toggleFollow = useCallback(async () => {
     const next = !following;
+    const who = user?.username || "this listener";
     setFollowing(next); // optimistic
     try {
       await apiCall({ method: next ? "post" : "delete", url: `/v1/users/${userId}/follow` });
-    } catch (e) { setFollowing(!next); }
-  }, [following, userId]);
+      feedback.success(next ? `Following ${who}` : `Unfollowed ${who}`, { id: "listener-follow" });
+    } catch (e) {
+      console.error("Failed to toggle follow:", e);
+      setFollowing(!next);
+      feedback.error(errorMessage(e, next ? `Couldn't follow ${who}. Try again.` : `Couldn't unfollow ${who}. Try again.`));
+    }
+  }, [following, userId, user?.username, feedback]);
 
   if (loading) {
     return <Layout><div className="lpr-wrap"><div className="lpr-loading"><div className="lpr-loading__spinner" /></div></div></Layout>;

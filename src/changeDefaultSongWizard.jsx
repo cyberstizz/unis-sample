@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Music, Check, Star } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import buildUrl from './utils/buildUrl';
 import './changeDefaultSongWizard.scss';
 
@@ -16,6 +17,8 @@ const ChangeDefaultSongWizard = ({
 
   if (!show) return null;
 
+  const feedback = useFeedback();
+
   const handleSave = async () => {
     if (selectedSongId === currentDefaultSongId) {
       onClose();
@@ -28,11 +31,13 @@ const ChangeDefaultSongWizard = ({
         url: '/v1/users/default-song',
         data: { defaultSongId: selectedSongId },
       });
+      const picked = songs?.find?.((s) => (s.songId || s.id) === selectedSongId);
+      feedback.success(picked?.title ? `\u201C${picked.title}\u201D is now your featured song` : 'Featured song updated');
       onSuccess?.();
       onClose();
     } catch (err) {
       console.error('Failed to update featured song:', err);
-      alert('Failed to update featured song. Try again.');
+      feedback.error(errorMessage(err, "Couldn't update your featured song. Try again."));
     } finally {
       setLoading(false);
     }

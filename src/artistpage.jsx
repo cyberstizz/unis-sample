@@ -8,6 +8,7 @@ import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
 import VotingWizard from './votingWizard';
 import { useAuth } from './context/AuthContext';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import { incrementGateSongCount } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
 import MessageButton from './MessageButton';
@@ -628,6 +629,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const { requestPlay } = useContext(PlayerContext);
   const { user, isGuest, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const feedback = useFeedback();
 
   const userId = user?.userId;
 
@@ -809,8 +811,13 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   }, [loading, artistId]);
 
   const handleFollow = async () => {
+    if (isGuest) {
+      feedback.info('Log in to follow artists', { action: { label: 'Log in', onClick: () => navigate('/login') } });
+      return;
+    }
     const previousState = isFollowing;
     const previousCount = followerCount;
+    const who = artist?.username || 'this artist';
     setIsFollowing(!previousState);
     setFollowerCount(prev => (!previousState ? prev + 1 : prev - 1));
     try {
@@ -819,11 +826,12 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       } else {
         await apiCall({ method: 'delete', url: `/v1/users/${artistId}/follow` });
       }
+      feedback.success(previousState ? `Unfollowed ${who}` : `Following ${who}`, { id: 'artist-follow' });
     } catch (err) {
       console.error('Failed to toggle follow:', err);
       setIsFollowing(previousState);
       setFollowerCount(previousCount);
-      alert('Something went wrong. Please try again.');
+      feedback.error(errorMessage(err, previousState ? `Couldn't unfollow ${who}. Try again.` : `Couldn't follow ${who}. Try again.`));
     }
   };
 
@@ -848,17 +856,23 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       const data = res.data || {};
       console.log('[Support] supported-artist update ok:', { artistId, status: data.status });
       setSupporterResult(data);
+      const who = artist?.username || 'this artist';
       if (data.status === 'immediate' || data.status === 'cancelled') {
         setIsSupporting(true);
         setPendingSwitch(null);
+        feedback.success(data.status === 'cancelled' ? `Pending switch cancelled \u2014 you're still supporting ${who}` : `You now support ${who}`);
       }
       if (data.status === 'pending') {
         setPendingSwitch({ effectiveDate: data.effectiveDate || null });
+        const when = data.effectiveDate ? new Date(data.effectiveDate).toLocaleDateString() : 'soon';
+        feedback.success(`Switch saved \u2014 you'll support ${who} starting ${when}`);
       }
       refreshUser?.(); // sync user.supportedArtistId app-wide
     } catch (err) {
       console.error('[Support] supported-artist update failed:', { artistId, err });
-      setSupporterError(err.response?.data?.error || 'Could not update your supported artist. Please try again.');
+      const text = err.response?.data?.error || 'Could not update your supported artist. Please try again.';
+      setSupporterError(text);
+      feedback.error(text);
     } finally {
       setSupporterBusy(false);
     }
@@ -890,8 +904,11 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const handleSaveBio = async () => {
     try {
       await apiCall({ method: 'put', url: `/v1/users/profile/${artistId}/bio`, data: { bio } });
-      alert('Bio updated successfully');
-    } catch (err) { alert('Failed to update bio'); }
+      feedback.success('Bio saved');
+    } catch (err) {
+      console.error('Failed to update bio:', err);
+      feedback.error(errorMessage(err, "Couldn't save your bio. Try again."));
+    }
   };
 
   const handleVoteSuccess = () => setShowVotingWizard(false);
@@ -933,7 +950,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         } catch (err) { console.error('Failed to track default song play:', err); }
       }
     } else {
-      alert('No default song available for this artist');
+      feedback.info(`${artist?.username || 'This artist'} hasn\u2019t picked a song to feature yet`);
     }
   };
 

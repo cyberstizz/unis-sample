@@ -24,6 +24,7 @@ import { Plus, Lock, Camera } from "lucide-react";
 import { apiCall } from "./components/axiosInstance";
 import { buildUrl } from "./utils/buildUrl";
 import { useAuth } from "./context/AuthContext";
+import { useFeedback } from "./context/FeedbackContext";
 import PhotoViewer from "./PhotoViewer";
 import "./ProfilePhotos.scss";
 
@@ -67,6 +68,7 @@ const ProfilePhotos = ({ ownerId, ownerName, ownerAvatar, isSelf }) => {
   const [pending, setPending] = useState([]);         // [{ key, preview }] uploads in flight
   const [uploadError, setUploadError] = useState(null);
   const [notice, setNotice] = useState(null);
+  const feedback = useFeedback();
 
   const inputRef = useRef(null);
   const photosRef = useRef(photos);
@@ -210,12 +212,13 @@ const ProfilePhotos = ({ ownerId, ownerName, ownerAvatar, isSelf }) => {
   const deletePhoto = useCallback(async (photoId) => {
     await apiCall({ method: "delete", url: `/v1/users/${ownerId}/photos/${photoId}` }); // viewer shows the error
     console.log("Profile photo deleted:", photoId);
+    feedback.success("Photo deleted");
     const idx = ordered.findIndex((p) => p.photoId === photoId);
     const neighbour = ordered[idx + 1] || ordered[idx - 1];
     pendingRemoval.current = photoId;
     if (neighbour) writePhotoParam(neighbour.photoId, { replace: true });
     else closeViewer();
-  }, [ownerId, ordered, writePhotoParam, closeViewer]);
+  }, [ownerId, ordered, writePhotoParam, closeViewer, feedback]);
 
   useEffect(() => {
     const id = pendingRemoval.current;
@@ -246,6 +249,7 @@ const ProfilePhotos = ({ ownerId, ownerName, ownerAvatar, isSelf }) => {
       problems.push(`You can add ${remaining} more photo${remaining === 1 ? "" : "s"} (limit ${max}).`);
     }
 
+    let uploaded = 0;
     const items = batch.map((file, i) => ({
       key: `${Date.now()}-${i}`,
       file,
@@ -268,7 +272,10 @@ const ProfilePhotos = ({ ownerId, ownerName, ownerAvatar, isSelf }) => {
         });
         const saved = res.data || {};
         console.log("Profile photo uploaded:", saved.photoId);
-        if (saved.photoId) setPhotos((prev) => [...prev, { ...saved, likeCount: 0, likedByMe: false }]);
+        if (saved.photoId) {
+          setPhotos((prev) => [...prev, { ...saved, likeCount: 0, likedByMe: false }]);
+          uploaded += 1;
+        }
       } catch (err) {
         console.error("Profile photo upload failed:", item.file.name, err);
         problems.push(err.response?.data?.error || `${item.file.name} didn't upload. Try again.`);
@@ -282,8 +289,13 @@ const ProfilePhotos = ({ ownerId, ownerName, ownerAvatar, isSelf }) => {
     items.forEach((item) => URL.revokeObjectURL(item.preview)); // any skipped after a stop
     setPending([]);
 
+    if (uploaded > 0) {
+      feedback.success(uploaded === 1 ? "Photo added to your profile" : `${uploaded} photos added to your profile`);
+    }
     if (problems.length) {
-      setUploadError(problems[0] + (problems.length > 1 ? ` (${problems.length - 1} more didn't upload.)` : ""));
+      const text = problems[0] + (problems.length > 1 ? ` (${problems.length - 1} more didn't upload.)` : "");
+      setUploadError(text);
+      feedback.error(text);
     }
   };
 

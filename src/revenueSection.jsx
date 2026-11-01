@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import CashoutPanel from './CashoutPanel';
 import './revenueSection.scss';
 
@@ -59,6 +60,7 @@ const RevenueSection = ({
   isStripeReady = false,
   onPayoutSuccess,             // refresh parent stats after a payout
 }) => {
+  const feedback = useFeedback();
   const [salesTotal, setSalesTotal] = useState(null);
   const [salesLoading, setSalesLoading] = useState(true);
   const [openStream, setOpenStream] = useState(null); // null | 'sales' | 'referrals' | 'supporters'
@@ -80,16 +82,40 @@ const RevenueSection = ({
     return () => { cancelled = true; };
   }, [artistId]);
 
-  // -- cashout handlers (lifted verbatim from the old inline revenue block) --
+  // -- cashout handlers --
+  // Both of these used to fail in silence: a refused payout or a missing
+  // Stripe link just left the button sitting there. CashoutPanel shows its
+  // own error state when the promise rejects, and the toast says why.
   const handleRequestPayout = useCallback(async () => {
-    const res = await apiCall({ url: '/v1/stripe/payout', method: 'post' });
-    if (res.data?.success) onPayoutSuccess?.();
-  }, [onPayoutSuccess]);
+    try {
+      const res = await apiCall({ url: '/v1/stripe/payout', method: 'post' });
+      if (res.data?.success) {
+        feedback.success('Payout on its way to your bank');
+        onPayoutSuccess?.();
+        return;
+      }
+      const msg = res.data?.error || "That payout didn't go through. Try again.";
+      feedback.error(msg);
+      throw new Error(msg);
+    } catch (err) {
+      if (err?.response || err?.request) {
+        console.error('[Revenue] payout failed:', err?.message || err);
+        feedback.error(errorMessage(err, "That payout didn't go through. Try again."));
+      }
+      throw err;
+    }
+  }, [onPayoutSuccess, feedback]);
 
   const handleConnectStripe = useCallback(async () => {
-    const res = await apiCall({ url: '/v1/stripe/onboard', method: 'post' });
-    if (res.data?.url) window.location.href = res.data.url;
-  }, []);
+    try {
+      const res = await apiCall({ url: '/v1/stripe/onboard', method: 'post' });
+      if (res.data?.url) { window.location.href = res.data.url; return; }
+      feedback.error("Couldn't open Stripe setup. Try again in a moment.");
+    } catch (err) {
+      console.error('[Revenue] Stripe onboarding failed:', err?.message || err);
+      feedback.error(errorMessage(err, "Couldn't open Stripe setup. Try again in a moment."));
+    }
+  }, [feedback]);
 
   // -- derive the three streams (all in cents) --
   const copies = Number(salesTotal?.copies || 0);

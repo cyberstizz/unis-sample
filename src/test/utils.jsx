@@ -5,6 +5,7 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
+import { FeedbackProvider } from '../context/FeedbackContext';
 import { PlayerProvider } from '../context/playercontext';
 import { makeToken, fixtures } from './mocks/handlers';
 
@@ -15,6 +16,10 @@ import { makeToken, fixtures } from './mocks/handlers';
  * @param {Object} options
  * @param {string} [options.route='/'] — initial route for MemoryRouter
  * @param {'guest'|'listener'|'artist'} [options.as='guest'] — auth state
+ *
+ * FeedbackProvider is part of the tree (as it is in App.jsx), so a test can
+ * assert what the user is told: `await screen.findByText(/liked/i)` finds the
+ * toast, which renders into document.body.
  */
 export function renderWithProviders(ui, { route = '/', as = 'guest', ...rest } = {}) {
   if (as === 'listener') {
@@ -25,9 +30,11 @@ export function renderWithProviders(ui, { route = '/', as = 'guest', ...rest } =
 
   return render(
     <MemoryRouter initialEntries={[route]}>
-      <AuthProvider>
-        <PlayerProvider>{ui}</PlayerProvider>
-      </AuthProvider>
+      <FeedbackProvider>
+        <AuthProvider>
+          <PlayerProvider>{ui}</PlayerProvider>
+        </AuthProvider>
+      </FeedbackProvider>
     </MemoryRouter>,
     rest
   );

@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ImagePlus, Trash2, AlertCircle } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
 import buildUrl from './utils/buildUrl';
 import './artistPhotosManager.scss';
 
 const DEFAULT_MAX = 15; // mirrors ArtistPhotoService.MAX_PHOTOS; server is the source of truth
 
 const ArtistPhotosManager = ({ artistId }) => {
+  const feedback = useFeedback();
   const [photos, setPhotos] = useState([]);
   const [max, setMax] = useState(DEFAULT_MAX);
   const [loading, setLoading] = useState(true);
@@ -56,16 +58,23 @@ const ArtistPhotosManager = ({ artistId }) => {
         });
         added += 1;
       } catch (err) {
-        setError(err.response?.data?.error || 'One or more photos failed to upload.');
+        const text = err.response?.data?.error || 'One or more photos failed to upload.';
+        setError(text);
+        feedback.error(errorMessage(err, text));
         break;
       }
     }
 
     if (files.length > remaining) {
-      setError(`Only ${remaining} more photo${remaining === 1 ? '' : 's'} allowed — some weren't added.`);
+      const text = `Only ${remaining} more photo${remaining === 1 ? '' : 's'} allowed — some weren't added.`;
+      setError(text);
+      feedback.error(text);
     }
     setUploading(false);
-    if (added > 0) load();
+    if (added > 0) {
+      feedback.success(added === 1 ? 'Photo added to your gallery' : `${added} photos added to your gallery`);
+      load();
+    }
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -77,9 +86,12 @@ const ArtistPhotosManager = ({ artistId }) => {
       await apiCall({ method: 'delete', url: `/v1/users/${artistId}/photos/${photoId}` });
       console.log('Artist photo deleted:', photoId); // ★ checklist: success logging
       setPhotos((prev) => prev.filter((p) => p.photoId !== photoId));
+      feedback.success('Photo removed from your gallery');
     } catch (err) {
       console.error('Artist photo delete failed:', photoId, err); // ★ checklist: failure logging
-      setError(err.response?.data?.error || 'Could not remove that photo.');
+      const text = err.response?.data?.error || 'Could not remove that photo.';
+      setError(text);
+      feedback.error(errorMessage(err, text));
     } finally {
       setDeletingId(null);
     }

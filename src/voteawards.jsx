@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import './voteawards.scss';
 import Layout from './layout';
 import backimage from './assets/randomrapper.jpeg';
@@ -20,6 +21,7 @@ const NOMINEE_PAGE = 48;
 
 const VoteAwards = () => {
   const navigate = useNavigate();
+  const feedback = useFeedback();
   const { requestPlay } = useContext(PlayerContext);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -471,7 +473,7 @@ const VoteAwards = () => {
       name: nominee.name,
       artwork: nominee.artwork,
     }, requestPlay, 'voteawards');
-    if (!played) alert(`${nominee.name} has not set a default song yet.`);
+    if (!played) feedback.info(`${nominee.name} hasn\u2019t picked a song to feature yet`);
   };
 
   const jurisdictionLabel = jurisdictions.find(j => j.value === selectedJurisdiction)?.label || 'Unknown';
@@ -737,7 +739,9 @@ const VoteAwards = () => {
                         <button
                           onClick={() => {
                             if (!userId) {
-                              alert('Sign up or log in to vote.');
+                              feedback.info('Sign up or log in to vote', {
+                                action: { label: 'Log in', onClick: () => navigate('/login') },
+                              });
                               return;
                             }
                             handleVoteClick(nominee);

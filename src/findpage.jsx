@@ -5,6 +5,7 @@ import AdSlot from './components/AdSlot';
 import backimage from './assets/randomrapper.jpeg';
 import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import UnisMap from './map/UnisMap';
 import { CANONICAL_GENRES } from './utils/idMappings';
 import RankMove from './components/RankMove';
@@ -50,6 +51,7 @@ const GENRES = CANONICAL_GENRES.map((key) => ({ value: key, label: titleCase(key
 
 const FindPage = () => {
   const navigate = useNavigate();
+  const feedback = useFeedback();
   const { requestPlay } = useContext(PlayerContext);
 
   const [navigationStack, setNavigationStack] = useState([ROOT_CRUMB]);
@@ -66,10 +68,8 @@ const FindPage = () => {
   const genreRef = useRef(genre);
   const lastTopsIdRef = useRef(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [toast, setToast] = useState(null);
   const [spotlight, setSpotlight] = useState(null); // state lit during a random spin
 
-  const toastTimer = useRef(null);
   const spinTimer = useRef(null);
 
   /* ------------------------------------------------------------- helpers */
@@ -77,15 +77,20 @@ const FindPage = () => {
   const isInHarlemChain = (name) => HARLEM_PARENT_CHAIN.includes(name);
   const isActiveJurisdiction = (name) => ACTIVE_JURISDICTIONS.includes(name);
 
-  const showComingSoonToast = useCallback((name) => {
-    setToast({ name });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 4500);
-  }, []);
+  // Tapping a place Unis hasn't opened yet. The app-wide toast carries it now,
+  // with the same "Join the waitlist" way out.
+  const showComingSoonToast = useCallback(
+    (name) => {
+      feedback.info(`Unis isn't in ${name} yet`, {
+        id: 'findpage-coming-soon',
+        action: { label: 'Join the waitlist', onClick: () => navigate('/waitlist') },
+      });
+    },
+    [feedback, navigate]
+  );
 
   useEffect(
     () => () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
       if (spinTimer.current) clearInterval(spinTimer.current);
     },
     []
@@ -663,20 +668,6 @@ const FindPage = () => {
               </span>
             </div>
 
-            <div className={`map-toast ${toast ? 'show' : ''}`} role="status" aria-live="polite">
-              {toast && (
-                <>
-                  <span className="map-toast-text">Unis isn't in {toast.name} yet</span>
-                  <button
-                    type="button"
-                    className="map-toast-cta"
-                    onClick={() => navigate('/waitlist')}
-                  >
-                    Join the waitlist
-                  </button>
-                </>
-              )}
-            </div>
           </div>
 
           {/* Always rendered, not mobile-only. It is the keyboard path into

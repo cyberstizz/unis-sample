@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Type, Music, Image, ShieldCheck, Download, AlertCircle } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import buildUrl from './utils/buildUrl'; // ★ item 7: checklist — buildUrl everywhere
 import useModalA11y from './hooks/useModalA11y'; // ★ item 7: same a11y as the other modals
 import SoundDiscoveryFields from './SoundDiscoveryFields';
@@ -25,6 +26,7 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
   const [preview, setPreview] = useState(buildUrl(song?.artworkUrl)); // ★ item 7: was hand-rolled API_BASE_URL prefixing
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null); // ★ item 7: inline error replaces alert()
+  const feedback = useFeedback();
   const [downloadPolicy, setDownloadPolicy] = useState(song?.downloadPolicy || 'free');
   const [downloadPrice, setDownloadPrice] = useState(
     song?.downloadPrice ? (song.downloadPrice / 100).toFixed(2) : ''
@@ -141,6 +143,7 @@ const EditSongWizard = ({ show, onClose, song, onSuccess }) => {
       }
 
       console.log('Song updated:', song.songId); // ★ checklist: success logging
+      feedback.success(`\u201C${song.title}\u201D updated`);
       onSuccess?.();
       onClose();
     } catch (err) {

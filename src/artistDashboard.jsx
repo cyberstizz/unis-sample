@@ -45,6 +45,7 @@ import backimage from './assets/randomrapper.jpeg';
 import { useAuth } from './context/AuthContext';
 import { PlayerContext } from './context/playercontext';
 import { apiCall } from './components/axiosInstance';
+import { useFeedback } from './context/FeedbackContext';
 import buildUrl from './utils/buildUrl';
 import { jsPDF } from 'jspdf';
 import ChangePasswordWizard from './changePasswordWizard';
@@ -92,7 +93,6 @@ const tabFromHash = (hash) => {
   return PANEL_IDS.includes(id) ? id : 'home';
 };
 
-const TOAST_MS = 3200;
 
 const LINK_FIELDS = [
   { key: 'instagramUrl', label: 'Instagram', placeholder: 'https://instagram.com/yourname', type: 'url' },
@@ -283,15 +283,16 @@ const ArtistDashboard = () => {
     [navigate]
   );
 
-  // ---- Toast (replaces alert()) -------------------------------------------
-  const [toast, setToast] = useState(null);
-  const toastTimer = useRef(null);
+  // ---- Toast --------------------------------------------------------------
+  // Now the app-wide toast (context/FeedbackContext), so the dashboard looks
+  // and behaves like every other page. The tone argument is kept so existing
+  // calls read the same.
+  const feedback = useFeedback();
   const showToast = useCallback((message, tone = 'info') => {
-    setToast({ message, tone });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), TOAST_MS);
-  }, []);
-  useEffect(() => () => toastTimer.current && clearTimeout(toastTimer.current), []);
+    if (tone === 'error') feedback.error(message);
+    else if (tone === 'success') feedback.success(message);
+    else feedback.info(message);
+  }, [feedback]);
 
   // ---- Core data ---------------------------------------------------------
   const [userProfile, setUserProfile] = useState(null);
@@ -841,10 +842,13 @@ const ArtistDashboard = () => {
     doc.save(`Unis_Artist_Agreement_${displayName.replace(/\s+/g, '_')}.pdf`);
   };
 
-  const handleUploadSuccess = () => {
+  const handleUploadSuccess = (result) => {
     setShowUploadWizard(false);
     refetchSongs();
     setVideosRefreshKey((k) => k + 1);
+    // The wizard used to just close — nothing told the artist it worked.
+    const title = result?.title;
+    showToast(title ? `\u201C${title}\u201D is live on Unis` : 'Upload complete \u2014 it\u2019s live on Unis', 'success');
   };
 
   const handleProfileUpdate = () => {
@@ -1615,10 +1619,6 @@ const ArtistDashboard = () => {
           >
             {renderPanel()}
           </div>
-        </div>
-
-        <div className={`ad-toast ${toast ? 'is-visible' : ''} ${toast ? `is-${toast.tone}` : ''}`} role="status" aria-live="polite">
-          {toast?.message}
         </div>
 
         {/* Wizards and modals */}

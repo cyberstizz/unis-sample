@@ -20,6 +20,8 @@ import Layout from './layout';
 import { PlayerContext } from './context/playercontext';
 import CommentSection from './commentSection';
 import { useAuth } from './context/AuthContext';
+import { useFeedback, errorMessage } from './context/FeedbackContext';
+import { useReward } from './context/RewardContext';
 import { buildUrl } from './utils/buildUrl';
 
 const VideoPage = () => {
@@ -28,6 +30,10 @@ const VideoPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const userId = user?.userId;
+  const feedback = useFeedback();
+  const { showReward } = useReward();
+  const askToLogIn = (what) =>
+    feedback.info(`Log in to ${what}`, { action: { label: 'Log in', onClick: () => navigate('/login') } });
 
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -232,34 +238,69 @@ const VideoPage = () => {
 
   // ── Handlers ──
   const handleLike = async () => {
-    if (!userId) { alert('Please log in to like videos'); return; }
+    if (!userId) { askToLogIn('like videos'); return; }
     if (!video?.id) return;
+    const name = `\u201C${video.title}\u201D`;
     try {
       if (isLiked) {
         const res = await apiCall({ method: 'delete', url: `/v1/media/video/${video.id}/like?userId=${userId}` });
-        if (res.data.success) { setIsLiked(false); setLikeCount(prev => Math.max(0, prev - 1)); }
+        if (res.data.success) {
+          setIsLiked(false); setLikeCount(prev => Math.max(0, prev - 1));
+          feedback.info(`Removed ${name} from your likes`, { id: 'video-like' });
+        } else {
+          feedback.error("Couldn't remove your like. Try again.");
+        }
       } else {
         const res = await apiCall({ method: 'post', url: `/v1/media/video/${video.id}/like?userId=${userId}` });
-        if (res.data.success) { setIsLiked(true); setLikeCount(prev => prev + 1); }
+        if (res.data.success) {
+          setIsLiked(true); setLikeCount(prev => prev + 1);
+          const earned = res.data.pointsAwarded;
+          if (earned > 0) {
+            showReward({ points: earned, label: 'Like counted', type: 'like', anchor: 'player' });
+          } else {
+            feedback.success(`Liked ${name}`, { id: 'video-like' });
+          }
+        } else {
+          feedback.error("Couldn't like this video. Try again.");
+        }
       }
-    } catch (error) { console.error('Failed to toggle like:', error); alert('Failed to update like. Please try again.'); }
+    } catch (error) {
+      console.error('Failed to toggle like:', error);
+      feedback.error(errorMessage(error, isLiked ? "Couldn't remove your like. Try again." : "Couldn't like this video. Try again."));
+    }
   };
 
   const handleFollow = async () => {
     if (!video?.artistId) return;
+    if (!userId) { askToLogIn('follow artists'); return; }
     const newStatus = !isFollowing;
+    const who = video.artist || 'this artist';
     setIsFollowing(newStatus);
     try {
       if (newStatus) await apiCall({ method: 'post', url: `/v1/users/${video.artistId}/follow` });
       else await apiCall({ method: 'delete', url: `/v1/users/${video.artistId}/follow` });
-    } catch (err) { console.error('Failed to toggle follow:', err); setIsFollowing(!newStatus); }
+      feedback.success(newStatus ? `Following ${who}` : `Unfollowed ${who}`, { id: 'video-follow' });
+    } catch (err) {
+      console.error('Failed to toggle follow:', err);
+      setIsFollowing(!newStatus);
+      feedback.error(errorMessage(err, newStatus ? `Couldn't follow ${who}. Try again.` : `Couldn't unfollow ${who}. Try again.`));
+    }
   };
 
-  const handleReport = () => console.log('Report video');
+  // Report used to do nothing (a console.log). It now opens the same
+  // infringement form the song page uses, with this page's link filled in.
+  const handleReport = () =>
+    navigate(`/report?url=${encodeURIComponent(window.location.href)}`);
 
   const handleCopyLink = async () => {
-    try { await navigator.clipboard.writeText(window.location.href); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2000); }
-    catch (err) { console.error('Failed to copy link:', err); }
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2000);
+      feedback.success('Link copied', { id: 'copy-link' });
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      feedback.info(`Copy this link: ${window.location.href}`);
+    }
   };
 
   const handleArtistClick = () => { if (video?.artistId) navigate(`/artist/${video.artistId}`); };
