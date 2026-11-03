@@ -92,7 +92,7 @@ export default function ComingSoon({ autoSignup = false, initialReferralCode = '
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'Unis — opening soon in Harlem';
+    document.title = 'Unis — launching November 22nd';
     return () => { document.title = previous; };
   }, []);
 
@@ -114,7 +114,7 @@ export default function ComingSoon({ autoSignup = false, initialReferralCode = '
       <main className="cs-main">
         <p className="cs-status">
           <span className="cs-status-dot" aria-hidden="true" />
-          Opening soon in Harlem
+          Launching November 22nd
         </p>
 
         <h1 className="cs-headline">
