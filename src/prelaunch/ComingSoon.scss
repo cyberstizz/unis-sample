@@ -56,12 +56,40 @@
 
 // ------------------------------------------------------------- main copy ---
 .cs-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
   max-width: 1240px;
   padding: clamp(32px, 7vh, 88px) var(--cs-pad) clamp(24px, 4vh, 48px);
 }
 
+// Wide screens: copy on the left, the countdown on the right.
+@media (min-width: 1180px) {
+  .cs-main {
+    max-width: 1480px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'status   clock'
+      'headline clock'
+      'lede     clock'
+      'actions  clock';
+    column-gap: clamp(40px, 5vw, 96px);
+    align-items: start;
+  }
+
+  .cs-status   { grid-area: status; }
+  .cs-headline { grid-area: headline; font-size: clamp(3.4rem, 7.4vw, 8.5rem); }
+  .cs-lede     { grid-area: lede; }
+  .cs-actions  { grid-area: actions; }
+  .cs-main > .lc {
+    grid-area: clock;
+    align-self: center;
+    margin-top: 0;
+  }
+}
+
 .cs-status {
+  justify-self: start;
   display: inline-flex;
   align-items: center;
   gap: 10px;

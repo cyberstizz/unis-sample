@@ -10,12 +10,16 @@
 // or the Done button) leaves the visitor right here — never on the login page.
 // "How Unis works" opens the help center (/help is open before launch), and
 // the waitlist link opens the pitch page for people outside Harlem.
+//
+// The "Doors open in" countdown (LaunchCountdown) sits beside the headline on
+// wide screens and under the copy on phones; its date is in prelaunchConfig.
 // =============================================================================
 
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CreateAccountWizard from '../createAccountWizard';
+import LaunchCountdown from './LaunchCountdown';
 // Same logo files the app header uses, picked the same way (see header.jsx).
 import logoblue from '../assets/unisLogoThree.svg';
 import logoorange from '../assets/logo-orange.png';
@@ -127,6 +131,8 @@ export default function ComingSoon({ autoSignup = false, initialReferralCode = '
           who live here vote on who&rsquo;s best. Sign up now and your
           account is ready the day we open.
         </p>
+
+        <LaunchCountdown />
 
         <div className="cs-actions" aria-live="polite">
           {user ? (

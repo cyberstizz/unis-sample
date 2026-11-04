@@ -34,6 +34,18 @@ export const OPEN_PATHS = [
   '/team',      // the street team: pitch page, join form, meetup replies (email links)
 ];
 
+// The launch moment the Coming soon countdown counts down to: midnight in
+// Harlem (Eastern time) on Saturday, November 22, 2026. If the date moves, set
+// VITE_LAUNCH_AT in Netlify to any ISO date (e.g. 2026-12-05T00:00:00-05:00)
+// and redeploy; no code change needed.
+export const DEFAULT_LAUNCH_AT = '2026-11-22T00:00:00-05:00';
+
+export function getLaunchAt() {
+  const raw = String(import.meta.env.VITE_LAUNCH_AT ?? '').trim();
+  const parsed = Date.parse(raw || DEFAULT_LAUNCH_AT);
+  return Number.isFinite(parsed) ? parsed : Date.parse(DEFAULT_LAUNCH_AT);
+}
+
 export function isPrelaunch() {
   const flag = String(import.meta.env.VITE_PRELAUNCH ?? '').trim().toLowerCase();
   if (flag === 'true') return true;

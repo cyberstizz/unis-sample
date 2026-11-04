@@ -1,0 +1,236 @@
+// =============================================================================
+// LaunchCountdown.scss — "Doors open in" countdown. Lives inside .cs-page, so it
+// uses that page's --cs-tip / --cs-ease plus the --unis-* theme tokens.
+// =============================================================================
+
+.lc {
+  --lc-digit: clamp(40px, 11vw, 64px);
+  --lc-line: 1.12em;
+
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: clamp(22px, 3.5vh, 34px);
+  padding: clamp(18px, 2.4vw, 26px) clamp(18px, 2.6vw, 30px) clamp(16px, 2vw, 22px);
+  border: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.14));
+  border-radius: 24px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, var(--unis-primary-soft, rgba(22, 51, 135, 0.18)), transparent 60%),
+    var(--unis-panel, rgba(255, 255, 255, 0.03));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 30px 80px -40px var(--unis-primary-glow, rgba(22, 51, 135, 0.6));
+  animation: cs-fade 0.9s var(--cs-ease, ease) 1.2s both;
+}
+
+.lc-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.lc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+// ------------------------------------------------------------------ digits ---
+.lc-clock {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(6px, 1.2vw, 14px);
+}
+
+.lc-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.lc-digits {
+  display: flex;
+  gap: 2px;
+}
+
+.lc-digit {
+  display: inline-block;
+  height: var(--lc-line);
+  overflow: hidden;
+  font-size: var(--lc-digit);
+  font-weight: 700;
+  line-height: var(--lc-line);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--unis-text, #fff);
+  // Digits fade at the top and bottom edges while they roll through.
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22%, #000 78%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 22%, #000 78%, transparent 100%);
+
+  .lc-unit:last-child & {
+    color: var(--cs-tip, #8fa8ff);
+  }
+}
+
+.lc-strip {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(calc(var(--pos) * -1 * var(--lc-line)));
+  will-change: transform;
+
+  > span {
+    display: block;
+    height: var(--lc-line);
+    text-align: center;
+    min-width: 0.62em;
+  }
+
+  &.is-rolling {
+    transition: transform 0.62s cubic-bezier(0.2, 0.9, 0.12, 1);
+  }
+}
+
+.lc-sep {
+  font-size: var(--lc-digit);
+  line-height: var(--lc-line);
+  font-weight: 300;
+  color: var(--unis-text-4, rgba(255, 255, 255, 0.28));
+  transform: translateY(-0.04em);
+}
+
+.lc-label {
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+// --------------------------------------------------------------- scrubber ---
+.lc-scrubber {
+  margin-top: clamp(16px, 2.4vh, 22px);
+}
+
+.lc-wave {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 46px;
+}
+
+.lc-bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  height: calc(12% + var(--h) * 88%);
+  border-radius: 999px;
+  background: var(--unis-text-4, rgba(255, 255, 255, 0.16));
+  transition: background 0.6s;
+
+  &.is-played {
+    background: linear-gradient(to top, var(--unis-primary, #163387), var(--cs-tip, #8fa8ff));
+  }
+}
+
+.lc-playhead {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: calc(var(--p) * 100%);
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: var(--unis-text, #fff);
+  box-shadow: 0 0 14px 2px var(--cs-tip, #8fa8ff);
+  transition: left 1s linear;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    border-radius: 50%;
+    background: var(--unis-text, #fff);
+    box-shadow: 0 0 0 4px var(--unis-primary-soft, rgba(22, 51, 135, 0.35));
+  }
+}
+
+.lc-beat {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  border: 2px solid var(--cs-tip, #8fa8ff);
+  animation: lc-beat 0.9s ease-out both;
+}
+
+.lc-track-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.lc-drop {
+  color: var(--unis-text, #fff);
+  font-weight: 600;
+}
+
+// ------------------------------------------------------------- live state ---
+.lc--live {
+  .lc-live-line {
+    margin: 0;
+    font-family: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+    font-size: clamp(30px, 4vw, 44px);
+    line-height: 1.05;
+    color: var(--unis-text, #fff);
+  }
+}
+
+.lc-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cs-tip, #8fa8ff);
+  box-shadow: 0 0 0 0 var(--cs-tip, #8fa8ff);
+  animation: cs-ping 2.4s ease-out infinite;
+}
+
+@keyframes lc-beat {
+  from { transform: scale(1); opacity: 0.9; }
+  to   { transform: scale(3.4); opacity: 0; }
+}
+
+// ---------------------------------------------------------------- mobile ---
+@media (max-width: 640px) {
+  .lc { width: 100%; }
+  .lc-clock { justify-content: space-between; }
+  .lc-label { font-size: 10px; letter-spacing: 0.16em; }
+  .lc-wave { height: 38px; gap: 2px; }
+}
+
+// --------------------------------------------------------- reduced motion ---
+@media (prefers-reduced-motion: reduce) {
+  .lc-strip.is-rolling,
+  .lc-playhead { transition: none; }
+  .lc-beat { display: none; }
+}
