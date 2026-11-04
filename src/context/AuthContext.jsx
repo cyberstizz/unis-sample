@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axiosInstance from '../components/axiosInstance';
 import cacheService from '../services/cacheService';
+import { clearBackstagePass } from '../prelaunch/prelaunchConfig';
 
 const AuthContext = createContext();
 
@@ -266,7 +267,7 @@ export const AuthProvider = ({ children }) => {
           detail: { userId: profileData.userId }
         }));
 
-        return { success: true };
+        return { success: true, userId: profileData.userId };
       } else {
         throw new Error('Invalid token');
       }
@@ -293,6 +294,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     localStorage.removeItem('token');
+    clearBackstagePass();                             // pre-launch pass ends with the session
     localStorage.removeItem('unis-theme');            // ★ feed #2
     // Saved API responses can include this account's private profile fields;
     // the next person on this browser must never be shown them.

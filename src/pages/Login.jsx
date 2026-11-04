@@ -8,6 +8,7 @@ import ForgotPasswordWizard from '../forgotPasswordWizard';
 import { apiCall } from '../components/axiosInstance'; 
 import AdminTwoFactor from '../components/AdminTwoFactor';
 import { useFeedback } from '../context/FeedbackContext';
+import { isBackstagePath, grantBackstagePass } from '../prelaunch/prelaunchConfig';
 import './Login.scss';
 
 const Login = () => {
@@ -40,6 +41,9 @@ const Login = () => {
     const result = await login({ email, password });
 
     if (result.success) {
+      // Signed in on the hidden backstage page: this account gets the full app
+      // in this browser before launch (see BACKSTAGE PASS in prelaunchConfig).
+      if (isBackstagePath(window.location.pathname)) grantBackstagePass(result.userId);
       navigate('/');
     } else if (result.mfa) {
       setMfa(result.mfa);

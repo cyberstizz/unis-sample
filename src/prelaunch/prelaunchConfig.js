@@ -6,7 +6,9 @@
 //   • Visitors can still create an account from the Coming soon page.
 //   • A short list of OPEN_PATHS keeps working, because signup, email
 //     verification, password resets, legal pages and DMCA reports depend on them.
-//   • The real app only opens for a signed-in account that has an admin role.
+//   • The real app only opens for a signed-in account that has an admin role,
+//     or for any account that signed in on the backstage page (BACKSTAGE PASS,
+//     below; the Railway variable UNIS_PRELAUNCH decides who can sign in).
 //   • The login form lives at a secret path (VITE_BACKSTAGE_PATH), so the only
 //     way to reach it is to know that path.
 //
@@ -78,11 +80,43 @@ export function isBackstagePath(pathname) {
   return Boolean(backstage) && normalize(pathname) === backstage;
 }
 
+// ── BACKSTAGE PASS ──────────────────────────────────────────────────────────
+// Anyone who signs in ON THE BACKSTAGE PAGE gets the full app in that browser,
+// not just admins (Login.jsx grants the pass; logout clears it). The pass is
+// tied to that one account, so someone else signing in on the same browser
+// through the normal pages doesn't inherit it.
+//
+// Who can sign in at all is decided by the SERVER, so that is the switch:
+//   Railway UNIS_PRELAUNCH = "true"  → only admin accounts can sign in (normal)
+//   Railway UNIS_PRELAUNCH = "false" → any verified account can sign in on the
+//                                      backstage page (e.g. a test artist)
+// The public keeps seeing the Coming soon page either way, because only the
+// backstage page hands out the pass. Turn VITE_PRELAUNCH off only on launch day.
+const BACKSTAGE_PASS_KEY = 'unis_backstage_pass';
+
+export function grantBackstagePass(userId) {
+  if (!userId) return;
+  try { localStorage.setItem(BACKSTAGE_PASS_KEY, String(userId)); } catch { /* storage blocked */ }
+}
+
+export function clearBackstagePass() {
+  try { localStorage.removeItem(BACKSTAGE_PASS_KEY); } catch { /* storage blocked */ }
+}
+
+function hasBackstagePass(user) {
+  try {
+    const passFor = localStorage.getItem(BACKSTAGE_PASS_KEY);
+    return Boolean(passFor && user?.userId && passFor === String(user.userId));
+  } catch {
+    return false;
+  }
+}
+
 // Who gets the real app before launch: any account with an admin role
-// (moderator, admin or super_admin). AuthContext fills user.adminRole on load
-// and on login.
+// (moderator, admin or super_admin), plus any account that signed in on the
+// backstage page. AuthContext fills user.adminRole on load and on login.
 export function canEnterApp(user) {
-  return Boolean(user?.adminRole);
+  return Boolean(user?.adminRole) || hasBackstagePass(user);
 }
 
 /**

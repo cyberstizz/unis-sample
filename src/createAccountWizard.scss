@@ -332,14 +332,20 @@ $step-gradients: (
 
 // ★ Scroll affordance — sticky cue at the bottom of the content scroller
 .scroll-cue {
+  // Sticks to the real bottom edge of the scroller. With bottom: 0 it stopped
+  // 32px short (sticky respects .wizard-content's padding), so fields scrolled
+  // through that gap underneath it and the fade's solid end showed as a dark
+  // band cutting into the step. Negative bottom/margin cover the padding; the
+  // extra 32px of height and padding keep the pill exactly where it was.
   position: sticky;
-  bottom: 0;
-  margin: 0 -32px 0;                 // bleed past the 32px content padding
-  height: 64px;
+  bottom: -32px;
+  margin: 0 -32px -32px;             // bleed past the 32px content padding
+  box-sizing: border-box;
+  height: 96px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 10px;
+  padding-bottom: 42px;
   pointer-events: none;
   background: linear-gradient(to bottom, rgba(10, 10, 10, 0), $bg-dark 78%);
   opacity: 0;
@@ -1497,7 +1503,12 @@ $step-gradients: (
     }
   }
 
-  .scroll-cue { margin: 0 -24px 0; } 
+  .scroll-cue {                    // same fix for the 24px phone padding
+    bottom: -24px;
+    margin: 0 -24px -24px;
+    height: 88px;
+    padding-bottom: 34px;
+  }
   
   .wizard-content {
     padding: 24px;
