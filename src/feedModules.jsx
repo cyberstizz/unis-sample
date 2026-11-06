@@ -16,7 +16,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import useDominantColor from './hooks/useDominantColor';
 import { formatCount } from './utils/standings';
 import { formatScore } from './context/RewardContext';
 import './feedModules.scss';
@@ -105,29 +104,16 @@ export function voteShares(board, max = 5) {
 //  SPOTLIGHT (replaces the old hero banner)
 // ═════════════════════════════════════════════════════════════════════════════
 
-const WARM = [255, 92, 57];
-
-/** Artwork colour → the card's gradient stops. Dark or missing art keeps the mockup's warm tones. */
-function spotlightVars(rgb) {
-  const usable = rgb && Math.max(rgb[0], rgb[1], rgb[2]) >= 70;
-  const [r, g, b] = usable ? rgb : WARM;
-  return {
-    '--spot-b': `rgb(${r}, ${g}, ${b})`,
-    '--spot-c': usable ? `color-mix(in srgb, rgb(${r}, ${g}, ${b}) 55%, #b538ff)` : '#b538ff',
-  };
-}
-
-const SpotlightSlide = ({ slide, index, count, onVote, onOpen }) => {
-  const rgb = useDominantColor(slide.image || null);
-  const style = useMemo(() => spotlightVars(rgb), [rgb]);
-
-  return (
+// The gradient is driven by the user's theme (see "SPOTLIGHT PALETTES" in
+// feedModules.scss). data-variant only moves the glows between corners so
+// neighbouring slides don't look identical.
+const SpotlightSlide = ({ slide, index, count, onVote, onOpen }) => (
     <div
       className="fm-spot__slide"
       role="group"
       aria-roledescription="slide"
       aria-label={`${index + 1} of ${count}: ${slide.title}`}
-      style={style}
+      data-variant={index % 3}
     >
       <div className="fm-spot__grain" aria-hidden="true" />
       <div className="fm-spot__shade" aria-hidden="true" />
@@ -176,8 +162,7 @@ const SpotlightSlide = ({ slide, index, count, onVote, onOpen }) => {
         </span>
       </div>
     </div>
-  );
-};
+);
 
 export const FeedSpotlight = ({
   jurisdictionName,

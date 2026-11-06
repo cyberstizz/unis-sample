@@ -172,9 +172,14 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
     &::-webkit-scrollbar { display: none; }
   }
 
+  // Gradient stops come from the theme palettes further down (see
+  // "SPOTLIGHT PALETTES"); nothing here is a fixed colour any more.
+  //   --spot-a     top-left glow: the theme colour itself, lit up
+  //   --spot-b     bottom-right: the palette's warm/contrast partner
+  //   --spot-c     top-right: the theme's neighbouring hue
+  //   --spot-base  the deep tinted ground everything sits on
+  //   --spot-shade how much the left edge is darkened so white type reads
   &__slide {
-    --spot-b: #ff5c39;
-    --spot-c: #b538ff;
     position: relative;
     flex: 0 0 100%;
     scroll-snap-align: start;
@@ -183,11 +188,29 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
     overflow: hidden;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
     background:
-      radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--unis-primary) 85%, white) 0%, transparent 58%),
+      radial-gradient(120% 140% at 0% 0%, var(--spot-a) 0%, transparent 58%),
       radial-gradient(90% 120% at 100% 100%, var(--spot-b) 0%, transparent 62%),
       radial-gradient(80% 110% at 72% 0%, var(--spot-c) 0%, transparent 62%),
-      #1a0c24;
+      var(--spot-base);
     transition: background 0.6s ease;
+
+    // Each slide in the carousel moves the glows to different corners so the
+    // three cards don't look identical (this used to come from the artwork).
+    &[data-variant="1"] {
+      background:
+        radial-gradient(120% 140% at 100% 0%, var(--spot-a) 0%, transparent 58%),
+        radial-gradient(90% 120% at 0% 100%, var(--spot-c) 0%, transparent 62%),
+        radial-gradient(80% 110% at 35% 0%, var(--spot-b) 0%, transparent 60%),
+        var(--spot-base);
+    }
+
+    &[data-variant="2"] {
+      background:
+        radial-gradient(120% 140% at 0% 100%, var(--spot-a) 0%, transparent 58%),
+        radial-gradient(90% 120% at 100% 0%, var(--spot-b) 0%, transparent 62%),
+        radial-gradient(80% 110% at 60% 100%, var(--spot-c) 0%, transparent 60%),
+        var(--spot-base);
+    }
   }
 
   &__grain {
@@ -203,7 +226,7 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
   &__shade {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0) 65%);
+    background: linear-gradient(90deg, rgba(0, 0, 0, var(--spot-shade)), rgba(0, 0, 0, 0) 65%);
     pointer-events: none;
   }
 
@@ -378,6 +401,95 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
 
     &.is-active::before { width: 20px; background: #fff; }
   }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  SPOTLIGHT PALETTES — the theme drives the gradient
+//
+//  Each theme gets its own hand-tuned three-colour palette built around its
+//  hue (its neighbours plus one warm or contrasting partner), on a dark ground
+//  tinted to match. That way green reads as green, purple as purple, and none of
+//  them clash with a fixed colour.
+//
+//  [data-theme] lives on #root (AuthContext), so switching themes re-colours
+//  the hero instantly — no JavaScript involved.
+//
+//  The first block is the fallback for any future theme that has no palette
+//  yet: it builds the gradient from --unis-primary alone, so it can never clash.
+// ═════════════════════════════════════════════════════════════════════════════
+.fm-spot__slide {
+  --spot-a:     color-mix(in srgb, var(--unis-primary) 80%, white);
+  --spot-b:     color-mix(in srgb, var(--unis-primary) 85%, black);
+  --spot-c:     color-mix(in srgb, var(--unis-primary) 60%, white);
+  --spot-base:  color-mix(in srgb, var(--unis-primary) 18%, #08080b);
+  --spot-shade: 0.38;
+}
+
+// Blue (default) — electric blue into violet, with the original sunset ember
+// (#root:not([data-theme]) covers the first paint, before AuthContext has
+// written the attribute — the app defaults to blue.)
+[data-theme="blue"] .fm-spot__slide,
+#root:not([data-theme]) .fm-spot__slide {
+  --spot-a:     #4f7dff;
+  --spot-b:     #ff6b45;
+  --spot-c:     #9a46ff;
+  --spot-base:  #110c2c;
+  --spot-shade: 0.38;
+}
+
+// Purple — violet into magenta, warmed by a rose glow
+[data-theme="purple"] .fm-spot__slide {
+  --spot-a:     #8f52ff;
+  --spot-b:     #ff5c8e;
+  --spot-c:     #d43dff;
+  --spot-base:  #16092a;
+  --spot-shade: 0.38;
+}
+
+// Green — emerald into teal, lifted by a lime highlight (aurora)
+[data-theme="green"] .fm-spot__slide {
+  --spot-a:     #1fc874;
+  --spot-b:     #b8e83f;
+  --spot-c:     #12a9b0;
+  --spot-base:  #04160f;
+  --spot-shade: 0.42;
+}
+
+// Red — crimson into magenta, with an amber flare
+[data-theme="red"] .fm-spot__slide {
+  --spot-a:     #ff3a4c;
+  --spot-b:     #ff9a3c;
+  --spot-c:     #e8247f;
+  --spot-base:  #1d0609;
+  --spot-shade: 0.4;
+}
+
+// Orange — tangerine into coral pink, with a golden flare
+[data-theme="orange"] .fm-spot__slide {
+  --spot-a:     #ff7a2e;
+  --spot-b:     #ffc23d;
+  --spot-c:     #f23d6c;
+  --spot-base:  #1d0b04;
+  --spot-shade: 0.46;
+}
+
+// Yellow — gold into tangerine with a red-orange ember. The bright stops need
+// a heavier left shade so the white headline stays readable.
+[data-theme="yellow"] .fm-spot__slide {
+  --spot-a:     #f2c21b;
+  --spot-b:     #ff5a36;
+  --spot-c:     #ff9220;
+  --spot-base:  #1a1303;
+  --spot-shade: 0.52;
+}
+
+// Dianna — antique gold, bronze and champagne (cheetah gold, no pattern)
+[data-theme="dianna"] .fm-spot__slide {
+  --spot-a:     #d9ab45;
+  --spot-b:     #f0d79a;
+  --spot-c:     #a8572a;
+  --spot-base:  #170f05;
+  --spot-shade: 0.5;
 }
 
 @media (min-width: 720px) {
