@@ -1,0 +1,377 @@
+// ============================================================================
+// artistOfWeekCard.scss — the feed's Artist of the Week cover card.
+//
+// THEME RULE (same as every Unis page)
+//   The tint comes from --unis-primary via color-mix(), so all seven themes
+//   recolour the card. Gold is the one fixed colour: it means "award" in every
+//   theme. Never wrap a CSS variable in rgba() — that rule silently dies.
+//
+// MOTION
+//   A single gold sheen sweeps across once when the card appears; the photo
+//   eases in slightly on hover. Both are off under prefers-reduced-motion.
+// ============================================================================
+
+.aotw {
+  --aotw-gold:   #f3cf7a;
+  --aotw-gold-2: #c9962f;
+  --aotw-accent: var(--unis-primary, #163387);
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 320px;
+  max-height: 440px;
+  margin: 0;
+  padding: 22px 26px 24px;
+  border: 0;
+  border-radius: 22px;
+  background: #0b0b0e;
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+  box-shadow:
+    0 30px 60px -32px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.35s ease;
+  animation: aotw-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+
+  // Gold hairline border, brightest at the top-left and bottom-right corners.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      var(--aotw-gold) 0%,
+      color-mix(in srgb, var(--aotw-gold) 25%, transparent) 30%,
+      transparent 55%,
+      color-mix(in srgb, var(--aotw-gold) 70%, transparent) 100%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 36px 70px -32px rgba(0, 0, 0, 0.9),
+      0 0 70px -24px color-mix(in srgb, var(--aotw-accent) 80%, transparent),
+      0 0 0 1px rgba(255, 255, 255, 0.06);
+
+    .aotw-media img { transform: scale(1.06); }
+
+    .aotw-cta {
+      background: #fff;
+      color: #0b0b0e;
+      border-color: #fff;
+
+      svg { transform: translateX(3px); }
+    }
+  }
+
+  &:active { transform: translateY(-1px) scale(0.995); }
+
+  &:focus-visible {
+    outline: 2px solid var(--aotw-gold);
+    outline-offset: 3px;
+  }
+}
+
+// ── Photo / fallback ─────────────────────────────────────────────────────────
+
+.aotw-media {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 25%;
+    transform: scale(1.02);
+    transition: transform 1.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+}
+
+.aotw--no-photo .aotw-media {
+  background:
+    radial-gradient(circle at 78% 28%, color-mix(in srgb, var(--aotw-accent), white 18%) 0%, transparent 58%),
+    radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--aotw-accent), black 35%) 0%, transparent 60%),
+    #0b0b0e;
+}
+
+.aotw-monogram {
+  position: absolute;
+  right: 4%;
+  top: 50%;
+  transform: translateY(-56%);
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-style: italic;
+  font-size: clamp(180px, 30vw, 320px);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.14);
+  user-select: none;
+}
+
+// Darkens top and bottom for legibility, and washes the left side in the
+// user's theme colour so the card belongs to their Unis.
+.aotw-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(0, 0, 0, 0) 26%,
+      rgba(0, 0, 0, 0) 40%,
+      rgba(6, 6, 10, 0.8) 76%,
+      rgba(6, 6, 10, 0.95) 100%
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--aotw-accent) 55%, transparent) 0%,
+      transparent 62%
+    );
+}
+
+// One gold sweep when the card first appears.
+.aotw-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 236, 190, 0.22) 50%,
+    transparent 62%
+  );
+  mix-blend-mode: screen;
+  transform: translateX(-120%);
+  animation: aotw-sheen 1.6s cubic-bezier(0.4, 0, 0.2, 1) 0.45s both;
+}
+
+// ── Top row: award badge + place ─────────────────────────────────────────────
+
+.aotw-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aotw-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 5px 14px 5px 5px;
+  border-radius: 999px;
+  background: rgba(10, 10, 14, 0.55);
+  border: 1px solid color-mix(in srgb, var(--aotw-gold) 45%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.aotw-medal {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: #3a2806;
+  background: radial-gradient(circle at 30% 28%, #fff4cc 0%, var(--aotw-gold) 45%, var(--aotw-gold-2) 100%);
+  box-shadow:
+    0 0 18px -3px rgba(243, 207, 122, 0.65),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.aotw-badge-text {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--aotw-gold);
+  white-space: nowrap;
+}
+
+.aotw-place {
+  max-width: 45%;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ── Bottom: name, stats, call to action ──────────────────────────────────────
+
+.aotw-bottom {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.aotw-kicker {
+  margin-bottom: 4px;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-style: italic;
+  font-size: 20px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.aotw-name {
+  display: block;
+  max-width: 100%;
+  font-size: clamp(34px, 5.2vw, 60px);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  color: #fff;
+  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-bottom: 2px; // keeps descenders clear of the overflow clip
+}
+
+.aotw-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.aotw-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  min-width: 0;
+}
+
+.aotw-stat {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  strong {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  & + &::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 3px;
+    margin: 0 10px;
+    border-radius: 50%;
+    background: var(--aotw-gold);
+    vertical-align: middle;
+  }
+}
+
+.aotw-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 16px 0 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+
+  svg { transition: transform 0.2s ease; }
+}
+
+// ── Motion ───────────────────────────────────────────────────────────────────
+
+@keyframes aotw-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes aotw-sheen {
+  from { transform: translateX(-120%); }
+  to   { transform: translateX(120%); }
+}
+
+// ── Phones: portrait cover ───────────────────────────────────────────────────
+
+@media (max-width: 600px) {
+  .aotw {
+    aspect-ratio: 4 / 5;
+    min-height: 0;
+    max-height: 540px;
+    padding: 14px 16px 18px;
+    border-radius: 20px;
+  }
+
+  .aotw-badge { padding-right: 12px; gap: 8px; }
+  .aotw-medal { width: 24px; height: 24px; }
+  .aotw-badge-text { font-size: 10px; letter-spacing: 0.14em; }
+  .aotw-place { font-size: 11px; padding: 5px 10px; }
+
+  .aotw-kicker { font-size: 18px; }
+
+  // Long names wrap to two lines on a phone instead of being cut off.
+  .aotw-name {
+    font-size: clamp(32px, 10vw, 44px);
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1;
+  }
+
+  .aotw-foot { margin-top: 14px; }
+  .aotw-cta { height: 38px; padding: 0 14px 0 16px; font-size: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aotw,
+  .aotw-media img,
+  .aotw-cta,
+  .aotw-cta svg { transition: none; }
+
+  .aotw { animation: none; }
+  .aotw-sheen { display: none; }
+  .aotw:hover,
+  .aotw:active { transform: none; }
+  .aotw:hover .aotw-media img { transform: scale(1.02); }
+}

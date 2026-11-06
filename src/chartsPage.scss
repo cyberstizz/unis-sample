@@ -488,11 +488,19 @@
 
   &.is-current { background: var(--ch-accent); color: #fff; }
 
+  // The winner card's labelled pill. Its sizing must never be overridden by
+  // the small round button's rules (the phone block below used to shrink it
+  // to a 36px circle, crushing the glyph and the word "Play" together).
   &--big {
     width: auto;
     height: 42px;
+    flex-shrink: 0;
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
     gap: 8px;
+    line-height: 1;
+    white-space: nowrap;
     padding: 0 20px 0 16px;
     border-radius: 999px;
     background: var(--ch-accent);
@@ -639,7 +647,7 @@
   .ch-art { width: 46px; height: 46px; }
   .ch-reason { display: none; }
   .ch-points strong { font-size: 14px; }
-  .ch-play { width: 36px; height: 36px; }
+  .ch-play:not(.ch-play--big) { width: 36px; height: 36px; }
   .ch-top { right: 14px; bottom: 132px; }
 }
 

@@ -28,6 +28,7 @@ import { toLocalISO } from './utils/periodBounds';
 import { useReward } from './context/RewardContext';
 import { useFeedback } from './context/FeedbackContext';
 import { FeedSpotlight, TodayRace, DayTiles, MoversCard, FollowingDrops } from './feedModules';
+import ArtistOfWeekCard from './ArtistOfWeekCard';
 import './feed.scss';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1014,49 +1015,11 @@ const Feed = () => {
               {/* ═══════ ARTIST OF THE WEEK ═══════ */}
               {artistOfWeek && (
                 <section className={`feed-section ${animate ? 'animate' : ''}`}>
-                  <div
-                    className="artist-of-week"
-                    onClick={() => handleArtistNav(artistOfWeek.userId)}
-                  >
-                    <div className="artist-of-week-photo-wrap">
-                      <svg className="artist-of-week-crown" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-                        <path d="M3 18h18l-1.5-9-4.5 4-3-7-3 7-4.5-4L3 18z" fill="#eab308" />
-                      </svg>
-                      {/* An artist with no photo on file shows their initial,
-                          not a stock photograph of somebody else. */}
-                      <div className={`artist-of-week-photo${artistOfWeek.photoUrl ? '' : ' artist-of-week-photo--monogram'}`}>
-                        {artistOfWeek.photoUrl ? (
-                          <img
-                            src={artistOfWeek.photoUrl}
-                            alt={artistOfWeek.username}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.parentElement?.classList.add('artist-of-week-photo--monogram');
-                            }}
-                          />
-                        ) : (
-                          <span className="artist-of-week-initial" aria-hidden="true">
-                            {(artistOfWeek.username || '?').trim().charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* ★ feed #3: portrait-first. The circular image is the hero
-                        and fills the card; the caption sits beneath it, centred.
-                        Restored — this was reverted by 46230a8 (Jul 16). */}
-                    <div className="artist-of-week-caption">
-                      <div className="artist-of-week-label">
-                        Artist of the Week &middot; {selectedJurisdictionName}
-                      </div>
-                      <div className="artist-of-week-name">{artistOfWeek.username}</div>
-                      {artistOfWeek.votesCount > 0 && (
-                        <div className="artist-of-week-meta">
-                          {artistOfWeek.votesCount} vote{artistOfWeek.votesCount !== 1 ? 's' : ''} this week
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <ArtistOfWeekCard
+                    artist={artistOfWeek}
+                    place={selectedJurisdictionName}
+                    onOpen={() => handleArtistNav(artistOfWeek.userId)}
+                  />
                 </section>
               )}
 
