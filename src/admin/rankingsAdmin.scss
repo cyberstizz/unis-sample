@@ -103,6 +103,9 @@
   border-top: 1px solid var(--mx-border);
   padding-top: 24px;
 
+  // The referral email's section sits under the Sunday email's.
+  & + & { margin-top: 32px; }
+
   &__head {
     margin-bottom: 14px;
     h2 { margin: 0 0 6px; font-size: 20px; font-weight: 700; color: var(--mx-ink); }

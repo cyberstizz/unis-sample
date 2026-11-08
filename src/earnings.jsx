@@ -94,6 +94,17 @@ const TABS = [
   { id: 'how',       label: 'How It Works' },
 ];
 
+// /earnings?tab=referrals opens that tab (the "new in your network" email
+// links there). Anything else opens Overview.
+const initialTab = () => {
+  try {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    return TABS.some((t) => t.id === tab) ? tab : 'overview';
+  } catch {
+    return 'overview';
+  }
+};
+
 // ── Logging ─────────────────────────────────────────────────────────────────
 // Single prefixed logger so earnings activity is greppable in a production
 // console session alongside [Cache] and [PlayTracker].
@@ -153,7 +164,7 @@ const Earnings = () => {
   // error = { source: 'load' | 'stripe', message } — the source matters because
   // a ?stripe=refresh warning must survive the data load that follows it.
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [stripeLoading, setStripeLoading] = useState(false);
   const [payoutLoading, setPayoutLoading] = useState(false);
   // payoutStatus is tracked separately from the message. The old code inferred

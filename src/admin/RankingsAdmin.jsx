@@ -9,7 +9,7 @@
 //
 // Below the boards: the Sunday email. Preview builds this week's email from
 // live standings (as you, or as any user ID); "Send me a test" delivers it to
-// your own inbox.
+// your own inbox. Then the "new in your network" email, the same two buttons.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -270,6 +270,100 @@ const SundayEmail = () => {
   );
 };
 
+// ── The "new in your network" email ─────────────────────────────────────────
+// Sent automatically (backend ReferralNoticeScheduler) to everyone credited
+// for a new member. Preview and test are built from your own account: the new
+// member is your most recent referral, or a stand-in if you have none.
+
+const ReferralEmail = () => {
+  const [level, setLevel] = useState('1');
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState('');
+  const [message, setMessage] = useState(null);
+
+  const loadPreview = async () => {
+    setBusy('preview');
+    setMessage(null);
+    try {
+      const res = await apiCall({
+        method: 'get',
+        url: `/v1/admin/referral-notice/preview?level=${level}`,
+        useCache: false,
+      });
+      setPreview(res.data);
+    } catch (err) {
+      setMessage({ tone: 'bad', text: err?.response?.data?.error || 'Could not build the preview.' });
+      setPreview(null);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const sendTest = async () => {
+    setBusy('send');
+    setMessage(null);
+    try {
+      const res = await apiCall({ method: 'post', url: `/v1/admin/referral-notice/send-test?level=${level}` });
+      setMessage({ tone: 'good', text: `Sent to ${res.data?.sentTo}. It can take a minute to arrive.` });
+    } catch (err) {
+      setMessage({ tone: 'bad', text: err?.response?.data?.error || 'The test email could not be sent.' });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  return (
+    <section className="rka-email">
+      <header className="rka-email__head">
+        <div>
+          <h2>New in your network email</h2>
+          <p>
+            Goes out on its own, within about 10 minutes of a new member confirming their email, to
+            the person whose code they used (level 1) and the two people above them (levels 2 and 3).
+            Only people with email notifications on get it.
+          </p>
+        </div>
+      </header>
+
+      <div className="mx-controls">
+        <label className="mx-select">
+          <span>New member at</span>
+          <select value={level} onChange={(e) => { setLevel(e.target.value); setPreview(null); }}>
+            <option value="1">Level 1 (used your code)</option>
+            <option value="2">Level 2</option>
+            <option value="3">Level 3</option>
+          </select>
+        </label>
+        <button type="button" className="mx-btn" onClick={loadPreview} disabled={busy !== ''}>
+          {busy === 'preview' ? 'Building…' : 'Preview'}
+        </button>
+        <button type="button" className="mx-btn mx-btn--ghost" onClick={sendTest} disabled={busy !== ''}>
+          {busy === 'send' ? 'Sending…' : 'Send me a test'}
+        </button>
+      </div>
+
+      {message && <p className={`rka-msg rka-msg--${message.tone}`} role="status">{message.text}</p>}
+
+      {preview && (
+        <div className="rka-inbox">
+          <div className="rka-inbox__meta">
+            <span className="rka-inbox__from">Unis</span>
+            <span className="rka-inbox__subject">{preview.subject}</span>
+            <span className="rka-inbox__pre">{preview.preheader}</span>
+            <span className="rka-inbox__to">For {preview.recipient}</span>
+          </div>
+          <iframe
+            className="rka-inbox__frame"
+            title={`Referral email preview for ${preview.recipient}`}
+            srcDoc={preview.html}
+            sandbox=""
+          />
+        </div>
+      )}
+    </section>
+  );
+};
+
 // ── Page ────────────────────────────────────────────────────────────────────
 
 const RankingsAdmin = () => {
@@ -337,6 +431,7 @@ const RankingsAdmin = () => {
         </div>
 
         <SundayEmail />
+        <ReferralEmail />
       </div>
     </Layout>
   );
