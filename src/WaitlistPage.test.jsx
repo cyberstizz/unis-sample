@@ -74,18 +74,18 @@ beforeEach(() => {
       });
     }),
     http.get(`${API}/v1/waitlist/check-referral/:code`, ({ params }) => {
-      if (params.code === 'UNIS-VALID1') return HttpResponse.json({ valid: true });
+      if (params.code === 'UNIS-VALID1') return HttpResponse.json({ valid: true, referrerUsername: 'friend' });
       return HttpResponse.json({ valid: false });
     }),
     // FIX #10: Live region stats endpoint
-    http.get(`${API}/v1/waitlist/region-stats`, ({ request }) => {
+    http.get(`${API}/v1/waitlist/region-progress`, ({ request }) => {
       const url = new URL(request.url);
       return HttpResponse.json({
         signupCount: 42,
         threshold: 100,
         progressPercent: 42,
-        stateCode: url.searchParams.get('stateCode'),
-        metroRegion: url.searchParams.get('metroRegion'),
+        stateCode: url.searchParams.get('state'),
+        metroRegion: url.searchParams.get('metro'),
       });
     })
   );
@@ -122,6 +122,7 @@ async function fillValidForm(user) {
   });
 
   await user.selectOptions(getMetroSelect(), 'Los Angeles');
+  await user.type(screen.getByPlaceholderText(/UNIS-AB12CD/i), 'UNIS-VALID1');
 }
 
 // ===========================================================================
@@ -167,9 +168,12 @@ describe('WaitlistPage — initial render', () => {
     expect(screen.queryByText(/Metro \/ Region/i)).not.toBeInTheDocument();
   });
 
-  it('renders referral code field as optional', () => {
+  it('renders the referral code field as required', () => {
     renderWithProviders(<WaitlistPage />, { as: 'guest' });
-    expect(screen.getByPlaceholderText(/UNIS-XXXXXX/i)).toBeInTheDocument();
+    const input = screen.getByPlaceholderText(/UNIS-AB12CD/i);
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByText(/^Referral code$/i)).toBeInTheDocument();
   });
 
   it('renders the submit button labeled "Join the Waitlist"', () => {
@@ -407,7 +411,7 @@ describe('WaitlistPage — referral code validation', () => {
     const user = userEvent.setup();
     renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    const refInput = screen.getByPlaceholderText(/UNIS-AB12CD/i);
     await user.type(refInput, 'unis-abc123');
 
     expect(refInput).toHaveValue('UNIS-ABC123');
@@ -417,7 +421,7 @@ describe('WaitlistPage — referral code validation', () => {
     const user = userEvent.setup();
     renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    const refInput = screen.getByPlaceholderText(/UNIS-AB12CD/i);
     await user.type(refInput, 'UNIS-VALID1');
     fireEvent.blur(refInput);
 
@@ -428,12 +432,12 @@ describe('WaitlistPage — referral code validation', () => {
     });
   });
 
-  it('does NOT fire check when code is shorter than 5 chars', async () => {
+  it('does NOT fire check when code is shorter than 3 chars', async () => {
     const user = userEvent.setup();
     renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
-    await user.type(refInput, 'UNIS');
+    const refInput = screen.getByPlaceholderText(/UNIS-AB12CD/i);
+    await user.type(refInput, 'UN');
     fireEvent.blur(refInput);
 
     await new Promise(r => setTimeout(r, 100));
@@ -445,7 +449,7 @@ describe('WaitlistPage — referral code validation', () => {
     const user = userEvent.setup();
     const { container } = renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    const refInput = screen.getByPlaceholderText(/UNIS-AB12CD/i);
     await user.type(refInput, 'UNIS-VALID1');
     fireEvent.blur(refInput);
 
@@ -459,7 +463,7 @@ describe('WaitlistPage — referral code validation', () => {
     const user = userEvent.setup();
     const { container } = renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    const refInput = screen.getByPlaceholderText(/UNIS-AB12CD/i);
     await user.type(refInput, 'UNIS-WRONG1');
     fireEvent.blur(refInput);
 
@@ -479,7 +483,7 @@ describe('WaitlistPage — referral code validation', () => {
     const user = userEvent.setup();
     renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    const refInput = screen.getByPlaceholderText(/UNIS-AB12CD/i);
     await user.type(refInput, 'UNIS-BROKEN');
     fireEvent.blur(refInput);
 
@@ -568,6 +572,7 @@ describe('WaitlistPage — submit flow', () => {
     await user.selectOptions(getMetroSelect(), 'Other');
 
     await user.type(screen.getByPlaceholderText(/Shreveport, Bakersfield/i), 'Bakersfield');
+    await user.type(screen.getByPlaceholderText(/UNIS-AB12CD/i), 'UNIS-VALID1');
     await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
 
     await waitFor(() => {
@@ -595,7 +600,6 @@ describe('WaitlistPage — submit flow', () => {
     renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
     await fillValidForm(user);
-    await user.type(screen.getByPlaceholderText(/UNIS-XXXXXX/i), 'UNIS-VALID1');
     await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
 
     await waitFor(() => {
@@ -604,17 +608,32 @@ describe('WaitlistPage — submit flow', () => {
     });
   });
 
-  it('sends null referredByCode when omitted', async () => {
+  it('refuses to submit without a referral code', async () => {
     const user = userEvent.setup();
     renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
     await fillValidForm(user);
+    await user.clear(screen.getByPlaceholderText(/UNIS-AB12CD/i));
     await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
 
-    await waitFor(() => {
-      const payload = callsMatching('/v1/waitlist/register', 'post')[0].data;
-      expect(payload.referredByCode).toBeNull();
-    });
+    expect(await screen.findByRole('alert')).toHaveTextContent(/referral code is required/i);
+    expect(callsMatching('/v1/waitlist/register', 'post').length).toBe(0);
+  });
+
+  it('refuses to submit with a code that was checked and is not valid', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WaitlistPage />, { as: 'guest' });
+
+    await fillValidForm(user);
+    const input = screen.getByPlaceholderText(/UNIS-AB12CD/i);
+    await user.clear(input);
+    await user.type(input, 'NOPE-123');
+    await user.tab();
+    await waitFor(() => expect(callsMatching(/\/waitlist\/check-referral\//).length).toBeGreaterThan(0));
+    await user.click(screen.getByRole('button', { name: /Join the Waitlist/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/isn.t valid/i);
+    expect(callsMatching('/v1/waitlist/register', 'post').length).toBe(0);
   });
 
   it('shows "Joining..." loading text during submission', async () => {
@@ -1014,20 +1033,20 @@ describe('WaitlistPage — UX Fix #4: motivating "N more to unlock" copy', () =>
 describe('WaitlistPage — UX Fix #5: referral code benefit explanation', () => {
   it('shows helper text explaining referral benefit when field is empty', () => {
     renderWithProviders(<WaitlistPage />, { as: 'guest' });
-    expect(screen.getByText(/Got a code from a friend/i)).toBeInTheDocument();
-    expect(screen.getByText(/you both benefit when your regions activate/i)).toBeInTheDocument();
+    expect(screen.getByText(/Everyone gets to Unis through someone/i)).toBeInTheDocument();
+    expect(screen.getByText(/They get the credit/i)).toBeInTheDocument();
   });
 
   it('shows success message after valid referral is entered', async () => {
     const user = userEvent.setup();
     renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
-    const refInput = screen.getByPlaceholderText(/UNIS-XXXXXX/i);
+    const refInput = screen.getByPlaceholderText(/UNIS-AB12CD/i);
     await user.type(refInput, 'UNIS-VALID1');
     fireEvent.blur(refInput);
 
     await waitFor(() => {
-      expect(screen.getByText(/you'll help boost their region too/i)).toBeInTheDocument();
+      expect(screen.getByText(/friend gets the credit for bringing you to Unis/i)).toBeInTheDocument();
     });
   });
 });
@@ -1133,7 +1152,7 @@ describe('WaitlistPage — UX Fix #9: state dropdown with typeahead', () => {
 });
 
 describe('WaitlistPage — UX Fix #10: live region stats before submit', () => {
-  it('fetches /v1/waitlist/region-stats when state + metro are both selected', async () => {
+  it('fetches /v1/waitlist/region-progress when state + metro are both selected', async () => {
     const user = userEvent.setup();
     renderWithProviders(<WaitlistPage />, { as: 'guest' });
 
@@ -1142,10 +1161,10 @@ describe('WaitlistPage — UX Fix #10: live region stats before submit', () => {
     await user.selectOptions(getMetroSelect(), 'Los Angeles');
 
     await waitFor(() => {
-      const statsCalls = callsMatching(/\/waitlist\/region-stats/);
+      const statsCalls = callsMatching(/\/waitlist\/region-progress/);
       expect(statsCalls.length).toBeGreaterThanOrEqual(1);
-      expect(statsCalls[0].url).toContain('stateCode=CA');
-      expect(statsCalls[0].url).toContain('metroRegion=');
+      expect(statsCalls[0].url).toContain('state=CA');
+      expect(statsCalls[0].url).toContain('metro=');
     });
   });
 
@@ -1156,7 +1175,7 @@ describe('WaitlistPage — UX Fix #10: live region stats before submit', () => {
     await user.selectOptions(getStateSelect(), 'CA');
 
     await new Promise(r => setTimeout(r, 150));
-    expect(callsMatching(/\/waitlist\/region-stats/).length).toBe(0);
+    expect(callsMatching(/\/waitlist\/region-progress/).length).toBe(0);
   });
 
   it('displays "N people already waiting" copy when stats return', async () => {
@@ -1187,7 +1206,7 @@ describe('WaitlistPage — UX Fix #10: live region stats before submit', () => {
 
   it('shows "You\'ll be the first from <metro>!" when count is 0', async () => {
     server.use(
-      http.get(`${API}/v1/waitlist/region-stats`, () =>
+      http.get(`${API}/v1/waitlist/region-progress`, () =>
         HttpResponse.json({ signupCount: 0, threshold: 100, progressPercent: 0 })
       )
     );
@@ -1206,7 +1225,7 @@ describe('WaitlistPage — UX Fix #10: live region stats before submit', () => {
 
   it('silently handles region stats endpoint errors', async () => {
     server.use(
-      http.get(`${API}/v1/waitlist/region-stats`, () =>
+      http.get(`${API}/v1/waitlist/region-progress`, () =>
         new HttpResponse(null, { status: 500 })
       )
     );
@@ -1233,14 +1252,14 @@ describe('WaitlistPage — UX Fix #10: live region stats before submit', () => {
     await user.selectOptions(getMetroSelect(), 'Los Angeles');
 
     await waitFor(() => {
-      expect(callsMatching(/\/waitlist\/region-stats/).length).toBeGreaterThanOrEqual(1);
+      expect(callsMatching(/\/waitlist\/region-progress/).length).toBeGreaterThanOrEqual(1);
     });
-    const firstCount = callsMatching(/\/waitlist\/region-stats/).length;
+    const firstCount = callsMatching(/\/waitlist\/region-progress/).length;
 
     await user.selectOptions(getMetroSelect(), 'San Diego');
 
     await waitFor(() => {
-      expect(callsMatching(/\/waitlist\/region-stats/).length).toBeGreaterThan(firstCount);
+      expect(callsMatching(/\/waitlist\/region-progress/).length).toBeGreaterThan(firstCount);
     });
   });
 });

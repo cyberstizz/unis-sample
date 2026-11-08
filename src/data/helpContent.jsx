@@ -2239,10 +2239,15 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              You pick your state and your metro area, choose whether you are a
-              listener or an artist, and set your username and password. Your
-              account is created right then — it just does not open until your
-              region does.
+              You enter the referral code of whoever told you about Unis, pick
+              your state and your metro area, choose whether you are a listener
+              or an artist, and set your username and password.
+            </p>
+            <p>
+              Every sign-up needs a referral code, on the waitlist too. Everyone
+              hears about Unis from someone, and that person gets the credit. A
+              friend&rsquo;s waitlist code, a member&rsquo;s code, or the code on
+              a Unis poster all work.
             </p>
             <p>
               Your username is reserved from that moment. Nobody else can take

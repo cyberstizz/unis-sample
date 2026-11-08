@@ -9,6 +9,11 @@ import US_STATES_AND_METROS from './data/Usstatesandmetros';
 // (WaitlistLanding) comes first and passes along what the visitor already
 // chose: ?ref (a friend's code from a share link), ?state and ?metro (the city
 // they checked), ?type=artist.
+//
+// A referral code is required: everyone hears about Unis from someone, and
+// that person gets the credit. Any code works — someone else's waitlist code
+// (UNIS-AB12CD), a member's code, or a short code from a poster (HARLEM). The
+// backend refuses a sign-up without one (PreRegistrationService).
 const initialForm = (params) => {
   const state = (params.get('state') || '').toUpperCase();
   const stateCode = US_STATES_AND_METROS[state] ? state : '';
@@ -35,6 +40,7 @@ const WaitlistPage = () => {
   const [error, setError] = useState('');
   const [referralValid, setReferralValid] = useState(null);
   const [referralChecking, setReferralChecking] = useState(false);
+  const [referrerName, setReferrerName] = useState('');
   const [copied, setCopied] = useState(false);
   const feedback = useFeedback();
 
@@ -68,16 +74,23 @@ const WaitlistPage = () => {
   };
 
   const checkReferral = useCallback(async (code) => {
-    if (!code || code.trim().length < 5) {
+    if (!code || code.trim().length < 3) {
       setReferralValid(null);
+      setReferrerName('');
       return;
     }
     setReferralChecking(true);
     try {
-      const res = await apiCall({ url: `/v1/waitlist/check-referral/${code.trim()}`, method: 'get' });
+      const res = await apiCall({
+        url: `/v1/waitlist/check-referral/${encodeURIComponent(code.trim())}`,
+        method: 'get',
+        useCache: false,
+      });
       setReferralValid(res.data.valid);
+      setReferrerName(res.data.valid ? res.data.referrerUsername || '' : '');
     } catch {
       setReferralValid(null);
+      setReferrerName('');
     } finally {
       setReferralChecking(false);
     }
@@ -101,7 +114,7 @@ const WaitlistPage = () => {
       setRegionStatsLoading(true);
       try {
         const res = await apiCall({
-          url: `/v1/waitlist/region-stats?stateCode=${form.stateCode}&metroRegion=${encodeURIComponent(form.metroRegion)}`,
+          url: `/v1/waitlist/region-progress?state=${encodeURIComponent(form.stateCode)}&metro=${encodeURIComponent(form.metroRegion)}`,
           method: 'get',
         });
         if (!cancelled) setRegionStats(res.data);
@@ -155,6 +168,16 @@ const WaitlistPage = () => {
       scrollToError();
       return;
     }
+    if (!form.referredByCode.trim()) {
+      setError('A referral code is required. Ask the person who told you about Unis for theirs.');
+      scrollToError();
+      return;
+    }
+    if (referralValid === false) {
+      setError('That referral code isn’t valid. Check it with the person who gave it to you.');
+      scrollToError();
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -170,7 +193,7 @@ const WaitlistPage = () => {
         stateName: selectedState.name,
         metroRegion: form.metroRegion,
         cityFreetext: form.cityFreetext || null,
-        referredByCode: form.referredByCode || null,
+        referredByCode: form.referredByCode.trim(),
       };
       const res = await apiCall({ url: '/v1/waitlist/register', method: 'post', data: payload });
       setResult(res.data);
@@ -662,15 +685,17 @@ const WaitlistPage = () => {
           {/* FIX #5: Referral code with benefit explanation */}
           <div style={fieldGroup}>
             <label style={labelStyle}>
-              Referral Code <span style={{ color: '#555' }}>(optional)</span>
+              Referral code
             </label>
             <div style={{ position: 'relative' }}>
               <input
                 type="text"
                 value={form.referredByCode}
-                onChange={e => handleChange('referredByCode', e.target.value.toUpperCase())}
+                onChange={e => { handleChange('referredByCode', e.target.value.toUpperCase()); setReferralValid(null); setReferrerName(''); }}
                 onBlur={e => checkReferral(e.target.value)}
-                placeholder="UNIS-XXXXXX"
+                placeholder="e.g. UNIS-AB12CD or HARLEM"
+                aria-required="true"
+                aria-invalid={referralValid === false || undefined}
                 style={{
                   ...inputStyle,
                   paddingRight: '44px',
@@ -692,7 +717,7 @@ const WaitlistPage = () => {
                   </svg>
                 </div>
               )}
-              {referralValid === false && form.referredByCode.length >= 5 && (
+              {referralValid === false && form.referredByCode.length >= 3 && (
                 <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)' }}>
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <circle cx="10" cy="10" r="9" fill="rgba(239,68,68,0.2)" stroke="#ef4444" strokeWidth="1.5" />
@@ -703,11 +728,16 @@ const WaitlistPage = () => {
             </div>
             {referralValid === true ? (
               <div style={{ color: '#22c55e', fontSize: '12px', marginTop: '6px' }}>
-                ✓ Nice — you'll help boost their region too when Unis activates.
+                ✓ {referrerName ? `${referrerName} gets the credit for bringing you to Unis.` : 'Valid code.'}
+              </div>
+            ) : referralValid === false && form.referredByCode.length >= 3 ? (
+              <div style={{ color: '#ef4444', fontSize: '12px', marginTop: '6px' }}>
+                That code isn’t valid. Check it with the person who gave it to you.
               </div>
             ) : (
               <div style={{ color: '#666', fontSize: '12px', marginTop: '6px' }}>
-                Got a code from a friend? Enter it — you both benefit when your regions activate.
+                Everyone gets to Unis through someone. Enter the code of the friend, artist or shop that
+                told you about Unis. They get the credit.
               </div>
             )}
           </div>
