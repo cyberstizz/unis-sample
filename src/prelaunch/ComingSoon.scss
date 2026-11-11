@@ -86,6 +86,17 @@
     align-self: center;
     margin-top: 0;
   }
+
+  // No launch date set → no countdown, so drop the empty clock column.
+  .cs-main.cs-main--no-date {
+    max-width: 1240px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'status'
+      'headline'
+      'lede'
+      'actions';
+  }
 }
 
 .cs-status {

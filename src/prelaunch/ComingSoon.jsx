@@ -11,8 +11,10 @@
 // "How Unis works" opens the help center (/help is open before launch), and
 // the waitlist link opens the pitch page for people outside Harlem.
 //
-// The "Doors open in" countdown (LaunchCountdown) sits beside the headline on
-// wide screens and under the copy on phones; its date is in prelaunchConfig.
+// The "Doors open in" countdown (LaunchCountdown) only shows when a launch date
+// is set (VITE_LAUNCH_AT, see prelaunchConfig). With a date it sits beside the
+// headline on wide screens and under the copy on phones. Without one, the page
+// says "Opening soon in Harlem" and the copy fills the full width.
 // =============================================================================
 
 import { useMemo, useState, useEffect } from 'react';
@@ -20,6 +22,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CreateAccountWizard from '../createAccountWizard';
 import LaunchCountdown from './LaunchCountdown';
+import { getLaunchLabel } from './prelaunchConfig';
 // Same logo files the app header uses, picked the same way (see header.jsx).
 import logoblue from '../assets/unisLogoThree.svg';
 import logoorange from '../assets/logo-orange.png';
@@ -93,12 +96,15 @@ export default function ComingSoon({ autoSignup = false, initialReferralCode = '
   const [showSignup, setShowSignup] = useState(autoSignup);
   const [justSignedUp, setJustSignedUp] = useState(false);
   const bars = useMemo(() => buildSkyline(), []);
+  // e.g. "December 5th", or null while no launch date is set.
+  const launchLabel = useMemo(() => getLaunchLabel(), []);
+  const statusLine = launchLabel ? `Launching ${launchLabel}` : 'Opening soon in Harlem';
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'Unis — launching November 22nd';
+    document.title = launchLabel ? `Unis — launching ${launchLabel}` : 'Unis — opening soon in Harlem';
     return () => { document.title = previous; };
-  }, []);
+  }, [launchLabel]);
 
   const handle = user?.username || user?.displayName || null;
   // Guests always get the default blue mark, exactly as the header does.
@@ -115,10 +121,10 @@ export default function ComingSoon({ autoSignup = false, initialReferralCode = '
         </nav>
       </header>
 
-      <main className="cs-main">
+      <main className={`cs-main${launchLabel ? '' : ' cs-main--no-date'}`}>
         <p className="cs-status">
           <span className="cs-status-dot" aria-hidden="true" />
-          Launching November 22nd
+          {statusLine}
         </p>
 
         <h1 className="cs-headline">
@@ -132,7 +138,7 @@ export default function ComingSoon({ autoSignup = false, initialReferralCode = '
           account is ready the day we open.
         </p>
 
-        <LaunchCountdown />
+        {launchLabel && <LaunchCountdown />}
 
         <div className="cs-actions" aria-live="polite">
           {user ? (

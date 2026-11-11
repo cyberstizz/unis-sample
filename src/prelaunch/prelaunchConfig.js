@@ -36,16 +36,32 @@ export const OPEN_PATHS = [
   '/team',      // the street team: pitch page, join form, meetup replies (email links)
 ];
 
-// The launch moment the Coming soon countdown counts down to: midnight in
-// Harlem (Eastern time) on Saturday, November 22, 2026. If the date moves, set
-// VITE_LAUNCH_AT in Netlify to any ISO date (e.g. 2026-12-05T00:00:00-05:00)
-// and redeploy; no code change needed.
-export const DEFAULT_LAUNCH_AT = '2026-11-22T00:00:00-05:00';
-
+// The launch date is OPTIONAL. There is no hard-coded date anymore.
+//   VITE_LAUNCH_AT unset (or not a real date) → no countdown, and the page
+//     says "Opening soon in Harlem". This is the setting until the launch
+//     gates are close to being met.
+//   VITE_LAUNCH_AT set to an ISO date (e.g. 2026-12-05T00:00:00-05:00, which
+//     is midnight in Harlem) → the "Launching December 5th" line and the
+//     countdown come back. Set it in Netlify and redeploy; no code change needed.
 export function getLaunchAt() {
   const raw = String(import.meta.env.VITE_LAUNCH_AT ?? '').trim();
-  const parsed = Date.parse(raw || DEFAULT_LAUNCH_AT);
-  return Number.isFinite(parsed) ? parsed : Date.parse(DEFAULT_LAUNCH_AT);
+  if (!raw) return null;
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+// "December 5th", in Harlem time, or null when no launch date is set.
+export function getLaunchLabel() {
+  const launchAt = getLaunchAt();
+  if (launchAt === null) return null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    month: 'long', day: 'numeric', timeZone: 'America/New_York',
+  }).formatToParts(new Date(launchAt));
+  const month = parts.find((p) => p.type === 'month')?.value;
+  const day = Number(parts.find((p) => p.type === 'day')?.value);
+  const teen = day % 100 >= 11 && day % 100 <= 13;
+  const suffix = teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th');
+  return `${month} ${day}${suffix}`;
 }
 
 export function isPrelaunch() {
