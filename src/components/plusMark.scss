@@ -1,0 +1,36 @@
+// PlusMark — the Unis Plus lockup (see PlusMark.jsx).
+// --pm-h is the cap height in px; everything below is proportional to it, using
+// the same measurements as the wordmark (205-unit cap height).
+
+.plus-mark {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: calc(var(--pm-h, 28px) * 0.195); // one letter-stroke of air before the +
+  line-height: 0;
+  vertical-align: middle;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.plus-mark__word {
+  flex: none;
+  background-repeat: no-repeat;
+  // width/height/background-size/position are set inline from the crop table.
+}
+
+.plus-mark__plus {
+  flex: none;
+  width: calc(var(--pm-h, 28px) * 0.546);
+  height: calc(var(--pm-h, 28px) * 0.546);
+  margin-top: calc(var(--pm-h, 28px) * -0.046); // rides just above the cap line
+  overflow: visible; // lets the glow breathe outside the viewBox
+}
+
+.plus-mark__glow {
+  fill: var(--unis-primary-2, #1476d0);
+  opacity: 0.42;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .plus-mark__glow { opacity: 0.2; }
+}

@@ -33,6 +33,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiCall } from './axiosInstance';
 import { buildUrl } from '../utils/buildUrl';
 import { usePlusStatus } from '../utils/plusStatus';
+import PlusMark from './PlusMark';
 import './adSlot.scss';
 
 const ADSENSE_CLIENT = String(import.meta.env.VITE_ADSENSE_CLIENT || '').trim();
@@ -132,8 +133,9 @@ const AdSenseUnit = ({ slot }) => {
 const HouseCard = ({ kind, priceCents }) => {
   if (kind === 'plus') {
     return (
-      <Link className="ad-house" to="/plus">
-        <span className="ad-house__title">Go ad-free with Unis Plus</span>
+      <Link className="ad-house ad-house--plus" to="/plus" aria-label="Go ad-free with Unis Plus">
+        <span className="ad-house__brand"><PlusMark height={15} /></span>
+        <span className="ad-house__title">Go ad-free</span>
         <span className="ad-house__body">
           {formatPrice(priceCents)} a month. 60% goes to artists, starting with the one you support.
         </span>

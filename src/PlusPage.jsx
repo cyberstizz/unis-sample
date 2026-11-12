@@ -20,6 +20,7 @@ import Layout from './layout';
 import { apiCall } from './components/axiosInstance';
 import { useFeedback } from './context/FeedbackContext';
 import { refreshPlusStatus, DEFAULT_PLUS_STATUS } from './utils/plusStatus';
+import PlusMark from './components/PlusMark';
 import './plusPage.scss';
 
 const POLL_MS = 2500;
@@ -128,9 +129,12 @@ const PlusPage = () => {
   return (
     <Layout>
       <div className="plus-page">
-        <header className="plus-hero">
-          <span className="plus-hero__eyebrow">Unis Plus</span>
-          <h1>No ads. Your money backs the artists you play.</h1>
+        <header className={`plus-hero ${s.plus ? 'plus-hero--member' : ''}`}>
+          <div className="plus-hero__brand">
+            <PlusMark height={40} />
+            {loaded && s.plus && <span className="plus-hero__chip">Member</span>}
+          </div>
+          <h1>No ads. Your money backs <em>the artists you play.</em></h1>
           <p>
             {dollars(price)} a month. Every month, 60% of what&rsquo;s left after Stripe&rsquo;s fees goes to
             artists: 15% to the artist you support, no matter what, and 45% to the artists you play.
