@@ -12,8 +12,9 @@
 //      ("Sponsored · Local"), bought on /sponsor by a Harlem business.
 //   3. A Google AdSense unit ("Advertisement"), once VITE_ADSENSE_CLIENT and
 //      this placement's VITE_ADSENSE_SLOT_… are set in Netlify.
-//   4. Otherwise a Unis card: "Go ad-free with Unis Plus" for signed-in
-//      members, or "Your business here" (→ /sponsor) for everyone else.
+//   4. Otherwise a Unis card: the Unis Plus card for signed-in members — with
+//      "Support <their supported artist>" and that artist's photo when they
+//      have one — or "Your business here" (→ /sponsor) for everyone else.
 //
 // The space is reserved (fixed minimum height) so the page doesn't jump, the
 // AdSense unit is pushed once per mount and again on each route change, and
@@ -130,14 +131,57 @@ const AdSenseUnit = ({ slot }) => {
   );
 };
 
-const HouseCard = ({ kind, priceCents }) => {
+// The supported artist on the Plus card. One small request per browser (the
+// profile endpoint is cached as type "user" and cleared whenever the account
+// changes, including a new supported artist), shared by every slot on a page.
+const useSupportedArtist = (artistId, enabled) => {
+  const [artist, setArtist] = useState(null);
+  useEffect(() => {
+    if (!enabled || !artistId) { setArtist(null); return undefined; }
+    let cancelled = false;
+    apiCall({ method: 'get', url: `/v1/users/profile/${artistId}` })
+      .then((res) => {
+        const d = res?.data;
+        if (!cancelled && d?.username) setArtist({ userId: artistId, name: d.username, photoUrl: d.photoUrl || null });
+      })
+      .catch((err) => {
+        console.warn('[AdSlot] supported artist failed:', err?.response?.status, err?.message);
+        if (!cancelled) setArtist(null);
+      });
+    return () => { cancelled = true; };
+  }, [artistId, enabled]);
+  return artist;
+};
+
+const HouseCard = ({ kind, priceCents, artist }) => {
   if (kind === 'plus') {
+    const photo = artist ? buildUrl(artist.photoUrl) : null;
+    const price = formatPrice(priceCents);
     return (
-      <Link className="ad-house ad-house--plus" to="/plus" aria-label="Go ad-free with Unis Plus">
+      <Link
+        className="ad-house ad-house--plus"
+        to="/plus"
+        aria-label={artist ? `Support ${artist.name} with Unis Plus` : 'Go ad-free with Unis Plus'}
+      >
         <span className="ad-house__brand"><PlusMark height={15} /></span>
-        <span className="ad-house__title">Go ad-free</span>
+        {artist ? (
+          <span className="ad-house__title ad-house__support" title={`Support ${artist.name}`}>
+            <span className="ad-house__avatar" aria-hidden="true">
+              {photo
+                ? <img src={photo} alt="" loading="lazy" />
+                : <span className="ad-house__initial">{artist.name.charAt(0).toUpperCase()}</span>}
+            </span>
+            <span className="ad-house__support-text">
+              Support <strong className="ad-house__name">{artist.name}</strong>
+            </span>
+          </span>
+        ) : (
+          <span className="ad-house__title">Go ad-free</span>
+        )}
         <span className="ad-house__body">
-          {formatPrice(priceCents)} a month. 60% goes to artists, starting with the one you support.
+          {artist
+            ? `${price} a month, no ads. They get a cut every month, and so do the artists you play.`
+            : `${price} a month. 60% goes to artists, starting with the one you support.`}
         </span>
         <span className="ad-house__cta">See Unis Plus</span>
       </Link>
@@ -170,6 +214,10 @@ const LiveAdSlot = ({ placement, variant = 'banner', className = '' }) => {
   const [houseKind] = useState(() => (Math.random() < 0.75 ? 'plus' : 'sponsor'));
 
   const blocked = isNoAdPath(pathname) || Boolean(plus.plus);
+  const supportedArtist = useSupportedArtist(
+    user?.supportedArtistId || null,
+    !blocked && Boolean(userId) && houseKind === 'plus',
+  );
 
   useEffect(() => {
     if (blocked) return undefined;
@@ -204,7 +252,7 @@ const LiveAdSlot = ({ placement, variant = 'banner', className = '' }) => {
   } else {
     const kind = userId && plus.available ? houseKind : 'sponsor';
     label = 'From Unis';
-    body = <HouseCard kind={kind} priceCents={plus.priceCents} />;
+    body = <HouseCard kind={kind} priceCents={plus.priceCents} artist={kind === 'plus' ? supportedArtist : null} />;
   }
 
   return (

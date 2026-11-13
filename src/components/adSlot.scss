@@ -164,6 +164,52 @@
 
     .ad-house__brand { display: block; margin-bottom: 4px; }
     .ad-house__title { font-size: 14px; letter-spacing: -0.01em; }
+
+    // "Support <artist>" with their photo — same row height as the plain
+    // title, so the card doesn't grow. Long names get an ellipsis.
+    .ad-house__support {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      max-width: 100%;
+      min-width: 0;
+      line-height: 18px;
+    }
+    .ad-house__avatar {
+      flex: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      overflow: hidden;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--unis-primary-soft, rgba(86, 140, 255, 0.14));
+      box-shadow: 0 0 0 1.5px var(--unis-primary, #3b82f6), 0 0 8px var(--unis-primary-glow, rgba(86, 140, 255, 0.35));
+      img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    }
+    .ad-house__initial {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--unis-primary-2, #9cc0ff);
+    }
+    .ad-house__support-text {
+      display: flex;
+      align-items: baseline;
+      gap: 0.3em;
+      min-width: 0;
+      font-weight: 500;
+      color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+    }
+    .ad-house__name {
+      min-width: 0;
+      max-width: 22ch;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 700;
+      color: var(--unis-text, #fff);
+    }
     .ad-house__cta {
       display: inline-flex;
       align-items: center;
@@ -180,7 +226,11 @@
   }
 }
 
-.ad-slot--rail .ad-house--plus .ad-house__cta { align-self: center; }
+.ad-slot--rail .ad-house--plus {
+  .ad-house__cta { align-self: center; }
+  .ad-house__support { justify-content: center; }
+  .ad-house__name { max-width: 16ch; }
+}
 
 @media (max-width: 520px) {
   .ad-sponsor {
