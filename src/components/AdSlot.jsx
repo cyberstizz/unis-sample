@@ -180,8 +180,8 @@ const HouseCard = ({ kind, priceCents, artist }) => {
         )}
         <span className="ad-house__body">
           {artist
-            ? `${price} a month, no ads. They get a cut every month, and so do the artists you play.`
-            : `${price} a month. 60% goes to artists, starting with the one you support.`}
+            ? `${price} a month, no ads. Half of it goes straight to them, every month.`
+            : `${price} a month. Half goes straight to the artist you support.`}
         </span>
         <span className="ad-house__cta">See Unis Plus</span>
       </Link>

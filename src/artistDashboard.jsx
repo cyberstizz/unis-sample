@@ -768,7 +768,7 @@ const ArtistDashboard = () => {
     // this document is distributed to any artist.
     const rows = [
       ['Direct song sales & downloads', '90% to Artist*'],
-      ['Unis Plus: 15% from members who support you + 45% by plays', '60% to Artists'],
+      ['Unis Plus: half of each supporting member\'s fee + a share by plays', '$3.50 of $4.99 to Artists'],
       ['Audio ads on your songs (coming soon)', '60% to Artist'],
       ['Community Share from your supporters', '15% to Artist'],
     ];

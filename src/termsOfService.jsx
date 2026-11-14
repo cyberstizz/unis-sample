@@ -12,7 +12,7 @@ const TermsOfService = () => {
           <header className="terms-header">
             <h1>Unis Terms of Service</h1>
             <div className="terms-meta">
-              <p><strong>Effective Date:</strong> October 28, 2026</p>
+              <p><strong>Effective Date:</strong> November 13, 2026</p>
               <p><strong>Last Updated:</strong> October 28, 2026</p>
             </div>
           </header>
@@ -434,24 +434,17 @@ const TermsOfService = () => {
             <h3>11.1 Revenue Share</h3>
             <p>
               Eligible artists will receive <strong>sixty percent (60%) of Net Streaming Revenue</strong> attributable 
-              to their content. &ldquo;Net Streaming Revenue&rdquo; means: (a) revenue from audio advertisements 
-              played immediately before or during streams of the artist&rsquo;s songs; and (b) when Unis offers its 
-              paid subscription (&ldquo;Unis Plus&rdquo;), the part of each subscriber&rsquo;s monthly fee attributable 
-              to the artist: one quarter of each fee is attributable to the artist the subscriber was supporting 
-              when the payment was made (Section 12.3), and three quarters is divided among the artists whose songs 
-              the subscriber played that month, in proportion to the subscriber&rsquo;s counted plays (Section 12.2). 
-              If the subscriber played no eligible songs that month, all of it is attributable to the supported 
-              artist; if the supported artist does not meet the requirements of Section 12.3, their quarter is 
-              divided by counted plays with the rest. (Sixty percent of these amounts is fifteen percent (15%) and 
-              forty-five percent (45%) of the subscriber&rsquo;s fee.) In each case minus: (i) applicable 
-              ad-serving and app-store fees (e.g., AdsWizz, Apple or Google fees); (ii) payment processing and 
-              billing fees (e.g., Stripe fees); (iii) applicable taxes and government charges; and (iv) refunds, 
-              chargebacks, and bad debt. A part owed to an artist who does not meet the requirements of Section 
-              12.3 when the month is closed is retained by Unis. Display and banner advertising and local 
-              sponsorships shown on Unis are not Net Streaming Revenue; Unis shares them with the community through 
-              the Community Share (Section 12). No deductions will be made for Unis&rsquo;s general operating 
-              expenses, employee costs, or overhead. Unis Plus terms are in Section 17. Audio advertising is not 
-              yet offered; this Section applies to it from the date Unis launches it.
+              to their content. &ldquo;Net Streaming Revenue&rdquo; means revenue from audio advertisements played 
+              immediately before or during streams of the artist&rsquo;s songs, minus: (i) applicable ad-serving and 
+              app-store fees (e.g., AdsWizz, Apple or Google fees); (ii) payment processing and billing fees; (iii) 
+              applicable taxes and government charges; and (iv) refunds, chargebacks, and bad debt. A part owed to 
+              an artist who does not meet the requirements of Section 12.3 when the month is closed is retained by 
+              Unis. Fees for Unis&rsquo;s paid subscription (&ldquo;Unis Plus&rdquo;) are not Net Streaming Revenue; 
+              they are shared with artists as set out in Section 17.5. Display and banner advertising and local 
+              sponsorships shown on Unis are not Net Streaming Revenue either; Unis shares them with the community 
+              through the Community Share (Section 12). No deductions will be made for Unis&rsquo;s general 
+              operating expenses, employee costs, or overhead. Audio advertising is not yet offered; this Section 
+              applies to it from the date Unis launches it.
             </p>
 
             <h3>11.2 Payment Schedule &amp; Thresholds</h3>
@@ -557,7 +550,7 @@ const TermsOfService = () => {
               After the end of each calendar month, once Unis has received that month&rsquo;s revenue, Unis adds 
               up the revenue it actually received and kept for that month: display advertising revenue; other 
               revenue such as sponsorships; Unis&rsquo;s part of audio advertising and Unis Plus revenue after the 
-              artist shares in Section 11.1; and Unis&rsquo;s platform fees on track sales and direct support after 
+              artist shares in Sections 11.1 and 17.5; and Unis&rsquo;s platform fees on track sales and direct support after 
               card-processing costs. Money paid to an artist for their own track sales, support, or Net Streaming 
               Revenue is never part of the Community Share. Unis divides the total among listeners in proportion to 
               their counted listening during the month: each listener&rsquo;s &ldquo;share&rdquo; equals the total 
@@ -821,11 +814,15 @@ const TermsOfService = () => {
 
             <h3>17.5 Where Your Fee Goes</h3>
             <p>
-              Each month, 60% of your fee after payment processing and billing fees goes to artists: 15% to the 
-              artist you were supporting when you paid, whatever you played, and 45% to the artists whose songs you 
-              played that month, in proportion to your counted plays. If you played no eligible songs, the whole 
-              60% goes to your supported artist (Section 11.1). Unis&rsquo;s remaining part is added to that month&rsquo;s 
-              Community Share (Section 12.1). These amounts are credited when the month is closed. Subscribing does 
+              Each month, half of what you paid for Unis Plus goes to the artist you were supporting when you paid, 
+              whatever you played (on a $4.99 month, $2.50), but never more than what remains after payment 
+              processing and billing fees. Of what remains after those fees and your supported artist&rsquo;s half, 
+              half goes to the artists whose songs you played that month, in proportion to your counted plays 
+              (Section 12.2), and half is added to that month&rsquo;s Community Share (Section 12.1). If you played no 
+              eligible songs, the played artists&rsquo; half also goes to your supported artist. If you have no 
+              supported artist, or they do not meet the requirements of Section 12.3 when the month is closed, their 
+              half is divided by your counted plays with the played artists&rsquo; half. Any part that cannot be paid 
+              to an artist is added to the Community Share. These amounts are credited when the month is closed. Subscribing does 
               not buy any song, is not a donation, and does not change your own participation in the Community 
               Share or the Referral Program. A refunded payment is excluded from these amounts; if it was already 
               credited, Unis may correct the affected balances (Section 12.4).

@@ -140,7 +140,7 @@ const RevenueSection = ({
   const supporterLastMonthCents = toCents(sup.lastMonth);
   const supporterCount = Number(earningsSummary?.supporterCount || 0);
 
-  // Unis Plus: 15% of the fees of ad-free members who support this artist, plus 45% by their plays.
+  // Unis Plus: half of the fee of every ad-free member who supports this artist, plus a share by their plays.
   const plusEarnings = earningsSummary?.plusEarnings || {};
   const plusCents = toCents(plusEarnings.lifetime);
   const plusLastMonthCents = toCents(plusEarnings.lastMonth);
@@ -298,9 +298,9 @@ const RevenueSection = ({
           <DetailRow label={lastClosedLabel} value={money(plusLastMonthCents)} accent />
           <p className="rev-detail__note">
             <Sparkles size={13} />
-            Each month you get 15% of the fee (after Stripe&apos;s fees) of every Unis Plus member who supports you,
-            whatever they played, plus your part of 45% of every member&apos;s fee, split by their plays. A member who
-            played no one sends the whole 60% to the artist they support.
+            Each month you get half of the fee of every Unis Plus member who supports you ($2.50 of $4.99),
+            whatever they played, plus your part of what members&apos; plays send to artists ($1.00 of each fee,
+            split by their plays). A supporter who played no one sends you that $1.00 too.
           </p>
         </div>
       )}

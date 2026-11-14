@@ -9,9 +9,9 @@
 //      (local sponsors are filled in from the database; add anything else)
 //      and what Unis kept from its fees on song sales and support after
 //      Stripe's card fees (filled in from the database).
-//   2. Preview: the server settles Unis Plus first (of each subscriber's
-//      payment after Stripe's fees: 15% to their supported artist and 45% to
-//      the artists they played, by plays; Unis's 40% joins the pot), then
+//   2. Preview: the server settles Unis Plus first (half of each subscriber's
+//      payment to their supported artist; of the rest after Stripe's fees,
+//      half to the artists they played, by plays, and half joins the pot), then
 //      divides the pot by counted listening and shows
 //      what supported artists and each referral level would get, and what
 //      Unis keeps. Nothing is saved.
@@ -234,7 +234,7 @@ const CloseMonth = ({ canMoveMoney, onClosed }) => {
                 {Object.entries(STREAM_LABELS).map(([key, label]) => (
                   <tr key={key}><td>{label}</td><td>{usd(streams[key])}</td></tr>
                 ))}
-                <tr><td>Unis Plus to artists (15% supported + 45% by plays)</td><td>{usd(preview.plusToArtists)}</td></tr>
+                <tr><td>Unis Plus to artists (half to supported + a share by plays)</td><td>{usd(preview.plusToArtists)}</td></tr>
               </tbody>
             </table>
           </div>
@@ -632,9 +632,9 @@ const CommunityShareAdmin = () => {
               listener&rsquo;s part goes to the artist they supported when they played, and 10, 5 and
               2% to the three people above them in the referral chain. Unis keeps the rest,
               including any share whose earner is missing, has left, isn&rsquo;t phone-verified, or
-              is a staff or test account. Unis Plus is settled in the same close: of each
-              subscriber&rsquo;s payment after Stripe&rsquo;s fees, 15% goes to the artist they support
-              and 45% to the artists they played.
+              is a staff or test account. Unis Plus is settled in the same close: half of each
+              subscriber&rsquo;s payment goes to the artist they support, and of the rest after
+              Stripe&rsquo;s fees, half goes to the artists they played and half joins the pot.
             </p>
           </div>
         </header>

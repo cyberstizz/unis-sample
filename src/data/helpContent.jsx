@@ -2932,28 +2932,33 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              Unis Plus is the ad-free plan. Each month, 60% of a
-              subscriber&rsquo;s fee, after Stripe&rsquo;s card and billing
-              fees, goes to artists in two parts:
+              Unis Plus is the ad-free plan. Each month, a subscriber&rsquo;s
+              $4.99 is shared like this:
             </p>
             <ul>
               <li>
-                <b>15% to the artist they support</b>, whatever they played. On
-                a $4.99 month that&rsquo;s about 67&cent;, so ten supporters on
-                Plus is about $6.75 a month, guaranteed.
+                <b>Half to the artist they support</b>, whatever they played:
+                $2.50 of every $4.99. Ten supporters on Plus is $25 a month,
+                guaranteed.
               </li>
               <li>
-                <b>45% to the artists they played</b>, split by their counted
-                plays (the same 50-a-day rule as the Community Share; your own
-                songs don&rsquo;t count). That&rsquo;s about $2.02 on a $4.99 month.
-                Their supported artist gets part of this too when they play
-                them.
+                <b>Stripe&rsquo;s card and billing fees</b>: about 49&cent;.
+              </li>
+              <li>
+                <b>Half of what&rsquo;s left to the artists they played</b>,
+                split by their counted plays (the same 50-a-day rule as the
+                Community Share; your own songs don&rsquo;t count). That&rsquo;s
+                $1.00 on a $4.99 month. Their supported artist gets part of
+                this too when they play them.
+              </li>
+              <li>
+                <b>The other half to the Community Share</b>: $1.00.
               </li>
             </ul>
             <p>
-              If a subscriber played nobody that month, the whole 60% goes to
-              the artist they support. Unis&rsquo;s 40% joins the Community
-              Share pot.
+              If a subscriber played nobody that month, the played
+              artists&rsquo; half goes to the artist they support too, so
+              they get $3.50.
             </p>
             <p>
               It&rsquo;s credited to your Earnings balance when the month is
@@ -2993,9 +2998,10 @@ export const HELP_SECTIONS = [
             <p>
               Unis Plus removes every ad on Unis for your account, on every
               device you sign in on. It&rsquo;s $4.99 a month, paid by card on
-              Stripe&rsquo;s secure page, and 60% of it (after Stripe&rsquo;s
-              fees) goes to artists: 15% to the artist you support, no matter
-              what, and 45% to the artists you play that month.
+              Stripe&rsquo;s secure page. Half of it, $2.50, goes to the artist
+              you support, no matter what you play. Of the rest after
+              Stripe&rsquo;s fees, $1.00 goes to the artists you play that
+              month and $1.00 to the Community Share.
             </p>
             <p>
               Get it from <b>Unis Plus</b> in the menu. It turns on as soon as
