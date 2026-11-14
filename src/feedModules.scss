@@ -183,7 +183,7 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
     position: relative;
     flex: 0 0 100%;
     scroll-snap-align: start;
-    height: 192px;
+    height: 206px; // room for a 2-line title, the byline and the Vote row with space between
     border-radius: 28px;
     overflow: hidden;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
@@ -235,6 +235,7 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
     top: 14px;
     right: 14px;
     z-index: 2;
+    max-width: 44%;
     height: 28px;
     padding: 0 11px;
     border-radius: 999px;
@@ -245,16 +246,20 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
     font-size: 12.5px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    display: flex;
-    align-items: center;
+    display: block; // block (not flex) so a long chip gets an ellipsis
+    line-height: 28px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
+  // Phones: the artwork sits in the top-right corner, clear of the Vote row.
   &__art {
     position: absolute;
-    right: 20px;
-    top: 56px;
-    width: 108px;
-    height: 108px;
+    right: 16px;
+    top: 50px;
+    width: 88px;
+    height: 88px;
     border-radius: 20px;
     object-fit: cover;
     transform: rotate(7deg);
@@ -276,41 +281,62 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
     &:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
   }
 
+  // Phones: with no artwork the words get the card's full width; with
+  // artwork they stop short of it (18 left + 88 art + 16 right + rotation and
+  // a gap). The Vote row sits below the artwork, so it can run the full width.
   &__body {
     position: absolute;
     left: 18px;
     top: 18px;
     bottom: 18px;
-    width: min(62%, 300px);
+    width: calc(100% - 36px);
     z-index: 2;
     display: flex;
     flex-direction: column;
     pointer-events: none;
   }
 
+  &__art ~ &__body { width: calc(100% - 140px); }
+  &__art ~ &__body &__foot { margin-right: -104px; }
+
+  // The label, title and byline are blocks so long text ends in an ellipsis
+  // (a flex row never shows one for its text).
   &__label {
-    display: flex;
-    align-items: center;
-    gap: 7px;
+    display: block;
+    max-width: 58%; // clear of the chip when there's no artwork
+    // Room for the live dot's glow ring, which the ellipsis clipping would cut.
+    padding: 4px 0 4px 5px;
+    margin: -4px 0 -4px -5px;
     font-size: 12.5px;
+    line-height: 18px;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.92);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
+  &__art ~ &__body &__label { max-width: none; }
+
   &__live {
+    display: inline-block;
+    vertical-align: middle;
     width: 7px;
     height: 7px;
+    margin: -2px 9px 0 1px;
     border-radius: 50%;
     background: #fff;
     box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.22);
   }
 
   &__title {
-    margin-top: 12px;
-    font-size: 31px;
-    line-height: 1;
+    flex: none;
+    margin-top: 10px;
+    font-size: 28px;
+    line-height: 1.06;
     font-weight: 800;
     letter-spacing: -0.04em;
+    overflow-wrap: break-word; // one very long word breaks instead of being cut off
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -318,19 +344,22 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
   }
 
   &__byline {
-    margin-top: 9px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
+    flex: none;
+    display: block;
+    margin-top: 8px;
     font-size: 14px;
+    line-height: 20px;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 
     img {
+      display: inline-block;
+      vertical-align: middle;
       width: 22px;
       height: 22px;
+      margin: -2px 7px 0 0;
       border-radius: 50%;
       object-fit: cover;
       box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.6);
@@ -338,10 +367,13 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
   }
 
   &__foot {
+    flex: none;
     margin-top: auto;
+    padding-top: 10px; // always some air between the byline and the Vote row
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
   }
 
   &__vote {
@@ -364,11 +396,14 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
   }
 
   &__meta {
+    min-width: 0;
     font-size: 13.5px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.9);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__dots {
@@ -498,7 +533,11 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
     &__slide { height: 248px; }
     &__art { width: 150px; height: 150px; top: 62px; right: 36px; }
     &__title { font-size: 40px; }
-    &__body { left: 24px; top: 22px; bottom: 22px; }
+    // Desktop keeps its original layout: the words take the left side.
+    &__body,
+    &__art ~ &__body { left: 24px; top: 22px; bottom: 22px; width: min(62%, 300px); }
+    &__art ~ &__body &__foot { margin-right: 0; }
+    &__label { max-width: none; }
   }
 }
 

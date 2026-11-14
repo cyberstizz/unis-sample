@@ -1,6 +1,11 @@
 // Unis Plus page (/plus).
 
 .plus-page {
+  // .layout-content is a sideways-scrolling flex row: as its child this page
+  // must be allowed to shrink to the screen, or its widest row (the mark plus
+  // the Member chip) widens the page and the whole screen scrolls sideways.
+  width: 100%;
+  min-width: 0;
   max-width: 720px;
   margin: 0 auto;
   padding: 24px 16px 120px; // room for the player bar
@@ -47,8 +52,9 @@
 
   &__brand {
     display: flex;
+    flex-wrap: wrap; // the Member chip drops under the mark on narrow phones
     align-items: center;
-    gap: 14px;
+    gap: 10px 14px;
     margin-bottom: 20px;
   }
 
@@ -309,11 +315,14 @@
 
 .plus-split {
   width: 100%;
+  // Fixed layout: the amounts column has a set width and the first column gets
+  // the rest, so a long artist name ellipsizes instead of widening the table.
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 15px;
 
   td { padding: 10px 0; border-bottom: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07)); }
-  td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  td:last-child { width: 5.5em; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
   &__hi td { color: var(--unis-primary-2, #9cc0ff); }
 
   &__who { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; vertical-align: middle; }
