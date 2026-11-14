@@ -201,7 +201,7 @@ const Profile = () => {
   // -----------------------------------------------------------------------
   // Actions
   // -----------------------------------------------------------------------
-  const playDefaultSong = async () => {
+  const playDefaultSong = () => {
     if (!supportedArtist?.defaultSong) {
       console.warn('[Profile] action=play_default status=skip reason=no_song');
       return;
@@ -225,15 +225,7 @@ const Profile = () => {
       artworkUrl: artworkResolved,
     };
 
-    try {
-      await apiCall({
-        method: 'post',
-        url: `/v1/media/song/${songId}/play?userId=${user.userId}`
-      });
-    } catch (err) {
-      console.error('[Profile] action=track_play status=fail err=', err);
-    }
-
+    // No /play POST here: the Player counts the play (15s / 25% gate).
     // requestPlay: empty queue -> plays immediately,
     //              non-empty   -> opens PlayChoiceModal (preserves queue)
     requestPlay(mediaObject);

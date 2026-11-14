@@ -73,8 +73,32 @@ const topsFixture = {
 
 let apiSpy;
 
+// What the backend says is open (voting_enabled): Harlem and Uptown Harlem,
+// each with its chain from the top down.
+const openFixture = [
+  {
+    jurisdictionId: HARLEM_ID, name: 'Harlem',
+    chain: [
+      { jurisdictionId: NY_ID, name: 'New York' },
+      { jurisdictionId: MANHATTAN_ID, name: 'Manhattan' },
+      { jurisdictionId: HARLEM_ID, name: 'Harlem' },
+    ],
+  },
+  {
+    jurisdictionId: UPTOWN_ID, name: 'Uptown Harlem',
+    chain: [
+      { jurisdictionId: NY_ID, name: 'New York' },
+      { jurisdictionId: MANHATTAN_ID, name: 'Manhattan' },
+      { jurisdictionId: HARLEM_ID, name: 'Harlem' },
+      { jurisdictionId: UPTOWN_ID, name: 'Uptown Harlem' },
+    ],
+  },
+];
+
 function defaultApiHandler(config) {
   const { url, method = 'get' } = config;
+
+  if (url === '/v1/jurisdictions/open') return { data: openFixture };
 
   if (url.startsWith('/v1/jurisdictions/byName/')) {
     const name = decodeURIComponent(url.split('/v1/jurisdictions/byName/')[1]);
@@ -118,9 +142,14 @@ beforeEach(() => {
 
 afterEach(() => { vi.restoreAllMocks(); });
 
+// New York is live with one way down, so entering it walks the map itself
+// down to Harlem (New York → Manhattan → Harlem). Wait for it to land.
 const enterNewYork = async () => {
   fireEvent.click(screen.getByText('map:New York'));
-  await waitFor(() => expect(screen.getByTestId('unis-map')).toHaveAttribute('data-mode', 'STATE'));
+  await waitFor(
+    () => expect(screen.getByTestId('unis-map')).toHaveAttribute('data-selected-id', HARLEM_ID),
+    { timeout: 3000 }
+  );
 };
 
 describe('FindPage — initial render', () => {
@@ -176,14 +205,33 @@ describe('FindPage — no ad-view tracking', () => {
 });
 
 describe('FindPage — entering a live state', () => {
-  it('flies to the state and loads its children', async () => {
+  it('asks the backend which places are open (nothing hardcoded)', async () => {
+    renderWithProviders(<FindPage />);
+    await screen.findByTestId('unis-map');
+    await waitFor(() => expect(callsTo('/v1/jurisdictions/open')).toHaveLength(1));
+  });
+
+  it('walks itself down from New York to Harlem, the one open neighborhood', async () => {
     renderWithProviders(<FindPage />);
     await screen.findByTestId('unis-map');
     await enterNewYork();
     const map = screen.getByTestId('unis-map');
     expect(map).toHaveAttribute('data-focus-state', 'New York');
-    expect(map).toHaveAttribute('data-territory-count', '1');
-    expect(await screen.findByText('map:Manhattan')).toBeInTheDocument();
+    expect(map).toHaveAttribute('data-mode', 'TERRITORY');
+    expect(document.querySelector('.crumbs .here')).toHaveTextContent('Harlem');
+    // Harlem's own regions are on screen when it lands.
+    expect(screen.getByText('map:Uptown Harlem')).toBeInTheDocument();
+  });
+
+  it('does not drill down again when going back up to New York with the crumb', async () => {
+    renderWithProviders(<FindPage />);
+    await screen.findByTestId('unis-map');
+    await enterNewYork();
+    fireEvent.click(within(document.querySelector('.crumbs')).getByRole('button', { name: 'New York' }));
+    await waitFor(() => expect(screen.getByTestId('unis-map')).toHaveAttribute('data-mode', 'STATE'));
+    await new Promise((r) => setTimeout(r, 900));
+    expect(screen.getByTestId('unis-map')).toHaveAttribute('data-mode', 'STATE');
+    expect(screen.getByText('map:Manhattan')).toBeInTheDocument();
   });
 
   it('fetches tops for a live state', async () => {
@@ -363,13 +411,14 @@ describe('FindPage — navigation', () => {
 });
 
 describe('FindPage — playback', () => {
-  it('tracks a play for an authenticated user', async () => {
+  it('does not POST /play itself for a signed-in user (the Player counts plays)', async () => {
     renderWithProviders(<FindPage />, { as: 'listener' });
     await screen.findByTestId('unis-map');
     await enterNewYork();
     await screen.findByText('Rap Song One');
     fireEvent.click(screen.getByRole('button', { name: 'Play Rap Song One' }));
-    await waitFor(() => expect(callsTo(/\/play\?userId=/).length).toBe(1));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(callsTo(/\/media\/song\/.+\/play/)).toHaveLength(0);
   });
 
   it('does not attempt play tracking for guests', async () => {

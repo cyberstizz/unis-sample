@@ -623,16 +623,12 @@ describe('VoteAwards — Listen on artist nominee', () => {
     expect(media.artist).toBe('Tony Fadd');
   });
 
-  it('tracks the play with userId after default-song fetch', async () => {
+  it('does not POST /play itself after default-song fetch (the Player counts plays)', async () => {
     const user = userEvent.setup();
     await renderAndWait({ payload: [artistNomineeFixture({ userId: 'art-1' })] });
     await user.click(screen.getByRole('button', { name: /^listen$/i }));
-    // Default song fixture has songId 'song-001' (see handlers.js)
-    await waitFor(() => {
-      const trackCall = callsTo('/play', 'post')[0];
-      expect(trackCall).toBeTruthy();
-      expect(trackCall.url).toMatch(/userId=user-listener-001/);
-    });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(callsTo('/v1/media/song/song-001/play', 'post')).toHaveLength(0);
   });
 
   it('shows alert when artist has no default song', async () => {
@@ -677,14 +673,11 @@ describe('VoteAwards — Listen on song nominee', () => {
     expect(media.url).toContain('/uploads/song1.mp3');
   });
 
-  it('tracks the play with the song id and userId', async () => {
+  it('does not POST /play itself for a song nominee (the Player counts plays)', async () => {
     const user = await setupSongs([songNomineeFixture({ songId: 'song-xyz' })]);
     await user.click(screen.getByRole('button', { name: /^listen$/i }));
-    await waitFor(() => {
-      const trackCall = callsTo('/v1/media/song/song-xyz/play', 'post')[0];
-      expect(trackCall).toBeTruthy();
-      expect(trackCall.url).toMatch(/userId=user-listener-001/);
-    });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(callsTo('/v1/media/song/song-xyz/play', 'post')).toHaveLength(0);
   });
 });
 

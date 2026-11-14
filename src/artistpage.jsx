@@ -928,7 +928,8 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     setShowVotingWizard(true);
   };
 
-  const handlePlayDefault = async () => {
+  // No /play POST here: the Player counts the play (15s / 25% gate).
+  const handlePlayDefault = () => {
     if (defaultSong?.fileUrl) {
       const fullUrl = buildUrl(defaultSong.fileUrl);
       if (isGuest) incrementGateSongCount();
@@ -944,11 +945,6 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         artwork: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl),
         artworkUrl: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl),
       });
-      if (defaultSong.songId && userId) {
-        try {
-          await apiCall({ method: 'post', url: `/v1/media/song/${defaultSong.songId}/play?userId=${userId}` });
-        } catch (err) { console.error('Failed to track default song play:', err); }
-      }
     } else {
       feedback.info(`${artist?.username || 'This artist'} hasn\u2019t picked a song to feature yet`);
     }

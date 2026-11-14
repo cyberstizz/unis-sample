@@ -27,11 +27,9 @@ import React, {
   useEffect,
   useContext,
   useCallback,
-  useRef,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
-import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
 import { buildUrl } from './utils/buildUrl';
 import { INTERVAL_IDS } from './utils/idMappings';
@@ -306,9 +304,7 @@ const WinnersTimeline = ({
   showHeader = true,
 }) => {
   const navigate = useNavigate();
-  const { requestPlay, currentMedia } = useContext(PlayerContext);
-  const { user } = useAuth();
-  const userId = user?.userId || null;
+  const { requestPlay } = useContext(PlayerContext);
 
   const [activeInterval, setActiveInterval] = useState(initialInterval);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
@@ -319,10 +315,6 @@ const WinnersTimeline = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [retryNonce, setRetryNonce] = useState(0);
-
-  // songId requested from this timeline, awaiting confirmation that it
-  // actually became the current track (same pattern as jurisdictionPage).
-  const pendingTrackRef = useRef(null);
 
   // ── Resolve jurisdiction UUID (skipped when the parent supplies it) ──
   useEffect(() => {
@@ -420,22 +412,6 @@ const WinnersTimeline = ({
     };
   }, [jurId, activeInterval, activeCategory, retryNonce]);
 
-  // ── Effect-based play tracking (credited only once it actually plays) ──
-  useEffect(() => {
-    const playingId = currentMedia?.id || currentMedia?.songId;
-    if (!playingId || !userId) return;
-    if (pendingTrackRef.current !== playingId) return;
-
-    pendingTrackRef.current = null;
-
-    apiCall({
-      method: 'post',
-      url: `/v1/media/song/${playingId}/play?userId=${userId}`,
-    }).catch((err) =>
-      console.error('[winnersTimeline] play tracking failed:', err?.message || err)
-    );
-  }, [currentMedia?.id, currentMedia?.songId, userId]);
-
   const visibleWinners = entries.slice(0, visibleCount);
   const hasMore = visibleCount < entries.length;
 
@@ -463,8 +439,7 @@ const WinnersTimeline = ({
         artwork: entry.winner.artwork,
         artworkUrl: entry.winner.artwork,
       });
-
-      pendingTrackRef.current = entry.winner.id;
+      // No /play POST here: the Player counts the play (15s / 25% gate).
     },
     [requestPlay]
   );

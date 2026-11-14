@@ -293,7 +293,7 @@ const Player = () => {
         // below, guest handling) is unchanged.
         const res = await apiCall({
           method: 'post',
-          url: `/v1/media/song/${songId}/play?userId=${userId}&source=${encodeURIComponent(currentMedia.source || 'player')}`,
+          url: `/v1/media/song/${songId}/play?source=${encodeURIComponent(currentMedia.source || 'player')}`,
         });
 
         currentPlayIdRef.current = res?.data?.playId || null; // ★ PLAY-FLOW

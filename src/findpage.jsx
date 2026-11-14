@@ -23,17 +23,63 @@ import './findpage.scss';
  * system on arrival.
  */
 
-/** Jurisdictions with voting live today. */
-const ACTIVE_JURISDICTIONS = ['Harlem', 'Uptown Harlem', 'Downtown Harlem'];
+/*
+ * Which places are open comes from the backend, never from this file.
+ * GET /v1/jurisdictions/open returns every jurisdiction whose voting_enabled
+ * flag is on, each with its chain from the root down to itself:
+ *   [{ jurisdictionId, name, chain: [{ jurisdictionId, name }, ...] }]
+ * Opening a neighborhood is a one-line UPDATE in Supabase; nothing here changes.
+ *
+ *   open      the jurisdiction itself is open (live dot, charts)
+ *   on a path the jurisdiction is open or sits above an open one. A state is
+ *             live when it is on a path.
+ */
+const EMPTY_OPEN = buildOpenIndex([]);
 
-/** States Unis has launched in. Everything else short-circuits client-side. */
-const ACTIVE_STATES = ['New York'];
+function buildOpenIndex(list) {
+  const openIds = new Set();
+  const openNames = [];
+  const pathIds = new Set();
+  const pathNames = new Set();
+  for (const o of list) {
+    openIds.add(o.jurisdictionId);
+    openNames.push(o.name);
+    for (const link of o.chain || []) {
+      pathIds.add(link.jurisdictionId);
+      pathNames.add(link.name);
+    }
+  }
+  return { list, openIds, openNames, pathIds, pathNames, liveStates: [...pathNames] };
+}
 
-/** The path down to Harlem. Anything on it resolves to Harlem's results. */
-const HARLEM_PARENT_CHAIN = [
-  'Unis', 'New York', 'New York City Metro', 'New York City',
-  'Manhattan', 'Upper Manhattan', 'Harlem', 'Uptown Harlem', 'Downtown Harlem',
-];
+/**
+ * The one open place at or below `id`, and the steps to reach it.
+ *   { target, steps }  steps run from just below `id` down to target; empty
+ *                      when `id` is itself open
+ *   null               `id` is not on any open path, or the way down splits
+ *                      (two or more open places below it: the visitor picks)
+ */
+function openTargetBelow(index, id) {
+  if (!id || !index.pathIds.has(id)) return null;
+  const found = new Map();
+  for (const o of index.list) {
+    const chain = o.chain || [];
+    const at = chain.findIndex((link) => link.jurisdictionId === id);
+    if (at === -1) continue;
+    const rest = chain.slice(at);
+    const hit = rest.findIndex((link) => index.openIds.has(link.jurisdictionId));
+    if (hit === -1) continue;
+    const target = rest[hit];
+    if (!found.has(target.jurisdictionId)) {
+      found.set(target.jurisdictionId, { target, steps: rest.slice(1, hit + 1) });
+    }
+  }
+  return found.size === 1 ? [...found.values()][0] : null;
+}
+
+/** Pause between levels of the automatic drill-down, so each one is seen. */
+const DRILL_STEP_MS = 400;
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const ROOT_CRUMB = { name: 'United States', jurisdictionId: null, tier: 0 };
 
@@ -71,11 +117,20 @@ const FindPage = () => {
   const [spotlight, setSpotlight] = useState(null); // state lit during a random spin
 
   const spinTimer = useRef(null);
+  const unmountedRef = useRef(false);
+
+  // Open places, from the backend (see buildOpenIndex).
+  const [openIndex, setOpenIndex] = useState(EMPTY_OPEN);
+  const openPromiseRef = useRef(null);
+
+  // True while the map walks itself down to the open neighborhood. Taps are
+  // ignored until it lands.
+  const drillingRef = useRef(false);
+  const [drilling, setDrilling] = useState(false);
 
   /* ------------------------------------------------------------- helpers */
 
-  const isInHarlemChain = (name) => HARLEM_PARENT_CHAIN.includes(name);
-  const isActiveJurisdiction = (name) => ACTIVE_JURISDICTIONS.includes(name);
+  const isOpen = (j) => Boolean(j && openIndex.openIds.has(j.jurisdictionId));
 
   // Tapping a place Unis hasn't opened yet. The app-wide toast carries it now,
   // with the same "Join the waitlist" way out.
@@ -91,10 +146,33 @@ const FindPage = () => {
 
   useEffect(
     () => () => {
+      unmountedRef.current = true;
       if (spinTimer.current) clearInterval(spinTimer.current);
     },
     []
   );
+
+  /** Loads the open list once. Resolves to the index, or null if it failed. */
+  const loadOpenIndex = useCallback(() => {
+    if (!openPromiseRef.current) {
+      openPromiseRef.current = apiCall({ method: 'get', url: '/v1/jurisdictions/open' })
+        .then((res) => {
+          const index = buildOpenIndex(Array.isArray(res?.data) ? res.data : []);
+          if (!unmountedRef.current) setOpenIndex(index);
+          return index;
+        })
+        .catch((err) => {
+          console.error('[findpage] open jurisdictions fetch failed:', err?.message || err);
+          openPromiseRef.current = null; // try again on the next click
+          return null;
+        });
+    }
+    return openPromiseRef.current;
+  }, []);
+
+  useEffect(() => {
+    loadOpenIndex();
+  }, [loadOpenIndex]);
 
   /* ------------------------------------------------------------- the API */
 
@@ -180,29 +258,59 @@ const FindPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [genre]);
 
-  /** Name-based lookup, for paths where only a name survived (back, crumbs). */
-  const fetchTopResultsByName = useCallback(
-    async (jurisdictionName) => {
-      const resolved =
-        !isActiveJurisdiction(jurisdictionName) && isInHarlemChain(jurisdictionName)
-          ? 'Harlem'
-          : jurisdictionName;
+  /** No charts to show (a closed place, or a place where the way down splits). */
+  const clearTops = useCallback(() => {
+    lastTopsIdRef.current = null;
+    setRawTops({ artists: [], songs: [], status: null });
+    setLoading(false);
+  }, []);
 
+  /**
+   * Walks the map down one level at a time to an open neighborhood, so the
+   * visitor sees where it is instead of tapping through every level.
+   * `siblings` are the places on screen now (they hold the full map data for
+   * the first step); `steps` come from openTargetBelow. The last step's charts
+   * are loaded on arrival.
+   */
+  const autoDrill = useCallback(
+    async (siblings, steps) => {
+      if (!steps.length) return;
+      drillingRef.current = true;
+      setDrilling(true);
+      setLoading(true);
+      setHasSelectedJurisdiction(true);
+      let onScreen = siblings;
       try {
-        const res = await apiCall({
-          method: 'get',
-          url: `/v1/jurisdictions/byName/${encodeURIComponent(resolved)}`,
-        });
-        const id = res.data?.[0]?.jurisdictionId;
-        if (!id) throw new Error(`no jurisdiction named ${resolved}`);
-        await fetchTopResultsById(id);
-      } catch (err) {
-        console.error('[findpage] byName lookup failed:', err?.message || err);
-        setError('Top results are unavailable right now. Try again in a moment.');
-        setLoading(false);
+        for (let i = 0; i < steps.length; i += 1) {
+          const step = steps[i];
+          const isTarget = i === steps.length - 1;
+          await wait(DRILL_STEP_MS);
+          if (unmountedRef.current) return;
+
+          const full = onScreen.find((j) => j.jurisdictionId === step.jurisdictionId) || step;
+          setSelectedJurisdiction(full);
+
+          const [children] = await Promise.all([
+            full.hasChildren === false ? Promise.resolve([]) : fetchChildren(step.jurisdictionId),
+            isTarget ? fetchTopResultsById(step.jurisdictionId) : Promise.resolve(),
+          ]);
+          if (unmountedRef.current) return;
+
+          if (children.length > 0) {
+            setNavigationStack((prev) => [
+              ...prev,
+              { name: step.name, jurisdictionId: step.jurisdictionId, tier: prev[prev.length - 1].tier + 1 },
+            ]);
+            setCurrentJurisdictions(children);
+            onScreen = children;
+          }
+        }
+      } finally {
+        drillingRef.current = false;
+        if (!unmountedRef.current) setDrilling(false);
       }
     },
-    [fetchTopResultsById]
+    [fetchChildren, fetchTopResultsById]
   );
 
   /* -------------------------------------------------------- interactions */
@@ -222,20 +330,29 @@ const FindPage = () => {
    */
   const handleStateSelect = useCallback(
     async (stateName) => {
-      if (focusState === stateName) return;
-
-      const isLive = ACTIVE_STATES.includes(stateName);
+      if (drillingRef.current || focusState === stateName) return;
 
       setLoading(true);
       setHasSelectedJurisdiction(true);
       setError(null);
 
       try {
-        const stateRes = await apiCall({
-          method: 'get',
-          url: `/v1/jurisdictions/byName/${encodeURIComponent(stateName)}`,
-        });
+        const [stateRes, index] = await Promise.all([
+          apiCall({
+            method: 'get',
+            url: `/v1/jurisdictions/byName/${encodeURIComponent(stateName)}`,
+          }),
+          loadOpenIndex(),
+        ]);
         const jurisdiction = stateRes.data?.[0];
+
+        // Without the open list there's no telling live from dormant.
+        if (!index) {
+          setLoading(false);
+          setHasSelectedJurisdiction(false);
+          setError('The map could not load right now. Try again in a moment.');
+          return;
+        }
 
         // No row at all — nothing to fly to, so say so and stay put.
         if (!jurisdiction) {
@@ -245,12 +362,16 @@ const FindPage = () => {
           return;
         }
 
-        // Charts are only fetched for live states. A dormant state has no
-        // content to rank, so asking for its tops is a guaranteed empty
-        // round trip on every click.
+        const isLive = index.pathIds.has(jurisdiction.jurisdictionId);
+        const way = isLive ? openTargetBelow(index, jurisdiction.jurisdictionId) : null;
+        const opensHere = Boolean(way && way.steps.length === 0);
+
+        // Charts only where there is something to rank: the state itself when
+        // it is open. A dormant state, or one where the way down splits, has
+        // none; when there's one way down, the drill loads the charts on arrival.
         const [children] = await Promise.all([
           fetchChildren(jurisdiction.jurisdictionId),
-          isLive ? fetchTopResultsById(jurisdiction.jurisdictionId) : Promise.resolve(),
+          opensHere ? fetchTopResultsById(jurisdiction.jurisdictionId) : Promise.resolve(),
         ]);
 
         setFocusState(stateName);
@@ -261,9 +382,10 @@ const FindPage = () => {
         setCurrentJurisdictions(children);
         setSelectedJurisdiction(jurisdiction);
 
-        if (!isLive) {
-          setRawTops({ artists: [], songs: [], status: null });
-          setLoading(false);
+        if (way && way.steps.length > 0) {
+          await autoDrill(children, way.steps);
+        } else if (!opensHere) {
+          clearTops();
         }
       } catch (err) {
         console.error('[findpage] state select failed:', err?.message || err);
@@ -271,11 +393,12 @@ const FindPage = () => {
         setLoading(false);
       }
     },
-    [fetchChildren, fetchTopResultsById, showComingSoonToast, focusState]
+    [fetchChildren, fetchTopResultsById, showComingSoonToast, focusState, loadOpenIndex, autoDrill, clearTops]
   );
 
   const handleTerritorySelect = useCallback(
     async (jurisdiction) => {
+      if (drillingRef.current) return;
       const { jurisdictionId, name, hasChildren } = jurisdiction;
 
       // Select immediately so the camera starts moving before data lands.
@@ -284,21 +407,26 @@ const FindPage = () => {
       // Inside a dormant state there is only one level of geometry, so a click
       // highlights the region and stops. Descending would fly the camera into
       // an empty frame.
-      if (!ACTIVE_STATES.includes(focusState)) {
+      if (!openIndex.pathNames.has(focusState)) {
         showComingSoonToast(name);
         return;
       }
 
-      const resolvedName =
-        !isActiveJurisdiction(name) && isInHarlemChain(name) ? 'Harlem' : name;
+      setHasSelectedJurisdiction(true);
+      setError(null);
 
-      const childrenPromise = hasChildren ? fetchChildren(jurisdictionId) : Promise.resolve([]);
-      const topsPromise =
-        resolvedName === name
-          ? fetchTopResultsById(jurisdictionId)
-          : fetchTopResultsByName(name);
+      // Open: its own charts. Above exactly one open place: walk down to it.
+      // Closed, or the way down splits: no charts (the panel says why).
+      const way = openTargetBelow(openIndex, jurisdictionId);
+      const opensHere = Boolean(way && way.steps.length === 0);
+      const drillTo = way && way.steps.length > 0 ? way.steps : null;
 
-      const [children] = await Promise.all([childrenPromise, topsPromise]);
+      if (drillTo) setLoading(true);
+      const [children] = await Promise.all([
+        hasChildren ? fetchChildren(jurisdictionId) : Promise.resolve([]),
+        opensHere ? fetchTopResultsById(jurisdictionId) : Promise.resolve(),
+      ]);
+      if (!opensHere && !drillTo) clearTops();
 
       // Descend only when there is somewhere to descend to. A leaf stays put
       // and simply becomes the selection — the old build silently ignored
@@ -310,8 +438,10 @@ const FindPage = () => {
         ]);
         setCurrentJurisdictions(children);
       }
+
+      if (drillTo) await autoDrill(children, drillTo);
     },
-    [fetchChildren, fetchTopResultsById, fetchTopResultsByName, focusState, showComingSoonToast]
+    [fetchChildren, fetchTopResultsById, focusState, showComingSoonToast, openIndex, autoDrill, clearTops]
   );
 
   const resetToNational = useCallback(() => {
@@ -325,8 +455,11 @@ const FindPage = () => {
     setError(null);
   }, []);
 
+  // Going back up never auto-drills, so a visitor can look at New York without
+  // being pulled back down to the neighborhood.
   const navigateToCrumb = useCallback(
     async (targetIndex) => {
+      if (drillingRef.current) return;
       if (targetIndex >= navigationStack.length - 1) return;
 
       const target = navigationStack[targetIndex];
@@ -337,9 +470,12 @@ const FindPage = () => {
 
       setNavigationStack(navigationStack.slice(0, targetIndex + 1));
 
+      // Charts for the one open place at or below this level, if there is
+      // exactly one. Otherwise none (closed, or the way down splits).
+      const way = openTargetBelow(openIndex, target.jurisdictionId);
       const [children] = await Promise.all([
         fetchChildren(target.jurisdictionId),
-        fetchTopResultsByName(target.name),
+        way ? fetchTopResultsById(way.target.jurisdictionId) : Promise.resolve(clearTops()),
       ]);
       setCurrentJurisdictions(children);
 
@@ -353,20 +489,20 @@ const FindPage = () => {
         console.warn('[findpage] crumb detail fetch failed:', err?.message || err);
       }
     },
-    [navigationStack, fetchChildren, fetchTopResultsByName, resetToNational]
+    [navigationStack, fetchChildren, fetchTopResultsById, resetToNational, openIndex, clearTops]
   );
 
   const handleBack = useCallback(() => {
-    if (navigationStack.length <= 1) return;
+    if (drillingRef.current || navigationStack.length <= 1) return;
     navigateToCrumb(navigationStack.length - 2);
   }, [navigationStack, navigateToCrumb]);
 
   const handleRandom = useCallback(() => {
-    if (isAnimating) return;
+    if (isAnimating || drillingRef.current) return;
     setIsAnimating(true);
 
-    // Spin through a few states, then land. Only New York can actually be
-    // entered today, so anything else surfaces the waitlist.
+    // Spin through a few states, then land. Live states (from the open list)
+    // are entered; anything else surfaces the waitlist.
     const pool = ['California', 'Texas', 'Georgia', 'Illinois', 'New York', 'Florida'];
     let count = 0;
 
@@ -381,14 +517,15 @@ const FindPage = () => {
         setIsAnimating(false);
         const landed = pool[Math.floor(Math.random() * pool.length)];
         setSpotlight(null);
-        if (landed === 'New York') handleStateSelect('New York');
+        if (openIndex.pathNames.has(landed)) handleStateSelect(landed);
         else showComingSoonToast(landed);
       }
     }, 110);
-  }, [isAnimating, handleStateSelect, showComingSoonToast]);
+  }, [isAnimating, handleStateSelect, showComingSoonToast, openIndex]);
 
   const handleJurisdictionNavigate = () => {
-    const name = selectedJurisdiction?.name || 'Harlem';
+    const name = selectedJurisdiction?.name;
+    if (!name) return;
     navigate(`/jurisdiction/${encodeURIComponent(name)}`);
   };
 
@@ -430,8 +567,18 @@ const FindPage = () => {
     navigationStack[navigationStack.length - 1]?.name ||
     'Select a state';
 
+  // Not on any open path: nothing here yet.
   const showComingSoonPanel =
-    selectedJurisdiction && !isInHarlemChain(selectedJurisdiction.name);
+    Boolean(selectedJurisdiction) && !openIndex.pathIds.has(selectedJurisdiction.jurisdictionId);
+
+  // On an open path but not open itself, with two or more open places below
+  // it: the visitor picks one. (Unreachable while only Harlem is open.)
+  const showPickPanel =
+    !drilling &&
+    Boolean(selectedJurisdiction) &&
+    !showComingSoonPanel &&
+    !isOpen(selectedJurisdiction) &&
+    openTargetBelow(openIndex, selectedJurisdiction.jurisdictionId) === null;
 
   const { artists, songs } = topResults;
 
@@ -598,7 +745,11 @@ const FindPage = () => {
           </button>
         </div>
 
-        <div className="mapEverything">
+        <div
+          className="mapEverything"
+          aria-busy={drilling}
+          style={drilling ? { pointerEvents: 'none' } : undefined}
+        >
           <nav className="crumbs" aria-label="Territory path">
             {navigationStack.map((level, i) => {
               const isLast = i === navigationStack.length - 1;
@@ -650,8 +801,8 @@ const FindPage = () => {
               spotlight={spotlight}
               territories={currentJurisdictions}
               selectedId={selectedJurisdiction?.jurisdictionId || null}
-              liveStates={ACTIVE_STATES}
-              liveTerritories={ACTIVE_JURISDICTIONS}
+              liveStates={openIndex.liveStates}
+              liveTerritories={openIndex.openNames}
               onStateSelect={handleStateSelect}
               onTerritorySelect={handleTerritorySelect}
               loading={loading}
@@ -682,11 +833,11 @@ const FindPage = () => {
                       type="button"
                       className={`region-chip ${
                         selectedJurisdiction?.jurisdictionId === j.jurisdictionId ? 'selected' : ''
-                      } ${isActiveJurisdiction(j.name) ? 'live' : ''}`}
+                      } ${isOpen(j) ? 'live' : ''}`}
                       onClick={() => handleTerritorySelect(j)}
                     >
                       {j.name}
-                      {isActiveJurisdiction(j.name) && (
+                      {isOpen(j) && (
                         <span className="live-dot" aria-label="live" />
                       )}
                     </button>
@@ -716,6 +867,13 @@ const FindPage = () => {
               <button type="button" className="map-toast-cta" onClick={() => navigate('/waitlist')}>
                 Join the waitlist
               </button>
+            </div>
+          ) : showPickPanel ? (
+            <div className="coming-soon-message">
+              <p className="coming-soon-title">{selectedJurisdiction?.name}</p>
+              <p className="coming-soon-text">
+                Pick a neighborhood on the map to see its charts.
+              </p>
             </div>
           ) : (
             <>

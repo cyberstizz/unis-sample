@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import songArtwork from './assets/theQuiet.jpg';
@@ -89,9 +89,6 @@ const SongPage = () => {
     return num.toLocaleString();
   };
 
-  const hasTrackedInitialRef = useRef(false);
-  const previousPlayingIdRef = useRef(null);
-
   // ── Data fetching ──
   useEffect(() => {
     if (!songId) return;
@@ -162,49 +159,9 @@ const SongPage = () => {
     fetchAll();
   }, [songId, userId]);
 
-  useEffect(() => {
-    hasTrackedInitialRef.current = false;
-    previousPlayingIdRef.current = null;
-  }, [songId]);
-
-  useEffect(() => {
-    if (!song?.id || !userId || !currentMedia) return;
-
-    const playingId = currentMedia.id || currentMedia.songId;
-    const prevId = previousPlayingIdRef.current;
-    previousPlayingIdRef.current = playingId;
-
-    // Not this page's song — nothing to do
-    if (playingId !== song.id) return;
-
-    // First observation on arrival: song was ALREADY playing. Skip.
-    if (!hasTrackedInitialRef.current) {
-      hasTrackedInitialRef.current = true;
-      return;
-    }
-
-    // Only count when the playing track actually CHANGED to this song
-    if (prevId === playingId) return;
-
-    // Optimistic bump
-    setSong(prev => prev ? {
-      ...prev,
-      playCount: prev.playCount + 1,
-      playsToday: prev.playsToday + 1,
-    } : prev);
-
-    apiCall({ method: 'post', url: `/v1/media/song/${song.id}/play?userId=${userId}` })
-      .catch(err => {
-        console.error('Failed to track song play:', err);
-        setSong(prev => prev ? {
-          ...prev,
-          playCount: Math.max(0, prev.playCount - 1),
-          playsToday: Math.max(0, prev.playsToday - 1),
-        } : prev);
-      });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMedia?.id, currentMedia?.songId, song?.id, userId]);
-
+  // Play counting lives in the Player only (15s / 25% gate, source, playId).
+  // This page used to POST /play itself the moment a song started, which
+  // beat the Player's gated call to the 30-minute cooldown and credited skips.
 
   // ── Load whether this song is on the user's do-not-play list ──
   useEffect(() => {

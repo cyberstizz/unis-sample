@@ -199,7 +199,7 @@ describe('VotingWizard', () => {
       await waitFor(() => expect(breadcrumbCalledWith).toBe(DOWNTOWN), { timeout: 3000 });
     });
 
-    it('only offers jurisdictions both the nominee and the voter qualify for', async () => {
+    it('shows every race the vote counts in: the ones nominee and voter share (no picker)', async () => {
       server.use(
         // Nominee is from Downtown Harlem; voter lives in Uptown Harlem.
         http.get(`${API}/v1/jurisdictions/:id/breadcrumb`, () =>
@@ -216,13 +216,11 @@ describe('VotingWizard', () => {
         nominee: makeNominee({ jurisdiction: { jurisdictionId: DOWNTOWN, name: 'Downtown Harlem' } }),
       });
 
-      const select = await screen.findByLabelText(/jurisdiction/i);
-      await waitFor(() => expect(select).toBeEnabled());
-      const labels = within(select).getAllByRole('option').map((o) => o.textContent);
       // Most local first; Downtown (voter not eligible) and Manhattan (voting
-      // off) are gone.
-      expect(labels).toEqual(['Harlem', 'Unis']);
-      expect(select).toHaveValue(HARLEM);
+      // off) are gone. One vote counts in both.
+      const countsIn = await screen.findByRole('note', { name: /counts in/i });
+      await waitFor(() => expect(countsIn).toHaveTextContent('Harlem · Unis'));
+      expect(screen.queryByLabelText(/jurisdiction/i)).not.toBeInTheDocument();
     });
 
     it('blocks with a clear notice when there is no overlap', async () => {
@@ -238,12 +236,6 @@ describe('VotingWizard', () => {
 
       expect(await screen.findByText(/Outside your voting area/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
-    });
-
-    it('prefers the race the page was showing as the default', async () => {
-      renderWizard({ filters: { selectedJurisdiction: 'harlem' } });
-      const select = await screen.findByLabelText(/jurisdiction/i);
-      await waitFor(() => expect(select).toHaveValue(HARLEM));
     });
   });
 

@@ -553,29 +553,13 @@ describe('Profile — playDefaultSong', () => {
     expect(media.artistId).toBe(ARTIST_ID);
   });
 
-  it('tracks the play before calling requestPlay', async () => {
-    mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
-    await renderAndWait();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /^listen$/i }));
-    await waitFor(() => {
-      const trackCall = callsTo('/v1/media/song/song-default-001/play', 'post')[0];
-      expect(trackCall).toBeTruthy();
-      expect(trackCall.url).toMatch(/userId=user-listener-001/);
-    });
-  });
-
-  it('still plays even when play tracking fails', async () => {
-    server.use(
-      http.post(`${API}/v1/media/song/:songId/play`, () =>
-        new HttpResponse(null, { status: 500 })
-      )
-    );
+  it('does not POST /play itself (the Player counts plays)', async () => {
     mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
     await renderAndWait();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /^listen$/i }));
     await waitFor(() => expect(requestPlaySpy).toHaveBeenCalled());
+    expect(callsTo('/v1/media/song/song-default-001/play', 'post')).toHaveLength(0);
   });
 });
 

@@ -217,7 +217,7 @@ describe('CreateAccountWizard', () => {
       expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
     });
 
-    it('accepts the hardcoded fallback UNIS-LAUNCH-2024 if the endpoint throws', async () => {
+    it('no longer accepts the retired UNIS-LAUNCH-2024 code when the endpoint throws', async () => {
       server.use(
         http.get(`${API}/v1/users/validate-referral/:code`, () =>
           HttpResponse.error()
@@ -229,13 +229,14 @@ describe('CreateAccountWizard', () => {
       await user.type(screen.getByPlaceholderText(/HARLEM-JOHN/i), 'UNIS-LAUNCH-2024');
 
       await waitFor(
-        () => expect(screen.getByText(/Welcome early adopter/i)).toBeInTheDocument(),
+        () => expect(screen.getByText(/Could not verify code/i)).toBeInTheDocument(),
         { timeout: 2000 }
       );
-      expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+      expect(screen.queryByText(/Welcome early adopter/i)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
     });
 
-    it('shows "Could not verify code" when endpoint throws on a non-fallback code', async () => {
+    it('shows "Could not verify code" when endpoint throws', async () => {
       server.use(
         http.get(`${API}/v1/users/validate-referral/:code`, () =>
           HttpResponse.error()

@@ -199,7 +199,7 @@ describe('ArtistPage', () => {
       expect(playBtn).toBeDisabled();
     });
 
-    it.skip('calls /play endpoint when Play Discography clicked (disabled-state timing issue)', () => {
+    it.skip('does not POST /play when Play Discography clicked — the Player counts plays (disabled-state timing issue)', () => {
       // Button starts disabled until defaultSong loads; timing in full-suite
       // runs is inconsistent. Verified manually in browser.
     });

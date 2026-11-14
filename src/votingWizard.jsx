@@ -614,8 +614,12 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   const intervalNoun = INTERVAL_NOUN[intervalKey] || formatText(intervalKey);
   const category = `${typeWord} of the ${intervalNoun}`; // "Song of the week"
 
+  // ONE VOTE, COUNTED UP THE CHAIN. The voter doesn't pick a jurisdiction:
+  // the vote counts once in every open race the voter and the nominee share
+  // (jurisdictionOptions, most local first). The server decides this itself
+  // and ignores the jurisdictionId sent with the vote.
   const selectedJurisdictionName =
-    jurisdictionOptions.find((o) => o.jurisdictionId === selectedJurisdictionId)?.name || '…';
+    jurisdictionOptions.length > 0 ? jurisdictionOptions.map((o) => o.name).join(' · ') : '…';
 
   // Problems the user should learn about on step 1 — before typing anything.
   let issue = null;
@@ -650,7 +654,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     issue = {
       kind: 'area',
       title: 'Outside your voting area',
-      body: `${nomineeName || 'This nominee'} isn’t on the ballot anywhere you can vote. You can vote in your home area and the areas above it.`,
+      body: `You and ${nomineeName || 'this nominee'} aren’t in any open race together yet, so this vote can’t be counted. You can vote for artists and songs from your own area and the areas around it.`,
     };
   }
 
@@ -995,7 +999,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
           </h2>
           <p className="vw-win__body">
             Your vote counted toward {category} in {selectedJurisdictionName}. One
-            vote per interval &mdash; results post at 12:00&nbsp;AM ET when the{' '}
+            vote per category per interval &mdash; results post at 12:00&nbsp;AM ET when the{' '}
             {intervalNoun} closes.
           </p>
 
@@ -1079,24 +1083,10 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
                 </select>
               </div>
               <div className="vw-field">
-                <label htmlFor="vw-jurisdiction">Jurisdiction</label>
-                <select
-                  id="vw-jurisdiction"
-                  className="vw-select"
-                  value={selectedJurisdictionId}
-                  onChange={(e) => setSelectedJurisdictionId(e.target.value)}
-                  disabled={jurisdictionStatus !== 'ready'}
-                >
-                  {jurisdictionStatus === 'loading' && <option value="">Loading…</option>}
-                  {jurisdictionStatus !== 'loading' && jurisdictionOptions.length === 0 && (
-                    <option value="">Unavailable</option>
-                  )}
-                  {jurisdictionOptions.map((o) => (
-                    <option key={o.jurisdictionId} value={o.jurisdictionId}>
-                      {o.name}
-                    </option>
-                  ))}
-                </select>
+<label id="vw-counts-in-label">Counts in</label>
+                <div className="vw-select" role="note" aria-labelledby="vw-counts-in-label">
+                  {jurisdictionStatus === 'loading' ? 'Loading…' : selectedJurisdictionName}
+                </div>
               </div>
             </div>
           </div>
@@ -1118,7 +1108,7 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
                 <strong>{category}</strong>
               </div>
               <div className="vw-summary__row">
-                <span>In</span>
+                <span>Counts in</span>
                 <strong>{selectedJurisdictionName}</strong>
               </div>
               <div className="vw-summary__row">

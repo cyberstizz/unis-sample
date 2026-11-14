@@ -9,7 +9,7 @@
 //     top-voted row per award_date)
 //   • interval/category switches refetch
 //   • deleted targets (award row with no song/user) are dropped, not crashed
-//   • play tracking is effect-based and never fires for guests
+//   • the timeline never POSTs /play itself — the Player owns play counting
 //   • loading / error+retry / empty states
 
 import React from 'react';
@@ -226,7 +226,7 @@ describe('WinnersTimeline', () => {
   // Playback
   // ══════════════════════════════════════════════════════════════════════
   describe('playback', () => {
-    it('plays a winning track and credits the play once it becomes current', async () => {
+    it('plays a winning track without POSTing /play itself (the Player counts plays)', async () => {
       trackAwards(() => [songAward()]);
       const user = userEvent.setup();
 
@@ -234,8 +234,9 @@ describe('WinnersTimeline', () => {
       await screen.findByText('no more heroes');
 
       await user.click(screen.getByRole('button', { name: 'Play no more heroes' }));
+      await flushPromises();
 
-      await waitFor(() => expect(callTracker.get('play:s1')).toBe(1));
+      expect(callTracker.get('play:s1')).toBe(0);
     });
 
     it('never tracks plays for guests', async () => {

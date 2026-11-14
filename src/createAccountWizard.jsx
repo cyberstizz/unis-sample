@@ -410,22 +410,12 @@ const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false, init
           });
         }
       } catch (err) {
-        if (code === 'UNIS-LAUNCH-2024') {
-          console.warn('[wizard] referral endpoint failed; applied launch-code fallback', err);
-          updateValidation('referralCode', {
-            checking: false,
-            valid: true,
-            message: 'Welcome early adopter!',
-          });
-          updateForm('referrerUsername', 'Unis');
-        } else {
-          console.error('[wizard] referral validation failed:', err);
-          updateValidation('referralCode', {
-            checking: false,
-            valid: false,
-            message: 'Could not verify code',
-          });
-        }
+        console.error('[wizard] referral validation failed:', err);
+        updateValidation('referralCode', {
+          checking: false,
+          valid: false,
+          message: 'Could not verify code',
+        });
       }
     }, 500),
     []
