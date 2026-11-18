@@ -743,10 +743,12 @@ $radius-sm: 6px;
   .player-buttons {
     display: flex;
     align-items: center;
-    gap: 20px;
+    // The skip buttons now have 40px tap targets (the icons were 26px), so the
+    // gap shrinks to keep the icons visually where they were.
+    gap: 12px;
 
     @media (max-width: 600px) {
-      gap: 10px;
+      gap: 4px;
 
       // Hide vote and playlist on mobile (they're in the tray)
       .player-btn:first-child,
@@ -778,51 +780,196 @@ $radius-sm: 6px;
     }
   }
 
-  // ─── THE PLAY/PAUSE BUTTON ───
-  // This is intentionally high-specificity to prevent any global
-  // SVG rule from eating the icon.
-  .player-btn-play {
-    width: 50px;
-    height: 50px;
+  // ─── TRANSPORT: previous · play/pause · next ───────────────────────────
+  // One rule drives this trio: play is the only coloured control. It's the
+  // action you came for, so it alone carries the theme. The skip buttons stay
+  // neutral (bright, not dim) and borrow the theme only when you touch them:
+  // a tinted halo on hover, a theme focus ring, a press that nudges the arrow
+  // the way it's pointing. That ties them to the theme without three
+  // coloured blobs competing for your eye.
+
+  .player-skip {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    padding: 0;
     border-radius: 50%;
-    background-color: $unis-blue;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.86);
     display: flex;
     align-items: center;
     justify-content: center;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease, background-color 0.2s ease;
-    padding: 0;
-    overflow: visible;
     flex-shrink: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.18s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-    &:hover {
-      transform: scale(1.05);
-      filter: brightness(1.15);
+    // The halo is its own layer so it can grow in without moving the icon.
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: color-mix(in srgb, var(--unis-primary, #163387) 34%, rgba(255, 255, 255, 0.08));
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .skip-glyph {
+      position: relative;
+      width: 20px !important;
+      height: 20px !important;
+      display: block !important;
+      fill: currentColor !important;
+      overflow: visible;
+      pointer-events: none;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+      rect,
+      path { fill: currentColor !important; }
+    }
+
+    // Cancel the shared .player-btn hover scale on every device (it would
+    // fight the halo, and on phones it sticks after a tap).
+    &:hover { transform: none; }
+
+    @media (hover: hover) {
+      &:hover {
+        color: #fff;
+
+        &::before {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
     }
 
     &:active {
-      transform: scale(0.95);
+      transform: scale(0.9);
+      transition-duration: 0.08s;
+
+      &::before {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
-    // Nuclear specificity: guarantee the SVG inside is visible
+    // The press nudges the arrow the way it points.
+    &--prev:active .skip-glyph { transform: translateX(-2px); }
+    &--next:active .skip-glyph { transform: translateX(2px); }
+
+    &:focus-visible {
+      outline: 2px solid var(--unis-primary-2, #4f6fd1);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 600px) {
+      width: 38px;
+      height: 38px;
+    }
+  }
+
+  .player-btn-play {
+    --pp: var(--unis-primary, #163387);
+
+    position: relative;
+    width: 50px;
+    height: 50px;
+    padding: 0;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: visible;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    // Lit from the top-left, like the chrome in the wordmark: a lighter
+    // shade of the theme up top falling to a deeper one below.
+    background:
+      radial-gradient(120% 120% at 30% 18%,
+        color-mix(in srgb, var(--pp), white 18%) 0%,
+        var(--pp) 55%,
+        color-mix(in srgb, var(--pp), black 20%) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),  // top edge catching light
+      inset 0 -2px 6px rgba(0, 0, 0, 0.2),        // weight at the bottom
+      0 6px 18px color-mix(in srgb, var(--pp), transparent 55%), // theme glow
+      0 2px 4px rgba(0, 0, 0, 0.35);              // contact shadow
+    transition:
+      transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.25s ease;
+
+    @media (hover: hover) {
+      &:hover {
+        transform: scale(1.06);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.32),
+          inset 0 -2px 6px rgba(0, 0, 0, 0.2),
+          0 8px 26px color-mix(in srgb, var(--pp), transparent 35%),
+          0 2px 4px rgba(0, 0, 0, 0.35);
+      }
+    }
+
+    &:active {
+      transform: scale(0.93);
+      transition-duration: 0.08s;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--unis-primary-2, #4f6fd1);
+      outline-offset: 3px;
+    }
+  }
+
+  // Play ⇄ pause: both glyphs are stacked; the outgoing one shrinks and
+  // fades while the incoming one springs up. The svg rules stay
+  // !important: a global svg rule once ate this icon.
+  .pp-glyph {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    display: block;
+    pointer-events: none;
+
     svg {
+      position: absolute;
+      inset: 0;
       width: 24px !important;
       height: 24px !important;
       display: block !important;
-      fill: #FFFFFF !important;
-      opacity: 1 !important;
+      fill: #fff !important;
+      opacity: 1;
       visibility: visible !important;
       overflow: visible !important;
-      flex-shrink: 0;
-      pointer-events: none;
+      transition:
+        opacity 0.16s ease,
+        transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-      path {
-        fill: #FFFFFF !important;
-        opacity: 1 !important;
+      path,
+      rect {
+        fill: #fff !important;
         visibility: visible !important;
       }
+    }
+
+    &[data-playing='true'] .pp-glyph__play,
+    &[data-playing='false'] .pp-glyph__pause {
+      opacity: 0;
+      transform: scale(0.55);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .player-skip,
+    .player-skip::before,
+    .player-skip .skip-glyph,
+    .player-btn-play,
+    .pp-glyph svg {
+      transition: none !important;
     }
   }
 
@@ -1084,6 +1231,38 @@ $radius-sm: 6px;
           &.play-pause-btn {
             font-size: 60px;
             color: $unis-blue;
+          }
+        }
+
+        // Full-screen view: same three controls as the bar, scaled up.
+        button.player-skip {
+          width: 56px;
+          height: 56px;
+          color: rgba(255, 255, 255, 0.9);
+
+          &:hover { color: #fff; transform: none; }
+
+          .skip-glyph {
+            width: 28px !important;
+            height: 28px !important;
+          }
+        }
+
+        button.player-btn-play {
+          width: 72px;
+          height: 72px;
+          background:
+            radial-gradient(120% 120% at 30% 18%,
+              color-mix(in srgb, var(--pp), white 18%) 0%,
+              var(--pp) 55%,
+              color-mix(in srgb, var(--pp), black 20%) 100%);
+
+          &:hover { color: inherit; transform: scale(1.05); }
+
+          .pp-glyph,
+          .pp-glyph svg {
+            width: 32px !important;
+            height: 32px !important;
           }
         }
       }

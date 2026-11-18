@@ -18,29 +18,43 @@ import PocketLockOverlay from './PocketLockOverlay';
 import './player.scss';
 
 // ─── Inline SVG icons ───
-const PlayIcon = ({ size = 24 }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size}
-    style={{ width: size, height: size, display: 'block', fill: '#FFFFFF', flexShrink: 0 }}>
-    <path d="M8 5v14l11-7z" />
-  </svg>
+// Transport glyphs (previous / play-pause / next). Drawn on one 24 grid with
+// rounded corners to match the Unis icon set and the wordmark. The play
+// triangle sits a hair right of centre, because a triangle's visual weight
+// is on its flat side and a mathematically centred one looks off.
+// Colours come from player.scss, not from here.
+
+// Play and pause are stacked, and the button crossfades between them
+// (player.scss → .pp-glyph), so the change feels like one morph.
+const PlayPauseGlyph = ({ playing }) => (
+  <span className="pp-glyph" data-playing={playing ? 'true' : 'false'} aria-hidden="true">
+    <svg className="pp-glyph__play" viewBox="0 0 24 24" focusable="false">
+      <path d="M8.6 6.32v11.36a1.3 1.3 0 0 0 1.97 1.11l9.27-5.68a1.3 1.3 0 0 0 0-2.22L10.57 5.21A1.3 1.3 0 0 0 8.6 6.32z" />
+    </svg>
+    <svg className="pp-glyph__pause" viewBox="0 0 24 24" focusable="false">
+      <rect x="6.6" y="5.2" width="3.9" height="13.6" rx="1.3" />
+      <rect x="13.5" y="5.2" width="3.9" height="13.6" rx="1.3" />
+    </svg>
+  </span>
 );
 
-const PauseIcon = ({ size = 24 }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size}
-    style={{ width: size, height: size, display: 'block', fill: '#FFFFFF', flexShrink: 0 }}>
-    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-  </svg>
-);
-
+// Skip back: bar + triangle. The bar means "to the start of the track /
+// the track before"; two triangles would mean rewind (scrubbing), which
+// these buttons don't do.
 const PrevIcon = () => (
-  <svg viewBox="0 0 24 24" width="18" height="18" style={{ width: 18, height: 18, fill: 'currentColor', display: 'block' }}>
-    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+  <svg className="skip-glyph" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <rect x="5.2" y="5.8" width="2.3" height="12.4" rx="1.15" />
+    <path d="M18.8 7.24v9.52a1.2 1.2 0 0 1-1.84 1.01l-7.06-4.76a1.2 1.2 0 0 1 0-2.02l7.06-4.76a1.2 1.2 0 0 1 1.84 1.01z" />
   </svg>
 );
 
+// Skip forward: the same glyph, mirrored, so the two are exact twins.
 const NextIcon = () => (
-  <svg viewBox="0 0 24 24" width="18" height="18" style={{ width: 18, height: 18, fill: 'currentColor', display: 'block' }}>
-    <path d="M16 6h2v12h-2zm-10 0l8.5 6L6 18z"/>
+  <svg className="skip-glyph" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <g transform="matrix(-1 0 0 1 24 0)">
+      <rect x="5.2" y="5.8" width="2.3" height="12.4" rx="1.15" />
+      <path d="M18.8 7.24v9.52a1.2 1.2 0 0 1-1.84 1.01l-7.06-4.76a1.2 1.2 0 0 1 0-2.02l7.06-4.76a1.2 1.2 0 0 1 1.84 1.01z" />
+    </g>
   </svg>
 );
 
@@ -876,11 +890,20 @@ const Player = () => {
           </div>
           <input type="range" value={progress} onChange={handleSeek} className="expanded-seekbar" min="0" max="100" />
           <div className="controls">
-            <button onClick={handlePrev}>⏮</button>
-            <button className="player-btn-play" onClick={handlePlayPause} title={isPlaying ? 'Pause' : 'Play'}>
-              {isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
+            <button className="player-skip player-skip--prev" onClick={handlePrev} aria-label="Previous">
+              <PrevIcon />
             </button>
-            <button onClick={handleNext}>⏭</button>
+            <button
+              className="player-btn-play"
+              onClick={handlePlayPause}
+              title={isPlaying ? 'Pause' : 'Play'}
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+            >
+              <PlayPauseGlyph playing={isPlaying} />
+            </button>
+            <button className="player-skip player-skip--next" onClick={handleNext} aria-label="Next">
+              <NextIcon />
+            </button>
           </div>
           <div className="expanded-actions">
             <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
@@ -1010,7 +1033,12 @@ const Player = () => {
                 <button className="player-btn" onClick={handleVoteClick} title="Vote for this song">
                   <Vote size={18} />
                 </button>
-                <button className="player-btn" onClick={handlePrev} title="Previous">
+                <button
+                  className="player-btn player-skip player-skip--prev"
+                  onClick={handlePrev}
+                  title="Previous"
+                  aria-label="Previous"
+                >
                   <PrevIcon />
                 </button>
 
@@ -1018,11 +1046,17 @@ const Player = () => {
                   className="player-btn-play"
                   onClick={handlePlayPause}
                   title={isPlaying ? 'Pause' : 'Play'}
+                  aria-label={isPlaying ? 'Pause' : 'Play'}
                 >
-                  {isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
+                  <PlayPauseGlyph playing={isPlaying} />
                 </button>
 
-                <button className="player-btn" onClick={handleNext} title="Next">
+                <button
+                  className="player-btn player-skip player-skip--next"
+                  onClick={handleNext}
+                  title="Next"
+                  aria-label="Next"
+                >
                   <NextIcon />
                 </button>
                 <button className="player-btn" onClick={handleAddToPlaylist} title="Add to playlist or queue">
