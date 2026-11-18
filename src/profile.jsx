@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Play, Edit3, Trash2, ArrowRight, Clock, Heart } from 'lucide-react';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
 import { useFeedback, errorMessage } from './context/FeedbackContext';
@@ -23,11 +24,9 @@ import './profile.scss';
 // ---------------------------------------------------------------------------
 // Inline section UI helpers
 // ---------------------------------------------------------------------------
+// Loading states use the shared Unis loader (components/UnisLoader.jsx).
 const SectionLoader = ({ label = 'Loading...' }) => (
-  <div className="section-loader" role="status" aria-live="polite">
-    <div className="section-loader-spinner" aria-hidden="true" />
-    <p>{label}</p>
-  </div>
+  <UnisLoader size="section" label={label} />
 );
 
 const SectionError = ({ message = 'Failed to load.', onRetry }) => (
@@ -153,7 +152,7 @@ const Profile = () => {
     return (
       <Layout>
         <div className="profile-container profile-container--center">
-          <SectionLoader label="Loading your profile..." />
+          <UnisLoader label="Loading your profile..." />
         </div>
       </Layout>
     );

@@ -8,6 +8,7 @@ import Layout from "./layout";
 import VoteHistorySection from "./VoteHistorySection"; // ★ read-only; fetches the logged-in user's votes (self-view only)
 import ProfilePhotos from "./ProfilePhotos"; // Instagram-style photo grid + full-screen viewer
 import "./ListenerPage.scss";
+import UnisLoader from './components/UnisLoader';
 
 // ----------------------------------------------------------------------------
 // inline icons
@@ -117,7 +118,7 @@ const ListenerPage = () => {
   }, [following, userId, user?.username, feedback]);
 
   if (loading) {
-    return <Layout><div className="lpr-wrap"><div className="lpr-loading"><div className="lpr-loading__spinner" /></div></div></Layout>;
+    return <Layout><div className="lpr-wrap"><UnisLoader label="Loading profile..." /></div></Layout>;
   }
   if (error || !user) {
     return <Layout><div className="lpr-wrap"><div className="lpr-empty"><h3>{error || "Profile not found"}</h3><p>This listener may have moved or set their profile to private.</p></div></div></Layout>;

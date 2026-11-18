@@ -17,6 +17,7 @@ import fallbackArtwork from './assets/theQuiet.jpg';
 import { Heart, Flag, Link as LinkIcon, ChevronDown, ChevronUp } from 'lucide-react';
 import './videoPage.scss';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import { PlayerContext } from './context/playercontext';
 import CommentSection from './commentSection';
 import { useAuth } from './context/AuthContext';
@@ -310,7 +311,7 @@ const VideoPage = () => {
     return (
       <Layout backgroundImage={fallbackArtwork}>
         <div className="video-page-container">
-          <div className="vp-loading">Loading video...</div>
+          <UnisLoader label="Loading video..." />
         </div>
       </Layout>
     );

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import './leaderboardsPage.scss';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import backimage from './assets/randomrapper.jpeg';
 import { JURISDICTION_IDS } from './utils/idMappings';
 import RankMove from './components/RankMove';
@@ -324,9 +325,7 @@ const LeaderboardsPage = () => {
 
           {/* ── Results ──────────────────────────────────────────────────── */}
           {isLoading ? (
-            <div className="lb-state" role="status" aria-live="polite">
-              <p className="lb-state-title">Counting the votes and plays…</p>
-            </div>
+            <UnisLoader size="section" label="Counting the votes and plays…" />
           ) : error ? (
             <div className="lb-state" role="alert">
               <p className="lb-state-title">No standings yet</p>

@@ -47,6 +47,7 @@ import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
 import { buildUrl } from './utils/buildUrl';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import backimage from './assets/randomrapper.jpeg';
 import {
   DollarSign, Users, TrendingUp, ArrowUpRight,
@@ -497,10 +498,7 @@ const Earnings = () => {
     return (
       <Layout backgroundImage={backimage}>
         <div className="earnings-page">
-          <div className="earnings-loading" role="status" aria-live="polite">
-            <RefreshCw size={32} className="spin" aria-hidden="true" />
-            <p>Loading your earnings...</p>
-          </div>
+          <UnisLoader label="Loading your earnings..." />
         </div>
       </Layout>
     );

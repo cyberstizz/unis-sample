@@ -6,11 +6,15 @@
 // v2: forwards recipientName + recipientPhotoUrl into the compose state.
 // MessagePage falls back to "Member" / no avatar when these are missing, so
 // callers should always pass them (see artistpage.jsx).
+//
+// v3: styles moved to messageButton.scss (they used to load only with the
+// Messages page) and the class renamed from udm-msg-btn to unis-dm-cta.
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
+import './messageButton.scss';
 
 export default function MessageButton({
   recipientId,
@@ -37,7 +41,7 @@ export default function MessageButton({
   };
 
   return (
-    <button className={`udm-msg-btn ${className}`} onClick={onClick}>
+    <button type="button" className={`unis-dm-cta ${className}`.trim()} onClick={onClick}>
       <MessageCircle size={18} aria-hidden="true" />
       <span>Message</span>
     </button>

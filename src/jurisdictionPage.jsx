@@ -40,6 +40,7 @@ import { apiCall } from './components/axiosInstance';
 import { useFeedback } from './context/FeedbackContext';
 import './jurisdictionPage.scss';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import AdSlot from './components/AdSlot';
 import prominentArtistBg from './assets/songartworkfour.jpeg';
 import albumArt from './assets/songartworktwo.jpeg';
@@ -307,7 +308,7 @@ const JurisdictionPage = ({ jurisdiction = 'Harlem' }) => {
   if (loading) {
     return (
       <Layout>
-        <div className="jp-loading">Loading {jurName}...</div>
+        <UnisLoader label={`Loading ${jurName}...`} />
       </Layout>
     );
   }

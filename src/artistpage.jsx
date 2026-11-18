@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import AdSlot from './components/AdSlot';
 import './artistpage.scss';
 import theQuiet from './assets/theQuiet.jpg';
@@ -971,7 +972,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
   if (loading) return (
     <Layout backgroundImage={theQuiet}>
-      <div className="ap2-loading">Loading...</div>
+      <UnisLoader label="Loading artist..." />
     </Layout>
   );
 
@@ -1162,6 +1163,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                     Play
                   </button>
                   <MessageButton
+                    className="ap2-hero__btn-message"
                     recipientId={artistId}
                     recipientName={artist.username}
                     recipientPhotoUrl={artist.photoUrl ? buildUrl(artist.photoUrl) : null}

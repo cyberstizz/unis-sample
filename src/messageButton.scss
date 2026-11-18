@@ -1,0 +1,52 @@
+// src/messageButton.scss
+// ─────────────────────────────────────────────────────────────
+// The "Message" button (MessageButton.jsx).
+//
+// Why this file exists: these styles used to live in messages.scss, which
+// only loads with the Messages page. Anyone who opened an artist page
+// before visiting Messages got a raw, unstyled browser button. The button
+// now brings its own styles wherever it's used.
+//
+// The base look is wrapped in :where(), which gives it zero specificity, so
+// a page can restyle the button to match its neighbours (artistpage.scss →
+// .ap2-hero__btn-message) without a fight over which stylesheet loaded last.
+// ─────────────────────────────────────────────────────────────
+
+:where(.unis-dm-cta) {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  font-family: var(--unis-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--unis-text);
+  background: var(--unis-panel-2);
+  border: 1px solid var(--unis-border-hi);
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+:where(.unis-dm-cta):hover {
+  background: var(--unis-primary-subtle);
+  border-color: var(--unis-primary-border);
+}
+
+:where(.unis-dm-cta):active { transform: scale(0.97); }
+
+:where(.unis-dm-cta):focus-visible {
+  outline: 2px solid var(--unis-primary-2);
+  outline-offset: 2px;
+}
+
+:where(.unis-dm-cta):disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+:where(.unis-dm-cta) svg {
+  flex-shrink: 0;
+  color: var(--unis-primary-2);
+}

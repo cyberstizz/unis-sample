@@ -5,6 +5,7 @@ import { apiCall } from './components/axiosInstance';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import AdSlot from './components/AdSlot';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
 import randomRapper from './assets/randomrapper.jpeg';
@@ -879,8 +880,7 @@ const Feed = () => {
         {/* On a cold start the launch splash covers this and stays until the
             feed has its data, so the splash hands over to a full feed. */}
         <SplashHold />
-        <div className="feed-loading-spinner" />
-        <span>Loading your feed...</span>
+        <UnisLoader label="Loading your feed..." />
       </div>
     </Layout>
   );
@@ -1140,9 +1140,7 @@ const Feed = () => {
               </div>
 
               {chartLoading ? (
-                <div className="lens-loading">
-                  <div className="feed-loading-spinner" />
-                </div>
+                <UnisLoader size="section" label="Loading the charts..." />
               ) : !chartData ? (
                 <div className="lens-empty">
                   Nothing has scored yet this week in {selectedJurisdictionName}. Plays,
@@ -1226,9 +1224,7 @@ const Feed = () => {
               </div>
 
               {playlistsLoading ? (
-                <div className="lens-loading">
-                  <div className="feed-loading-spinner" />
-                </div>
+                <UnisLoader size="section" label="Loading playlists..." />
               ) : (
                 <>
                   {featuredPlaylist && (

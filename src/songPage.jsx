@@ -6,6 +6,7 @@ import LyricsWizard from './lyricsWizard';
 import { FileText, Heart } from 'lucide-react';
 import './songPage.scss';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import AdSlot from './components/AdSlot';
 import { PlayerContext } from './context/playercontext';
 import VotingWizard from './votingWizard';
@@ -354,7 +355,7 @@ const SongPage = () => {
     return (
       <Layout backgroundImage={songArtwork}>
         <div className="song-page-container">
-          <div className="sp-loading">Loading song...</div>
+          <UnisLoader label="Loading song..." />
         </div>
       </Layout>
     );

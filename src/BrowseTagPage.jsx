@@ -18,6 +18,7 @@ import { JURISDICTION_IDS } from './utils/idMappings';
 import { GENRE_LABELS } from './utils/taxonomy';
 import { songToTrack } from './utils/songTrack';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import './recommendedSongs.scss';
 import './browseTagPage.scss';
 
@@ -95,7 +96,7 @@ const BrowseTagPage = () => {
           <p className="btp__area">Songs from {areaName} come first.</p>
         )}
 
-        {loading && <div className="btp__status" role="status">Loading songs…</div>}
+        {loading && <UnisLoader size="section" label="Loading songs…" />}
         {!loading && error && <div className="btp__status btp__status--error" role="alert">{error}</div>}
         {!loading && !error && songs.length === 0 && (
           <div className="btp__status">

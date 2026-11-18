@@ -10,6 +10,7 @@ import Layout from "./layout";
 import AdSlot from "./components/AdSlot";
 
 import "./DiscoverPage.scss";
+import UnisLoader from './components/UnisLoader';
 
 // ----------------------------------------------------------------------------
 // constants
@@ -790,10 +791,7 @@ const DiscoverPage = () => {
 
           <div className="dsc-status" role="status" aria-live="polite">
             {loading && (
-              <div className="dsc-loading">
-                <div className="dsc-loading__spinner" aria-hidden="true" />
-                <span className="sr-only">Loading results…</span>
-              </div>
+              <UnisLoader size="section" label="Loading results…" />
             )}
 
             {error && !loading && (

@@ -2260,21 +2260,8 @@ $danger: #ff7a7a;
   }
 }
 
-// ── Profile "Message" button ─────────────────────────────────
-.udm-msg-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 16px;
-  font-family: var(--unis-font-sans); font-size: 14px; font-weight: 600;
-  color: var(--unis-text);
-  background: var(--unis-panel-2);
-  border: 1px solid var(--unis-border-hi);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-  &:hover { background: var(--unis-primary-subtle); border-color: var(--unis-primary-border); }
-  &:disabled { opacity: 0.6; cursor: default; }
-  svg { color: var(--unis-primary-2); }
-}
+// The profile "Message" button's styles moved to messageButton.scss so they
+// load with the button itself, not only with this page.
 
 // ═════════════════════════════════════════════════════════════
 //  PHONE: single pane + full-screen thread stage

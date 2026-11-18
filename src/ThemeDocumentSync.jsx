@@ -66,8 +66,32 @@ function appendIconLink({ rel, href, type }) {
   document.head.appendChild(link);
 }
 
+// The page scrollbar belongs to <html>, outside #root where the theme
+// variables live, so it can't read --unis-primary by itself. This copies the
+// theme colour up to <html> as --unis-scroll-thumb (index.css paints the
+// scrollbar with it) whenever #root's data-theme changes.
+function syncScrollbarColour() {
+  const root = document.getElementById("root");
+  if (!root) return;
+  const primary = getComputedStyle(root).getPropertyValue("--unis-primary").trim();
+  if (primary) {
+    document.documentElement.style.setProperty("--unis-scroll-thumb", primary);
+  }
+}
+
 export default function ThemeDocumentSync() {
   const { theme } = useAuth();
+
+  // Watch the attribute itself: AuthContext sets it, sometimes after this
+  // component's own effects have already run.
+  useEffect(() => {
+    const root = document.getElementById("root");
+    if (!root || typeof MutationObserver === "undefined") return undefined;
+    syncScrollbarColour();
+    const observer = new MutationObserver(syncScrollbarColour);
+    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const safeTheme = THEME_DOCUMENT_MAP[theme] ? theme : DEFAULT_THEME;

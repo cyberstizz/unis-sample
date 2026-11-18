@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { buildUrl } from "../utils/buildUrl";
 import Layout from "../layout";
 import "./SearchResultsPage.scss";
+import UnisLoader from '../components/UnisLoader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -231,9 +232,7 @@ const SearchResultsPage = () => {
 
         {/* Loading */}
         {loading && (
-          <div className="srp-loading">
-            <div className="srp-loading__spinner" />
-          </div>
+          <UnisLoader size="section" label="Searching..." />
         )}
 
         {/* No results */}

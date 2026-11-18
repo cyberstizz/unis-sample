@@ -41,6 +41,7 @@ import buildSetupSteps from './utils/artistSetupSteps';
 import PhoneVerificationModal from './phoneVerificationModal';
 import './artistDashboard.scss';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import backimage from './assets/randomrapper.jpeg';
 import { useAuth } from './context/AuthContext';
 import { PlayerContext } from './context/playercontext';
@@ -105,11 +106,9 @@ const LINK_FIELDS = [
 // ---------------------------------------------------------------------------
 // Small inline loader / error shown per section while data is in flight
 // ---------------------------------------------------------------------------
+// Loading states use the shared Unis loader (components/UnisLoader.jsx).
 const SectionLoader = ({ label = 'Loading...' }) => (
-  <div className="ad-loader" role="status">
-    <span className="ad-card__spinner" aria-hidden="true" />
-    <p>{label}</p>
-  </div>
+  <UnisLoader size="section" label={label} />
 );
 
 const SectionError = ({ message = 'Failed to load.', onRetry }) => (

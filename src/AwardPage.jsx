@@ -13,6 +13,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import { apiCall } from './components/axiosInstance';
 import { useFeedback } from './context/FeedbackContext';
 import { buildUrl } from './utils/buildUrl';
@@ -105,7 +106,7 @@ const AwardPage = () => {
     <Layout>
       <div className="aw-page">
         {error && <p className="aw-error" role="alert">{error}</p>}
-        {!card && !error && <p className="aw-loading" role="status">Loading…</p>}
+        {!card && !error && <UnisLoader label="Loading award…" />}
 
         {card && (
           <article className="aw-layout">

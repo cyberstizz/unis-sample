@@ -499,36 +499,19 @@ const LastWonNotification = () => {
           /> */}
 
           {/* Badge — slides in from left */}
-          <div
-            className={`lwn-tag ${animStage >= 1 ? 'lwn-tag-visible' : ''}`}
-            style={
-              ambientColor
-                ? {
-                    background: `rgba(${ambientColor}, 0.12)`,
-                    borderColor: `rgba(${ambientColor}, 0.3)`,
-                    color: `rgba(${ambientColor}, 1)`,
-                    filter: 'brightness(1.6)',
-                  }
-                : undefined
-            }
-          >
+          {/* Text accents (this badge, the date callout, the artist name) always
+              use the user's theme. The artwork's colour is only for the
+              atmosphere behind the card: averaged down to one pixel it is
+              almost always a muddy grey-brown, and it used to replace the
+              theme here whenever the artwork could be sampled. */}
+          <div className={`lwn-tag ${animStage >= 1 ? 'lwn-tag-visible' : ''}`}>
             {/* <span className="lwn-tag-icon">{cat.icon}</span> */}
             <LetterReveal text={cat.badge} baseDelay={0.5} />
           </div>
 
           {/* Date callout — bold context + supporting date */}
           <div className={`lwn-date-callout ${animStage >= 2 ? 'lwn-date-visible' : ''}`}>
-            <div
-              className="lwn-date-label"
-              style={
-                ambientColor
-                  ? {
-                      backgroundImage: `linear-gradient(180deg, #ffffff 0%, rgba(${ambientColor}, 1) 52%, rgba(${ambientColor}, 0.72) 100%)`,
-                      filter: `drop-shadow(0 0 18px rgba(${ambientColor}, 0.35)) brightness(1.35)`,
-                    }
-                  : undefined
-              }
-            >
+            <div className="lwn-date-label">
               {notification.dateLabel}
             </div>
 
@@ -540,17 +523,7 @@ const LastWonNotification = () => {
             <h2 className="lwn-title">{notification.title}</h2>
 
             {notification.artist && (
-              <p
-                className="lwn-artist"
-                style={
-                  ambientColor
-                    ? {
-                        color: `rgb(${ambientColor})`,
-                        filter: 'brightness(1.5)',
-                      }
-                    : undefined
-                }
-              >
+              <p className="lwn-artist">
                 {notification.artist}
               </p>
             )}

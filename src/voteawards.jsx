@@ -5,6 +5,7 @@ import { apiCall } from './components/axiosInstance';
 import { useFeedback } from './context/FeedbackContext';
 import './voteawards.scss';
 import Layout from './layout';
+import UnisLoader from './components/UnisLoader';
 import backimage from './assets/randomrapper.jpeg';
 import VotingWizard from './votingWizard';
 import { GENRE_IDS, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
@@ -673,7 +674,7 @@ const VoteAwards = () => {
             </p>
           )}
           {loading && (
-            <div className="va-loading">Loading nominees...</div>
+            <UnisLoader size="section" label="Loading nominees..." />
           )}
 
           {error && (

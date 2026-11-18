@@ -1,0 +1,220 @@
+// src/components/unisLoader.scss
+// ─────────────────────────────────────────────────────────────
+// The in-app loader (UnisLoader.jsx).
+//
+// How the sweep works. Three layers sit on top of each other, all the size
+// of the wordmark:
+//   __word  the real logo (theme version), shown through a moving mask
+//   __edge  a sharp band of light, cut to the letter shapes
+//   __glow  the same band, blurred so its light spills past the letters
+// All three move together on one 2.8s loop. The mask and the bands are one
+// long gradient, five times the logo's width, sliding right to left past
+// it. Read across, that gradient is:
+//   empty · band + edge in · logo fully shown · band + edge out · empty
+// so as it slides, a band of light enters from the right writing the
+// letters in, the logo holds, a second band enters from the right wiping
+// them out, and the loop restarts from empty, with no visible seam.
+// ─────────────────────────────────────────────────────────────
+
+.unis-loader {
+  // The logo for this theme (same files as the launch splash).
+  --ul-word: url(/brand/splash/wordmark-blue.svg);
+  --ul-mask: url(/brand/splash/wordmark-blue.svg);
+
+  // The light: the theme colour, lifted so dark themes still glow, plus its
+  // neighbouring hues on either side. Browsers without relative colour
+  // syntax get two tints of the theme instead.
+  --ul-c: color-mix(in srgb, var(--unis-primary, #163387), white 30%);
+  --ul-a: color-mix(in srgb, var(--unis-primary, #163387), white 55%);
+  --ul-b: color-mix(in srgb, var(--unis-primary, #163387), white 15%);
+
+  --ul-w: 150px;
+  --ul-loop: 2.8s;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+
+  // Wait a beat before appearing so a fast load never flashes the loader.
+  opacity: 0;
+  animation: ul-appear 0.35s ease 0.18s forwards;
+
+  &--page {
+    min-height: min(62vh, 560px);
+    padding: 40px 20px;
+  }
+
+  &--section {
+    --ul-w: 112px;
+    min-height: 160px;
+    padding: 28px 16px;
+    gap: 12px;
+  }
+}
+
+@supports (color: oklch(from red l c h)) {
+  .unis-loader {
+    --ul-a: oklch(from var(--unis-primary, #163387) calc(l + 0.28) c calc(h - 42));
+    --ul-b: oklch(from var(--unis-primary, #163387) calc(l + 0.22) c calc(h + 42));
+  }
+}
+
+[data-theme='orange'] .unis-loader { --ul-word: url(/brand/splash/wordmark-orange.png); }
+[data-theme='red']    .unis-loader { --ul-word: url(/brand/splash/wordmark-red.png); }
+[data-theme='green']  .unis-loader { --ul-word: url(/brand/splash/wordmark-green.png); }
+[data-theme='purple'] .unis-loader { --ul-word: url(/brand/splash/wordmark-purple.png); }
+[data-theme='yellow'] .unis-loader { --ul-word: url(/brand/splash/wordmark-yellow.png); }
+[data-theme='dianna'] .unis-loader { --ul-word: url(/brand/splash/wordmark-dianna.png); }
+
+.unis-loader__mark {
+  position: relative;
+  width: var(--ul-w);
+  aspect-ratio: 931.2 / 207.2;
+}
+
+.unis-loader__word,
+.unis-loader__edge,
+.unis-loader__glow,
+.unis-loader__glow > i {
+  position: absolute;
+  inset: 0;
+}
+
+// The logo, revealed and hidden by a sliding mask.
+.unis-loader__word {
+  background: var(--ul-word) center / 100% 100% no-repeat;
+  -webkit-mask-image: linear-gradient(90deg,
+    transparent 0%, transparent 20%,
+    #000 25%, #000 75%,
+    transparent 80%, transparent 100%);
+          mask-image: linear-gradient(90deg,
+    transparent 0%, transparent 20%,
+    #000 25%, #000 75%,
+    transparent 80%, transparent 100%);
+  -webkit-mask-size: 500% 100%;
+          mask-size: 500% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  animation: ul-sweep-mask var(--ul-loop) linear infinite;
+}
+
+// The band of light: one gradient, the same geometry as the mask above,
+// cut to the letter shapes.
+%ul-band {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    transparent 19%,
+    var(--ul-a) 20.8%,
+    #fff 22.5%,
+    var(--ul-c) 23.7%,
+    var(--ul-b) 24.8%,
+    transparent 26%,
+    transparent 74%,
+    var(--ul-b) 75.2%,
+    var(--ul-c) 76.3%,
+    #fff 77.5%,
+    var(--ul-a) 79.2%,
+    transparent 81%,
+    transparent 100%) 0% 0 / 500% 100% no-repeat;
+  -webkit-mask: var(--ul-mask) center / 100% 100% no-repeat;
+          mask: var(--ul-mask) center / 100% 100% no-repeat;
+  animation: ul-sweep-band var(--ul-loop) linear infinite;
+}
+
+.unis-loader__edge {
+  @extend %ul-band;
+  mix-blend-mode: screen;
+}
+
+// The blur sits on the wrapper, so it blurs the already-cut letters and the
+// light spills past their edges like a glow.
+.unis-loader__glow {
+  filter: blur(9px) saturate(1.5) brightness(1.3);
+  transform: scale(1.06, 1.25);
+
+  > i { @extend %ul-band; }
+
+  // A second, wider haze behind the first: the soft bloom around the light.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    @extend %ul-band;
+    filter: blur(10px);
+    opacity: 0.8;
+    transform: scale(1.1, 1.6);
+  }
+}
+
+.unis-loader__label {
+  margin: 0;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+  text-align: center;
+  animation: ul-label 2.8s ease-in-out infinite;
+
+  .unis-loader--section & { font-size: 12.5px; }
+}
+
+.unis-loader__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+// ── Motion ──────────────────────────────────────────────────────────────────
+// Position 0% shows the gradient's empty left end, 100% its empty right end.
+// Stops: 0→31.25% writes the logo in (the first band crosses), 31.25→68.75%
+// holds it (a slow drift, nothing visible changes), 68.75→100% wipes it out
+// (the second band crosses), then a short empty pause before the loop.
+
+@keyframes ul-sweep-mask {
+  0%   { -webkit-mask-position: 0% 0;      mask-position: 0% 0;      animation-timing-function: cubic-bezier(0.3, 0.1, 0.25, 1); }
+  36%  { -webkit-mask-position: 31.25% 0;  mask-position: 31.25% 0; }
+  58%  { -webkit-mask-position: 68.75% 0;  mask-position: 68.75% 0;  animation-timing-function: cubic-bezier(0.55, 0, 0.7, 0.9); }
+  90%  { -webkit-mask-position: 100% 0;    mask-position: 100% 0; }
+  100% { -webkit-mask-position: 100% 0;    mask-position: 100% 0; }
+}
+
+@keyframes ul-sweep-band {
+  0%   { background-position: 0% 0;      animation-timing-function: cubic-bezier(0.3, 0.1, 0.25, 1); }
+  36%  { background-position: 31.25% 0; }
+  58%  { background-position: 68.75% 0;  animation-timing-function: cubic-bezier(0.55, 0, 0.7, 0.9); }
+  90%  { background-position: 100% 0; }
+  100% { background-position: 100% 0; }
+}
+
+@keyframes ul-appear {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes ul-label {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unis-loader { animation: ul-appear 0.01s linear 0.18s forwards; }
+
+  .unis-loader__word {
+    animation: none;
+    -webkit-mask-image: none;
+            mask-image: none;
+  }
+
+  .unis-loader__edge,
+  .unis-loader__glow { display: none; }
+
+  .unis-loader__label { animation: none; }
+}
