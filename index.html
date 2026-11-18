@@ -32,10 +32,32 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=Instrument+Serif:ital@0;1&amp;family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&amp;family=Caveat:wght@700&amp;family=Playfair+Display:ital,wght@0,700;1,700&amp;family=Bitcount+Grid+Double&amp;display=swap"
     />
 
+    <!-- Launch splash: these two load before anything else so the splash is
+         the very first frame. splash-boot.js picks the theme and quick mode;
+         splash.css draws it. src/boot/bootSplash.js removes it. -->
+    <script src="/splash-boot.js"></script>
+    <link rel="stylesheet" href="/splash.css" />
+    <link rel="preload" href="/brand/splash/wordmark-blue.svg" as="image" type="image/svg+xml" />
+
     <title>UNIS</title>
   </head>
 
   <body>
+    <div id="unis-splash" role="status">
+      <span class="us-sr">Loading Unis</span>
+      <div class="us-bg" aria-hidden="true"><div class="us-aura"></div></div>
+      <div class="us-stage" aria-hidden="true">
+        <div class="us-word">
+          <div class="us-cell us-cell--u"><div class="us-img us-base"></div><div class="us-fillwrap"><div class="us-fill"></div></div><div class="us-img us-true"></div></div>
+          <div class="us-cell us-cell--n"><div class="us-img us-base"></div><div class="us-fillwrap"><div class="us-fill"></div></div><div class="us-img us-true"></div></div>
+          <div class="us-cell us-cell--i"><div class="us-img us-base"></div><div class="us-fillwrap"><div class="us-fill"></div></div><div class="us-img us-true"></div></div>
+          <div class="us-cell us-cell--s"><div class="us-img us-base"></div><div class="us-fillwrap"><div class="us-fill"></div></div><div class="us-img us-true"></div></div>
+          <div class="us-glint"></div>
+        </div>
+        <div class="us-floor"></div>
+      </div>
+    </div>
+
     <div id="root"></div>
 
     <script type="module" src="/src/main.jsx"></script>

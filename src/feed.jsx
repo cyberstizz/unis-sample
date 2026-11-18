@@ -28,6 +28,7 @@ import { toLocalISO } from './utils/periodBounds';
 import { useReward } from './context/RewardContext';
 import { useFeedback } from './context/FeedbackContext';
 import { FeedSpotlight, TodayRace, DayTiles, MoversCard, FollowingDrops } from './feedModules';
+import { SplashHold } from './boot/bootSplash';
 import ArtistOfWeekCard from './ArtistOfWeekCard';
 import './feed.scss';
 
@@ -875,6 +876,9 @@ const Feed = () => {
   if (loading) return (
     <Layout backgroundImage={randomRapper}>
       <div className="feed-loading">
+        {/* On a cold start the launch splash covers this and stays until the
+            feed has its data, so the splash hands over to a full feed. */}
+        <SplashHold />
         <div className="feed-loading-spinner" />
         <span>Loading your feed...</span>
       </div>

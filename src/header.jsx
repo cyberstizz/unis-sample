@@ -12,6 +12,7 @@ import { createLogoMotionState, stepLogoMotion, logoStyle } from './utils/logoMo
 import {
   GESTURE_CONFIG, playLogoGesture, isGestureRunning, createPlaybackGestureTracker,
 } from './utils/logoGestures';
+import { onSplashGone } from './boot/bootSplash';
 import { FindIcon, VoteIcon, AwardsIcon, EarningsIcon, MenuIcon, SearchIcon, SignInIcon } from './icons/UnisIcons';
 import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
@@ -52,7 +53,10 @@ const Header = () => {
     try {
       const hasPlayed = sessionStorage.getItem('unis-logo-breathed');
       if (!hasPlayed) {
-        setShouldBreathe(true);
+        // With the launch splash up, the stretch waits for the splash's
+        // wordmark to land here and plays at once, as the "catch". With no
+        // splash it plays straight away, as before.
+        onSplashGone((landed) => setShouldBreathe(landed ? 'landing' : true));
         sessionStorage.setItem('unis-logo-breathed', 'true');
       }
     } catch (e) {
@@ -382,6 +386,7 @@ const Header = () => {
               src={activeLogo}
               alt="UNIS"
               className={`logo-img ${shouldBreathe ? 'logo-breathe' : ''}`}
+              style={shouldBreathe === 'landing' ? { animationDelay: '0s' } : undefined}
               draggable="false"
               onAnimationEnd={() => setShouldBreathe(false)}
             />

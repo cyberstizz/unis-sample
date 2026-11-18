@@ -1,0 +1,381 @@
+/*
+ * splash.css: the Unis launch splash.
+ *
+ * The markup is in index.html (#unis-splash, outside #root), so it paints on
+ * the very first frame, before any JavaScript. public/splash-boot.js sets the
+ * theme and quick mode first; src/boot/bootSplash.js decides when it leaves
+ * and flies the wordmark into the header logo.
+ *
+ * The idea: the UNIS wordmark is a set of four level meters.
+ *   0.00s  dark stage; the four letters rise in, unlit (grey chrome)
+ *   0.50s  each letter fills with the theme colour like an equaliser bar,
+ *          bouncing on a 120 BPM beat while the aura pulses with it
+ *   1.70s  the levels settle where the real logo keeps its colour, and the
+ *          real logo fades in on top: the lights come on
+ *   1.95s  a chrome glint sweeps across
+ *   2.20s+ if the app still isn't ready: the aura breathes, a hairline
+ *          shimmers under the logo, the glint returns every few seconds
+ *
+ * Geometry: every theme's logo has its letters in the same place, so one
+ * silhouette (wordmark-blue.svg) masks all of them. Letter columns, as a
+ * share of the wordmark's width: U 0-29.5%, N 29.5-61.1%, i 61.1-70.25%,
+ * S 70.25-100%.
+ */
+
+html { background: #07090f; }
+
+#unis-splash {
+  --sp-mask: url(/brand/splash/wordmark-blue.svg);
+  --sp-word: url(/brand/splash/wordmark-blue.svg);
+  --sp-accent: #2f86ea;
+  --sp-deep: #0a3a92;
+  --sp-hot: #d4e9ff;
+
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-splash-theme="orange"] #unis-splash { --sp-word: url(/brand/splash/wordmark-orange.png); --sp-accent: #ff7a1f; --sp-deep: #9a3604; --sp-hot: #ffdcbd; }
+html[data-splash-theme="red"]    #unis-splash { --sp-word: url(/brand/splash/wordmark-red.png);    --sp-accent: #e3242b; --sp-deep: #7a0306; --sp-hot: #ffc9cb; }
+html[data-splash-theme="green"]  #unis-splash { --sp-word: url(/brand/splash/wordmark-green.png);  --sp-accent: #3dc546; --sp-deep: #0f6b2a; --sp-hot: #d2f8d4; }
+html[data-splash-theme="purple"] #unis-splash { --sp-word: url(/brand/splash/wordmark-purple.png); --sp-accent: #9a49dc; --sp-deep: #3c0a5c; --sp-hot: #ead6ff; }
+html[data-splash-theme="yellow"] #unis-splash { --sp-word: url(/brand/splash/wordmark-yellow.png); --sp-accent: #e3b23c; --sp-deep: #7a560a; --sp-hot: #fff2cc; }
+html[data-splash-theme="dianna"] #unis-splash { --sp-word: url(/brand/splash/wordmark-dianna.png); --sp-accent: #e9b47c; --sp-deep: #8a5a1f; --sp-hot: #fff3e3; }
+
+#unis-splash.is-leaving { pointer-events: none; }
+
+.us-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Stage ──────────────────────────────────────────────────────────────── */
+
+.us-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
+    #07090f;
+}
+
+/* Film grain: barely there, but it stops the black reading as flat. */
+.us-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.us-aura {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(150vw, 1100px);
+  aspect-ratio: 2 / 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--sp-accent) 34%, transparent) 0%,
+    color-mix(in srgb, var(--sp-accent) 12%, transparent) 50%,
+    transparent 100%
+  );
+  opacity: 0;
+  animation:
+    us-aura-in 0.9s ease-out 0.05s both,
+    us-beat 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) 0.5s 3,
+    us-breathe 3.4s ease-in-out 2.2s infinite;
+  will-change: transform, opacity;
+}
+
+.us-stage {
+  position: relative;
+  width: min(74vw, 540px);
+}
+
+.us-word {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 931.2 / 207.2;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+
+/* ── Letters ────────────────────────────────────────────────────────────── */
+
+.us-cell {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(0 var(--r) 0 var(--l));
+  opacity: 0;
+  animation: us-rise 0.7s cubic-bezier(0.16, 0.84, 0.24, 1) var(--d) both;
+}
+.us-cell--u { --l: 0%;     --r: 70.5%;  --d: 0.06s; }
+.us-cell--n { --l: 29.5%;  --r: 38.9%;  --d: 0.13s; }
+.us-cell--i { --l: 61.1%;  --r: 29.75%; --d: 0.20s; }
+.us-cell--s { --l: 70.25%; --r: 0%;     --d: 0.27s; }
+
+.us-img {
+  position: absolute;
+  inset: 0;
+  background: var(--sp-word) center / 100% 100% no-repeat;
+}
+
+/* Unlit chrome: the real logo, drained of colour and dimmed. */
+.us-base { filter: grayscale(1) brightness(0.5) contrast(1.1); }
+
+/* The real logo, in the theme's colours. Fading this in is "lights on". */
+.us-true {
+  opacity: 0;
+  animation: us-lights 0.42s ease-out var(--td) both;
+}
+.us-cell--u .us-true { --td: 1.66s; }
+.us-cell--n .us-true { --td: 1.70s; }
+.us-cell--i .us-true { --td: 1.74s; }
+.us-cell--s .us-true { --td: 1.78s; }
+
+/* The level meter. The wrap is masked to the letter shapes and stays put;
+   the bar inside it moves (a mask moves with whatever it is on). */
+.us-fillwrap {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: var(--sp-mask) center / 100% 100% no-repeat;
+          mask: var(--sp-mask) center / 100% 100% no-repeat;
+  animation: us-drain 0.38s ease-in 1.72s both;
+}
+
+.us-fill {
+  position: absolute;
+  inset: 0;
+  transform: translateY(100%);
+  background: linear-gradient(
+    180deg,
+    var(--sp-hot) 0%,
+    var(--sp-accent) 7%,
+    var(--sp-accent) 42%,
+    var(--sp-deep) 100%
+  );
+  animation: var(--meter) 1.3s linear 0.5s both;
+  will-change: transform;
+}
+
+/* The bright surface line on top of the liquid. */
+.us-fill::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -5%;
+  height: 10%;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(255, 255, 255, 0.95), transparent 100%);
+}
+
+.us-cell--u .us-fill { --meter: us-meter-u; }
+.us-cell--n .us-fill { --meter: us-meter-n; }
+.us-cell--i .us-fill { --meter: us-meter-i; }
+.us-cell--s .us-fill { --meter: us-meter-s; }
+
+/* ── Glint + floor ──────────────────────────────────────────────────────── */
+
+.us-glint {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: var(--sp-mask) center / 100% 100% no-repeat;
+          mask: var(--sp-mask) center / 100% 100% no-repeat;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    transparent 41%,
+    rgba(255, 255, 255, 0.82) 50%,
+    transparent 59%,
+    transparent 100%
+  ) 100% 0 / 300% 100% no-repeat;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation:
+    us-glint 0.95s cubic-bezier(0.45, 0, 0.2, 1) 1.95s both,
+    us-glint-idle 3.6s cubic-bezier(0.45, 0, 0.2, 1) 4.4s infinite;
+}
+
+/* A hairline "stage floor" under the logo. If loading runs long, a light
+   travels along it so the screen never looks frozen. */
+.us-floor {
+  position: absolute;
+  left: 50%;
+  bottom: -34%;
+  width: 62%;
+  height: 1px;
+  overflow: hidden;
+  transform: translateX(-50%) scaleX(0);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--sp-accent) 55%, white) 50%,
+    transparent
+  );
+  opacity: 0;
+  animation: us-floor 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s both;
+}
+
+.us-floor::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 34%;
+  left: -34%;
+  background: linear-gradient(90deg, transparent, #fff, transparent);
+  opacity: 0;
+  animation: us-scan 1.5s cubic-bezier(0.45, 0, 0.55, 1) 2.4s infinite;
+}
+
+/* ── Keyframes ──────────────────────────────────────────────────────────── */
+
+@keyframes us-aura-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.82); }
+  to   { opacity: 0.62; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes us-beat {
+  0%   { opacity: 0.62; transform: translate(-50%, -50%) scale(1); }
+  14%  { opacity: 1;    transform: translate(-50%, -50%) scale(1.09); }
+  100% { opacity: 0.62; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes us-breathe {
+  0%, 100% { opacity: 0.62; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 0.85; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+@keyframes us-rise {
+  from { opacity: 0; transform: translateY(16%); filter: blur(10px); }
+  to   { opacity: 1; transform: translateY(0);   filter: blur(0); }
+}
+
+@keyframes us-lights {
+  from { opacity: 0; filter: brightness(1.6); }
+  to   { opacity: 1; filter: brightness(1); }
+}
+
+@keyframes us-drain {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Level meters: fast attack, slower fall, like a real meter. translateY 100%
+   is empty, 0% is full. Each one lands on that letter's colour line in the
+   real logo (U none, N half, i full, S just over half). */
+@keyframes us-meter-u {
+  0%   { transform: translateY(100%); animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  12%  { transform: translateY(22%);  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4); }
+  24%  { transform: translateY(65%);  animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  38%  { transform: translateY(8%);   animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4); }
+  52%  { transform: translateY(60%);  animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  66%  { transform: translateY(30%);  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4); }
+  82%  { transform: translateY(75%);  animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes us-meter-n {
+  0%   { transform: translateY(100%); animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  12%  { transform: translateY(45%);  animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  24%  { transform: translateY(10%);  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4); }
+  38%  { transform: translateY(70%);  animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  52%  { transform: translateY(18%);  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4); }
+  66%  { transform: translateY(55%);  animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  82%  { transform: translateY(40%);  animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1); }
+  100% { transform: translateY(50%); }
+}
+
+@keyframes us-meter-i {
+  0%   { transform: translateY(100%); animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  12%  { transform: translateY(5%);   animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4); }
+  24%  { transform: translateY(50%);  animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  38%  { transform: translateY(28%);  animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  52%  { transform: translateY(0%);   animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4); }
+  66%  { transform: translateY(40%);  animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  82%  { transform: translateY(12%);  animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1); }
+  100% { transform: translateY(0%); }
+}
+
+@keyframes us-meter-s {
+  0%   { transform: translateY(100%); animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  12%  { transform: translateY(38%);  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4); }
+  24%  { transform: translateY(60%);  animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  38%  { transform: translateY(0%);   animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4); }
+  52%  { transform: translateY(50%);  animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1); }
+  66%  { transform: translateY(15%);  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4); }
+  82%  { transform: translateY(60%);  animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1); }
+  100% { transform: translateY(40%); }
+}
+
+@keyframes us-glint {
+  from { background-position: 100% 0; }
+  to   { background-position: 0% 0; }
+}
+
+@keyframes us-glint-idle {
+  0%        { background-position: 100% 0; }
+  30%, 100% { background-position: 0% 0; }
+}
+
+@keyframes us-floor {
+  from { opacity: 0;    transform: translateX(-50%) scaleX(0); }
+  to   { opacity: 0.55; transform: translateX(-50%) scaleX(1); }
+}
+
+@keyframes us-scan {
+  0%   { left: -34%; opacity: 0; }
+  20%  { opacity: 0.9; }
+  80%  { opacity: 0.9; }
+  100% { left: 100%; opacity: 0; }
+}
+
+/* ── Quick mode: a reload in the same session ───────────────────────────── */
+
+.splash-quick .us-cell { animation: us-rise 0.4s cubic-bezier(0.16, 0.84, 0.24, 1) 0s both; }
+.splash-quick .us-true { opacity: 1; animation: none; }
+.splash-quick .us-fillwrap { display: none; }
+.splash-quick .us-aura {
+  animation:
+    us-aura-in 0.5s ease-out 0s both,
+    us-breathe 3.4s ease-in-out 0.8s infinite;
+}
+.splash-quick .us-glint {
+  animation:
+    us-glint 0.8s cubic-bezier(0.45, 0, 0.2, 1) 0.2s both,
+    us-glint-idle 3.6s cubic-bezier(0.45, 0, 0.2, 1) 2.4s infinite;
+}
+.splash-quick .us-floor { animation-delay: 0.1s; }
+.splash-quick .us-floor::after { animation-delay: 0.9s; }
+
+/* ── Reduced motion: the lit logo, a soft glow, nothing moving ──────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .us-cell,
+  .us-true,
+  .us-aura,
+  .us-glint,
+  .us-floor,
+  .us-floor::after { animation: none !important; }
+  .us-cell { opacity: 1; }
+  .us-true { opacity: 1; }
+  .us-fillwrap,
+  .us-glint { display: none; }
+  .us-aura { opacity: 0.6; }
+  .us-floor { opacity: 0.4; transform: translateX(-50%) scaleX(1); }
+}

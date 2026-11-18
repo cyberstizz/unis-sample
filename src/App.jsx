@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import lazyWithRetry from './utils/lazyWithRetry';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
@@ -18,6 +18,8 @@ import PlayChoiceModal from './PlayChoiceModal';
 import RewardScoreSync from './RewardScoreSync';
 import ThemeDocumentSync from "./ThemeDocumentSync";
 import { resolveGate } from './prelaunch/prelaunchConfig';
+import { SplashHold, markAppReady } from './boot/bootSplash';
+import TourLauncher from './tour/TourLauncher';
 
 // Theme
 import './theme.scss';
@@ -95,7 +97,7 @@ const SponsorsAdmin = lazyWithRetry(() => import('./admin/SponsorsAdmin'));
  */
 const AuthRequiredRoute = () => {
   const { user, authLoaded } = useAuth();
-  if (!authLoaded) return null;
+  if (!authLoaded) return <SplashHold />;
   if (!user) return <Navigate to="/login" />;
   return <Outlet />;
 };
@@ -104,9 +106,12 @@ const AuthRequiredRoute = () => {
 // React Router 7 keeps the current page on screen during in-app navigation
 // until the next one is ready, so this mostly appears when someone opens a
 // shared link straight to a page. The height keeps the player and the
-// notifications from jumping while it loads.
+// notifications from jumping while it loads. On a first visit the launch
+// splash is still up, and SplashHold keeps it there until the page is ready.
 const PageFallback = () => (
-  <div className="route-loading" aria-busy="true" style={{ minHeight: '100vh' }} />
+  <div className="route-loading" aria-busy="true" style={{ minHeight: '100vh' }}>
+    <SplashHold />
+  </div>
 );
 
 const SearchRedirect = () => {
@@ -124,11 +129,11 @@ const AppLayout = () => {
   // ★ PRE-LAUNCH GATE (see src/prelaunch/prelaunchConfig.js). When the gate is
   //   off this is always 'app' and everything below renders exactly as before.
   const gate = resolveGate({ pathname, user, authLoaded });
-  if (gate === 'wait') return null;                         // no flash while auth resolves
+  if (gate === 'wait') return <SplashHold />;               // no flash while auth resolves
   if (gate === 'enter') return <Navigate to="/" replace />; // admin already signed in
   if (gate === 'comingSoon') {
     return (
-      <Suspense fallback={null}>
+      <Suspense fallback={<SplashHold />}>
         <ComingSoon />
       </Suspense>
     );
@@ -136,7 +141,7 @@ const AppLayout = () => {
   if (gate === 'backstage') {
     return (
       <div className="app-wrapper">
-        <Suspense fallback={null}>
+        <Suspense fallback={<SplashHold />}>
           <Login />
         </Suspense>
       </div>
@@ -247,11 +252,20 @@ const AppLayout = () => {
 
       {!isAuthPage && !chromeless && <Player />}
       {!isAuthPage && !chromeless && <PlayChoiceModal />}
+
+      {/* First-visit guided tour of the interface (src/tour). Starts by
+          itself once per account, on the feed; Help → "Take the tour"
+          replays it. */}
+      {!isAuthPage && !chromeless && <TourLauncher />}
     </div>
   );
 };
 
 const App = () => {
+  // The launch splash (index.html) leaves once React is up and nothing is
+  // holding it (see src/boot/bootSplash.js).
+  useEffect(() => { markAppReady(); }, []);
+
   return (
   <RewardProvider>
     <FeedbackProvider>

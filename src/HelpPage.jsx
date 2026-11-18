@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import Layout from './layout';
 import { HELP_SECTIONS } from './data/helpContent';
+import { useAuth } from './context/AuthContext';
+import { isPrelaunch, canEnterApp } from './prelaunch/prelaunchConfig';
+import { startTour } from './tour/tourStorage';
 import './helpPage.scss';
 
 // ── Chevron ─────────────────────────────────────────────────────────────────
@@ -28,6 +31,10 @@ const toText = (node) => {
 const HelpPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  // The tour walks through the app itself, so it's offered only to people
+  // who can get into the app (not on the pre-launch "Coming soon" side).
+  const canTour = !(isPrelaunch() && !canEnterApp(user));
 
   const [query, setQuery] = useState('');
   const [openSection, setOpenSection] = useState(null);
@@ -115,6 +122,14 @@ const HelpPage = () => {
             Every rule that decides a vote, a win, or a payout — written out in
             plain language.
           </p>
+
+          {canTour && (
+            <button type="button" className="help-tour-btn" onClick={() => startTour(navigate)}>
+              <span className="help-tour-btn__meter" aria-hidden="true"><i /><i /><i /><i /></span>
+              Take the tour
+              <span className="help-tour-btn__hint">40 sec</span>
+            </button>
+          )}
 
           <div className="help-search">
             <svg viewBox="0 0 24 24" aria-hidden="true">
