@@ -29,6 +29,17 @@
   --sm-bottom: color-mix(in srgb, var(--unis-primary) 46%, var(--sm-ink));
 }
 
+// unis-design-tokens.scss has `#root > * { position: relative; z-index: 1; }`
+// — an ID rule, so it outranks the class rules below. The menu is placed
+// directly in #root, so it restates its positioning at the same strength.
+// Without this the menu fell to the bottom of the page, out of sight
+// (same fix as `#root > .udm-sheet` in messages.scss).
+#root > .song-menu--popover,
+#root > .song-menu-sheet {
+  position: fixed;
+  z-index: 3200;
+}
+
 // ── Popover (desktop / tablet) ─────────────────────────────────────
 .song-menu--popover {
   position: fixed;
