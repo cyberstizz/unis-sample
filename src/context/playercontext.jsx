@@ -651,8 +651,10 @@ export const PlayerProvider = ({ children }) => {
    *   playlist   – { playlistId, name, coverUrl }
    *   startIndex – row the user clicked; omit to start at the top
    *   shuffle    – true for the playlist's Shuffle button
+   *   title      – ★ name for the prompt and toasts when there's no playlist
+   *                (the artist page's "play all" passes the artist's name)
    */
-  const requestPlayCollection = useCallback(({ tracks, playlist, startIndex = 0, shuffle = false }) => {
+  const requestPlayCollection = useCallback(({ tracks, playlist, startIndex = 0, shuffle = false, title = null }) => {
     const playable = (tracks || []).filter(t => t && (t.url || t.fileUrl));
     if (playable.length === 0) return;
 
@@ -670,7 +672,7 @@ export const PlayerProvider = ({ children }) => {
     const collection = {
       tracks: ordered,
       origin,
-      title: playlist?.name || 'Playlist',
+      title: playlist?.name || title || 'Playlist', // ★ title
       artwork: playlist?.coverUrl || ordered[0]?.artworkUrl || ordered[0]?.artwork || null,
       // Set only when the user clicked a specific row: "Starts with <song>"
       startTitle: !shuffle && from > 0 ? (ordered[0]?.title || null) : null,

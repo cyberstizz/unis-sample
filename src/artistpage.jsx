@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
@@ -10,13 +10,23 @@ import theQuiet from './assets/theQuiet.jpg';
 import VotingWizard from './votingWizard';
 import { useAuth } from './context/AuthContext';
 import { useFeedback, errorMessage } from './context/FeedbackContext';
-import { incrementGateSongCount } from './AuthGateSheet';
+import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
 import { buildUrl } from './utils/buildUrl';
 import MessageButton from './MessageButton';
 import DownloadModal from './DownloadModal';
 import useModalA11y from './hooks/useModalA11y';
+import SongMenu, { KebabIcon, anchorFromEvent } from './SongMenu'; // ★ song ⋮ menu
+import { VoteIcon, SupportIcon } from './icons/UnisIcons';            // ★ Glow icons
 
-// ─── Award rail definitions ────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// ArtistPage — v4 redesign (Nov 2026, signed-off mockup "Unis artist page
+// redesign"): clear hero photo, one action row (Follow · Support · Message ·
+// Shuffle · Play), full-width Vote on phones, Music / Photos / About tabs,
+// Play & Shuffle use the whole catalog, awards on a shelf instead of over the
+// photo, Standing with Week | Day only, ⋮ menu on every song row.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Award definitions ─────────────────────────────────────────
 // 12 slots: 2 entities (artist, song) x 6 voting intervals. A medal only
 // renders when that award has actually been won at least once.
 //
@@ -61,84 +71,11 @@ const normalizeAwards = (data) => {
   return map;
 };
 
-// Inline glyphs (project convention: inline SVG, never lucide inside buttons)
-//
-// One distinct symbol per voting interval, so a fan can read the rail at a
-// glance: sun = daily, arc = weekly, half-moon = midterm, full moon = monthly,
-// quarter-pie = quarterly, crown = annual. Entity is carried by COLOR, not
-// shape — artist medals take the user's theme accent, song medals stay gold.
-const INTERVAL_GLYPHS = {
-  daily: (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none" />
-      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
-    </svg>
-  ),
-  weekly: (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" aria-hidden="true">
-      <path d="M4 14a8 8 0 0 1 16 0" />
-      <circle cx="12" cy="14" r="1.6" fill="currentColor" stroke="none" />
-      <path d="M12 14l4.5-4" />
-    </svg>
-  ),
-  midterm: (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <circle cx="12" cy="12" r="8" />
-      <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" />
-    </svg>
-  ),
-  monthly: (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
-      <circle cx="12" cy="12" r="8" />
-      <circle cx="9.4" cy="9.6" r="1.5" fill="rgba(0,0,0,0.45)" />
-      <circle cx="14.6" cy="13.4" r="2" fill="rgba(0,0,0,0.35)" />
-      <circle cx="10" cy="15" r="1.1" fill="rgba(0,0,0,0.35)" />
-    </svg>
-  ),
-  quarterly: (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <circle cx="12" cy="12" r="8" />
-      <path d="M12 12V4a8 8 0 0 1 8 8z" fill="currentColor" stroke="none" />
-      <path d="M12 12V4M12 12h8" />
-    </svg>
-  ),
-  annual: (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
-      <path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 11H5L3 7z" />
-    </svg>
-  ),
-};
+// ★ Medal glyphs, interval symbols and the zap are gone: medals now show the
+// period as text (DAY/WK/MO/MID/QTR/YR) on the shelf, and Support uses the
+// Glow set's SupportIcon like the rest of the app.
+const SupportGlyph = ({ size = 15 }) => <SupportIcon size={size} tone="on" />;
 
-const AwardGlyph = ({ interval }) => INTERVAL_GLYPHS[interval] || INTERVAL_GLYPHS.annual;
-
-// The medal chrome: ribbon tails + glass disc + double ring. Everything is
-// currentColor, so the ENTIRE medal re-tints from CSS — artist medals take
-// the user's theme accent, song medals take gold, and any future theme just
-// works. The interval glyph is layered on top separately (see ap2-badge).
-const MedalBase = () => (
-  <svg className="ap2-badge__base" viewBox="0 0 64 80" aria-hidden="true">
-    {/* Ribbon tails — splayed, notched, tucked behind the disc */}
-    <g fill="currentColor" opacity="0.88">
-      <g transform="translate(24.5 46) rotate(-16)">
-        <path d="M-5.5 -4 h11 v27 l-5.5 -6.5 l-5.5 6.5 z" />
-      </g>
-      <g transform="translate(39.5 46) rotate(16)">
-        <path d="M-5.5 -4 h11 v27 l-5.5 -6.5 l-5.5 6.5 z" />
-      </g>
-    </g>
-    {/* Glass disc */}
-    <circle cx="32" cy="29" r="26" fill="rgba(9, 9, 13, 0.78)" />
-    {/* Outer ring + inner engraving ring */}
-    <circle cx="32" cy="29" r="26" fill="none" stroke="currentColor" strokeWidth="2.2" />
-    <circle cx="32" cy="29" r="20.5" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.35" />
-  </svg>
-);
-
-const ZapGlyph = ({ size = 15 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" />
-  </svg>
-);
 
 // Average-color sampler for the "Popular" ambient row backgrounds.
 // Draws the artwork into a 1x1 canvas and reads the resulting pixel.
@@ -285,7 +222,7 @@ const SupporterSheet = ({
     if (alreadySupporting) {
       return (
         <div className="ap2-supsheet__state">
-          <span className="ap2-supsheet__stateicon ap2-supsheet__stateicon--ok"><ZapGlyph size={24} /></span>
+          <span className="ap2-supsheet__stateicon ap2-supsheet__stateicon--ok"><SupportGlyph size={24} /></span>
           <h3 className="ap2-supsheet__statetitle">{artistName} is your supported artist</h3>
           <p className="ap2-supsheet__statesub">Every stream you play on Unis puts weight behind them.</p>
           <button className="ap2-supsheet__btn ap2-supsheet__btn--primary" onClick={onClose}>Done</button>
@@ -305,7 +242,7 @@ const SupporterSheet = ({
         {error && <p className="ap2-supsheet__error" role="alert">{error}</p>}
         <div className="ap2-supsheet__actions">
           <button className="ap2-supsheet__btn ap2-supsheet__btn--primary" onClick={onConfirm} disabled={busy}>
-            <ZapGlyph size={14} />
+            <SupportGlyph size={14} />
             {busy ? 'Saving…' : (isFirstPick ? 'Support them' : 'Switch to them')}
           </button>
           <button className="ap2-supsheet__btn ap2-supsheet__btn--ghost" onClick={onClose} disabled={busy}>
@@ -498,68 +435,91 @@ const ShopSheet = ({ show, onClose, artistName, songs, onPick }) => {
 };
 
 // =============================================================================
-// ArtistTerritory — public territory standing for the artist page.
+// ArtistStanding — ★ one card for the artist's rank (replaces the separate
+// "This week in …" strip and the four-period Territory rank).
 //
-// Mirrors the dashboard's TerritoryRankSection (home headline, period toggle,
-// neighborhood→national chain) but reads the PUBLIC endpoint
-// GET /v1/users/{artistId}/territory-rank. The dashboard's own endpoint is
-// self-only (403 for anyone but the artist), which is why the dashboard
-// component cannot be reused here.
+// Week | Day only, always opening on Week (signed off Nov 2026 — the extra
+// Month/Year options were analysis paralysis).
 //
-// Payload: { status?, genreName, computedAt, defaultPeriod,
-//            periods: { today|week|month|year: [ { jurisdictionId,
-//            jurisdictionName, overallRank, genreRank } ] } }
+// Reads the PUBLIC endpoint GET /v1/users/{artistId}/territory-rank:
+//   { status?, genreName, periods: { today|week|…: [ { jurisdictionId,
+//     jurisdictionName, overallRank, genreRank } ] } }
+// If ranks haven't been computed but /standing has a rank, it shows that
+// instead of vanishing.
 // =============================================================================
-const TERRITORY_PERIODS = ['today', 'week', 'month', 'year'];
-const TERRITORY_LABELS = { today: 'Day', week: 'Week', month: 'Month', year: 'Year' };
+const STANDING_PERIODS = [
+  { id: 'week', label: 'Week' },
+  { id: 'today', label: 'Day' },
+];
 
-const ArtistTerritory = ({ artistId, artistName }) => {
+const ArtistStanding = ({ artistId, artistName, standing, className = '' }) => {
   const [data, setData] = useState(null);
-  const [period, setPeriod] = useState('year');
+  const [period, setPeriod] = useState('week');
   const [state, setState] = useState('loading'); // loading | ready | hidden
 
   useEffect(() => {
     if (!artistId) return undefined;
     let cancelled = false;
     setState('loading');
+    setPeriod('week');
 
     apiCall({ method: 'get', url: `/v1/users/${artistId}/territory-rank` })
       .then((res) => {
         if (cancelled) return;
         const payload = res.data || null;
         const hasRows = payload?.periods
-          && Object.values(payload.periods).some((rows) => Array.isArray(rows) && rows.length);
+          && STANDING_PERIODS.some(({ id }) => Array.isArray(payload.periods[id]) && payload.periods[id].length);
         if (!payload || (!hasRows && payload.status !== 'calculating')) {
           setState('hidden');
           return;
         }
         setData(payload);
-        const dp = payload.defaultPeriod;
-        if (dp && TERRITORY_PERIODS.includes(dp)) setPeriod(dp);
         setState('ready');
-        console.log('[TerritoryRank] loaded:', { artistId, status: payload.status });
+        console.log('[Standing] loaded:', { artistId, status: payload.status });
       })
       .catch((err) => {
         if (cancelled) return;
-        // Never break the page over a ranking read — just hide the section.
-        console.error('[TerritoryRank] load failed:', { artistId, err });
+        // Never break the page over a ranking read — fall back or hide.
+        console.error('[Standing] load failed:', { artistId, err });
         setState('hidden');
       });
 
     return () => { cancelled = true; };
   }, [artistId]);
 
-  if (state === 'hidden' || state === 'loading') return null;
-  if (!data) return null;
+  if (state === 'loading') return null;
+
+  const fallbackRank = standing && standing.rank != null ? standing : null;
+
+  // No territory ranks — show /standing's weekly rank if there is one.
+  if (state === 'hidden' || !data) {
+    if (!fallbackRank) return null;
+    return (
+      <section className={`ap3-card ap3-standing ${className}`} aria-label={`${artistName} standing`}>
+        <div className="ap3-standing__head">
+          <h3 className="ap3-h3 ap3-h3--sm">Standing</h3>
+        </div>
+        <p className="ap3-standing__headline">
+          <span className="ap3-standing__num">#{fallbackRank.rank}</span>
+          <span className="ap3-standing__in">in {fallbackRank.jurisdictionName || 'their area'}</span>
+        </p>
+        <p className="ap3-standing__move">
+          This week{fallbackRank.genreName ? ` · ${fallbackRank.genreName}` : ''}
+          {fallbackRank.total ? ` · of ${fallbackRank.total}` : ''}
+          {fallbackRank.deltaSpots > 0 ? ` · up ${fallbackRank.deltaSpots} spot${fallbackRank.deltaSpots > 1 ? 's' : ''}` : ''}
+        </p>
+      </section>
+    );
+  }
 
   if (data.status === 'calculating') {
     return (
-      <div className="ap2-card ap2-territory">
-        <h3 className="ap2-territory__heading">Territory rank</h3>
-        <p className="ap2-territory__calc">
-          Ranks are computed nightly — {artistName}&rsquo;s standing appears after tonight&rsquo;s update.
+      <section className={`ap3-card ap3-standing ${className}`} aria-label={`${artistName} standing`}>
+        <h3 className="ap3-h3 ap3-h3--sm">Standing</h3>
+        <p className="ap3-standing__move">
+          Ranks are worked out every night. {artistName}&rsquo;s standing shows up after tonight&rsquo;s update.
         </p>
-      </div>
+      </section>
     );
   }
 
@@ -567,70 +527,150 @@ const ArtistTerritory = ({ artistId, artistName }) => {
   const home = rows[0] || null;
   const genreName = data.genreName || null;
 
+  // "up N spots" comes from /standing, which is a weekly number.
+  const moveBits = [];
+  if (genreName) moveBits.push(genreName);
+  if (period === 'week' && fallbackRank?.deltaSpots > 0) {
+    moveBits.push(`up ${fallbackRank.deltaSpots} spot${fallbackRank.deltaSpots > 1 ? 's' : ''} this week`);
+  } else {
+    moveBits.push(period === 'week' ? 'this week' : 'today');
+  }
+
   return (
-    <div className="ap2-card ap2-territory">
-      <div className="ap2-territory__head">
-        <h3 className="ap2-territory__heading">Territory rank</h3>
-        <div className="ap2-territory__toggle" role="tablist" aria-label="Rank period">
-          {TERRITORY_PERIODS.map((p) => (
+    <section className={`ap3-card ap3-standing ${className}`} aria-label={`${artistName} standing`}>
+      <div className="ap3-standing__head">
+        <h3 className="ap3-h3 ap3-h3--sm">Standing</h3>
+        <div className="ap3-seg" role="tablist" aria-label="Rank period">
+          {STANDING_PERIODS.map((p) => (
             <button
-              key={p}
+              key={p.id}
               type="button"
               role="tab"
-              aria-selected={p === period}
-              className={`ap2-territory__tab ${p === period ? 'is-active' : ''}`}
-              onClick={() => setPeriod(p)}
+              aria-selected={p.id === period}
+              className={p.id === period ? 'is-on' : ''}
+              onClick={() => setPeriod(p.id)}
             >
-              {TERRITORY_LABELS[p]}
+              {p.label}
             </button>
           ))}
         </div>
       </div>
 
-      {home && home.overallRank != null && (
-        <p className="ap2-territory__headline">
-          <span className="ap2-territory__headline-num">#{home.overallRank}</span>
-          <span className="ap2-territory__headline-in">in {home.jurisdictionName}</span>
-        </p>
-      )}
-
       {rows.length === 0 ? (
-        <p className="ap2-empty">No ranking yet for this period.</p>
+        <p className="ap3-standing__move">No ranking yet for {period === 'week' ? 'this week' : 'today'}.</p>
       ) : (
-        <ol className="ap2-territory__list">
-          {rows.map((j, i) => (
-            <li
-              key={j.jurisdictionId || `${j.jurisdictionName}-${i}`}
-              className={`ap2-territory__row ${i === 0 ? 'is-home' : ''}`}
-            >
-              <span className="ap2-territory__pin" aria-hidden="true">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 21s-7-6.4-7-11a7 7 0 0 1 14 0c0 4.6-7 11-7 11z" /><circle cx="12" cy="10" r="2.5" />
-                </svg>
-              </span>
-              <span className="ap2-territory__place">
-                <span className="ap2-territory__placename">{j.jurisdictionName}</span>
-                {j.genreRank != null && genreName && (
-                  <span className="ap2-territory__genre">#{j.genreRank} · {genreName}</span>
-                )}
-              </span>
-              <span className="ap2-territory__rank">
-                {j.overallRank != null ? `#${j.overallRank}` : '—'}
-              </span>
-            </li>
-          ))}
-        </ol>
+        <>
+          {home && home.overallRank != null && (
+            <p className="ap3-standing__headline">
+              <span className="ap3-standing__num">#{home.overallRank}</span>
+              <span className="ap3-standing__in">in {home.jurisdictionName}</span>
+            </p>
+          )}
+          <p className="ap3-standing__move">{moveBits.join(' · ')}</p>
+          <ol className="ap3-standing__list">
+            {rows.map((j, i) => (
+              <li
+                key={j.jurisdictionId || `${j.jurisdictionName}-${i}`}
+                className={`ap3-standing__row ${i === 0 ? 'is-home' : ''}`}
+              >
+                <span className="ap3-standing__place">
+                  <span className="ap3-standing__placename">{j.jurisdictionName}</span>
+                  {j.genreRank != null && genreName && (
+                    <span className="ap3-standing__genre">#{j.genreRank} in {genreName}</span>
+                  )}
+                </span>
+                <span className="ap3-standing__rank">{j.overallRank != null ? `#${j.overallRank}` : '—'}</span>
+              </li>
+            ))}
+          </ol>
+        </>
       )}
-    </div>
+    </section>
   );
 };
 
+// ─── Small inline glyphs the Glow set doesn't have yet (same 1.8 stroke) ───
+const GlowDefs = () => (
+  <svg width="0" height="0" className="ap3-defs" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="ap3-glow" gradientUnits="userSpaceOnUse" x1="3" y1="3" x2="21" y2="21">
+        <stop offset="0" style={{ stopColor: 'color-mix(in srgb, var(--unis-primary, #163387), white 62%)' }} />
+        <stop offset="1" style={{ stopColor: 'color-mix(in srgb, var(--unis-primary, #163387), white 18%)' }} />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
+const G = ({ size = 20, children }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    {children}
+  </svg>
+);
+
+const PlayFill = ({ size = 22, color = '#fff' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden="true" focusable="false">
+    <path d="M8 5.2v13.6a1 1 0 0 0 1.5.86l11-6.8a1 1 0 0 0 0-1.72l-11-6.8A1 1 0 0 0 8 5.2z" />
+  </svg>
+);
+const ShuffleGlyph = ({ size = 24 }) => (
+  <G size={size}>
+    <path d="M3 7h3.5c4.5 0 6.5 10 11 10H20" />
+    <path d="M3 17h3.5c1.6 0 2.8-1.3 3.8-3M13.7 10c1-1.7 2.2-3 3.8-3H20" />
+    <path d="M18 4.5L20.5 7 18 9.5M18 14.5l2.5 2.5-2.5 2.5" stroke="url(#ap3-glow)" />
+  </G>
+);
+const FollowGlyph = ({ size = 16, on = false }) => (
+  <G size={size}>
+    <circle cx="9.5" cy="8" r="3.6" />
+    <path d="M3.5 19.5c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2" />
+    {on
+      ? <path d="M15.5 11l2 2 3.5-4" stroke="url(#ap3-glow)" />
+      : <path d="M18.5 8v6M15.5 11h6" stroke="url(#ap3-glow)" />}
+  </G>
+);
+const ShareGlyph = ({ size = 19 }) => (
+  <G size={size}>
+    <path d="M12 15V4" />
+    <path d="M8 8l4-4 4 4" stroke="url(#ap3-glow)" />
+    <path d="M6 12v6.5A1.5 1.5 0 0 0 7.5 20h9a1.5 1.5 0 0 0 1.5-1.5V12" />
+  </G>
+);
+const BackGlyph = ({ size = 20 }) => (<G size={size}><path d="M15 5l-7 7 7 7" /></G>);
+const ChevronGlyph = ({ size = 18 }) => (<G size={size}><path d="M9 6l6 6-6 6" /></G>);
+const PinGlyph = ({ size = 13 }) => (
+  <G size={size}>
+    <path d="M12 21.3C9.6 19.5 4.6 15.1 4.6 9.9a7.4 7.4 0 0 1 14.8 0c0 5.2-5 9.6-7.4 11.4z" />
+    <circle cx="12" cy="9.9" r="2.6" fill="url(#ap3-glow)" stroke="none" />
+  </G>
+);
+const UpGlyph = ({ size = 11 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+);
+const ShopGlyph = ({ size = 17 }) => (
+  <G size={size}>
+    <path d="M6 3.5L3.8 6.6v12.2a1.7 1.7 0 0 0 1.7 1.7h13a1.7 1.7 0 0 0 1.7-1.7V6.6L18 3.5z" />
+    <path d="M3.8 6.6h16.4" />
+    <path d="M15.6 10a3.6 3.6 0 0 1-7.2 0" stroke="url(#ap3-glow)" />
+  </G>
+);
+
+const TABS = [
+  { id: 'music', label: 'Music' },
+  { id: 'photos', label: 'Photos' },
+  { id: 'about', label: 'About' },
+];
+
+const POPULAR_COUNT = 5;
+
 const ArtistPage = ({ isOwnProfile = false }) => {
   const { artistId } = useParams();
-  const { requestPlay } = useContext(PlayerContext);
+  const { requestPlayCollection } = useContext(PlayerContext);
   const { user, isGuest, refreshUser } = useAuth();
   const navigate = useNavigate();
   const feedback = useFeedback();
+  const { triggerGate, gateProps } = useAuthGate();
 
   const userId = user?.userId;
 
@@ -643,17 +683,17 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const [bio, setBio] = useState('');
   const [showVotingWizard, setShowVotingWizard] = useState(false);
   const [selectedNominee, setSelectedNominee] = useState(null);
-  const [defaultSong, setDefaultSong] = useState(null);
   const [awards, setAwards] = useState({});       // normalized award counts
-  const [standing, setStanding] = useState(null);  // jurisdiction ranking
-  const [songColors, setSongColors] = useState({}); // songId -> ambient rgb
+  const [standing, setStanding] = useState(null);  // weekly jurisdiction ranking
+  const [songColors, setSongColors] = useState({}); // songId -> ambient gradient
   const [featuredAmbient, setFeaturedAmbient] = useState(null); // Fans Pick tint
   const [photos, setPhotos] = useState([]);        // artist gallery photos
   const [lightboxIndex, setLightboxIndex] = useState(null);
-  const [awardsRevealed, setAwardsRevealed] = useState(false); // medal rail entrance
   const [showShopSheet, setShowShopSheet] = useState(false);
   const [shopSong, setShopSong] = useState(null); // song handed to DownloadModal
   const [showAllSongs, setShowAllSongs] = useState(false);
+  const [tab, setTab] = useState('music');          // ★ music | photos | about
+  const [songMenu, setSongMenu] = useState(null);   // ★ { song, anchor, key }
 
   // ---- Supporter (switch-supported-artist) state ------------------------
   const [isSupporting, setIsSupporting] = useState(false);
@@ -669,8 +709,15 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     setIsSupporting(Boolean(userId && user?.supportedArtistId === artistId));
   }, [userId, user?.supportedArtistId, artistId]);
 
+  // New artist → back to the Music tab, list collapsed.
+  useEffect(() => {
+    setTab('music');
+    setShowAllSongs(false);
+  }, [artistId]);
+
   // Sticky header scroll detection
   const heroRef = useRef(null);
+  const tabsRef = useRef(null);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
 
   const handleScroll = useCallback(() => {
@@ -684,7 +731,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     const scrollTarget = heroRef.current?.closest('.layout-content') || window;
     scrollTarget.addEventListener('scroll', handleScroll, { passive: true });
     return () => scrollTarget.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
+  }, [handleScroll, loading]);
 
   useEffect(() => {
     if (!artistId) return;
@@ -700,7 +747,6 @@ const ArtistPage = ({ isOwnProfile = false }) => {
           artistRes,
           followerCountRes,
           songsRes,
-          defaultSongRes,
           followStatusRes,
           awardsRes,
           standingRes,
@@ -709,7 +755,6 @@ const ArtistPage = ({ isOwnProfile = false }) => {
           apiCall({ method: 'get', url: `/v1/users/profile/${artistId}` }),
           apiCall({ method: 'get', url: `/v1/users/${artistId}/followers/count` }).catch(() => ({ data: { count: 0 } })),
           apiCall({ method: 'get', url: `/v1/media/songs/artist/${artistId}` }).catch(() => ({ data: [] })),
-          apiCall({ method: 'get', url: `/v1/users/${artistId}/default-song` }).catch(() => ({ data: null })),
           isViewingOther
             ? apiCall({ method: 'get', url: `/v1/users/${artistId}/is-following` }).catch(() => ({ data: { isFollowing: false } }))
             : Promise.resolve({ data: { isFollowing: false } }),
@@ -724,15 +769,13 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
         const artistData = artistRes.data;
         setArtist(artistData);
-        setBio(artistData.bio || 'No bio available');
+        setBio(artistData.bio || ''); // ★ empty stays empty (was 'No bio available')
         setFollowerCount(followerCountRes.data.count || 0);
-        setSongs(songsRes.data || []);
-        setDefaultSong(defaultSongRes.data || null);
+        setSongs(Array.isArray(songsRes.data) ? songsRes.data : []);
         setIsFollowing(followStatusRes.data.isFollowing || false);
         setAwards(normalizeAwards(awardsRes.data));
         setStanding(standingRes.data || null);
         setPhotos(Array.isArray(photosRes.data?.photos) ? photosRes.data.photos : []);
-
       } catch (err) {
         console.error('Failed to load artist:', err);
         setError('Failed to load artist details');
@@ -744,11 +787,17 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     fetchAll();
   }, [artistId, userId]);
 
-  // Sample ambient colors for the top songs shown in "Popular".
+  // ★ Popular = most played first. This order also drives Play all.
+  const popularSongs = useMemo(
+    () => [...songs].sort((a, b) => playsOf(b) - playsOf(a)),
+    [songs]
+  );
+
+  // Ambient colours for the rows that can be on screen.
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      const top = songs.slice(0, 5);
+      const top = popularSongs.slice(0, 12);
       const entries = await Promise.all(
         top.map(async (song) => {
           const url = buildUrl(song.artworkUrl);
@@ -766,17 +815,16 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       entries.forEach((e) => {
         if (e) {
           const { r, g, b } = e[1];
-          map[e[0]] = `linear-gradient(90deg, rgba(${r}, ${g}, ${b}, 0.34) 0%, rgba(${r}, ${g}, ${b}, 0.10) 55%, transparent 100%)`;
+          map[e[0]] = `linear-gradient(90deg, rgba(${r}, ${g}, ${b}, 0.30) 0%, rgba(${r}, ${g}, ${b}, 0.08) 60%, rgba(255, 255, 255, 0.02) 100%)`;
         }
       });
       setSongColors(map);
     };
-    if (songs.length) run();
+    if (popularSongs.length) run();
     return () => { cancelled = true; };
-  }, [songs]);
+  }, [popularSongs]);
 
-  // Ambient wash for the Fans Pick card, sampled from that song's artwork —
-  // the same treatment used on the Popular rows and elsewhere in the app.
+  // Ambient wash for the Fans Pick card, sampled from that song's artwork.
   useEffect(() => {
     let cancelled = false;
     if (!songs.length) { setFeaturedAmbient(null); return undefined; }
@@ -793,23 +841,14 @@ const ArtistPage = ({ isOwnProfile = false }) => {
         if (cancelled) return;
         setFeaturedAmbient({
           backgroundImage:
-            `radial-gradient(120% 140% at 0% 0%, rgba(${r}, ${g}, ${b}, 0.42) 0%, rgba(${r}, ${g}, ${b}, 0.16) 45%, transparent 78%)`,
-          borderColor: `rgba(${r}, ${g}, ${b}, 0.42)`,
+            `linear-gradient(110deg, rgba(${r}, ${g}, ${b}, 0.30) 0%, rgba(${r}, ${g}, ${b}, 0.08) 55%, rgba(255, 255, 255, 0.03) 100%)`,
+          borderColor: `rgba(${r}, ${g}, ${b}, 0.35)`,
         });
       })
       .catch(() => { if (!cancelled) setFeaturedAmbient(null); });
 
     return () => { cancelled = true; };
   }, [songs]);
-
-  // Medal rails slide in AFTER the hero portrait has landed, so the artist's
-  // face reads first and the prestige arrives as a second beat. Base delay
-  // plus the per-medal stagger in SCSS finishes comfortably under 2s.
-  useEffect(() => {
-    if (loading) return undefined;
-    const timer = setTimeout(() => setAwardsRevealed(true), 650);
-    return () => clearTimeout(timer);
-  }, [loading, artistId]);
 
   const handleFollow = async () => {
     if (isGuest) {
@@ -861,12 +900,12 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       if (data.status === 'immediate' || data.status === 'cancelled') {
         setIsSupporting(true);
         setPendingSwitch(null);
-        feedback.success(data.status === 'cancelled' ? `Pending switch cancelled \u2014 you're still supporting ${who}` : `You now support ${who}`);
+        feedback.success(data.status === 'cancelled' ? `Pending switch cancelled — you're still supporting ${who}` : `You now support ${who}`);
       }
       if (data.status === 'pending') {
         setPendingSwitch({ effectiveDate: data.effectiveDate || null });
         const when = data.effectiveDate ? new Date(data.effectiveDate).toLocaleDateString() : 'soon';
-        feedback.success(`Switch saved \u2014 you'll support ${who} starting ${when}`);
+        feedback.success(`Switch saved — you'll support ${who} starting ${when}`);
       }
       refreshUser?.(); // sync user.supportedArtistId app-wide
     } catch (err) {
@@ -920,8 +959,6 @@ const ArtistPage = ({ isOwnProfile = false }) => {
       name: artist.username,
       type: 'artist',
       jurisdiction: artist.jurisdiction,
-      // ★ The wizard had no image for artist votes from this page — the photo
-      //   was never passed. Real UUIDs too, so nothing depends on name lookups.
       jurisdictionId: artist.jurisdiction?.jurisdictionId || null,
       genreId: artist.genre?.genreId || null,
       photoUrl: artist.photoUrl || null,
@@ -929,45 +966,98 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     setShowVotingWizard(true);
   };
 
+  // ---- Playback ------------------------------------------------------------
   // No /play POST here: the Player counts the play (15s / 25% gate).
-  const handlePlayDefault = () => {
-    if (defaultSong?.fileUrl) {
-      const fullUrl = buildUrl(defaultSong.fileUrl);
-      if (isGuest) incrementGateSongCount();
-      requestPlay({
-        type: 'song',
-        id: defaultSong.songId,
-        songId: defaultSong.songId,
-        url: fullUrl,
-        fileUrl: fullUrl,
-        title: defaultSong.title,
-        artist: artist.username,
-        artistId: artist.userId,
-        artwork: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl),
-        artworkUrl: buildUrl(defaultSong.artworkUrl) || buildUrl(artist.photoUrl),
-      });
-    } else {
-      feedback.info(`${artist?.username || 'This artist'} hasn\u2019t picked a song to feature yet`);
-    }
-  };
-
-  const handleSongClick = (songId) => navigate(`/song/${songId}`);
-
-  const playSong = (song) => {
-    if (!song) return;
-    if (isGuest) incrementGateSongCount();
-    requestPlay({
+  const toTrack = useCallback((song) => {
+    const fallbackArt = artist?.photoUrl ? buildUrl(artist.photoUrl) : theQuiet;
+    const art = buildUrl(song.artworkUrl) || fallbackArt;
+    return {
       type: 'song',
       id: song.songId,
       songId: song.songId,
       url: buildUrl(song.fileUrl),
       fileUrl: buildUrl(song.fileUrl),
       title: song.title,
-      artist: artist.username,
-      artistId: artist.userId,
-      artwork: buildUrl(song.artworkUrl) || (artist.photoUrl ? buildUrl(artist.photoUrl) : theQuiet),
-      artworkUrl: buildUrl(song.artworkUrl) || (artist.photoUrl ? buildUrl(artist.photoUrl) : theQuiet),
-    });
+      artist: artist?.username,
+      artistId: artist?.userId,
+      artwork: art,
+      artworkUrl: art,
+    };
+  }, [artist]);
+
+  const catalog = useMemo(
+    () => popularSongs.filter((s) => s.fileUrl).map(toTrack),
+    [popularSongs, toTrack]
+  );
+
+  // ★ Play / Shuffle / tap a row → the whole catalog, most played first.
+  // Same "Play now / Add to queue" prompt as playlists, so the queue is
+  // never wiped.
+  const playCatalog = ({ startIndex = 0, shuffle = false } = {}) => {
+    if (!catalog.length) {
+      feedback.info(`${artist?.username || 'This artist'} hasn’t uploaded any songs yet`);
+      return;
+    }
+    if (isGuest) incrementGateSongCount();
+    requestPlayCollection({ tracks: catalog, startIndex, shuffle, title: artist?.username });
+  };
+
+  const playFromSong = (song) => {
+    const index = catalog.findIndex((t) => t.songId === song.songId);
+    if (index < 0) return;
+    playCatalog({ startIndex: index });
+  };
+
+  // ---- Song ⋮ menu -----------------------------------------------------------
+  const openSongMenu = useCallback((song, anchor) => {
+    setSongMenu((current) => (
+      current && current.song.id === song.id && anchor && anchor.left !== anchor.right
+        && current.anchor?.trigger === anchor.trigger
+        ? null
+        : { song, anchor, key: Date.now() }
+    ));
+  }, []);
+  const closeSongMenu = useCallback(() => setSongMenu(null), []);
+  const playFromMenu = useCallback((track) => {
+    if (isGuest) incrementGateSongCount();
+    requestPlayCollection({ tracks: [track], title: track.title });
+  }, [isGuest, requestPlayCollection]);
+  const requireAccount = useCallback(() => triggerGate('generic'), [triggerGate]);
+
+  // ---- Share the artist ------------------------------------------------------
+  const handleShareArtist = async () => {
+    const url = `${window.location.origin}/artist/${artistId}`;
+    const name = artist?.username || 'this artist';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: name, text: `${name} on Unis`, url });
+        return;
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+        console.warn('[Artist] share sheet failed, copying instead:', err?.message);
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      feedback.success('Link copied');
+    } catch (err) {
+      console.warn('[Artist] clipboard blocked:', err?.message);
+      feedback.info(`Copy this link: ${url}`);
+    }
+  };
+
+  const goToTab = (id) => {
+    setTab(id);
+    // Bring the tab bar into view so the new content starts on screen.
+    const el = tabsRef.current;
+    if (el && el.getBoundingClientRect().top < 80) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const openAbout = () => {
+    setTab('about');
+    tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   if (loading) return (
@@ -983,6 +1073,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   );
 
   const artistPhoto = artist.photoUrl ? buildUrl(artist.photoUrl) : theQuiet;
+  const aboutPhoto = photos.length ? buildUrl(photos[0].photoUrl) : artistPhoto;
   const topSong = songs.length > 0
     ? songs.reduce((prev, current) => (current.score || 0) > (prev.score || 0) ? current : prev, songs[0])
     : null;
@@ -994,15 +1085,12 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
   const fmt = (n) => (n || 0).toLocaleString();
 
+  // Awards: artist medals first, then song medals, most prestigious first.
   const earnedAwards = AWARD_DEFS
     .map((def) => ({ ...def, count: awards[def.key] || 0 }))
     .filter((a) => a.count > 0)
-    .sort((a, b) => a.rank - b.rank); // most prestigious first
-
-  // Side rails: LEFT = artist medals (theme-colored, who they are),
-  // RIGHT = song medals (gold, what they made). Most prestigious at the top.
-  const artistAwards = earnedAwards.filter((a) => a.entity === 'artist');
-  const songAwards = earnedAwards.filter((a) => a.entity === 'song');
+    .sort((a, b) => (a.entity === b.entity ? a.rank - b.rank : (a.entity === 'artist' ? -1 : 1)));
+  const totalWins = earnedAwards.reduce((sum, a) => sum + a.count, 0);
 
   const socialLinks = SOCIAL_DEFS
     .map((d) => ({ ...d, url: artist[d.field] }))
@@ -1012,437 +1100,510 @@ const ArtistPage = ({ isOwnProfile = false }) => {
 
   const standingPlace = standing?.genreName || artist.genre?.name || '';
   const standingArea = standing?.jurisdictionName || artist.jurisdiction?.name || 'your area';
+  const hasRank = Boolean(standing && standing.rank != null);
 
   const supportSub = isSupporting
-    ? 'They\u2019re your supported artist \u2014 your listening backs them.'
+    ? `Your listening backs ${artist.username} every month.`
     : pendingSwitch
-      ? `Switch locked in for ${formatEffective(pendingSwitch.effectiveDate)}.`
-      : `Make ${artist.username} your supported artist.`;
+      ? `You'll switch to ${artist.username} on ${formatEffective(pendingSwitch.effectiveDate)}.`
+      : `Make ${artist.username} your supported artist and your listening backs them.`;
+
+  const visibleSongs = showAllSongs ? popularSongs : popularSongs.slice(0, POPULAR_COUNT);
+  const bioText = (bio || '').trim();
+  const bioParagraphs = bioText ? bioText.split(/\n{2,}|\r\n\r\n/).map((p) => p.trim()).filter(Boolean) : [];
+
+  // Shape the ⋮ menu (SongMenu) expects — same as feed items.
+  const menuSong = (song) => {
+    const t = toTrack(song);
+    return { ...t, id: song.songId, type: 'song', artistData: { userId: artist.userId, username: artist.username } };
+  };
+
+  const stats = (
+    <p className="ap3-statline">
+      <b>{fmt(artist.totalPlays)}</b> plays · <b>{fmt(followerCount)}</b> {followerCount === 1 ? 'follower' : 'followers'} · <b>{fmt(artist.score)}</b> score
+    </p>
+  );
 
   return (
     <Layout backgroundImage={artistPhoto}>
-      {/* ===== STICKY HEADER — slides in under the app header (Spotify-style) ===== */}
+      <GlowDefs />
+
+      {/* ===== STICKY HEADER — slides in under the app header ===== */}
       <div className={`ap2-sticky ${showStickyHeader ? 'ap2-sticky--visible' : ''}`}>
         <div className="ap2-sticky__inner">
           <div className="ap2-sticky__left">
-            <img src={artistPhoto} alt={artist.username} className="ap2-sticky__avatar" />
+            <img src={artistPhoto} alt="" className="ap2-sticky__avatar" />
             <span className="ap2-sticky__name">{artist.username}</span>
           </div>
-          {showActionButtons && (
-            <div className="ap2-sticky__actions">
+          <div className="ap2-sticky__actions">
+            {showActionButtons && (
               <button
                 onClick={handleFollow}
                 className={`ap2-sticky__btn ${isFollowing ? 'ap2-sticky__btn--following' : ''}`}
               >
                 {isFollowing ? 'Following' : 'Follow'}
               </button>
-              <button onClick={handlePlayDefault} className="ap2-sticky__btn ap2-sticky__btn--play" disabled={!defaultSong}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
-                Play
-              </button>
-            </div>
-          )}
+            )}
+            <button onClick={() => playCatalog()} className="ap2-sticky__btn ap2-sticky__btn--play" disabled={!catalog.length}>
+              <PlayFill size={12} />
+              Play
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="ap2-page">
-        {/* ===== HERO — Full-bleed artist portrait ===== */}
-        <section className="ap2-hero" ref={heroRef}>
-          <div className="ap2-hero__backdrop">
-            <img src={artistPhoto} alt="" className="ap2-hero__img" />
-            <div className="ap2-hero__scrim" />
-            <div className="ap2-hero__vignette" />
+      <div className="ap2-page ap3">
+        {/* ===== HERO — the photo stays clear ===== */}
+        <section className="ap3-hero" ref={heroRef}>
+          <img src={artistPhoto} alt="" className="ap3-hero__img" />
+          <div className="ap3-hero__scrim" />
+          <div className="ap3-hero__tint" />
+
+          <div className="ap3-hero__top">
+            <button type="button" className="ap3-circ ap3-circ--glass" onClick={() => navigate(-1)} aria-label="Back">
+              <BackGlyph />
+            </button>
+            <button type="button" className="ap3-circ ap3-circ--glass" onClick={handleShareArtist} aria-label={`Share ${artist.username}`}>
+              <ShareGlyph />
+            </button>
           </div>
 
-          {/* Medal rails — back on the hero's edges where they belong.
-              Absolutely positioned overlays: they never move any other
-              element. LEFT = artist medals, RIGHT = song medals, most
-              prestigious first. Each medal names its award in full and
-              carries a ×N win chip. Rails scroll quietly if a decorated
-              artist overflows the space above the hero text. */}
-          {artistAwards.length > 0 && (
-            <div
-              className={`ap2-rail ap2-rail--left ${awardsRevealed ? 'ap2-rail--in' : ''}`}
-              role="list"
-              aria-label={`${artist.username} artist awards`}
-            >
-              {artistAwards.map((a, i) => (
-                <div
-                  key={a.key}
-                  role="listitem"
-                  className="ap2-badge ap2-badge--artist"
-                  style={{ '--ap2-badge-delay': `${i * 0.1}s` }}
-                  aria-label={`${a.label}, won ${a.count} ${a.count === 1 ? 'time' : 'times'}`}
+          <div className="ap3-hero__content">
+            <div className="ap3-hero__chips">
+              {artist.jurisdiction?.name && (
+                <button
+                  type="button"
+                  className="ap3-chip"
+                  onClick={() => navigate(`/jurisdiction/${artist.jurisdiction.name}`)}
                 >
-                  <span className="ap2-badge__medal">
-                    <MedalBase />
-                    <span className="ap2-badge__glyph"><AwardGlyph interval={a.interval} /></span>
-                    <span className="ap2-badge__count" aria-hidden="true">×{a.count}</span>
-                  </span>
-                  <span className="ap2-badge__label" aria-hidden="true">{a.label}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {songAwards.length > 0 && (
-            <div
-              className={`ap2-rail ap2-rail--right ${awardsRevealed ? 'ap2-rail--in' : ''}`}
-              role="list"
-              aria-label={`${artist.username} song awards`}
-            >
-              {songAwards.map((a, i) => (
-                <div
-                  key={a.key}
-                  role="listitem"
-                  className="ap2-badge ap2-badge--song"
-                  style={{ '--ap2-badge-delay': `${i * 0.1}s` }}
-                  aria-label={`${a.label}, won ${a.count} ${a.count === 1 ? 'time' : 'times'}`}
-                >
-                  <span className="ap2-badge__medal">
-                    <MedalBase />
-                    <span className="ap2-badge__glyph"><AwardGlyph interval={a.interval} /></span>
-                    <span className="ap2-badge__count" aria-hidden="true">×{a.count}</span>
-                  </span>
-                  <span className="ap2-badge__label" aria-hidden="true">{a.label}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="ap2-hero__content">
-            <div className="ap2-hero__tags">
-              <span
-                className="ap2-hero__jurisdiction"
-                onClick={() => navigate(`/jurisdiction/${artist.jurisdiction?.name}`)}
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M12 21s-7-6.4-7-11a7 7 0 0 1 14 0c0 4.6-7 11-7 11z" /><circle cx="12" cy="10" r="2.5" />
-                </svg>
-                {artist.jurisdiction?.name || 'Unknown'}
-              </span>
-
-              {standing && (standing.rank != null) && (
-                <span className="ap2-hero__rank">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M5 4h14v3a5 5 0 0 1-4 4.9V14h2v2H7v-2h2v-2.1A5 5 0 0 1 5 7V4z" /><rect x="8" y="18" width="8" height="2" rx="1" />
-                  </svg>
-                  #{standing.rank}{standingPlace ? ` ${standingPlace}` : ''}
+                  <PinGlyph />
+                  {artist.jurisdiction.name}
+                </button>
+              )}
+              {hasRank && (
+                <span className="ap3-chip ap3-chip--rank">
+                  #{standing.rank}{standingPlace ? ` in ${standingPlace}` : ''}
                   {standing.deltaSpots > 0 && (
-                    <span className="ap2-hero__rank-up">
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
-                      {standing.deltaSpots}
+                    <span className="ap3-chip__up" aria-label={`up ${standing.deltaSpots}`}>
+                      <UpGlyph />{standing.deltaSpots}
                     </span>
                   )}
                 </span>
               )}
             </div>
-
-            <h1 className="ap2-hero__name">{artist.username}</h1>
-
-            <div className="ap2-hero__meta">
-              <div className="ap2-hero__stat">
-                <span className="ap2-hero__stat-value">{fmt(artist.totalPlays)}</span>
-                <span className="ap2-hero__stat-label">Plays</span>
-              </div>
-              <div className="ap2-hero__stat">
-                <span className="ap2-hero__stat-value">{fmt(followerCount)}</span>
-                <span className="ap2-hero__stat-label">Followers</span>
-              </div>
-              <div className="ap2-hero__stat">
-                <span className="ap2-hero__stat-value">{fmt(artist.score)}</span>
-                <span className="ap2-hero__stat-label">Score</span>
-              </div>
-            </div>
-
-            {showActionButtons && (
-              <>
-                <div className="ap2-hero__actions">
-                  <button onClick={handlePlayDefault} className="ap2-hero__btn-play" disabled={!defaultSong}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
-                    Play
-                  </button>
-                  <MessageButton
-                    className="ap2-hero__btn-message"
-                    recipientId={artistId}
-                    recipientName={artist.username}
-                    recipientPhotoUrl={artist.photoUrl ? buildUrl(artist.photoUrl) : null}
-                  />
-                  <button
-                    onClick={openSupporterSheet}
-                    className={`ap2-hero__btn-support ${isSupporting ? 'ap2-hero__btn-support--active' : ''}`}
-                  >
-                    <ZapGlyph size={15} />
-                    {isSupporting ? 'Supporting' : 'Support'}
-                  </button>
-                  <button onClick={handleFollow} className={`ap2-hero__btn-follow ${isFollowing ? 'ap2-hero__btn-follow--active' : ''}`}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
-                    </svg>
-                    {isFollowing ? 'Following' : 'Follow'}
-                  </button>
-                  <button onClick={handleVote} className="ap2-hero__btn-vote">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6L12 2z" /></svg>
-                    Vote
-                  </button>
-                </div>
-                <p className="ap2-hero__votehint">
-                  <ZapGlyph size={13} />
-                  Your vote moves them up the {standingArea} rankings
-                </p>
-              </>
-            )}
+            <h1 className="ap3-hero__name">{artist.username}</h1>
+            <div className="ap3-hide-phone">{stats}</div>
           </div>
         </section>
 
-        {/* ===== CARD BODY — Ambient background from artwork ===== */}
-        <div className="ap2-body">
-          <div className="ap2-body__ambient">
-            <img src={topSongArtwork} alt="" className="ap2-body__ambient-img" />
-            <div className="ap2-body__ambient-overlay" />
+        {/* ===== IDENTITY + ACTIONS ===== */}
+        <div className="ap3-wrap ap3-identity">
+          <div className="ap3-hide-desktop">{stats}</div>
+
+          {bioText && (
+            <div className="ap3-teaser ap3-hide-desktop">
+              <p className="ap3-teaser__text">{bioText}</p>
+              <button type="button" className="ap3-link ap3-link--bright" onClick={openAbout}>
+                more about {artist.username}
+              </button>
+            </div>
+          )}
+
+          <div className="ap3-actions">
+            {showActionButtons && (
+              <button
+                type="button"
+                className={`ap3-pill ap3-act--follow ${isFollowing ? 'is-on' : ''}`}
+                onClick={handleFollow}
+                aria-pressed={isFollowing}
+              >
+                <FollowGlyph on={isFollowing} />
+                {isFollowing ? 'Following' : 'Follow'}
+              </button>
+            )}
+            {showActionButtons && (
+              <button type="button" className="ap3-pill ap3-pill--vote ap3-act--vote ap3-hide-phone" onClick={handleVote}>
+                <VoteIcon size={18} />
+                Vote
+              </button>
+            )}
+            {showActionButtons && (
+              <button
+                type="button"
+                className={`ap3-circ ap3-act--support ${isSupporting ? 'is-on' : ''}`}
+                onClick={openSupporterSheet}
+                aria-label={isSupporting ? `Supporting ${artist.username}` : `Support ${artist.username}`}
+                title={isSupporting ? 'Supporting' : 'Support'}
+              >
+                <SupportIcon size={21} active={false} tone={isSupporting ? 'on' : 'default'} />
+              </button>
+            )}
+            {showActionButtons && (
+              <MessageButton
+                iconOnly
+                className="ap3-circ ap3-act--message"
+                recipientId={artistId}
+                recipientName={artist.username}
+                recipientPhotoUrl={artist.photoUrl ? buildUrl(artist.photoUrl) : null}
+              />
+            )}
+            <button type="button" className="ap3-circ ap3-act--share ap3-hide-phone" onClick={handleShareArtist} aria-label={`Share ${artist.username}`} title="Share">
+              <ShareGlyph />
+            </button>
+
+            <span className="ap3-actions__spacer" aria-hidden="true" />
+
+            <button
+              type="button"
+              className="ap3-circ ap3-circ--bare ap3-act--shuffle"
+              onClick={() => playCatalog({ shuffle: true })}
+              disabled={!catalog.length}
+              aria-label={`Shuffle all of ${artist.username}'s songs`}
+              title="Shuffle all"
+            >
+              <ShuffleGlyph />
+            </button>
+            <button
+              type="button"
+              className="ap3-play ap3-act--play"
+              onClick={() => playCatalog()}
+              disabled={!catalog.length}
+              aria-label={`Play all of ${artist.username}'s songs`}
+              title="Play all"
+            >
+              <PlayFill />
+            </button>
           </div>
 
-          <div className="ap2-body__content">
-            {/* Standing strip — democratic ranking (renders when backend supplies it) */}
-            {standing && (standing.rank != null) && (
-              <div className="ap2-card ap2-standing">
-                <div className="ap2-standing__icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M3 3v18h18" /><path d="M7 15l4-5 3 3 5-7" />
-                  </svg>
-                </div>
-                <div className="ap2-standing__text">
-                  <span className="ap2-standing__label">This week in {standingArea}</span>
-                  <span className="ap2-standing__value">
-                    #{standing.rank}{standing.total ? ` of ${standing.total}` : ''}{standingPlace ? ` in ${standingPlace}` : ''}
-                    {standing.deltaSpots > 0 && ` · up ${standing.deltaSpots} spot${standing.deltaSpots > 1 ? 's' : ''}`}
-                  </span>
-                </div>
-                {showActionButtons && (
-                  <button className="ap2-standing__btn" onClick={handleVote}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6L12 2z" /></svg>
-                    Boost
-                  </button>
-                )}
-              </div>
-            )}
+          {showActionButtons && (
+            <button type="button" className="ap3-votecard ap3-hide-desktop" onClick={handleVote}>
+              <VoteIcon size={22} />
+              <span className="ap3-votecard__text">
+                <span className="ap3-votecard__title">Vote for {artist.username}</span>
+                <span className="ap3-votecard__sub">Moves them up the {standingArea} rankings</span>
+              </span>
+              <ChevronGlyph />
+            </button>
+          )}
+        </div>
 
-            {/* Territory rank — public standing, visible to guests too.
-                Hides itself entirely if ranks have not been computed. */}
-            <ArtistTerritory artistId={artistId} artistName={artist.username} />
+        {/* ===== TABS ===== */}
+        <div className="ap3-tabs" ref={tabsRef}>
+          <div className="ap3-wrap ap3-tabs__row" role="tablist" aria-label={artist.username}>
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                id={`ap3-tab-${t.id}`}
+                aria-selected={tab === t.id}
+                aria-controls={`ap3-panel-${t.id}`}
+                className={`ap3-tab ${tab === t.id ? 'is-on' : ''}`}
+                onClick={() => goToTab(t.id)}
+              >
+                {t.label}
+                {t.id === 'photos' && photos.length > 0 && <span className="ap3-tab__count">{photos.length}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
 
-            {/* Featured video — only when the artist has uploaded one */}
-            {videoUrl && (
-              <div className="ap2-card ap2-video">
-                <span className="ap2-video__label">Featured Video</span>
-                <div className="ap2-video__frame">
-                  <video
-                    className="ap2-video__el"
-                    src={buildUrl(videoUrl)}
-                    poster={artistPhoto}
-                    controls
-                    playsInline
-                    preload="metadata"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Row 1: Featured Song + Support (support card hidden on your own page) */}
-            <div className={`ap2-grid ap2-grid--featured ${!showActionButtons ? 'ap2-grid--single' : ''}`}>
+        {/* ===== MUSIC ===== */}
+        {tab === 'music' && (
+          <div className="ap3-wrap ap3-music" role="tabpanel" id="ap3-panel-music" aria-labelledby="ap3-tab-music">
+            <div className="ap3-music__main">
               {topSong && (
-                <div className="ap2-card ap2-featured" style={featuredAmbient || undefined}>
-                  <div className="ap2-featured__layout">
-                    <div className="ap2-featured__artwork-wrap" onClick={() => handleSongClick(topSong.songId)}>
-                      <img src={topSongArtwork} alt={topSong.title} className="ap2-featured__artwork" />
-                      <button
-                        className="ap2-featured__play-overlay"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          playSong(songs.find(s => s.songId === topSong.songId));
-                        }}
-                        aria-label="Play fans pick"
-                      >
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
-                      </button>
-                    </div>
-                    <div className="ap2-featured__info">
-                      <span className="ap2-featured__badge">Fans Pick</span>
-                      <h3 className="ap2-featured__title" onClick={() => handleSongClick(topSong.songId)}>
-                        {topSong.title}
-                      </h3>
-                      <p className="ap2-featured__desc">
-                        {fmt(playsOf(topSong))} plays
-                      </p>
-                      <div className="ap2-featured__genre">{artist.genre?.name || 'Unknown Genre'}</div>
-                    </div>
-                  </div>
+                <div className="ap3-card ap3-pick" style={featuredAmbient || undefined}>
+                  <button type="button" className="ap3-pick__open" onClick={() => playFromSong(topSong)} aria-label={`Play ${topSong.title}`}>
+                    <img src={topSongArtwork} alt="" className="ap3-pick__art" />
+                    <span className="ap3-pick__info">
+                      <span className="ap3-pick__badge">Fans pick</span>
+                      <span className="ap3-pick__title">{topSong.title}</span>
+                      <span className="ap3-pick__meta">
+                        Song · {fmt(playsOf(topSong))} plays{artist.genre?.name ? ` · ${artist.genre.name}` : ''}
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ap3-pick__play"
+                    onClick={() => playFromSong(topSong)}
+                    aria-label={`Play ${topSong.title}`}
+                  >
+                    <PlayFill size={17} color="#111" />
+                  </button>
                 </div>
               )}
 
-              {/* Support card — wired to the real supporter-switch mechanism */}
-              {showActionButtons && (
-                <div className="ap2-card ap2-support">
-                  <div className="ap2-support__head">
-                    <img src={artistPhoto} alt={artist.username} className="ap2-support__avatar" />
-                    <div className="ap2-support__copy">
-                      <h3 className="ap2-support__title">Support {artist.username}</h3>
-                      <p className="ap2-support__sub">{supportSub}</p>
-                    </div>
-                  </div>
-                  <div className="ap2-support__actions">
-                    <button
-                      className={`ap2-support__btn ap2-support__btn--support ${isSupporting ? 'ap2-support__btn--supporting' : ''}`}
-                      onClick={openSupporterSheet}
-                    >
-                      <ZapGlyph size={16} />
-                      {isSupporting ? 'Supporting' : 'Support'}
+              <section className="ap3-popular" aria-label="Popular songs">
+                <div className="ap3-sechead">
+                  <h3 className="ap3-h3">Popular</h3>
+                  {popularSongs.length > POPULAR_COUNT && (
+                    <button type="button" className="ap3-link" onClick={() => setShowAllSongs((v) => !v)}>
+                      {showAllSongs ? 'Show less' : `See all ${popularSongs.length}`}
                     </button>
-                    <button
-                      className={`ap2-support__btn ap2-support__btn--follow ${isFollowing ? 'ap2-support__btn--following' : ''}`}
-                      onClick={handleFollow}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
-                      </svg>
-                      {isFollowing ? 'Following' : 'Follow'}
-                    </button>
-                    <button className="ap2-support__btn ap2-support__btn--shop" onClick={handleShop}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M6 2L3 6v13a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
-                      </svg>
-                      Shop
-                    </button>
-                  </div>
+                  )}
                 </div>
-              )}
+                {popularSongs.length === 0 ? (
+                  <p className="ap2-empty">No songs yet</p>
+                ) : (
+                  <ol className="ap3-tracks">
+                    {visibleSongs.map((song, idx) => (
+                      <li
+                        key={song.songId}
+                        className={`ap3-track ${songMenu?.song?.id === song.songId ? 'is-menu' : ''}`}
+                        style={songColors[song.songId] ? { backgroundImage: songColors[song.songId] } : undefined}
+                      >
+                        <button
+                          type="button"
+                          className="ap3-track__main"
+                          onClick={() => playFromSong(song)}
+                          aria-label={`Play ${song.title}`}
+                        >
+                          <span className="ap3-track__num">{idx + 1}</span>
+                          <img src={buildUrl(song.artworkUrl) || artistPhoto} alt="" className="ap3-track__art" />
+                          <span className="ap3-track__info">
+                            <span className="ap3-track__title">{song.title}</span>
+                            <span className="ap3-track__plays">{fmt(playsOf(song))} plays</span>
+                          </span>
+                          <span className="ap3-track__plays ap3-track__plays--wide">{fmt(playsOf(song))} plays</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="ap3-kebab"
+                          aria-label={`More options for ${song.title}`}
+                          aria-haspopup="menu"
+                          aria-expanded={songMenu?.song?.id === song.songId}
+                          onClick={(e) => { e.stopPropagation(); openSongMenu(menuSong(song), anchorFromEvent(e)); }}
+                        >
+                          <KebabIcon />
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </section>
             </div>
 
-            {/* Row 2: Popular (theme-tinted, ambient rows) + Connect / About aside */}
-            <div className="ap2-grid ap2-grid--lower">
-              <div className="ap2-card ap2-popular">
-                <div className="ap2-popular__header">
-                  <h3>Popular</h3>
-                  {songs.length > 5 && (
+            <div className="ap3-music__aside">
+              {bioText && (
+                <div className="ap3-card ap3-aboutcard ap3-hide-phone">
+                  <img src={aboutPhoto} alt="" className="ap3-aboutcard__img" />
+                  <div className="ap3-aboutcard__body">
+                    <h3 className="ap3-h3 ap3-h3--sm"><em>About</em> {artist.username}</h3>
+                    <p className="ap3-aboutcard__text">{bioText}</p>
+                    <button type="button" className="ap3-link ap3-link--bright" onClick={openAbout}>Read more</button>
+                  </div>
+                </div>
+              )}
+
+              <ArtistStanding
+                artistId={artistId}
+                artistName={artist.username}
+                standing={standing}
+                className="ap3-o-standing"
+              />
+
+              {showActionButtons && (
+                <div className="ap3-card ap3-support ap3-o-support">
+                  <div className="ap3-support__head">
+                    <img src={artistPhoto} alt="" className="ap3-support__avatar" />
+                    <div>
+                      <h3 className="ap3-support__title">Support {artist.username}</h3>
+                      <p className="ap3-support__sub">{supportSub}</p>
+                    </div>
+                  </div>
+                  <div className="ap3-support__actions">
                     <button
                       type="button"
-                      className="ap2-popular__seeall"
-                      onClick={() => setShowAllSongs((v) => !v)}
+                      className={`ap3-pill ${isSupporting ? 'is-on' : ''}`}
+                      onClick={openSupporterSheet}
                     >
-                      {showAllSongs ? 'Show less' : 'See all'}
+                      <SupportIcon size={17} tone={isSupporting ? 'on' : 'default'} />
+                      {isSupporting ? 'Supporting' : 'Support'}
                     </button>
-                  )}
-                </div>
-                <div className="ap2-popular__list">
-                  {(showAllSongs ? songs : songs.slice(0, 5)).map((song, idx) => (
-                    <div
-                      key={song.songId}
-                      className="ap2-track"
-                      style={songColors[song.songId] ? { backgroundImage: songColors[song.songId] } : undefined}
-                    >
-                      <span className="ap2-track__num">{idx + 1}</span>
-                      <img src={buildUrl(song.artworkUrl) || artistPhoto} alt={song.title} className="ap2-track__art" />
-                      <div className="ap2-track__info">
-                        <span className="ap2-track__title" onClick={() => handleSongClick(song.songId)}>
-                          {song.title}
-                        </span>
-                        <span className="ap2-track__plays">{fmt(playsOf(song))} plays</span>
-                      </div>
-                      <button
-                        className="ap2-track__play"
-                        onClick={(e) => { e.stopPropagation(); playSong(song); }}
-                        aria-label={`Play ${song.title}`}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21" /></svg>
-                      </button>
-                    </div>
-                  ))}
-                  {songs.length === 0 && <p className="ap2-empty">No songs yet</p>}
-                </div>
-              </div>
-
-              <div className="ap2-aside">
-                {socialLinks.length > 0 && (
-                  <div className="ap2-card ap2-connect">
-                    <h3 className="ap2-connect__title">Connect</h3>
-                    <div className="ap2-connect__logos">
-                      {socialLinks.map((sl) => (
-                        <a
-                          key={sl.key}
-                          href={sl.url}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className={`ap2-connect__logo ap2-connect__logo--${sl.key}`}
-                          aria-label={`${artist.username} on ${sl.name}`}
-                          title={sl.name}
-                        >
-                          {SOCIAL_ICONS[sl.key]}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="ap2-card ap2-about">
-                  <h3 className="ap2-about__heading">About</h3>
-                  <div className="ap2-about__photo-wrap">
-                    <img src={artistPhoto} alt="" className="ap2-about__photo" />
-                    <div className="ap2-about__photo-fade" />
-                    {!isOwnProfile && (
-                      <p className="ap2-about__bio-overlay">{bio}</p>
-                    )}
-                  </div>
-                  {isOwnProfile && (
-                    <div className="ap2-about__edit">
-                      <textarea value={bio} onChange={handleBioChange} className="ap2-about__textarea" placeholder="Tell fans about yourself..." />
-                      <button onClick={handleSaveBio} className="ap2-about__save">Save Bio</button>
-                    </div>
-                  )}
-                  <div className="ap2-about__badges">
-                    <div className="ap2-about__badge">
-                      <span className="ap2-about__badge-value">{fmt(artist.score)}</span>
-                      <span className="ap2-about__badge-label">Score</span>
-                    </div>
-                    <div className="ap2-about__badge">
-                      <span className="ap2-about__badge-value">{fmt(followerCount)}</span>
-                      <span className="ap2-about__badge-label">Followers</span>
-                    </div>
+                    <button type="button" className="ap3-pill" onClick={handleShop}>
+                      <ShopGlyph />
+                      Buy songs
+                    </button>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* ===== AD SPACE (none for Unis Plus) ===== */}
-            <AdSlot placement="artist" />
+            <div className="ap3-music__wide">
+              {videoUrl && (
+                <section className="ap3-card ap3-video ap3-o-video" aria-label="Featured video">
+                  <h3 className="ap3-h3 ap3-h3--sm">Featured video</h3>
+                  <div className="ap3-video__frame">
+                    <video
+                      className="ap3-video__el"
+                      src={buildUrl(videoUrl)}
+                      poster={artistPhoto}
+                      controls
+                      playsInline
+                      preload="metadata"
+                    />
+                  </div>
+                </section>
+              )}
 
-            {/* ===== PHOTOS — Instagram-style gallery (renders only when the
-                 artist has uploaded photos via the dashboard) ===== */}
-            {photos.length > 0 && (
-              <div className="ap2-card ap2-gallery">
-                <div className="ap2-gallery__header">
-                  <h3>Photos</h3>
-                  <span className="ap2-gallery__count">{photos.length}</span>
-                </div>
-                <div className="ap2-gallery__grid">
+              {earnedAwards.length > 0 && (
+                <section className="ap3-awards ap3-o-awards" aria-label={`${artist.username} awards`}>
+                  <div className="ap3-sechead">
+                    <h3 className="ap3-h3">Awards <em>{fmt(totalWins)} {totalWins === 1 ? 'win' : 'wins'}</em></h3>
+                  </div>
+                  <ul className="ap3-awards__shelf">
+                    {earnedAwards.map((a) => (
+                      <li
+                        key={a.key}
+                        className="ap3-medal"
+                        aria-label={`${a.label}, won ${a.count} ${a.count === 1 ? 'time' : 'times'}`}
+                      >
+                        <span className={`ap3-medal__disc ap3-medal__disc--${a.entity}`} aria-hidden="true">{a.short}</span>
+                        <span className="ap3-medal__text" aria-hidden="true">
+                          <span className="ap3-medal__label">{a.label}</span>
+                          <span className="ap3-medal__count">&times;{fmt(a.count)}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {photos.length > 0 && (
+                <section className="ap3-photostrip ap3-o-photos" aria-label="Photos">
+                  <div className="ap3-sechead">
+                    <h3 className="ap3-h3">Photos</h3>
+                    <button type="button" className="ap3-link" onClick={() => goToTab('photos')}>
+                      See all {photos.length}
+                    </button>
+                  </div>
+                  <div className="ap3-photostrip__row">
+                    {photos.slice(0, 6).map((photo, idx) => (
+                      <button
+                        key={photo.photoId}
+                        type="button"
+                        className="ap3-photostrip__tile"
+                        onClick={() => setLightboxIndex(idx)}
+                        aria-label={`Open photo ${idx + 1} of ${photos.length}`}
+                      >
+                        <img src={buildUrl(photo.photoUrl)} alt="" loading="lazy" />
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <div className="ap3-o-ad">
+                <AdSlot placement="artist" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== PHOTOS ===== */}
+        {tab === 'photos' && (
+          <div className="ap3-photos" role="tabpanel" id="ap3-panel-photos" aria-labelledby="ap3-tab-photos">
+            {photos.length === 0 ? (
+              <p className="ap2-empty ap3-wrap">
+                {isOwnProfile || isCurrentUser
+                  ? 'No photos yet. Add some from your artist dashboard.'
+                  : `${artist.username} hasn’t posted any photos yet.`}
+              </p>
+            ) : (
+              <>
+                <p className="ap3-photos__hint ap3-wrap">
+                  {photos.length} {photos.length === 1 ? 'photo' : 'photos'} · tap one to open it full screen
+                </p>
+                <div className="ap3-photos__grid">
                   {photos.map((photo, idx) => (
                     <button
                       key={photo.photoId}
                       type="button"
-                      className="ap2-gallery__tile"
+                      className="ap3-photos__tile"
                       onClick={() => setLightboxIndex(idx)}
                       aria-label={`Open photo ${idx + 1} of ${photos.length}`}
                     >
                       <img src={buildUrl(photo.photoUrl)} alt="" loading="lazy" />
-                      <span className="ap2-gallery__tile-glow" aria-hidden="true">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /><path d="M11 8v6M8 11h6" /></svg>
-                      </span>
                     </button>
                   ))}
                 </div>
-              </div>
+              </>
             )}
           </div>
-        </div>
+        )}
+
+        {/* ===== ABOUT — the bio gets its own room, never on top of the photo ===== */}
+        {tab === 'about' && (
+          <div className="ap3-wrap ap3-about" role="tabpanel" id="ap3-panel-about" aria-labelledby="ap3-tab-about">
+            <img src={aboutPhoto} alt={`${artist.username}`} className="ap3-about__img" />
+            <div className="ap3-about__body">
+              <h2 className="ap3-about__title"><em>About</em> {artist.username}</h2>
+
+              <div className="ap3-about__stats">
+                <div className="ap3-stat"><b>{fmt(artist.totalPlays)}</b><span>Plays</span></div>
+                <div className="ap3-stat"><b>{fmt(followerCount)}</b><span>{followerCount === 1 ? 'Follower' : 'Followers'}</span></div>
+                <div className="ap3-stat"><b>{fmt(artist.score)}</b><span>Score</span></div>
+                <div className="ap3-stat"><b>{fmt(totalWins)}</b><span>Awards won</span></div>
+              </div>
+
+              {(artist.jurisdiction?.name || artist.genre?.name) && (
+                <div className="ap3-about__tags">
+                  {artist.jurisdiction?.name && (
+                    <button type="button" className="ap3-chip ap3-chip--flat" onClick={() => navigate(`/jurisdiction/${artist.jurisdiction.name}`)}>
+                      <PinGlyph />{artist.jurisdiction.name}
+                    </button>
+                  )}
+                  {artist.genre?.name && <span className="ap3-chip ap3-chip--flat">{artist.genre.name}</span>}
+                </div>
+              )}
+
+              {isOwnProfile ? (
+                <div className="ap3-about__edit">
+                  <label htmlFor="ap3-bio" className="ap3-about__label">Your bio</label>
+                  <textarea
+                    id="ap3-bio"
+                    value={bio}
+                    onChange={handleBioChange}
+                    className="ap3-about__textarea"
+                    placeholder="Tell fans about yourself…"
+                    rows={8}
+                  />
+                  <button type="button" onClick={handleSaveBio} className="ap3-pill is-on">Save bio</button>
+                </div>
+              ) : bioParagraphs.length > 0 ? (
+                <div className="ap3-about__bio">
+                  {bioParagraphs.map((p, i) => <p key={i}>{p}</p>)}
+                </div>
+              ) : (
+                <p className="ap3-about__empty">{artist.username} hasn&rsquo;t written a bio yet.</p>
+              )}
+
+              {socialLinks.length > 0 && (
+                <section aria-label="Connect">
+                  <h3 className="ap3-h3 ap3-h3--sm ap3-about__connecthead">Connect</h3>
+                  <div className="ap3-about__links">
+                    {socialLinks.map((sl) => (
+                      <a
+                        key={sl.key}
+                        href={sl.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="ap3-social"
+                        aria-label={`${artist.username} on ${sl.name}`}
+                      >
+                        <span className="ap3-social__icon">{SOCIAL_ICONS[sl.key]}</span>
+                        <span className="ap3-social__name">{sl.name}</span>
+                        <ChevronGlyph size={16} />
+                      </a>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <VotingWizard
@@ -1504,6 +1665,21 @@ const ArtistPage = ({ isOwnProfile = false }) => {
           fileName: `${artist.username} - ${shopSong.title || 'Track'}.mp3`,
         } : {}}
       />
+
+      {/* ★ Song ⋮ menu (Play next · Add to queue · Save to playlist · Download · Share · Go to song) */}
+      {songMenu && (
+        <SongMenu
+          key={songMenu.key}
+          song={songMenu.song}
+          anchor={songMenu.anchor}
+          onClose={closeSongMenu}
+          onPlayNow={playFromMenu}
+          isGuest={isGuest}
+          onRequireAccount={requireAccount}
+        />
+      )}
+
+      <AuthGateSheet {...gateProps} />
     </Layout>
   );
 };

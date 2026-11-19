@@ -1,7 +1,7 @@
-// artistpage.scss — v3 "Premium" pass
-// ALL classes prefixed ap2- to avoid collisions with feed, song, or any other page.
-// Fonts: Playfair Display italic (hero name), Bitcount Grid Double (jurisdiction),
-//        DM Sans (body). Colors: #111114 base, theme accent via --unis-primary.
+// artistpage.scss — v4 redesign (Nov 2026) on top of the v3 pieces that stay
+// (sticky bar, support / shop windows, photo viewer). New page styles are
+// the ap3- block below.
+// Classes are prefixed ap2- (kept v3 pieces) and ap3- (v4) to avoid collisions.
 //
 // v3 changes:
 //   • Header-gap fix: layout clears the fixed header with padding-top: 11vh,
@@ -70,7 +70,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 .ap2-error {
   text-align: center;
   padding: 80px 20px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
   font-size: 16px;
 }
 .ap2-loading { color: $ap2-text-2; }
@@ -79,7 +79,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   text-align: center;
   color: $ap2-text-3;
   padding: 16px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
   font-size: 14px;
   margin: 0;
 }
@@ -148,10 +148,10 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   }
 
   &__name {
-    font-family: 'Playfair Display', serif;
+    font-family: var(--unis-font-italic, 'Instrument Serif', Georgia, serif); // ★ was Playfair
     font-style: italic;
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 19px;
+    font-weight: 400;
     color: $ap2-text-1;
     white-space: nowrap;
     overflow: hidden;
@@ -170,7 +170,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
     gap: 5px;
     padding: 6px 16px;
     border-radius: 50px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--unis-font-sans, 'Inter', sans-serif); // ★ was DM Sans
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
@@ -211,1232 +211,837 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HERO — Full-bleed artist portrait (entire viewport fold)
+// ★ v4 REDESIGN (Nov 2026) — everything below is `ap3-`.
+// Inter for UI, Instrument Serif italic for the name and accents (the
+// token-layer fonts the newer pages use). All colour comes from the theme
+// tokens, so every theme works.
+//
+// Breakpoints: phone layout below 768px; Music tab goes two-column at 1200px
+// (the desktop sidebar takes ~260px, so narrower screens stay one column).
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-hero {
-  position: relative;
-  width: 100%;
-  // Take up the full viewport minus a little to hint at content below
-  min-height: 85vh;
-  display: flex;
-  align-items: flex-end;
-  padding: 0 48px 56px;
-  box-sizing: border-box;
-  overflow: hidden;
+$ap3-p: var(--unis-primary, #163387);
+$ap3-p2: color-mix(in srgb, var(--unis-primary, #163387), white 30%);
+$ap3-p3: color-mix(in srgb, var(--unis-primary, #163387), white 62%);
+$ap3-pt: color-mix(in srgb, var(--unis-primary, #163387), transparent 84%);
+$ap3-pg: color-mix(in srgb, var(--unis-primary, #163387), transparent 62%);
+$ap3-bg: var(--unis-bg, #07090f);
+$ap3-text: #ffffff;
+$ap3-text-2: rgba(255, 255, 255, 0.72);
+$ap3-text-3: rgba(255, 255, 255, 0.55);
+$ap3-line: rgba(255, 255, 255, 0.08);
+$ap3-line-hi: rgba(255, 255, 255, 0.16);
+$ap3-panel: rgba(255, 255, 255, 0.035);
+$ap3-sans: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+$ap3-serif: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+$ap3-phone: 767px;
+$ap3-wide: 1200px;
 
-  @media (max-width: 900px) {
-    padding: 0 28px 44px;
-    min-height: 75vh;
+.ap3 {
+  font-family: $ap3-sans;
+  color: $ap3-text;
+  background: $ap3-bg;
+  padding-bottom: 48px;
+  -webkit-font-smoothing: antialiased;
+
+  button {
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  @media (max-width: 600px) {
-    padding: 0 20px 36px;
-    min-height: 70vh;
+  :focus-visible {
+    outline: 2px solid $ap3-p3;
+    outline-offset: 2px;
   }
 }
 
-.ap2-hero__backdrop {
+.ap3-defs {
   position: absolute;
-  inset: 0;
-  z-index: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
 
-  .ap2-hero__img {
+.ap3-wrap {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 40px;
+  box-sizing: border-box;
+
+  @media (max-width: $ap3-phone) { padding: 0 20px; }
+}
+
+@media (max-width: $ap3-phone) {
+  .ap3-hide-phone { display: none !important; }
+}
+@media (min-width: $ap3-phone + 1) {
+  .ap3-hide-desktop { display: none !important; }
+}
+
+// ── Shared atoms ───────────────────────────────────────────────
+.ap3-h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: $ap3-text;
+
+  em {
+    font-family: $ap3-serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.14em;
+    color: $ap3-p3;
+  }
+
+  &--sm { font-size: 18px; }
+
+  @media (max-width: $ap3-phone) {
+    font-size: 20px;
+    &--sm { font-size: 17px; }
+  }
+}
+
+.ap3-sechead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ap3-link {
+  background: none;
+  border: 0;
+  padding: 6px 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: $ap3-text-3;
+  cursor: pointer;
+
+  &:hover { color: $ap3-text; }
+  &--bright { color: $ap3-text; }
+}
+
+.ap3-card {
+  background: $ap3-panel;
+  border: 1px solid $ap3-line;
+  border-radius: 18px;
+}
+
+.ap3-circ {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid $ap3-line-hi;
+  background: rgba(255, 255, 255, 0.05);
+  color: $ap3-text;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.1); }
+  &:active { transform: scale(0.94); }
+  &:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  &.is-on {
+    background: $ap3-p;
+    border-color: $ap3-p;
+  }
+
+  &--bare {
+    border: 0;
+    background: none;
+    &:hover { background: rgba(255, 255, 255, 0.08); }
+  }
+
+  &--glass {
+    background: rgba(10, 10, 16, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  @media (max-width: $ap3-phone) {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.ap3-pill {
+  height: 40px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: $ap3-text;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+
+  &:hover { border-color: #fff; }
+  &:active { transform: scale(0.97); }
+
+  &.is-on {
+    border-color: $ap3-p2;
+    color: $ap3-p3;
+    background: $ap3-pt;
+  }
+
+  &--vote {
+    border-color: $ap3-p2;
+    background: linear-gradient(100deg, $ap3-pt, rgba(255, 255, 255, 0.02));
+  }
+
+  @media (max-width: $ap3-phone) {
+    height: 36px;
+    padding: 0 16px;
+    font-size: 13.5px;
+  }
+}
+
+.ap3-play {
+  width: 60px;
+  height: 60px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: $ap3-p;
+  box-shadow: 0 10px 28px -8px $ap3-pg, inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+
+  svg { margin-left: 2px; }
+  &:hover { transform: scale(1.04); filter: brightness(1.1); }
+  &:active { transform: scale(0.96); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  @media (max-width: $ap3-phone) {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+.ap3-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(10, 10, 16, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: $ap3-text;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  @at-root button#{&} {
+    cursor: pointer;
+    &:hover { border-color: rgba(255, 255, 255, 0.4); }
+  }
+
+  &--rank {
+    border-color: $ap3-p2;
+    background: color-mix(in srgb, var(--unis-primary, #163387), transparent 35%);
+  }
+
+  &__up {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 2px;
+  }
+
+  &--flat {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: $ap3-panel;
+  }
+
+  @media (max-width: $ap3-phone) {
+    height: 26px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+}
+
+.ap3-statline {
+  margin: 14px 0 0;
+  font-size: 15px;
+  color: $ap3-text-2;
+
+  b {
+    color: $ap3-text;
+    font-weight: 650;
+  }
+
+  @media (max-width: $ap3-phone) {
+    margin: 4px 0 0;
+    font-size: 13.5px;
+  }
+}
+
+// ── Hero: the photo stays clear ────────────────────────────────
+.ap3-hero {
+  position: relative;
+  height: 440px;
+  overflow: hidden;
+  background: #0d0f16;
+
+  @media (max-width: $ap3-phone) { height: clamp(340px, 52vh, 420px); }
+
+  &__img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 15%;
-    // No blur — the mockup shows the actual photo sharp/visible
-    filter: brightness(0.55) saturate(1.15);
+    object-position: center 28%;
+    animation: ap2-fadeIn 0.5s ease both;
   }
 
-  // Heavy bottom gradient so text is legible & cards emerge from darkness,
-  // plus a gentle top band that seats the trophy shelf over bright portraits
-  .ap2-hero__scrim {
+  // Phones: top shade for the buttons, bottom fade into the page.
+  // Desktop: a left-side shade too, where the name sits.
+  &__scrim {
     position: absolute;
     inset: 0;
-    background:
-      linear-gradient(to bottom, rgba($ap2-base, 0.55) 0%, transparent 20%),
-      linear-gradient(
-        to top,
-        $ap2-base 0%,
-        rgba($ap2-base, 0.92) 12%,
-        rgba($ap2-base, 0.55) 40%,
-        rgba($ap2-base, 0.15) 65%,
-        transparent 85%
-      );
-  }
+    background: linear-gradient(180deg,
+      rgba(7, 9, 15, 0.45) 0%, rgba(7, 9, 15, 0) 22%,
+      rgba(7, 9, 15, 0) 48%, rgba(7, 9, 15, 0.85) 86%, #07090f 100%);
 
-  // Side vignette for cinematic feel
-  .ap2-hero__vignette {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(
-      ellipse at 50% 40%,
-      transparent 0%,
-      rgba($ap2-base, 0.3) 65%,
-      rgba($ap2-base, 0.65) 100%
-    );
-  }
-}
-
-// ─── MEDAL RAILS ───────────────────────────────────────────────
-// The Unis prestige signal, pinned to the hero's edges — LEFT = artist
-// medals (theme accent), RIGHT = song medals (gold). Pure overlays: they are
-// absolutely positioned and never move the hero content, which keeps its
-// original layout untouched.
-//
-// Rails occupy the upper band of the hero (content is bottom-anchored, so
-// this space is free). If a heavily decorated artist overflows the band, the
-// rail scrolls quietly (no visible scrollbar, bottom fade hints at more).
-//
-// Entrance: portrait lands first, then medals slide in from their own edge,
-// staggered top-to-bottom — JS flips --in ~650ms after load, each medal adds
-// --ap2-badge-delay (0.1s apart); six finish comfortably under 2s.
-.ap2-rail {
-  position: absolute;
-  z-index: 3;
-  top: 82px;
-  // NO scrolling and no fixed bottom — the rail is free to run the full
-  // height of the hero for a completely decorated artist. Scrollbars on a
-  // trophy rail look broken, so the badges are sized to fit instead.
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
-  width: 66px;
-  pointer-events: none;
-  .ap2-badge { pointer-events: auto; }
-
-  &--left  { left: 6px; }
-  &--right { right: 6px; }
-
-  @media (max-width: 600px) {
-    top: 64px;
-    width: 58px;
-    gap: 5px;
-    &--left  { left: 2px; }
-    &--right { right: 2px; }
-  }
-}
-
-.ap2-badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex-shrink: 0;
-  width: 100%;
-  cursor: default;
-
-  // Off-stage until the rail reveals; slides in from its own edge
-  opacity: 0;
-  transition:
-    opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1) var(--ap2-badge-delay, 0s),
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1) var(--ap2-badge-delay, 0s);
-
-  .ap2-rail--left & { transform: translateX(-24px) scale(0.92); }
-  .ap2-rail--right & { transform: translateX(24px) scale(0.92); }
-
-  .ap2-rail--in & {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-
-  // Entity carried by COLOR: artist = user theme, song = gold
-  &--artist {
-    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 62%, #ffffff);
-  }
-  &--song {
-    color: #f5d990;
-  }
-
-  &__medal {
-    position: relative;
-    width: 42px;
-    height: 52px;
-    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.55));
-    transition: transform 0.2s;
-
-    @media (max-width: 600px) {
-      width: 36px;
-      height: 45px;
+    @media (min-width: $ap3-phone + 1) {
+      background:
+        linear-gradient(90deg, rgba(7, 9, 15, 0.8) 0%, rgba(7, 9, 15, 0.15) 55%, rgba(7, 9, 15, 0) 100%),
+        linear-gradient(180deg, rgba(7, 9, 15, 0) 55%, #07090f 100%);
     }
   }
 
-  &:hover &__medal {
-    transform: translateY(-2px) scale(1.06);
-  }
-
-  &__base {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-
-  // Interval symbol, centered on the disc (svg viewBox is 64x80,
-  // disc center at 50%/36%)
-  &__glyph {
+  &__tint {
     position: absolute;
-    top: 36%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    inset: 0;
+    background: radial-gradient(120% 60% at 50% 100%, $ap3-pt, transparent 70%);
+    pointer-events: none;
+  }
+
+  &__top {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    color: inherit;
+    justify-content: space-between;
 
-    svg {
-      width: 16px;
-      height: 16px;
-
-      @media (max-width: 600px) {
-        width: 14px;
-        height: 14px;
-      }
-    }
+    // Desktop has the sidebar and an action-row Share, so no hero buttons.
+    @media (min-width: $ap3-phone + 1) { display: none; }
   }
 
-  // ×N win chip pinned to the medal's shoulder
-  &__count {
+  &__content {
     position: absolute;
-    top: -4px;
-    right: -7px;
-    padding: 1px 5px;
-    border-radius: 20px;
-    background: rgba(9, 9, 13, 0.88);
-    border: 1px solid currentColor;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 8.5px;
-    font-weight: 800;
-    line-height: 1.3;
-    color: inherit;
-    letter-spacing: 0.3px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-  }
+    left: 0;
+    right: 0;
+    bottom: 26px;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 40px;
+    box-sizing: border-box;
+    animation: ap2-fadeUp 0.6s ease both;
 
-  // Full award name, written on the badge itself
-  &__label {
-    margin-top: 1px;
-    max-width: 64px;
-    text-align: center;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 6.5px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    line-height: 1.3;
-    text-transform: uppercase;
-    color: $ap2-text-1;
-    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.8);
-    text-wrap: balance;
-
-    @media (max-width: 600px) {
-      font-size: 6px;
-      max-width: 56px;
-      letter-spacing: 0.3px;
+    @media (max-width: $ap3-phone) {
+      bottom: 16px;
+      padding: 0 20px;
     }
   }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+
+    @media (max-width: $ap3-phone) {
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+  }
+
+  &__name {
+    margin: 0;
+    font-family: $ap3-serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(64px, 8vw, 112px);
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+    color: $ap3-text;
+    text-shadow: 0 6px 30px rgba(0, 0, 0, 0.5);
+    overflow-wrap: anywhere;
+
+    @media (max-width: $ap3-phone) { font-size: clamp(48px, 17vw, 72px); }
+  }
 }
 
-.ap2-hero__content {
-  position: relative;
-  z-index: 1;
-  // LEFT-ANCHORED, never auto-centered. `margin: 0 auto` here (and on
-  // .ap2-body__content) is what pushed everything toward the middle of a wide
-  // desktop, reading as a huge gap between the sidebar and the content. The
-  // column now starts at the hero's own gutter and grows rightward, so on a
-  // large monitor the page hugs the sidebar the way the portrait does.
-  max-width: 1100px;
-  width: 100%;
-  margin: 0;
-  animation: ap2-fadeUp 0.8s ease-out both;
+// ── Identity + actions ─────────────────────────────────────────
+.ap3-identity {
+  padding-top: 8px;
+
+  @media (max-width: $ap3-phone) { padding-top: 0; }
 }
 
-.ap2-hero__tags {
+.ap3-teaser {
+  margin-top: 10px;
+
+  &__text {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: $ap3-text-2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .ap3-link { padding-top: 2px; }
+}
+
+.ap3-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-top: 6px;
 
-  @media (max-width: 600px) { margin-bottom: 10px; }
-}
+  &__spacer { flex: 1 1 0; min-width: 0; }
 
-.ap2-hero__jurisdiction {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 30%, transparent);
-  border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 55%, transparent);
-  font-family: "Bitcount Grid Double", system-ui;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff);
-  cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
-
-  svg { flex-shrink: 0; }
-
-  &:hover {
-    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, transparent);
-    transform: translateY(-1px);
+  // Desktop: Play first, Spotify-style.
+  @media (min-width: $ap3-phone + 1) {
+    flex-wrap: wrap;
+    .ap3-act--play { order: -2; }
+    .ap3-act--shuffle { order: -1; }
+    .ap3-actions__spacer { display: none; }
   }
 
-  @media (max-width: 600px) {
-    font-size: 10px;
-    padding: 5px 11px;
-    letter-spacing: 1.5px;
+  @media (max-width: $ap3-phone) {
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-top: 14px;
   }
 }
 
-.ap2-hero__rank {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 5px;
-  background: var(--unis-primary, #{$ap2-blue-raw});
-  color: #fff;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, transparent);
-
-  svg { flex-shrink: 0; }
-
-  &-up {
-    display: inline-flex;
-    align-items: center;
-    gap: 1px;
-    margin-left: 2px;
-    padding: 1px 5px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.22);
-    font-size: 10px;
-    font-weight: 800;
-  }
-
-  @media (max-width: 600px) {
-    font-size: 10px;
-    padding: 5px 10px;
-  }
-}
-
-.ap2-hero__name {
-  font-family: 'Playfair Display', serif;
-  font-weight: 800;
-  font-size: clamp(42px, 8vw, 80px);
-  color: $ap2-text-1;
-  margin: 0 0 16px;
-  line-height: 1.0;
-  letter-spacing: -1px;
-  text-shadow: 0 4px 40px rgba(0, 0, 0, 0.6);
-  // Slight italic like your Unis display headings
-  font-style: italic;
-
-  @media (max-width: 600px) {
-    margin-bottom: 12px;
-    letter-spacing: -0.5px;
-  }
-}
-
-.ap2-hero__meta {
-  display: flex;
-  gap: 32px;
-  margin-bottom: 24px;
-  animation: ap2-fadeUp 0.7s ease-out both;
-  animation-delay: 0.15s;
-
-  @media (max-width: 600px) {
-    gap: 22px;
-    margin-bottom: 20px;
-  }
-}
-
-.ap2-hero__stat {
-  display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: 6px;
-
-  &-value {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 20px;
-    font-weight: 700;
-    color: $ap2-text-1;
-
-    @media (max-width: 600px) { font-size: 17px; }
-  }
-
-  &-label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    color: $ap2-text-3;
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-
-    @media (max-width: 600px) { font-size: 10px; }
-  }
-}
-
-.ap2-hero__actions {
+.ap3-votecard {
+  width: 100%;
+  margin-top: 14px;
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
-  animation: ap2-fadeUp 0.6s ease-out both;
-  animation-delay: 0.3s;
-
-  @media (max-width: 600px) { gap: 10px; }
-}
-
-.ap2-hero__btn-play {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 32px;
-  border-radius: 50px;
-  background: $ap2-blue;
-  border: none;
-  color: white;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid $ap3-p2;
+  background: linear-gradient(100deg, $ap3-pt, rgba(255, 255, 255, 0.02));
+  color: $ap3-text;
+  text-align: left;
   cursor: pointer;
-  transition: transform 0.2s, filter 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 24px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, transparent);
 
-  svg { flex-shrink: 0; margin-left: -2px; }
+  &:active { transform: scale(0.99); }
 
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    filter: brightness(1.2);
-    box-shadow: 0 6px 32px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 50%, transparent);
-  }
-  &:active:not(:disabled) { transform: translateY(0); }
-  &:disabled { opacity: 0.35; cursor: not-allowed; }
-
-  @media (max-width: 600px) {
-    padding: 12px 24px;
-    font-size: 13px;
-  }
-}
-
-// Support — theme-colored (replaces the old hard-coded green usp-trigger)
-.ap2-hero__btn-support {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 28px;
-  border-radius: 50px;
-  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 20%, rgba(255, 255, 255, 0.04));
-  border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 55%, transparent);
-  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, #ffffff);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s;
-
-  svg { flex-shrink: 0; }
-
-  &:hover {
-    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, rgba(255, 255, 255, 0.04));
-    border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 75%, transparent);
-    transform: translateY(-1px);
-  }
-
-  &--active {
-    background: $ap2-blue;
-    border-color: $ap2-blue;
-    color: #fff;
-    box-shadow: 0 4px 18px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, transparent);
-
-    &:hover {
-      filter: brightness(1.15);
-      background: $ap2-blue;
-      border-color: $ap2-blue;
-    }
-  }
-
-  @media (max-width: 600px) {
-    padding: 12px 22px;
-    font-size: 13px;
-  }
-}
-
-.ap2-hero__btn-follow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 28px;
-  border-radius: 50px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: $ap2-text-1;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s;
-
-  svg { flex-shrink: 0; }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.35);
-    transform: translateY(-1px);
-  }
-
-  &--active {
-    background: $ap2-blue;
-    border-color: $ap2-blue;
-
-    &:hover {
-      filter: brightness(1.15);
-      background: $ap2-blue;
-      border-color: $ap2-blue;
-    }
-  }
-
-  @media (max-width: 600px) {
-    padding: 12px 22px;
-    font-size: 13px;
-  }
-}
-
-// Message: the shared MessageButton, dressed to match Follow (same glass
-// pill, size and type) so the hero row reads as one set.
-.ap2-hero__btn-message {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 28px;
-  border-radius: 50px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: $ap2-text-1;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s;
-
-  svg {
-    flex-shrink: 0;
-    width: 16px;
-    height: 16px;
-    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, #ffffff);
-  }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.35);
-    transform: translateY(-1px);
-  }
-
-  @media (max-width: 600px) {
-    padding: 12px 22px;
-    font-size: 13px;
-  }
-}
-
-.ap2-hero__btn-vote {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 28px;
-  border-radius: 50px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: $ap2-text-1;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s;
-
-  svg { flex-shrink: 0; }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.35);
-    transform: translateY(-1px);
-  }
-
-  @media (max-width: 600px) {
-    padding: 12px 22px;
-    font-size: 13px;
-  }
-}
-
-.ap2-hero__votehint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 14px 0 0;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, #cfcfda);
-  animation: ap2-fadeUp 0.6s ease-out both;
-  animation-delay: 0.4s;
-
-  svg { flex-shrink: 0; color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 55%, #ffffff); }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// BODY — Card area with ambient artwork background
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-body {
-  position: relative;
-  width: 100%;
-  // Overlap into the hero slightly so cards feel like they're rising from it
-  margin-top: -20px;
-  padding-bottom: 120px;
-
-  @media (max-width: 600px) {
-    margin-top: -12px;
-    padding-bottom: 100px;
-  }
-}
-
-.ap2-body__ambient {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-
-  &-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: blur(80px) brightness(0.18) saturate(1.6);
-    transform: scale(1.5);
-    opacity: 0.7;
-  }
-
-  &-overlay {
-    position: absolute;
-    inset: 0;
-    // Subtle noise + dark overlay to unify
-    background:
-      linear-gradient(180deg, $ap2-base 0%, transparent 8%, transparent 92%, $ap2-base 100%),
-      linear-gradient(180deg, rgba($ap2-base, 0.5) 0%, rgba($ap2-base, 0.35) 100%);
-  }
-}
-
-.ap2-body__content {
-  position: relative;
-  z-index: 1;
-  // Same left-anchored column as .ap2-hero__content, on the SAME gutter as
-  // .ap2-hero's padding (48 / 28 / 20px), so the artist name, the buttons and
-  // every card below share one left edge — and none of it drifts to the
-  // middle of a wide screen.
-  max-width: 1100px;
-  margin: 0;
-  box-sizing: border-box;
-  padding: 32px 48px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-
-  @media (max-width: 900px) {
-    padding: 28px 28px 0;
-  }
-
-  @media (max-width: 600px) {
-    padding: 20px 20px 0;
-    gap: 16px;
-  }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// GRID LAYOUTS
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-grid {
-  display: grid;
-  gap: 20px;
-  align-items: start;
-
-  @media (max-width: 600px) { gap: 16px; }
-}
-
-.ap2-grid--featured {
-  grid-template-columns: 1.6fr 1fr;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-// Own-profile view hides the Support card — collapse to one column.
-.ap2-grid--single {
-  grid-template-columns: 1fr;
-}
-
-.ap2-grid--lower {
-  grid-template-columns: 1.2fr 1fr;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.ap2-aside {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-
-  @media (max-width: 600px) { gap: 16px; }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// CARD BASE
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-card {
-  background: $ap2-surface;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid $ap2-border;
-  border-radius: 16px;
-  padding: 24px;
-  transition: border-color 0.25s, transform 0.25s;
-  animation: ap2-fadeUp 0.5s ease-out both;
-
-  &:hover {
-    border-color: $ap2-border-hover;
-  }
-
-  @media (max-width: 600px) {
-    padding: 18px;
-    border-radius: 14px;
-  }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// STANDING STRIP — democratic ranking
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-standing {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 20px;
-  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 12%, $ap2-surface);
-  border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 26%, transparent);
-
-  &__icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 22%, transparent);
-    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, #ffffff);
-  }
+  > svg:last-child { opacity: 0.6; flex: 0 0 auto; }
 
   &__text {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
   }
 
-  &__label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.4px;
-    text-transform: uppercase;
-    color: $ap2-text-3;
-  }
+  &__title { font-size: 14.5px; font-weight: 700; }
+  &__sub { font-size: 12px; color: $ap3-text-3; }
+}
 
-  &__value {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    color: $ap2-text-1;
-  }
+// ── Tabs ───────────────────────────────────────────────────────
+.ap3-tabs {
+  margin-top: 18px;
+  border-bottom: 1px solid $ap3-line;
+  scroll-margin-top: 80px;
 
-  &__btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-    padding: 9px 16px;
-    border-radius: 50px;
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff);
-    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 16%, transparent);
-    border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, transparent);
-    transition: all 0.2s;
+  &__row {
+    display: flex;
+    gap: 30px;
 
-    svg { flex-shrink: 0; }
-
-    &:hover {
-      background: var(--unis-primary, #{$ap2-blue-raw});
-      color: #fff;
-      transform: translateY(-1px);
-    }
-  }
-
-  @media (max-width: 600px) {
-    padding: 14px;
-    gap: 11px;
-
-    &__icon { width: 36px; height: 36px; }
-    &__value { font-size: 13.5px; }
+    @media (max-width: $ap3-phone) { gap: 26px; }
   }
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// FEATURED VIDEO
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-video {
-  &__label {
-    display: block;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: $ap2-text-3;
-    margin-bottom: 14px;
-  }
-
-  &__frame {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #000;
-    border: 1px solid $ap2-border;
-  }
-
-  &__el {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// FEATURED / FANS PICK CARD
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// The ambient wash is applied inline (background-image + border-color),
-// sampled from the song's own artwork. background-color stays on the card so
-// the tint layers over the dark glass instead of replacing it.
-.ap2-featured {
-  background-color: rgba(20, 20, 24, 0.78);
-  background-repeat: no-repeat;
-  background-size: cover;
-  transition: border-color 0.35s ease, background-image 0.35s ease;
-}
-
-.ap2-featured__layout {
-  display: flex;
-  gap: 20px;
-
-  @media (max-width: 500px) {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-}
-
-.ap2-featured__artwork-wrap {
+.ap3-tab {
   position: relative;
-  flex-shrink: 0;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 16px 2px 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: $ap3-text-3;
   cursor: pointer;
-  border-radius: 12px;
-  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 
-  .ap2-featured__artwork {
-    width: 180px;
-    height: 180px;
-    object-fit: cover;
-    display: block;
-    border-radius: 12px;
-    transition: transform 0.3s;
+  &:hover { color: $ap3-text; }
 
-    @media (max-width: 600px) {
-      width: 150px;
-      height: 150px;
-    }
-    @media (max-width: 500px) {
-      width: 200px;
-      height: 200px;
-    }
+  &.is-on {
+    color: $ap3-text;
+    border-bottom-color: $ap3-p2;
   }
 
-  &:hover .ap2-featured__artwork {
-    transform: scale(1.04);
-  }
-
-  .ap2-featured__play-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.25s;
-    border: none;
-    cursor: pointer;
-    color: white;
-    border-radius: 12px;
-  }
-
-  &:hover .ap2-featured__play-overlay {
-    opacity: 1;
-  }
-}
-
-.ap2-featured__info {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-}
-
-.ap2-featured__badge {
-  display: inline-block;
-  width: fit-content;
-  padding: 3px 10px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 22%, transparent);
-  border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 38%, transparent);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 12px;
-
-  @media (max-width: 500px) {
-    margin: 0 auto 10px;
-  }
-}
-
-.ap2-featured__title {
-  font-family: 'Playfair Display', serif;
-  font-style: italic;
-  font-weight: 700;
-  font-size: 26px;
-  color: $ap2-text-1;
-  margin: 0 0 8px;
-  cursor: pointer;
-  transition: color 0.2s;
-  line-height: 1.2;
-
-  &:hover { color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 50%, #ffffff); }
-
-  @media (max-width: 600px) { font-size: 22px; }
-}
-
-.ap2-featured__desc {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  color: $ap2-text-2;
-  margin: 0 0 12px;
-  line-height: 1.5;
-}
-
-.ap2-featured__genre {
-  display: inline-block;
-  width: fit-content;
-  padding: 4px 12px;
-  border-radius: 50px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid $ap2-border;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  color: $ap2-text-3;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// SUPPORT CARD — image avatar + Support / Follow / Shop
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-support {
-  display: flex;
-  flex-direction: column;
-  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 10%, $ap2-surface);
-  border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 24%, transparent);
-
-  &__head {
-    display: flex;
-    align-items: center;
-    gap: 13px;
-  }
-
-  &__avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    object-fit: cover;
-    flex-shrink: 0;
-    border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, rgba(255, 255, 255, 0.15));
-  }
-
-  &__copy { min-width: 0; }
-
-  &__title {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    font-weight: 800;
-    color: $ap2-text-1;
-    margin: 0 0 3px;
-    line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__sub {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px;
-    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 22%, $ap2-text-2);
-    margin: 0;
-    line-height: 1.45;
-  }
-
-  &__actions {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 18px;
-  }
-
-  &__btn {
-    width: 100%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px;
-    border-radius: 50px;
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
+  &__count {
+    font-size: 11.5px;
     font-weight: 700;
-    transition: all 0.2s;
+    color: $ap3-text-3;
+  }
 
-    svg { flex-shrink: 0; }
+  @media (max-width: $ap3-phone) { padding: 14px 2px 12px; }
+}
 
-    &--support {
-      background: $ap2-blue;
-      border: 1px solid $ap2-blue;
-      color: #fff;
-      box-shadow: 0 4px 18px color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, transparent);
+// ── Music tab layout ───────────────────────────────────────────
+// Phone / tablet: one column, ordered like the mockup. The three groups
+// dissolve (display: contents) so `order` can interleave their items.
+.ap3-music {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  padding-top: 24px;
 
-      &:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  &__main,
+  &__aside,
+  &__wide { display: contents; }
+
+  .ap3-pick { order: 1; }
+  .ap3-popular { order: 2; }
+  .ap3-o-video { order: 3; }
+  .ap3-o-awards { order: 4; }
+  .ap3-o-standing { order: 5; }
+  .ap3-o-photos { order: 6; }
+  .ap3-o-support { order: 7; }
+  .ap3-o-ad { order: 8; }
+  .ap3-aboutcard { order: 0; }
+
+  // Desktop: songs on the left; About, Standing, Support on the right;
+  // then awards, photos and the ad across the full width.
+  @media (min-width: $ap3-wide) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    column-gap: 28px;
+    row-gap: 36px;
+    align-items: start;
+    padding-top: 28px;
+
+    &__main,
+    &__aside,
+    &__wide {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
     }
 
-    // Live "Supporting" state — quieter, confirmed
-    &--supporting {
-      background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 22%, transparent);
-      border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 60%, transparent);
-      color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 35%, #ffffff);
-      box-shadow: none;
-
-      &:hover { filter: none; background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 32%, transparent); }
-    }
-
-    &--follow {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: $ap2-text-1;
-
-      &:hover { background: rgba(255, 255, 255, 0.12); transform: translateY(-1px); }
-    }
-
-    &--following {
-      background: $ap2-blue;
-      border-color: $ap2-blue;
-      color: #fff;
-
-      &:hover { filter: brightness(1.12); background: $ap2-blue; }
-    }
-
-    &--shop {
-      background: transparent;
-      border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, transparent);
-      color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 38%, #ffffff);
-
-      &:hover {
-        background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 14%, transparent);
-        transform: translateY(-1px);
-      }
-    }
+    &__main { gap: 28px; }
+    &__aside { gap: 18px; }
+    &__wide { grid-column: 1 / -1; gap: 36px; }
   }
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// CONNECT CARD
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-connect__title {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  color: $ap2-text-3;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin: 0 0 18px;
-}
-
-// Logo-only row: the real brand marks, no boxes, no labels, no arrows.
-// Marks sit in neutral white and warm to the user's theme on hover, so the
-// section reads as the artist's own links rather than a template.
-.ap2-connect__logos {
+// Fans pick
+.ap3-pick {
   display: flex;
   align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px;
+  background-image: linear-gradient(110deg, $ap3-pt, rgba(255, 255, 255, 0.03) 70%);
+
+  &__open {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  &__art {
+    width: 96px;
+    height: 96px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.7);
+
+    @media (max-width: $ap3-phone) { width: 84px; height: 84px; }
+  }
+
+  &__info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 9px;
+    border-radius: 999px;
+    background: #fff;
+    color: #111;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  &__title {
+    margin-top: 8px;
+    max-width: 100%;
+    font-size: 19px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    @media (max-width: $ap3-phone) { font-size: 16px; margin-top: 7px; }
+  }
+
+  &__meta {
+    margin-top: 3px;
+    font-size: 13px;
+    color: $ap3-text-3;
+  }
+
+  &__play {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    margin-right: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+
+    svg { margin-left: 2px; }
+    &:hover { transform: scale(1.05); }
+  }
 }
 
-.ap2-connect__logo {
+// Popular rows — ambient artwork wash kept from v3
+.ap3-tracks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ap3-track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 6px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.025);
+  transition: filter 0.15s ease;
+
+  &:hover,
+  &.is-menu { filter: brightness(1.15); }
+
+  &__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 6px 8px 14px;
+    border: 0;
+    border-radius: 12px;
+    background: none;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:active { transform: scale(0.995); }
+
+    @media (max-width: $ap3-phone) {
+      gap: 12px;
+      padding-left: 10px;
+    }
+  }
+
+  &__num {
+    width: 18px;
+    flex: 0 0 auto;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: $ap3-text-3;
+  }
+
+  &__art {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    object-fit: cover;
+
+    @media (max-width: $ap3-phone) { width: 46px; height: 46px; }
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__title {
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    @media (max-width: $ap3-phone) { font-size: 14.5px; }
+  }
+
+  &__plays {
+    margin-top: 2px;
+    font-size: 12.5px;
+    color: $ap3-text-3;
+
+    // On wide screens plays sit in their own column on the right.
+    &--wide {
+      display: none;
+      width: 110px;
+      margin: 0;
+      text-align: right;
+      flex: 0 0 auto;
+    }
+
+    @media (min-width: $ap3-phone + 1) {
+      .ap3-track__info & { display: none; }
+      &--wide { display: block; }
+    }
+  }
+}
+
+.ap3-kebab {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  // Brand marks wear the user's theme, not a generic grey.
-  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 62%, #ffffff);
-  text-decoration: none;
-  transition: color 0.2s, transform 0.2s, filter 0.2s;
-  border-radius: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: $ap3-text-3;
+  cursor: pointer;
 
-  svg {
-    width: 26px;
-    height: 26px;
-    display: block;
-  }
+  svg { pointer-events: none; }
+  &:hover { color: $ap3-text; background: rgba(255, 255, 255, 0.08); }
 
-  &:hover {
-    color: var(--unis-primary, #{$ap2-blue-raw});
-    filter: brightness(1.35);
-    transform: translateY(-2px) scale(1.08);
-  }
-
-  &:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 70%, #ffffff);
-    outline-offset: 4px;
-  }
-
-  @media (max-width: 600px) {
-    svg { width: 24px; height: 24px; }
+  &[aria-expanded="true"] {
+    background: $ap3-p;
+    color: #fff;
   }
 }
 
-// ─── TERRITORY RANK (public, artist-page flavour) ──────────────
-.ap2-territory {
-  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 10%, $ap2-surface);
-  border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 24%, transparent);
+// About card (desktop aside)
+.ap3-aboutcard {
+  overflow: hidden;
+
+  &__img {
+    display: block;
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    object-position: center 30%;
+  }
+
+  &__body { padding: 16px 18px 12px; }
+
+  &__text {
+    margin: 8px 0 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: $ap3-text-2;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+// Standing
+.ap3-standing {
+  padding: 18px;
 
   &__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-
-  &__heading {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: $ap2-text-3;
-    margin: 0;
-  }
-
-  &__toggle {
-    display: inline-flex;
-    gap: 2px;
-    padding: 3px;
-    border-radius: 50px;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid $ap2-border;
-  }
-
-  &__tab {
-    padding: 5px 12px;
-    border-radius: 50px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    color: $ap2-text-3;
-    transition: background 0.2s, color 0.2s;
-
-    &:hover { color: $ap2-text-1; }
-
-    &.is-active {
-      background: var(--unis-primary, #{$ap2-blue-raw});
-      color: #fff;
-    }
-
-    &:focus-visible {
-      outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 70%, #ffffff);
-      outline-offset: 1px;
-    }
+    gap: 12px;
   }
 
   &__headline {
     display: flex;
     align-items: baseline;
-    gap: 8px;
-    margin: 0 0 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 14px 0 0;
   }
 
-  &__headline-num {
-    font-family: 'Playfair Display', serif;
+  &__num {
+    font-family: $ap3-serif;
     font-style: italic;
-    font-size: 34px;
-    font-weight: 800;
+    font-size: 54px;
     line-height: 1;
-    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff);
+    color: $ap3-p3;
   }
 
-  &__headline-in {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
+  &__in {
+    font-size: 15px;
     font-weight: 600;
-    color: $ap2-text-2;
   }
 
-  &__calc {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    line-height: 1.6;
-    color: $ap2-text-2;
-    margin: 0;
+  &__move {
+    margin: 6px 0 14px;
+    font-size: 12.5px;
+    color: $ap3-text-3;
   }
 
   &__list {
@@ -1445,28 +1050,18 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
   }
 
   &__row {
     display: flex;
     align-items: center;
-    gap: 11px;
-    padding: 9px 11px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.035);
-    border: 1px solid transparent;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
 
-    &.is-home {
-      background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 16%, transparent);
-      border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 34%, transparent);
-    }
-  }
-
-  &__pin {
-    flex-shrink: 0;
-    display: flex;
-    color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, #ffffff);
+    &.is-home { background: color-mix(in srgb, var(--unis-primary, #163387), transparent 55%); }
   }
 
   &__place {
@@ -1474,427 +1069,471 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
   }
 
   &__placename {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13.5px;
-    font-weight: 700;
-    color: $ap2-text-1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 600;
   }
 
   &__genre {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11px;
-    color: $ap2-text-3;
+    font-size: 11.5px;
+    color: $ap3-text-3;
   }
 
   &__rank {
-    flex-shrink: 0;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    font-weight: 800;
-    color: $ap2-text-1;
-  }
-
-  @media (max-width: 600px) {
-    &__headline-num { font-size: 28px; }
-    &__tab { padding: 5px 10px; font-size: 10.5px; }
+    font-size: 16px;
+    font-weight: 700;
   }
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// POPULAR CARD — Track list (theme-tinted card + ambient rows)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-popular {
-  // Card surface picks up the user's selected theme
-  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 16%, rgba(20, 20, 24, 0.82));
-  border-color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 28%, transparent);
-}
+.ap3-seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid $ap3-line;
 
-.ap2-popular__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
+  button {
+    border: 0;
+    background: none;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 650;
+    color: $ap3-text-3;
+    cursor: pointer;
 
-  h3 {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 20px;
-    font-weight: 800;
-    color: $ap2-text-1;
-    margin: 0;
-  }
-}
+    &:hover { color: $ap3-text; }
 
-.ap2-popular__seeall {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  color: $ap2-text-3;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  cursor: pointer;
-  transition: color 0.2s;
-  background: none;
-  border: none;
-  padding: 4px 2px;
-
-  &:hover { color: $ap2-text-1; }
-
-  &:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 70%, #ffffff);
-    outline-offset: 2px;
-    border-radius: 4px;
-  }
-}
-
-.ap2-popular__list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.ap2-track {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 10px;
-  border-radius: 10px;
-  // Per-song ambient tint is applied inline; this is the neutral fallback
-  background-color: rgba(255, 255, 255, 0.03);
-  transition: filter 0.15s, transform 0.15s;
-
-  &:hover {
-    filter: brightness(1.18);
-    transform: translateX(2px);
-
-    .ap2-track__play { opacity: 1; }
-    .ap2-track__num { opacity: 0; }
-  }
-
-  @media (max-width: 600px) {
-    gap: 10px;
-    padding: 8px 8px;
-  }
-}
-
-.ap2-track__num {
-  width: 22px;
-  text-align: center;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  color: $ap2-text-1;
-  flex-shrink: 0;
-  transition: opacity 0.15s;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-}
-
-.ap2-track__art {
-  width: 44px;
-  height: 44px;
-  border-radius: 6px;
-  object-fit: cover;
-  flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-
-  @media (max-width: 600px) {
-    width: 40px;
-    height: 40px;
-  }
-}
-
-.ap2-track__info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ap2-track__title {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  color: $ap2-text-1;
-  cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: color 0.2s;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-
-  &:hover { color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff); }
-}
-
-.ap2-track__plays {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  color: $ap2-text-2;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-}
-
-.ap2-track__play {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  // Play button always reflects the user's theme
-  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 32%, rgba(0, 0, 0, 0.3));
-  border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 45%, transparent);
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.15s, background 0.15s, transform 0.15s;
-
-  svg { margin-left: 1px; }
-
-  &:hover {
-    background: var(--unis-primary, #{$ap2-blue-raw});
-    transform: scale(1.08);
-  }
-
-  @media (hover: none) { opacity: 1; }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ABOUT CARD — Photo backdrop with bio overlay + stat badges
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-about__heading {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 20px;
-  font-weight: 800;
-  color: $ap2-text-1;
-  margin: 0 0 16px;
-}
-
-.ap2-about__photo-wrap {
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 16px;
-
-  .ap2-about__photo {
-    width: 100%;
-    height: 220px;
-    object-fit: cover;
-    object-position: center 20%;
-    display: block;
-
-    @media (max-width: 600px) {
-      height: 180px;
+    &.is-on {
+      background: $ap3-p;
+      color: #fff;
     }
   }
+}
 
-  .ap2-about__photo-fade {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to top,
-      rgba($ap2-base, 0.95) 0%,
-      rgba($ap2-base, 0.6) 40%,
-      transparent 75%
-    );
+// Support
+.ap3-support {
+  padding: 18px;
+  background-image: linear-gradient(140deg, $ap3-pt, rgba(255, 255, 255, 0.03) 70%);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 
-  .ap2-about__bio-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 16px 18px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    line-height: 1.65;
-    color: $ap2-text-2;
-    margin: 0;
-    // Clamp to ~4 lines
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-}
-
-.ap2-about__edit {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.ap2-about__textarea {
-  width: 100%;
-  height: 110px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid $ap2-border;
-  color: $ap2-text-1;
-  padding: 12px 14px;
-  border-radius: 10px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  line-height: 1.6;
-  resize: vertical;
-  box-sizing: border-box;
-  transition: border-color 0.2s;
-
-  &:focus {
-    outline: none;
-    border-color: $ap2-blue;
-  }
-
-  &::placeholder { color: $ap2-text-3; }
-}
-
-.ap2-about__save {
-  align-self: flex-start;
-  padding: 10px 24px;
-  border-radius: 50px;
-  background: $ap2-blue;
-  border: none;
-  color: white;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: filter 0.2s, transform 0.2s;
-
-  &:hover {
-    filter: brightness(1.15);
-    transform: translateY(-1px);
-  }
-}
-
-.ap2-about__badges {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.ap2-about__badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 16px 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid $ap2-border;
-  transition: border-color 0.2s;
-
-  &:hover { border-color: $ap2-border-hover; }
-
-  &-value {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 24px;
-    font-weight: 800;
-    color: $ap2-text-1;
-    line-height: 1.2;
-
-    @media (max-width: 600px) { font-size: 20px; }
-  }
-
-  &-label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 10px;
-    font-weight: 600;
-    color: $ap2-text-3;
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    margin-top: 4px;
-  }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// PHOTO GALLERY — Instagram-style grid
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-gallery__header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-
-  h3 {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 20px;
-    font-weight: 800;
-    color: $ap2-text-1;
-    margin: 0;
-  }
-}
-
-.ap2-gallery__count {
-  padding: 2px 10px;
-  border-radius: 20px;
-  background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 22%, transparent);
-  border: 1px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, transparent);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 40%, #ffffff);
-}
-
-.ap2-gallery__grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 3px; // Instagram-tight gutters
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.ap2-gallery__tile {
-  position: relative;
-  aspect-ratio: 1;
-  padding: 0;
-  border: none;
-  background: rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-  overflow: hidden;
-  display: block;
-
-  img {
-    width: 100%;
-    height: 100%;
+  &__avatar {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    border-radius: 50%;
     object-fit: cover;
-    display: block;
-    transition: transform 0.35s ease, filter 0.35s ease;
+    box-shadow: 0 0 0 2px $ap3-p2;
   }
 
-  .ap2-gallery__tile-glow {
-    position: absolute;
-    inset: 0;
+  &__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  &__sub {
+    margin: 3px 0 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: $ap3-text-2;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+
+    .ap3-pill { flex: 1; }
+  }
+}
+
+// Featured video
+.ap3-video {
+  padding: 18px;
+
+  &__frame {
+    margin-top: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+  }
+
+  &__el {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+  }
+}
+
+// Awards shelf — off the photo
+.ap3-awards__shelf {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  // Phones: one swipeable row
+  @media (max-width: $ap3-phone) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-right: -20px;
+    padding-right: 20px;
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+  }
+}
+
+.ap3-medal {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $ap3-line;
+
+  &__disc {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
-    background: color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 30%, rgba(0, 0, 0, 0.35));
-    opacity: 0;
-    transition: opacity 0.25s ease;
+    border-radius: 50%;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+
+    // Artist medals take the theme colour, song medals stay gold.
+    &--artist {
+      color: #fff;
+      background: radial-gradient(circle at 35% 30%, $ap3-p3, $ap3-p 70%);
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+    }
+
+    &--song {
+      color: #2a1d00;
+      background: radial-gradient(circle at 35% 30%, #ffe9a8, #c9971f 72%);
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4);
+    }
   }
 
-  &:hover img,
-  &:focus-visible img {
-    transform: scale(1.06);
-    filter: brightness(0.85);
+  &__text {
+    display: flex;
+    flex-direction: column;
   }
 
-  &:hover .ap2-gallery__tile-glow,
-  &:focus-visible .ap2-gallery__tile-glow {
-    opacity: 1;
+  &__label {
+    font-size: 13px;
+    font-weight: 650;
+    white-space: nowrap;
   }
 
-  &:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 70%, #ffffff);
-    outline-offset: -2px;
-    z-index: 1;
+  &__count {
+    font-size: 12px;
+    color: $ap3-text-3;
   }
+}
+
+// Photo drawer (Music tab)
+.ap3-photostrip__row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+
+  @media (max-width: $ap3-wide - 1) {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  @media (max-width: $ap3-phone) {
+    margin-right: -20px;
+    padding-right: 20px;
+  }
+}
+
+.ap3-photostrip__tile {
+  position: relative;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #151821;
+  aspect-ratio: 4 / 5;
+  cursor: pointer;
+
+  @media (max-width: $ap3-wide - 1) {
+    flex: 0 0 auto;
+    width: 140px;
+  }
+
+  @media (max-width: $ap3-phone) { width: 128px; }
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  &:hover img { transform: scale(1.05); }
+}
+
+// ── Photos tab: Instagram-style grid ───────────────────────────
+.ap3-photos {
+  padding-top: 18px;
+
+  &__hint {
+    margin: 0 auto 12px;
+    font-size: 13.5px;
+    color: $ap3-text-3;
+  }
+
+  &__grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 40px;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+
+    @media (max-width: $ap3-phone) {
+      padding: 0;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 2px;
+    }
+  }
+
+  &__tile {
+    padding: 0;
+    border: 0;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 6px;
+    background: #151821;
+    cursor: pointer;
+
+    @media (max-width: $ap3-phone) { border-radius: 0; }
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: filter 0.2s ease;
+    }
+
+    &:hover img { filter: brightness(1.15); }
+  }
+}
+
+// ── About tab ──────────────────────────────────────────────────
+.ap3-about {
+  padding-top: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px;
+  align-items: flex-start;
+
+  @media (max-width: $ap3-phone) {
+    padding-top: 20px;
+    gap: 22px;
+  }
+
+  &__img {
+    flex: 1 1 360px;
+    max-width: 460px;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: 22px;
+
+    @media (max-width: $ap3-phone) {
+      flex-basis: 100%;
+      max-width: none;
+      aspect-ratio: 7 / 6;
+      border-radius: 20px;
+    }
+  }
+
+  &__body {
+    flex: 999 1 460px;
+    min-width: 0;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 34px;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+
+    em {
+      font-family: $ap3-serif;
+      font-style: italic;
+      font-weight: 400;
+      color: $ap3-p3;
+    }
+
+    @media (max-width: $ap3-phone) { font-size: 26px; }
+  }
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+
+    @media (max-width: $ap3-phone) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__bio {
+    font-size: 17px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.86);
+    overflow-wrap: anywhere;
+
+    p { margin: 0 0 16px; white-space: pre-line; }
+    p:last-child { margin-bottom: 0; }
+
+    @media (max-width: $ap3-phone) { font-size: 15.5px; }
+  }
+
+  &__empty {
+    margin: 0;
+    font-size: 15px;
+    color: $ap3-text-3;
+  }
+
+  &__edit {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  &__label {
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $ap3-text-3;
+  }
+
+  &__textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 180px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid $ap3-line-hi;
+    background: rgba(255, 255, 255, 0.04);
+    color: $ap3-text;
+    font: inherit;
+    font-size: 15.5px;
+    line-height: 1.6;
+    resize: vertical;
+
+    &:focus {
+      outline: none;
+      border-color: $ap3-p2;
+    }
+  }
+
+  &__connecthead { margin-bottom: 10px; }
+
+  &__links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+
+    @media (max-width: $ap3-phone) { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  }
+}
+
+.ap3-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px;
+  border-radius: 14px;
+  background: $ap3-panel;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+
+  b {
+    font-size: 22px;
+    font-weight: 700;
+    color: $ap3-text;
+
+    @media (max-width: $ap3-phone) { font-size: 20px; }
+  }
+
+  span {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $ap3-text-3;
+  }
+}
+
+.ap3-social {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: $ap3-panel;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: $ap3-text;
+  text-decoration: none;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: $ap3-text;
+  }
+
+  &__icon {
+    display: inline-flex;
+    width: 20px;
+    height: 20px;
+    color: $ap3-p3;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  > svg { opacity: 0.5; }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1939,7 +1578,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 }
 
 .ap2-lightbox__counter {
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 1.5px;
@@ -2071,7 +1710,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 }
 
 .ap2-supsheet__title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
   font-style: italic;
   font-size: 21px;
   font-weight: 700;
@@ -2081,7 +1720,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 }
 
 .ap2-supsheet__copy {
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
   font-size: 13.5px;
   line-height: 1.6;
   color: $ap2-text-2;
@@ -2089,7 +1728,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 }
 
 .ap2-supsheet__error {
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
   font-size: 12.5px;
   color: #f08c8c;
   margin: 0 0 12px;
@@ -2110,7 +1749,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   padding: 13px;
   border-radius: 50px;
   cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
   font-size: 14px;
   font-weight: 700;
   transition: all 0.2s;
@@ -2169,7 +1808,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 }
 
 .ap2-supsheet__statetitle {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
   font-style: italic;
   font-size: 20px;
   font-weight: 700;
@@ -2179,7 +1818,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 }
 
 .ap2-supsheet__statesub {
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
   font-size: 13px;
   line-height: 1.6;
   color: $ap2-text-2;
@@ -2264,7 +1903,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 }
 
 .ap2-shopsheet__songtitle {
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
   font-size: 14px;
   font-weight: 700;
   color: $ap2-text-1;
@@ -2274,7 +1913,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 }
 
 .ap2-shopsheet__meta {
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
   font-size: 11.5px;
   color: $ap2-text-3;
 }
@@ -2283,7 +1922,7 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   flex-shrink: 0;
   padding: 4px 11px;
   border-radius: 20px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
   font-size: 12px;
   font-weight: 800;
   background: rgba(255, 255, 255, 0.06);
@@ -2301,18 +1940,8 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 // REDUCED MOTION — quality floor
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @media (prefers-reduced-motion: reduce) {
-  // Medals appear in place — no drop, no stagger — but still appear.
-  .ap2-badge {
-    transition: none;
-    opacity: 1;
-    transform: none;
-  }
-
-  .ap2-card,
-  .ap2-hero__content,
-  .ap2-hero__meta,
-  .ap2-hero__actions,
-  .ap2-hero__votehint,
+  .ap3-hero__img,
+  .ap3-hero__content,
   .ap2-lightbox,
   .ap2-lightbox__stage,
   .ap2-supsheet,
@@ -2320,11 +1949,13 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
     animation: none;
   }
 
-  .ap2-sticky {
-    transition: none;
-  }
-
-  .ap2-gallery__tile img {
+  .ap2-sticky,
+  .ap3-circ,
+  .ap3-pill,
+  .ap3-play,
+  .ap3-track,
+  .ap3-photostrip__tile img,
+  .ap3-photos__tile img {
     transition: none;
   }
 }

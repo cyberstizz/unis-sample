@@ -6,6 +6,8 @@
 //   Save to playlist → the existing PlaylistWizard
 //   Download         → the existing DownloadModal (free, owned or buy)
 //   Share            → the phone's share sheet, or copy the link
+//   Go to song       → the song page (★ added with the artist page redesign,
+//                      where tapping a row now plays instead of navigating)
 //
 // Desktop: a popover anchored to the ⋮ button, or to the cursor on right-click.
 // Phone (≤ 640px): a bottom sheet with the song at the top.
@@ -30,6 +32,7 @@
 
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { useFeedback } from './context/FeedbackContext';
 import PlaylistWizard from './playlistWizard';
@@ -80,6 +83,12 @@ const IconPlaylist = () => (
 const IconDownload = () => (
   <Svg>
     <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />
+  </Svg>
+);
+const IconSong = () => (
+  <Svg>
+    <path d="M13.6 17V4.2c3 .4 5 2 5.6 4.6" />
+    <ellipse cx="10.3" cy="17.2" rx="3.3" ry="2.7" />
   </Svg>
 );
 const IconShare = () => (
@@ -187,6 +196,7 @@ export default function SongMenu({
   const player = useContext(PlayerContext) || {};
   const { queue = [], playNext, playLater } = player;
   const feedback = useFeedback();
+  const navigate = useNavigate();
 
   const [view, setView] = useState('menu'); // menu | playlist | download
   const [phone] = useState(isPhone);
@@ -338,6 +348,11 @@ export default function SongMenu({
     }
   };
 
+  const handleGoToSong = () => {
+    dismiss(false);
+    navigate(`/${isSong ? 'song' : 'video'}/${song.id}`);
+  };
+
   // Arrow keys move between actions (menu pattern).
   const onMenuKeyDown = (e) => {
     const items = Array.from(panelRef.current?.querySelectorAll('[role="menuitem"]') || []);
@@ -384,6 +399,7 @@ export default function SongMenu({
     isSong && { key: 'playlist', label: 'Save to playlist', icon: <IconPlaylist />, onClick: handlePlaylist },
     isSong && { key: 'download', label: 'Download', icon: <IconDownload />, onClick: handleDownload },
     { key: 'share', label: 'Share', icon: <IconShare />, onClick: handleShare },
+    { key: 'song', label: isSong ? 'Go to song' : 'Go to video', icon: <IconSong />, onClick: handleGoToSong }, // ★
   ].filter(Boolean);
 
   const list = (

@@ -14,6 +14,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
+import { MessagesIcon } from './icons/UnisIcons'; // ★ icon-only variant
 import './messageButton.scss';
 
 export default function MessageButton({
@@ -21,6 +22,7 @@ export default function MessageButton({
   recipientName,
   recipientPhotoUrl = null,
   className = '',
+  iconOnly = false, // ★ round icon button (artist page action row); default is unchanged
 }) {
   const { user, isGuest } = useAuth();
   const navigate = useNavigate();
@@ -39,6 +41,21 @@ export default function MessageButton({
       },
     });
   };
+
+  // ★ Icon-only: same behaviour, Glow icon, no text — the label moves to aria-label.
+  if (iconOnly) {
+    return (
+      <button
+        type="button"
+        className={className}
+        onClick={onClick}
+        aria-label={`Message ${recipientName || ''}`.trim()}
+        title="Message"
+      >
+        <MessagesIcon size={21} />
+      </button>
+    );
+  }
 
   return (
     <button type="button" className={`unis-dm-cta ${className}`.trim()} onClick={onClick}>
