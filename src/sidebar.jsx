@@ -8,9 +8,12 @@
 //     standings call and URL the feed makes, so on the feed it comes from
 //     the cache). Signed-out visitors get a "Now live · Harlem" card that
 //     opens Find.
-//   • Six links: Home, Discover, Charts, Leaderboards, Messages (unread
-//     badge), Unis Plus (+ Admin for admins). Vote, Awards, Find and
-//     Earnings live in the header only, so nothing is listed twice.
+//   • Six links: Home, Discover, Charts, Vote, Messages (unread badge),
+//     Unis Plus (+ Admin for admins). Vote is also in the header on purpose:
+//     it's the heart of Unis. Awards, Find and Earnings are header-only.
+//     (Leaderboards was dropped in Nov 2026: it read the same standings as
+//     Charts, which shows everything it did and more. The page still exists
+//     at /leaderboards, but nothing links to it.)
 //   • Your playlists: the user's own and followed playlists with their
 //     covers (already loaded by PlayerContext, no extra request). The one
 //     the current song came from shows a moving equaliser. Only this list
@@ -75,10 +78,10 @@ const ICONS = {
       <path className="fs2" d="M15.4 8.6l-2.1 4.7-4.7 2.1 2.1-4.7z" />
     </svg>
   ),
-  leaderboards: (
+  vote: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path className="fs" d="M7 4.5h10V8a5 5 0 0 1-10 0z" />
-      <path d="M7 5.6H4.8A2 2 0 0 0 7 8.4M17 5.6h2.2A2 2 0 0 1 17 8.4M12 13v3.4M9 20h6M9.4 20a2.6 2.6 0 0 1 5.2 0" />
+      <rect className="fs" x="4" y="4.5" width="16" height="15" rx="3.4" />
+      <path d="M8.4 12l2.4 2.4L15.6 9.4" />
     </svg>
   ),
   charts: (
@@ -364,7 +367,7 @@ const Sidebar = () => {
     { key: 'home',         label: 'Home',         icon: 'home',         onClick: () => handleNav('/'),             match: (p) => p === '/' },
     { key: 'discover',     label: 'Discover',     icon: 'discover',     onClick: () => handleNav('/discover'),     match: (p) => p.startsWith('/discover') },
     { key: 'charts',       label: 'Charts',       icon: 'charts',       onClick: () => handleNav('/charts'),       match: (p) => p.startsWith('/charts') },
-    { key: 'leaderboards', label: 'Leaderboards', icon: 'leaderboards', onClick: () => handleNav('/leaderboards'), match: (p) => p.startsWith('/leaderboards') },
+    { key: 'vote',         label: 'Vote',         icon: 'vote',         onClick: () => handleNav('/voteawards'),   match: (p) => p.startsWith('/voteawards') },
     { key: 'messages',     label: 'Messages',     icon: 'messages',     onClick: onMessages, badge: unreadCount,  match: (p) => p.startsWith('/messages') },
     { key: 'plus',         label: 'Unis Plus',    icon: 'plus',         onClick: onPlus,                          match: (p) => p.startsWith('/plus') },
     ...(user && user.adminRole

@@ -8,7 +8,9 @@
 //   • the launch splash is gone and the feed has drawn (its lens bar exists)
 //   • this account (or this device, for signed-out visitors) hasn't
 //     finished or skipped it before (tourStorage.js)
-//   • the app isn't locked behind the pre-launch "Coming soon" page
+//   • the app isn't locked behind the pre-launch "Coming soon" page (a
+//     visitor at the gate never gets the tour, by itself or from Help: this
+//     component isn't even rendered there, and `locked` is a second check)
 // Opens on request when Help → "Take the tour" sends someone to the feed
 // with { state: { unisTour: true } } (startTour() in tourStorage.js).
 // ─────────────────────────────────────────────────────────────
@@ -60,12 +62,22 @@ export default function TourLauncher() {
 
   useEffect(() => onSplashGone(() => setSplashGone(true)), []);
 
-  // Replay from Help.
+  // Replay from Help. Works however many times the tour has been seen.
+  // Two steps on purpose: clearing the request from the address re-runs the
+  // first effect, so the wait for the feed lives in the second one, keyed to
+  // a counter that only goes up. (Waiting inside the first effect let that
+  // re-run cancel its own wait, so a replay never opened.)
+  const [replayCount, setReplayCount] = useState(0);
   useEffect(() => {
-    if (!onFeed || !replayRequested || locked) return undefined;
+    if (!onFeed || !replayRequested || locked) return;
     navigate('/', { replace: true, state: null }); // one replay per click
-    return whenFeedReady(() => setOpen(true));
+    setReplayCount((n) => n + 1);
   }, [onFeed, replayRequested, locked, navigate]);
+
+  useEffect(() => {
+    if (!replayCount || locked) return undefined;
+    return whenFeedReady(() => setOpen(true));
+  }, [replayCount, locked]);
 
   // First visit.
   useEffect(() => {

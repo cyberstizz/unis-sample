@@ -1,7 +1,8 @@
 // src/sidebar.test.jsx
 //
 // Unit tests for the Sidebar (v3 redesign). Covers:
-// - The six links route correctly; Vote / Find / Earnings live in the header only
+// - The six links route correctly; Find / Earnings live in the header only,
+//   and nothing links to Leaderboards any more
 // - Auth gating (Messages, Unis Plus, Settings) and artist vs listener settings
 // - Your turf: jurisdiction name + tonight's #1, and the signed-out card
 // - Your playlists: list, navigation, "playing" equaliser, new playlist,
@@ -124,18 +125,18 @@ describe('Sidebar', () => {
       ['Home',         '/'],
       ['Discover',     '/discover'],
       ['Charts',       '/charts'],
-      ['Leaderboards', '/leaderboards'],
+      ['Vote',         '/voteawards'],
     ])('"%s" navigates to %s', async (label, path) => {
       const { user } = signedIn();
       await user.click(screen.getByRole('button', { name: label }));
       expect(mockNavigate).toHaveBeenCalledWith(path);
     });
 
-    it('does not repeat the header links (Vote, Find, Earnings)', () => {
+    it('does not repeat the header-only links (Find, Earnings) or link Leaderboards', () => {
       signedIn();
-      expect(screen.queryByRole('button', { name: 'Vote' })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Find' })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Earnings' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Leaderboards' })).toBeNull();
     });
 
     it('marks the current page with aria-current', () => {
@@ -358,7 +359,7 @@ describe('Sidebar', () => {
       const { container } = signedIn();
       expect(container.querySelector('.sidebar')).toHaveClass('sidebar--rail');
       // Labels stay visible in the rail (never hover-only)
-      expect(screen.getByText('Leaderboards')).toBeInTheDocument();
+      expect(screen.getByText('Unis Plus')).toBeInTheDocument();
     });
   });
 });
