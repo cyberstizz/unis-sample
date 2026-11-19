@@ -1,14 +1,64 @@
-import React, { useState, useContext, useRef, useEffect } from 'react';
+// src/sidebar.jsx
+// ─────────────────────────────────────────────────────────────
+// The Unis sidebar (v3, Nov 2026 redesign).
+//
+// Desktop (>1024px): a floating rounded panel down the left side.
+//   • Your turf: the user's jurisdiction in the serif italic the feed uses,
+//     a live equaliser, and tonight's #1 song (today's song race, the same
+//     standings call and URL the feed makes, so on the feed it comes from
+//     the cache). Signed-out visitors get a "Now live · Harlem" card that
+//     opens Find.
+//   • Six links: Home, Discover, Charts, Leaderboards, Messages (unread
+//     badge), Unis Plus (+ Admin for admins). Vote, Awards, Find and
+//     Earnings live in the header only, so nothing is listed twice.
+//   • Your playlists: the user's own and followed playlists with their
+//     covers (already loaded by PlayerContext, no extra request). The one
+//     the current song came from shows a moving equaliser. Only this list
+//     scrolls, so no link is ever pushed out of view.
+//   • Account row: avatar, lifetime earnings, Settings and Help buttons.
+//   • Collapse: shrinks to a slim rail (icons keep small labels, playlists
+//     show as covers). Remembered per device. The content column follows
+//     through --sidebar-width.
+// Phone and tablet (≤1024px): the same panel as a drawer over the page,
+//   opened by the header's menu button ('unis:toggle-sidebar').
+//
+// Every control is a real <button> or link, so the browser's focus ring
+// shows for keyboard users only (never after a click), and the panel itself
+// never scrolls.
+// ─────────────────────────────────────────────────────────────
+import React, { useState, useContext, useRef, useEffect, useMemo } from 'react';
 import './sidebar.scss';
-import { useNavigate, useLocation } from 'react-router-dom';        // ★ useLocation drives the real active state
-import { useAuth } from './context/AuthContext';                    // ★ theme comes from here too
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 import { apiCall } from './components/axiosInstance';
 import { PlayerContext } from './context/playercontext';
-import { buildUrl } from './utils/buildUrl';                        // ★ avatar photo
+import { buildUrl } from './utils/buildUrl';
+import { fetchStandings } from './utils/standings';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 
+const DESKTOP_MIN = 1025;          // matches sidebar.scss and player.scss
+const PANEL_W = 268;
+const RAIL_W = 86;
+const GUTTER = 8;                  // space around the floating panel
+const COLLAPSE_KEY = 'unis-sidebar-collapsed';
+
+// Signed-out visitors (and accounts without a jurisdiction yet) see the
+// launch area. Change this when Unis opens beyond Harlem.
+const GUEST_TURF = { name: 'Harlem', line: 'See who’s #1 uptown and downtown', path: '/findpage' };
+
+const THEMES = ['blue', 'orange', 'red', 'green', 'purple', 'yellow', 'dianna'];
+
+const isDesktop = () => typeof window !== 'undefined' && window.innerWidth >= DESKTOP_MIN;
+
+const readCollapsed = () => {
+  try { return localStorage.getItem(COLLAPSE_KEY) === '1'; } catch { return false; }
+};
+
+const initials = (name) => (name || '')
+  .split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || 'U';
+
 // ★ Custom inline-SVG icon set (outline by default, duotone when active).
-//   Inline SVGs are required here — Lucide does not render reliably inside
+//   Inline SVGs are required here: Lucide does not render reliably inside
 //   buttons in the web app, and the outline→duotone active swap needs a
 //   fillable primary shape (class `fs`) plus accent-fill detail (`fs2`).
 //   Stroke / fill are driven entirely by sidebar.scss.
@@ -19,22 +69,10 @@ const ICONS = {
       <path d="M9.5 20.4v-5h5v5" />
     </svg>
   ),
-  find: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle className="fs" cx="11" cy="11" r="6.4" />
-      <path d="M16 16l4 4" />
-    </svg>
-  ),
   discover: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle className="fs" cx="12" cy="12" r="8.4" />
       <path className="fs2" d="M15.4 8.6l-2.1 4.7-4.7 2.1 2.1-4.7z" />
-    </svg>
-  ),
-  vote: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect className="fs" x="4" y="4.5" width="16" height="15" rx="3.4" />
-      <path d="M8.4 12l2.4 2.4L15.6 9.4" />
     </svg>
   ),
   leaderboards: (
@@ -52,19 +90,6 @@ const ICONS = {
   messages: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path className="fs" d="M5 5.6h14a1.5 1.5 0 0 1 1.5 1.5v7.8A1.5 1.5 0 0 1 19 16.4h-9l-4 3.2v-3.2H5A1.5 1.5 0 0 1 3.5 14.9V7.1A1.5 1.5 0 0 1 5 5.6z" />
-    </svg>
-  ),
-  playlists: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 7h10M4 12h7M4 17h7" />
-      <circle className="fs2" cx="17" cy="16" r="2.5" />
-      <path d="M19.5 16V8.6l-3 .9" />
-    </svg>
-  ),
-  earnings: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle className="fs" cx="12" cy="12" r="8.4" />
-      <path d="M12 7v10M14.6 9.3c0-1.2-1.2-1.9-2.6-1.9s-2.6.8-2.6 2 .9 1.7 2.6 2 2.6.9 2.6 2.1-1.2 2-2.6 2-2.6-.8-2.6-2" />
     </svg>
   ),
   plus: (
@@ -91,28 +116,112 @@ const ICONS = {
       <path d="M9.2 12l2 2 3.6-4" />
     </svg>
   ),
+  // ── Panel controls (drawn to the same rules) ──
+  collapse: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3.5" y="4.5" width="17" height="15" rx="3" />
+      <path d="M9.5 4.5v15M15.5 10l-2 2 2 2" />
+    </svg>
+  ),
+  expand: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3.5" y="4.5" width="17" height="15" rx="3" />
+      <path d="M9.5 4.5v15M13.5 10l2 2-2 2" />
+    </svg>
+  ),
+  add: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  ),
+  close: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  ),
+  note: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M9 18V6l10-2v12" />
+      <circle cx="6.5" cy="18" r="2.5" />
+      <circle cx="16.5" cy="16" r="2.5" />
+    </svg>
+  ),
+};
+
+// A playlist's cover: its own image, else a 2×2 mosaic of its first four
+// songs (one image if it has fewer), else a music note.
+const PlaylistCover = ({ playlist }) => {
+  const [broken, setBroken] = useState(false);
+  const cover = playlist.coverImageUrl && !broken ? buildUrl(playlist.coverImageUrl) : null;
+  const art = (playlist.firstFourArtworks || []).filter(Boolean).map((u) => buildUrl(u));
+
+  if (cover) {
+    return <span className="sb-cover"><img src={cover} alt="" loading="lazy" onError={() => setBroken(true)} /></span>;
+  }
+  if (art.length >= 4) {
+    return (
+      <span className="sb-cover sb-cover--mosaic">
+        {art.slice(0, 4).map((u, i) => <img key={i} src={u} alt="" loading="lazy" />)}
+      </span>
+    );
+  }
+  if (art.length) {
+    return <span className="sb-cover"><img src={art[0]} alt="" loading="lazy" /></span>;
+  }
+  return <span className="sb-cover sb-cover--empty">{ICONS.note}</span>;
+};
+
+// Four little level bars: the same mark as the launch splash and the tour.
+const Equalizer = ({ label }) => (
+  <span
+    className="sb-eq"
+    {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true })}
+  >
+    <i /><i /><i /><i />
+  </span>
+);
+
+const songsWord = (n) => `${n} ${n === 1 ? 'song' : 'songs'}`;
+
+const formatMoney = (amount) => {
+  const n = typeof amount === 'number' ? amount : parseFloat(amount);
+  if (!Number.isFinite(n)) return '$0.00';
+  if (n >= 1000) return `$${Math.round(n).toLocaleString()}`;
+  return `$${n.toFixed(2)}`;
 };
 
 const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { user, isGuest, theme } = useAuth();                      // ★ theme
+  const [isOpen, setIsOpen] = useState(false);          // the phone/tablet drawer
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [desktop, setDesktop] = useState(isDesktop);
+  const { user, isGuest, theme } = useAuth();
   const { triggerGate, gateProps } = useAuthGate();
-  const { openPlaylistManager } = useContext(PlayerContext);
+  const player = useContext(PlayerContext) || {};
+  const {
+    openPlaylistManager,
+    playlists = [],
+    followedPlaylists = [],
+    currentMedia,
+    isPlaying,
+  } = player;
   const navigate = useNavigate();
-  const location = useLocation();                                  // ★
-
-  const toggleOpen = () => setIsOpen((o) => !o);
+  const location = useLocation();
   const sidebarRef = useRef(null);
+  const animTimer = useRef(null);
+
+  const path = location?.pathname || '/';
+  const signedIn = !!user && !isGuest;
+  const rail = desktop && collapsed;
 
   // ── Unread messages badge ──────────────────────────────────
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (!user || isGuest) { setUnreadCount(0); return undefined; }
+    if (!signedIn) { setUnreadCount(0); return undefined; }
     let alive = true;
     const load = async () => {
       try {
-        // Chats only — a message request never adds to the badge.
+        // Chats only: a message request never adds to the badge.
         const res = await apiCall({ url: '/v1/conversations/summary', useCache: false });
         if (!alive) return;
         setUnreadCount(Number(res.data?.unread) || 0);
@@ -121,22 +230,19 @@ const Sidebar = () => {
       }
     };
     load();
-    const onUpdate = () => load();
-    window.addEventListener('unis:messages-updated', onUpdate);
-    window.addEventListener('focus', onUpdate);
+    window.addEventListener('unis:messages-updated', load);
+    window.addEventListener('focus', load);
     return () => {
       alive = false;
-      window.removeEventListener('unis:messages-updated', onUpdate);
-      window.removeEventListener('focus', onUpdate);
+      window.removeEventListener('unis:messages-updated', load);
+      window.removeEventListener('focus', load);
     };
-  }, [user, isGuest]);
+  }, [signedIn]);
 
-  // ★ Lifetime earnings for the account footer (referral + supporter, or an
-  //   explicit lifetime total if the summary provides one). Guarded so it
-  //   never throws; simply hides the figure if the call fails.
+  // ── Lifetime earnings for the account row ──────────────────
   const [lifetime, setLifetime] = useState(null);
   useEffect(() => {
-    if (!user || isGuest) { setLifetime(null); return undefined; }
+    if (!signedIn) { setLifetime(null); return undefined; }
     let alive = true;
     (async () => {
       try {
@@ -147,42 +253,96 @@ const Sidebar = () => {
         const sup = Number(s?.supporterEarnings?.lifetime) || 0;
         const explicit = Number(s?.totalEarnings?.lifetime);
         setLifetime(Number.isFinite(explicit) && explicit > 0 ? explicit : ref + sup);
-      } catch (_) { /* ignore */ }
+      } catch (err) {
+        console.error('[Sidebar] lifetime earnings failed (figure hidden):', err?.message || err);
+      }
     })();
     return () => { alive = false; };
-  }, [user, isGuest]);
+  }, [signedIn]);
 
-  // ── Desktop sidebar width broadcast (unchanged behaviour) ───
+  // ── Tonight's #1 in the user's jurisdiction ────────────────
+  // Same call (and URL) as the feed's daily race, so it's a cache hit there.
+  const jName = user?.jurisdiction?.name || null;
+  const jId = user?.jurisdiction?.jurisdictionId || null;
+  const [leader, setLeader] = useState(null);
+
   useEffect(() => {
-    const updateSidebarWidth = () => {
-      const isMobile = window.innerWidth <= 1024;
-      const width = isMobile ? 0 : (sidebarRef.current ? sidebarRef.current.offsetWidth : 0);
+    if (!jId) { setLeader(null); return undefined; }
+    let alive = true;
+    const load = () => fetchStandings({ type: 'song', jurisdictionId: jId, genre: 'all', period: 'daily', limit: 50 })
+      .then((board) => {
+        if (!alive) return;
+        const top = (board?.entries || []).find((e) => e.points > 0);
+        setLeader(top
+          ? { name: top.name, artistName: top.artistName, live: (board.state || 'LIVE') === 'LIVE' }
+          : null);
+      })
+      .catch((err) => {
+        console.error('[Sidebar] tonight’s #1 failed (line hidden):', err?.message || err);
+        if (alive) setLeader(null);
+      });
+    load();
+    window.addEventListener('focus', load);
+    return () => {
+      alive = false;
+      window.removeEventListener('focus', load);
+    };
+  }, [jId]);
+
+  // ── Width the content column leaves for us ──────────────────
+  useEffect(() => {
+    const apply = () => {
+      const d = isDesktop();
+      setDesktop(d);
+      if (d) setIsOpen(false);
+      const width = d ? (collapsed ? RAIL_W : PANEL_W) + GUTTER * 2 : 0;
       document.documentElement.style.setProperty('--sidebar-width', `${width}px`);
     };
-    updateSidebarWidth();
-    window.addEventListener('resize', updateSidebarWidth);
-    return () => window.removeEventListener('resize', updateSidebarWidth);
-  }, []);
+    apply();
+    window.addEventListener('resize', apply);
+    return () => window.removeEventListener('resize', apply);
+  }, [collapsed]);
 
-  // ── Header hamburger toggle (unchanged) ─────────────────────
   useEffect(() => {
-    const handleToggle = () => setIsOpen((prev) => !prev);
-    window.addEventListener('unis:toggle-sidebar', handleToggle);
-    return () => window.removeEventListener('unis:toggle-sidebar', handleToggle);
+    try { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0'); } catch { /* private mode */ }
+  }, [collapsed]);
+
+  useEffect(() => () => clearTimeout(animTimer.current), []);
+
+  // The content column glides with the panel only while it's being toggled
+  // (sidebar.scss → .sb-animating), never on page load.
+  const toggleCollapsed = () => {
+    const root = document.documentElement;
+    root.classList.add('sb-animating');
+    clearTimeout(animTimer.current);
+    animTimer.current = setTimeout(() => root.classList.remove('sb-animating'), 450);
+    setCollapsed((c) => !c);
+  };
+
+  // ── The drawer (phone / tablet) ─────────────────────────────
+  useEffect(() => {
+    const onToggle = () => setIsOpen((prev) => !prev);
+    window.addEventListener('unis:toggle-sidebar', onToggle);
+    return () => window.removeEventListener('unis:toggle-sidebar', onToggle);
   }, []);
 
-  const closeSidebar = () => {
-    if (window.innerWidth <= 1024) setIsOpen(false);
-  };
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setIsOpen(false); };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [isOpen]);
 
-  const handleNav = (path) => {
-    navigate(path);
-    closeSidebar();
-  };
+  const closeDrawer = () => setIsOpen(false);
 
-  const handlePlaylists = () => {
-    openPlaylistManager();
-    closeSidebar();
+  const handleNav = (to) => {
+    navigate(to);
+    if (!isDesktop()) setIsOpen(false);
   };
 
   const handleProfile = () => {
@@ -190,152 +350,283 @@ const Sidebar = () => {
     else handleNav('/profile');
   };
 
-  // ── Gated handlers (behaviour preserved exactly) ────────────
-  const onMessages = () => { if (isGuest) { triggerGate('profile'); return; } handleNav('/messages'); };
-  const onEarnings = () => { if (isGuest) { triggerGate('earnings'); return; } handleNav('/earnings'); };
-  const onSettings = () => { if (isGuest) { triggerGate('profile'); return; } handleProfile(); };
-  const onPlus = () => { if (isGuest) { triggerGate('plus'); return; } handleNav('/plus'); };
-
-  const path = location?.pathname || '/';
-
-  // ★ Sectioned information architecture (Browse / Community / Your space).
-  const sections = [
-    {
-      label: 'Browse',
-      items: [
-        { key: 'home',     label: 'Home',     icon: 'home',     onClick: () => handleNav('/'),            match: (p) => p === '/' },
-        { key: 'find',     label: 'Find',     icon: 'find',     onClick: () => handleNav('/findpage'),    match: (p) => p.startsWith('/findpage') },
-        { key: 'discover', label: 'Discover', icon: 'discover', onClick: () => handleNav('/discover'),    match: (p) => p.startsWith('/discover') },
-      ],
-    },
-    {
-      label: 'Community',
-      items: [
-        { key: 'vote',         label: 'Vote',         icon: 'vote',         onClick: () => handleNav('/voteawards'),   match: (p) => p.startsWith('/voteawards') },
-        { key: 'leaderboards', label: 'Leaderboards', icon: 'leaderboards', onClick: () => handleNav('/leaderboards'), match: (p) => p.startsWith('/leaderboards') },
-        { key: 'charts',       label: 'Charts',       icon: 'charts',       onClick: () => handleNav('/charts'),       match: (p) => p.startsWith('/charts') },
-        { key: 'messages',     label: 'Messages',     icon: 'messages',     onClick: onMessages, badge: unreadCount,  match: (p) => p.startsWith('/messages') },
-      ],
-    },
-    {
-      label: 'Your space',
-      items: [
-        { key: 'playlists', label: 'Playlists', icon: 'playlists', onClick: handlePlaylists, match: () => false },
-        { key: 'earnings',  label: 'Earnings',  icon: 'earnings',  onClick: onEarnings,      match: (p) => p.startsWith('/earnings') },
-        { key: 'plus',      label: 'Unis Plus', icon: 'plus',      onClick: onPlus,          match: (p) => p.startsWith('/plus') },
-        { key: 'settings',  label: 'Settings',  icon: 'settings',  onClick: onSettings,      match: (p) => p === '/profile' || p === '/artistDashboard' },
-        { key: 'help',      label: 'Help',      icon: 'help',      onClick: () => handleNav('/help'), match: (p) => p.startsWith('/help') }, 
-        ...(user && user.adminRole
-          ? [{ key: 'admin', label: 'Admin', icon: 'admin', onClick: () => handleNav('/admin'), match: (p) => p.startsWith('/admin') }]
-          : []),
-      ],
-    },
-  ];
-
-  const jName = user?.jurisdiction?.name || null;                 // ★
-  const jId = user?.jurisdiction?.jurisdictionId || null;         // ★
-  const goJurisdiction = () => handleNav(jId ? `/jurisdiction/${jId}` : '/discover'); // ★
-
-  const formatMoney = (amount) => {                               // ★
-    const n = typeof amount === 'number' ? amount : parseFloat(amount);
-    if (!Number.isFinite(n)) return '$0';
-    if (n >= 1000) return `$${Math.round(n).toLocaleString()}`;
-    return `$${n.toFixed(2)}`;
+  const handleNewPlaylist = () => {
+    openPlaylistManager?.();
+    if (!isDesktop()) setIsOpen(false);
   };
 
-  const avatarUrl = buildUrl(user?.photoUrl);                     // ★
+  // Gated actions (same behaviour as before the redesign)
+  const onMessages = () => { if (isGuest) { triggerGate('profile'); return; } handleNav('/messages'); };
+  const onPlus = () => { if (isGuest) { triggerGate('plus'); return; } handleNav('/plus'); };
+  const onSettings = () => { if (isGuest) { triggerGate('profile'); return; } handleProfile(); };
+
+  const links = [
+    { key: 'home',         label: 'Home',         icon: 'home',         onClick: () => handleNav('/'),             match: (p) => p === '/' },
+    { key: 'discover',     label: 'Discover',     icon: 'discover',     onClick: () => handleNav('/discover'),     match: (p) => p.startsWith('/discover') },
+    { key: 'charts',       label: 'Charts',       icon: 'charts',       onClick: () => handleNav('/charts'),       match: (p) => p.startsWith('/charts') },
+    { key: 'leaderboards', label: 'Leaderboards', icon: 'leaderboards', onClick: () => handleNav('/leaderboards'), match: (p) => p.startsWith('/leaderboards') },
+    { key: 'messages',     label: 'Messages',     icon: 'messages',     onClick: onMessages, badge: unreadCount,  match: (p) => p.startsWith('/messages') },
+    { key: 'plus',         label: 'Unis Plus',    icon: 'plus',         onClick: onPlus,                          match: (p) => p.startsWith('/plus') },
+    ...(user && user.adminRole
+      ? [{ key: 'admin', label: 'Admin', icon: 'admin', onClick: () => handleNav('/admin'), match: (p) => p.startsWith('/admin') }]
+      : []),
+  ];
+
+  // Own playlists first, then followed ones, never the same one twice.
+  const library = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    const add = (pl, mine) => {
+      const id = pl?.playlistId || pl?.id;
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      out.push({ ...pl, id, mine });
+    };
+    (playlists || []).forEach((pl) => add(pl, true));
+    (followedPlaylists || []).forEach((pl) => add(pl, false));
+    return out;
+  }, [playlists, followedPlaylists]);
+
+  const playingFrom = isPlaying && currentMedia?.origin?.type === 'playlist'
+    ? currentMedia.origin.playlistId
+    : null;
+
+  const turf = jName
+    ? {
+      eyebrow: 'Your turf',
+      name: jName,
+      open: () => handleNav(jId ? `/jurisdiction/${jId}` : '/findpage'),
+      line: leader
+        ? (
+          <>
+            <span className="sb-turf__rank">{leader.live ? '#1 tonight' : 'Yesterday’s #1'}</span>
+            <span aria-hidden="true">·</span>
+            <span className="sb-turf__song">
+              {leader.name}{leader.artistName ? ` — ${leader.artistName}` : ''}
+            </span>
+          </>
+        )
+        : <span className="sb-turf__song">Open your neighborhood</span>,
+    }
+    : {
+      eyebrow: 'Now live',
+      name: GUEST_TURF.name,
+      open: () => handleNav(GUEST_TURF.path),
+      line: <span className="sb-turf__song">{GUEST_TURF.line}</span>,
+    };
+
+  const safeTheme = signedIn && THEMES.includes(theme) ? theme : 'blue';
+  const wordmark = `/brand/splash/wordmark-${safeTheme}.${safeTheme === 'blue' ? 'svg' : 'png'}`;
+  const avatarUrl = buildUrl(user?.photoUrl);
   const initial = (user?.username || 'U').charAt(0).toUpperCase();
+  const currentPlaylistId = path.startsWith('/playlist/') ? path.split('/')[2] : null;
 
   return (
     <>
-      {/* ★ Pill trigger (mobile/tablet) — hides itself while the drawer is open */}
-      <button
-        type="button"
-        className={`sidebar-trigger ${isOpen ? 'hidden' : ''}`}
-        onClick={toggleOpen}
-        aria-label="Open navigation"
-      >
-        <span className="pill-handle" />
-      </button>
-
       <nav
-        className={`sidebar ${isOpen ? 'open' : ''} ${isGuest ? 'sidebar--guest' : ''}`}
+        className={`sidebar ${isOpen ? 'open' : ''} ${rail ? 'sidebar--rail' : ''} ${isGuest ? 'sidebar--guest' : ''}`}
         ref={sidebarRef}
+        aria-label="Sidebar"
       >
-        {/* ★ Jurisdiction identity — pinned to the very top of the drawer.
-            The empty brand button that used to sit above this was the source
-            of the bad top spacing, so it's gone entirely. */}
-        {jName && (
-          <button type="button" className="sidebar-juris" onClick={goJurisdiction}>
-            <span className="sidebar-juris__dot" />
-            <span className="sidebar-juris__text">
-              <span className="sidebar-juris__name">{jName}</span>
-              {/* <span className="sidebar-juris__sub">Your jurisdiction</span> */}
-            </span>
-          </button>
+        {/* Phone / tablet: the drawer's own top bar */}
+        {!desktop && (
+          <div className="sb-drawer-top">
+            <img className="sb-drawer-top__logo" src={wordmark} alt="Unis" draggable="false" />
+            <button type="button" className="sb-icon-btn" onClick={closeDrawer} aria-label="Close menu">
+              {ICONS.close}
+            </button>
+          </div>
         )}
 
-        <ul>
-          {sections.map((sec) => (
-            <React.Fragment key={sec.label}>
-              <li className="sidebar-section" aria-hidden="true">{sec.label}</li>
-              {sec.items.map((it) => (
-                <li
-                  key={it.key}
-                  className={`sidebar-link ${it.match(path) ? 'active' : ''}`}
-                  onClick={it.onClick}
+        {/* ── Your turf ── */}
+        {rail ? (
+          <button
+            type="button"
+            className="sb-turf-badge"
+            onClick={turf.open}
+            title={turf.name}
+            aria-label={turf.name}
+          >
+            <Equalizer />
+            <span className="sb-turf-badge__initials">{initials(turf.name)}</span>
+          </button>
+        ) : (
+          <div className="sb-turf">
+            <div className="sb-turf__top">
+              <Equalizer />
+              <span className="sb-turf__eyebrow">{turf.eyebrow}</span>
+              {desktop && (
+                <button
+                  type="button"
+                  className="sb-icon-btn sb-icon-btn--sm"
+                  onClick={toggleCollapsed}
+                  aria-label="Collapse sidebar"
+                  aria-expanded="true"
+                  title="Collapse sidebar"
                 >
-                  <span className="sidebar-icon">
+                  {ICONS.collapse}
+                </button>
+              )}
+            </div>
+            <button type="button" className="sb-turf__open" onClick={turf.open}>
+              <span className="sb-turf__name">{turf.name}</span>
+              <span className="sb-turf__line">{turf.line}</span>
+            </button>
+          </div>
+        )}
+
+        {/* ── Links ── */}
+        <ul className="sb-links">
+          {links.map((it) => {
+            const active = it.match(path);
+            return (
+              <li key={it.key}>
+                <button
+                  type="button"
+                  className={`sb-link ${active ? 'active' : ''}`}
+                  onClick={it.onClick}
+                  aria-current={active ? 'page' : undefined}
+                  title={rail ? it.label : undefined}
+                >
+                  <span className="sb-link__icon">
                     {ICONS[it.icon]}
-                    {it.badge > 0 && (
-                      <span className="sidebar-badge">{it.badge > 9 ? '9+' : it.badge}</span>
+                    {rail && it.badge > 0 && (
+                      <span className="sb-badge sb-badge--corner">{it.badge > 9 ? '9+' : it.badge}</span>
                     )}
                   </span>
-                  <span className="sidebar-text">{it.label}</span>
-                </li>
-              ))}
-            </React.Fragment>
-          ))}
+                  <span className="sb-link__label">{it.label}</span>
+                  {!rail && it.badge > 0 && (
+                    <span className="sb-badge" aria-label={`${it.badge} unread`}>{it.badge > 99 ? '99+' : it.badge}</span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
         </ul>
 
-        {/* ★ Account footer — lifetime earnings for members, sign-in for guests.
-            Now flows directly beneath the nav (no longer pinned to the very
-            bottom) so the player can't cover it. */}
-        <div className="sidebar-foot">
-          {user && !isGuest ? (
-            <button type="button" className="sidebar-account" onClick={handleProfile}>
-              <span className="sidebar-account__av">
-                {avatarUrl ? <img src={avatarUrl} alt="" /> : <span>{initial}</span>}
-              </span>
-              <span className="sidebar-account__id">
-                <span className="sidebar-account__name">{user?.username || 'You'}</span>
-                <span className="sidebar-account__handle">@{user?.username || 'you'}</span>
-              </span>
-              {lifetime != null && (
-                <span className="sidebar-account__earn">
-                  <span className="e1">Lifetime</span>
-                  <span className="e2">{formatMoney(lifetime)}</span>
-                </span>
-              )}
+        <div className="sb-divider" />
+
+        {/* ── Your playlists ── */}
+        {!signedIn ? (
+          !rail && (
+            <div className="sb-card">
+              <p className="sb-card__title">Make it yours</p>
+              <p className="sb-card__body">
+                Sign in to save songs, build playlists and earn from every listener you bring.
+              </p>
+              <button type="button" className="sb-card__btn sb-card__btn--light" onClick={() => handleNav('/login')}>
+                Sign in
+              </button>
+            </div>
+          )
+        ) : library.length === 0 ? (
+          rail ? (
+            <button type="button" className="sb-icon-btn" onClick={handleNewPlaylist} aria-label="New playlist" title="New playlist">
+              {ICONS.add}
             </button>
           ) : (
-            <button
-              type="button"
-              className="sidebar-account sidebar-account--guest"
-              onClick={() => handleNav('/login')}
-            >
-              <span className="sidebar-account__av"><span>↗</span></span>
-              <span className="sidebar-account__id">
-                <span className="sidebar-account__name">Sign in</span>
-                <span className="sidebar-account__handle">Track your earnings</span>
-              </span>
+            <>
+              <div className="sb-lib-head"><span className="sb-lib-head__title">Your playlists</span></div>
+              <div className="sb-card">
+                <p className="sb-card__title">Create your first playlist</p>
+                <p className="sb-card__body">Collect the songs you love from your block and beyond.</p>
+                <button type="button" className="sb-card__btn" onClick={handleNewPlaylist}>New playlist</button>
+              </div>
+            </>
+          )
+        ) : (
+          <>
+            {rail ? (
+              <button type="button" className="sb-icon-btn sb-rail-add" onClick={handleNewPlaylist} aria-label="New playlist" title="New playlist">
+                {ICONS.add}
+              </button>
+            ) : (
+              <div className="sb-lib-head">
+                <span className="sb-lib-head__title">Your playlists</span>
+                <button type="button" className="sb-icon-btn" onClick={handleNewPlaylist} aria-label="New playlist" title="New playlist">
+                  {ICONS.add}
+                </button>
+              </div>
+            )}
+            <ul className="sb-lib" aria-label="Your playlists">
+              {library.map((pl) => {
+                const playing = playingFrom && String(playingFrom) === String(pl.id);
+                const here = currentPlaylistId && String(currentPlaylistId) === String(pl.id);
+                const meta = pl.mine || !pl.creatorName
+                  ? `Playlist · ${songsWord(pl.songCount || 0)}`
+                  : `Playlist · ${pl.creatorName}`;
+                return (
+                  <li key={pl.id}>
+                    <button
+                      type="button"
+                      className={`sb-pl ${playing ? 'is-playing' : ''} ${here ? 'active' : ''}`}
+                      onClick={() => handleNav(`/playlist/${pl.id}`)}
+                      aria-current={here ? 'page' : undefined}
+                      title={rail ? pl.name : undefined}
+                      aria-label={rail ? `${pl.name}${playing ? ', playing' : ''}` : undefined}
+                    >
+                      <PlaylistCover playlist={pl} />
+                      {!rail && (
+                        <>
+                          <span className="sb-pl__text">
+                            <span className="sb-pl__name">{pl.name}</span>
+                            <span className="sb-pl__meta">{meta}</span>
+                          </span>
+                          {playing && <Equalizer label="Playing" />}
+                        </>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+
+        {/* ── Account ── */}
+        <div className="sb-foot">
+          {rail && (
+            <button type="button" className="sb-icon-btn" onClick={toggleCollapsed} aria-label="Expand sidebar" aria-expanded="false" title="Expand sidebar">
+              {ICONS.expand}
             </button>
+          )}
+          {signedIn ? (
+            rail ? (
+              <button type="button" className="sb-avatar-btn" onClick={handleProfile} aria-label="Your profile" title={user?.username || 'Your profile'}>
+                <span className="sb-avatar">{avatarUrl ? <img src={avatarUrl} alt="" /> : initial}</span>
+              </button>
+            ) : (
+              <div className="sb-account">
+                <button type="button" className="sb-account__me" onClick={handleProfile}>
+                  <span className="sb-avatar">{avatarUrl ? <img src={avatarUrl} alt="" /> : initial}</span>
+                  <span className="sb-account__id">
+                    <span className="sb-account__name">{user?.username || 'You'}</span>
+                    <span className="sb-account__sub">
+                      {lifetime != null
+                        ? <>Lifetime <span className="sb-account__money">{formatMoney(lifetime)}</span></>
+                        : `@${user?.username || 'you'}`}
+                    </span>
+                  </span>
+                </button>
+                <button type="button" className="sb-icon-btn" onClick={onSettings} aria-label="Settings" title="Settings">{ICONS.settings}</button>
+                <button type="button" className="sb-icon-btn" onClick={() => handleNav('/help')} aria-label="Help" title="Help">{ICONS.help}</button>
+              </div>
+            )
+          ) : (
+            rail ? (
+              <button type="button" className="sb-icon-btn" onClick={() => handleNav('/help')} aria-label="Help" title="Help">{ICONS.help}</button>
+            ) : (
+              <div className="sb-account">
+                <button type="button" className="sb-account__join" onClick={() => handleNav('/login?signup=1')}>Create account</button>
+                <button type="button" className="sb-icon-btn" onClick={() => handleNav('/help')} aria-label="Help" title="Help">{ICONS.help}</button>
+              </div>
+            )
           )}
         </div>
       </nav>
 
-      {isOpen && (
-        <div className="sidebar-overlay" onClick={() => setIsOpen(false)} />
+      {isOpen && !desktop && (
+        <div className="sidebar-overlay" onClick={closeDrawer} aria-hidden="true" />
       )}
       <AuthGateSheet {...gateProps} />
     </>

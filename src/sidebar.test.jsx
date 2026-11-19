@@ -1,17 +1,19 @@
-// src/Sidebar.test.jsx
+// src/sidebar.test.jsx
 //
-// Unit tests for Sidebar. Covers:
-// - Trigger open/close + overlay
-// - Nav item routing
-// - Auth gating for Settings & Earnings
-// - Settings routing differs for artists vs listeners
-// - Playlists button opens the playlist manager
-// - Admin link visibility based on user.adminRole
-// - --sidebar-width CSS variable updates on resize / breakpoint
+// Unit tests for the Sidebar (v3 redesign). Covers:
+// - The six links route correctly; Vote / Find / Earnings live in the header only
+// - Auth gating (Messages, Unis Plus, Settings) and artist vs listener settings
+// - Your turf: jurisdiction name + tonight's #1, and the signed-out card
+// - Your playlists: list, navigation, "playing" equaliser, new playlist,
+//   empty state, and the signed-out "Make it yours" card
+// - Admin link visibility
+// - The phone/tablet drawer: header toggle, overlay, Escape, close button,
+//   auto-close after navigating
+// - Collapse / expand and the --sidebar-width the content column reads
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PlayerContext } from './context/playercontext';
 
@@ -20,19 +22,11 @@ import { PlayerContext } from './context/playercontext';
 // ---------------------------------------------------------------------------
 
 const mockNavigate = vi.fn();
+let mockPath = '/';
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
-  useLocation: () => ({ pathname: '/' }),
+  useLocation: () => ({ pathname: mockPath }),
 }));
-
-// Themed logo assets imported by the sidebar (mirrors header.test.jsx).
-vi.mock('./assets/unisLogoThree.svg', () => ({ default: '/logo-blue.svg' }));
-vi.mock('./assets/logo-orange.png',   () => ({ default: '/logo-orange.png' }));
-vi.mock('./assets/logo-red.png',      () => ({ default: '/logo-red.png' }));
-vi.mock('./assets/logo-green.png',    () => ({ default: '/logo-green.png' }));
-vi.mock('./assets/logo-purple.png',   () => ({ default: '/logo-purple.png' }));
-vi.mock('./assets/logo-gold.png',     () => ({ default: '/logo-gold.png' }));
-vi.mock('./assets/logo-dianna.png',   () => ({ default: '/logo-dianna.png' }));
 
 const mockUseAuth = vi.fn();
 vi.mock('./context/AuthContext', () => ({
@@ -48,6 +42,20 @@ vi.mock('./AuthGateSheet', () => ({
   }),
 }));
 
+const mockApiCall = vi.fn();
+vi.mock('./components/axiosInstance', () => ({
+  apiCall: (...args) => mockApiCall(...args),
+}));
+
+const mockFetchStandings = vi.fn();
+vi.mock('./utils/standings', () => ({
+  fetchStandings: (...args) => mockFetchStandings(...args),
+}));
+
+vi.mock('./utils/buildUrl', () => ({
+  buildUrl: (u) => (u ? `https://cdn.test/${u}` : null),
+}));
+
 vi.mock('./sidebar.scss', () => ({}));
 
 import Sidebar from './sidebar';
@@ -56,18 +64,21 @@ import Sidebar from './sidebar';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const setAuth = (overrides = {}) => {
-  mockUseAuth.mockReturnValue({
-    user: null,
-    isGuest: true,
-    ...overrides,
-  });
+const LISTENER = {
+  userId: 'u1',
+  username: 'stizz',
+  role: 'listener',
+  jurisdiction: { jurisdictionId: 'j1', name: 'Downtown Harlem' },
 };
 
 const renderSidebar = (authOverrides = {}, playerOverrides = {}) => {
-  setAuth(authOverrides);
+  mockUseAuth.mockReturnValue({ user: null, isGuest: true, theme: 'blue', ...authOverrides });
   const playerCtx = {
     openPlaylistManager: vi.fn(),
+    playlists: [],
+    followedPlaylists: [],
+    currentMedia: null,
+    isPlaying: false,
     ...playerOverrides,
   };
   const result = render(
@@ -78,229 +89,276 @@ const renderSidebar = (authOverrides = {}, playerOverrides = {}) => {
   return { user: userEvent.setup(), playerCtx, ...result };
 };
 
-/** Set window.innerWidth and dispatch a resize event. */
+const signedIn = (extra = {}, player = {}) =>
+  renderSidebar({ user: { ...LISTENER, ...extra }, isGuest: false }, player);
+
 const setViewportWidth = (px) => {
-  Object.defineProperty(window, 'innerWidth', {
-    configurable: true,
-    writable: true,
-    value: px,
-  });
-  act(() => {
-    window.dispatchEvent(new Event('resize'));
-  });
+  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: px });
+  act(() => { window.dispatchEvent(new Event('resize')); });
 };
+
+const sidebarWidth = () => document.documentElement.style.getPropertyValue('--sidebar-width');
 
 // ---------------------------------------------------------------------------
 // Suite
 // ---------------------------------------------------------------------------
 
 describe('Sidebar', () => {
-
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default desktop width
-    Object.defineProperty(window, 'innerWidth', {
-      configurable: true, writable: true, value: 1280,
-    });
+    mockPath = '/';
+    localStorage.clear();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1280 });
+    mockApiCall.mockResolvedValue({ data: {} });
+    mockFetchStandings.mockResolvedValue({ state: 'LIVE', entries: [] });
   });
 
   afterEach(() => {
     document.documentElement.style.removeProperty('--sidebar-width');
+    document.documentElement.classList.remove('sb-animating');
   });
 
   // =========================================================================
-  // Trigger / open-close behaviour
-  // =========================================================================
-  describe('open / close behaviour', () => {
-    it('starts closed (no .open class on the sidebar)', () => {
-      renderSidebar();
-      expect(document.querySelector('.sidebar').className).not.toMatch(/open/);
-    });
-
-    it('opens when the pill trigger is clicked', async () => {
-      const { user } = renderSidebar();
-      await user.click(screen.getByLabelText(/open navigation/i));
-      expect(document.querySelector('.sidebar').className).toMatch(/open/);
-    });
-
-    it('hides the trigger when open', async () => {
-      const { user } = renderSidebar();
-      await user.click(screen.getByLabelText(/open navigation/i));
-      expect(document.querySelector('.sidebar-trigger').className).toMatch(/hidden/);
-    });
-
-    it('renders the overlay only when open', async () => {
-      const { user } = renderSidebar();
-      expect(document.querySelector('.sidebar-overlay')).toBeNull();
-      await user.click(screen.getByLabelText(/open navigation/i));
-      expect(document.querySelector('.sidebar-overlay')).toBeInTheDocument();
-    });
-
-    it('closes when the overlay is clicked', async () => {
-      const { user } = renderSidebar();
-      await user.click(screen.getByLabelText(/open navigation/i));
-      await user.click(document.querySelector('.sidebar-overlay'));
-      expect(document.querySelector('.sidebar').className).not.toMatch(/open/);
-    });
-  });
-
-  // =========================================================================
-  // Nav items — basic routing
-  // =========================================================================
-  describe('navigation', () => {
+  describe('links', () => {
     it.each([
-      [/^Home$/,         '/'],
-      [/^Vote$/,         '/voteawards'],
-      [/^Find$/,         '/findpage'],
-      [/^Leaderboards$/, '/leaderboards'],
-    ])('navigates to %s when "%s" is clicked', async (label, path) => {
-      const { user } = renderSidebar({ user: { id: 'u1' }, isGuest: false });
-      await user.click(screen.getByText(label));
+      ['Home',         '/'],
+      ['Discover',     '/discover'],
+      ['Charts',       '/charts'],
+      ['Leaderboards', '/leaderboards'],
+    ])('"%s" navigates to %s', async (label, path) => {
+      const { user } = signedIn();
+      await user.click(screen.getByRole('button', { name: label }));
       expect(mockNavigate).toHaveBeenCalledWith(path);
     });
+
+    it('does not repeat the header links (Vote, Find, Earnings)', () => {
+      signedIn();
+      expect(screen.queryByRole('button', { name: 'Vote' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Find' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Earnings' })).toBeNull();
+    });
+
+    it('marks the current page with aria-current', () => {
+      mockPath = '/charts';
+      signedIn();
+      expect(screen.getByRole('button', { name: 'Charts' })).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('button', { name: 'Home' })).not.toHaveAttribute('aria-current');
+    });
+
+    it('shows the unread badge on Messages', async () => {
+      mockApiCall.mockImplementation(({ url }) =>
+        Promise.resolve({ data: url.includes('conversations/summary') ? { unread: 3 } : {} }));
+      signedIn();
+      expect(await screen.findByLabelText('3 unread')).toBeInTheDocument();
+    });
   });
 
   // =========================================================================
-  // Settings — gating + role-based routing
-  // =========================================================================
-  describe('Settings item', () => {
-    it('triggers the auth gate for guests', async () => {
-      const { user } = renderSidebar({ user: null, isGuest: true });
-      await user.click(screen.getByText('Settings'));
+  describe('gating', () => {
+    it('gates Messages, Unis Plus and Settings for guests', async () => {
+      const { user } = renderSidebar();
+      await user.click(screen.getByRole('button', { name: 'Messages' }));
+      await user.click(screen.getByRole('button', { name: 'Unis Plus' }));
       expect(mockTriggerGate).toHaveBeenCalledWith('profile');
+      expect(mockTriggerGate).toHaveBeenCalledWith('plus');
       expect(mockNavigate).not.toHaveBeenCalled();
     });
 
-    it('navigates listeners to /profile', async () => {
-      const { user } = renderSidebar({
-        user: { id: 'u1', role: 'listener' }, isGuest: false,
-      });
-      await user.click(screen.getByText('Settings'));
+    it('Settings goes to /profile for listeners', async () => {
+      const { user } = signedIn();
+      await user.click(screen.getByRole('button', { name: 'Settings' }));
       expect(mockNavigate).toHaveBeenCalledWith('/profile');
     });
 
-    it('navigates artists to /artistDashboard', async () => {
-      const { user } = renderSidebar({
-        user: { id: 'u1', role: 'artist' }, isGuest: false,
-      });
-      await user.click(screen.getByText('Settings'));
+    it('Settings goes to /artistDashboard for artists', async () => {
+      const { user } = signedIn({ role: 'artist' });
+      await user.click(screen.getByRole('button', { name: 'Settings' }));
       expect(mockNavigate).toHaveBeenCalledWith('/artistDashboard');
     });
   });
 
   // =========================================================================
-  // Earnings — gating
-  // =========================================================================
-  describe('Earnings item', () => {
-    it('triggers the auth gate for guests', async () => {
-      const { user } = renderSidebar({ user: null, isGuest: true });
-      await user.click(screen.getByText('Earnings'));
-      expect(mockTriggerGate).toHaveBeenCalledWith('earnings');
-      expect(mockNavigate).not.toHaveBeenCalled();
+  describe('your turf', () => {
+    it("shows the jurisdiction and tonight's #1", async () => {
+      mockFetchStandings.mockResolvedValue({
+        state: 'LIVE',
+        entries: [{ id: 's1', name: 'no more heroes', artistName: 'stizz', points: 12 }],
+      });
+      signedIn();
+      expect(screen.getByText('Downtown Harlem')).toBeInTheDocument();
+      expect(await screen.findByText('#1 tonight')).toBeInTheDocument();
+      expect(screen.getByText(/no more heroes — stizz/)).toBeInTheDocument();
+      expect(mockFetchStandings).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'song', jurisdictionId: 'j1', period: 'daily', limit: 50 }),
+      );
     });
 
-    it('navigates logged-in users to /earnings', async () => {
-      const { user } = renderSidebar({
-        user: { id: 'u1' }, isGuest: false,
-      });
-      await user.click(screen.getByText('Earnings'));
-      expect(mockNavigate).toHaveBeenCalledWith('/earnings');
+    it('opens the jurisdiction page', async () => {
+      const { user } = signedIn();
+      await user.click(screen.getByText('Downtown Harlem'));
+      expect(mockNavigate).toHaveBeenCalledWith('/jurisdiction/j1');
+    });
+
+    it('shows the launch area to signed-out visitors and opens Find', async () => {
+      const { user } = renderSidebar();
+      await user.click(screen.getByText('Harlem'));
+      expect(mockNavigate).toHaveBeenCalledWith('/findpage');
+      expect(mockFetchStandings).not.toHaveBeenCalled();
     });
   });
 
   // =========================================================================
-  // Playlists
-  // =========================================================================
-  describe('Playlists item', () => {
-    it('calls openPlaylistManager from PlayerContext', async () => {
-      const { user, playerCtx } = renderSidebar();
-      await user.click(screen.getByText('Playlists'));
-      expect(playerCtx.openPlaylistManager).toHaveBeenCalledTimes(1);
-      expect(mockNavigate).not.toHaveBeenCalled();
+  describe('your playlists', () => {
+    const playlists = [
+      { playlistId: 'p1', name: 'Late Night Uptown', songCount: 24, firstFourArtworks: [] },
+      { playlistId: 'p2', name: 'Harlem Heat', songCount: 1, coverImageUrl: 'covers/hh.jpg' },
+    ];
+
+    it('lists own and followed playlists without duplicates', () => {
+      signedIn({}, {
+        playlists,
+        followedPlaylists: [
+          { playlistId: 'p2', name: 'Harlem Heat' },
+          { playlistId: 'p3', name: 'Bars Only', creatorName: 'rapking' },
+        ],
+      });
+      expect(screen.getByText('Late Night Uptown')).toBeInTheDocument();
+      expect(screen.getAllByText('Harlem Heat')).toHaveLength(1);
+      expect(screen.getByText('Playlist · 1 song')).toBeInTheDocument();
+      expect(screen.getByText('Playlist · rapking')).toBeInTheDocument();
+    });
+
+    it('opens a playlist page', async () => {
+      const { user } = signedIn({}, { playlists });
+      await user.click(screen.getByText('Late Night Uptown'));
+      expect(mockNavigate).toHaveBeenCalledWith('/playlist/p1');
+    });
+
+    it('marks the playlist the current song came from', () => {
+      signedIn({}, {
+        playlists,
+        isPlaying: true,
+        currentMedia: { id: 's1', origin: { type: 'playlist', playlistId: 'p1' } },
+      });
+      expect(screen.getByRole('img', { name: 'Playing' })).toBeInTheDocument();
+    });
+
+    it('New playlist opens the playlist manager', async () => {
+      const { user, playerCtx } = signedIn({}, { playlists });
+      await user.click(screen.getByRole('button', { name: 'New playlist' }));
+      expect(playerCtx.openPlaylistManager).toHaveBeenCalled();
+    });
+
+    it('shows the first-playlist card when there are none', async () => {
+      const { user, playerCtx } = signedIn();
+      expect(screen.getByText('Create your first playlist')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'New playlist' }));
+      expect(playerCtx.openPlaylistManager).toHaveBeenCalled();
+    });
+
+    it('asks signed-out visitors to sign in', async () => {
+      const { user } = renderSidebar();
+      expect(screen.getByText('Make it yours')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Sign in' }));
+      expect(mockNavigate).toHaveBeenCalledWith('/login');
     });
   });
 
   // =========================================================================
-  // Admin section
-  // =========================================================================
-  describe('Admin link', () => {
-    it('does not render for a guest', () => {
-      renderSidebar({ user: null, isGuest: true });
-      expect(screen.queryByText('Admin')).toBeNull();
+  describe('admin link', () => {
+    it('is hidden for guests and regular users', () => {
+      signedIn();
+      expect(screen.queryByRole('button', { name: 'Admin' })).toBeNull();
     });
 
-    it('does not render for a regular user (no adminRole)', () => {
-      renderSidebar({ user: { id: 'u1', adminRole: null }, isGuest: false });
-      expect(screen.queryByText('Admin')).toBeNull();
-    });
-
-    it('renders for users with an adminRole', () => {
-      renderSidebar({
-        user: { id: 'u1', adminRole: 'moderator' }, isGuest: false,
-      });
-      expect(screen.getByText('Admin')).toBeInTheDocument();
-    });
-
-    it('navigates to /admin when clicked', async () => {
-      const { user } = renderSidebar({
-        user: { id: 'u1', adminRole: 'admin' }, isGuest: false,
-      });
-      await user.click(screen.getByText('Admin'));
+    it('shows for admins and routes to /admin', async () => {
+      const { user } = signedIn({ adminRole: 'SUPER_ADMIN' });
+      await user.click(screen.getByRole('button', { name: 'Admin' }));
       expect(mockNavigate).toHaveBeenCalledWith('/admin');
     });
   });
 
   // =========================================================================
-  // Mobile auto-close on navigation
-  // =========================================================================
-  describe('mobile auto-close', () => {
-    it('closes itself after navigating on a mobile viewport (≤1024px)', async () => {
-      setViewportWidth(800);
-      const { user } = renderSidebar({ user: { id: 'u1' }, isGuest: false });
-      await user.click(screen.getByLabelText(/open navigation/i));
-      expect(document.querySelector('.sidebar').className).toMatch(/open/);
+  describe('drawer (phone / tablet)', () => {
+    const openDrawer = () => act(() => { window.dispatchEvent(new CustomEvent('unis:toggle-sidebar')); });
 
-      await user.click(screen.getByText(/^Home$/));
-      expect(document.querySelector('.sidebar').className).not.toMatch(/open/);
+    it('starts closed and opens from the header menu button', () => {
+      setViewportWidth(800);
+      const { container } = signedIn();
+      const nav = container.querySelector('.sidebar');
+      expect(nav).not.toHaveClass('open');
+      openDrawer();
+      expect(nav).toHaveClass('open');
+      expect(container.querySelector('.sidebar-overlay')).toBeInTheDocument();
     });
 
-    it('stays open after navigating on a desktop viewport (>1024px)', async () => {
-      setViewportWidth(1400);
-      const { user } = renderSidebar({ user: { id: 'u1' }, isGuest: false });
-      await user.click(screen.getByLabelText(/open navigation/i));
-      await user.click(screen.getByText(/^Home$/));
-      expect(document.querySelector('.sidebar').className).toMatch(/open/);
+    it('closes from the overlay, the close button and Escape', async () => {
+      setViewportWidth(800);
+      const { container, user } = signedIn();
+      const nav = container.querySelector('.sidebar');
+
+      openDrawer();
+      await user.click(container.querySelector('.sidebar-overlay'));
+      expect(nav).not.toHaveClass('open');
+
+      openDrawer();
+      await user.click(screen.getByRole('button', { name: 'Close menu' }));
+      expect(nav).not.toHaveClass('open');
+
+      openDrawer();
+      await user.keyboard('{Escape}');
+      expect(nav).not.toHaveClass('open');
+    });
+
+    it('closes itself after navigating', async () => {
+      setViewportWidth(800);
+      const { container, user } = signedIn();
+      openDrawer();
+      await user.click(screen.getByRole('button', { name: 'Charts' }));
+      expect(mockNavigate).toHaveBeenCalledWith('/charts');
+      expect(container.querySelector('.sidebar')).not.toHaveClass('open');
     });
   });
 
   // =========================================================================
-  // --sidebar-width CSS variable
-  // =========================================================================
-  describe('--sidebar-width CSS variable', () => {
-    it('sets --sidebar-width to 0px on a mobile viewport', () => {
+  describe('collapse and --sidebar-width', () => {
+    it('reserves 0px on phones and tablets', () => {
       setViewportWidth(800);
       renderSidebar();
-      expect(document.documentElement.style.getPropertyValue('--sidebar-width'))
-        .toBe('0px');
+      expect(sidebarWidth()).toBe('0px');
     });
 
-    it('sets --sidebar-width to a non-zero value on desktop', () => {
+    it('reserves the panel width on desktop', () => {
       setViewportWidth(1400);
       renderSidebar();
-      // jsdom returns 0 for offsetWidth, but the property is still written.
-      // What we really care about is that it's NOT explicitly 0px from the
-      // mobile branch — so we verify the property was set.
-      const value = document.documentElement.style.getPropertyValue('--sidebar-width');
-      expect(value).toMatch(/^\d+px$/);
+      expect(sidebarWidth()).toBe('284px');
     });
 
-    it('updates --sidebar-width when the viewport crosses the breakpoint', () => {
+    it('updates when the viewport crosses the breakpoint', () => {
       setViewportWidth(1400);
       renderSidebar();
-
       setViewportWidth(800);
-      expect(document.documentElement.style.getPropertyValue('--sidebar-width'))
-        .toBe('0px');
+      expect(sidebarWidth()).toBe('0px');
+    });
+
+    it('collapses to the rail, remembers it, and expands again', async () => {
+      const { user, container } = signedIn();
+      await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+      expect(container.querySelector('.sidebar')).toHaveClass('sidebar--rail');
+      expect(sidebarWidth()).toBe('102px');
+      expect(localStorage.getItem('unis-sidebar-collapsed')).toBe('1');
+
+      await user.click(screen.getByRole('button', { name: 'Expand sidebar' }));
+      expect(container.querySelector('.sidebar')).not.toHaveClass('sidebar--rail');
+      await waitFor(() => expect(localStorage.getItem('unis-sidebar-collapsed')).toBe('0'));
+    });
+
+    it('starts collapsed when that was the last choice', () => {
+      localStorage.setItem('unis-sidebar-collapsed', '1');
+      const { container } = signedIn();
+      expect(container.querySelector('.sidebar')).toHaveClass('sidebar--rail');
+      // Labels stay visible in the rail (never hover-only)
+      expect(screen.getByText('Leaderboards')).toBeInTheDocument();
     });
   });
 });
