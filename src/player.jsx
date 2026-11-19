@@ -727,7 +727,12 @@ const Player = () => {
       )}
       <PlaylistWizard open={showPlaylistWizard} onClose={() => setShowPlaylistWizard(false)} selectedTrack={currentMedia} />
       <PlaylistManager open={showPlaylistManager} onClose={closePlaylistManager} />
-      <QueuePanel open={showQueue} onClose={() => setShowQueue(false)} />
+      <QueuePanel
+        open={showQueue}
+        onClose={() => setShowQueue(false)}
+        isLiked={isLiked}
+        onToggleLike={currentMedia ? handleLike : undefined}
+      />
       <VotingWizard
         show={showVoteWizard}
         onClose={() => {

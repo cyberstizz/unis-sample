@@ -120,6 +120,7 @@
   }
 
   .qp-source { color: var(--unis-primary-2); }
+  .qp-time-left { color: color-mix(in srgb, var(--unis-primary), white 55%); }
 }
 
 .qp-icon-btn {
@@ -170,54 +171,72 @@
 }
 
 // ───────── NOW PLAYING COCKPIT ─────────
-// Open on the dark panel (no card) so the theme glow reads clean — matches mockup.
+// Framed top and bottom in the theme colour: the header's 2px line above,
+// .qp-now-edge below. The artwork wash (.qp-now-bleed) is NOT clipped to the
+// cockpit — it runs 46px past the bottom line and fades out there, so the
+// song's colour bleeds through into the Up next header instead of stopping
+// at a hard edge.
 .qp-now {
   position: relative;
-  overflow: hidden;
-
   margin: 0;
-  padding: 14px 14px 12px;
+  padding: 14px 14px 16px;
+}
+
+.qp-now-bleed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: -46px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 70px), transparent);
+          mask-image: linear-gradient(#000 calc(100% - 70px), transparent);
 
   &::before {
     content: '';
     position: absolute;
-
-    top: -80px;
-    left: -40px;
-    right: -40px;
-    bottom: -80px;
-
+    inset: -80px -40px;
     background-image: var(--qp-art-bg);
     background-size: cover;
     background-position: center;
-
     filter: blur(60px) saturate(200%);
     opacity: 0.4;
-
-    pointer-events: none;
-    z-index: 0;
-
-    transition:
-      opacity 0.4s ease,
-      transform 0.4s ease;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-
-    background:
-      linear-gradient(
-        180deg,
-        rgba(0,0,0,0.15),
-        rgba(0,0,0,0.45)
-      );
-
-    pointer-events: none;
-    z-index: 1;
+    transition: opacity 0.4s ease;
   }
 }
+
+// Darkens the wash behind the controls (stops at the edge line).
+.qp-now-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.45));
+}
+
+// The bottom theme line — same weight as the header's, a little brighter in
+// the middle, with a soft glow that falls onto the bleed below it.
+.qp-now-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--unis-primary),
+    color-mix(in srgb, var(--unis-primary), white 45%) 50%,
+    var(--unis-primary)
+  );
+  box-shadow:
+    0 0 14px 1px color-mix(in srgb, var(--unis-primary), transparent 35%),
+    0 6px 22px color-mix(in srgb, var(--unis-primary), transparent 45%);
+}
+
 .qp-now-top { display: flex; gap: 14px; align-items: center; }
 
 .qp-now-art {
@@ -420,15 +439,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 12px 14px 0;
-  padding: 14px 4px 8px;
-  border-top: 1px solid var(--unis-border);
-  background:
-  linear-gradient(
-    180deg,
-    rgba(0,0,0,0.08),
-    transparent
-  );
+  gap: 10px;
+  margin: 0 14px;
+  padding: 20px 2px 8px;
 }
 
 .qp-section-l { display: flex; align-items: center; gap: 9px; }
@@ -450,70 +463,53 @@
   border-radius: 999px;
 }
 
-.qp-menu-wrap { position: relative; }
+// Queue actions (Select · Save · Clear) sit in view — a hidden "clear
+// queue" is the most repeated complaint about other players' queues.
+.qp-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
 
-.qp-overflow {
-  width: 34px;
-  height: 34px;
+.qp-chip {
+  height: 30px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid transparent;
-  border-radius: var(--unis-radius-sm);
-  background: transparent;
-  color: var(--unis-text-3);
+  gap: 6px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--unis-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--unis-text-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
   cursor: pointer;
   transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
 
+  svg { flex-shrink: 0; }
+
   &:hover:not(:disabled) {
     color: var(--unis-text);
+    border-color: var(--unis-border-hi);
     background: var(--unis-panel-2);
-    border-color: var(--unis-border);
   }
-  &:disabled { opacity: 0.3; cursor: not-allowed; }
-}
+  &:disabled { opacity: 0.35; cursor: not-allowed; }
 
-.qp-menu {
-  position: absolute;
-  top: 40px;
-  right: 0;
-  z-index: 20;
-  min-width: 188px;
-  overflow: hidden;
-  border-radius: var(--unis-radius);
-  background: rgba(10, 12, 18, 0.97);
-  border: 1px solid var(--unis-border-hi);
-  box-shadow:
-    0 24px 54px -18px rgba(0, 0, 0, 0.7),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  animation: qpMenuIn 0.16s ease both;
-
-  button {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    padding: 12px 14px;
-    border: none;
-    background: transparent;
-    color: var(--unis-text-2);
-    font-size: 13px;
-    font-weight: 750;
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.14s ease, color 0.14s ease;
-
-    svg { flex-shrink: 0; }
-    &:hover:not(:disabled) { background: var(--unis-panel-2); color: var(--unis-text); }
-    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  &.qp-chip-danger:hover:not(:disabled) {
+    color: #ff8a8a;
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.1);
   }
 
-  .qp-menu-danger:hover:not(:disabled) { color: #ff7a7a; background: rgba(239, 68, 68, 0.1); }
-}
-
-@keyframes qpMenuIn {
-  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  &.qp-chip-strong {
+    color: var(--unis-text);
+    border-color: color-mix(in srgb, var(--unis-primary) 55%, var(--unis-border-hi));
+    background: color-mix(in srgb, var(--unis-primary), transparent 72%);
+  }
 }
 
 .qp-body {
@@ -1229,4 +1225,264 @@
 @media (prefers-reduced-motion: reduce) {
   .qp-confirm { animation: none; }
   .qp-drag-overlay .qp-item-lifted { transform: none; }
+}
+
+// =============================================================================
+// QUEUE REDESIGN — like, played fold, select mode, swipe to remove, end note
+// =============================================================================
+
+// ── Like (the song playing now) ──────────────────────────────────────────────
+// Sits beside the title, where every major player keeps it. Liked = theme
+// colour, matching the heart in the player bar.
+.qp-like {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--unis-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--unis-text-2);
+  cursor: pointer;
+  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+
+  &:hover {
+    color: var(--unis-text);
+    border-color: var(--unis-border-hi);
+    transform: scale(1.06);
+  }
+  &:active { transform: scale(0.92); }
+
+  &.qp-like-on {
+    color: color-mix(in srgb, var(--unis-primary), white 45%);
+    border-color: color-mix(in srgb, var(--unis-primary) 55%, transparent);
+    background: color-mix(in srgb, var(--unis-primary), transparent 78%);
+    box-shadow: 0 0 22px -8px var(--unis-primary-glow);
+
+    svg { animation: qpLikePop 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
+  }
+}
+
+@keyframes qpLikePop {
+  0% { transform: scale(0.6); }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+// ── Played songs, folded ─────────────────────────────────────────────────────
+.qp-played-toggle {
+  width: 100%;
+  height: 40px;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border-radius: var(--unis-radius);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: var(--unis-text-3);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+
+  span { flex: 1; text-align: left; }
+
+  &:hover,
+  &.qp-played-open {
+    color: var(--unis-text-2);
+    border-style: solid;
+    border-color: var(--unis-border);
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+.qp-now-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 4px 2px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--unis-primary), white 50%);
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: color-mix(in srgb, var(--unis-primary), transparent 45%);
+  }
+}
+
+// ── End of queue ─────────────────────────────────────────────────────────────
+// Says plainly what happens next — nothing gets slipped in after your songs.
+.qp-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 4px 6px;
+  color: var(--unis-text-4);
+  font-size: 11.5px;
+  font-weight: 650;
+  text-align: center;
+
+  .qp-end-line {
+    flex: 1;
+    min-width: 16px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+// ── Select mode ──────────────────────────────────────────────────────────────
+.qp-check {
+  width: 22px;
+  height: 22px;
+  margin: 0 4px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  border-radius: 7px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transition: background 0.14s ease, border-color 0.14s ease;
+
+  &.qp-check-on {
+    background: var(--unis-primary);
+    border-color: color-mix(in srgb, var(--unis-primary), white 40%);
+  }
+}
+
+.qp-item.qp-item-selected {
+  border-color: color-mix(in srgb, var(--unis-primary) 45%, transparent);
+  background: color-mix(in srgb, var(--unis-primary), transparent 80%);
+}
+
+.qp-selecting {
+  .qp-item:hover { transform: none; }
+  .qp-item.qp-current { opacity: 0.55; cursor: default; }
+  .qp-body { padding-bottom: 96px; }
+}
+
+.qp-select-bar {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 18px;
+  background: rgba(16, 14, 24, 0.94);
+  border: 1px solid color-mix(in srgb, var(--unis-primary) 50%, var(--unis-border-hi));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55), 0 0 30px -18px var(--unis-primary-glow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: qpBarIn 0.22s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+
+  button {
+    flex: 1;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 12px;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: background 0.16s ease, opacity 0.16s ease;
+
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  }
+
+  .qp-select-next {
+    color: var(--unis-text);
+    border: 1px solid var(--unis-border-hi);
+    background: rgba(255, 255, 255, 0.07);
+    &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+  }
+
+  .qp-select-remove {
+    color: #ff9a9a;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.14);
+    &:hover:not(:disabled) { background: rgba(239, 68, 68, 0.22); }
+  }
+}
+
+@keyframes qpBarIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+// ── Swipe to remove (touch) ──────────────────────────────────────────────────
+// The row slides left over a red Remove button. pan-y keeps vertical
+// scrolling with the browser while horizontal moves reach the swipe code.
+.qp-swipe {
+  position: relative;
+  border-radius: var(--unis-radius);
+
+  .qp-item { touch-action: pan-y; }
+
+  &.qp-swipe-open {
+    overflow: hidden;
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.3));
+
+    // The row needs a solid face while it covers the button.
+    .qp-item {
+      background: #10121a;
+      border-color: var(--unis-border);
+      box-shadow: 10px 0 20px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  // Snap back / open when the finger lifts; follow it exactly while down.
+  .qp-item:not(.qp-item-swiping) { transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.2, 1), background 0.16s ease, border-color 0.16s ease; }
+  .qp-item.qp-item-swiping { transition: none; }
+}
+
+.qp-swipe-remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: #c92a2a;
+  color: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+@media (max-width: 400px) {
+  .qp-section { margin: 0 10px; }
+  .qp-chip { padding: 0 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-like.qp-like-on svg,
+  .qp-select-bar { animation: none; }
+  .qp-swipe .qp-item:not(.qp-item-swiping) { transition: none; }
 }

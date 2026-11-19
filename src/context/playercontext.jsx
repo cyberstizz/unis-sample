@@ -765,18 +765,28 @@ export const PlayerProvider = ({ children }) => {
     feedback.success(`Added ${quoted(song.title)} to your queue`);
   };
 
+  // Always the latest queue state, for actions that run later from a toast
+  // button (Undo) or that must act on several entries in one go. Reading
+  // these from a callback's closure could hand back a queue that's since
+  // moved on.
+  const latestQueueRef = useRef(null);
+  latestQueueRef.current = { queue, currentIndex, isShuffled };
+
   /**
-   * Remove entries by qid. The song that's currently playing is never removed
-   * (stop it with the transport instead), so removing a whole playlist group
-   * that contains the current song removes everything else in that group.
+   * Remove entries by qid and return them with the positions they held, so
+   * the removal can be undone. The song that's currently playing is never
+   * removed (stop it with the transport instead), so removing a whole
+   * playlist group that contains the current song removes everything else in
+   * that group.
    */
-  const removeQueueItems = useCallback((qids) => {
+  const removeQueueEntries = useCallback((qids) => {
     const drop = new Set(qids || []);
     const current = queue[currentIndex];
     if (current) drop.delete(current.qid);
-    if (drop.size === 0) return;
+    if (drop.size === 0) return [];
 
-    const removed = queue.filter(t => drop.has(t.qid));
+    const removed = [];
+    queue.forEach((t, i) => { if (drop.has(t.qid)) removed.push({ item: t, index: i }); });
     const nq = queue.filter(t => !drop.has(t.qid));
     const newIndex = current ? nq.findIndex(t => t.qid === current.qid) : 0;
     setQueue(nq);
@@ -785,14 +795,68 @@ export const PlayerProvider = ({ children }) => {
     return removed;
   }, [queue, currentIndex]);
 
-  // The queue panel's remove buttons: same as removeQueueItems, plus a toast.
-  // (Kept separate so automatic clean-ups — e.g. dropping a removed song —
-  // can't announce themselves as if the user had done it.)
+  const removeQueueItems = useCallback(
+    (qids) => removeQueueEntries(qids).map(e => e.item),
+    [removeQueueEntries],
+  );
+
+  /**
+   * Put removed entries back where they were (the Undo on the removal toast).
+   * Entries already back in the queue are skipped, so a double tap is safe.
+   */
+  const restoreQueueEntries = useCallback((entries) => {
+    const { queue: q, currentIndex: ci, isShuffled: shuffled } = latestQueueRef.current;
+    const have = new Set(q.map(t => t.qid));
+    const back = (entries || [])
+      .filter(e => e?.item?.qid && !have.has(e.item.qid))
+      .sort((a, b) => a.index - b.index);
+    if (back.length === 0) return;
+
+    const current = q[ci];
+    const nq = [...q];
+    back.forEach(({ item, index }) => nq.splice(Math.min(index, nq.length), 0, item));
+    setQueue(nq);
+    // Shuffle off: the return-to order mirrors the queue. Shuffle on: the
+    // songs rejoin the end of the return-to order, like any other addition.
+    setOriginalQueue(prev => (shuffled ? [...prev, ...back.map(e => e.item)] : nq));
+    const newIndex = current ? nq.findIndex(t => t.qid === current.qid) : 0;
+    setCurrentIndex(newIndex >= 0 ? newIndex : 0);
+  }, []);
+
+  // The queue panel's remove actions: same as removeQueueItems, plus a toast
+  // that can undo it. (Kept separate so automatic clean-ups — e.g. dropping a
+  // removed song — can't announce themselves as if the user had done it.)
   const removeQueueItemsByUser = useCallback((qids) => {
-    const removed = removeQueueItems(qids) || [];
-    if (removed.length === 1) feedback.success(`Removed ${quoted(removed[0].title)} from your queue`);
-    else if (removed.length > 1) feedback.success(`Removed ${songsWord(removed.length)} from your queue`);
-  }, [removeQueueItems, feedback]);
+    const removed = removeQueueEntries(qids);
+    if (removed.length === 0) return;
+    const undo = { action: { label: 'Undo', onClick: () => restoreQueueEntries(removed) } };
+    if (removed.length === 1) feedback.success(`Removed ${quoted(removed[0].item.title)} from your queue`, undo);
+    else feedback.success(`Removed ${songsWord(removed.length)} from your queue`, undo);
+  }, [removeQueueEntries, restoreQueueEntries, feedback]);
+
+  /**
+   * Move several entries so they play right after the current song, keeping
+   * the order they had between themselves (select mode's "Play next").
+   */
+  const moveQueueItemsNext = useCallback((qids) => {
+    const { queue: q, currentIndex: ci, isShuffled: shuffled } = latestQueueRef.current;
+    const current = q[ci];
+    const pick = new Set(qids || []);
+    if (current) pick.delete(current.qid);
+    const moving = q.filter(t => pick.has(t.qid));
+    if (moving.length === 0) return;
+
+    const rest = q.filter(t => !pick.has(t.qid));
+    const at = current ? rest.findIndex(t => t.qid === current.qid) + 1 : 0;
+    const nq = [...rest.slice(0, at), ...moving, ...rest.slice(at)];
+    setQueue(nq);
+    if (!shuffled) setOriginalQueue(nq);
+    const newIndex = current ? nq.findIndex(t => t.qid === current.qid) : 0;
+    setCurrentIndex(newIndex >= 0 ? newIndex : 0);
+    feedback.success(moving.length === 1
+      ? `${quoted(moving[0].title)} plays next`
+      : `${songsWord(moving.length)} play next`);
+  }, [feedback]);
 
   // Index-based removal kept for existing callers.
   const removeFromQueue = (index) => {
@@ -1378,6 +1442,7 @@ export const PlayerProvider = ({ children }) => {
       playLater,
       removeFromQueue,
       removeQueueItems: removeQueueItemsByUser,
+      moveQueueItemsNext,
       reorderQueue,
       moveQueueItem,
       clearQueue,

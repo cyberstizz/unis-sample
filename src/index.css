@@ -91,39 +91,3 @@ select:focus,
     background-color: #f9f9f9;
   }
 }
-
-/* ─── Page scrollbar, in the user's theme colour ───────────────────────
-   The page scroller is <html>, outside #root where the theme variables
-   live, so ThemeDocumentSync.jsx copies the theme colour up to <html> as
-   --unis-scroll-thumb. Chrome, Edge and Safari use the ::-webkit-scrollbar
-   rules (they allow a rounded thumb); Firefox, which has no such rules,
-   gets the standard scrollbar-color instead. The thumb is lifted slightly
-   toward white so the darkest themes still show on the near-black page. */
-html::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-html::-webkit-scrollbar-track {
-  background: #07090f;
-}
-
-html::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--unis-scroll-thumb, #163387), white 12%);
-  border-radius: 999px;
-  border: 2px solid #07090f;
-}
-
-html::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--unis-scroll-thumb, #163387), white 28%);
-}
-
-html::-webkit-scrollbar-corner {
-  background: #07090f;
-}
-
-@supports not selector(::-webkit-scrollbar) {
-  html {
-    scrollbar-color: color-mix(in srgb, var(--unis-scroll-thumb, #163387), white 12%) #07090f;
-  }
-}
