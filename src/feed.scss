@@ -1956,3 +1956,81 @@ $chart-down: #e2564b;
     user-select: none;
   }
 }
+// ═══════════════════════════════════════
+//  ★ SONG ⋮ MENU TRIGGERS (SongMenu.jsx)
+//  Card: sits right of the title, YouTube-style. Fresh row: before play.
+//  40px tap target, never overlapping the play button.
+// ═══════════════════════════════════════
+.card-info--has-more {
+  position: relative;
+  padding-right: 30px;
+}
+
+.card-more,
+.fresh-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: $text-secondary;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+
+  svg { display: block; pointer-events: none; }
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(255, 255, 255, 0.1);
+    color: $text-primary;
+    outline: none;
+  }
+
+  &[aria-expanded="true"] {
+    background: var(--unis-primary);
+    color: #fff;
+    opacity: 1;
+  }
+}
+
+.card-more {
+  position: absolute;
+  top: 4px;
+  right: -8px;
+  width: 36px;
+  height: 36px;
+}
+
+.fresh-more {
+  width: 38px;
+  height: 38px;
+}
+
+// Desktop: quiet until the card is hovered or focused (like YouTube).
+@media (hover: hover) and (pointer: fine) {
+  .card-more { opacity: 0.55; }
+
+  .song-card:hover .card-more,
+  .song-card:focus-within .card-more,
+  .song-card--menu-open .card-more {
+    opacity: 1;
+  }
+}
+
+// Long-press opens the menu, so stop the phone's own image/text callout.
+.song-card,
+.fresh-row {
+  -webkit-touch-callout: none;
+}
+
+.song-card--menu-open .card-title {
+  color: $unis-blue;
+}
+
+.fresh-row--menu-open {
+  border-color: var(--unis-primary-border, $border-medium);
+}

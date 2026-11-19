@@ -31,6 +31,7 @@ import { useFeedback } from './context/FeedbackContext';
 import { FeedSpotlight, TodayRace, DayTiles, MoversCard, FollowingDrops } from './feedModules';
 import { SplashHold } from './boot/bootSplash';
 import ArtistOfWeekCard from './ArtistOfWeekCard';
+import SongMenu, { KebabIcon, anchorFromEvent, useSongMenuGestures, hasSongMenu } from './SongMenu'; // ★ song ⋮ menu
 import './feed.scss';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -244,12 +245,38 @@ const PlaylistCover = ({ playlist, className }) => {
   );
 };
 
+// ─── ⋮ button that opens the song menu (★) ───
+// Its own 40px target, away from the play button, so a slightly-off tap
+// can't start the song instead (the top complaint about these menus).
+const SongMoreButton = ({ item, open, onMenu, className }) => {
+  if (!onMenu || !hasSongMenu(item)) return null;
+  return (
+    <button
+      type="button"
+      className={className}
+      aria-label={`More options for ${item.title}`}
+      aria-haspopup="menu"
+      aria-expanded={open}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onMenu(item, anchorFromEvent(e));
+      }}
+    >
+      <KebabIcon />
+    </button>
+  );
+};
+
 // ─── Reusable song card (Trending / New releases rows) ───
-const SongCard = React.memo(({ item, index, onNav, onArtistNav, onPlay }) => (
+const SongCard = React.memo(({ item, index, onNav, onArtistNav, onPlay, onMenu, menuOpen = false }) => { // ★ onMenu, menuOpen
+  const gestures = useSongMenuGestures(item, onMenu); // ★ right-click / long-press open the menu
+  return (
   <div 
-    className="song-card"
+    className={`song-card ${menuOpen ? 'song-card--menu-open' : ''}`}
     style={{ animationDelay: `${0.05 * (index + 1)}s` }}
     onClick={() => onNav(item.id, item.type)}
+    {...gestures}
   >
     <div className="card-artwork">
       <img 
@@ -272,8 +299,9 @@ const SongCard = React.memo(({ item, index, onNav, onArtistNav, onPlay }) => (
         <CardPlayIcon />
       </button>
     </div>
-    <div className="card-info">
+    <div className={`card-info ${onMenu && hasSongMenu(item) ? 'card-info--has-more' : ''}`}>
       <div className="card-title">{item.title}</div>
+      <SongMoreButton item={item} open={menuOpen} onMenu={onMenu} className="card-more" />
 
       <div className="card-subrow">
         <div
@@ -305,7 +333,53 @@ const SongCard = React.memo(({ item, index, onNav, onArtistNav, onPlay }) => (
       )}
     </div>
   </div>
-));
+  );
+});
+
+// ─── Fresh lens row (★ moved out of the map so it can use the menu gestures) ───
+const FreshRow = React.memo(({ item, onNav, onArtistNav, onPlay, onMenu, menuOpen = false }) => {
+  const gestures = useSongMenuGestures(item, onMenu);
+  return (
+    <div
+      className={`fresh-row ${menuOpen ? 'fresh-row--menu-open' : ''}`}
+      onClick={() => onNav(item.id, item.type)}
+      {...gestures}
+    >
+      <div className="fresh-artwork">
+        <img
+          src={item.artworkUrl || item.artwork || randomRapper}
+          alt={item.title}
+          onError={(e) => { e.target.src = randomRapper; }}
+        />
+      </div>
+      <div className="fresh-info">
+        <div className="fresh-title">{item.title}</div>
+        <div
+          className="fresh-artist"
+          onClick={(e) => {
+            e.stopPropagation();
+            onArtistNav(item.artistData?.userId || 'unknown');
+          }}
+        >
+          {item.artistData?.username || item.artist || 'Unknown'}
+          {item.createdAt ? <> &middot; {formatTimeAgo(item.createdAt)}</> : null}
+        </div>
+      </div>
+      {isWithinDays(item.createdAt, 7) && (
+        <span className="fresh-badge">NEW</span>
+      )}
+      <SongMoreButton item={item} open={menuOpen} onMenu={onMenu} className="fresh-more" />
+      <button
+        type="button"
+        className="chart-play"
+        aria-label={`Play ${item.title}`}
+        onClick={(e) => onPlay(e, item)}
+      >
+        <CardPlayIcon />
+      </button>
+    </div>
+  );
+});
 
 // ─── Ghost jurisdiction dropdown ───
 const JurisdictionSelect = ({ jurisdictions, value, label, onChange }) => (
@@ -415,6 +489,9 @@ const Feed = () => {
   const [followingDrops, setFollowingDrops] = useState([]);
   const { displayedScore } = useReward() || {};
   const feedback = useFeedback();
+
+  // ★ Song ⋮ menu — one for the whole page. `key` gives each opening a fresh menu.
+  const [songMenu, setSongMenu] = useState(null); // { song, anchor, key }
 
   const userId = user?.userId;
   const userJurisdictionId = user?.jurisdiction?.jurisdictionId || DEFAULT_JURISDICTION_ID;
@@ -810,6 +887,27 @@ const Feed = () => {
 
   // Play a board entry (song, or an artist's default song). Plays are counted
   // by the Player after real listening, never here.
+  // ★ ⋮ on a card: opens its menu; pressing the same ⋮ again closes it.
+  const openSongMenu = useCallback((song, anchor) => {
+    setSongMenu((current) => (
+      current && current.song.id === song.id && anchor && anchor.left !== anchor.right
+        && current.anchor?.trigger === anchor.trigger
+        ? null
+        : { song, anchor, key: Date.now() }
+    ));
+  }, []);
+  const closeSongMenu = useCallback(() => setSongMenu(null), []);
+
+  // ★ "Play next" / "Add to queue" with nothing queued: just play it.
+  const playFromMenu = useCallback((song) => {
+    if (isGuest) {
+      incrementGateSongCount();
+    }
+    requestPlay(song);
+  }, [isGuest, requestPlay]);
+  const requireAccount = useCallback(() => triggerGate('generic'), [triggerGate]);
+  const menuSongId = songMenu?.song?.id;
+
   const handlePlayChartEntry = useCallback(async (e, entry) => {
     e.stopPropagation();
     if (isGuest) {
@@ -949,6 +1047,8 @@ const Feed = () => {
                       onNav={handleSongNav}
                       onArtistNav={handleArtistNav}
                       onPlay={handlePlayMedia}
+                      onMenu={openSongMenu}
+                      menuOpen={menuSongId === item.id}
                     />
                   ))}
                 </div>
@@ -970,6 +1070,8 @@ const Feed = () => {
                       onNav={handleSongNav}
                       onArtistNav={handleArtistNav}
                       onPlay={handlePlayMedia}
+                      onMenu={openSongMenu}
+                      menuOpen={menuSongId === item.id}
                     />
                   ))}
                 </div>
@@ -1290,43 +1392,15 @@ const Feed = () => {
               </div>
               <div className="fresh-list">
                 {newMediaList.map((item) => (
-                  <div
+                  <FreshRow
                     key={item.id}
-                    className="fresh-row"
-                    onClick={() => handleSongNav(item.id, item.type)}
-                  >
-                    <div className="fresh-artwork">
-                      <img
-                        src={item.artworkUrl || item.artwork || randomRapper}
-                        alt={item.title}
-                        onError={(e) => { e.target.src = randomRapper; }}
-                      />
-                    </div>
-                    <div className="fresh-info">
-                      <div className="fresh-title">{item.title}</div>
-                      <div
-                        className="fresh-artist"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleArtistNav(item.artistData?.userId || 'unknown');
-                        }}
-                      >
-                        {item.artistData?.username || item.artist || 'Unknown'}
-                        {item.createdAt ? <> &middot; {formatTimeAgo(item.createdAt)}</> : null}
-                      </div>
-                    </div>
-                    {isWithinDays(item.createdAt, 7) && (
-                      <span className="fresh-badge">NEW</span>
-                    )}
-                    <button
-                      type="button"
-                      className="chart-play"
-                      aria-label={`Play ${item.title}`}
-                      onClick={(e) => handlePlayMedia(e, item)}
-                    >
-                      <CardPlayIcon />
-                    </button>
-                  </div>
+                    item={item}
+                    onNav={handleSongNav}
+                    onArtistNav={handleArtistNav}
+                    onPlay={handlePlayMedia}
+                    onMenu={openSongMenu}
+                    menuOpen={menuSongId === item.id}
+                  />
                 ))}
               </div>
 
@@ -1374,6 +1448,19 @@ const Feed = () => {
       {/* Auth gate bottom sheet — triggered when guest taps Vote */}
 
       <AuthGateSheet {...gateProps} />
+
+      {/* ★ Song ⋮ menu (Play next · Add to queue · Save to playlist · Download · Share) */}
+      {songMenu && (
+        <SongMenu
+          key={songMenu.key}
+          song={songMenu.song}
+          anchor={songMenu.anchor}
+          onClose={closeSongMenu}
+          onPlayNow={playFromMenu}
+          isGuest={isGuest}
+          onRequireAccount={requireAccount}
+        />
+      )}
     </Layout>
   );
 };
