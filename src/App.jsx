@@ -48,6 +48,8 @@ const FindPage = lazyWithRetry(() => import('./findpage'));
 const PrivacyPolicy = lazyWithRetry(() => import('./privacyPolicy'));
 const TermsOfService = lazyWithRetry(() => import('./termsOfService'));
 const CookiePolicy = lazyWithRetry(() => import('./cookiePolicy'));
+// ★ Cookie banner + Cookie settings (Nov 2026). Not lazy: it shows on first visit.
+import CookieConsent from './CookieConsent';
 const ReportInfringement = lazyWithRetry(() => import('./reportInfringement'));
 const ArtistDashboard = lazyWithRetry(() => import('./artistDashboard'));
 const JurisdictionPage = lazyWithRetry(() => import('./jurisdictionPage'));
@@ -275,6 +277,7 @@ const App = () => {
         <PlayerProvider>
           <Router>
             <AppLayout />
+            <CookieConsent />
           </Router>
         </PlayerProvider>
       </AuthProvider>

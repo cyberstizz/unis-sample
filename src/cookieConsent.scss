@@ -1,0 +1,391 @@
+// cookieConsent.scss — the cookie banner and Cookie settings (Nov 2026).
+// Theme-aware from --unis-primary. The banner sits above the player bar
+// (80px) when the player is on the page, and at the bottom edge otherwise.
+
+$ck-p: var(--unis-primary, #163387);
+$ck-p3: color-mix(in srgb, var(--unis-primary, #163387), white 64%);
+$ck-pt: color-mix(in srgb, var(--unis-primary, #163387), transparent 78%);
+$ck-pg: color-mix(in srgb, var(--unis-primary, #163387), transparent 45%);
+$ck-sans: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+$ck-serif: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+$ck-player: 80px;
+$ck-phone: 640px;
+
+// The wrapper is a direct child of #root, where a global rule sets
+// position: relative on every child. display: contents makes it boxless, so
+// the fixed banner and dialog inside it position against the screen.
+#root > .ck-root,
+.ck-root {
+  display: contents;
+}
+
+.ck-banner,
+.ck-sheet {
+  font-family: $ck-sans;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  border-radius: 24px;
+  background: linear-gradient(150deg,
+    color-mix(in srgb, var(--unis-primary, #163387) 30%, #12141c) 0%,
+    #101219 55%,
+    #0c0d13 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.4);
+
+  button { font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 2px solid $ck-p3; outline-offset: 2px; }
+}
+
+// ─── First layer: the banner ──────────────────────────────────
+.ck-banner {
+  position: fixed;
+  z-index: 1250; // above the player (1000), below sheets and toasts
+  left: 24px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  width: 420px;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
+  padding: 20px 20px 12px;
+  animation: ck-rise 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+
+  @media (max-width: $ck-phone) {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    padding: 18px 18px 12px;
+  }
+
+  &__top {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  &__copy { min-width: 0; }
+
+  &__links {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+  }
+}
+
+// Clear the player bar when it's on the page.
+body:has(.player) .ck-banner {
+  bottom: calc(#{$ck-player} + 16px + env(safe-area-inset-bottom, 0px));
+
+  @media (max-width: $ck-phone) {
+    bottom: calc(#{$ck-player} + 12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.ck-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 11px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: $ck-pt;
+  color: $ck-p3;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ck-title {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: #fff;
+
+  em {
+    font-family: $ck-serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.17em;
+    color: $ck-p3;
+  }
+
+  &--lg { margin: 0; font-size: 24px; }
+}
+
+.ck-text {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+// "Only essential" and "Allow all": same size, same color, side by side.
+.ck-pair {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.ck-btn {
+  flex: 1;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: $ck-p;
+  color: #fff;
+  box-shadow: 0 10px 24px -12px $ck-pg, inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  font-size: 14.5px;
+  font-weight: 700;
+  transition: filter 0.16s ease, transform 0.16s ease;
+
+  &:hover { filter: brightness(1.1); }
+  &:active { transform: scale(0.97); }
+
+  &--wide { width: 100%; margin-top: 8px; }
+}
+
+.ck-ghost {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.16s ease, transform 0.16s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.1); }
+  &:active { transform: scale(0.97); }
+}
+
+// Yellow is too light for white text.
+[data-theme="yellow"] .ck-btn { color: #1a1300; }
+
+.ck-textbtn {
+  border: 0;
+  background: none;
+  min-height: 36px;
+  padding: 0 2px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: $ck-p3;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ck-policy {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.62);
+  text-decoration: none;
+
+  &:hover { color: #fff; text-decoration: underline; }
+
+  &--center {
+    display: block;
+    width: fit-content;
+    margin: 14px auto 0;
+  }
+}
+
+// ─── The record with a bite out of it ─────────────────────────
+.ck-record {
+  flex: 0 0 auto;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.5));
+
+  &__spin {
+    transform-origin: 60px 60px;
+    animation: ck-spin 6s linear infinite;
+  }
+
+  &__ring { fill: $ck-p; }
+}
+
+// ─── Second layer: Cookie settings ────────────────────────────
+.ck-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 3000; // above the player and the banner, below toasts
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+
+  @media (max-width: $ck-phone) {
+    align-items: flex-end;
+    padding: 0;
+  }
+}
+
+.ck-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 4, 8, 0.62);
+  backdrop-filter: blur(3px);
+  animation: ck-fade 0.25s ease both;
+}
+
+.ck-sheet {
+  position: relative;
+  width: 480px;
+  max-width: 100%;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 22px 24px 22px;
+  animation: ck-pop 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+
+  @media (max-width: $ck-phone) {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 28px 28px 0 0;
+    padding: 10px 20px calc(22px + env(safe-area-inset-bottom, 0px));
+    animation: ck-rise 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+  }
+
+  &__grab {
+    display: none;
+    width: 40px;
+    height: 5px;
+    margin: 0 auto 14px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.25);
+
+    @media (max-width: $ck-phone) { display: block; }
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  > .ck-text { margin-bottom: 12px; }
+}
+
+.ck-close {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover { background: rgba(255, 255, 255, 0.14); }
+}
+
+.ck-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+  &__copy { flex: 1; min-width: 0; }
+
+  &__name {
+    display: block;
+    font-size: 15.5px;
+    font-weight: 700;
+  }
+
+  &__desc {
+    display: block;
+    margin-top: 3px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.66);
+  }
+}
+
+.ck-always {
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: $ck-pt;
+  color: $ck-p3;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+}
+
+// A switch whose knob plays an equalizer while it's on.
+.ck-switch {
+  position: relative;
+  width: 54px;
+  height: 32px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  transition: background-color 0.2s ease;
+
+  &.is-on { background: $ck-p; }
+  &.is-locked { background: rgba(255, 255, 255, 0.1); cursor: not-allowed; }
+
+  &__knob {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 24px;
+    height: 24px;
+    box-sizing: border-box;
+    padding-bottom: 7px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 2px;
+    transition: left 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.25);
+
+    i {
+      display: block;
+      width: 2.5px;
+      height: 3px;
+      border-radius: 1px;
+      background: $ck-p;
+      animation: ck-eq 0.9s ease-in-out infinite;
+
+      &:nth-child(2) { animation-delay: 0.15s; }
+      &:nth-child(3) { animation-delay: 0.3s; }
+    }
+  }
+
+  &.is-on &__knob { left: 26px; }
+
+  &.is-locked &__knob {
+    padding: 0;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.55);
+  }
+}
+
+@keyframes ck-rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ck-pop { from { transform: scale(0.94); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ck-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ck-spin { to { transform: rotate(360deg); } }
+@keyframes ck-eq { 0%, 100% { height: 3px; } 50% { height: 10px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ck-banner,
+  .ck-sheet,
+  .ck-scrim,
+  .ck-record__spin,
+  .ck-switch__knob i {
+    animation: none;
+  }
+  .ck-switch__knob i { height: 7px; }
+  .ck-switch__knob { transition: none; }
+}

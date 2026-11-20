@@ -26,3 +26,16 @@ $unis-blue: var(--unis-primary);
         height: 20vh !important;
     }
 }
+
+// "Cookie settings" opens the cookie dialog; it looks like the links beside it.
+.footer-cookie-btn {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+
+    &:hover { text-decoration: underline; }
+    &:focus-visible { outline: 2px solid var(--unis-primary); outline-offset: 2px; }
+}

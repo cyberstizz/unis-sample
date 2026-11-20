@@ -15,6 +15,7 @@
 // with { state: { unisTour: true } } (startTour() in tourStorage.js).
 // ─────────────────────────────────────────────────────────────
 import React, { Suspense, useEffect, useRef, useState, useCallback } from 'react';
+import { useConsent } from '../utils/consent';
 import { useLocation, useNavigate } from 'react-router-dom';
 import lazyWithRetry from '../utils/lazyWithRetry';
 import { useAuth } from '../context/AuthContext';
@@ -54,6 +55,8 @@ export default function TourLauncher() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [splashGone, setSplashGone] = useState(false);
+  // The cookie banner goes first; the tour waits until it's answered.
+  const cookieChoice = useConsent();
   const autoTriedFor = useRef(null);
 
   const onFeed = location.pathname === '/';
@@ -81,12 +84,12 @@ export default function TourLauncher() {
 
   // First visit.
   useEffect(() => {
-    if (open || !authLoaded || !splashGone || !onFeed || locked || replayRequested) return undefined;
+    if (open || !authLoaded || !splashGone || !cookieChoice || !onFeed || locked || replayRequested) return undefined;
     const who = user?.userId || 'guest';
     if (autoTriedFor.current === who || hasSeenTour(user)) return undefined;
     autoTriedFor.current = who;
     return whenFeedReady(() => setOpen(true));
-  }, [open, authLoaded, splashGone, onFeed, locked, replayRequested, user]);
+  }, [open, authLoaded, splashGone, cookieChoice, onFeed, locked, replayRequested, user]);
 
   // Leaving the feed (the tour blocks the page, but a back gesture can
   // still navigate) closes it without counting as seen.

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom'; 
+import { openCookieSettings } from './utils/consent';
 import './footer.scss';
 
 const Footer = () => {
@@ -11,6 +12,8 @@ const Footer = () => {
         <Link to="/terms">Terms of Use</Link>
         <span className="footer-separator">|</span>
         <Link to="/cookie">Cookie Policy</Link>
+        <span className="footer-separator">|</span>
+        <button type="button" className="footer-cookie-btn" onClick={openCookieSettings}>Cookie settings</button>
         <span className="footer-separator">|</span>
         <Link to="/report">Report Infringement</Link>
       </div>

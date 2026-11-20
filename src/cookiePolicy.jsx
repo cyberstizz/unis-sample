@@ -2,6 +2,7 @@ import React from 'react';
 import Layout from './layout';
 import './cookiePolicy.scss';
 import backimage from './assets/randomrapper.jpeg';
+import { openCookieSettings } from './utils/consent';
 
 const CookiePolicy = () => {
   return (
@@ -13,7 +14,7 @@ const CookiePolicy = () => {
             <h1>Cookie Policy</h1>
             <div className="policy-meta">
               <p><strong>Effective Date:</strong> November 30, 2025</p>
-              <p><strong>Last Updated:</strong> October 19, 2026</p>
+              <p><strong>Last Updated:</strong> November 20, 2026</p>
             </div>
           </header>
 
@@ -21,11 +22,17 @@ const CookiePolicy = () => {
             <p>
               This Cookie Policy explains how Unis Inc. ("Unis," "we," "us," or "our") uses cookies, local storage, 
               and similar tracking technologies on our website and mobile applications (collectively, the "Services"). 
-              By using the Services, you consent to the use of these technologies as described in this policy.
+              Essential storage is always on. Analytics and advertising cookies only run after you allow them,
+              in the cookie banner or in Cookie settings, and saying no is as easy as saying yes.
+            </p>
+            <p>
+              <button type="button" className="policy-cookie-btn" onClick={openCookieSettings}>
+                Open Cookie settings
+              </button>
             </p>
             <p>
               For more information about how we collect and use your data, please see our{' '}
-              <a href="/privacy-policy">Privacy Policy</a>.
+              <a href="/privacy">Privacy Policy</a>.
             </p>
           </section>
 
@@ -75,8 +82,9 @@ const CookiePolicy = () => {
               <h4>Analytics Cookies (Optional)</h4>
               <ul>
                 <li>
-                  <strong>Google Analytics:</strong> We use Google Analytics to understand how users interact with Unis 
-                  (e.g., popular pages, user flows). Google may set cookies to track aggregated, anonymized usage data.
+                  <strong>Google Analytics:</strong> Helps us understand how people use Unis (e.g., popular pages,
+                  user flows). Google may set cookies to track aggregated, anonymized usage data. It only runs if you
+                  allow analytics cookies.
                 </li>
               </ul>
               <p className="note">
@@ -94,7 +102,8 @@ const CookiePolicy = () => {
                   <strong>Google AdSense:</strong> Pages with an ad space may show ads from Google. Third-party vendors, 
                   including Google, use cookies to serve ads based on your prior visits to Unis or other websites. 
                   Google&rsquo;s use of advertising cookies enables it and its partners to serve ads based on your 
-                  visits to Unis and/or other sites on the Internet.
+                  visits to Unis and/or other sites on the Internet. These cookies only run if you allow advertising
+                  cookies; if you don&rsquo;t, any Google ads you see are not personalised.
                 </li>
                 <li>
                   <strong>Local sponsorships</strong> (labeled &ldquo;Sponsored &middot; Local&rdquo;) are shown by 
@@ -141,6 +150,14 @@ const CookiePolicy = () => {
 
           <section className="policy-section">
             <h2>3. How to Manage Cookies & Storage</h2>
+
+            <h3>Cookie settings</h3>
+            <p>
+              Change your choice any time from <strong>Cookie settings</strong> at the bottom of any page, or{' '}
+              <button type="button" className="policy-cookie-btn policy-cookie-btn--inline" onClick={openCookieSettings}>
+                open it here
+              </button>. Your choice is kept on this device for a year.
+            </p>
             
             <h3>Browser Settings</h3>
             <p>Most browsers allow you to:</p>
@@ -193,18 +210,23 @@ const CookiePolicy = () => {
               Some browsers support "Do Not Track" (DNT) signals. We honor DNT signals where technically feasible, 
               but note that some third-party services may not respond to DNT.
             </p>
+            <p>
+              <strong>Global Privacy Control:</strong> If your browser sends a Global Privacy Control signal, we treat
+              it as a request to opt out: advertising cookies stay off, and Cookie settings shows that the signal was
+              honored.
+            </p>
           </section>
 
           <section className="policy-section">
             <h2>5. International Users</h2>
             <p>
               <strong>EU/UK Users (GDPR):</strong> You have the right to consent to or refuse non-essential cookies. 
-              We use essential storage (authentication) by default; analytics cookies require implied consent through 
-              continued use (you can opt out anytime).
+              We use essential storage (authentication) by default. Analytics and advertising cookies only run after
+              you allow them, and you can change your choice any time in Cookie settings.
             </p>
             <p>
               <strong>California Users (CCPA):</strong> We do not sell personal information collected via cookies. 
-              See our <a href="/privacy-policy">Privacy Policy</a> for your rights.
+              See our <a href="/privacy">Privacy Policy</a> for your rights.
             </p>
           </section>
 

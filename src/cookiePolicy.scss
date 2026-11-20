@@ -300,3 +300,30 @@ html {
     }
   }
 }
+
+// "Open Cookie settings" — opens the same dialog as the footer link.
+.policy-cookie-btn {
+  height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--unis-primary, #163387);
+  color: #fff;
+  font: 600 14px var(--unis-font-sans, 'Inter', sans-serif);
+  cursor: pointer;
+
+  &:hover { filter: brightness(1.1); }
+  &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+  &--inline {
+    height: auto;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+  }
+}
+
+[data-theme="yellow"] .policy-cookie-btn:not(.policy-cookie-btn--inline) { color: #1a1300; }
