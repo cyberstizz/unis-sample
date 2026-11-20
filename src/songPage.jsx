@@ -17,6 +17,9 @@ import { useReward } from './context/RewardContext';
 import { buildUrl } from './utils/buildUrl';
 import RecommendedSongs from './RecommendedSongs';
 import { useTaxonomy } from './utils/taxonomy';
+import { fetchStandings } from './utils/standings';
+import FollowBar from './components/FollowBar';
+import { useFollowBar } from './hooks/useFollowBar';
 
 const SongPage = () => {
   const { songId } = useParams();
@@ -46,6 +49,12 @@ const SongPage = () => {
   const [isBlocked, setIsBlocked] = useState(false);
   const [dominantColor, setDominantColor] = useState('rgba(255, 255, 255, 0.1)');
   const [ambientRGB, setAmbientRGB] = useState({ r: 80, g: 60, b: 40 });
+  // ★ Weekly standing for the bar's line: { rank, when } or null (not ranked).
+  const [standing, setStanding] = useState(null);
+
+  // ★ The bar that follows you (shared frame: components/FollowBar.jsx).
+  //   titleRef goes on the song title, playRef on the page's own Play.
+  const bar = useFollowBar({ ready: !loading && !!song });
 
   const extractColor = (url) => {
     const img = new Image();
@@ -124,6 +133,7 @@ const SongPage = () => {
           artistId: songData.artist.userId,
           artistPhoto: buildUrl(songData.artist.photoUrl) || null,
           jurisdiction: songData.jurisdiction?.name || 'Unknown',
+          jurisdictionId: songData.jurisdiction?.jurisdictionId || null,
           artwork: buildUrl(songData.artworkUrl) || songArtwork,
           url: buildUrl(songData.fileUrl) || null,
           description: songData.description || 'No description available',
@@ -141,7 +151,6 @@ const SongPage = () => {
           subgenres: [songData.primarySubgenre, songData.secondarySubgenre].filter(Boolean),
           moods: [songData.primaryMood, songData.secondaryMood].filter(Boolean),
           language: songData.language || null,
-          credits: { producer: 'N/A', writer: 'N/A', mix: 'N/A' },
           photos: [],
           videos: [],
         };
@@ -163,6 +172,38 @@ const SongPage = () => {
   // Play counting lives in the Player only (15s / 25% gate, source, playId).
   // This page used to POST /play itself the moment a song started, which
   // beat the Player's gated call to the 30-minute cooldown and credited skips.
+
+  // ── Load whether the viewer already follows this artist ──
+  // The sidebar's Follow button used to start at "Follow" every time, even
+  // for people who already followed the artist.
+  useEffect(() => {
+    if (!song?.artistId || !userId || song.artistId === userId) { setIsFollowing(false); return; }
+    let active = true;
+    apiCall({ method: 'get', url: `/v1/users/${song.artistId}/is-following` })
+      .then((res) => { if (active) setIsFollowing(!!res.data?.isFollowing); })
+      .catch((err) => console.error('Failed to load follow status:', err));
+    return () => { active = false; };
+  }, [song?.artistId, userId]);
+
+  // ── Weekly standing for the bar ("#3 in Downtown Harlem this week") ──
+  // Same board the Charts and jurisdiction pages read, so the numbers agree.
+  // A song outside the top 50, or a failed read, just shows its area.
+  useEffect(() => {
+    if (!song?.id || !song.jurisdictionId) { setStanding(null); return; }
+    let active = true;
+    fetchStandings({ type: 'song', jurisdictionId: song.jurisdictionId, genre: 'all', period: 'weekly', limit: 50 })
+      .then((board) => {
+        if (!active) return;
+        const entry = board.entries.find((e) => e.id === song.id);
+        const when = board.state === 'LIVE' ? 'this week' : 'last week';
+        setStanding(entry ? { rank: entry.rank, when } : null);
+      })
+      .catch((err) => {
+        console.error('Failed to load song standing:', err);
+        if (active) setStanding(null);
+      });
+    return () => { active = false; };
+  }, [song?.id, song?.jurisdictionId]);
 
   // ── Load whether this song is on the user's do-not-play list ──
   useEffect(() => {
@@ -319,7 +360,6 @@ const SongPage = () => {
   // ── Report — opens the infringement form with this page's URL pre-filled.
   const handleReport = () =>
     navigate(`/report?url=${encodeURIComponent(window.location.href)}`);
-  const handleShare = () => console.log('Share song');
 
   const handleCopyLink = async () => {
     try {
@@ -350,6 +390,12 @@ const SongPage = () => {
 
   const isOwner = userId && song?.artistId === userId;
 
+  const barLine = song
+    ? (standing
+      ? `${song.artist} · #${standing.rank} in ${song.jurisdiction} ${standing.when}`
+      : `${song.artist} · ${song.jurisdiction}`)
+    : '';
+
   // ── Loading ──
   if (loading) {
     return (
@@ -376,6 +422,46 @@ const SongPage = () => {
       {/* When a track is loaded, the fixed player tray (80px) covers the
           bottom of the page — on mobile that's the comment input. Padding
           the container by the tray height keeps comments fully usable. */}
+      {/* ── THE BAR THAT FOLLOWS YOU ──
+          The song's artwork, blurred and tinted with the theme. Shows once the
+          title has gone under the header; Play docks once the page's own Play
+          has scrolled away. Square artwork: songs are square, people round. */}
+      <FollowBar bar={bar} backdrop={song.artwork} label={`${song.title} by ${song.artist}`} className="sp-bar">
+        <button type="button" className="fb-who" onClick={bar.scrollToTop} aria-label={`Back to the top of ${song.title}`}>
+          <img src={song.artwork} alt="" className="sp-bar__art" />
+          <span className="fb-text">
+            <span className="sp-bar__title">{song.title}</span>
+            <span className="fb-line">
+              {isThisSongPlaying && <span className="fb-eq" aria-hidden="true"><i /><i /><i /></span>}
+              <span>{isThisSongPlaying ? `Playing · ${song.artist}` : barLine}</span>
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          className={`fb-icon sp-bar__like${isLiked ? ' is-on' : ''}`}
+          onClick={handleLike}
+          aria-pressed={isLiked}
+          aria-label={isLiked ? `Unlike ${song.title}` : `Like ${song.title}`}
+        >
+          <Heart size={17} fill={isLiked ? 'currentColor' : 'none'} aria-hidden="true" />
+        </button>
+        <button type="button" className="fb-pill" onClick={handleVote}>Vote</button>
+        <button
+          type="button"
+          className="fb-dock"
+          onClick={handleHeroPlayClick}
+          aria-label={isThisSongPlaying ? `Pause ${song.title}` : `Play ${song.title}`}
+          tabIndex={bar.docked ? 0 : -1}
+        >
+          {isThisSongPlaying ? (
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z" fill="currentColor" /></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" style={{ marginLeft: 2 }}><path d="M8 5v14l11-7z" fill="currentColor" /></svg>
+          )}
+        </button>
+      </FollowBar>
+
       <div
         className="song-page-container"
         style={{ paddingBottom: currentMedia ? 100 : undefined }}
@@ -403,7 +489,7 @@ const SongPage = () => {
                   >
                     {song.jurisdiction}
                   </div>
-                  <h1 className="sp-title">
+                  <h1 className="sp-title" ref={bar.titleRef}>
                     {song.title}
                     {song.explicit && <span className="sp-explicit">Explicit</span>}
                   </h1>
@@ -463,6 +549,7 @@ const SongPage = () => {
             {/* ── PRIMARY ACTIONS — text buttons like original ── */}
             <div className="sp-primary-actions">
               <button
+                ref={bar.playRef}
                 onClick={handleHeroPlayClick}
                 className="sp-btn-play-circle"
                 aria-label={isThisSongPlaying ? 'Pause' : 'Play'}
@@ -592,14 +679,9 @@ const SongPage = () => {
               </div>
             )}
 
-            <div className="sp-sidebar-section">
-              <div className="sp-sidebar-title">Credits</div>
-              <div className="sp-credits">
-                <div className="sp-credit"><span className="sp-credit-role">Producer</span><span className="sp-credit-name">{song.credits.producer}</span></div>
-                <div className="sp-credit"><span className="sp-credit-role">Writer</span><span className="sp-credit-name">{song.credits.writer}</span></div>
-                <div className="sp-credit"><span className="sp-credit-role">Mix</span><span className="sp-credit-name">{song.credits.mix}</span></div>
-              </div>
-            </div>
+            {/* Credits: removed (Nov 2026). The backend stores no producer,
+                writer or mix credits yet, so every song showed "N/A" three
+                times. Bring the section back when credits are stored. */}
 
             {song.photos.length > 0 && (
               <div className="sp-sidebar-section">

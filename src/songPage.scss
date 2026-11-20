@@ -661,33 +661,6 @@ $transition-ambient: 1.2s ease;
   color: $text-secondary;
 }
 
-.sp-credits {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.sp-credit {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  &:not(:last-child) { border-bottom: 1px solid $border-default; }
-}
-
-.sp-credit-role {
-  font-size: 11px;
-  color: $text-tertiary;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.sp-credit-name {
-  font-size: 13px;
-  color: $text-secondary;
-}
-
 .sp-media-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -746,4 +719,37 @@ $transition-ambient: 1.2s ease;
   .sp-lyrics-section { padding: 20px 16px; }
   .sp-comments { padding: 8px 16px 24px; }
   .sp-sidebar { padding: 20px 16px; }
+}
+
+// ━━━ THE BAR THAT FOLLOWS YOU (Nov 2026) ━━━
+// The frame, scroll behavior and shared buttons live in
+// components/followBar.scss. This is the song page's own content:
+// square artwork (songs are square, people are round), the title in the
+// page's own weight, and the Like heart.
+.sp-bar__art {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.25);
+
+  @media (max-width: 767px) { width: 36px; height: 36px; border-radius: 6px; }
+}
+
+.sp-bar__title {
+  display: block;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  @media (max-width: 767px) { font-size: 15px; }
+}
+
+.sp-bar__like.is-on {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 45%, transparent);
 }

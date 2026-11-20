@@ -1,0 +1,233 @@
+// followBar.scss — the shared bar that follows you down a page (Nov 2026).
+// See components/FollowBar.jsx for the rules it follows. Pages style their
+// own content inside it; the pieces here (fb-who, fb-line, fb-eq, fb-pill,
+// fb-icon, fb-dock) keep every page's bar behaving and feeling the same.
+
+$fb-header-h: 75px; // keep in sync with $header-height in header.scss
+$fb-phone: 767px;
+$fb-p: var(--unis-primary, #163387);
+$fb-p2: color-mix(in srgb, var(--unis-primary, #163387), white 30%);
+$fb-p3: color-mix(in srgb, var(--unis-primary, #163387), white 62%);
+$fb-pg: color-mix(in srgb, var(--unis-primary, #163387), transparent 62%);
+$fb-sans: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+
+.fb {
+  --fb-hand: 0;
+  position: fixed;
+  top: $fb-header-h;
+  left: var(--sidebar-width, 0px);
+  right: 0;
+  z-index: 900; // below the app header (1000), above the page
+  height: 68px;
+  overflow: hidden;
+  font-family: $fb-sans;
+  color: #fff;
+  // Solid base under the backdrop, so the bar never turns see-through
+  // while the artwork loads or if it fails.
+  background: #07090f;
+  opacity: var(--fb-hand);
+  pointer-events: none;
+  -webkit-font-smoothing: antialiased;
+
+  &.is-shown { pointer-events: auto; }
+
+  @media (max-width: $fb-phone) { height: 56px; }
+
+  &__backdrop {
+    position: absolute;
+    inset: -40px;
+    width: calc(100% + 80px);
+    height: calc(100% + 80px);
+    object-fit: cover;
+    object-position: center 35%;
+    filter: blur(26px) saturate(1.35);
+    transform: scale(1.15);
+  }
+
+  // Solid enough to read: never see-through over the page.
+  &__tint {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+      color-mix(in srgb, #{$fb-p} 55%, rgba(7, 9, 15, 0.78)) 0%,
+      rgba(7, 9, 15, 0.76) 62%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  &__inner {
+    position: relative;
+    height: 100%;
+    max-width: 1280px;
+    box-sizing: border-box;
+    padding: 0 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    @media (max-width: $fb-phone) {
+      gap: 8px;
+      padding: 0 12px 0 14px;
+    }
+  }
+
+  button {
+    font-family: inherit;
+    color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    &:focus-visible { outline: 2px solid $fb-p3; outline-offset: 2px; }
+  }
+}
+
+// ── Shared pieces ────────────────────────────────────────────────────────────
+
+// The "who/what" button: tap to go back to the top. Rises in with the scroll.
+.fb-who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  transform: translateY(calc((1 - var(--fb-hand)) * 14px));
+
+  @media (max-width: $fb-phone) { gap: 10px; }
+}
+
+.fb-text { min-width: 0; }
+
+.fb-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.74);
+  white-space: nowrap;
+  overflow: hidden;
+
+  span { overflow: hidden; text-overflow: ellipsis; }
+
+  @media (max-width: $fb-phone) { margin-top: 2px; font-size: 11.5px; }
+}
+
+.fb-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+  flex: 0 0 auto;
+
+  i {
+    display: block;
+    width: 2.5px;
+    height: 3px;
+    border-radius: 1px;
+    background: $fb-p3;
+    animation: fb-eq 0.9s ease-in-out infinite;
+
+    &:nth-child(2) { animation-delay: 0.15s; }
+    &:nth-child(3) { animation-delay: 0.3s; }
+  }
+}
+
+// Text pill (Vote, Follow).
+.fb-pill {
+  flex: 0 0 auto;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 13.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: background-color 0.16s ease, transform 0.16s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.15); }
+  &:active { transform: scale(0.95); }
+
+  @media (max-width: $fb-phone) {
+    height: 32px;
+    padding: 0 14px;
+    font-size: 12.5px;
+  }
+}
+
+// Round icon button (Like).
+.fb-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.16s ease, transform 0.16s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.14); }
+  &:active { transform: scale(0.92); }
+
+  @media (max-width: $fb-phone) { width: 36px; height: 36px; }
+}
+
+// The Play that docks once the page's own Play has gone under the bar.
+.fb-dock {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: $fb-p;
+  color: #fff;
+  box-shadow: 0 8px 20px -8px $fb-pg, inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.4);
+  pointer-events: none;
+  margin-left: -44px; // takes no room until it docks
+  transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.25), opacity 0.2s ease, margin-left 0.25s ease;
+
+  &:hover { filter: brightness(1.1); }
+
+  @media (max-width: $fb-phone) {
+    width: 40px;
+    height: 40px;
+    margin-left: -40px;
+  }
+}
+
+.fb.is-docked .fb-dock {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  margin-left: 0;
+}
+
+// Yellow theme: dark icon on yellow.
+[data-theme="yellow"] .fb-dock { color: #1a1300; }
+
+@keyframes fb-eq {
+  0%, 100% { height: 3px; }
+  50% { height: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb-who { transform: none; }
+  .fb-dock { transition: opacity 0.2s ease; transform: none; }
+  .fb-eq i { animation: none; height: 7px; }
+  .fb-pill, .fb-icon { transition: none; }
+}
