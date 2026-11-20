@@ -398,7 +398,10 @@ const Sidebar = () => {
     ? {
       eyebrow: 'Your turf',
       name: jName,
-      open: () => handleNav(jId ? `/jurisdiction/${jId}` : '/findpage'),
+      // The jurisdiction page looks places up by name (/jurisdiction/:name),
+      // so the link carries the name. It used to carry the id, which the
+      // page couldn't find ("Couldn't load …").
+      open: () => handleNav(`/jurisdiction/${encodeURIComponent(jName)}`),
       line: leader
         ? (
           <>

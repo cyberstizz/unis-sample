@@ -194,10 +194,10 @@ describe('Sidebar', () => {
       );
     });
 
-    it('opens the jurisdiction page', async () => {
+    it('opens the jurisdiction page by name (the route looks places up by name)', async () => {
       const { user } = signedIn();
       await user.click(screen.getByText('Downtown Harlem'));
-      expect(mockNavigate).toHaveBeenCalledWith('/jurisdiction/j1');
+      expect(mockNavigate).toHaveBeenCalledWith('/jurisdiction/Downtown%20Harlem');
     });
 
     it('shows the launch area to signed-out visitors and opens Find', async () => {

@@ -1,71 +1,43 @@
-// winnersTimeline.scss
-// Vertical timeline of past poll winners for a jurisdiction.
-// Used by both the embedded widget (jurisdiction page section)
-// and the full-page archive at /jurisdiction/:jur/winners.
-// Aesthetic: matches jurisdictionPage.scss — dark premium dashboard,
-// accent from the active theme, Inter body + Instrument Serif italic flourishes.
+// winnersTimeline.scss — Hall of fame (v3, Nov 2026)
+// Past poll winners for a jurisdiction. Used by the embedded section on the
+// jurisdiction page and the full archive at /jurisdiction/:jur/winners.
+//
+// Same grammar as the v6 jurisdiction page and the v4 artist page: Inter,
+// Instrument Serif italic accents, quiet panels, theme from the token layer.
+// The switcher matches the Charts page's; the medals match the artist
+// page's awards shelf (song = gold, artist = theme).
 
-// Fonts come from unis-design-tokens.scss (Inter + Instrument Serif) —
-// no local @import, so the timeline matches Discover / the jurisdiction page.
+$wt-phone: 767px;
 
-// ── Tokens ──────────────────────────────────────
-// Theme contract: every colour resolves from the token layer
-// (theme.scss + unis-design-tokens.scss). The old literal blues pinned this
-// component to the blue theme — under orange/green/purple the timeline stayed
-// blue while the rest of the page re-tinted.
-$wt-bg-base: var(--unis-bg);
-$wt-bg-panel: var(--unis-panel-2);
-$wt-bg-soft: var(--unis-panel-2);
-$wt-bg-hover: var(--unis-panel-hi);
+$wt-p: var(--unis-primary, #163387);
+$wt-p2: color-mix(in srgb, var(--unis-primary, #163387), white 30%);
+$wt-p3: color-mix(in srgb, var(--unis-primary, #163387), white 62%);
+$wt-pt: color-mix(in srgb, var(--unis-primary, #163387), transparent 84%);
+$wt-pg: color-mix(in srgb, var(--unis-primary, #163387), transparent 60%);
+$wt-line: rgba(255, 255, 255, 0.08);
+$wt-line-hi: rgba(255, 255, 255, 0.16);
+$wt-panel: rgba(255, 255, 255, 0.035);
+$wt-serif: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
 
-$wt-border-soft: var(--unis-border);
-$wt-border-medium: var(--unis-border-hi);
-
-$wt-blue-solid: var(--unis-primary);
-$wt-blue-bright: var(--unis-primary-2, var(--unis-primary));
-$wt-blue-glow: var(--unis-primary-glow);
-
-$wt-text-primary: var(--unis-text);
-$wt-text-secondary: var(--unis-text-2);
-$wt-text-muted: var(--unis-text-3);
-$wt-text-faint: var(--unis-text-4);
-
-$wt-radius-sm: 8px;
-$wt-radius-md: 12px;
-$wt-radius-lg: 18px;
-$wt-radius-xl: 24px;
-
-$wt-shadow-card: 0 18px 52px rgba(0, 0, 0, 0.32);
-$wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
+$wt-text-1: var(--unis-text, #fff);
+$wt-text-2: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+$wt-text-3: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+$wt-text-4: var(--unis-text-4, rgba(255, 255, 255, 0.32));
 
 // ── Animations ──────────────────────────────────
 @keyframes wt-fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes wt-fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-@keyframes wt-pulseDot {
-  0%, 100% {
-    box-shadow: 0 0 0 4px $wt-bg-base, 0 0 16px var(--unis-primary-glow);
-  }
-  50% {
-    box-shadow: 0 0 0 4px $wt-bg-base, 0 0 24px var(--unis-primary-glow);
-  }
+@keyframes wt-shimmer {
+  0%   { background-position: -420px 0; }
+  100% { background-position: 420px 0; }
 }
 
 // ═════════════════════════════════════════════════
@@ -74,8 +46,9 @@ $wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
 
 .wt {
   width: 100%;
-  color: $wt-text-primary;
+  color: $wt-text-1;
   font-family: var(--unis-font-sans);
+  -webkit-font-smoothing: antialiased;
   animation: wt-fadeIn 0.4s ease;
 
   *,
@@ -84,14 +57,20 @@ $wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
     box-sizing: border-box;
   }
 
-  button {
-    font-family: inherit;
-  }
 }
 
-// ── When embedded inside another page section ──
-.wt--embedded {
-  margin-top: 46px;
+// Zero-specificity base, so every class below wins without !important
+// (also when the timeline sits inside the jurisdiction page).
+:where(.wt) button {
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &:focus-visible {
+    outline: 2px solid $wt-p3;
+    outline-offset: 2px;
+  }
 }
 
 // ═════════════════════════════════════════════════
@@ -99,466 +78,673 @@ $wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
 // ═════════════════════════════════════════════════
 
 .wt-header {
-  margin-bottom: 26px;
-  animation: wt-fadeUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-.wt-eyebrow {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 7px;
-  color: $wt-blue-bright;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-
-  &::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: $wt-blue-bright;
-    box-shadow: 0 0 16px var(--unis-primary-glow);
-  }
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .wt-title {
-  margin: 10px 0 0;
-  color: $wt-text-primary;
-  font-size: clamp(28px, 4vw, 44px);
-  font-weight: 900;
-  letter-spacing: -0.05em;
-  line-height: 1.02;
+  margin: 0;
+  color: $wt-text-1;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
 
   em {
-    font-family: var(--unis-font-italic);
+    font-family: $wt-serif;
     font-style: italic;
     font-weight: 400;
-    color: $wt-blue-bright;
-    letter-spacing: -0.02em;
+    font-size: 1.16em;
+    color: $wt-p3;
   }
+
+  @media (max-width: $wt-phone) { font-size: 21px; }
+}
+
+.wt--full .wt-title {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .wt-subtitle {
   max-width: 580px;
-  margin: 14px 0 0;
-  color: $wt-text-secondary;
-  font-size: 15px;
-  line-height: 1.6;
+  margin: 4px 0 0;
+  color: $wt-text-3;
+  font-size: 13.5px;
+  line-height: 1.55;
+
+  @media (max-width: $wt-phone) { font-size: 13px; }
 }
 
-// Embedded version uses a tighter header
-.wt--embedded .wt-title {
-  font-size: clamp(24px, 3vw, 30px);
-}
+.wt-link {
+  flex: 0 0 auto;
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: $wt-text-2;
+  white-space: nowrap;
 
-.wt--embedded .wt-subtitle {
-  font-size: 14px;
-  margin-top: 10px;
+  &:hover { color: $wt-text-1; text-decoration: underline; text-underline-offset: 3px; }
+
+  @media (max-width: $wt-phone) { font-size: 13px; }
 }
 
 // ═════════════════════════════════════════════════
-// FILTERS
+// SWITCHER (Charts page look)
 // ═════════════════════════════════════════════════
 
-.wt-filters {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin: 24px 0 32px;
-  padding: 18px 20px;
-  border-radius: $wt-radius-lg;
-  border: 1px solid $wt-border-soft;
-  background:
-    radial-gradient(circle at 88% 0%, var(--unis-glow-2), transparent 50%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
-}
-
-.wt-filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.wt-filter-label {
-  color: $wt-text-muted;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.wt-filter-pills {
+.wt-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 10px;
+  margin: 2px 0 20px;
+
+  @media (max-width: $wt-phone) {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
 }
 
-.wt-pill {
-  min-height: 30px;
-  padding: 0 14px;
+.wt-seg {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 3px;
+  gap: 2px;
   border-radius: 999px;
-  border: 1px solid $wt-border-medium;
   background: rgba(255, 255, 255, 0.04);
-  color: $wt-text-secondary;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition:
-    color 0.18s ease,
-    background 0.18s ease,
-    border-color 0.18s ease,
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
+  border: 1px solid $wt-line;
 
-  &:hover {
-    color: $wt-text-primary;
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.22);
+  &--scroll {
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar { display: none; }
   }
 
-  &.is-active {
-    color: #fff;
-    background:
-      radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.2), transparent 40%),
-      linear-gradient(135deg, $wt-blue-bright 0%, $wt-blue-solid 100%);
-    border-color: var(--unis-primary-border);
-    box-shadow: 0 6px 18px var(--unis-primary-glow);
+  @media (max-width: $wt-phone) {
+    display: flex;
+
+    .wt-seg__btn { flex: 1 0 auto; }
   }
 }
 
-// ═════════════════════════════════════════════════
-// TIMELINE
-// ═════════════════════════════════════════════════
-
-.wt-timeline {
-  display: flex;
-  flex-direction: column;
-}
-
-.wt-entry {
-  position: relative;
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
-  gap: 18px;
-  padding-bottom: 28px;
-  animation: wt-fadeUp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-// Stagger the entry animations slightly for a cascading feel
-.wt-entry:nth-child(1) { animation-delay: 0.02s; }
-.wt-entry:nth-child(2) { animation-delay: 0.06s; }
-.wt-entry:nth-child(3) { animation-delay: 0.10s; }
-.wt-entry:nth-child(4) { animation-delay: 0.14s; }
-.wt-entry:nth-child(5) { animation-delay: 0.18s; }
-.wt-entry:nth-child(n + 6) { animation-delay: 0.22s; }
-
-// ── Gutter (the timeline rail) ─────────────────
-.wt-gutter {
-  position: relative;
-  width: 18px;
-
-  // Vertical line going down from this entry into the next gap
-  &::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 18px;
-    bottom: -28px;
-    width: 2px;
-    background: linear-gradient(
-      to bottom,
-      $wt-border-medium 0%,
-      $wt-border-soft 100%
-    );
-  }
-}
-
-// Last entry shouldn't draw a trailing line
-.wt-entry--last .wt-gutter::before {
-  background: linear-gradient(
-    to bottom,
-    $wt-border-medium 0%,
-    transparent 100%
-  );
-  bottom: 50%;
-}
-
-.wt-dot {
-  position: absolute;
-  left: 0;
-  top: 18px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: $wt-bg-base;
-  border: 2.5px solid $wt-blue-bright;
-  box-shadow:
-    0 0 0 4px $wt-bg-base,
-    0 0 18px var(--unis-primary-glow);
-  z-index: 1;
-}
-
-// First dot pulses subtly to draw the eye to the most recent winner
-.wt-entry:first-child .wt-dot {
-  animation: wt-pulseDot 2.6s ease-in-out infinite;
-}
-
-.wt-entry-content {
-  min-width: 0;
-  padding-top: 2px;
-}
-
-.wt-period {
-  margin: 0 0 10px;
-  color: $wt-text-muted;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-// ═════════════════════════════════════════════════
-// WINNER CARD
-// ═════════════════════════════════════════════════
-
-.wt-card {
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
-  gap: 14px;
-  align-items: center;
-  padding: 14px;
-  border-radius: $wt-radius-lg;
-  border: 1px solid $wt-border-soft;
-  background:
-    radial-gradient(circle at 95% 0%, var(--unis-glow-2), transparent 42%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.018));
-  backdrop-filter: blur(18px);
-  cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    background 0.2s ease;
-
-  // Card children sit above the ambient glow layer.
-  > * { position: relative; z-index: 1; }
-
-  &:focus-visible {
-    outline: 2px solid var(--unis-primary-2, var(--unis-primary));
-    outline-offset: 2px;
-  }
-
-  &:hover .wt-card-glow { opacity: 0.42; }
-
-  &:hover {
-    transform: translateY(-2px);
-    border-color: var(--unis-primary-border);
-    box-shadow: $wt-shadow-card;
-
-    .wt-card-play {
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    .wt-card-art {
-      transform: scale(1.06);
-      filter: brightness(0.85) saturate(1.08);
-    }
-  }
-}
-
-// ── Ambient glow — the winner's own artwork, blurred behind the card.
-// Same treatment as the Milestones winner plate (.ms-plate-glow), so a
-// gold-toned cover warms its card and a cool cover cools it.
-.wt-card-glow {
-  position: absolute;
-  inset: -45%;
-  z-index: 0;
-  background-size: cover;
-  background-position: center;
-  filter: blur(64px) saturate(1.5);
-  opacity: 0.3;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-}
-
-.wt-card-art-wrap {
-  position: relative;
-  width: 68px;
-  height: 68px;
-  border-radius: $wt-radius-md;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.wt-card-art {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  transition: transform 0.35s ease, filter 0.35s ease;
-}
-
-.wt-card-play {
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 32px;
-  height: 32px;
+.wt-seg__btn {
+  min-height: 34px;
+  padding: 0 14px;
   border: 0;
-  border-radius: 50%;
-  background: $wt-blue-solid;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  transform: scale(0.85);
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease,
-    background 0.2s ease;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
-
-  &:hover {
-    background: $wt-blue-bright;
-  }
-}
-
-.wt-card-body {
-  min-width: 0;
-}
-
-.wt-card-title {
-  margin: 0 0 4px;
-  color: $wt-text-primary;
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -0.015em;
-  line-height: 1.22;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.wt-card-meta {
-  margin: 0 0 7px;
-  color: $wt-text-secondary;
+  border-radius: 999px;
+  background: transparent;
   font-size: 13px;
   font-weight: 600;
+  color: $wt-text-2;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover { color: $wt-text-1; }
+
+  &.is-on {
+    background: $wt-p;
+    color: #fff;
+  }
+
+  @media (max-width: $wt-phone) { min-height: 36px; padding: 0 13px; }
 }
 
-.wt-card-stat {
+// ═════════════════════════════════════════════════
+// MEDALS (artist page awards shelf)
+// ═════════════════════════════════════════════════
+
+.wt-medal {
+  position: relative;
+  z-index: 1;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+
+  &--sm {
+    width: 28px;
+    height: 28px;
+    font-size: 9px;
+  }
+
+  &--song {
+    color: #2a1d00;
+    background: radial-gradient(circle at 35% 30%, #ffe9a8, #c9971f 72%);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4);
+  }
+
+  &--artist {
+    color: #fff;
+    background: radial-gradient(circle at 35% 30%, $wt-p3, $wt-p 70%);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+  }
+
+  // Nothing happened that period: no trophy.
+  &--quiet {
+    color: $wt-text-3;
+    background: var(--unis-bg, #07090f);
+    border: 1.5px dashed $wt-line-hi;
+  }
+
+  @media (max-width: $wt-phone) {
+    width: 30px;
+    height: 30px;
+    font-size: 9.5px;
+
+    &--sm { width: 26px; height: 26px; font-size: 8.5px; }
+  }
+}
+
+// ═════════════════════════════════════════════════
+// TAGS
+// ═════════════════════════════════════════════════
+
+.wt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.wt-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: $wt-blue-bright;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
-
-// "Award card" — opens /award/:id, the winner's shareable card
-.wt-card-award {
-  display: flex;
-  align-items: center;
-  width: fit-content;
-  margin-top: 8px;
-  min-height: 28px;
-  padding: 0 11px;
+  height: 26px;
+  padding: 0 10px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--unis-primary) 55%, transparent);
-  background: color-mix(in srgb, var(--unis-primary) 18%, transparent);
-  color: var(--unis-text, #fff);
-  font-family: inherit;
-  font-size: 11px;
+  border: 1px solid $wt-line;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  font-weight: 600;
+  color: $wt-text-2;
+  white-space: nowrap;
+
+  &--votes {
+    color: #f5d27a;
+    border-color: rgba(245, 210, 122, 0.32);
+    background: rgba(245, 210, 122, 0.08);
+  }
+
+  &--streak {
+    color: $wt-text-1;
+    border-color: $wt-p2;
+    background: $wt-pt;
+  }
+
+  &--quiet {
+    color: $wt-text-3;
+    border-style: dashed;
+    background: transparent;
+  }
+}
+
+// Small inline tags in the ledger.
+.wt-mini {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px dashed $wt-line-hi;
+  font-size: 10.5px;
   font-weight: 700;
-  cursor: pointer;
+  color: $wt-text-3;
+  white-space: nowrap;
+
+  &--streak {
+    border-style: solid;
+    border-color: $wt-p2;
+    background: $wt-pt;
+    color: $wt-text-1;
+  }
+}
+
+// ═════════════════════════════════════════════════
+// THE LATEST WINNER
+// ═════════════════════════════════════════════════
+
+.wt-latest {
   position: relative;
-  z-index: 1;
-  transition: background-color 0.16s ease, transform 0.16s ease;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--unis-primary, #163387), transparent 50%);
+  background: color-mix(in srgb, var(--unis-primary, #163387), transparent 86%);
+  animation: wt-fadeUp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 
-  &:hover { background: color-mix(in srgb, var(--unis-primary) 34%, transparent); }
-  &:active { transform: scale(0.95); }
-  &:focus-visible { outline: 2px solid var(--unis-primary-2, #fff); outline-offset: 2px; }
+  &__glow {
+    position: absolute;
+    inset: -60px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(56px) saturate(1.5);
+    opacity: 0.32;
+    pointer-events: none;
+  }
+
+  &__art,
+  &__body,
+  &__actions { position: relative; }
+
+  &__art {
+    width: 120px;
+    height: 120px;
+    border-radius: 14px;
+    object-fit: cover;
+    box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.7);
+
+    &--round { border-radius: 50%; }
+  }
+
+  &__body { min-width: 0; }
+
+  &__kicker {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $wt-text-2;
+
+    b { color: $wt-text-1; font-weight: 700; }
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+
+    button {
+      display: block;
+      max-width: 100%;
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      &:hover { text-decoration: underline; text-underline-offset: 3px; }
+    }
+  }
+
+  &__artist {
+    margin: 4px 0 12px;
+    font-size: 14.5px;
+    color: $wt-text-2;
+  }
+
+  &__title + .wt-tags { margin-top: 12px; }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  // Phones: stacked — kicker, then art beside the name, tags, actions.
+  @media (max-width: $wt-phone) {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 12px 14px;
+    padding: 16px;
+    border-radius: 18px;
+
+    &__art { width: 88px; height: 88px; border-radius: 12px; }
+
+    &__title { font-size: 20px; }
+    &__artist { font-size: 13.5px; margin-bottom: 10px; }
+
+    &__actions { grid-column: 1 / -1; }
+  }
 }
 
-// ═════════════════════════════════════════════════
-// LOAD MORE BUTTON
-// ═════════════════════════════════════════════════
-
-.wt-load-more-wrap {
-  display: flex;
-  justify-content: center;
-  margin-top: 10px;
-  padding-top: 6px;
-}
-
-.wt-load-more {
-  min-height: 46px;
-  padding: 0 26px;
+.wt-play {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: $wt-p;
+  color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease;
+  box-shadow: 0 10px 24px -8px $wt-pg;
+  transition: transform 0.15s ease, filter 0.15s ease;
 
-  &--embedded {
-    color: $wt-text-primary;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid $wt-border-medium;
+  svg { margin-left: 2px; }
 
-    &:hover {
-      transform: translateY(-1px);
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.24);
-    }
-  }
+  &:hover { transform: scale(1.04); filter: brightness(1.1); }
+  &:active { transform: scale(0.96); }
 
-  &--full {
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background:
-      radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.18), transparent 34%),
-      linear-gradient(135deg, $wt-blue-bright 0%, $wt-blue-solid 45%,
-        color-mix(in srgb, var(--unis-primary), black 34%) 100%);
-    box-shadow: $wt-shadow-blue;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 16px 42px var(--unis-primary-glow);
-    }
-  }
+  @media (max-width: $wt-phone) { width: 48px; height: 48px; }
 }
 
-.wt-empty {
-  padding: 24px 0;
-  color: $wt-text-muted;
-  font-size: 14px;
-  text-align: center;
+.wt-pill {
+  height: 38px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+
+  &:hover { border-color: #fff; }
+  &:active { transform: scale(0.97); }
+
+  @media (max-width: $wt-phone) { height: 40px; }
 }
 
 // ═════════════════════════════════════════════════
-// FULL PAGE LAYOUT
+// EARLIER WINNERS — the ledger
+// ═════════════════════════════════════════════════
+
+.wt-ledger {
+  position: relative;
+  margin-top: 6px;
+
+  // The rail runs through the medals.
+  &__rail {
+    position: absolute;
+    left: 144px; // date column (112) + gap (14) + half a medal (19) - 1
+    top: 30px;
+    bottom: 30px;
+    width: 2px;
+    background: linear-gradient($wt-line-hi, rgba(255, 255, 255, 0));
+    pointer-events: none;
+
+    @media (max-width: $wt-phone) { left: 14px; top: 26px; bottom: 26px; }
+  }
+
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+}
+
+.wt-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 112px 38px 48px minmax(0, 1fr) auto 96px 36px 36px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid $wt-line;
+  animation: wt-fadeUp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  &:nth-child(2) { animation-delay: 0.04s; }
+  &:nth-child(3) { animation-delay: 0.08s; }
+  &:nth-child(n + 4) { animation-delay: 0.12s; }
+
+  &__date {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $wt-text-3;
+    font-variant-numeric: tabular-nums;
+
+    &--inline { display: none; }
+  }
+
+  &__art {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    object-fit: cover;
+
+    &--round { border-radius: 50%; }
+  }
+
+  &__main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  &__title {
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 700;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover { text-decoration: underline; text-underline-offset: 3px; }
+  }
+
+  &__sub {
+    max-width: 100%;
+    margin-top: 2px;
+    font-size: 12.5px;
+    color: $wt-text-3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &--narrow { display: none; }
+  }
+
+  &__tags {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  &__stat {
+    font-size: 12.5px;
+    color: $wt-text-2;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  // Phones: medal, art, then date / name / one line of detail.
+  @media (max-width: $wt-phone) {
+    grid-template-columns: 30px 44px minmax(0, 1fr) 36px 36px;
+    gap: 10px;
+
+    > .wt-row__date,
+    &__tags,
+    &__stat { display: none; }
+
+    &__date--inline {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+      font-size: 11.5px;
+    }
+
+    &__art { width: 44px; height: 44px; }
+    &__title { font-size: 14px; }
+
+    &__sub--wide { display: none; }
+    &__sub--narrow { display: block; font-size: 12px; }
+  }
+}
+
+.wt-ibtn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid $wt-line-hi;
+  background: rgba(255, 255, 255, 0.04);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.1); }
+
+  &--play {
+    border-color: transparent;
+    background: $wt-p;
+    color: #fff;
+
+    &:hover { background: $wt-p; filter: brightness(1.1); }
+  }
+
+  &--none { width: 36px; height: 36px; }
+}
+
+// ═════════════════════════════════════════════════
+// MORE
+// ═════════════════════════════════════════════════
+
+.wt-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.wt-more__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid $wt-line-hi;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--unis-primary-border, $wt-line-hi);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  @media (max-width: $wt-phone) { min-height: 44px; }
+}
+
+// ═════════════════════════════════════════════════
+// EMPTY / LOADING / ERROR
+// ═════════════════════════════════════════════════
+
+.wt-empty {
+  padding: 26px 18px;
+  border-radius: 16px;
+  border: 1px dashed $wt-line-hi;
+  text-align: center;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: $wt-text-3;
+
+  b {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 15px;
+    color: $wt-text-1;
+  }
+}
+
+.wt-skeleton {
+  &__plate,
+  &__dot,
+  &__art,
+  &__line {
+    background: linear-gradient(100deg,
+      rgba(255, 255, 255, 0.03) 20%,
+      rgba(255, 255, 255, 0.07) 42%,
+      rgba(255, 255, 255, 0.03) 64%);
+    background-size: 420px 100%;
+    animation: wt-shimmer 1.35s linear infinite;
+  }
+
+  &__plate {
+    height: 160px;
+    border-radius: 20px;
+
+    @media (max-width: $wt-phone) { height: 190px; border-radius: 18px; }
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 38px 48px minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid $wt-line;
+
+    @media (max-width: $wt-phone) { grid-template-columns: 30px 44px minmax(0, 1fr); gap: 10px; }
+  }
+
+  &__dot { width: 100%; aspect-ratio: 1; border-radius: 50%; }
+  &__art { width: 100%; aspect-ratio: 1; border-radius: 10px; }
+  &__line { height: 30px; border-radius: 8px; }
+}
+
+.wt-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid $wt-line;
+  background: rgba(255, 255, 255, 0.03);
+
+  p {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: $wt-text-2;
+  }
+}
+
+.wt-retry {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 650;
+
+  &:hover { border-color: #fff; }
+}
+
+// ═════════════════════════════════════════════════
+// FULL PAGE LAYOUT (the archive at /jurisdiction/:jur/winners)
 // ═════════════════════════════════════════════════
 
 .wt-page {
@@ -582,9 +768,10 @@ $wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
   width: fit-content;
   padding: 9px 16px;
   border-radius: 999px;
-  border: 1px solid $wt-border-medium;
+  border: 1px solid $wt-line-hi;
   background: rgba(255, 255, 255, 0.04);
-  color: $wt-text-secondary;
+  color: $wt-text-2;
+  font-family: var(--unis-font-sans);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -596,7 +783,7 @@ $wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
     border-color 0.18s ease;
 
   &:hover {
-    color: $wt-text-primary;
+    color: $wt-text-1;
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.24);
     transform: translateX(-2px);
@@ -623,10 +810,6 @@ $wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
     'back'
     'main';
 }
-
-// ═════════════════════════════════════════════════
-// RESPONSIVE
-// ═════════════════════════════════════════════════
 
 @media (max-width: 1080px) {
   .wt-page {
@@ -678,155 +861,42 @@ $wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
     padding: 18px 14px 60px;
     row-gap: 14px;
   }
+}
 
-  .wt--embedded {
-    margin-top: 34px;
+// Desktop ledger squeezes between the sidebar and the ad rail on the archive
+// page: drop the tag column there before the name gets crowded.
+@media (min-width: $wt-phone + 1) and (max-width: 1180px) {
+  .wt--full .wt-row {
+    grid-template-columns: 112px 38px 48px minmax(0, 1fr) 96px 36px 36px;
+
+    .wt-row__tags { display: none; }
   }
-
-  .wt-filters {
-    padding: 14px 16px;
-    gap: 12px;
-  }
-
-  .wt-filter-pills {
-    gap: 6px;
-  }
-
-  .wt-pill {
-    min-height: 28px;
-    padding: 0 12px;
-    font-size: 11px;
-  }
-
-  .wt-entry {
-    grid-template-columns: 16px minmax(0, 1fr);
-    gap: 14px;
-    padding-bottom: 22px;
-  }
-
-  .wt-dot {
-    width: 16px;
-    height: 16px;
-    top: 16px;
-    border-width: 2px;
-  }
-
-  .wt-gutter::before {
-    left: 7px;
-    top: 16px;
-    bottom: -22px;
-  }
-
-  .wt-card {
-    grid-template-columns: 58px minmax(0, 1fr);
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .wt-card-art-wrap {
-    width: 58px;
-    height: 58px;
-  }
-
-  .wt-card-title {
-    font-size: 14px;
-  }
-
-  .wt-card-meta {
-    font-size: 12px;
-  }
-
-  // Show play button by default on touch — no hover state to reveal it
-  .wt-card-play {
-    opacity: 1;
-    transform: scale(1);
-    width: 28px;
-    height: 28px;
-  }
-
-  .wt-load-more {
-    width: 100%;
-    min-height: 44px;
-  }
-
 }
 
 // ═════════════════════════════════════════════════
-// LOADING / ERROR STATES
+// YELLOW THEME — dark text on yellow fills
 // ═════════════════════════════════════════════════
 
-@keyframes wt-shimmer {
-  0%   { background-position: -420px 0; }
-  100% { background-position: 420px 0; }
-}
-
-.wt-skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-left: 30px;
-}
-
-.wt-skeleton-row {
-  height: 96px;
-  border-radius: $wt-radius-lg;
-  border: 1px solid $wt-border-soft;
-  background:
-    linear-gradient(
-      100deg,
-      rgba(255, 255, 255, 0.03) 20%,
-      rgba(255, 255, 255, 0.07) 42%,
-      rgba(255, 255, 255, 0.03) 64%
-    );
-  background-size: 420px 100%;
-  animation: wt-shimmer 1.35s linear infinite;
-}
-
-.wt-error {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 24px;
-  border-radius: $wt-radius-lg;
-  border: 1px solid $wt-border-soft;
-  background: $wt-bg-soft;
-
-  p {
-    margin: 0;
-    color: $wt-text-secondary;
-    font-size: 14px;
-    line-height: 1.6;
-  }
-}
-
-.wt-retry {
-  min-height: 38px;
-  padding: 0 20px;
-  border-radius: 10px;
-  border: 1px solid $wt-border-medium;
-  background: $wt-bg-soft;
-  color: $wt-text-primary;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 0.18s ease, border-color 0.18s ease;
-
-  &:hover {
-    background: $wt-bg-hover;
-    border-color: var(--unis-primary-border);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--unis-primary-2, var(--unis-primary));
-    outline-offset: 2px;
-  }
+[data-theme="yellow"] {
+  .wt-seg__btn.is-on,
+  .wt-play,
+  .wt-ibtn--play { color: #1a1300; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wt-skeleton-row { animation: none; }
-  .wt-card,
-  .wt-card-glow { transition: none; }
+  .wt,
+  .wt-latest,
+  .wt-row { animation: none; }
+
+  .wt-skeleton__plate,
+  .wt-skeleton__dot,
+  .wt-skeleton__art,
+  .wt-skeleton__line { animation: none; }
+
+  .wt-seg__btn,
+  .wt-play,
+  .wt-pill,
+  .wt-ibtn,
+  .wt-more__btn,
+  .wt-back { transition: none; }
 }

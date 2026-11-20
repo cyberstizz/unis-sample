@@ -1,33 +1,63 @@
 // ═══════════════════════════════════════════════════════════════════════════
-//  UNIS — Jurisdiction Page (v5)
+//  UNIS — Jurisdiction Page (v6, Nov 2026)
 //
 //  Theme contract: every colour resolves from the token layer
-//  (theme.scss + unis-design-tokens.scss). No literal theme hexes —
-//  the page re-tints itself under every [data-theme].
+//  (theme.scss + unis-design-tokens.scss). No literal theme hexes — the page
+//  re-tints itself under every [data-theme]; yellow gets dark text on fills.
 //
-//  Typography follows the app's newest language (Discover / WinnersTimeline):
-//  Inter via --unis-font-sans, with Instrument Serif italic <em> accents.
+//  Type: Inter via --unis-font-sans, Instrument Serif italic for the place
+//  name and <em> accents — the same grammar as the v4 artist page.
 //
-//  Signature: the jurisdiction's own name, ghosted behind its hero via
-//  content: attr(data-name) — the neighborhood stamped on its own charter.
+//  Sections: hero (jp-hero), action row (jp-actions), the race and number
+//  one song (jp-now), neighborhoods (jp-hoods), the chart boards (unchanged
+//  from v5), Hall of fame (winnersTimeline.scss). The bar that follows you
+//  is components/followBar.scss plus the jp-bar__ pieces at the bottom.
+//
+//  Breakpoints: phones ≤767px (same as the artist and song pages), boards go
+//  one column ≤900px.
 // ═══════════════════════════════════════════════════════════════════════════
 
+$jp-header-h: 75px; // keep in sync with $header-height in header.scss
+$jp-phone: 767px;
+
+$jp-p: var(--unis-primary, #163387);
+$jp-p2: color-mix(in srgb, var(--unis-primary, #163387), white 30%);
+$jp-p3: color-mix(in srgb, var(--unis-primary, #163387), white 62%);
+$jp-pt: color-mix(in srgb, var(--unis-primary, #163387), transparent 84%);
+$jp-pg: color-mix(in srgb, var(--unis-primary, #163387), transparent 60%);
+$jp-bg: var(--unis-bg, #07090f);
+$jp-line: rgba(255, 255, 255, 0.08);
+$jp-line-hi: rgba(255, 255, 255, 0.16);
+$jp-panel: rgba(255, 255, 255, 0.035);
+$jp-serif: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+
+// ━━━ Layout: clear the fixed header exactly and go full-bleed ━━━━━━━━━━━━━━━
+// layout.scss clears the header with padding-top: 11vh, which leaves a dead
+// band above the hero on tall screens, and adds side gutters. Same scoped fix
+// as the artist page; every other page keeps its current behavior.
+.layout-container:has(.jp-v6) {
+  padding-top: $jp-header-h;
+}
+
+.layout-container:has(.jp-v6) .layout-content {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .jp {
-  // File-scoped surfaces — near-black mixed with the active theme's primary,
-  // same technique as DiscoverPage's --dsc-surface.
+  // File-scoped surfaces — near-black mixed with the active theme's primary.
   --jp-surface:    #{color-mix(in srgb, var(--unis-bg) 93%, var(--unis-primary))};
   --jp-surface-2:  #{color-mix(in srgb, var(--unis-bg) 87%, var(--unis-primary))};
   --jp-accent:     var(--unis-primary);
   --jp-accent-2:   var(--unis-primary-2, var(--unis-primary));
 
   width: 100%;
-  max-width: 1120px;
   min-width: 0;
   box-sizing: border-box;
-  margin: 0 auto;
-  padding: 36px 32px 96px;
+  padding-bottom: 96px;
   color: var(--unis-text);
   font-family: var(--unis-font-sans);
+  -webkit-font-smoothing: antialiased;
   animation: jp-fade-in 0.35s ease;
 }
 
@@ -36,9 +66,31 @@
   box-sizing: border-box;
 }
 
-.jp button {
+// Zero-specificity base, so every class below wins (the embedded Hall of
+// fame's own button classes included).
+:where(.jp) button {
   font-family: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+
+  &:focus-visible {
+    outline: 2px solid $jp-p3;
+    outline-offset: 2px;
+  }
 }
+
+.jp-body {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 40px;
+
+  @media (max-width: $jp-phone) { padding: 0 20px; }
+}
+
+// Wide-only / narrow-only words and controls.
+@media (max-width: $jp-phone) { .jp .jp-wide { display: none !important; } }
+@media (min-width: $jp-phone + 1) { .jp .jp-narrow { display: none !important; } }
 
 // ── Motion ──────────────────────────────────────────────────────────────────
 @keyframes jp-fade-in {
@@ -72,12 +124,1040 @@
 .jp-error   { color: #ff7272; }
 
 // ═════════════════════════════════════════════════
-// SHARED SECTION CHROME
+// 1 · HERO — this week's #1 is the cover of the place
+// ═════════════════════════════════════════════════
+
+.jp-top {
+  position: relative;
+}
+
+.jp-hero {
+  position: relative;
+  height: 440px;
+  overflow: hidden;
+  background: #0d0f16;
+
+  @media (max-width: $jp-phone) { height: clamp(380px, 54vh, 440px); }
+
+  &__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 72% 28%;
+    animation: jp-fade-in 0.5s ease both;
+
+    @media (max-width: $jp-phone) { object-position: 62% 28%; }
+  }
+
+  // Desktop: a left shade where the name sits, and a fade into the page.
+  // Phones: a top shade for the buttons, a bottom shade for the name.
+  &__scrim {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(7, 9, 15, 0.94) 0%, rgba(7, 9, 15, 0.72) 30%, rgba(7, 9, 15, 0.12) 62%, rgba(7, 9, 15, 0) 100%),
+      linear-gradient(180deg, rgba(7, 9, 15, 0.55) 0%, rgba(7, 9, 15, 0) 22%, rgba(7, 9, 15, 0) 58%, #07090f 100%);
+
+    @media (max-width: $jp-phone) {
+      background: linear-gradient(180deg,
+        rgba(7, 9, 15, 0.5) 0%, rgba(7, 9, 15, 0) 22%,
+        rgba(7, 9, 15, 0) 40%, rgba(7, 9, 15, 0.88) 80%, #07090f 100%);
+    }
+  }
+
+  &__tint {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(80% 70% at 0% 100%, $jp-pg, transparent 70%);
+    opacity: 0.75;
+    pointer-events: none;
+
+    @media (max-width: $jp-phone) {
+      background: radial-gradient(120% 60% at 50% 100%, $jp-pg, transparent 70%);
+      opacity: 0.7;
+    }
+  }
+
+  // The place photo (nobody charting yet) takes the theme's hue, so a stock
+  // picture reads as texture of this palette rather than a picture.
+  &--place &__img {
+    filter: saturate(0.6) brightness(0.85);
+  }
+
+  &--solo &__left { padding-right: 0; }
+
+  &--place &__tint {
+    background:
+      linear-gradient(150deg, color-mix(in srgb, var(--unis-primary, #163387), transparent 55%), transparent 70%),
+      radial-gradient(80% 70% at 0% 100%, $jp-pg, transparent 70%);
+  }
+
+  &__top {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+
+    @media (max-width: $jp-phone) { display: flex; }
+  }
+
+  &__content {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 30px;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 40px;
+    animation: jp-fade-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+    @media (max-width: $jp-phone) {
+      bottom: 18px;
+      padding: 0 20px;
+    }
+  }
+
+  &__left {
+    min-width: 0;
+    // Leave room for the crown in the hero's corner (desktop).
+    padding-right: 320px;
+
+    @media (max-width: 1000px) { padding-right: 280px; }
+    @media (max-width: $jp-phone) { padding-right: 0; }
+  }
+
+  &__name {
+    margin: 0;
+    font-family: $jp-serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(64px, 8vw, 112px);
+    line-height: 0.92;
+    letter-spacing: -0.01em;
+    color: #fff;
+    text-shadow: 0 6px 30px rgba(0, 0, 0, 0.5);
+    overflow-wrap: anywhere;
+
+    @media (max-width: $jp-phone) { font-size: clamp(48px, 17vw, 68px); line-height: 0.95; }
+  }
+}
+
+// ── Breadcrumb (desktop) — where the place sits, not your history ──
+.jp-crumbs {
+  position: absolute;
+  top: 22px;
+  left: 0;
+  right: 0;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 40px;
+
+  @media (max-width: $jp-phone) { display: none; }
+
+  ol {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--unis-text-2);
+  }
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  li[aria-current] { color: #fff; }
+
+  button {
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+
+    &:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+  }
+
+  &__sep { color: var(--unis-text-4); }
+}
+
+// ── Glass controls on the photo (phones) ──
+.jp-glass {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  max-width: 60vw;
+  padding: 0 14px 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(10, 10, 16, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.jp-glass-c {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(10, 10, 16, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+// ── Chips ──
+.jp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+
+  @media (max-width: $jp-phone) { gap: 6px; margin-bottom: 10px; }
+}
+
+.jp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(10, 10, 16, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--live {
+    border-color: $jp-p2;
+    background: color-mix(in srgb, var(--unis-primary, #163387), rgba(10, 10, 16, 0.6) 45%);
+  }
+
+  &--final { border-color: rgba(255, 255, 255, 0.35); }
+
+  @media (max-width: $jp-phone) {
+    height: 26px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+}
+
+// Mini equalizer inside the live chip.
+.jp-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+
+  i {
+    width: 3px;
+    height: 100%;
+    border-radius: 2px;
+    background: #fff;
+    transform-origin: bottom;
+    animation: jp-eq-bounce 1s ease-in-out infinite;
+
+    &:nth-child(2) { animation-delay: 0.18s; }
+    &:nth-child(3) { animation-delay: 0.36s; }
+  }
+}
+
+.jp-statline {
+  margin: 14px 0 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--unis-text-2);
+
+  b {
+    color: #fff;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: $jp-phone) {
+    margin-top: 6px;
+    font-size: 13.5px;
+  }
+}
+
+// ── The crown — names the person on the cover ──
+.jp-crown {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+  color: #fff;
+
+  img {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    object-fit: cover;
+  }
+
+  svg:last-child { flex: 0 0 auto; opacity: 0.8; }
+
+  &__txt {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__k {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $jp-p3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__n {
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Desktop: glass tag in the hero's bottom-right corner.
+  &--hero {
+    position: absolute;
+    bottom: 30px;
+    right: max(40px, calc((100% - 1120px) / 2 + 40px));
+    max-width: 300px;
+    padding: 8px 16px 8px 8px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(10, 10, 16, 0.58);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: border-color 0.16s ease, background-color 0.16s ease;
+
+    &:hover { border-color: rgba(255, 255, 255, 0.4); }
+
+    @media (max-width: 1000px) { max-width: 260px; }
+    @media (max-width: $jp-phone) { display: none; }
+  }
+
+  // Phones: its own row under the photo.
+  &--row {
+    width: 100%;
+    margin-top: 4px;
+    padding: 10px 12px 10px 10px;
+    border-radius: 14px;
+    border: 1px solid $jp-line;
+    background: $jp-panel;
+
+    img { width: 44px; height: 44px; }
+    .jp-crown__k { font-size: 10.5px; }
+    .jp-crown__n { font-size: 15.5px; }
+
+    @media (min-width: $jp-phone + 1) { display: none; }
+  }
+}
+
+// ═════════════════════════════════════════════════
+// 2 · ACTIONS
+// ═════════════════════════════════════════════════
+
+.jp-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 18px;
+
+  &__spacer { flex: 1 1 0; min-width: 0; }
+
+  @media (max-width: $jp-phone) {
+    gap: 8px;
+    padding-top: 14px;
+
+    &__spacer { display: none; }
+  }
+}
+
+.jp-play {
+  width: 60px;
+  height: 60px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: $jp-p;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 28px -8px $jp-pg, inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+
+  svg { margin-left: 2px; }
+
+  &:hover { transform: scale(1.04); filter: brightness(1.1); }
+  &:active { transform: scale(0.96); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; transform: none; filter: none; }
+
+  @media (max-width: $jp-phone) { width: 56px; height: 56px; }
+}
+
+.jp-play-cap {
+  display: flex;
+  flex-direction: column;
+  margin-right: 10px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--unis-text-3);
+
+  b {
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 650;
+  }
+}
+
+.jp-pill {
+  height: 42px;
+  min-width: 0;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+
+  svg { flex: 0 0 auto; }
+
+  &:hover { border-color: #fff; }
+  &:active { transform: scale(0.97); }
+
+  &--vote {
+    border-color: $jp-p2;
+    background: linear-gradient(100deg, $jp-pt, rgba(255, 255, 255, 0.02));
+  }
+
+  &__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (max-width: $jp-phone) {
+    height: 44px;
+    padding: 0 16px;
+    font-size: 13.5px;
+
+    &--vote { flex: 1 1 auto; }
+  }
+}
+
+.jp-circ {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid $jp-line-hi;
+  background: rgba(255, 255, 255, 0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.1); }
+}
+
+.jp-cap {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--unis-text-3);
+}
+
+.jp-bio {
+  max-width: 640px;
+  margin: 16px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--unis-text-3);
+
+  @media (max-width: $jp-phone) { font-size: 13.5px; }
+}
+
+// ═════════════════════════════════════════════════
+// 3 · RIGHT NOW — the race + number one song
+// ═════════════════════════════════════════════════
+
+.jp-now {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-top: 30px;
+  animation: jp-fade-up 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  @media (max-width: $jp-phone) { margin-top: 26px; }
+}
+
+.jp-card {
+  background: $jp-panel;
+  border: 1px solid $jp-line;
+  border-radius: 18px;
+}
+
+.jp-sechead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+
+  @media (max-width: $jp-phone) { margin-bottom: 12px; }
+}
+
+.jp-h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #fff;
+
+  em {
+    font-family: $jp-serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.16em;
+    color: $jp-p3;
+  }
+
+  @media (max-width: $jp-phone) { font-size: 21px; }
+}
+
+.jp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--unis-text-2);
+  white-space: nowrap;
+}
+
+.jp-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: $jp-p2;
+  box-shadow: 0 0 0 3px $jp-pt;
+
+  &--off {
+    background: rgba(255, 255, 255, 0.4);
+    box-shadow: none;
+  }
+}
+
+.jp-tight {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid $jp-p2;
+  background: $jp-pt;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+// ── The race ──
+.jp-race {
+  padding: 22px 24px;
+
+  @media (max-width: $jp-phone) { padding: 18px; }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 4px 0 2px;
+
+    p {
+      margin: 0;
+      font-size: 14.5px;
+      line-height: 1.5;
+      color: var(--unis-text-2);
+    }
+  }
+
+  &__line {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--unis-text-2);
+
+    b { color: #fff; font-weight: 650; }
+
+    @media (max-width: $jp-phone) { font-size: 14px; }
+  }
+
+  &__foot {
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    color: var(--unis-text-3);
+  }
+}
+
+.jp-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--unis-text-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+
+  &:hover { color: #fff; }
+}
+
+.jp-duel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+
+  @media (max-width: $jp-phone) { gap: 8px; }
+}
+
+.jp-duelist {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+
+  img,
+  .jp-open-slot {
+    width: 56px;
+    height: 56px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid $jp-line-hi;
+  }
+
+  &--lead img {
+    border-color: $jp-p2;
+    box-shadow: 0 0 0 4px $jp-pt;
+  }
+
+  &--r {
+    flex-direction: row-reverse;
+    text-align: right;
+  }
+
+  &--open { cursor: default; }
+
+  &__txt {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  &__rank {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: var(--unis-text-4);
+  }
+
+  &__name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &--muted { color: var(--unis-text-3); font-weight: 600; }
+  }
+
+  &__pts {
+    font-size: 13px;
+    color: var(--unis-text-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &:not(.jp-duelist--open):hover .jp-duelist__name { text-decoration: underline; text-underline-offset: 3px; }
+
+  // Phones: stacked, photo above the name.
+  @media (max-width: $jp-phone) {
+    flex-direction: column;
+    text-align: center;
+    gap: 6px;
+
+    &--r { flex-direction: column; text-align: center; }
+
+    img,
+    .jp-open-slot { width: 60px; height: 60px; }
+
+    &__txt { max-width: 100%; }
+    &__name { font-size: 15px; }
+    &__pts { font-size: 12.5px; }
+  }
+}
+
+.jp-open-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed !important;
+  color: var(--unis-text-4);
+  font-size: 18px;
+}
+
+.jp-vs {
+  font-family: $jp-serif;
+  font-style: italic;
+  font-size: 22px;
+  color: var(--unis-text-4);
+}
+
+.jp-meter {
+  display: flex;
+  height: 8px;
+  margin: 18px 0 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: $jp-p2;
+    transition: width 0.4s ease;
+  }
+
+  @media (max-width: $jp-phone) { margin: 16px 0 12px; }
+}
+
+// ── Number one song ──
+.jp-song1 {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px;
+
+  @media (max-width: $jp-phone) { gap: 14px; padding: 14px; }
+
+  &__glow {
+    position: absolute;
+    inset: -40%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(60px) saturate(1.4);
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  &__art,
+  &__body,
+  &__ph { position: relative; }
+
+  &__art {
+    width: 132px;
+    height: 132px;
+    flex: 0 0 auto;
+    border-radius: 14px;
+    object-fit: cover;
+    box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.7);
+
+    @media (max-width: $jp-phone) { width: 96px; height: 96px; border-radius: 12px; }
+  }
+
+  &__ph {
+    width: 96px;
+    height: 96px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    border: 1.5px dashed $jp-line-hi;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--unis-text-4);
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+
+    button {
+      max-width: 100%;
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      color: #fff;
+      text-align: left;
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+
+      &:hover { text-decoration: underline; text-underline-offset: 3px; }
+    }
+
+    @media (max-width: $jp-phone) { font-size: 18px; }
+  }
+
+  &__artist {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--unis-text-2);
+
+    button {
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+
+      &:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+    }
+
+    @media (max-width: $jp-phone) { font-size: 13px; }
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0 14px;
+    font-size: 12.5px;
+    color: var(--unis-text-3);
+    font-variant-numeric: tabular-nums;
+
+    @media (max-width: $jp-phone) { margin: 4px 0 10px; }
+  }
+
+  &__move { font-size: 11px; }
+}
+
+.jp-kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: $jp-p3;
+
+  @media (max-width: $jp-phone) { margin-bottom: 4px; font-size: 10.5px; }
+}
+
+.jp-muted {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--unis-text-2);
+}
+
+.jp-listen {
+  height: 38px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: $jp-p;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease;
+
+  &:hover { filter: brightness(1.1); }
+  &:active { transform: scale(0.97); }
+
+  @media (max-width: $jp-phone) { height: 36px; padding: 0 14px; font-size: 13px; }
+}
+
+// ═════════════════════════════════════════════════
+// NEIGHBORHOODS — inside this place, or next door
+// ═════════════════════════════════════════════════
+
+.jp-hoods {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 26px;
+
+  &__label {
+    margin: 0 6px 0 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--unis-text-3);
+  }
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__more {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--unis-text-3);
+  }
+
+  // Phones: label above, one swipeable row.
+  @media (max-width: $jp-phone) {
+    display: block;
+    margin-top: 24px;
+
+    &__label { margin: 0 0 10px; font-size: 11.5px; }
+
+    &__row {
+      flex-wrap: nowrap;
+      gap: 8px;
+      overflow-x: auto;
+      margin-right: -20px;
+      padding-right: 20px;
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar { display: none; }
+    }
+  }
+}
+
+.jp-hood {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 48px;
+  padding: 0 14px 0 16px;
+  border-radius: 12px;
+  border: 1px solid $jp-line;
+  background: $jp-panel;
+  font-size: 14px;
+  font-weight: 650;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--unis-primary, #163387), transparent 40%);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &__txt {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+
+    small {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--unis-text-3);
+    }
+  }
+
+  &--closed {
+    border-style: dashed;
+    color: var(--unis-text-3);
+    cursor: default;
+
+    &:hover { border-color: $jp-line; background: $jp-panel; }
+  }
+
+  @media (max-width: $jp-phone) { height: 52px; padding: 0 12px 0 14px; gap: 10px; }
+}
+
+// ═════════════════════════════════════════════════
+// SHARED SECTION CHROME (chart boards, Hall of fame)
 // ═════════════════════════════════════════════════
 
 .jp-section {
   margin-top: 52px;
   animation: jp-fade-up 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  @media (max-width: 620px) { margin-top: 38px; }
 }
 
 .jp-section-head {
@@ -119,6 +1199,8 @@
     letter-spacing: -0.01em;
     color: var(--jp-accent-2);
   }
+
+  @media (max-width: 620px) { font-size: 24px; }
 }
 
 .jp-empty {
@@ -130,414 +1212,15 @@
 }
 
 // ═════════════════════════════════════════════════
-// ACTION BUTTONS
-// ═════════════════════════════════════════════════
-
-.jp-primary-action,
-.jp-secondary-action,
-.jp-featured-listen {
-  min-height: 44px;
-  border-radius: 12px;
-  padding: 0 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease;
-
-  &:focus-visible {
-    outline: 2px solid var(--jp-accent-2);
-    outline-offset: 2px;
-  }
-}
-
-.jp-primary-action {
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background:
-    radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.16), transparent 36%),
-    linear-gradient(
-      135deg,
-      var(--jp-accent-2) 0%,
-      var(--jp-accent) 48%,
-      color-mix(in srgb, var(--jp-accent), black 32%) 100%
-    );
-  box-shadow: 0 16px 38px var(--unis-primary-glow);
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 18px 46px var(--unis-primary-glow);
-  }
-}
-
-.jp-secondary-action {
-  color: var(--unis-text);
-  background: var(--unis-panel-2);
-  border: 1px solid var(--unis-border-hi);
-
-  &:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255, 255, 255, 0.24);
-    background: var(--unis-panel-hi);
-  }
-}
-
-// ═════════════════════════════════════════════════
-// 1 · HERO
-// ═════════════════════════════════════════════════
-
-.jp-hero {
-  position: relative;
-  overflow: hidden;
-  min-height: 360px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 36px;
-  align-items: center;
-  padding: 42px;
-  border-radius: 26px;
-  border: 1px solid var(--unis-border-hi);
-  // ── The gradient — built entirely from --unis-primary, so it is the SAME
-  // effect in every palette rather than a hardcoded blue. Two theme-tinted
-  // pools of light (top-right hot, bottom-left cool) over a near-black base
-  // that itself carries a trace of the theme colour.
-  background:
-    radial-gradient(ellipse 74% 62% at 82% 8%,
-      color-mix(in srgb, var(--unis-primary), transparent 55%), transparent 62%),
-    radial-gradient(ellipse 66% 74% at 4% 96%,
-      color-mix(in srgb, var(--unis-primary), transparent 74%), transparent 58%),
-    radial-gradient(circle at 8% 4%, rgba(255, 255, 255, 0.07), transparent 30%),
-    linear-gradient(152deg,
-      var(--jp-surface-2) 0%,
-      var(--jp-surface) 52%,
-      var(--unis-bg) 100%);
-  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.35);
-  animation: jp-fade-up 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-
-  // Signature — the place's own name ghosted behind its charts.
-  &::after {
-    content: attr(data-name);
-    position: absolute;
-    z-index: 0;
-    right: -1%;
-    bottom: -4%;
-    color: rgba(255, 255, 255, 0.042);
-    font-size: clamp(90px, 12vw, 150px);
-    font-weight: 900;
-    letter-spacing: -0.07em;
-    line-height: 1;
-    text-transform: uppercase;
-    white-space: nowrap;
-    pointer-events: none;
-    user-select: none;
-  }
-
-  &--solo {
-    grid-template-columns: 1fr;
-  }
-}
-
-// ── Hero backdrop stack ─────────────────────────────────────────────────────
-// The photo is texture, not a picture: desaturated, softened, and mixed into
-// the gradient with `soft-light` so it modulates the theme colour instead of
-// covering it. Legible only if you look for it — exactly the brief.
-//
-// Swapping in a real jurisdiction photo needs no CSS change; only the source
-// in HERO_IMAGES (or the backend symbolUrl) moves.
-.jp-hero-photo {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background-size: cover;
-  background-position: center 42%;
-  // Grayscale first so the photo contributes LUMINANCE only — its own colour
-  // never fights the theme. Contrast keeps the architecture readable at low
-  // opacity; the slight blur stops any detail reading as a photograph.
-  filter: grayscale(1) contrast(1.22) brightness(0.92) blur(1.5px);
-  mix-blend-mode: soft-light;
-  opacity: 0.5;
-  // Fade the photo away from the copy: strongest top-right (behind the
-  // featured card), gone bottom-left (behind the title and stats).
-  -webkit-mask-image: radial-gradient(ellipse 92% 96% at 76% 18%,
-    rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.55) 42%, transparent 82%);
-  mask-image: radial-gradient(ellipse 92% 96% at 76% 18%,
-    rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.55) 42%, transparent 82%);
-  pointer-events: none;
-}
-
-// Pushes any residual neutral grey toward the active theme's hue, so the
-// blended photo belongs to the palette rather than sitting beside it.
-.jp-hero-tint {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background:
-    linear-gradient(150deg,
-      color-mix(in srgb, var(--unis-primary), transparent 62%) 0%,
-      color-mix(in srgb, var(--unis-primary), transparent 88%) 58%,
-      transparent 100%);
-  mix-blend-mode: color;
-  opacity: 0.85;
-  pointer-events: none;
-}
-
-// Contrast floor for the copy and the ghosted jurisdiction name.
-.jp-hero-scrim {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background:
-    linear-gradient(100deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.16) 46%, transparent 72%),
-    linear-gradient(to top, rgba(0, 0, 0, 0.42) 0%, transparent 46%);
-  pointer-events: none;
-}
-
-.jp-hero-content {
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-}
-
-// ── Pills ──
-.jp-pills {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 22px;
-}
-
-.jp-pill {
-  min-height: 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 14px;
-  border-radius: 999px;
-  color: var(--unis-text-2);
-  background: var(--unis-panel-hi);
-  border: 1px solid var(--unis-border-hi);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-
-  &--live {
-    color: var(--jp-accent-2);
-    background: var(--unis-primary-soft, var(--unis-primary-subtle));
-    border-color: var(--unis-primary-border);
-  }
-}
-
-// Mini equalizer inside the live pill
-.jp-eq {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 10px;
-
-  i {
-    width: 3px;
-    height: 100%;
-    border-radius: 2px;
-    background: var(--jp-accent-2);
-    transform-origin: bottom;
-    animation: jp-eq-bounce 1s ease-in-out infinite;
-
-    &:nth-child(2) { animation-delay: 0.18s; }
-    &:nth-child(3) { animation-delay: 0.36s; }
-  }
-}
-
-// ── Title & copy ──
-.jp-title {
-  margin: 0;
-  color: var(--unis-text);
-  font-size: clamp(42px, 5vw, 66px);
-  line-height: 0.96;
-  font-weight: 900;
-  letter-spacing: -0.06em;
-  max-width: 700px;
-  overflow-wrap: break-word;
-}
-
-.jp-subtitle {
-  max-width: 640px;
-  margin: 18px 0 26px;
-  color: var(--unis-text-2);
-  font-size: 17px;
-  line-height: 1.58;
-}
-
-// ── Stats ──
-.jp-stats {
-  width: min(100%, 640px);
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  overflow: hidden;
-  margin: 0 0 28px;
-  border: 1px solid var(--unis-border);
-  border-radius: 16px;
-  background:
-    linear-gradient(135deg, var(--unis-panel-2), var(--unis-panel)),
-    rgba(0, 0, 0, 0.24);
-}
-
-.jp-stat {
-  min-width: 0;
-  padding: 18px 18px 19px;
-  border-right: 1px solid var(--unis-border);
-
-  &:last-child { border-right: 0; }
-
-  dt {
-    margin: 0 0 8px;
-    color: var(--unis-text-3);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  dd {
-    margin: 0;
-    color: var(--unis-text);
-    font-size: 21px;
-    font-weight: 900;
-    line-height: 1.15;
-    letter-spacing: -0.03em;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-.jp-hero-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-// ── Song of the week card ──
-.jp-featured {
-  position: relative;
-  z-index: 1;
-  min-height: 280px;
-  height: 100%;
-  overflow: hidden;
-  border-radius: 22px;
-  cursor: pointer;
-  border: 1px solid var(--unis-border-hi);
-  background: var(--unis-bg);
-  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.42);
-  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
-
-  &:hover,
-  &:focus-visible {
-    transform: translateY(-3px);
-    border-color: var(--unis-primary-border);
-    box-shadow: 0 26px 68px rgba(0, 0, 0, 0.55);
-
-    .jp-featured-art {
-      transform: scale(1.04);
-      filter: saturate(1.08) brightness(0.78);
-    }
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--jp-accent-2);
-    outline-offset: 3px;
-  }
-}
-
-.jp-featured-art {
-  width: 100%;
-  height: 100%;
-  min-height: 280px;
-  display: block;
-  object-fit: cover;
-  filter: saturate(1.02) brightness(0.7);
-  transform: scale(1.01);
-  transition: transform 0.35s ease, filter 0.35s ease;
-}
-
-.jp-featured-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 26px;
-  background:
-    linear-gradient(to top, rgba(0, 0, 0, 0.96) 0%, rgba(0, 0, 0, 0.55) 48%, rgba(0, 0, 0, 0.1) 100%);
-
-  h2 {
-    margin: 12px 0 4px;
-    color: #fff;
-    font-size: 26px;
-    font-weight: 900;
-    letter-spacing: -0.045em;
-    line-height: 1.08;
-  }
-
-  p {
-    margin: 0 0 18px;
-    color: var(--unis-text-2);
-    font-size: 15px;
-    font-weight: 600;
-  }
-}
-
-.jp-featured-kicker {
-  width: fit-content;
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 11px;
-  color: var(--unis-text);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(0, 0, 0, 0.38);
-  backdrop-filter: blur(10px);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.jp-featured-listen {
-  width: 100%;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.095);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-
-  &:hover {
-    background: color-mix(in srgb, var(--jp-accent), transparent 28%);
-    border-color: var(--unis-primary-border);
-    transform: translateY(-1px);
-  }
-}
-
-// ═════════════════════════════════════════════════
-// 2 · CHART BOARDS
+// 4 · CHART BOARDS (unchanged from v5)
 // ═════════════════════════════════════════════════
 
 .jp-boards {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 22px;
+
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
 }
 
 .jp-board {
@@ -549,6 +1232,11 @@
     radial-gradient(circle at 85% 0%, var(--unis-glow-2), transparent 32%),
     linear-gradient(145deg, var(--unis-panel-2), var(--unis-panel));
   box-shadow: 0 18px 52px rgba(0, 0, 0, 0.22);
+
+  @media (max-width: 620px) {
+    padding: 20px;
+    border-radius: 20px;
+  }
 }
 
 .jp-board-title {
@@ -609,6 +1297,16 @@
     border-radius: 12px;
     object-fit: cover;
     border: 1px solid var(--unis-border-hi);
+  }
+
+  @media (max-width: 620px) {
+    grid-template-columns: 30px 44px minmax(0, 1fr) 34px;
+    gap: 10px;
+
+    > img {
+      width: 44px;
+      height: 44px;
+    }
   }
 }
 
@@ -692,6 +1390,8 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
+
+  @media (max-width: 620px) { display: none; }
 }
 
 .jp-row-play {
@@ -716,200 +1416,83 @@
     outline: 2px solid var(--jp-accent-2);
     outline-offset: 2px;
   }
-}
-
-// ═════════════════════════════════════════════════
-// 3 · HALL OF FAME
-// ═════════════════════════════════════════════════
-
-.jp-winners {
-  // WinnersTimeline brings its own chrome (wt--embedded); the section only
-  // provides rhythm.
-  margin-top: 56px;
-}
-
-// ═════════════════════════════════════════════════
-// TOAST — replaces alert()
-// ═════════════════════════════════════════════════
-
-.jp-toast {
-  position: fixed;
-  left: 50%;
-  bottom: 104px; // clears the global player bar
-  z-index: 60;
-  transform: translate(-50%, 12px);
-  max-width: min(92vw, 440px);
-  padding: 12px 18px;
-  border-radius: 14px;
-  color: var(--unis-text);
-  background: color-mix(in srgb, var(--unis-bg) 82%, var(--unis-primary));
-  border: 1px solid var(--unis-primary-border);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(12px);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.45;
-  text-align: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.22s ease, transform 0.22s ease;
-
-  &.is-visible {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
-
-// ═════════════════════════════════════════════════
-// RESPONSIVE
-// ═════════════════════════════════════════════════
-
-@media (max-width: 1120px) {
-  .jp-hero {
-    grid-template-columns: minmax(0, 1fr) 320px;
-    padding: 34px;
-  }
-
-  .jp-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .jp-stat {
-    border-bottom: 1px solid var(--unis-border);
-
-    &:nth-child(2) { border-right: 0; }
-
-    &:nth-child(3),
-    &:nth-child(4) { border-bottom: 0; }
-  }
-}
-
-@media (max-width: 900px) {
-  .jp {
-    padding: 28px 20px 80px;
-  }
-
-  .jp-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .jp-featured,
-  .jp-featured-art {
-    min-height: 320px;
-  }
-
-  .jp-boards {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 620px) {
-  .jp {
-    padding: 20px 14px 68px;
-  }
-
-  .jp-section {
-    margin-top: 38px;
-  }
-
-  .jp-hero {
-    min-height: 0;
-    padding: 24px;
-    border-radius: 22px;
-
-    &::after { display: none; }
-  }
-
-  // On a narrow hero the photo sits directly behind the copy — pull it back
-  // and centre the mask so contrast never depends on the image.
-  .jp-hero-photo {
-    opacity: 0.34;
-    -webkit-mask-image: radial-gradient(ellipse 120% 78% at 62% 12%,
-      rgba(0, 0, 0, 0.9) 0%, transparent 78%);
-    mask-image: radial-gradient(ellipse 120% 78% at 62% 12%,
-      rgba(0, 0, 0, 0.9) 0%, transparent 78%);
-  }
-
-  .jp-title {
-    font-size: 40px;
-    letter-spacing: -0.055em;
-  }
-
-  .jp-subtitle {
-    font-size: 15px;
-    margin: 16px 0 22px;
-  }
-
-  .jp-pills { gap: 7px; }
-
-  .jp-pill {
-    min-height: 26px;
-    padding: 0 10px;
-    font-size: 11px;
-  }
-
-  .jp-stats {
-    grid-template-columns: 1fr;
-  }
-
-  .jp-stat {
-    border-right: 0;
-    border-bottom: 1px solid var(--unis-border);
-
-    &:nth-child(2),
-    &:nth-child(3) { border-bottom: 1px solid var(--unis-border); }
-
-    &:last-child { border-bottom: 0; }
-  }
-
-  .jp-hero-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .jp-primary-action,
-  .jp-secondary-action {
-    width: 100%;
-  }
-
-  .jp-chart-title { font-size: 24px; }
-
-  .jp-board {
-    padding: 20px;
-    border-radius: 20px;
-  }
-
-  .jp-row {
-    grid-template-columns: 30px 44px minmax(0, 1fr) 34px;
-    gap: 10px;
-  }
-
-  .jp-row > img {
-    width: 44px;
-    height: 44px;
-  }
-
-  .jp-row-score { display: none; }
 
   // Touch devices have no hover — keep play buttons visible.
-  .jp-row-play {
+  @media (max-width: 620px) {
     opacity: 1;
     transform: none;
   }
+}
 
-  .jp-featured,
-  .jp-featured-art {
-    min-height: 260px;
-  }
+// ═════════════════════════════════════════════════
+// 5 · HALL OF FAME
+// ═════════════════════════════════════════════════
 
-  .jp-toast { bottom: 92px; }
+.jp-winners {
+  // WinnersTimeline brings its own chrome; the section only provides rhythm.
+  margin-top: 56px;
+
+  @media (max-width: 620px) { margin-top: 40px; }
+}
+
+// ═════════════════════════════════════════════════
+// THE BAR THAT FOLLOWS YOU — place content inside the shared FollowBar
+// Songs are square, people are round, places are a pin.
+// ═════════════════════════════════════════════════
+
+.jp-bar__pin {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: radial-gradient(circle at 30% 25%, $jp-p3, $jp-p 75%);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.25);
+  color: #fff;
+
+  @media (max-width: $jp-phone) { width: 36px; height: 36px; border-radius: 10px; }
+}
+
+.jp-bar__title {
+  display: block;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  @media (max-width: $jp-phone) { font-size: 15px; }
+}
+
+// Desktop adds Share; phones keep name, Vote, Play (same split as the artist bar).
+// (.fb prefix: followBar.scss loads after this file and sets .fb-icon's display.)
+.fb .jp-bar__share {
+  @media (max-width: $jp-phone) { display: none; }
+}
+
+// ═════════════════════════════════════════════════
+// YELLOW THEME — dark text and icons on yellow fills
+// ═════════════════════════════════════════════════
+
+[data-theme="yellow"] {
+  .jp-play,
+  .jp-listen,
+  .jp-row-play,
+  .jp-bar__pin { color: #1a1300; }
+
+  .jp-row-play svg { fill: #1a1300 !important; }
 }
 
 // ── Reduced motion — freeze everything ──────────────────────────────────────
 @media (prefers-reduced-motion: reduce) {
   .jp,
   .jp-section,
-  .jp-hero {
+  .jp-now,
+  .jp-hero__img,
+  .jp-hero__content {
     animation: none;
   }
 
@@ -919,11 +1502,12 @@
   }
 
   .jp-row,
-  .jp-featured,
-  .jp-featured-art,
-  .jp-primary-action,
-  .jp-secondary-action,
-  .jp-toast {
+  .jp-play,
+  .jp-pill,
+  .jp-listen,
+  .jp-hood,
+  .jp-crown,
+  .jp-meter span {
     transition: none;
   }
 }

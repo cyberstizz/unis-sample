@@ -1,25 +1,31 @@
 // src/jurisdictionPage.test.jsx
 //
-// Tests for JurisdictionPage — the identity page for one place.
+// Tests for JurisdictionPage (v6) — the identity page for one place.
 //
 // The page looks the place up by name (apiCall), then reads this week's artist
 // and song boards through utils/standings.js. fetchStandings is mocked at the
 // module boundary (its own logic is tested in utils/standings.test.js);
-// describeBoard stays real.
+// describeBoard stays real. Place context (breadcrumb, neighborhoods) comes
+// from /breadcrumb and /children/detailed after the page loads.
 //
 // Covers:
 //   • loading and error states
-//   • the lookup request and the two board requests
-//   • hero: name, bio or fallback line, Neighborhood/District pill, stats
+//   • the lookup request, the two board requests, the place-context requests
+//   • hero: name, bio (no stock line), this week's #1 as the cover, the place
+//     photo as fallback, crown, statline, Neighborhood/District chip from the
+//     children lookup, Your home, breadcrumb
+//   • the race: lead, tie, neck and neck, unopposed, empty, last week
+//   • number one song: shown when a song has scored; open and play
+//   • Play the top 10 goes through requestPlayCollection
+//   • neighborhoods inside a district / next door to a neighborhood
 //   • "finished" wording when the board shows last week's final
-//   • song of the week: shown only when a song has scored; open and play
 //   • chart boards: rank, movement, points, empty wording, zero-point entries
 //     left out
 //   • playing a song goes through requestPlay with source "jurisdiction";
 //     a song with no file tells the user instead
 //   • playing an artist looks up their featured song; the two failure messages
 //   • the page never records a play itself
-//   • navigation: rows, Vote now, Explore tracks, full-chart links
+//   • navigation: rows, Vote, Charts, Share, full-chart links
 //   • exactly one WinnersTimeline, given the place's id
 //   • the ad slot is present
 
@@ -31,6 +37,19 @@ import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('./jurisdictionPage.scss', () => ({}));
 vi.mock('./components/RankMove.scss', () => ({}));
+vi.mock('./components/followBar.scss', () => ({}));
+// The bar's scroll behavior is the shared hook's job (and jsdom has no
+// layout). Kept hidden here, so its buttons stay out of the queries below.
+vi.mock('./hooks/useFollowBar', () => ({
+  useFollowBar: () => ({
+    titleRef: { current: null },
+    playRef: { current: null },
+    barRef: { current: null },
+    shown: false,
+    docked: false,
+    scrollToTop: () => {},
+  }),
+}));
 vi.mock('./layout', () => ({
   default: ({ children }) => <div data-testid="layout">{children}</div>,
 }));
@@ -50,11 +69,16 @@ vi.mock('./winnersTimeline', () => ({
   ),
 }));
 
-const { mockNavigate, routeParams, fetchStandings, feedback } = vi.hoisted(() => ({
+const { mockNavigate, routeParams, fetchStandings, feedback, auth } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   routeParams: { jurisdiction: 'Uptown Harlem' },
   fetchStandings: vi.fn(),
   feedback: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
+  auth: { user: null },
+}));
+
+vi.mock('./context/AuthContext', () => ({
+  useAuth: () => auth,
 }));
 
 vi.mock('react-router-dom', async (importOriginal) => ({
@@ -83,9 +107,25 @@ const JUR_ID = 'jur-uptown-001';
 const JUR = {
   jurisdictionId: JUR_ID,
   name: 'Uptown Harlem',
-  hasChildren: false,
   bio: 'North of 130th Street — Sugar Hill, Hamilton Heights, and Strivers Row.',
 };
+
+// Root (Unis) → New York → Manhattan → Harlem → Uptown Harlem
+const CHAIN = [
+  { jurisdictionId: 'root', name: 'Unis', parentJurisdictionId: null },
+  { jurisdictionId: 'ny', name: 'New York', parentJurisdictionId: 'root' },
+  { jurisdictionId: 'man', name: 'Manhattan', parentJurisdictionId: 'ny' },
+  { jurisdictionId: 'harlem', name: 'Harlem', parentJurisdictionId: 'man' },
+  { jurisdictionId: JUR_ID, name: 'Uptown Harlem', parentJurisdictionId: 'harlem' },
+];
+
+const kid = (id, name, extra = {}) => ({ jurisdictionId: id, name, hasChildren: false, isActive: true, ...extra });
+
+const HARLEM_KIDS = [
+  kid(JUR_ID, 'Uptown Harlem'),
+  kid('down', 'Downtown Harlem'),
+  kid('east', 'East Harlem', { isActive: false }),
+];
 
 const entry = (overrides) => ({
   id: 'id-x', type: 'artist', rank: 1, name: 'Someone', artistName: '', artistId: null,
@@ -106,8 +146,8 @@ const board = (entries, overrides = {}) => ({
 });
 
 const ARTISTS = [
-  entry({ id: 'a1', rank: 1, name: 'rockle_gend', points: 320, homeJurisdictionName: 'Sugar Hill', artwork: 'https://cdn.test/a1.jpg', movement: 2 }),
-  entry({ id: 'a2', rank: 2, name: 'stizz', points: 1210, isNew: true }),
+  entry({ id: 'a1', rank: 1, name: 'rockle_gend', points: 1210, homeJurisdictionName: 'Sugar Hill', artwork: 'https://cdn.test/a1.jpg', movement: 2 }),
+  entry({ id: 'a2', rank: 2, name: 'stizz', points: 320, isNew: true }),
   entry({ id: 'a3', rank: 3, name: 'quiet_one', points: 0 }),
 ];
 
@@ -119,16 +159,20 @@ const SONGS = [
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const requestPlay = vi.fn();
+const requestPlayCollection = vi.fn();
+const togglePlayPause = vi.fn();
 let apiSpy;
 let jurResponse;
 let defaultSong;
 let boards;
+let chain;
+let kids;
 
 function renderPage(props = {}) {
   const user = userEvent.setup();
   render(
     <MemoryRouter>
-      <PlayerContext.Provider value={{ requestPlay }}>
+      <PlayerContext.Provider value={{ requestPlay, requestPlayCollection, togglePlayPause, currentMedia: null, isPlaying: false }}>
         <JurisdictionPage {...props} />
       </PlayerContext.Provider>
     </MemoryRouter>
@@ -142,20 +186,35 @@ async function renderLoaded(props) {
   return utils;
 }
 
-const stat = (label) => within(screen.getByText(label).closest('.jp-stat')).getByRole('definition');
+const statline = () => document.querySelector('.jp-statline');
+const chips = () => document.querySelector('.jp-chips');
+const raceLine = () => document.querySelector('.jp-race__line');
 const boardOf = (title) => screen.getByRole('heading', { level: 3, name: title }).closest('.jp-board');
 const apiUrls = () => apiSpy.mock.calls.map(([c]) => `${c.method} ${c.url}`);
 
 beforeEach(() => {
   vi.clearAllMocks();
   routeParams.jurisdiction = 'Uptown Harlem';
+  auth.user = null;
   jurResponse = [JUR];
+  chain = CHAIN;
+  kids = { [JUR_ID]: [], harlem: HARLEM_KIDS };
   defaultSong = { songId: 'ds-1', title: 'Featured Cut', fileUrl: 'https://cdn.test/ds1.mp3', artworkUrl: 'https://cdn.test/ds1.jpg' };
   boards = { artist: board(ARTISTS), song: board(SONGS) };
 
   fetchStandings.mockImplementation(async ({ type }) => boards[type]);
   apiSpy = vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
     if (config.url.startsWith('/v1/jurisdictions/byName/')) return { data: jurResponse };
+    if (/\/breadcrumb$/.test(config.url)) {
+      if (chain instanceof Error) throw chain;
+      return { data: chain };
+    }
+    const kidsMatch = config.url.match(/^\/v1\/jurisdictions\/(.+)\/children\/detailed$/);
+    if (kidsMatch) {
+      const list = kids[kidsMatch[1]];
+      if (list instanceof Error) throw list;
+      return { data: list || [] };
+    }
     if (/\/v1\/users\/.+\/default-song/.test(config.url)) {
       if (defaultSong instanceof Error) throw defaultSong;
       return { data: defaultSong };
@@ -221,6 +280,13 @@ describe('JurisdictionPage — requests', () => {
     expect(fetchStandings).toHaveBeenCalledWith({ type: 'song', jurisdictionId: JUR_ID, genre: 'all', period: 'weekly', limit: 10 });
   });
 
+  it('then reads the breadcrumb and the neighborhoods, and the parent\'s for a neighborhood', async () => {
+    await renderLoaded();
+    await waitFor(() => expect(apiUrls()).toContain('get /v1/jurisdictions/harlem/children/detailed'));
+    expect(apiUrls()).toContain(`get /v1/jurisdictions/${JUR_ID}/breadcrumb`);
+    expect(apiUrls()).toContain(`get /v1/jurisdictions/${JUR_ID}/children/detailed`);
+  });
+
   it('falls back to the jurisdiction prop when the route has no name', async () => {
     routeParams.jurisdiction = undefined;
     await renderLoaded({ jurisdiction: 'Harlem' });
@@ -237,63 +303,182 @@ describe('JurisdictionPage — hero', () => {
     expect(screen.getByText(/north of 130th street/i)).toBeInTheDocument();
   });
 
-  it('falls back to a generic line when there is no bio', async () => {
+  it('shows no stock line when there is no bio', async () => {
     jurResponse = [{ ...JUR, bio: null }];
     await renderLoaded();
-    expect(screen.getByText(/the heartbeat of uptown harlem/i)).toBeInTheDocument();
+    expect(screen.queryByText(/heartbeat/i)).not.toBeInTheDocument();
+    expect(document.querySelector('.jp-bio')).toBeNull();
   });
 
-  it('labels a place with no children "Neighborhood"', async () => {
+  it('uses this week\'s #1 artist as the cover, named in the alt text', async () => {
     await renderLoaded();
-    expect(screen.getByText('Neighborhood')).toBeInTheDocument();
+    const img = document.querySelector('.jp-hero__img');
+    expect(img).toHaveAttribute('src', 'https://cdn.test/a1.jpg');
+    expect(img).toHaveAttribute('alt', 'rockle_gend, this week’s number one in Uptown Harlem');
   });
 
-  it('labels a place with children "District"', async () => {
-    jurResponse = [{ ...JUR, hasChildren: true }];
-    await renderLoaded();
-    expect(screen.getByText('District')).toBeInTheDocument();
-  });
-
-  it('prefers the place\'s own image for the backdrop', async () => {
+  it('falls back to the place\'s own image when the #1 has no photo', async () => {
+    boards.artist = board([{ ...ARTISTS[0], artwork: null }, ARTISTS[1]]);
     jurResponse = [{ ...JUR, symbolUrl: 'https://cdn.test/uptown.jpg' }];
     await renderLoaded();
-    expect(document.querySelector('.jp-hero-photo').style.backgroundImage).toContain('cdn.test/uptown.jpg');
+    expect(document.querySelector('.jp-hero__img')).toHaveAttribute('src', 'https://cdn.test/uptown.jpg');
+    expect(document.querySelector('.jp-hero')).toHaveClass('jp-hero--place');
   });
 
-  it('names the top artist and top track', async () => {
-    await renderLoaded();
-    expect(stat('Top artist')).toHaveTextContent('rockle_gend');
-    expect(stat('Top track')).toHaveTextContent('rock baby');
+  it('the crown names the #1 and opens their page', async () => {
+    const { user } = await renderLoaded();
+    const crowns = screen.getAllByRole('button', { name: '#1 in Uptown Harlem this week: rockle_gend' });
+    expect(crowns).toHaveLength(2); // desktop corner + phone row; CSS shows one
+    await user.click(crowns[0]);
+    expect(mockNavigate).toHaveBeenCalledWith('/artist/a1');
   });
 
-  it('counts only artists who have scored, and totals their points', async () => {
+  it('counts only artists who have scored, totals their points, and gives the close time', async () => {
+    boards.artist = board(ARTISTS, { closesAt: '2026-11-23T04:59:00Z' });
     await renderLoaded();
-    expect(stat('Artists charting')).toHaveTextContent(/^2$/);
-    expect(stat('Points this week')).toHaveTextContent('1,530'); // 320 + 1,210
+    expect(statline()).toHaveTextContent(/2 artists charting/);
+    expect(statline()).toHaveTextContent(/1,530 points this week/);
+    expect(statline()).toHaveTextContent(/final/);
   });
 
   it('adds a "+" when the board has more artists than the page loaded', async () => {
     const full = Array.from({ length: 25 }, (_, i) => entry({ id: `a${i}`, rank: i + 1, name: `artist ${i}`, points: 100 - i }));
     boards.artist = board(full, { total: 40 });
     await renderLoaded();
-    expect(stat('Artists charting')).toHaveTextContent('25+');
+    expect(statline()).toHaveTextContent(/25\+ artists charting/);
   });
 
-  it('says so when nobody has scored yet', async () => {
+  it('says so when nobody has scored yet, and shows no crown', async () => {
     boards = { artist: board([]), song: board([]) };
     await renderLoaded();
-    expect(stat('Top artist')).toHaveTextContent('No artist yet');
-    expect(stat('Top track')).toHaveTextContent('No track yet');
-    expect(stat('Artists charting')).toHaveTextContent(/^0$/);
-    expect(stat('Points this week')).toHaveTextContent(/^0$/);
+    expect(statline()).toHaveTextContent('Nobody on the board yet. The first play, like or vote starts it.');
+    expect(screen.queryByRole('button', { name: /^#1 in / })).not.toBeInTheDocument();
+    expect(document.querySelector('.jp-hero')).toHaveClass('jp-hero--solo');
   });
 
-  it('Vote now and Explore tracks navigate', async () => {
+  it('labels a place with no children "Neighborhood" once the lookup answers', async () => {
+    await renderLoaded();
+    expect(await within(chips()).findByText('Neighborhood')).toBeInTheDocument();
+  });
+
+  it('labels a place with children "District" and counts them', async () => {
+    kids[JUR_ID] = [kid('k1', 'North End'), kid('k2', 'South End')];
+    await renderLoaded();
+    expect(await within(chips()).findByText('District · 2 neighborhoods')).toBeInTheDocument();
+  });
+
+  it('shows no tier at all when the children lookup fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    kids[JUR_ID] = new Error('down');
+    await renderLoaded();
+    await waitFor(() => expect(apiUrls()).toContain(`get /v1/jurisdictions/${JUR_ID}/children/detailed`));
+    expect(within(chips()).queryByText(/Neighborhood|District/)).not.toBeInTheDocument();
+  });
+
+  it('marks the user\'s own place "Your home"', async () => {
+    auth.user = { jurisdiction: { jurisdictionId: JUR_ID, name: 'Uptown Harlem' } };
+    await renderLoaded();
+    expect(within(chips()).getByText('Your home')).toBeInTheDocument();
+  });
+
+  it('does not say "Your home" on someone else\'s place', async () => {
+    auth.user = { jurisdiction: { jurisdictionId: 'elsewhere', name: 'Downtown Harlem' } };
+    await renderLoaded();
+    expect(within(chips()).queryByText('Your home')).not.toBeInTheDocument();
+  });
+
+  it('shows where the place sits — without the root — and each level opens', async () => {
     const { user } = await renderLoaded();
-    await user.click(screen.getByRole('button', { name: 'Vote now' }));
-    await user.click(screen.getByRole('button', { name: 'Explore tracks' }));
+    const crumbs = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(crumbs).getByRole('button', { name: 'New York' })).toBeInTheDocument();
+    expect(within(crumbs).getByRole('button', { name: 'Harlem' })).toBeInTheDocument();
+    expect(within(crumbs).queryByText('Unis')).not.toBeInTheDocument();
+    expect(crumbs.querySelector('[aria-current="page"]')).toHaveTextContent('Uptown Harlem');
+    await user.click(within(crumbs).getByRole('button', { name: 'Manhattan' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/jurisdiction/Manhattan');
+  });
+
+  it('phones get a single "up" button to the parent', async () => {
+    const { user } = await renderLoaded();
+    await user.click(await screen.findByRole('button', { name: 'Up to Harlem' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/jurisdiction/Harlem');
+  });
+
+  it('Vote and Charts navigate', async () => {
+    const { user } = await renderLoaded();
+    await user.click(screen.getByRole('button', { name: 'Vote in Uptown Harlem' }));
+    await user.click(screen.getByRole('button', { name: 'Charts for Uptown Harlem' }));
     expect(mockNavigate).toHaveBeenNthCalledWith(1, '/voteawards');
-    expect(mockNavigate).toHaveBeenNthCalledWith(2, '/findpage');
+    expect(mockNavigate).toHaveBeenNthCalledWith(2, '/charts?type=song&period=weekly&genre=all&place=uptown-harlem');
+  });
+
+  it('Share copies the page link and says so', async () => {
+    const { user } = await renderLoaded();
+    // user-event installs its own clipboard on setup; spy on that one.
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText');
+    await user.click(screen.getAllByRole('button', { name: 'Share Uptown Harlem' })[0]);
+    expect(writeText).toHaveBeenCalledWith(window.location.href);
+    expect(feedback.success).toHaveBeenCalledWith('Link copied', { id: 'copy-link' });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('JurisdictionPage — the race', () => {
+  it('shows #1 against #2 and the gap', async () => {
+    await renderLoaded();
+    expect(screen.getByRole('button', { name: 'Open rockle_gend, first with 1,210 points' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open stizz, second with 320 points' })).toBeInTheDocument();
+    expect(raceLine()).toHaveTextContent('rockle_gend leads by 890 points.');
+    expect(screen.getByRole('img', { name: /rockle_gend has 79 percent/ })).toBeInTheDocument();
+  });
+
+  it('names third place and how far behind', async () => {
+    boards.artist = board([
+      ...ARTISTS.slice(0, 2),
+      entry({ id: 'a4', rank: 3, name: 'third_one', points: 300 }),
+    ]);
+    await renderLoaded();
+    expect(raceLine()).toHaveTextContent('third_one is third, 20 behind stizz.');
+  });
+
+  it('calls a close race "Neck and neck"', async () => {
+    boards.artist = board([
+      entry({ id: 'a1', rank: 1, name: 'rockle_gend', points: 1210 }),
+      entry({ id: 'a2', rank: 2, name: 'stizz', points: 1198 }),
+    ]);
+    await renderLoaded();
+    expect(screen.getByText('Neck and neck')).toBeInTheDocument();
+    expect(raceLine()).toHaveTextContent('rockle_gend leads by just 12 points.');
+  });
+
+  it('explains a tie', async () => {
+    boards.artist = board([
+      entry({ id: 'a1', rank: 1, name: 'rockle_gend', points: 500 }),
+      entry({ id: 'a2', rank: 2, name: 'stizz', points: 500 }),
+    ]);
+    await renderLoaded();
+    expect(raceLine()).toHaveTextContent('rockle_gend and stizz are tied on 500 points.');
+  });
+
+  it('says so when one artist is unopposed', async () => {
+    boards.artist = board([ARTISTS[0]]);
+    await renderLoaded();
+    expect(screen.getByText('Open spot')).toBeInTheDocument();
+    expect(raceLine()).toHaveTextContent('rockle_gend is the only artist on the board in Uptown Harlem this week.');
+  });
+
+  it('an empty board invites the first play', async () => {
+    boards = { artist: board([]), song: board([]) };
+    const { user } = await renderLoaded();
+    expect(screen.getByText('Not started')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Find music from Uptown Harlem' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/findpage');
+  });
+
+  it('links to how the race works', async () => {
+    const { user } = await renderLoaded();
+    await user.click(screen.getByRole('button', { name: 'How the race works' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/help#awards-winner');
   });
 });
 
@@ -301,52 +486,52 @@ describe('JurisdictionPage — hero', () => {
 describe('JurisdictionPage — live week vs last week\'s final', () => {
   it('a live board uses "this week" wording', async () => {
     await renderLoaded();
-    expect(screen.getByText('Live this week')).toBeInTheDocument();
-    expect(screen.getByText('Points this week')).toBeInTheDocument();
-    expect(screen.getByText('Number one this week')).toBeInTheDocument();
+    expect(within(chips()).getByText('Live this week')).toBeInTheDocument();
+    expect(statline()).toHaveTextContent(/points this week/);
+    expect(screen.getByText('Number one song · this week')).toBeInTheDocument();
   });
 
   it('before anyone scores in a new week, it says the results are last week\'s', async () => {
     boards.artist = board(ARTISTS, { state: 'PREVIOUS_FINAL' });
     await renderLoaded();
-    expect(screen.getByText("Last week's final")).toBeInTheDocument();
-    expect(screen.getByText('Points last week')).toBeInTheDocument();
-    expect(screen.getByText('Last week’s number one')).toBeInTheDocument();
+    expect(within(chips()).getByText("Last week's final")).toBeInTheDocument();
+    expect(statline()).toHaveTextContent(/1,530 points last week/);
+    expect(screen.getByRole('heading', { level: 2, name: 'Last week’s race' })).toBeInTheDocument();
+    expect(raceLine()).toHaveTextContent('rockle_gend won last week by 890 points.');
+    expect(screen.getAllByRole('button', { name: 'Last week’s #1: rockle_gend' })).toHaveLength(2);
+    expect(screen.getByText('Last week’s number one song')).toBeInTheDocument();
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe('JurisdictionPage — song of the week', () => {
+describe('JurisdictionPage — number one song', () => {
   it('features the top-scoring song', async () => {
     await renderLoaded();
-    const card = screen.getByRole('button', { name: 'Song of the week: rock baby' });
+    const card = document.querySelector('.jp-song1');
     expect(within(card).getByRole('heading', { level: 2, name: 'rock baby' })).toBeInTheDocument();
-    expect(within(card).getByText('rockle_gend')).toBeInTheDocument();
-    expect(card.querySelector('img')).toHaveAttribute('src', 'https://cdn.test/s1.jpg');
+    expect(within(card).getByRole('button', { name: 'rockle_gend' })).toBeInTheDocument();
+    expect(card.querySelector('.jp-song1__art')).toHaveAttribute('src', 'https://cdn.test/s1.jpg');
   });
 
-  it('is left out when no song has scored', async () => {
+  it('says so when no song has scored', async () => {
     boards.song = board([SONGS[2]]);
     await renderLoaded();
-    expect(screen.queryByRole('button', { name: /song of the week/i })).not.toBeInTheDocument();
-    expect(document.querySelector('.jp-hero')).toHaveClass('jp-hero--solo');
+    expect(screen.getByText('No song has scored here this week yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /number one song/i })).not.toBeInTheDocument();
   });
 
-  it('clicking the card opens the song page', async () => {
+  it('the title opens the song page and the artist opens theirs', async () => {
     const { user } = await renderLoaded();
-    await user.click(screen.getByRole('button', { name: 'Song of the week: rock baby' }));
-    expect(mockNavigate).toHaveBeenCalledWith('/song/s1');
+    const card = document.querySelector('.jp-song1');
+    await user.click(within(card).getByRole('button', { name: 'rock baby' }));
+    await user.click(within(card).getByRole('button', { name: 'rockle_gend' }));
+    expect(mockNavigate).toHaveBeenNthCalledWith(1, '/song/s1');
+    expect(mockNavigate).toHaveBeenNthCalledWith(2, '/artist/a1');
   });
 
-  it('Enter on the card opens the song page', async () => {
-    await renderLoaded();
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Song of the week: rock baby' }), { key: 'Enter' });
-    expect(mockNavigate).toHaveBeenCalledWith('/song/s1');
-  });
-
-  it('"Listen now" plays it without opening the song page', async () => {
+  it('Listen plays it without opening the song page', async () => {
     const { user } = await renderLoaded();
-    await user.click(screen.getByRole('button', { name: 'Play song of the week: rock baby' }));
+    await user.click(screen.getByRole('button', { name: 'Listen to the number one song, rock baby' }));
     expect(requestPlay).toHaveBeenCalledWith(expect.objectContaining({
       type: 'song', id: 's1', songId: 's1',
       url: 'https://cdn.test/s1.mp3',
@@ -355,6 +540,56 @@ describe('JurisdictionPage — song of the week', () => {
       source: 'jurisdiction',
     }));
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('JurisdictionPage — play the top 10', () => {
+  it('queues this week\'s playable top tracks as one collection', async () => {
+    const { user } = await renderLoaded();
+    await user.click(screen.getByRole('button', { name: 'Play Uptown Harlem’s top 1 this week' }));
+    expect(requestPlayCollection).toHaveBeenCalledTimes(1);
+    const { tracks, title } = requestPlayCollection.mock.calls[0][0];
+    expect(title).toBe('Uptown Harlem · top 1');
+    expect(tracks).toHaveLength(1); // "no more heroes" has no file
+    expect(tracks[0]).toEqual(expect.objectContaining({ id: 's1', url: 'https://cdn.test/s1.mp3', source: 'jurisdiction' }));
+    expect(requestPlay).not.toHaveBeenCalled();
+  });
+
+  it('is disabled when nothing is playable', async () => {
+    boards.song = board([SONGS[1]]); // scored, but no file
+    await renderLoaded();
+    expect(document.querySelector('.jp-play')).toBeDisabled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('JurisdictionPage — neighborhoods', () => {
+  it('a neighborhood shows its parent and the places next door; closed ones are not links', async () => {
+    const { user } = await renderLoaded();
+    const strip = (await screen.findByRole('heading', { level: 2, name: 'Part of Harlem · next door' })).closest('section');
+    expect(within(strip).getByRole('button', { name: /Harlem\s*District/ })).toBeInTheDocument();
+    expect(within(strip).getByText('Opening soon')).toBeInTheDocument();
+    expect(within(strip).queryByRole('button', { name: /East Harlem/ })).not.toBeInTheDocument();
+    expect(within(strip).queryByRole('button', { name: /Uptown Harlem/ })).not.toBeInTheDocument();
+    await user.click(within(strip).getByRole('button', { name: /Downtown Harlem/ }));
+    expect(mockNavigate).toHaveBeenCalledWith('/jurisdiction/Downtown%20Harlem');
+  });
+
+  it('a district lists the places inside it', async () => {
+    kids[JUR_ID] = [kid('k1', 'North End'), kid('k2', 'South End', { isActive: false })];
+    await renderLoaded();
+    const strip = (await screen.findByRole('heading', { level: 2, name: 'Inside Uptown Harlem' })).closest('section');
+    expect(within(strip).getByRole('button', { name: /North End/ })).toBeInTheDocument();
+    expect(within(strip).getByText('Opening soon')).toBeInTheDocument();
+  });
+
+  it('a failed breadcrumb just hides the breadcrumb and the strip', async () => {
+    chain = new Error('down');
+    await renderLoaded();
+    await waitFor(() => expect(apiUrls()).toContain(`get /v1/jurisdictions/${JUR_ID}/breadcrumb`));
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Uptown Harlem' })).toBeInTheDocument();
   });
 });
 
@@ -371,7 +606,8 @@ describe('JurisdictionPage — chart boards', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].querySelector('.jp-row-rank')).toHaveTextContent('01');
     expect(within(rows[0]).getByText('Sugar Hill')).toBeInTheDocument();
-    expect(rows[1].querySelector('.jp-row-score')).toHaveTextContent('1,210pts');
+    expect(rows[0].querySelector('.jp-row-score')).toHaveTextContent('1,210pts');
+    expect(rows[1].querySelector('.jp-row-score')).toHaveTextContent('320pts');
   });
 
   it('labels an artist with no home listed "Local artist"', async () => {
@@ -405,7 +641,7 @@ describe('JurisdictionPage — chart boards', () => {
     boards.artist = board(many);
     await renderLoaded();
     expect(boardOf('Top artists').querySelectorAll('.jp-row')).toHaveLength(10);
-    expect(stat('Artists charting')).toHaveTextContent('14');
+    expect(statline()).toHaveTextContent(/14 artists charting/);
   });
 
   it('explains an empty artist board and an empty track board', async () => {
@@ -480,7 +716,7 @@ describe('JurisdictionPage — playing', () => {
   it('the page never records a play itself (the Player does, after real listening)', async () => {
     const { user } = await renderLoaded();
     await user.click(screen.getByRole('button', { name: 'Play rock baby' }));
-    await user.click(screen.getByRole('button', { name: 'Play song of the week: rock baby' }));
+    await user.click(screen.getByRole('button', { name: 'Listen to the number one song, rock baby' }));
     await user.click(screen.getByRole('button', { name: 'Play rockle_gend' }));
     await waitFor(() => expect(requestPlay).toHaveBeenCalledTimes(3));
 
@@ -546,9 +782,10 @@ describe('JurisdictionPage — hall of fame and ads', () => {
     expect(screen.getByTestId('ad-slot')).toHaveAttribute('data-placement', 'jurisdiction');
   });
 
-  it('has none of the old hardcoded hero pills', async () => {
+  it('has none of the old hardcoded hero pills or stock lines', async () => {
     await renderLoaded();
     expect(screen.queryByText('Invite-Only')).not.toBeInTheDocument();
     expect(screen.queryByText(/active poll: live/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/heartbeat of/i)).not.toBeInTheDocument();
   });
 });

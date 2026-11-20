@@ -1,7 +1,7 @@
 // src/winnersTimeline.test.jsx
 //
-// Integration tests for WinnersTimeline v2 — now backed by the real
-// /v1/awards/past endpoint instead of the mock generator.
+// Integration tests for WinnersTimeline (Hall of fame v3) — backed by the
+// real /v1/awards/past endpoint.
 //
 // Covers the wiring that matters:
 //   • correct interval UUID + date window per interval pill
@@ -203,7 +203,7 @@ describe('WinnersTimeline', () => {
       renderTimeline();
       await screen.findByText('no more heroes');
 
-      await user.click(screen.getByRole('button', { name: 'Artist' }));
+      await user.click(screen.getByRole('button', { name: 'Artists' }));
 
       expect(await screen.findByText('rockle_gend')).toBeInTheDocument();
       expect(seen[seen.length - 1].type).toBe('artist');
@@ -274,8 +274,45 @@ describe('WinnersTimeline', () => {
       renderTimeline({ initialCategory: 'artist' });
       await screen.findByText('rockle_gend');
 
-      await user.click(screen.getByRole('button', { name: 'View rockle_gend' }));
+      await user.click(screen.getByRole('button', { name: 'rockle_gend' }));
       expect(mockNavigate).toHaveBeenCalledWith('/artist/a1');
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════
+  // v3: streaks and quiet periods
+  // ══════════════════════════════════════════════════════════════════════
+  describe('streaks and quiet periods', () => {
+    it('tags back-to-back wins on the newest win of the run', async () => {
+      trackAwards(() => [
+        songAward({ awardId: 'w3', awardDate: '2026-03-14' }),
+        songAward({ awardId: 'w2', awardDate: '2026-03-07' }),
+        songAward({ awardId: 'w1', awardDate: '2026-02-28', targetId: 's9', song: { songId: 's9', title: 'older one', artist: { userId: 'a9', username: 'other' } } }),
+      ]);
+
+      renderTimeline();
+      await screen.findAllByText('no more heroes');
+
+      expect(screen.getByText('2 weeks running')).toBeInTheDocument();
+    });
+
+    it('says a period was quiet instead of showing a trophy', async () => {
+      trackAwards(() => [songAward({ votesCount: 0, determinationMethod: 'NO_ACTIVITY' })]);
+
+      renderTimeline();
+      await screen.findByText('no more heroes');
+
+      expect(screen.getByText('Quiet week · decided on score')).toBeInTheDocument();
+      expect(screen.queryByText(/votes/)).not.toBeInTheDocument();
+    });
+
+    it('a win with no votes says it was won on plays and likes', async () => {
+      trackAwards(() => [songAward({ votesCount: 0, determinationMethod: 'ENGAGEMENT' })]);
+
+      renderTimeline();
+      await screen.findByText('no more heroes');
+
+      expect(screen.getByText('Won on plays & likes')).toBeInTheDocument();
     });
   });
 
@@ -288,7 +325,8 @@ describe('WinnersTimeline', () => {
 
       renderTimeline();
 
-      expect(await screen.findByText(/No winners on record for this interval yet/i)).toBeInTheDocument();
+      expect(await screen.findByText('No weekly winners yet')).toBeInTheDocument();
+      expect(screen.getByText(/When this week closes in Uptown Harlem, its #1 lands here/)).toBeInTheDocument();
     });
 
     it('shows an error with a working retry when the request fails', async () => {
@@ -311,14 +349,14 @@ describe('WinnersTimeline', () => {
       expect(await screen.findByText('no more heroes')).toBeInTheDocument();
     });
 
-    it('embedded variant sends "See full archive" to the archive route', async () => {
+    it('embedded variant sends "See the full archive" to the archive route', async () => {
       trackAwards(() => [songAward()]);
       const user = userEvent.setup();
 
       renderTimeline({ variant: 'embedded' });
       await screen.findByText('no more heroes');
 
-      await user.click(screen.getByRole('button', { name: /See full archive/i }));
+      await user.click(screen.getByRole('button', { name: 'See the full archive' }));
 
       expect(mockNavigate).toHaveBeenCalledWith(
         '/jurisdiction/Uptown%20Harlem/winners?interval=week&category=song'
