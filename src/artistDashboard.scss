@@ -621,7 +621,7 @@
   @media (max-width: 560px) {
     grid-template-columns: auto 1fr;
 
-    small { grid-column: 2; }
+    .artist-award-row__side { grid-column: 2; align-items: flex-start; }
   }
 
   // Content above ambient
@@ -663,6 +663,34 @@
     opacity: 0.16;
     z-index: 0;
     pointer-events: none;
+  }
+
+  // Date + "View award card" (opens /award/:id, the shareable card)
+  &__side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  &__card {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 11px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--unis-primary) 55%, transparent);
+    background: color-mix(in srgb, var(--unis-primary) 18%, transparent);
+    color: var(--unis-text);
+    font-size: 11.5px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.16s ease, transform 0.16s ease;
+
+    &:hover { background: color-mix(in srgb, var(--unis-primary) 34%, transparent); }
+    &:active { transform: scale(0.96); }
+    &:focus-visible { outline: 2px solid var(--unis-primary-2); outline-offset: 2px; }
   }
 
   // Small rounded artwork image (replaces emoji span)

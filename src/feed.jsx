@@ -1112,6 +1112,19 @@ const Feed = () => {
                         >
                           {winner.artistName}
                         </div>
+                        {winner.awardId && (
+                          <button
+                            type="button"
+                            className="winners-timeline-card"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/award/${winner.awardId}`);
+                            }}
+                            aria-label={`View award card for ${winner.title}`}
+                          >
+                            Award card
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>

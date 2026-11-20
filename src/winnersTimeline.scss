@@ -467,6 +467,31 @@ $wt-shadow-blue: 0 12px 32px var(--unis-primary-glow);
   letter-spacing: 0.04em;
 }
 
+// "Award card" — opens /award/:id, the winner's shareable card
+.wt-card-award {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 8px;
+  min-height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--unis-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--unis-primary) 18%, transparent);
+  color: var(--unis-text, #fff);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  transition: background-color 0.16s ease, transform 0.16s ease;
+
+  &:hover { background: color-mix(in srgb, var(--unis-primary) 34%, transparent); }
+  &:active { transform: scale(0.95); }
+  &:focus-visible { outline: 2px solid var(--unis-primary-2, #fff); outline-offset: 2px; }
+}
+
 // ═════════════════════════════════════════════════
 // LOAD MORE BUTTON
 // ═════════════════════════════════════════════════

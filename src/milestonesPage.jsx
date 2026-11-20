@@ -330,7 +330,13 @@ const MilestonesPage = () => {
           ? normalized.reduce((sum, e) => sum + e.votes, 0)
           : (payload.totalVotes ?? normalized.reduce((sum, e) => sum + e.votes, 0))
       );
-      setShown({ jurisdiction, genre, category, interval, selectedDate, empty: false });
+      // The award card only exists once the period is decided: FINAL from the
+      // leaderboard (its winner is the saved Award), or a row of the older
+      // bare-Award shape. Open and pending periods get no card link.
+      const awardId = Array.isArray(payload)
+        ? (rows[0]?.awardId || null)
+        : (payload.status === 'FINAL' ? (payload.winner?.awardId || null) : null);
+      setShown({ jurisdiction, genre, category, interval, selectedDate, empty: false, awardId });
       console.info(`${LOG} loaded ${normalized.length} ${category} entries · winner "${normalized[0].title}"`);
     } catch (err) {
       const status = err?.response?.status;
@@ -540,6 +546,15 @@ const MilestonesPage = () => {
                     <button type="button" className="ms-action" onClick={() => openEntry(winner)}>
                       {shown.category === 'artist' ? 'View artist' : 'View song'}
                     </button>
+                    {shown.awardId && (
+                      <button
+                        type="button"
+                        className="ms-action"
+                        onClick={() => navigate(`/award/${shown.awardId}`)}
+                      >
+                        View award card
+                      </button>
+                    )}
                   </div>
                 </div>
               </article>

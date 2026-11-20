@@ -1202,7 +1202,18 @@ const ArtistDashboard = () => {
                     {award.genre?.name && ` · ${award.genre.name}`}
                   </p>
                 </div>
-                <small>{formatAwardDate(award.awardDate)}</small>
+                <div className="artist-award-row__side">
+                  <small>{formatAwardDate(award.awardDate)}</small>
+                  {award.awardId && (
+                    <Link
+                      to={`/award/${award.awardId}`}
+                      className="artist-award-row__card"
+                      aria-label={`View award card: ${getAwardTitle(award.interval, type)}, ${formatAwardDate(award.awardDate)}`}
+                    >
+                      View award card
+                    </Link>
+                  )}
+                </div>
               </div>
             ))}
           </div>

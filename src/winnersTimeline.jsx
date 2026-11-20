@@ -217,7 +217,7 @@ const normalizeAward = (award, interval) => {
 // WINNER CARD
 // ═══════════════════════════════════════════════════════════
 
-const WinnerCard = ({ entry, onClick, onPlay }) => {
+const WinnerCard = ({ entry, onClick, onPlay, onCard }) => {
   const isSong = entry.type === 'song';
   const art = isSong ? entry.winner.artwork : entry.winner.photo;
 
@@ -274,6 +274,22 @@ const WinnerCard = ({ entry, onClick, onPlay }) => {
             ? `${entry.votesCount.toLocaleString()} vote${entry.votesCount === 1 ? '' : 's'}`
             : 'Won on engagement'}
         </div>
+
+        {entry.id && onCard && (
+          <button
+            type="button"
+            className="wt-card-award"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCard(entry);
+            }}
+            // Keep Enter/Space on this button from also opening the winner.
+            onKeyDown={(e) => e.stopPropagation()}
+            aria-label={`View award card for ${isSong ? entry.winner.title : entry.winner.name}, ${entry.periodLabel}`}
+          >
+            Award card
+          </button>
+        )}
       </div>
     </article>
   );
@@ -565,6 +581,7 @@ const WinnersTimeline = ({
                       entry={entry}
                       onClick={() => handleNavigate(entry)}
                       onPlay={() => handlePlay(entry)}
+                      onCard={() => navigate(`/award/${entry.id}`)}
                     />
                   </div>
                 </div>

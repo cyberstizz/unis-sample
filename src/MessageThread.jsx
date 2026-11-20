@@ -273,6 +273,8 @@ export default function MessageThread({
   onActivity,
   onAccepted,
   onRequestGone,
+  pinned = false,
+  onTogglePin,
 }) {
   const navigate = useNavigate();
   const {
@@ -1140,6 +1142,16 @@ export default function MessageThread({
             <div className={`udm-menu__panel${menuAnim.leaving ? ' is-leaving' : ''}`} role="menu">
               {menuStep === 'main' && (
                 <>
+                  {onTogglePin && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="udm-menu__item"
+                      onClick={() => { setMenuOpen(false); setMenuStep('main'); onTogglePin(); }}
+                    >
+                      {pinned ? 'Unpin chat' : 'Pin chat'}
+                    </button>
+                  )}
                   <button type="button" role="menuitem" className="udm-menu__item" onClick={openProfile}>View profile</button>
                   <button type="button" role="menuitem" className="udm-menu__item" onClick={() => setMenuStep('report')}>Report</button>
                   <button type="button" role="menuitem" className="udm-menu__item udm-menu__item--danger" onClick={() => setMenuStep('block')}>

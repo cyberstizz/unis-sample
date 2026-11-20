@@ -114,6 +114,23 @@ function useNow(ms) {
   return now;
 }
 
+// Pinned chats: up to 3, private to you (PUT /v1/conversations/{id}/pin).
+const PIN_LIMIT = 3;
+const LONG_PRESS_MS = 480;
+const MOVE_TOLERANCE = 10;
+
+const PinGlyph = ({ size = 13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="udm-pin">
+    <path d="M9.5 3.5h5l-.8 6.2 3.3 3.3H7l3.3-3.3z" fill="currentColor" fillOpacity="0.25" />
+    <path d="M12 13v7.5" />
+  </svg>
+);
+
+const pinTime = (c) => {
+  const t = parseServerTime(c.pinnedAt).getTime();
+  return Number.isNaN(t) ? 0 : t;
+};
+
 const VerifiedCheck = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" role="img" aria-label="Artist" className="udm-check">
     <path d="M12 1.8l2.6 1.9 3.2-.2 1 3.1 2.8 1.6-.6 3.1 1.6 2.8-2.2 2.3-.1 3.2-3.1.7-1.9 2.6-3-1.1-3 1.1-1.9-2.6-3.1-.7-.1-3.2L1.3 14l1.6-2.8-.6-3.1 2.8-1.6 1-3.1 3.2.2z" />
@@ -493,10 +510,14 @@ export default function MessagesPage() {
   const visible = useMemo(() => {
     const q = filter.trim().toLowerCase();
     const test = tab === 'chats' ? (CHIP_TEST[chip] || CHIP_TEST.all) : CHIP_TEST.all;
-    return laneRows.filter((c) => test(c) && (!q
+    const rows = laneRows.filter((c) => test(c) && (!q
       || (c.otherUsername || '').toLowerCase().includes(q)
       || (c.lastMessagePreview || '').toLowerCase().includes(q)
       || (c.otherJurisdictionName || '').toLowerCase().includes(q)));
+    if (tab !== 'chats') return rows;
+    // Pinned chats stay on top, in the order they were pinned.
+    const pinned = rows.filter((c) => c.pinnedAt).sort((a, b) => pinTime(a) - pinTime(b));
+    return pinned.length ? [...pinned, ...rows.filter((c) => !c.pinnedAt)] : rows;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [laneRows, filter, chip, tab]);
 
@@ -626,6 +647,103 @@ export default function MessagesPage() {
     }
   };
 
+  // ★ Pin / unpin a chat. Optimistic, rolled back if the server says no.
+  const [pinMenu, setPinMenu] = useState(null); // { conv, x, y }
+  const pinBusy = useRef(new Set());
+
+  const togglePin = useCallback(async (c) => {
+    if (!c || c._draft || c.lane !== 'chats' || pinBusy.current.has(c.id)) return;
+    const pinning = !c.pinnedAt;
+    const name = c.otherUsername || 'this chat';
+    if (pinning && conversations.filter((x) => x.lane === 'chats' && x.pinnedAt).length >= PIN_LIMIT) {
+      haptic('error');
+      feedback.info(`You can pin up to ${PIN_LIMIT} chats. Unpin one first.`, { id: 'dm-pin' });
+      return;
+    }
+    const before = c.pinnedAt || null;
+    const setPinnedAt = (value) => setConversations((prev) => prev.map((x) => (x.id === c.id ? { ...x, pinnedAt: value } : x)));
+    pinBusy.current.add(c.id);
+    setPinnedAt(pinning ? new Date().toISOString() : null);
+    try {
+      const res = await apiCall({ method: 'put', url: `/v1/conversations/${c.id}/pin`, data: { pinned: pinning } });
+      if (pinning && res.data?.pinnedAt) setPinnedAt(res.data.pinnedAt);
+      haptic('success');
+      feedback.success(pinning ? `Pinned ${name}` : `Unpinned ${name}`, { id: 'dm-pin' });
+      console.info(`[Messages] ${pinning ? 'pinned' : 'unpinned'} conversation ${c.id}`);
+    } catch (err) {
+      setPinnedAt(before);
+      console.error(`[Messages] ${pinning ? 'pin' : 'unpin'} failed:`, err?.response?.status, err?.message);
+      feedback.error(err?.response?.data?.error
+        || (pinning ? 'Couldn’t pin this chat. Try again.' : 'Couldn’t unpin this chat. Try again.'), { id: 'dm-pin' });
+    } finally {
+      pinBusy.current.delete(c.id);
+    }
+  }, [conversations, feedback]);
+
+  const openPinMenu = (c, x, y) => {
+    haptic('press');
+    setPinMenu({ conv: c, x, y });
+  };
+  const closePinMenu = useCallback(() => setPinMenu(null), []);
+
+  useEffect(() => {
+    if (!pinMenu) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') closePinMenu(); };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', closePinMenu);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', closePinMenu);
+    };
+  }, [pinMenu, closePinMenu]);
+
+  // Long-press (touch) or right-click (mouse) on a chat row opens Pin / Unpin.
+  const press = useRef({ timer: null, x: 0, y: 0, fired: false });
+  const clearPress = () => {
+    if (press.current.timer) clearTimeout(press.current.timer);
+    press.current.timer = null;
+  };
+  useEffect(() => () => clearPress(), []);
+
+  const rowGestures = (c) => {
+    if (c.lane !== 'chats') return {};
+    return {
+      onContextMenu: (e) => {
+        e.preventDefault();
+        clearPress();
+        openPinMenu(c, e.clientX, e.clientY);
+      },
+      onPointerDown: (e) => {
+        press.current.fired = false;
+        if (e.pointerType !== 'touch') return;
+        clearPress();
+        press.current.x = e.clientX;
+        press.current.y = e.clientY;
+        press.current.timer = setTimeout(() => {
+          press.current.timer = null;
+          press.current.fired = true;
+          openPinMenu(c, press.current.x, press.current.y);
+        }, LONG_PRESS_MS);
+      },
+      onPointerMove: (e) => {
+        if (!press.current.timer) return;
+        if (Math.abs(e.clientX - press.current.x) > MOVE_TOLERANCE
+          || Math.abs(e.clientY - press.current.y) > MOVE_TOLERANCE) clearPress();
+      },
+      onPointerUp: clearPress,
+      onPointerCancel: clearPress,
+      onPointerLeave: clearPress,
+      onClickCapture: (e) => {
+        // The long-press opened the menu — don't also open the chat.
+        if (press.current.fired) {
+          press.current.fired = false;
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      },
+    };
+  };
+
   const messageArtist = (a) => {
     haptic('tap');
     openWithUser({ userId: a.id, username: a.name, photoUrl: a.photoUrl });
@@ -676,6 +794,8 @@ export default function MessagesPage() {
       onActivity={onThreadActivity}
       onAccepted={() => { setTab('chats'); setShowFiltered(false); loadConversations(); }}
       onRequestGone={() => { requestClose(); loadConversations(); }}
+      pinned={!!realSelected?.pinnedAt}
+      onTogglePin={realSelected && realSelected.lane === 'chats' ? () => togglePin(realSelected) : undefined}
     />
   ) : null;
 
@@ -883,14 +1003,17 @@ export default function MessagesPage() {
               const online = isOnline(c);
               const isRequest = c.lane === 'requests';
               const busy = requestBusy[c.id];
+              const pinned = !isRequest && !!c.pinnedAt;
+              const g = rowGestures(c);
               const row = (
                 <button
                   type="button"
                   key={c.id}
-                  className={`udm-conv${c.id === selectedId ? ' active' : ''}${unread ? ' unread' : ''}`}
-                  onPointerDown={() => prefetchThread(me, c.id)}
+                  className={`udm-conv${c.id === selectedId ? ' active' : ''}${unread ? ' unread' : ''}${pinned ? ' pinned' : ''}`}
+                  {...g}
+                  onPointerDown={(e) => { prefetchThread(me, c.id); g.onPointerDown?.(e); }}
                   onClick={() => openExisting(c)}
-                  aria-label={`${c.otherUsername || 'Unknown'}${c.otherJurisdictionName ? `, ${c.otherJurisdictionName}` : ''}${online ? ', active now' : ''}${unread ? `, ${c.unreadCount} unread` : ''}`}
+                  aria-label={`${c.otherUsername || 'Unknown'}${pinned ? ', pinned' : ''}${c.otherJurisdictionName ? `, ${c.otherJurisdictionName}` : ''}${online ? ', active now' : ''}${unread ? `, ${c.unreadCount} unread` : ''}`}
                 >
                   <Avatar name={c.otherUsername} photoUrl={c.otherPhotoUrl} size={52} ring={c.otherSupportsMe} online={online} />
                   <span className="udm-conv__body">
@@ -904,7 +1027,10 @@ export default function MessagesPage() {
                     <Preview conv={c} typing={typing} />
                   </span>
                   <span className="udm-conv__side">
-                    <span className="udm-conv__time">{relativeTime(c.lastMessageAt, now)}</span>
+                    <span className="udm-conv__time">
+                      {pinned && <PinGlyph />}
+                      {relativeTime(c.lastMessageAt, now)}
+                    </span>
                     {unread ? (
                       <span className="udm-badge" key={c.unreadCount}>{c.unreadCount}</span>
                     ) : c.lastMessageSeen ? (
@@ -1038,6 +1164,39 @@ export default function MessagesPage() {
           aria-hidden={!stageOpen}
         >
           {thread}
+        </div>,
+        stageHost,
+      )}
+
+      {/* Pin / Unpin — from a long-press or right-click on a chat row */}
+      {pinMenu && stageHost && createPortal(
+        <div
+          className="udm-pinlayer"
+          onPointerDown={closePinMenu}
+          onContextMenu={(e) => { e.preventDefault(); closePinMenu(); }}
+        >
+          <div
+            className="udm-pinmenu"
+            role="menu"
+            aria-label={`Options for ${pinMenu.conv.otherUsername || 'this chat'}`}
+            style={{
+              left: Math.max(8, Math.min(pinMenu.x, window.innerWidth - 228)),
+              top: Math.max(8, Math.min(pinMenu.y, window.innerHeight - 120)),
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <span className="udm-pinmenu__name">{pinMenu.conv.otherUsername || 'Unknown'}</span>
+            <button
+              type="button"
+              role="menuitem"
+              className="udm-pinmenu__item"
+              autoFocus
+              onClick={() => { const c = pinMenu.conv; closePinMenu(); togglePin(c); }}
+            >
+              <PinGlyph size={18} />
+              {pinMenu.conv.pinnedAt ? 'Unpin chat' : 'Pin chat'}
+            </button>
+          </div>
         </div>,
         stageHost,
       )}
