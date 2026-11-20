@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { useReward, formatScore } from './context/RewardContext';
 import { useAuth } from './context/AuthContext';
+import { useFeedback } from './context/FeedbackContext';
+import { drawVoteCard, voteCardBlob, voteCardFileName } from './utils/voteCard'; // ★ share image
 import { GENRE_IDS, GENRE_NAMES, JURISDICTION_IDS, INTERVAL_IDS } from './utils/idMappings';
 // Points + interval list come from the help center's shared constants, so the
 // wizard and the help page can never quote different numbers (helpContent
@@ -254,6 +255,32 @@ const readThemePrimary = () => {
   }
 };
 
+// ★ When a race's results come in, in words, on the race's own clock.
+// closesAt (from /v1/awards/standings) is the instant the period ends — the
+// local midnight after its last day — so a minute before it is that last day.
+//   same day → "tonight at midnight", this week → "Sunday at midnight",
+//   further out → "Dec 31 at midnight".
+const RESULTS_FALLBACK = {
+  daily: 'tonight at midnight',
+  weekly: 'Sunday at midnight',
+};
+function closeLabel(closesAt, timeZone, intervalKey) {
+  const fallback = RESULTS_FALLBACK[intervalKey] || `when the ${INTERVAL_NOUN[intervalKey] || 'period'} ends`;
+  if (!closesAt) return fallback;
+  try {
+    const end = new Date(new Date(closesAt).getTime() - 60 * 1000);
+    if (Number.isNaN(end.getTime())) return fallback;
+    const opt = timeZone ? { timeZone } : {};
+    const dayKey = (d) => d.toLocaleDateString('en-CA', opt);
+    if (dayKey(end) === dayKey(new Date())) return 'tonight at midnight';
+    const daysAway = (end.getTime() - Date.now()) / 86400000;
+    if (daysAway < 6.5) return `${end.toLocaleDateString('en-US', { ...opt, weekday: 'long' })} at midnight`;
+    return `${end.toLocaleDateString('en-US', { ...opt, month: 'short', day: 'numeric' })} at midnight`;
+  } catch {
+    return fallback;
+  }
+}
+
 // --- ANIMATION VARIANTS ---------------------------------------------------
 
 const overlayVariants = {
@@ -334,6 +361,11 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
 
   const [voteResult, setVoteResult] = useState({ status: 'idle', message: '', details: '' });
   const [showPhoneModal, setShowPhoneModal] = useState(false);
+  // ★ After a vote: the most local race, live (ranks only), and share state.
+  //   race.status: idle | loading | ready | none
+  const [race, setRace] = useState({ status: 'idle', entries: [], closesAt: null, timeZone: null });
+  const [sharing, setSharing] = useState(false);
+  const feedback = useFeedback();
 
   // The artwork URL that actually LOADED (null until one does).
   const [artworkSrc, setArtworkSrc] = useState(null);
@@ -359,6 +391,8 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
       setStep(1);
       setDirection(1);
       setVoteResult({ status: 'idle', message: '', details: '' });
+      setRace({ status: 'idle', entries: [], closesAt: null, timeZone: null });
+      setSharing(false);
       setArtistNameForward('');
       setArtistNameBackward('');
       setSubmitting(false);
@@ -550,36 +584,6 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     };
   }, [show, artKey]);
 
-  // --- CONFETTI ON SUCCESS ------------------------------------------------
-  useEffect(() => {
-    if (voteResult.status === 'success') triggerFireworks();
-  }, [voteResult.status]);
-
-  const triggerFireworks = () => {
-    const duration = 2200;
-    const animationEnd = Date.now() + duration;
-    const themePrimary = readThemePrimary();
-    const palette = artRGB
-      ? [`rgb(${artRGB.join(',')})`, '#ffffff', '#C0C0C0', themePrimary]
-      : [themePrimary, '#ffffff', '#C0C0C0'];
-    const defaults = {
-      startVelocity: 28,
-      spread: 360,
-      ticks: 70,
-      zIndex: 99999,
-      colors: palette,
-    };
-    const rand = (min, max) => Math.random() * (max - min) + min;
-
-    const interval = setInterval(() => {
-      const timeLeft = animationEnd - Date.now();
-      if (timeLeft <= 0) return clearInterval(interval);
-      const particleCount = 40 * (timeLeft / duration);
-      confetti({ ...defaults, particleCount, origin: { x: rand(0.1, 0.3), y: Math.random() - 0.2 } });
-      confetti({ ...defaults, particleCount, origin: { x: rand(0.7, 0.9), y: Math.random() - 0.2 } });
-    }, 220);
-  };
-
   // --- CLOSE (never mid-submit) -------------------------------------------
   // Closing while the request is in flight would hide the result — the vote
   // could count with the user never knowing, then a retry hits "Already Voted".
@@ -620,6 +624,60 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   // and ignores the jurisdictionId sent with the vote.
   const selectedJurisdictionName =
     jurisdictionOptions.length > 0 ? jurisdictionOptions.map((o) => o.name).join(' · ') : '…';
+
+  // ★ AFTER A VOTE — the most local race it counts in, live.
+  // GET /v1/awards/standings is the read-only live board (the vote itself
+  // clears its cache on the server, so the new vote is already counted).
+  // Ranks only — no scores on this screen.
+  const raceJurisdiction = jurisdictionOptions[0] || null;
+  const raceJurisdictionId = raceJurisdiction?.jurisdictionId || null;
+  const voteType = currentFilters.selectedType;
+  useEffect(() => {
+    if (voteResult.status !== 'success') return undefined;
+    const intervalId = INTERVAL_IDS[intervalKey];
+    if (!raceJurisdictionId || !intervalId || !resolvedGenreId) {
+      setRace({ status: 'none', entries: [], closesAt: null, timeZone: null });
+      return undefined;
+    }
+    let cancelled = false;
+    setRace((r) => ({ ...r, status: 'loading' }));
+    apiCall({
+      method: 'get',
+      url: `/v1/awards/standings?type=${encodeURIComponent(voteType)}&jurisdictionId=${raceJurisdictionId}&genreId=${resolvedGenreId}&intervalId=${intervalId}&limit=50`,
+      useCache: false,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        const data = res.data || {};
+        const live = data.state === 'LIVE';
+        const all = Array.isArray(data.entries) ? data.entries : [];
+        const mineIdx = all.findIndex((e) => String(e.targetId) === String(selectedNominee?.id));
+        // Top three — or top two plus the pick, when the pick is further down.
+        const shown = mineIdx >= 3 ? [...all.slice(0, 2), all[mineIdx]] : all.slice(0, 3);
+        setRace({
+          status: live && shown.length ? 'ready' : 'none',
+          entries: shown.map((e) => ({
+            rank: e.rank,
+            id: e.targetId,
+            name: e.name,
+            artistName: e.artistName || null,
+            art: e.artworkUrl ? toImageSrc(e.artworkUrl) : null,
+            mine: String(e.targetId) === String(selectedNominee?.id),
+          })),
+          pickArtist: mineIdx >= 0 ? all[mineIdx].artistName || null : null,
+          closesAt: live ? data.closesAt || null : null,
+          timeZone: data.raceTimezone || null,
+        });
+        console.info('[VotingWizard] race loaded', { state: data.state, pickRank: mineIdx >= 0 ? all[mineIdx].rank : null });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // The vote already counted — a missing board just hides the card.
+        console.error('[VotingWizard] race standings failed:', err?.response?.status, err?.message);
+        setRace({ status: 'none', entries: [], closesAt: null, timeZone: null });
+      });
+    return () => { cancelled = true; };
+  }, [voteResult.status, raceJurisdictionId, intervalKey, resolvedGenreId, voteType, selectedNominee?.id]);
 
   // Problems the user should learn about on step 1 — before typing anything.
   let issue = null;
@@ -928,92 +986,237 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
     );
   };
 
-  // --- SUCCESS TAKEOVER ---------------------------------------------------
-  // Full-bleed result: the nominee's artwork consumes the whole modal, a
-  // themed points tag states the exact score gained (before → after), and a
-  // single pill dismisses.
+  // --- SUCCESS: VOTE CELEBRATION (★ redesigned Nov 2026) --------------------
+  // About two seconds, no confetti (people vote every day). The pick gets a
+  // check seal; "Counts in" lights up the races the vote counts in, most
+  // local first; the race card shows where that race stands right now (ranks
+  // only); one line of points; Share my pick (a story image) and Done.
+  const weight = (INTERVAL_WEIGHTS.find((w) => w.key === intervalKey) || {}).weight || null;
+  const resultsWhen = closeLabel(race.closesAt, race.timeZone, intervalKey);
+  const isSongVote = voteType === 'song';
+  const pickArtist = isSongVote
+    ? (race.pickArtist || selectedNominee?.artistName || selectedNominee?.artist?.username
+      || (typeof selectedNominee?.artist === 'string' ? selectedNominee.artist : null))
+    : null;
+
+  const shareMyPick = async () => {
+    if (sharing) return;
+    setSharing(true);
+    const place = raceJurisdiction?.name || '';
+    const vote = {
+      kind: isSongVote ? 'song' : 'artist',
+      name: nomineeName,
+      artistName: pickArtist,
+      award: category,
+      place,
+      genre: genreLabel,
+      closes: `Voting for this ${intervalNoun} closes ${resultsWhen}`,
+      artworkUrl: artworkSrc,
+      themeColor: readThemePrimary(),
+      logoSrc: activeLogo,
+    };
+
+    // The link carries the voter's referral code, so anyone who joins from
+    // the share is credited to them.
+    let link = `${window.location.origin}/${isSongVote ? 'song' : 'artist'}/${selectedNominee?.id}`;
+    try {
+      if (userId) {
+        const res = await apiCall({ method: 'get', url: `/v1/users/profile-summary/${userId}` });
+        const code = res.data?.referralCode;
+        if (code) link += `?ref=${encodeURIComponent(code)}`;
+      }
+    } catch (err) {
+      console.warn('[VotingWizard] referral code unavailable for share link:', err?.message);
+    }
+    const text = `I voted for ${nomineeName}${pickArtist ? ` by ${pickArtist}` : ''} for ${category}${place ? ` in ${place}` : ''} on Unis. Cast yours:`;
+
+    let file = null;
+    try {
+      const canvas = document.createElement('canvas');
+      await drawVoteCard(canvas, vote);
+      const blob = await voteCardBlob(canvas);
+      if (blob) file = new File([blob], voteCardFileName(vote), { type: 'image/png' });
+    } catch (err) {
+      console.error('[VotingWizard] share image failed, sharing the link instead:', err?.message);
+    }
+
+    try {
+      if (file && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `My vote for ${category}`, text: `${text} ${link}` });
+      } else if (navigator.share) {
+        await navigator.share({ title: `My vote for ${category}`, text, url: link });
+      } else {
+        // Desktop browsers without a share sheet: save the image, copy the link.
+        if (file) {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(file);
+          a.download = file.name;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        }
+        try {
+          await navigator.clipboard.writeText(`${text} ${link}`);
+          feedback.success(file ? 'Image saved and link copied' : 'Link copied');
+        } catch {
+          feedback.success(file ? 'Image saved' : `Copy this link: ${link}`);
+        }
+      }
+    } catch (err) {
+      if (err?.name !== 'AbortError') {
+        console.error('[VotingWizard] share failed:', err?.message);
+        feedback.error("Couldn't open sharing. Try again.");
+      }
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const renderSuccessTakeover = () => {
-    const { points = VOTE_POINTS, scoreBefore, scoreAfter } = voteResult;
-    const hasScore =
-      typeof scoreBefore === 'number' && typeof scoreAfter === 'number';
+    const { points = VOTE_POINTS, scoreAfter } = voteResult;
+    const hasScore = typeof scoreAfter === 'number';
+    const chain = jurisdictionOptions.length ? jurisdictionOptions : [];
+    // Each "Counts in" node lights up 300ms after the last one.
+    const nodeDelay = (i) => `${880 + i * 330}ms`;
 
     return (
-      <motion.div
-        className="vw-win"
-        initial={{ opacity: 0, scale: 0.98, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      >
+      <div className="vw-cel" role="status" aria-live="polite">
         {showArtwork && (
-          <div
-            className="vw-win__bg"
-            style={{ backgroundImage: `url("${artworkSrc}")` }}
-            aria-hidden="true"
-          />
+          <div className="vw-cel__ambient" style={{ backgroundImage: `url("${artworkSrc}")` }} aria-hidden="true" />
         )}
-        <div className="vw-win__scrim" aria-hidden="true" />
-        <div className="vw-win__accentline" aria-hidden="true" />
+        <div className="vw-cel__scrim" aria-hidden="true" />
 
-        <div className="vw-win__frame">
-          <header className="vw-win__top">
-            <img src={activeLogo} alt="UNIS" className="vw-win__logo" />
-            <button className="vw-win__close" onClick={handleClose} aria-label="Close">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <div className="vw-cel__frame">
+          <header className="vw-cel__top">
+            <img src={activeLogo} alt="UNIS" className="vw-cel__logo" />
+            <button className="vw-cel__close" onClick={handleClose} aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
               </svg>
             </button>
           </header>
 
-          <div className="vw-win__badgerow">
-            <div className="vw-win__badge">
-              {category}
-              <small>{selectedJurisdictionName}</small>
-            </div>
-            <div className="vw-win__tagwrap">
-              <div className="vw-win__tag">
-                <b>+{points}<sup>pts</sup></b>
-                <span>earned</span>
-              </div>
-              {hasScore && (
-                <div className="vw-win__score">
-                  <s>{formatScore(scoreBefore)}</s> &rarr;{' '}
-                  <strong>{formatScore(scoreAfter)}</strong>
-                </div>
-              )}
-            </div>
+          {/* The pick, sealed */}
+          <div className={`vw-cel__pick ${isSongVote ? 'is-song' : ''}`}>
+            <span className="vw-cel__ring" aria-hidden="true" />
+            {showArtwork ? (
+              <img src={artworkSrc} alt="" className="vw-cel__art" />
+            ) : (
+              <span className="vw-cel__art vw-cel__art--empty" aria-hidden="true" />
+            )}
+            <span className="vw-cel__seal" aria-hidden="true">
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
+                <span
+                  key={a}
+                  className="vw-cel__spark"
+                  style={{
+                    '--sx': `${Math.round(Math.cos((a * Math.PI) / 180) * 34)}px`,
+                    '--sy': `${Math.round(Math.sin((a * Math.PI) / 180) * 34)}px`,
+                  }}
+                />
+              ))}
+              <span className="vw-cel__check">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M5 12.5l4.5 4.5L19 7.5" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </span>
           </div>
 
-          <div className="vw-win__spacer" />
+          <div className="vw-cel__words">
+            <p className="vw-cel__eyebrow vw-cel__in" style={{ '--d': '520ms' }}>Vote counted</p>
+            <h2 className="vw-cel__head vw-cel__in" style={{ '--d': '600ms' }}>
+              You backed <em className={nomineeName.length > 12 ? 'is-long' : ''}>{nomineeName}</em>
+            </h2>
+            <p className="vw-cel__race vw-cel__in" style={{ '--d': '680ms' }}>
+              {category}{pickArtist ? ` · by ${pickArtist}` : genreLabel ? ` · ${genreLabel}` : ''}
+            </p>
+          </div>
 
-          {showArtwork && (
-            <img
-              src={artworkSrc}
-              alt={nomineeName}
-              className="vw-win__cover"
-            />
+          {chain.length > 0 && (
+            <div className="vw-cel__card vw-cel__in" style={{ '--d': '780ms' }}>
+              <div className="vw-cel__cardhead">
+                <span className="vw-cel__label">Counts in</span>
+                {weight && (
+                  <span className="vw-cel__weight">
+                    <b>+{weight}</b> to {isSongVote ? 'the song' : nomineeName} in each
+                  </span>
+                )}
+              </div>
+              <ol className="vw-cel__chain" style={{ '--n': chain.length }}>
+                {chain.map((j, i) => (
+                  <li key={j.jurisdictionId || j.name} className="vw-cel__node">
+                    {i > 0 && (
+                      <span className="vw-cel__line" aria-hidden="true">
+                        <span className="vw-cel__linefill" style={{ '--d': `${880 + (i - 1) * 330 + 150}ms` }} />
+                      </span>
+                    )}
+                    <span className="vw-cel__dot" style={{ '--d': nodeDelay(i) }} aria-hidden="true" />
+                    <span className="vw-cel__place">{j.name}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           )}
 
-          <p className="vw-win__eyebrow">Vote locked in</p>
-          <h2 className="vw-win__head">
-            You backed <em>{nomineeName}</em> for the {intervalNoun}
-          </h2>
-          <p className="vw-win__body">
-            Your vote counted toward {category} in {selectedJurisdictionName}. One
-            vote per category per interval &mdash; results post at 12:00&nbsp;AM ET when the{' '}
-            {intervalNoun} closes.
-          </p>
+          {race.status === 'loading' && (
+            <div className="vw-cel__card vw-cel__racecard is-loading" aria-hidden="true">
+              <span className="vw-cel__skel" />
+              <span className="vw-cel__skel" />
+              <span className="vw-cel__skel" />
+            </div>
+          )}
+          {race.status === 'ready' && (
+            <div className="vw-cel__card vw-cel__racecard vw-cel__in" style={{ '--d': '1650ms' }}>
+              <div className="vw-cel__cardhead">
+                <span className="vw-cel__racetitle">{raceJurisdiction?.name} right now</span>
+                <span className="vw-cel__closes">Results {resultsWhen}</span>
+              </div>
+              <ol className="vw-cel__board">
+                {race.entries.map((e) => (
+                  <li key={e.id} className={`vw-cel__row ${e.mine ? 'is-mine' : ''}`}>
+                    <span className="vw-cel__rank">{e.rank}</span>
+                    {e.art ? (
+                      <img src={e.art} alt="" className={`vw-cel__thumb ${isSongVote ? 'is-song' : ''}`} />
+                    ) : (
+                      <span className={`vw-cel__thumb vw-cel__thumb--empty ${isSongVote ? 'is-song' : ''}`} aria-hidden="true" />
+                    )}
+                    <span className="vw-cel__name">
+                      {e.name}{isSongVote && e.artistName ? ` · ${e.artistName}` : ''}
+                    </span>
+                    {e.mine && <span className="vw-cel__tag">Your pick</span>}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {race.status === 'none' && (
+            <p className="vw-cel__closesline vw-cel__in" style={{ '--d': '900ms' }}>Results {resultsWhen}</p>
+          )}
 
-          <button
-            className="vw-btn vw-win__cta"
-            onClick={() => onVoteSuccess?.(selectedNominee?.id)}
-          >
-            Done
-          </button>
-          <p className="vw-win__sub">
-            +{points} points added to your score.
+          <div className="vw-cel__spacer" />
+
+          <p className="vw-cel__points vw-cel__in" style={{ '--d': '1900ms' }}>
+            <b>+{points} points</b> for you{hasScore ? <> · score {formatScore(scoreAfter)}</> : null}
           </p>
+          <div className="vw-cel__actions vw-cel__in" style={{ '--d': '1950ms' }}>
+            <button type="button" className="vw-cel__btn vw-cel__btn--ghost" onClick={shareMyPick} disabled={sharing}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 15V4" />
+                <path d="M8 8l4-4 4 4" />
+                <path d="M6 12v6.5A1.5 1.5 0 0 0 7.5 20h9a1.5 1.5 0 0 0 1.5-1.5V12" />
+              </svg>
+              {sharing ? 'Making image…' : 'Share my pick'}
+            </button>
+            <button
+              type="button"
+              className="vw-cel__btn vw-cel__btn--solid"
+              onClick={() => onVoteSuccess?.(selectedNominee?.id)}
+            >
+              Done
+            </button>
+          </div>
         </div>
-      </motion.div>
+      </div>
     );
   };
 
