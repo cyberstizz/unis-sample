@@ -154,6 +154,19 @@ const popularArtist = {
   score: 600,
 };
 
+// Rankings on the feed (top five artists, the Charts lens, the daily race)
+// all read GET /v1/awards/standings. `standings` holds what that endpoint
+// answers per type; a test can replace an entry before rendering.
+const WEEKLY_ID = '00000000-0000-0000-0000-000000000202';
+const emptyBoard = (type) => ({ type, state: 'LIVE', interval: 'Weekly', total: 0, entries: [] });
+let standings;
+
+const topArtistRows = [
+  { targetId: 'artist-1', targetType: 'artist', rank: 1, name: 'testartist', totalPoints: 320, votes: 2, artworkUrl: '/cdn/photo1.jpg', movement: 1 },
+  { targetId: 'artist-2', targetType: 'artist', rank: 2, name: 'secondartist', totalPoints: 210, votes: 0, artworkUrl: null },
+  { targetId: 'artist-9', targetType: 'artist', rank: 3, name: 'noscoreartist', totalPoints: 0, votes: 0, artworkUrl: null },
+];
+
 // ---------------------------------------------------------------------------
 // apiCall logger — track which URLs get called
 // ---------------------------------------------------------------------------
@@ -180,6 +193,9 @@ function callsMatching(urlMatcher, method) {
 // LIFECYCLE
 // ---------------------------------------------------------------------------
 beforeEach(() => {
+  standings = {
+    'artist:weekly': { type: 'artist', state: 'LIVE', interval: 'Weekly', total: 3, entries: topArtistRows },
+  };
   callTracker.reset();
   cacheService.clearAll();
   navigateSpy.mockReset();
@@ -198,6 +214,14 @@ beforeEach(() => {
       return HttpResponse.json([]);
     }),
     http.get(`${API}/v1/users/artist/top`, () => HttpResponse.json([popularArtist])),
+    http.get(`${API}/v1/awards/standings`, ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      const type = params.get('type');
+      const weekly = params.get('intervalId') === WEEKLY_ID;
+      const answer = standings[`${type}:${weekly ? 'weekly' : 'daily'}`];
+      if (answer === 'error') return new HttpResponse(null, { status: 500 });
+      return HttpResponse.json(answer || emptyBoard(type));
+    }),
     http.get(`${API}/v1/users/:id/default-song`, () =>
       HttpResponse.json({ songId: 'ds1', title: 'Default', fileUrl: '/cdn/default.mp3', artworkUrl: '/cdn/default-art.jpg' })
     ),
@@ -244,7 +268,7 @@ describe('Feed — initial render', () => {
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
     expect(screen.getByText(/Trending Today in/i)).toBeInTheDocument();
     expect(screen.getByText(/New Releases/i)).toBeInTheDocument();
-    expect(screen.getByText(/Popular Artists/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Top 5 artists in/i })).toBeInTheDocument();
   });
 });
 
@@ -558,43 +582,74 @@ describe('Feed — navigation clicks', () => {
   });
 });
 
-describe('Feed — popular artists section', () => {
-  it('renders artist cards from aggregated media data', async () => {
+describe('Feed — top five artists', () => {
+  // Ranked by the backend with the same formula as awards — the feed no
+  // longer builds this list itself from the trending and new-release songs.
+  const topFive = async () => {
+    const heading = await screen.findByRole('heading', { name: /Top 5 artists in/i });
+    return heading.closest('section');
+  };
+
+  async function loadFeed() {
     renderWithProviders(<Feed />, { as: 'guest' });
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
+  }
 
-    await waitFor(() => {
-      // Artists aggregated from trending/topRated/new: artist-1, artist-2, artist-3
-      expect(screen.getByTestId('artist-card-artist-1')).toBeInTheDocument();
-    });
+  it('asks for this week\'s top five artists across all genres', async () => {
+    await loadFeed();
+    await topFive();
+    const call = callsMatching(/\/v1\/awards\/standings\?/)
+      .map((c) => Object.fromEntries(new URL(c.url, 'http://x.test').searchParams))
+      .find((p) => p.type === 'artist' && p.intervalId === WEEKLY_ID);
+    expect(call).toMatchObject({ limit: '5', offset: '0' });
+    expect(call.genreId).toBeUndefined();
   });
 
-  it('navigates to artist page when artist card is clicked', async () => {
-    renderWithProviders(<Feed />, { as: 'guest' });
-    await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
-    await waitFor(() => expect(screen.getByTestId('artist-card-artist-1')).toBeInTheDocument());
+  it('lists artists in ranked order with their points', async () => {
+    await loadFeed();
+    const section = await topFive();
+    const rows = section.querySelectorAll('.chart-row');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveClass('chart-row--first');
+    expect(within(rows[0]).getByText('testartist')).toBeInTheDocument();
+    expect(rows[0].querySelector('.chart-song-artist')).toHaveTextContent('320 pts · 2 votes');
+    expect(rows[1].querySelector('.chart-song-artist')).toHaveTextContent(/^210 pts$/);
+  });
 
+  it('leaves out artists with no points', async () => {
+    await loadFeed();
+    const section = await topFive();
+    expect(within(section).queryByText('noscoreartist')).not.toBeInTheDocument();
+  });
+
+  it('says whether the ranking is live', async () => {
+    await loadFeed();
+    const section = await topFive();
+    expect(section.querySelector('.chart-caption')).toHaveTextContent('Live this week');
+  });
+
+  it('navigates to the artist page when a row is clicked', async () => {
+    await loadFeed();
+    const section = await topFive();
     const user = userEvent.setup();
-    await user.click(screen.getByTestId('artist-card-artist-1'));
-
+    await user.click(within(section).getByText('testartist'));
     expect(navigateSpy).toHaveBeenCalledWith('/artist/artist-1');
   });
 
-  it('dedupes artists (same userId only appears once)', async () => {
-    // Make both trending and new return songs by the SAME artist
-    server.use(
-      http.get(`${API}/v1/media/trending/today`, () => HttpResponse.json([trendingSong])),
-      http.get(`${API}/v1/media/new`, () => HttpResponse.json([{ ...trendingSong, songId: 'dupe-song' }]))
-    );
+  it('is hidden when nobody has scored', async () => {
+    standings['artist:weekly'] = emptyBoard('artist');
+    await loadFeed();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByRole('heading', { name: /Top 5 artists in/i })).not.toBeInTheDocument();
+  });
 
-    renderWithProviders(<Feed />, { as: 'guest' });
-    await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
-
-    await waitFor(() => {
-      // Should only find ONE artist card with userId artist-1
-      const cards = screen.getAllByTestId(/artist-card-artist-1/);
-      expect(cards.length).toBe(1);
-    });
+  it('is hidden, and the rest of the feed still shows, when the ranking fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    standings['artist:weekly'] = 'error';
+    await loadFeed();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByRole('heading', { name: /Top 5 artists in/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Trending Today in/i)).toBeInTheDocument();
   });
 });
 
@@ -624,7 +679,7 @@ describe('Feed — LastWonNotification rendering', () => {
 });
 
 describe('Feed — data fetch with correct params', () => {
-  it('calls the 4 feed endpoints on mount (and not the unused leaderboards)', async () => {
+  it('calls the feed endpoints on mount (and not the unused leaderboards)', async () => {
     renderWithProviders(<Feed />, { as: 'guest' });
     await waitFor(() => expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument());
 
@@ -632,8 +687,10 @@ describe('Feed — data fetch with correct params', () => {
       expect(callsMatching(/\/trending\/today/).length).toBeGreaterThan(0);
       expect(callsMatching(/\/v1\/media\/trending(?!\/today)/).length).toBeGreaterThan(0);
       expect(callsMatching(/\/media\/new/).length).toBeGreaterThan(0);
-      expect(callsMatching(/\/users\/artist\/top/).length).toBeGreaterThan(0);
+      expect(callsMatching(/\/v1\/awards\/standings\?/).length).toBeGreaterThan(0);
     });
+    // The old popular-artists list is gone; rankings come from standings.
+    expect(callsMatching(/\/users\/artist\/top/).length).toBe(0);
     // Nothing on the feed shows leaderboard data, and a slow answer used to
     // knock the whole feed down to demo content.
     expect(callsMatching(/\/awards\/leaderboards/).length).toBe(0);
@@ -680,48 +737,70 @@ describe('Feed — lens switching does not crash', () => {
     expect(screen.getByRole('tab', { name: /Fresh/i })).toBeInTheDocument();
   });
 
-  it('switches to the Charts lens without throwing', async () => {
-    server.use(
-      http.get(`${API}/v1/charts`, () =>
-        HttpResponse.json({
-          totalPlaysThisWeek: 12,
-          entries: [
-            {
-              rank: 1, movement: 2, plays: 8, songId: 'c1', title: 'Charted Song',
-              artworkUrl: '/cdn/c1.jpg', fileUrl: '/cdn/c1.mp3',
-              artistId: 'artist-1', artistName: 'testartist',
-            },
-          ],
-        })
-      )
-    );
+  it('switches to the Charts lens and shows this week\'s ranked songs', async () => {
+    standings['song:weekly'] = {
+      type: 'song', state: 'LIVE', interval: 'Weekly', total: 2,
+      entries: [
+        {
+          targetId: 'c1', targetType: 'song', rank: 1, movement: 2, name: 'Charted Song',
+          totalPoints: 1280, artworkUrl: '/cdn/c1.jpg', fileUrl: '/cdn/c1.mp3',
+          artistId: 'artist-1', artistName: 'testartist',
+        },
+        { targetId: 'c2', targetType: 'song', rank: 2, name: 'Unscored Song', totalPoints: 0, artistName: 'nobody' },
+      ],
+    };
     await loadFeed();
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: /Charts/i }));
     // Real data path renders the entry; crucially, no render crash.
-    await waitFor(() =>
-      expect(screen.getByText(/Most Played This Week/i)).toBeInTheDocument()
-    );
-    await waitFor(() => expect(screen.getByText('Charted Song')).toBeInTheDocument());
-    // Plays count and total surface in the UI
-    expect(screen.getByText(/8 plays/i)).toBeInTheDocument();
-    expect(screen.getByText(/12 plays this week/i)).toBeInTheDocument();
+    const heading = await screen.findByRole('heading', { name: /This Week.s Chart in/i });
+    const section = heading.closest('section');
+    await waitFor(() => expect(within(section).getByText('Charted Song')).toBeInTheDocument());
+    expect(section.querySelector('.chart-song-artist')).toHaveTextContent('testartist · 1,280 pts');
+    expect(section.querySelector('.chart-caption')).toHaveTextContent('Live this week.');
+    expect(within(section).getByLabelText('Up 2 places')).toBeInTheDocument();
+    // Entries with no points stay off the chart.
+    expect(within(section).queryByText('Unscored Song')).not.toBeInTheDocument();
+  });
+
+  it('asks for the weekly song chart only once, however often the lens is reopened', async () => {
+    await loadFeed();
+    const user = userEvent.setup();
+    const weeklySongCalls = () => callsMatching(/\/v1\/awards\/standings\?/)
+      .map((c) => Object.fromEntries(new URL(c.url, 'http://x.test').searchParams))
+      .filter((p) => p.type === 'song' && p.intervalId === WEEKLY_ID && p.limit === '10');
+
+    await user.click(screen.getByRole('tab', { name: /Charts/i }));
+    await screen.findByRole('heading', { name: /This Week.s Chart in/i });
+    await waitFor(() => expect(weeklySongCalls()).toHaveLength(1));
+
+    await user.click(screen.getByRole('tab', { name: /All/i }));
+    await user.click(screen.getByRole('tab', { name: /Charts/i }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(weeklySongCalls()).toHaveLength(1);
   });
 
   it('shows the honest empty state when the chart has no entries (no fake data)', async () => {
-    server.use(
-      http.get(`${API}/v1/charts`, () =>
-        HttpResponse.json({ totalPlaysThisWeek: 0, entries: [] })
-      )
-    );
     await loadFeed();
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: /Charts/i }));
     await waitFor(() =>
-      expect(screen.getByText(/No plays counted yet this week/i)).toBeInTheDocument()
+      expect(screen.getByText(/Nothing has scored yet this week in/i)).toBeInTheDocument()
     );
     // Demo rows must NOT appear — Charts never shows fake data.
     expect(screen.queryByText('124')).not.toBeInTheDocument();
+    expect(document.querySelector('.chart-list')).toBeNull();
+  });
+
+  it('shows the same empty state when the chart cannot be loaded', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    standings['song:weekly'] = 'error';
+    await loadFeed();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /Charts/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/Nothing has scored yet this week in/i)).toBeInTheDocument()
+    );
   });
 
   it('switches to the Playlists lens without throwing', async () => {

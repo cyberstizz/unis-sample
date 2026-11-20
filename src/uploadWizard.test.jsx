@@ -1,102 +1,111 @@
 // src/uploadWizard.test.jsx
 //
-// Comprehensive test suite for UploadWizard — the artist-facing flow that
-// uploads a song or video file with metadata, and (for explicit songs)
-// optionally uploads a clean version that gets linked to the explicit one.
+// Test suite for UploadWizard — the artist-facing flow that uploads a song or
+// video with its details and, for explicit songs, an optional clean version.
 //
-// Wizard structure:
-//   Step 1 — choose media type (song vs video)
-//   Step 2 — title, description, ISRC, explicit toggle, download policy,
-//            file picker, artwork picker
-//   Step 3 — confirm + submit (POST /v1/media/{song|video})
-//   Step 4 — (only for explicit songs) prompt for clean version
+// Wizard structure (current design):
+//   Step 1 — media type (song / video)                    heading "Upload song"
+//   Step 2 — title, description, ISRC, Sound & discovery   footer button "Review"
+//            (songs only), explicit toggle, download
+//            policy, media file, artwork
+//   Step 3 — review, rights checkbox, "Upload now"         heading "Review upload"
+//   Step 4 — explicit songs only: offer a clean version    heading "Clean version"
 //
-// Covers:
-//   • show=false renders nothing
-//   • Step 1 → 2 → 3 navigation, Back/Next buttons
-//   • Initial defaults: mediaType=song, genreId/jurisdictionId from props
-//   • File validation: type allowlist (mp3 vs mp4/mov/avi), 50MB size cap
-//   • Artwork validation: jpeg/png only, 1MB cap
-//   • Title required, file required, genre/jurisdiction required
-//   • ISRC is uppercased + alphanumeric-stripped, max 15 chars
-//   • Explicit toggle (only shown for songs)
-//   • Download policy: free / paid / unavailable
-//   • Paid download: minimum $0.94 validation
-//   • Confirmation step shows submitted values
-//   • Submit POSTs to /v1/media/song or /v1/media/video with FormData
-//   • Submit success (non-explicit): calls onUploadSuccess + onClose
-//   • Submit success (explicit song): advances to step 4 instead
-//   • Step 4 — "skip" path closes wizard immediately
-//   • Step 4 — "yes" path uploads clean MP3 + PATCHes the explicit song
-//   • Clean version inherits title with " (Clean)" suffix
-//   • Server error during upload surfaces in error-message
-//   • Loading state disables submit button
-//   • Overlay click closes; clicks inside the wizard do NOT close
-//   • Close (×) button closes
+// Rules covered:
+//   • show=false renders nothing; overlay and × close, inside clicks don't
+//   • Review is disabled until there is a title and a file
+//   • A song can't reach review without a subgenre and a mood; a video can
+//   • File rules: MP3 for songs, MP4/MOV/AVI for videos, 50 MB cap
+//   • Artwork rules: JPEG/PNG, 1 MB cap
+//   • ISRC is uppercased and stripped to letters and digits
+//   • Paid downloads: $0.94 minimum, price sent in cents
+//   • The rights box must be ticked; nothing is sent without it
+//   • Song payload carries the discovery fields and rightsConfirmed
+//   • Video payload carries no song-only fields
+//   • Explicit song → step 4; skip, or upload a clean MP3 and link it
+//   • Server errors are shown; the button shows a busy state
 //
 // Pattern notes:
-//   • Uses the canonical MSW-bypass pattern via vi.spyOn(axiosModule, 'apiCall')
-//     because FormData + MSW + axios + jsdom hangs forever (gotcha #1 from
-//     Charles's original prompt).
-//   • Each upload test installs its own mockApiCall and falls back to the
-//     original for non-upload calls.
+//   • apiCall is spied (not MSW) because FormData + MSW + axios + jsdom hangs.
+//   • The taxonomy lists come from GET /v1/taxonomy, which the same spy answers.
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as axiosModule from './components/axiosInstance';
 
-// ---------------------------------------------------------------------------
-// MOCKS
-// ---------------------------------------------------------------------------
 vi.mock('./uploadWizard.scss', () => ({}));
+vi.mock('./soundDiscoveryFields.scss', () => ({}));
+vi.mock('./RightsConfirm.scss', () => ({}));
 
-// Import AFTER mocks
 import UploadWizard from './uploadWizard';
 
 // ---------------------------------------------------------------------------
-// CONSTANTS / FIXTURES
+// FIXTURES
 // ---------------------------------------------------------------------------
+const RAP = '00000000-0000-0000-0000-000000000101';
+const ROCK = '00000000-0000-0000-0000-000000000102';
+
 const ARTIST_PROFILE = {
   userId: 'user-artist-001',
   username: 'testartist',
+  displayName: 'Test Artist',
   role: 'artist',
-  genreId: '00000000-0000-0000-0000-000000000101',
+  genreId: RAP,
   jurisdiction: { jurisdictionId: '00000000-0000-0000-0000-000000000003', name: 'Uptown Harlem' },
 };
 
-// Helper: create a File whose .type and .size jsdom can read back
-function fakeFile({
-  name = 'track.mp3',
-  type = 'audio/mpeg',
-  sizeMB = 5,
-} = {}) {
-  // jsdom respects the second arg (an array of BlobParts) for size only when
-  // we explicitly set the size via Object.defineProperty.
+const TAXONOMY = {
+  subgenres: [
+    { subgenreId: 'sg-drill', genreId: RAP, name: 'Drill', soundsLike: 'sliding 808s' },
+    { subgenreId: 'sg-boombap', genreId: RAP, name: 'Boom bap' },
+    { subgenreId: 'sg-indie', genreId: ROCK, name: 'Indie rock' },
+  ],
+  moods: [
+    { moodId: 'mood-hype', name: 'Hype' },
+    { moodId: 'mood-chill', name: 'Chill' },
+  ],
+  languages: [
+    { code: 'en', name: 'English' },
+    { code: 'es', name: 'Spanish' },
+  ],
+};
+
+function fakeFile({ name = 'track.mp3', type = 'audio/mpeg', sizeMB = 5 } = {}) {
   const file = new File(['x'.repeat(1024)], name, { type });
   Object.defineProperty(file, 'size', { value: Math.round(sizeMB * 1024 * 1024) });
   return file;
 }
 
-// Helper: select a file on a hidden <input type="file">.
-// Uses fireEvent.change directly because userEvent.upload v14 enforces the
-// `accept` attribute (silently dropping rejected files), which prevents us
-// from testing the component's OWN type-rejection logic.
-async function selectFile(input, file) {
-  fireEvent.change(input, { target: { files: [file] } });
+// fireEvent.change, not userEvent.upload: userEvent drops files the `accept`
+// attribute rejects, which would hide the component's own type checks.
+const selectFile = (input, file) => fireEvent.change(input, { target: { files: [file] } });
+
+const fileInputs = () => document.querySelectorAll('input[type="file"]');
+const mediaInput = () => fileInputs()[0];
+const artworkInput = () => fileInputs()[1];
+
+// ---------------------------------------------------------------------------
+// apiCall spy — answers the taxonomy lookup, records everything else
+// ---------------------------------------------------------------------------
+let apiSpy;
+
+function mockApi(handler = () => ({ data: { songId: 'song-new' } })) {
+  apiSpy = vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
+    if (config.url === '/v1/taxonomy') return { data: TAXONOMY };
+    return handler(config);
+  });
+  return apiSpy;
 }
 
-// ---------------------------------------------------------------------------
-// LIFECYCLE
-// ---------------------------------------------------------------------------
-let originalApiCall;
+const uploadCalls = () =>
+  apiSpy.mock.calls.map(([config]) => config).filter((c) => c.url !== '/v1/taxonomy');
 
 beforeEach(() => {
-  originalApiCall = axiosModule.apiCall;
-  // Stub URL.createObjectURL / revokeObjectURL — jsdom doesn't implement them
   global.URL.createObjectURL = vi.fn(() => 'blob:mock-preview-url');
   global.URL.revokeObjectURL = vi.fn();
+  mockApi();
 });
 
 afterEach(() => {
@@ -104,7 +113,7 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// HELPERS — common render setup
+// HELPERS
 // ---------------------------------------------------------------------------
 function renderWizard({
   onClose = vi.fn(),
@@ -126,1001 +135,934 @@ function renderWizard({
   };
 }
 
-// Advance to step 2 with mediaType=song
-async function advanceToStep2(user) {
+async function goToStep2(user, { mediaType = 'song' } = {}) {
+  if (mediaType === 'video') {
+    await user.selectOptions(screen.getByRole('combobox'), 'video');
+  }
   await user.click(screen.getByRole('button', { name: /^next$/i }));
-  expect(screen.getByRole('heading', { name: /upload file & details/i })).toBeInTheDocument();
+  expect(screen.getByText(/step 2 of 3/i)).toBeInTheDocument();
 }
 
-// Advance to step 2 then fill required fields
-async function fillStep2({
-  user,
+async function pickDiscovery(user, { subgenre = 'sg-drill', mood = 'Hype' } = {}) {
+  const primary = await screen.findByLabelText(/^subgenre/i);
+  if (subgenre) await user.selectOptions(primary, subgenre);
+  if (mood) await user.click(screen.getByRole('button', { name: mood }));
+}
+
+async function fillStep2(user, {
+  mediaType = 'song',
   title = 'My Track',
-  file = fakeFile(),
+  file,
   artwork = null,
   isrc = '',
   explicit = false,
-  downloadPolicy = null, // null = leave default 'free'
+  downloadPolicy = null,
   downloadPrice = '',
+  discovery = true,
 } = {}) {
-  await advanceToStep2(user);
-
-  if (title) {
-    const titleInput = screen.getByPlaceholderText(/song\/video title/i);
-    await user.type(titleInput, title);
+  await goToStep2(user, { mediaType });
+  if (title) await user.type(screen.getByPlaceholderText(/enter song or video title/i), title);
+  if (isrc) await user.type(screen.getByPlaceholderText(/usrc/i), isrc);
+  if (mediaType === 'song' && discovery) await pickDiscovery(user);
+  if (explicit) await user.click(screen.getByRole('switch'));
+  if (downloadPolicy) {
+    const label = { free: 'Free', paid: 'Paid', unavailable: 'No download' }[downloadPolicy];
+    await user.click(screen.getByRole('button', { name: label }));
   }
-  if (isrc) {
-    const isrcInput = screen.getByPlaceholderText(/usrc/i);
-    await user.type(isrcInput, isrc);
-  }
-  if (explicit) {
-    const toggle = screen.getByRole('switch');
-    await user.click(toggle);
-  }
-  if (downloadPolicy && downloadPolicy !== 'free') {
-    const labelMap = { paid: /paid download/i, unavailable: /no download/i, free: /free download/i };
-    await user.click(screen.getByRole('button', { name: labelMap[downloadPolicy] }));
-  }
-  if (downloadPrice) {
-    const priceInput = screen.getByPlaceholderText('0.94');
-    await user.type(priceInput, downloadPrice);
-  }
-  if (file) {
-    const fileInput = document.getElementById('file');
-    await selectFile(fileInput, file);
-  }
-  if (artwork) {
-    const artInput = document.getElementById('artwork');
-    await selectFile(artInput, artwork);
-  }
+  if (downloadPrice) await user.type(screen.getByPlaceholderText('0.94'), downloadPrice);
+  const media = file === undefined
+    ? (mediaType === 'song' ? fakeFile() : fakeFile({ name: 'clip.mp4', type: 'video/mp4' }))
+    : file;
+  if (media) selectFile(mediaInput(), media);
+  if (artwork) selectFile(artworkInput(), artwork);
 }
 
+async function goToReview(user, options = {}) {
+  await fillStep2(user, options);
+  await user.click(screen.getByRole('button', { name: /^review$/i }));
+  expect(screen.getByRole('heading', { name: /review upload/i })).toBeInTheDocument();
+}
+
+const tickRights = (user) => user.click(screen.getByRole('checkbox'));
+
+async function submit(user, { rights = true } = {}) {
+  if (rights) await tickRights(user);
+  await user.click(screen.getByRole('button', { name: /upload now/i }));
+}
+
+/** The JSON metadata part of an upload call's FormData. */
+const metadataOf = (config, part = 'song') => JSON.parse(config.data.get(part));
+
+/** The <dd> next to a review-row label. */
+const summaryValue = (label) => {
+  const dt = screen.getAllByText(label).find((el) => el.tagName === 'DT');
+  return dt.nextElementSibling;
+};
+
 // ===========================================================================
-// VISIBILITY GATING
+// VISIBILITY AND CLOSING
 // ===========================================================================
-describe('UploadWizard — visibility', () => {
+describe('UploadWizard — visibility and closing', () => {
   it('renders nothing when show=false', () => {
     const { container } = renderWizard({ show: false });
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders the wizard overlay when show=true', () => {
+  it('renders a modal dialog when show=true', () => {
     renderWizard();
-    expect(document.querySelector('.upload-wizard-overlay')).not.toBeNull();
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
+  });
+
+  it('closes when the overlay is clicked', async () => {
+    const { onClose } = renderWizard();
+    await userEvent.setup().click(document.querySelector('.uw-overlay'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not close when the wizard itself is clicked', async () => {
+    const { onClose } = renderWizard();
+    await userEvent.setup().click(screen.getByRole('dialog'));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('closes from the × button', async () => {
+    const { onClose } = renderWizard();
+    await userEvent.setup().click(screen.getByRole('button', { name: /close/i }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the artist initial when there is no profile photo', () => {
+    renderWizard();
+    expect(document.querySelector('.uw__avatar-fallback')).toHaveTextContent('T');
+  });
+
+  it('shows the profile photo when there is one', () => {
+    renderWizard({ userProfile: { ...ARTIST_PROFILE, photoUrl: '/uploads/me.jpg' } });
+    expect(screen.getByAltText('Test Artist')).toBeInTheDocument();
   });
 });
 
 // ===========================================================================
-// STEP 1 — TYPE SELECTION
+// STEP 1 — MEDIA TYPE
 // ===========================================================================
-describe('UploadWizard — step 1 (type selection)', () => {
-  it('starts on step 1 with the SONG heading', () => {
+describe('UploadWizard — step 1 (media type)', () => {
+  it('starts on step 1 as a song upload', () => {
     renderWizard();
-    expect(screen.getByRole('heading', { name: /upload new song/i })).toBeInTheDocument();
+    expect(screen.getByText(/step 1 of 3/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /upload song/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toHaveValue('song');
   });
 
-  it('renders the media type select with default = song', () => {
+  it('switches the heading when video is picked', async () => {
     renderWizard();
-    const select = document.querySelector('select.input-field');
-    expect(select).not.toBeNull();
-    expect(select.value).toBe('song');
+    await userEvent.setup().selectOptions(screen.getByRole('combobox'), 'video');
+    expect(screen.getByRole('heading', { name: /upload video/i })).toBeInTheDocument();
   });
 
-  it('switches heading to "VIDEO" when user picks video', async () => {
+  it('shows Next but no Back', () => {
     renderWizard();
-    const user = userEvent.setup();
-    const select = document.querySelector('select.input-field');
-    await user.selectOptions(select, 'video');
-    expect(screen.getByRole('heading', { name: /upload new video/i })).toBeInTheDocument();
-  });
-
-  it('Back button is hidden on step 1', () => {
-    renderWizard();
+    expect(screen.getByRole('button', { name: /^next$/i })).toBeEnabled();
     expect(screen.queryByRole('button', { name: /^back$/i })).not.toBeInTheDocument();
   });
 
-  it('Next button is visible on step 1', () => {
+  it('shows the three progress steps with step 1 active', () => {
     renderWizard();
-    expect(screen.getByRole('button', { name: /^next$/i })).toBeInTheDocument();
-  });
-
-  it('Close button is rendered', () => {
-    renderWizard();
-    expect(document.querySelector('.close-button')).not.toBeNull();
+    const progress = screen.getByLabelText(/upload progress/i);
+    ['Type', 'Details', 'Review'].forEach((label) => {
+      expect(within(progress).getByText(label)).toBeInTheDocument();
+    });
+    expect(progress.querySelector('.is-active')).toHaveTextContent('Type');
   });
 });
 
 // ===========================================================================
-// NAVIGATION — Step 1 → 2 → 3 → back
+// NAVIGATION
 // ===========================================================================
 describe('UploadWizard — navigation', () => {
-  it('Next on step 1 advances to step 2 details form', async () => {
+  it('Next moves to step 2', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
+    await goToStep2(userEvent.setup());
+    expect(screen.getByPlaceholderText(/enter song or video title/i)).toBeInTheDocument();
   });
 
   it('Back from step 2 returns to step 1', async () => {
     renderWizard();
     const user = userEvent.setup();
-    await advanceToStep2(user);
+    await goToStep2(user);
     await user.click(screen.getByRole('button', { name: /^back$/i }));
-    expect(screen.getByRole('heading', { name: /upload new song/i })).toBeInTheDocument();
+    expect(screen.getByText(/step 1 of 3/i)).toBeInTheDocument();
   });
 
-  it('Next on step 2 advances to step 3 confirmation', async () => {
+  it('Review is disabled until there is a title and a file', async () => {
     renderWizard();
     const user = userEvent.setup();
-    await advanceToStep2(user);
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    expect(screen.getByRole('heading', { name: /confirm upload/i })).toBeInTheDocument();
+    await goToStep2(user);
+    const review = screen.getByRole('button', { name: /^review$/i });
+    expect(review).toBeDisabled();
+
+    await user.type(screen.getByPlaceholderText(/enter song or video title/i), 'My Track');
+    expect(review).toBeDisabled();
+
+    selectFile(mediaInput(), fakeFile());
+    expect(review).toBeEnabled();
   });
 
-  it('Back from step 3 returns to step 2', async () => {
+  it('a complete song reaches the review step', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /^back$/i }));
-    expect(screen.getByRole('heading', { name: /upload file & details/i })).toBeInTheDocument();
+    await goToReview(userEvent.setup());
+    expect(screen.getByText(/step 3 of 3/i)).toBeInTheDocument();
   });
 
-  it('Next button disappears on step 3 (only the submit button is there)', async () => {
+  it('the review step has no Back/Next footer', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    expect(screen.queryByRole('button', { name: /^next$/i })).not.toBeInTheDocument();
+    await goToReview(userEvent.setup());
+    expect(screen.queryByRole('button', { name: /^back$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^review$/i })).not.toBeInTheDocument();
+  });
+
+  it('marks earlier steps as done in the progress bar', async () => {
+    renderWizard();
+    await goToReview(userEvent.setup());
+    const progress = screen.getByLabelText(/upload progress/i);
+    expect(progress.querySelectorAll('.is-done')).toHaveLength(2);
+    expect(progress.querySelector('.is-active')).toHaveTextContent('Review');
   });
 });
 
 // ===========================================================================
-// STEP 2 — FORM FIELDS
+// STEP 2 — SOUND & DISCOVERY GATE
 // ===========================================================================
-describe('UploadWizard — step 2 form fields', () => {
-  it('updates title state when user types', async () => {
+describe('UploadWizard — sound & discovery', () => {
+  it('shows the discovery block for songs', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    const input = screen.getByPlaceholderText(/song\/video title/i);
-    await user.type(input, 'Midnight Uptown');
-    expect(input.value).toBe('Midnight Uptown');
+    await goToStep2(userEvent.setup());
+    expect(await screen.findByRole('group', { name: /sound & discovery/i })).toBeInTheDocument();
   });
 
-  it('updates description state when user types', async () => {
+  it('hides the discovery block for videos', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    const ta = screen.getByPlaceholderText(/brief description/i);
-    await user.type(ta, 'Late night vibes');
-    expect(ta.value).toBe('Late night vibes');
+    await goToStep2(userEvent.setup(), { mediaType: 'video' });
+    expect(screen.queryByText(/sound & discovery/i)).not.toBeInTheDocument();
   });
 
-  it('uppercases ISRC input and strips non-alphanumeric chars', async () => {
+  it('only offers the artist\'s own genre as the primary subgenre', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    const isrc = screen.getByPlaceholderText(/usrc/i);
-    await user.type(isrc, 'us-rc176-07839');
-    expect(isrc.value).toBe('USRC17607839');
+    await goToStep2(userEvent.setup());
+    const primary = await screen.findByLabelText(/^subgenre/i);
+    expect(within(primary).getByRole('option', { name: 'Drill' })).toBeInTheDocument();
+    expect(within(primary).queryByRole('option', { name: 'Indie rock' })).not.toBeInTheDocument();
   });
 
-  it('limits ISRC to 15 chars via maxLength', async () => {
+  it('blocks review when no subgenre is picked', async () => {
     renderWizard();
     const user = userEvent.setup();
-    await advanceToStep2(user);
-    const isrc = screen.getByPlaceholderText(/usrc/i);
-    expect(isrc.maxLength).toBe(15);
+    await fillStep2(user, { discovery: false });
+    await user.click(screen.getByRole('button', { name: /^review$/i }));
+
+    expect(screen.getByText(/step 2 of 3/i)).toBeInTheDocument();
+    expect(document.querySelector('.uw__error')).toHaveTextContent(/pick the subgenre/i);
+  });
+
+  it('blocks review when a subgenre is picked but no mood', async () => {
+    renderWizard();
+    const user = userEvent.setup();
+    await fillStep2(user, { discovery: false });
+    await pickDiscovery(user, { mood: null });
+    await user.click(screen.getByRole('button', { name: /^review$/i }));
+
+    expect(screen.getByText(/step 2 of 3/i)).toBeInTheDocument();
+    expect(document.querySelector('.uw__error')).toHaveTextContent(/pick at least one mood/i);
+  });
+
+  it('clears the error once the missing pick is made', async () => {
+    renderWizard();
+    const user = userEvent.setup();
+    await fillStep2(user, { discovery: false });
+    await user.click(screen.getByRole('button', { name: /^review$/i }));
+    expect(document.querySelector('.uw__error')).not.toBeNull();
+
+    await pickDiscovery(user);
+    expect(document.querySelector('.uw__error')).toBeNull();
+  });
+
+  it('a video reaches review without any discovery picks', async () => {
+    renderWizard();
+    await goToReview(userEvent.setup(), { mediaType: 'video' });
+    expect(screen.getByRole('heading', { name: /review upload/i })).toBeInTheDocument();
   });
 });
 
 // ===========================================================================
-// EXPLICIT TOGGLE
+// STEP 2 — FILES
 // ===========================================================================
-describe('UploadWizard — explicit toggle', () => {
-  it('shows the explicit toggle for songs', async () => {
+describe('UploadWizard — media file rules', () => {
+  it('accepts an MP3 for a song and shows its name and size', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    expect(screen.getByRole('switch')).toBeInTheDocument();
+    await goToStep2(userEvent.setup());
+    selectFile(mediaInput(), fakeFile({ name: 'banger.mp3', sizeMB: 4.2 }));
+    expect(screen.getByText(/banger\.mp3 — 4\.2 MB/)).toBeInTheDocument();
   });
 
-  it('hides the explicit toggle for videos', async () => {
+  it('rejects a non-MP3 for a song', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    const typeSelect = document.querySelector('select.input-field');
-    await user.selectOptions(typeSelect, 'video');
-    await advanceToStep2(user);
-    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    await goToStep2(userEvent.setup());
+    selectFile(mediaInput(), fakeFile({ name: 'track.wav', type: 'audio/wav' }));
+    expect(document.querySelector('.uw__error')).toHaveTextContent(/song must be MP3/i);
+    expect(screen.getByRole('button', { name: /^review$/i })).toBeDisabled();
   });
 
-  it('toggles aria-checked when clicked', async () => {
+  it('rejects a song over 50 MB', async () => {
+    renderWizard();
+    await goToStep2(userEvent.setup());
+    selectFile(mediaInput(), fakeFile({ sizeMB: 51 }));
+    expect(document.querySelector('.uw__error')).toHaveTextContent(/file too large \(max 50 MB\)/i);
+  });
+
+  it('accepts a file of exactly 50 MB', async () => {
+    renderWizard();
+    await goToStep2(userEvent.setup());
+    selectFile(mediaInput(), fakeFile({ sizeMB: 50 }));
+    expect(document.querySelector('.uw__error')).toBeNull();
+  });
+
+  it.each([
+    ['clip.mp4', 'video/mp4'],
+    ['clip.mov', 'video/quicktime'],
+    ['clip.avi', 'video/x-msvideo'],
+  ])('accepts %s for a video', async (name, type) => {
+    renderWizard();
+    await goToStep2(userEvent.setup(), { mediaType: 'video' });
+    selectFile(mediaInput(), fakeFile({ name, type }));
+    expect(document.querySelector('.uw__error')).toBeNull();
+    expect(screen.getByText(new RegExp(`${name.replace('.', '\\.')} —`))).toBeInTheDocument();
+  });
+
+  it('rejects an MP3 for a video', async () => {
+    renderWizard();
+    await goToStep2(userEvent.setup(), { mediaType: 'video' });
+    selectFile(mediaInput(), fakeFile());
+    expect(document.querySelector('.uw__error')).toHaveTextContent(/video must be MP4 \/ MOV \/ AVI/i);
+  });
+
+  it('a valid file clears an earlier file error', async () => {
+    renderWizard();
+    await goToStep2(userEvent.setup());
+    selectFile(mediaInput(), fakeFile({ type: 'audio/wav' }));
+    expect(document.querySelector('.uw__error')).not.toBeNull();
+    selectFile(mediaInput(), fakeFile());
+    expect(document.querySelector('.uw__error')).toBeNull();
+  });
+});
+
+describe('UploadWizard — artwork rules', () => {
+  it.each([
+    ['cover.jpg', 'image/jpeg'],
+    ['cover.png', 'image/png'],
+  ])('accepts %s', async (name, type) => {
+    renderWizard();
+    await goToStep2(userEvent.setup());
+    selectFile(artworkInput(), fakeFile({ name, type, sizeMB: 0.5 }));
+    expect(document.querySelector('.uw__error')).toBeNull();
+    expect(screen.getByText(new RegExp(`${name.replace('.', '\\.')} —`))).toBeInTheDocument();
+  });
+
+  it('rejects a GIF', async () => {
+    renderWizard();
+    await goToStep2(userEvent.setup());
+    selectFile(artworkInput(), fakeFile({ name: 'cover.gif', type: 'image/gif', sizeMB: 0.5 }));
+    expect(document.querySelector('.uw__error')).toHaveTextContent(/artwork must be JPEG or PNG/i);
+  });
+
+  it('rejects artwork over 1 MB', async () => {
+    renderWizard();
+    await goToStep2(userEvent.setup());
+    selectFile(artworkInput(), fakeFile({ name: 'cover.jpg', type: 'image/jpeg', sizeMB: 1.5 }));
+    expect(document.querySelector('.uw__error')).toHaveTextContent(/artwork too large \(max 1 MB\)/i);
+  });
+});
+
+// ===========================================================================
+// STEP 2 — ISRC, EXPLICIT, DOWNLOAD POLICY
+// ===========================================================================
+describe('UploadWizard — ISRC, explicit and download policy', () => {
+  it('uppercases the ISRC and strips anything that is not a letter or digit', async () => {
     renderWizard();
     const user = userEvent.setup();
-    await advanceToStep2(user);
+    await goToStep2(user);
+    const isrc = screen.getByPlaceholderText(/usrc/i);
+    await user.type(isrc, 'us-rc1 76_07839');
+    expect(isrc).toHaveValue('USRC17607839');
+  });
+
+  it('caps the ISRC at 15 characters', async () => {
+    renderWizard();
+    await goToStep2(userEvent.setup());
+    expect(screen.getByPlaceholderText(/usrc/i)).toHaveAttribute('maxLength', '15');
+  });
+
+  it('the explicit switch starts off and toggles on click', async () => {
+    renderWizard();
+    const user = userEvent.setup();
+    await goToStep2(user);
     const toggle = screen.getByRole('switch');
     expect(toggle).toHaveAttribute('aria-checked', 'false');
     await user.click(toggle);
     expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText(/prompted to add an optional clean version/i)).toBeInTheDocument();
   });
 
-  it('toggles via Space key', async () => {
+  it('the explicit switch works from the keyboard', async () => {
     renderWizard();
     const user = userEvent.setup();
-    await advanceToStep2(user);
+    await goToStep2(user);
     const toggle = screen.getByRole('switch');
     toggle.focus();
     await user.keyboard(' ');
     expect(toggle).toHaveAttribute('aria-checked', 'true');
-  });
-
-  it('toggles via Enter key', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    const toggle = screen.getByRole('switch');
-    toggle.focus();
     await user.keyboard('{Enter}');
-    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
   });
 
-  it('shows the "after uploading you\'ll be prompted" hint when explicit is on', async () => {
+  it('hides the explicit switch and download policy for videos', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    await user.click(screen.getByRole('switch'));
-    expect(screen.getByText(/prompted to upload an optional clean version/i)).toBeInTheDocument();
-  });
-});
-
-// ===========================================================================
-// DOWNLOAD POLICY
-// ===========================================================================
-describe('UploadWizard — download policy', () => {
-  it('defaults to Free Download', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    // The free button should look "selected" — we can verify by checking
-    // its border style is the active-selection state.
-    const freeBtn = screen.getByRole('button', { name: /free download/i });
-    expect(freeBtn.style.border).toContain('2px solid');
+    await goToStep2(userEvent.setup(), { mediaType: 'video' });
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.queryByText(/download availability/i)).not.toBeInTheDocument();
   });
 
-  it('switching to Paid reveals the price input', async () => {
+  it('defaults to a free download', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    expect(screen.queryByPlaceholderText('0.94')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /paid download/i }));
-    expect(screen.getByPlaceholderText('0.94')).toBeInTheDocument();
-  });
-
-  it('switching from Paid back to Free hides the price input', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    await user.click(screen.getByRole('button', { name: /paid download/i }));
-    await user.click(screen.getByRole('button', { name: /free download/i }));
+    await goToStep2(userEvent.setup());
+    expect(screen.getByRole('button', { name: 'Free' })).toHaveClass('is-active');
+    expect(screen.getByText(/download this track for free/i)).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('0.94')).not.toBeInTheDocument();
   });
 
-  it('shows "free" hint copy when Free is selected', async () => {
+  it('Paid reveals the price box; switching away hides and clears it', async () => {
     renderWizard();
     const user = userEvent.setup();
-    await advanceToStep2(user);
-    expect(screen.getByText(/can download this track for free/i)).toBeInTheDocument();
-  });
+    await goToStep2(user);
+    await user.click(screen.getByRole('button', { name: 'Paid' }));
+    await user.type(screen.getByPlaceholderText('0.94'), '1.99');
 
-  it('shows "minimum $0.94" hint when Paid is selected', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    await user.click(screen.getByRole('button', { name: /paid download/i }));
-    expect(screen.getByText(/minimum \$0\.94/i)).toBeInTheDocument();
-  });
-
-  it('shows "stream but not download" hint when Unavailable is selected', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    await user.click(screen.getByRole('button', { name: /no download/i }));
+    await user.click(screen.getByRole('button', { name: 'No download' }));
+    expect(screen.queryByPlaceholderText('0.94')).not.toBeInTheDocument();
     expect(screen.getByText(/stream but not download/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Paid' }));
+    expect(screen.getByPlaceholderText('0.94')).toHaveValue(null);
   });
 
-  it('hides download policy section for videos', async () => {
+  it('tells the artist what they receive at a valid price', async () => {
     renderWizard();
     const user = userEvent.setup();
-    const typeSelect = document.querySelector('select.input-field');
-    await user.selectOptions(typeSelect, 'video');
-    await advanceToStep2(user);
-    expect(screen.queryByRole('button', { name: /free download/i })).not.toBeInTheDocument();
-  });
-});
-
-// ===========================================================================
-// FILE VALIDATION
-// ===========================================================================
-describe('UploadWizard — file validation', () => {
-  it('accepts MP3 for songs', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    const input = document.getElementById('file');
-    await selectFile(input, fakeFile({ name: 'track.mp3', type: 'audio/mpeg', sizeMB: 5 }));
-    expect(screen.getByText(/Selected: track\.mp3/i)).toBeInTheDocument();
-  });
-
-  it('rejects WAV (or any non-MP3) for songs', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    const input = document.getElementById('file');
-    await selectFile(input, fakeFile({ name: 'track.wav', type: 'audio/wav', sizeMB: 5 }));
-    expect(screen.getByText(/song must be MP3/i)).toBeInTheDocument();
-  });
-
-  it('rejects MP3 for videos', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    const typeSelect = document.querySelector('select.input-field');
-    await user.selectOptions(typeSelect, 'video');
-    await advanceToStep2(user);
-    const input = document.getElementById('file');
-    await selectFile(input, fakeFile({ name: 'clip.mp3', type: 'audio/mpeg', sizeMB: 5 }));
-    expect(screen.getByText(/video must be MP4\/MOV\/AVI/i)).toBeInTheDocument();
-  });
-
-  it('accepts MP4 for videos', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    const typeSelect = document.querySelector('select.input-field');
-    await user.selectOptions(typeSelect, 'video');
-    await advanceToStep2(user);
-    const input = document.getElementById('file');
-    await selectFile(input, fakeFile({ name: 'clip.mp4', type: 'video/mp4', sizeMB: 10 }));
-    expect(screen.getByText(/Selected: clip\.mp4/i)).toBeInTheDocument();
-  });
-
-  it('rejects file larger than 50MB', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    const input = document.getElementById('file');
-    await selectFile(input, fakeFile({ name: 'huge.mp3', type: 'audio/mpeg', sizeMB: 51 }));
-    expect(screen.getByText(/File too large \(max 50MB\)/i)).toBeInTheDocument();
+    await goToStep2(user);
+    await user.click(screen.getByRole('button', { name: 'Paid' }));
+    await user.type(screen.getByPlaceholderText('0.94'), '1.99');
+    expect(screen.getByText(/at \$1\.99 you receive \$1\.62/i)).toBeInTheDocument();
   });
 });
 
 // ===========================================================================
-// ARTWORK VALIDATION
+// STEP 3 — REVIEW
 // ===========================================================================
-describe('UploadWizard — artwork validation', () => {
-  it('accepts JPEG artwork', async () => {
+describe('UploadWizard — review step', () => {
+  it('lists what was entered', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    const art = document.getElementById('artwork');
-    await selectFile(art, fakeFile({ name: 'cover.jpg', type: 'image/jpeg', sizeMB: 0.5 }));
-    expect(screen.getByText(/Selected: cover\.jpg/i)).toBeInTheDocument();
+    await goToReview(userEvent.setup(), {
+      title: 'Uptown Anthem',
+      isrc: 'USRC17607839',
+      file: fakeFile({ name: 'anthem.mp3' }),
+      artwork: fakeFile({ name: 'cover.png', type: 'image/png', sizeMB: 0.4 }),
+    });
+    expect(summaryValue('Title')).toHaveTextContent('Uptown Anthem');
+    expect(summaryValue('File')).toHaveTextContent('anthem.mp3');
+    expect(summaryValue('Artwork')).toHaveTextContent('cover.png');
+    expect(summaryValue('ISRC')).toHaveTextContent('USRC17607839');
+    expect(summaryValue('Subgenre')).toHaveTextContent('Drill');
+    expect(summaryValue('Mood')).toHaveTextContent('Hype');
+    expect(summaryValue('Language')).toHaveTextContent('English');
+    expect(summaryValue('Explicit')).toHaveTextContent('No');
+    expect(summaryValue('Download')).toHaveTextContent('Free');
   });
 
-  it('accepts PNG artwork', async () => {
+  it('shows a dash for the optional fields left blank', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    const art = document.getElementById('artwork');
-    await selectFile(art, fakeFile({ name: 'cover.png', type: 'image/png', sizeMB: 0.5 }));
-    expect(screen.getByText(/Selected: cover\.png/i)).toBeInTheDocument();
+    await goToReview(userEvent.setup());
+    expect(summaryValue('Description')).toHaveTextContent('—');
+    expect(summaryValue('Artwork')).toHaveTextContent('—');
+    expect(summaryValue('ISRC')).toHaveTextContent('—');
   });
 
-  it('rejects GIF artwork', async () => {
+  it('shows the paid price and the explicit flag', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    const art = document.getElementById('artwork');
-    await selectFile(art, fakeFile({ name: 'cover.gif', type: 'image/gif', sizeMB: 0.5 }));
-    expect(screen.getByText(/Artwork must be JPEG or PNG/i)).toBeInTheDocument();
+    await goToReview(userEvent.setup(), { explicit: true, downloadPolicy: 'paid', downloadPrice: '1.5' });
+    expect(summaryValue('Explicit')).toHaveTextContent('Yes');
+    expect(summaryValue('Download')).toHaveTextContent('$1.50');
   });
 
-  it('rejects artwork larger than 1MB', async () => {
+  it('shows "Not available" when downloads are off', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    const art = document.getElementById('artwork');
-    await selectFile(art, fakeFile({ name: 'cover.jpg', type: 'image/jpeg', sizeMB: 1.5 }));
-    expect(screen.getByText(/Artwork too large \(max 1MB\)/i)).toBeInTheDocument();
-  });
-});
-
-// ===========================================================================
-// STEP 3 — CONFIRMATION SUMMARY
-// ===========================================================================
-describe('UploadWizard — step 3 confirmation', () => {
-  it('shows submitted title on confirm screen', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await fillStep2({ user, title: 'Midnight Uptown' });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    expect(screen.getByText(/Midnight Uptown/)).toBeInTheDocument();
+    await goToReview(userEvent.setup(), { downloadPolicy: 'unavailable' });
+    expect(summaryValue('Download')).toHaveTextContent('Not available');
   });
 
-  it('shows "None" when description is blank', async () => {
+  it('leaves the song-only rows out for a video', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await fillStep2({ user });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    const summary = document.querySelector('.confirmation-summary');
-    expect(summary.textContent).toMatch(/Description:\s*None/i);
+    await goToReview(userEvent.setup(), { mediaType: 'video' });
+    ['Subgenre', 'Mood', 'Explicit', 'Download'].forEach((label) => {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    });
   });
 
-  it('shows "Yes" / "No" for Explicit field', async () => {
+  it('previews the audio and the artwork', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await fillStep2({ user, explicit: true });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    const summary = document.querySelector('.confirmation-summary');
-    expect(summary.textContent).toMatch(/Explicit:\s*Yes/i);
+    await goToReview(userEvent.setup(), {
+      artwork: fakeFile({ name: 'cover.png', type: 'image/png', sizeMB: 0.4 }),
+    });
+    expect(document.querySelector('audio')).toHaveAttribute('src', 'blob:mock-preview-url');
+    expect(screen.getByAltText(/artwork preview/i)).toBeInTheDocument();
   });
 
-  it('shows ISRC on confirm screen when provided', async () => {
+  it('warns that the upload cannot be undone', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await fillStep2({ user, isrc: 'USRC17607839' });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    expect(screen.getByText(/USRC17607839/)).toBeInTheDocument();
-  });
-
-  it('shows "Not provided" for ISRC when blank', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await fillStep2({ user });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    const summary = document.querySelector('.confirmation-summary');
-    expect(summary.textContent).toMatch(/ISRC:\s*Not provided/i);
-  });
-
-  it('shows the selected file name on confirm', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await fillStep2({ user, file: fakeFile({ name: 'banger.mp3' }) });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    // File line: "File: banger.mp3 (song)" — appears in confirmation summary
-    const confirmSection = document.querySelector('.confirmation-summary');
-    expect(confirmSection.textContent).toMatch(/banger\.mp3/);
-  });
-
-  it('renders the submit "Upload Now" button', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await fillStep2({ user });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    expect(screen.getByRole('button', { name: /upload now/i })).toBeInTheDocument();
-  });
-
-  it('shows the warning copy about uploads being permanent', async () => {
-    renderWizard();
-    const user = userEvent.setup();
-    await fillStep2({ user });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await goToReview(userEvent.setup());
     expect(screen.getByText(/cannot be undone/i)).toBeInTheDocument();
   });
 });
 
 // ===========================================================================
-// SUBMIT — VALIDATION ERRORS
+// STEP 3 — RIGHTS BOX
 // ===========================================================================
-describe('UploadWizard — submit validation', () => {
-  it('shows "All fields required" when title is empty', async () => {
+describe('UploadWizard — rights confirmation', () => {
+  it('shows the rights box unticked', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    // Skip title, but provide a file
-    await advanceToStep2(user);
-    const fileInput = document.getElementById('file');
-    await selectFile(fileInput, fakeFile());
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-    expect(await screen.findByText(/all fields required/i)).toBeInTheDocument();
+    await goToReview(userEvent.setup());
+    expect(screen.getByRole('group', { name: /your rights to this song/i })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
   });
 
-  it('shows "All fields required" when no file is selected', async () => {
+  it('words the box for the music in a video', async () => {
     renderWizard();
-    const user = userEvent.setup();
-    await advanceToStep2(user);
-    await user.type(screen.getByPlaceholderText(/song\/video title/i), 'No File');
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-    expect(await screen.findByText(/all fields required/i)).toBeInTheDocument();
+    await goToReview(userEvent.setup(), { mediaType: 'video' });
+    expect(screen.getByRole('group', { name: /your rights to the music in this video/i })).toBeInTheDocument();
   });
 
-  it('shows "Minimum download price is $0.94" when paid + price below 0.94', async () => {
-    renderWizard();
+  it('sends nothing and shows an alert when the box is not ticked', async () => {
+    const { onUploadSuccess } = renderWizard();
     const user = userEvent.setup();
-    await fillStep2({
-      user,
-      title: 'Cheap',
-      downloadPolicy: 'paid',
-      downloadPrice: '0.90',
-    });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-    expect(await screen.findByText(/minimum download price is \$0\.94/i)).toBeInTheDocument();
+    await goToReview(user);
+    await submit(user, { rights: false });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/check the box to upload this song/i);
+    expect(uploadCalls()).toHaveLength(0);
+    expect(onUploadSuccess).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /upload now/i })).toBeEnabled();
   });
 
-  it('shows price error when paid + no price set', async () => {
+  it('ticking the box clears the alert', async () => {
     renderWizard();
     const user = userEvent.setup();
-    await fillStep2({
-      user,
-      title: 'No Price',
-      downloadPolicy: 'paid',
-    });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-    expect(await screen.findByText(/minimum download price is \$0\.94/i)).toBeInTheDocument();
+    await goToReview(user);
+    await submit(user, { rights: false });
+    await screen.findByRole('alert');
+
+    await tickRights(user);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
 
 // ===========================================================================
-// SUBMIT — SUCCESS PATHS (non-explicit)
+// SUBMIT — SONG
 // ===========================================================================
-describe('UploadWizard — submit success', () => {
-  it('POSTs to /v1/media/song with the right metadata', async () => {
-    let capturedPayload = null;
-    let capturedUrl = null;
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
-      capturedUrl = config.url;
-      // Pull out the metadata JSON from the FormData
-      const fd = config.data;
-      const meta = fd.get('song');
-      if (meta) capturedPayload = JSON.parse(meta);
-      return { data: { songId: 'new-song-1' } };
-    });
-
-    const onUploadSuccess = vi.fn();
-    const onClose = vi.fn();
-    render(
-      <UploadWizard show={true} onClose={onClose} onUploadSuccess={onUploadSuccess} userProfile={ARTIST_PROFILE} />
-    );
+describe('UploadWizard — song upload', () => {
+  it('POSTs multipart form data to /v1/media/song with a long timeout', async () => {
+    renderWizard();
     const user = userEvent.setup();
-    await fillStep2({ user, title: 'Hit Track' });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
+    await goToReview(user);
+    await submit(user);
 
-    await waitFor(() => expect(onUploadSuccess).toHaveBeenCalled());
-    expect(capturedUrl).toBe('/v1/media/song');
-    expect(capturedPayload.title).toBe('Hit Track');
-    expect(capturedPayload.artistId).toBe(ARTIST_PROFILE.userId);
-    expect(capturedPayload.genreId).toBe(ARTIST_PROFILE.genreId);
-    expect(capturedPayload.jurisdictionId).toBe(ARTIST_PROFILE.jurisdiction.jurisdictionId);
-    expect(capturedPayload.explicit).toBe(false);
+    await waitFor(() => expect(uploadCalls()).toHaveLength(1));
+    const [call] = uploadCalls();
+    expect(call.url).toBe('/v1/media/song');
+    expect(call.method).toBe('post');
+    expect(call.data).toBeInstanceOf(FormData);
+    expect(call.headers['Content-Type']).toBe('multipart/form-data');
+    expect(call.timeout).toBe(10 * 60 * 1000);
   });
 
-  it('POSTs to /v1/media/video when video is selected', async () => {
-    let capturedUrl = null;
-    let capturedKey = null;
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
-      capturedUrl = config.url;
-      // metadata key is the mediaType
-      const fd = config.data;
-      capturedKey = Array.from(fd.keys()).find((k) => k === 'song' || k === 'video');
-      return { data: { videoId: 'new-vid-1' } };
-    });
-
-    const onUploadSuccess = vi.fn();
-    const onClose = vi.fn();
-    render(
-      <UploadWizard show={true} onClose={onClose} onUploadSuccess={onUploadSuccess} userProfile={ARTIST_PROFILE} />
-    );
+  it('sends the details, discovery picks and rights confirmation', async () => {
+    renderWizard();
     const user = userEvent.setup();
-    const typeSelect = document.querySelector('select.input-field');
-    await user.selectOptions(typeSelect, 'video');
-    await fillStep2({ user, title: 'Vid', file: fakeFile({ name: 'clip.mp4', type: 'video/mp4' }) });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
+    await goToReview(user, { title: 'Uptown Anthem', isrc: 'USRC17607839' });
+    await submit(user);
 
-    await waitFor(() => expect(onUploadSuccess).toHaveBeenCalled());
-    expect(capturedUrl).toBe('/v1/media/video');
-    expect(capturedKey).toBe('video');
-  });
-
-  it('calls onUploadSuccess with response data and onClose on success', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => ({
-      data: { songId: 'new-song-1' },
-    }));
-
-    const onUploadSuccess = vi.fn();
-    const onClose = vi.fn();
-    render(
-      <UploadWizard show={true} onClose={onClose} onUploadSuccess={onUploadSuccess} userProfile={ARTIST_PROFILE} />
-    );
-    const user = userEvent.setup();
-    await fillStep2({ user, title: 'Done' });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-
-    await waitFor(() => {
-      expect(onUploadSuccess).toHaveBeenCalledWith({ songId: 'new-song-1' });
-      expect(onClose).toHaveBeenCalled();
+    await waitFor(() => expect(uploadCalls()).toHaveLength(1));
+    expect(metadataOf(uploadCalls()[0])).toEqual({
+      title: 'Uptown Anthem',
+      description: '',
+      genreId: RAP,
+      artistId: 'user-artist-001',
+      jurisdictionId: '00000000-0000-0000-0000-000000000003',
+      rightsConfirmed: true,
+      explicit: false,
+      isrc: 'USRC17607839',
+      downloadPolicy: 'free',
+      downloadPrice: null,
+      primarySubgenreId: 'sg-drill',
+      subgenreWriteIn: null,
+      secondarySubgenreId: null,
+      primaryMoodId: 'mood-hype',
+      secondaryMoodId: null,
+      language: 'en',
     });
   });
 
-  it('serializes downloadPrice as integer cents when paid', async () => {
-    let capturedPayload = null;
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
-      const meta = config.data.get('song');
-      if (meta) capturedPayload = JSON.parse(meta);
-      return { data: { songId: 'paid-1' } };
-    });
-
-    render(
-      <UploadWizard show={true} onClose={vi.fn()} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
+  it('attaches the file, and the artwork when there is one', async () => {
+    renderWizard();
     const user = userEvent.setup();
-    await fillStep2({
-      user,
-      title: 'Premium',
-      downloadPolicy: 'paid',
-      downloadPrice: '2.99',  // typed in dollars, sent in cents
+    await goToReview(user, {
+      file: fakeFile({ name: 'anthem.mp3' }),
+      artwork: fakeFile({ name: 'cover.png', type: 'image/png', sizeMB: 0.4 }),
     });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
+    await submit(user);
 
-    await waitFor(() => expect(capturedPayload).not.toBeNull());
-    expect(capturedPayload.downloadPolicy).toBe('paid');
-    expect(capturedPayload.downloadPrice).toBe(299);
+    await waitFor(() => expect(uploadCalls()).toHaveLength(1));
+    const { data } = uploadCalls()[0];
+    expect(data.get('file').name).toBe('anthem.mp3');
+    expect(data.get('artwork').name).toBe('cover.png');
   });
 
-  it('sends downloadPrice=null when policy is free', async () => {
-    let capturedPayload = null;
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
-      const meta = config.data.get('song');
-      if (meta) capturedPayload = JSON.parse(meta);
-      return { data: { songId: 'free-1' } };
-    });
-
-    render(
-      <UploadWizard show={true} onClose={vi.fn()} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
+  it('leaves the artwork part out when none was chosen', async () => {
+    renderWizard();
     const user = userEvent.setup();
-    await fillStep2({ user, title: 'Free Track' });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-
-    await waitFor(() => expect(capturedPayload).not.toBeNull());
-    expect(capturedPayload.downloadPolicy).toBe('free');
-    expect(capturedPayload.downloadPrice).toBeNull();
+    await goToReview(user);
+    await submit(user);
+    await waitFor(() => expect(uploadCalls()).toHaveLength(1));
+    expect(uploadCalls()[0].data.has('artwork')).toBe(false);
   });
 
-  it('sends artwork when provided', async () => {
-    let hadArtwork = null;
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
-      hadArtwork = config.data.has('artwork');
-      return { data: { songId: 'with-art' } };
-    });
-
-    render(
-      <UploadWizard show={true} onClose={vi.fn()} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
+  it('sends a null ISRC when left blank', async () => {
+    renderWizard();
     const user = userEvent.setup();
-    await fillStep2({
-      user,
-      title: 'Arty',
-      artwork: fakeFile({ name: 'cover.jpg', type: 'image/jpeg', sizeMB: 0.3 }),
-    });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
+    await goToReview(user);
+    await submit(user);
+    await waitFor(() => expect(uploadCalls()).toHaveLength(1));
+    expect(metadataOf(uploadCalls()[0]).isrc).toBeNull();
+  });
 
-    await waitFor(() => expect(hadArtwork).toBe(true));
+  it('falls back to the default genre and jurisdiction when the profile has none', async () => {
+    renderWizard({ userProfile: { userId: 'user-artist-001' } });
+    const user = userEvent.setup();
+    await goToReview(user);
+    await submit(user);
+    await waitFor(() => expect(uploadCalls()).toHaveLength(1));
+    const meta = metadataOf(uploadCalls()[0]);
+    expect(meta.genreId).toBe(RAP);
+    expect(meta.jurisdictionId).toBe('00000000-0000-0000-0000-000000000002');
+  });
+
+  it('on success reports the song, closes, and resets to step 1', async () => {
+    mockApi(() => ({ data: { songId: 'song-123', title: 'My Track' } }));
+    const { onClose, onUploadSuccess } = renderWizard();
+    const user = userEvent.setup();
+    await goToReview(user);
+    await submit(user);
+
+    await waitFor(() => expect(onUploadSuccess).toHaveBeenCalledWith({ songId: 'song-123', title: 'My Track' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/step 1 of 3/i)).toBeInTheDocument();
+  });
+
+  it('shows a busy button while the upload is in flight', async () => {
+    let finish;
+    mockApi(() => new Promise((resolve) => { finish = resolve; }));
+    renderWizard();
+    const user = userEvent.setup();
+    await goToReview(user);
+    await submit(user);
+
+    const busy = await screen.findByRole('button', { name: /uploading/i });
+    expect(busy).toBeDisabled();
+    finish({ data: { songId: 'song-1' } });
+    await waitFor(() => expect(screen.getByText(/step 1 of 3/i)).toBeInTheDocument());
   });
 });
 
 // ===========================================================================
-// SUBMIT — ERROR HANDLING
+// SUBMIT — PAID DOWNLOADS
 // ===========================================================================
-describe('UploadWizard — submit errors', () => {
-  it('surfaces backend message when API returns one', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
-      const err = new Error('Request failed');
-      err.response = { data: { message: 'Storage quota exceeded' } };
-      throw err;
-    });
-
-    render(
-      <UploadWizard show={true} onClose={vi.fn()} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
+describe('UploadWizard — paid download price', () => {
+  it('sends the price in cents', async () => {
+    renderWizard();
     const user = userEvent.setup();
-    await fillStep2({ user, title: 'Track' });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-
-    expect(await screen.findByText(/storage quota exceeded/i)).toBeInTheDocument();
+    await goToReview(user, { downloadPolicy: 'paid', downloadPrice: '1.99' });
+    await submit(user);
+    await waitFor(() => expect(uploadCalls()).toHaveLength(1));
+    const meta = metadataOf(uploadCalls()[0]);
+    expect(meta.downloadPolicy).toBe('paid');
+    expect(meta.downloadPrice).toBe(199);
   });
 
-  it('falls back to error.message when no response.data.message', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
-      throw new Error('Network down');
-    });
-
-    render(
-      <UploadWizard show={true} onClose={vi.fn()} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
+  it('accepts the $0.94 minimum', async () => {
+    renderWizard();
     const user = userEvent.setup();
-    await fillStep2({ user, title: 'Track' });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-
-    expect(await screen.findByText(/network down/i)).toBeInTheDocument();
+    await goToReview(user, { downloadPolicy: 'paid', downloadPrice: '0.94' });
+    await submit(user);
+    await waitFor(() => expect(uploadCalls()).toHaveLength(1));
+    expect(metadataOf(uploadCalls()[0]).downloadPrice).toBe(94);
   });
 
-  it('does not call onUploadSuccess on failure', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
-      throw new Error('boom');
-    });
-
-    const onUploadSuccess = vi.fn();
-    const onClose = vi.fn();
-    render(
-      <UploadWizard show={true} onClose={onClose} onUploadSuccess={onUploadSuccess} userProfile={ARTIST_PROFILE} />
-    );
+  it('refuses a price under $0.94', async () => {
+    renderWizard();
     const user = userEvent.setup();
-    await fillStep2({ user, title: 'Track' });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
+    await goToReview(user, { downloadPolicy: 'paid', downloadPrice: '0.93' });
+    await submit(user);
+    expect(document.querySelector('.uw__error')).toHaveTextContent(/minimum download price is \$0\.94/i);
+    expect(uploadCalls()).toHaveLength(0);
+  });
 
-    await screen.findByText(/boom/i);
+  it('refuses a paid download with no price', async () => {
+    renderWizard();
+    const user = userEvent.setup();
+    await goToReview(user, { downloadPolicy: 'paid' });
+    await submit(user);
+    expect(document.querySelector('.uw__error')).toHaveTextContent(/minimum download price/i);
+    expect(uploadCalls()).toHaveLength(0);
+  });
+
+  it('sends a null price when downloads are off', async () => {
+    renderWizard();
+    const user = userEvent.setup();
+    await goToReview(user, { downloadPolicy: 'unavailable' });
+    await submit(user);
+    await waitFor(() => expect(uploadCalls()).toHaveLength(1));
+    const meta = metadataOf(uploadCalls()[0]);
+    expect(meta.downloadPolicy).toBe('unavailable');
+    expect(meta.downloadPrice).toBeNull();
+  });
+});
+
+// ===========================================================================
+// SUBMIT — VIDEO
+// ===========================================================================
+describe('UploadWizard — video upload', () => {
+  it('POSTs to /v1/media/video with no song-only fields', async () => {
+    renderWizard();
+    const user = userEvent.setup();
+    await goToReview(user, { mediaType: 'video', title: 'My Video' });
+    await submit(user);
+
+    await waitFor(() => expect(uploadCalls()).toHaveLength(1));
+    const [call] = uploadCalls();
+    expect(call.url).toBe('/v1/media/video');
+    expect(metadataOf(call, 'video')).toEqual({
+      title: 'My Video',
+      description: '',
+      genreId: RAP,
+      artistId: 'user-artist-001',
+      jurisdictionId: '00000000-0000-0000-0000-000000000003',
+      rightsConfirmed: true,
+    });
+    expect(call.data.has('song')).toBe(false);
+  });
+
+  it('closes after a video upload without offering a clean version', async () => {
+    const { onClose, onUploadSuccess } = renderWizard();
+    const user = userEvent.setup();
+    await goToReview(user, { mediaType: 'video' });
+    await submit(user);
+    await waitFor(() => expect(onUploadSuccess).toHaveBeenCalledTimes(1));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('heading', { name: /clean version/i })).not.toBeInTheDocument();
+  });
+});
+
+// ===========================================================================
+// SUBMIT — ERRORS
+// ===========================================================================
+describe('UploadWizard — upload errors', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('shows the server message', async () => {
+    mockApi(() => Promise.reject({ response: { data: { message: 'Title already used' } } }));
+    const { onClose, onUploadSuccess } = renderWizard();
+    const user = userEvent.setup();
+    await goToReview(user);
+    await submit(user);
+
+    await waitFor(() => expect(document.querySelector('.uw__error')).toHaveTextContent('Title already used'));
     expect(onUploadSuccess).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('disables submit button while loading', async () => {
-    let resolveFn;
-    const pending = new Promise((r) => { resolveFn = r; });
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
-      await pending;
-      return { data: { songId: 'slow' } };
-    });
-
-    render(
-      <UploadWizard show={true} onClose={vi.fn()} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
+  it('falls back to the error message, then to "Upload failed"', async () => {
+    mockApi(() => Promise.reject(new Error('Network Error')));
+    renderWizard();
     const user = userEvent.setup();
-    await fillStep2({ user, title: 'Slow' });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
+    await goToReview(user);
+    await submit(user);
+    await waitFor(() => expect(document.querySelector('.uw__error')).toHaveTextContent('Network Error'));
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /uploading\.\.\./i })).toBeDisabled();
-    });
-    resolveFn();
+    mockApi(() => Promise.reject({}));
+    await user.click(screen.getByRole('button', { name: /upload now/i }));
+    await waitFor(() => expect(document.querySelector('.uw__error')).toHaveTextContent('Upload failed'));
+  });
+
+  it('re-enables the button after a failure and logs it', async () => {
+    mockApi(() => Promise.reject(new Error('boom')));
+    renderWizard();
+    const user = userEvent.setup();
+    await goToReview(user);
+    await submit(user);
+    await waitFor(() => expect(screen.getByRole('button', { name: /upload now/i })).toBeEnabled());
+    expect(console.error).toHaveBeenCalledWith('Upload error:', expect.any(Error));
   });
 });
 
 // ===========================================================================
-// EXPLICIT SONG → STEP 4 (CLEAN VERSION FLOW)
+// STEP 4 — CLEAN VERSION
 // ===========================================================================
-describe('UploadWizard — explicit song advances to step 4', () => {
-  it('advances to step 4 instead of closing on success', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => ({
-      data: { songId: 'explicit-1' },
+describe('UploadWizard — clean version (explicit songs)', () => {
+  async function uploadExplicit(user, handler) {
+    mockApi(handler || ((config) => {
+      if (config.method === 'patch') return { data: {} };
+      const meta = JSON.parse(config.data.get('song'));
+      return { data: { songId: meta.isCleanVersion ? 'song-clean' : 'song-explicit', title: meta.title } };
     }));
+    const utils = renderWizard();
+    await goToReview(user, { title: 'Raw Cut', explicit: true });
+    await submit(user);
+    expect(await screen.findByRole('heading', { name: /clean version/i })).toBeInTheDocument();
+    return utils;
+  }
 
-    const onClose = vi.fn();
-    render(
-      <UploadWizard show={true} onClose={onClose} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
-    const user = userEvent.setup();
-    await fillStep2({ user, title: 'Bad Words', explicit: true });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-
-    expect(await screen.findByRole('heading', { name: /upload clean version/i })).toBeInTheDocument();
+  it('an explicit song moves to the clean-version step instead of closing', async () => {
+    const { onClose, onUploadSuccess } = await uploadExplicit(userEvent.setup());
+    expect(screen.getByText(/"Raw Cut"/)).toBeInTheDocument();
+    expect(screen.getByText('Optional')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/upload progress/i)).not.toBeInTheDocument();
+    expect(onUploadSuccess).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('shows the original title in the step 4 prompt copy', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => ({
-      data: { songId: 'explicit-1' },
-    }));
-
-    render(
-      <UploadWizard show={true} onClose={vi.fn()} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
-    const user = userEvent.setup();
-    await fillStep2({ user, title: 'Late Night Sin', explicit: true });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-
-    await screen.findByRole('heading', { name: /upload clean version/i });
-    expect(screen.getByText(/Late Night Sin/)).toBeInTheDocument();
+  it('the explicit upload itself is flagged explicit', async () => {
+    await uploadExplicit(userEvent.setup());
+    expect(metadataOf(uploadCalls()[0]).explicit).toBe(true);
   });
-});
 
-describe('UploadWizard — step 4 skip path', () => {
-  it('"No, skip for now" button calls onUploadSuccess + onClose', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => ({
-      data: { songId: 'explicit-1' },
-    }));
-
-    const onUploadSuccess = vi.fn();
-    const onClose = vi.fn();
-    render(
-      <UploadWizard show={true} onClose={onClose} onUploadSuccess={onUploadSuccess} userProfile={ARTIST_PROFILE} />
-    );
+  it('"No, skip for now" reports the explicit song and closes', async () => {
     const user = userEvent.setup();
-    await fillStep2({ user, title: 'Skip Path', explicit: true });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-    await screen.findByRole('heading', { name: /upload clean version/i });
-
+    const { onClose, onUploadSuccess } = await uploadExplicit(user);
     await user.click(screen.getByRole('button', { name: /no, skip for now/i }));
-    expect(onUploadSuccess).toHaveBeenCalledWith({ songId: 'explicit-1' });
-    expect(onClose).toHaveBeenCalled();
-  });
-});
 
-describe('UploadWizard — step 4 yes path', () => {
-  it('"Yes, upload a clean version" reveals the clean file picker', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => ({
-      data: { songId: 'explicit-1' },
-    }));
-
-    render(
-      <UploadWizard show={true} onClose={vi.fn()} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
-    const user = userEvent.setup();
-    await fillStep2({ user, title: 'Yes Path', explicit: true });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-    await screen.findByRole('heading', { name: /upload clean version/i });
-
-    await user.click(screen.getByRole('button', { name: /yes, upload a clean version/i }));
-    expect(document.getElementById('cleanFile')).not.toBeNull();
-    expect(screen.getByRole('button', { name: /upload clean version/i })).toBeInTheDocument();
+    expect(onUploadSuccess).toHaveBeenCalledWith({ songId: 'song-explicit', title: 'Raw Cut' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(uploadCalls()).toHaveLength(1);
   });
 
-  it('rejects non-MP3 clean file', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => ({
-      data: { songId: 'explicit-1' },
-    }));
-
-    render(
-      <UploadWizard show={true} onClose={vi.fn()} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
+  it('"Yes" shows the clean-file picker with upload disabled until a file is chosen', async () => {
     const user = userEvent.setup();
-    await fillStep2({ user, title: 'WAV Clean', explicit: true });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-    await screen.findByRole('heading', { name: /upload clean version/i });
+    await uploadExplicit(user);
     await user.click(screen.getByRole('button', { name: /yes, upload a clean version/i }));
 
-    const cleanInput = document.getElementById('cleanFile');
-    await selectFile(cleanInput, fakeFile({ name: 'clean.wav', type: 'audio/wav' }));
-    expect(screen.getByText(/Clean version must be MP3/i)).toBeInTheDocument();
+    expect(screen.getByText(/"Raw Cut \(Clean\)"/)).toBeInTheDocument();
+    const upload = screen.getByRole('button', { name: /^upload clean version$/i });
+    expect(upload).toBeDisabled();
+
+    selectFile(mediaInput(), fakeFile({ name: 'raw-clean.mp3' }));
+    expect(upload).toBeEnabled();
   });
 
-  it('uploads clean MP3 + PATCHes the explicit song with cleanVersionId', async () => {
-    let cleanUploadPayload = null;
-    let patchUrl = null;
-    let patchHadCleanVersionId = false;
-    let callIndex = 0;
+  it('rejects a clean file that is not an MP3', async () => {
+    const user = userEvent.setup();
+    await uploadExplicit(user);
+    await user.click(screen.getByRole('button', { name: /yes, upload a clean version/i }));
+    selectFile(mediaInput(), fakeFile({ name: 'raw.wav', type: 'audio/wav' }));
+    expect(document.querySelector('.uw__error')).toHaveTextContent(/clean version must be MP3/i);
+  });
 
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
-      callIndex++;
-      if (callIndex === 1) {
-        // First call: explicit song upload
-        return { data: { songId: 'explicit-1' } };
-      }
-      if (callIndex === 2) {
-        // Second call: clean version POST
-        const meta = config.data.get('song');
-        if (meta) cleanUploadPayload = JSON.parse(meta);
-        return { data: { songId: 'clean-1' } };
-      }
-      if (callIndex === 3) {
-        // Third call: PATCH
-        patchUrl = config.url;
-        patchHadCleanVersionId = config.data.has('cleanVersionId');
-        return { data: {} };
-      }
-      return { data: {} };
+  it('rejects a clean file over 50 MB', async () => {
+    const user = userEvent.setup();
+    await uploadExplicit(user);
+    await user.click(screen.getByRole('button', { name: /yes, upload a clean version/i }));
+    selectFile(mediaInput(), fakeFile({ sizeMB: 60 }));
+    expect(document.querySelector('.uw__error')).toHaveTextContent(/file too large/i);
+  });
+
+  it('uploads the clean song with the inherited details, then links it', async () => {
+    const user = userEvent.setup();
+    const { onClose, onUploadSuccess } = await uploadExplicit(user);
+    await user.click(screen.getByRole('button', { name: /yes, upload a clean version/i }));
+    selectFile(mediaInput(), fakeFile({ name: 'raw-clean.mp3' }));
+    await user.click(screen.getByRole('button', { name: /^upload clean version$/i }));
+
+    await waitFor(() => expect(uploadCalls()).toHaveLength(3));
+    const [, cleanCall, linkCall] = uploadCalls();
+
+    expect(cleanCall.url).toBe('/v1/media/song');
+    expect(cleanCall.method).toBe('post');
+    expect(cleanCall.timeout).toBe(10 * 60 * 1000);
+    expect(cleanCall.data.get('file').name).toBe('raw-clean.mp3');
+    expect(metadataOf(cleanCall)).toMatchObject({
+      title: 'Raw Cut (Clean)',
+      explicit: false,
+      isrc: null,
+      isCleanVersion: true,
+      rightsConfirmed: true,
+      genreId: RAP,
+      primarySubgenreId: 'sg-drill',
+      primaryMoodId: 'mood-hype',
+      language: 'en',
     });
 
-    const onUploadSuccess = vi.fn();
-    const onClose = vi.fn();
-    render(
-      <UploadWizard show={true} onClose={onClose} onUploadSuccess={onUploadSuccess} userProfile={ARTIST_PROFILE} />
-    );
-    const user = userEvent.setup();
-    await fillStep2({ user, title: 'Bad Words', explicit: true });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-    await screen.findByRole('heading', { name: /upload clean version/i });
-    await user.click(screen.getByRole('button', { name: /yes, upload a clean version/i }));
+    expect(linkCall.url).toBe('/v1/media/song/song-explicit');
+    expect(linkCall.method).toBe('patch');
+    expect(linkCall.data.get('cleanVersionId')).toBe('song-clean');
 
-    const cleanInput = document.getElementById('cleanFile');
-    await selectFile(cleanInput, fakeFile({ name: 'clean.mp3', type: 'audio/mpeg' }));
-    await user.click(screen.getByRole('button', { name: /upload clean version/i }));
-
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(cleanUploadPayload.title).toBe('Bad Words (Clean)');
-    expect(cleanUploadPayload.explicit).toBe(false);
-    expect(patchUrl).toBe('/v1/media/song/explicit-1');
-    expect(patchHadCleanVersionId).toBe(true);
-    expect(onUploadSuccess).toHaveBeenCalledWith({ songId: 'explicit-1' });
+    await waitFor(() => expect(onUploadSuccess).toHaveBeenCalledWith({ songId: 'song-explicit', title: 'Raw Cut' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('shows error message when clean upload fails', async () => {
-    let callIndex = 0;
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
-      callIndex++;
-      if (callIndex === 1) return { data: { songId: 'explicit-1' } };
-      const err = new Error('Clean upload boom');
-      err.response = { data: { message: 'Disk full' } };
-      throw err;
+  it('skips the link call when the server returns no clean song id', async () => {
+    const user = userEvent.setup();
+    const { onUploadSuccess } = await uploadExplicit(user, (config) => {
+      const meta = JSON.parse(config.data.get('song'));
+      return { data: meta.isCleanVersion ? {} : { songId: 'song-explicit' } };
     });
-
-    render(
-      <UploadWizard show={true} onClose={vi.fn()} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
-    const user = userEvent.setup();
-    await fillStep2({ user, title: 'Trk', explicit: true });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-    await screen.findByRole('heading', { name: /upload clean version/i });
     await user.click(screen.getByRole('button', { name: /yes, upload a clean version/i }));
+    selectFile(mediaInput(), fakeFile());
+    await user.click(screen.getByRole('button', { name: /^upload clean version$/i }));
 
-    const cleanInput = document.getElementById('cleanFile');
-    await selectFile(cleanInput, fakeFile({ name: 'clean.mp3', type: 'audio/mpeg' }));
-    await user.click(screen.getByRole('button', { name: /upload clean version/i }));
-
-    expect(await screen.findByText(/disk full/i)).toBeInTheDocument();
+    await waitFor(() => expect(onUploadSuccess).toHaveBeenCalledTimes(1));
+    expect(uploadCalls().some((c) => c.method === 'patch')).toBe(false);
   });
 
-  it('upload-clean button disabled when no file selected', async () => {
-    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => ({
-      data: { songId: 'explicit-1' },
-    }));
-
-    render(
-      <UploadWizard show={true} onClose={vi.fn()} onUploadSuccess={vi.fn()} userProfile={ARTIST_PROFILE} />
-    );
+  it('shows an error and stays open when the clean upload fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     const user = userEvent.setup();
-    await fillStep2({ user, title: 'NoFile', explicit: true });
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
-    await user.click(screen.getByRole('button', { name: /upload now/i }));
-    await screen.findByRole('heading', { name: /upload clean version/i });
+    const { onClose } = await uploadExplicit(user, (config) => {
+      const meta = JSON.parse(config.data.get('song'));
+      if (meta.isCleanVersion) return Promise.reject({ response: { data: { message: 'Clean upload refused' } } });
+      return { data: { songId: 'song-explicit' } };
+    });
     await user.click(screen.getByRole('button', { name: /yes, upload a clean version/i }));
+    selectFile(mediaInput(), fakeFile());
+    await user.click(screen.getByRole('button', { name: /^upload clean version$/i }));
 
-    expect(screen.getByRole('button', { name: /upload clean version/i })).toBeDisabled();
-  });
-});
-
-// ===========================================================================
-// CLOSE BEHAVIOR
-// ===========================================================================
-describe('UploadWizard — close behavior', () => {
-  it('clicking the × button calls onClose', async () => {
-    const onClose = vi.fn();
-    renderWizard({ onClose });
-    const user = userEvent.setup();
-    await user.click(document.querySelector('.close-button'));
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it('clicking the overlay calls onClose', async () => {
-    const onClose = vi.fn();
-    renderWizard({ onClose });
-    const user = userEvent.setup();
-    await user.click(document.querySelector('.upload-wizard-overlay'));
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it('clicking inside the wizard does NOT call onClose', async () => {
-    const onClose = vi.fn();
-    renderWizard({ onClose });
-    const user = userEvent.setup();
-    await user.click(document.querySelector('.upload-wizard'));
+    await waitFor(() => expect(document.querySelector('.uw__error')).toHaveTextContent('Clean upload refused'));
     expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /^upload clean version$/i })).toBeEnabled();
+  });
+
+  it('the Skip button on the picker also finishes the upload', async () => {
+    const user = userEvent.setup();
+    const { onClose, onUploadSuccess } = await uploadExplicit(user);
+    await user.click(screen.getByRole('button', { name: /yes, upload a clean version/i }));
+    await user.click(screen.getByRole('button', { name: /^skip$/i }));
+    expect(onUploadSuccess).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

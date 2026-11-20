@@ -635,7 +635,7 @@ describe('CreateAccountWizard', () => {
       );
     });
 
-    it('songUpload gates Continue until title + audio + artwork are present', async () => {
+    it('songUpload gates Continue until title + audio + artwork + subgenre + mood are present', async () => {
       renderWithProviders(<CreateAccountWizard show={true} onClose={() => {}} />);
       const user = userEvent.setup();
       await advanceToArtistSongStep(user);
@@ -647,10 +647,46 @@ describe('CreateAccountWizard', () => {
       fireEvent.change(fileInputs[0], { target: { files: [smallAudio()] } });
       fireEvent.change(fileInputs[1], { target: { files: [smallArtwork()] } });
 
+      // Title and files alone are no longer enough: a song needs a subgenre
+      // and a mood before it can go up.
+      const subgenre = await screen.findByLabelText(/^Subgenre/i);
+      expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+
+      await user.selectOptions(subgenre, 'sg-indie');
+      expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+
+      await user.click(screen.getByRole('button', { name: 'Hype' }));
       await waitFor(
         () => expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled(),
         { timeout: 2000 }
       );
+    });
+
+    it('songUpload only offers subgenres from the genre picked on the profile step', async () => {
+      renderWithProviders(<CreateAccountWizard show={true} onClose={() => {}} />);
+      const user = userEvent.setup();
+      await advanceToArtistSongStep(user); // picks Rock
+
+      const subgenre = await screen.findByLabelText(/^Subgenre/i);
+      expect(within(subgenre).getByRole('option', { name: 'Indie rock' })).toBeInTheDocument();
+      expect(within(subgenre).queryByRole('option', { name: 'Drill' })).not.toBeInTheDocument();
+    });
+
+    it('songUpload: Continue with the rights box unticked explains why, and stays on the step', async () => {
+      renderWithProviders(<CreateAccountWizard show={true} onClose={() => {}} />);
+      const user = userEvent.setup();
+      await advanceToArtistSongStep(user);
+      await fillSongDetails(user);
+
+      await user.click(screen.getByRole('button', { name: /continue/i }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(/check the box to upload this song/i);
+      expect(screen.getByText(/Your Debut Track/i)).toBeInTheDocument();
+
+      // Ticking the box clears the alert and lets the artist move on.
+      await user.click(screen.getByRole('checkbox', { name: /all of this is true for this song/i }));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /continue/i }));
+      await screen.findByText(/Support an Artist/i);
     });
   });
 
@@ -773,6 +809,7 @@ describe('CreateAccountWizard', () => {
         if (url.includes('/media/signup-song') && method === 'post') {
           state.callOrder.push('song');
           state.songParams = url;
+          state.songData = JSON.parse(config.data.get('song'));
           if (overrides.song) return overrides.song(config);
           return { data: { songId: 'new-song' } };
         }
@@ -834,6 +871,14 @@ describe('CreateAccountWizard', () => {
       expect(state.registerPayload.role).toBe('artist');
       expect(state.registerPayload.genreId).toBeTruthy();
       expect(state.songParams).toContain('signupToken=tok-123');
+      // The debut song carries its discovery picks and the rights confirmation.
+      expect(state.songData).toMatchObject({
+        title: 'My Debut',
+        primarySubgenreId: 'sg-indie',
+        primaryMoodId: 'mood-hype',
+        language: 'en',
+        rightsConfirmed: true,
+      });
 
       await waitFor(
         () => expect(screen.getByText(/Check your email/i)).toBeInTheDocument(),
@@ -1043,16 +1088,27 @@ describe('CreateAccountWizard', () => {
     );
   }
 
-  async function advanceToArtistReview(user) {
-    await advanceToArtistSongStep(user);
+  // Everything the debut-song step needs before Continue enables: a title,
+  // the audio and artwork files, a subgenre and a mood. (advanceToArtistSongStep
+  // picks Rock, so the subgenre comes from the Rock list.)
+  async function fillSongDetails(user) {
     await user.type(screen.getByPlaceholderText(/Track name/i), 'My Debut');
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fireEvent.change(fileInputs[0], { target: { files: [smallAudio()] } });
     fireEvent.change(fileInputs[1], { target: { files: [smallArtwork()] } });
+    await user.selectOptions(await screen.findByLabelText(/^Subgenre/i), 'sg-indie');
+    await user.click(screen.getByRole('button', { name: 'Hype' }));
     await waitFor(
       () => expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled(),
       { timeout: 2000 }
     );
+  }
+
+  async function advanceToArtistReview(user) {
+    await advanceToArtistSongStep(user);
+    await fillSongDetails(user);
+    // The rights box (Terms 3.6) must be ticked for the song to go up.
+    await user.click(screen.getByRole('checkbox', { name: /all of this is true for this song/i }));
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     // Support artist

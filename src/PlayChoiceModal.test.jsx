@@ -72,7 +72,7 @@ describe('PlayChoiceModal', () => {
   test('renders song title, artist, eyebrow text, and action buttons when open', () => {
     renderWithPlayerContext();
 
-    expect(screen.getByText('Add to your queue')).toBeInTheDocument();
+    expect(screen.getByText('Up next')).toBeInTheDocument();
     expect(screen.getByText('Midnight Drive')).toBeInTheDocument();
     expect(screen.getByText('Nova Flame')).toBeInTheDocument();
 
@@ -92,9 +92,11 @@ describe('PlayChoiceModal', () => {
   test('renders artwork when artwork is provided', () => {
     renderWithPlayerContext();
 
-    const image = screen.getByAltText('Midnight Drive');
+    // The artwork is decorative (alt=""): the title beside it already names the song.
+    const image = document.querySelector('.pcm-artwork img');
 
     expect(image).toBeInTheDocument();
+    expect(image).toHaveAttribute('alt', '');
     expect(image).toHaveAttribute('src', 'https://example.com/artwork.jpg');
   });
 
@@ -110,7 +112,7 @@ describe('PlayChoiceModal', () => {
       },
     });
 
-    const image = screen.getByAltText('City Lights');
+    const image = document.querySelector('.pcm-artwork img');
 
     expect(image).toBeInTheDocument();
     expect(image).toHaveAttribute('src', 'https://example.com/artwork-url.jpg');
@@ -127,7 +129,7 @@ describe('PlayChoiceModal', () => {
       },
     });
 
-    expect(screen.queryByAltText('No Cover Song')).not.toBeInTheDocument();
+    expect(document.querySelector('.pcm-artwork')).toBeNull();
   });
 
   test('uses fallback title and artist when song data is missing', () => {
@@ -283,5 +285,67 @@ describe('PlayChoiceModal', () => {
       'keydown',
       expect.any(Function)
     );
+  });
+  // ── A whole playlist goes through the same two choices ─────────────────
+  describe('playlist (collection)', () => {
+    const playlist = (overrides = {}) => ({
+      playChoiceModal: {
+        open: true,
+        pendingSong: null,
+        pendingCollection: {
+          title: 'Gym Mix',
+          artwork: 'https://example.com/gym.jpg',
+          tracks: [{ songId: 'a' }, { songId: 'b' }, { songId: 'c' }],
+          ...overrides,
+        },
+      },
+    });
+
+    test('shows the playlist name, its song count and playlist wording', () => {
+      renderWithPlayerContext(playlist());
+
+      expect(screen.getByText('Playlist')).toBeInTheDocument();
+      expect(screen.getByText('Gym Mix')).toBeInTheDocument();
+      expect(screen.getByText('3 songs')).toBeInTheDocument();
+      expect(screen.getByText('Starts now, then your queue continues')).toBeInTheDocument();
+      expect(screen.getByText('Adds 3 songs after your current queue')).toBeInTheDocument();
+      expect(document.querySelector('.pcm-artwork img')).toHaveAttribute('src', 'https://example.com/gym.jpg');
+    });
+
+    test('says "1 song" for a one-song playlist', () => {
+      renderWithPlayerContext(playlist({ tracks: [{ songId: 'a' }] }));
+
+      expect(screen.getByText('1 song')).toBeInTheDocument();
+      expect(screen.getByText('Adds 1 song after your current queue')).toBeInTheDocument();
+    });
+
+    test('labels a shuffled playlist', () => {
+      renderWithPlayerContext(playlist({ shuffled: true }));
+
+      expect(screen.getByText('Shuffle playlist')).toBeInTheDocument();
+    });
+
+    test('names the starting song when playing from the middle of a playlist', () => {
+      renderWithPlayerContext(playlist({ startTitle: 'Second Wind' }));
+
+      expect(screen.getByText('Play from here')).toBeInTheDocument();
+      expect(screen.getByText('3 songs · starts with \u201CSecond Wind\u201D')).toBeInTheDocument();
+    });
+
+    test('falls back to "Playlist" when the playlist has no name', () => {
+      renderWithPlayerContext(playlist({ title: undefined }));
+
+      expect(document.getElementById('pcm-title')).toHaveTextContent('Playlist');
+    });
+
+    test('Play Now and Add to Queue call the same handlers as for a song', () => {
+      const { contextValue } = renderWithPlayerContext(playlist());
+
+      fireEvent.click(screen.getByRole('button', { name: /play now/i }));
+      fireEvent.click(screen.getByRole('button', { name: /add to queue/i }));
+
+      expect(contextValue.confirmPlayNow).toHaveBeenCalledTimes(1);
+      expect(contextValue.confirmAddToQueue).toHaveBeenCalledTimes(1);
+    });
   });
 });

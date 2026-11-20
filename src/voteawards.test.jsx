@@ -1,783 +1,728 @@
 // src/voteawards.test.jsx
 //
-// Comprehensive test suite for VoteAwards — the active polling page where
-// users browse nominees by genre/type/interval/jurisdiction, search them,
-// listen to their music, and click Vote to open the VotingWizard.
+// Tests for VoteAwards — the nominee page for the active poll.
+//
+// Nominees come from utils/standings.js (GET /v1/awards/standings — the same
+// ranking that decides the award). fetchStandings and playEntry are mocked at
+// the module boundary; that module's own logic is tested in
+// utils/standings.test.js. The "current winner" card reads /v1/awards/past
+// through apiCall, which is spied here.
 //
 // Covers:
-//   • Initial render: filters, hero, countdown, nominees grid
-//   • Filter pills update state and refetch (genre, type, interval, jurisdiction)
-//   • Search expand/collapse, query filtering, autoFocus on open, X clears query
-//   • Countdown timer renders in HH:MM:SS format and ticks
-//   • Hero headline reflects current filter selections
-//   • Nominees fetch URL params: targetType, genreId, jurisdictionId,
-//     intervalId, limit=20
-//   • [BUG/Concern B] guests still trigger the nominees fetch
-//   • Artist nominees: lifetime votes, +N badge, Listen button (default song)
-//   • Song nominees: title, artist subtitle, plays count, Listen button
-//   • Listen click: artist → fetch default-song; song → playMedia direct
-//   • Listen click tracks the play (with userId from JWT) for both modes
-//   • Vote click opens VotingWizard with the right nominee + filters payload
-//   • Successful vote: closes wizard, refetches nominees
-//   • Card click navigates: artist → /artist/:id, song → /song/:id
-//   • Empty states: no nominees, no search results, error fetching
-//   • no ad-view tracking (earnings follow listening, not ad views)
-//   • Loading state shows "Loading nominees..."
-//   • Error state shows "Failed to load nominees…"
-//
-// Pattern notes:
-//   • VotingWizard is mocked — too heavy to render in this test, and it
-//     already has its own dedicated tests.
-//   • No fake timers in most tests — countdown is a continuous interval and
-//     fake timers would break MSW. The few tests that need to inspect the
-//     countdown just check format, not specific values.
+//   • first render: filters, hero headline, countdown, LIVE badge
+//   • the request each filter produces, and a refetch on every change
+//   • guests can see nominees; guest Vote prompts a log-in instead of opening
+//     the wizard
+//   • loading, error and empty states
+//   • status line for a live board and for a board showing the last period
+//   • nominee cards: rank, movement, points, vote badge, jurisdiction
+//   • "Show more nominees" paging, without duplicates
+//   • search: toggle, filter, case-insensitive, no-match, close clears
+//   • Listen (song and artist) goes through playEntry with source "voteawards"
+//   • the page never records a play or an ad view itself
+//   • Vote opens the wizard with the nominee and the current filters; a
+//     successful vote closes it and reloads the nominees
+//   • current-winner card: request window, newest award wins, navigation,
+//     pending wording
+//   • card click navigation
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
-import { server } from './test/mocks/server';
-import { callTracker } from './test/mocks/handlers';
-import { renderWithProviders } from './test/utils';
-import * as axiosModule from './components/axiosInstance';
-import cacheService from './services/cacheService';
+import { MemoryRouter } from 'react-router-dom';
 
-// ---------------------------------------------------------------------------
-// MOCKS
-// ---------------------------------------------------------------------------
 vi.mock('./voteawards.scss', () => ({}));
+vi.mock('./components/RankMove.scss', () => ({}));
 vi.mock('./assets/randomrapper.jpeg', () => ({ default: 'randomrapper.jpeg' }));
-
 vi.mock('./layout', () => ({
   default: ({ children }) => <div data-testid="layout">{children}</div>,
 }));
 
-// VotingWizard is heavy and has its own tests. Render a stub that exposes
-// the props we want to assert on.
-const { votingWizardSpy } = vi.hoisted(() => ({ votingWizardSpy: vi.fn() }));
+// VotingWizard has its own suites. This stub exposes the props worth asserting.
 vi.mock('./votingWizard', () => ({
-  default: (props) => {
-    votingWizardSpy(props);
-    return props.show ? (
-      <div data-testid="voting-wizard">
-        <span data-testid="vw-nominee-id">{props.nominee?.id || ''}</span>
-        <span data-testid="vw-nominee-name">{props.nominee?.name || ''}</span>
-        <span data-testid="vw-genre">{props.filters?.selectedGenre}</span>
-        <span data-testid="vw-type">{props.filters?.selectedType}</span>
-        <span data-testid="vw-interval">{props.filters?.selectedInterval}</span>
-        <span data-testid="vw-jurisdiction">{props.filters?.selectedJurisdiction}</span>
-        <button onClick={props.onClose}>vw-close</button>
-        <button onClick={() => props.onVoteSuccess(props.nominee?.id)}>vw-confirm</button>
-      </div>
-    ) : null;
-  },
+  default: (props) => (props.show ? (
+    <div data-testid="voting-wizard">
+      <span data-testid="vw-nominee-id">{props.nominee?.id || ''}</span>
+      <span data-testid="vw-nominee-name">{props.nominee?.name || ''}</span>
+      <span data-testid="vw-user">{props.userId || ''}</span>
+      <span data-testid="vw-filters">{JSON.stringify(props.filters)}</span>
+      <button onClick={props.onClose}>vw-close</button>
+      <button onClick={() => props.onVoteSuccess(props.nominee?.id)}>vw-confirm</button>
+    </div>
+  ) : null),
 }));
 
-const { navigateSpy } = vi.hoisted(() => ({ navigateSpy: vi.fn() }));
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => navigateSpy,
-  };
-});
+const { navigateSpy, fetchStandings, playEntry, feedback } = vi.hoisted(() => ({
+  navigateSpy: vi.fn(),
+  fetchStandings: vi.fn(),
+  playEntry: vi.fn(),
+  feedback: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
+}));
 
-const { playMediaSpy } = vi.hoisted(() => ({ playMediaSpy: vi.fn() }));
-vi.mock('./context/playercontext', async () => {
-  const actual = await vi.importActual('./context/playercontext');
-  const React = require('react');
-  return {
-    ...actual,
-    PlayerContext: React.createContext({ playMedia: playMediaSpy }),
-  };
-});
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useNavigate: () => navigateSpy,
+}));
 
-// Import AFTER mocks
+vi.mock('./utils/standings', async (importOriginal) => ({
+  ...(await importOriginal()),
+  fetchStandings,
+  playEntry,
+}));
+
+vi.mock('./context/FeedbackContext', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useFeedback: () => feedback,
+}));
+
+import { PlayerContext } from './context/playercontext';
+import * as axiosModule from './components/axiosInstance';
+import { makeToken } from './test/mocks/handlers';
 import VoteAwards from './voteawards';
 
 // ---------------------------------------------------------------------------
-// CONSTANTS
+// CONSTANTS / FIXTURES
 // ---------------------------------------------------------------------------
-const API = 'http://localhost:8080/api';
-
-// IDs match utils/idMappings.js
 const RAP_ID = '00000000-0000-0000-0000-000000000101';
-const ROCK_ID = '00000000-0000-0000-0000-000000000102';
-const POP_ID = '00000000-0000-0000-0000-000000000103';
-
 const DAILY_ID = '00000000-0000-0000-0000-000000000201';
-const WEEKLY_ID = '00000000-0000-0000-0000-000000000202';
-const MONTHLY_ID = '00000000-0000-0000-0000-000000000203';
-const QUARTERLY_ID = '00000000-0000-0000-0000-000000000204';
-const ANNUAL_ID = '00000000-0000-0000-0000-000000000205';
-
 const HARLEM_ID = '1cf6ceb1-aae6-4113-98c0-d9fe8ad8b5e3';
 const UPTOWN_ID = '52740de0-e4e9-4c9e-b68e-1e170f6788c4';
 const DOWNTOWN_ID = '4b09eaa2-03bc-4778-b7c2-db8b42c9e732';
 
-// ---------------------------------------------------------------------------
-// FIXTURE BUILDERS — match real backend nominee shape
-// ---------------------------------------------------------------------------
-const artistNomineeFixture = (overrides = {}) => ({
-  userId: 'art-1',
-  username: 'Tony Fadd',
-  photoUrl: '/uploads/tony.jpg',
-  voteCount: 3,
-  totalVotes: 42,
-  jurisdiction: { name: 'Harlem' },
-  genre: { name: 'Rap' },
+const entry = (overrides) => ({
+  id: 'id-x', type: 'artist', rank: 1, name: 'Someone', artistName: '', artistId: null,
+  artwork: null, fileUrl: null, homeJurisdictionId: UPTOWN_ID, homeJurisdictionName: 'Uptown Harlem',
+  points: 0, votes: 0, plays: 0, likes: 0, winner: false, movement: null, isNew: false,
   ...overrides,
 });
 
-const songNomineeFixture = (overrides = {}) => ({
-  songId: 'song-1',
-  title: 'Midnight Uptown',
-  artworkUrl: '/uploads/song1.jpg',
-  fileUrl: '/uploads/song1.mp3',
-  artist: { userId: 'art-1', username: 'Tony Fadd' },
-  voteCount: 5,
-  playCount: 120,
-  jurisdiction: { name: 'Harlem' },
-  genre: { name: 'Rap' },
+const board = (entries, overrides = {}) => ({
+  type: entries[0]?.type || 'artist',
+  state: 'LIVE',
+  periodKey: 'daily',
+  closesAt: null,
+  stillOpenIn: [],
+  total: entries.length,
+  offset: 0,
+  entries,
   ...overrides,
 });
 
-// ---------------------------------------------------------------------------
-// apiCall LOGGER
-// ---------------------------------------------------------------------------
-let apiCallLog = [];
-function setupApiCallLog() {
-  apiCallLog = [];
-  const original = axiosModule.apiCall;
-  vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
-    apiCallLog.push({ ...config });
-    return original(config);
-  });
-}
-function callsTo(urlSubstring, method) {
-  return apiCallLog.filter((c) => {
-    const m = method ? (c.method || 'get').toLowerCase() === method.toLowerCase() : true;
-    return m && c.url && c.url.includes(urlSubstring);
-  });
-}
-function parseParams(url) {
-  const u = new URL(url, 'http://x.test');
-  const out = {};
-  u.searchParams.forEach((v, k) => { out[k] = v; });
-  return out;
-}
+const ARTISTS = [
+  entry({ id: 'artist-01', rank: 1, name: 'Tony Fadd', points: 1200, votes: 7, artwork: 'https://cdn.test/tony.jpg', movement: 1 }),
+  entry({ id: 'artist-02', rank: 2, name: 'SD Boomin', points: 900, votes: 1, homeJurisdictionName: 'Downtown Harlem', isNew: true }),
+  entry({ id: 'artist-03', rank: 3, name: 'Harlem MC', points: 0, votes: 0 }),
+];
+
+const SONGS = [
+  entry({ id: 'song-01', type: 'song', rank: 1, name: 'Midnight Uptown', artistName: 'Tony Fadd', artistId: 'artist-01', points: 55, votes: 3, artwork: 'https://cdn.test/s1.jpg', fileUrl: 'https://cdn.test/s1.mp3' }),
+  entry({ id: 'song-02', type: 'song', rank: 2, name: 'No File Yet', artistName: '', points: 5 }),
+];
 
 // ---------------------------------------------------------------------------
-// MSW HELPERS
+// HELPERS
 // ---------------------------------------------------------------------------
-function mockNominees(payload) {
-  server.use(
-    http.get(`${API}/v1/vote/nominees`, () => HttpResponse.json(payload))
+const requestPlay = vi.fn();
+let apiSpy;
+let pastAwards = [];
+
+const pastCalls = () => apiSpy.mock.calls.map(([c]) => c).filter((c) => c.url.startsWith('/v1/awards/past'));
+const paramsOf = (url) => Object.fromEntries(new URL(url, 'http://x.test').searchParams);
+
+function renderPage({ loggedIn = false } = {}) {
+  if (loggedIn) localStorage.setItem('token', makeToken('user-listener-001'));
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter>
+      <PlayerContext.Provider value={{ requestPlay }}>
+        <VoteAwards />
+      </PlayerContext.Provider>
+    </MemoryRouter>
   );
+  return { user };
 }
 
-// Render and wait for the initial nominees fetch to settle (loading gone)
-async function renderAndWait({ as = 'listener', payload = [artistNomineeFixture()] } = {}) {
-  mockNominees(payload);
-  renderWithProviders(<VoteAwards />, { as });
-  // Loading state appears briefly then resolves
-  await waitFor(() => {
-    expect(screen.queryByText(/loading nominees/i)).not.toBeInTheDocument();
-  });
+async function renderLoaded(options = {}) {
+  const utils = renderPage(options);
+  await waitFor(() => expect(screen.queryByText(/loading nominees/i)).not.toBeInTheDocument());
+  return utils;
 }
 
-// ---------------------------------------------------------------------------
-// LIFECYCLE
-// ---------------------------------------------------------------------------
+const selects = () => screen.getAllByRole('combobox');
+const [genreSelect, typeSelect, intervalSelect, jurisdictionSelect] =
+  [0, 1, 2, 3].map((i) => () => selects()[i]);
+
+// The headline breaks onto a second line with a <br>, so there is no space
+// in the text between the period and "in".
+const expectHeadline = (text) => {
+  const [poll, place] = text.split(' in ');
+  const h1 = screen.getByRole('heading', { level: 1 });
+  expect(h1).toHaveTextContent(poll);
+  expect(h1).toHaveTextContent(new RegExp(`in ${place}$`));
+};
+
+const cardOf = (name) => screen.getByRole('heading', { level: 3, name }).closest('.va-card');
+const lastStandingsArgs = () => fetchStandings.mock.calls.at(-1)[0];
+
 beforeEach(() => {
-  cacheService.clearAll();
-  callTracker.reset();
-  navigateSpy.mockReset();
-  playMediaSpy.mockReset();
-  votingWizardSpy.mockReset();
-  setupApiCallLog();
+  vi.clearAllMocks();
+  pastAwards = [];
+  fetchStandings.mockResolvedValue(board(ARTISTS));
+  playEntry.mockResolvedValue(true);
+  apiSpy = vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
+    if (config.url.startsWith('/v1/awards/past')) return { data: pastAwards };
+    throw new Error(`Unexpected request: ${config.method} ${config.url}`);
+  });
 });
 
 afterEach(() => {
-  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
 // ===========================================================================
-// INITIAL RENDER
-// ===========================================================================
-describe('VoteAwards — initial render', () => {
-  it('renders inside Layout', async () => {
-    await renderAndWait();
+describe('VoteAwards — first render', () => {
+  it('renders inside Layout with the four filters and the search toggle', async () => {
+    await renderLoaded();
     expect(screen.getByTestId('layout')).toBeInTheDocument();
-  });
-
-  it('renders all four filter selects', async () => {
-    await renderAndWait();
-    // 4 selects: genre, type, interval, jurisdiction
-    const selects = document.querySelectorAll('.va-pill select');
-    expect(selects).toHaveLength(4);
-  });
-
-  it('renders the search toggle button', async () => {
-    await renderAndWait();
+    expect(selects()).toHaveLength(4);
     expect(screen.getByRole('button', { name: /toggle search/i })).toBeInTheDocument();
   });
 
-  it('renders the hero "Active poll" label', async () => {
-    await renderAndWait();
-    expect(screen.getByText(/active poll/i)).toBeInTheDocument();
+  it('defaults to Rap, Artist, Day, Harlem', async () => {
+    await renderLoaded();
+    expect(genreSelect()).toHaveValue('rap');
+    expect(typeSelect()).toHaveValue('artist');
+    expect(intervalSelect()).toHaveValue('daily');
+    expect(jurisdictionSelect()).toHaveValue('harlem');
   });
 
-  it('renders the LIVE badge', async () => {
-    await renderAndWait();
-    expect(screen.getByText(/^LIVE$/)).toBeInTheDocument();
+  it('shows the active poll headline for the default scope', async () => {
+    await renderLoaded();
+    expect(screen.getByText('Active poll')).toBeInTheDocument();
+    expectHeadline('Rap Artist of the Day in Harlem');
   });
 
-  it('renders the countdown in HH:MM:SS format', async () => {
-    await renderAndWait();
-    const countdown = document.querySelector('.va-countdown-time');
-    expect(countdown).not.toBeNull();
-    // Format: NN:NN:NN where NN is two digits
-    expect(countdown.textContent).toMatch(/^\d{2}:\d{2}:\d{2}$/);
-  });
-});
-
-// ===========================================================================
-// FILTER DEFAULTS
-// ===========================================================================
-describe('VoteAwards — filter defaults', () => {
-  it('genre defaults to rap', async () => {
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    expect(selects[0].value).toBe('rap');
+  it('shows the LIVE badge and a HH:MM:SS countdown', async () => {
+    await renderLoaded();
+    expect(screen.getByText('LIVE')).toBeInTheDocument();
+    expect(document.querySelector('.va-countdown-time').textContent).toMatch(/\d{2}:\d{2}:\d{2}$/);
   });
 
-  it('type defaults to artist', async () => {
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    expect(selects[1].value).toBe('artist');
-  });
-
-  it('interval defaults to daily', async () => {
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    expect(selects[2].value).toBe('daily');
-  });
-
-  it('jurisdiction defaults to harlem', async () => {
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    expect(selects[3].value).toBe('harlem');
+  it('adds a day count to the countdown for longer polls', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-03-10T15:00:00Z')); // months left in the year
+    const { user } = await renderLoaded();
+    await user.selectOptions(intervalSelect(), 'annual');
+    expect(document.querySelector('.va-countdown-days')).toHaveTextContent(/^\d+D/);
   });
 });
 
 // ===========================================================================
-// NOMINEES FETCH — URL PARAMS
-// ===========================================================================
-describe('VoteAwards — nominees fetch URL params', () => {
-  it('default fetch sends targetType=artist, rap, harlem, daily, limit=20', async () => {
-    await renderAndWait();
-    const call = callsTo('/v1/vote/nominees')[0];
-    expect(call).toBeTruthy();
-    const params = parseParams(call.url);
-    expect(params.targetType).toBe('artist');
-    expect(params.genreId).toBe(RAP_ID);
-    expect(params.jurisdictionId).toBe(HARLEM_ID);
-    expect(params.intervalId).toBe(DAILY_ID);
-    expect(params.limit).toBe('20');
-  });
-
-  it('changing genre to rock sends Rock UUID', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    await user.selectOptions(selects[0], 'rock');
-    await waitFor(() => {
-      const last = callsTo('/v1/vote/nominees').slice(-1)[0];
-      expect(parseParams(last.url).genreId).toBe(ROCK_ID);
-    });
-  });
-
-  it('changing type to song sends targetType=song', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    await user.selectOptions(selects[1], 'song');
-    await waitFor(() => {
-      const last = callsTo('/v1/vote/nominees').slice(-1)[0];
-      expect(parseParams(last.url).targetType).toBe('song');
-    });
-  });
-
-  it('changing interval to weekly sends Weekly UUID', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    await user.selectOptions(selects[2], 'weekly');
-    await waitFor(() => {
-      const last = callsTo('/v1/vote/nominees').slice(-1)[0];
-      expect(parseParams(last.url).intervalId).toBe(WEEKLY_ID);
-    });
-  });
-
-  it('changing jurisdiction to uptown-harlem sends Uptown UUID', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    await user.selectOptions(selects[3], 'uptown-harlem');
-    await waitFor(() => {
-      const last = callsTo('/v1/vote/nominees').slice(-1)[0];
-      expect(parseParams(last.url).jurisdictionId).toBe(UPTOWN_ID);
-    });
+describe('VoteAwards — headline follows the filters', () => {
+  it.each([
+    [2, 'monthly', 'Rap Artist of the Month in Harlem'],
+    [1, 'song', 'Rap Song of the Day in Harlem'],
+    [0, 'rock', 'Rock Artist of the Day in Harlem'],
+    [3, 'uptown-harlem', 'Rap Artist of the Day in Uptown Harlem'],
+  ])('filter %i → %s', async (index, value, headline) => {
+    const { user } = await renderLoaded();
+    await user.selectOptions(selects()[index], value);
+    expectHeadline(headline);
   });
 });
 
 // ===========================================================================
-// CONCERN B — GUEST USERS SEE NOMINEES
-// ===========================================================================
-describe('VoteAwards — Concern B: guest visibility', () => {
-    it('fires the nominees fetch even when user is a guest (no userId)', async () => {
-      await renderAndWait({ as: 'guest' });
-      expect(callsTo('/v1/vote/nominees').length).toBeGreaterThan(0);
-    });
-
-    it('renders artist nominee cards for guests', async () => {
-      await renderAndWait({ as: 'guest', payload: [artistNomineeFixture()] });
-      expect(screen.getByText('Tony Fadd')).toBeInTheDocument();
-    });
-
-    it('guests clicking Vote get an alert and the wizard does not open', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-      const user = userEvent.setup();
-      await renderAndWait({ as: 'guest', payload: [artistNomineeFixture()] });
-      await user.click(screen.getByRole('button', { name: /^vote$/i }));
-      expect(alertSpy).toHaveBeenCalledWith(expect.stringMatching(/sign up|log in/i));
-      expect(screen.queryByTestId('voting-wizard')).not.toBeInTheDocument();
+describe('VoteAwards — nominee request', () => {
+  it('asks for the default scope, 48 at a time', async () => {
+    await renderLoaded();
+    expect(lastStandingsArgs()).toEqual({
+      type: 'artist',
+      jurisdictionId: HARLEM_ID,
+      genre: 'rap',
+      period: 'daily',
+      limit: 48,
+      offset: 0,
     });
   });
-// ===========================================================================
-// NO AD-VIEW TRACKING
-// ===========================================================================
-describe('VoteAwards — no ad-view tracking', () => {
-  it('never POSTs /v1/earnings/track-view', async () => {
-    await renderAndWait();
-    expect(callsTo('/v1/earnings/track-view', 'post').length).toBe(0);
+
+  it.each([
+    [0, 'rock', { genre: 'rock' }],
+    [0, 'pop', { genre: 'pop' }],
+    [1, 'song', { type: 'song' }],
+    [2, 'weekly', { period: 'weekly' }],
+    [2, 'annual', { period: 'annual' }],
+    [3, 'uptown-harlem', { jurisdictionId: UPTOWN_ID }],
+    [3, 'downtown-harlem', { jurisdictionId: DOWNTOWN_ID }],
+  ])('filter %i = %s is sent', async (index, value, expected) => {
+    const { user } = await renderLoaded();
+    await user.selectOptions(selects()[index], value);
+    await waitFor(() => expect(lastStandingsArgs()).toMatchObject(expected));
+  });
+
+  it('every filter change loads a fresh board', async () => {
+    const { user } = await renderLoaded();
+    const before = fetchStandings.mock.calls.length;
+    await user.selectOptions(genreSelect(), 'rock');
+    await user.selectOptions(intervalSelect(), 'weekly');
+    await waitFor(() => expect(fetchStandings.mock.calls.length).toBe(before + 2));
+  });
+
+  it('guests get nominees too', async () => {
+    await renderLoaded();
+    expect(fetchStandings).toHaveBeenCalled();
+    expect(screen.getByRole('heading', { level: 3, name: 'Tony Fadd' })).toBeInTheDocument();
   });
 });
 
 // ===========================================================================
-// LOADING / ERROR / EMPTY STATES
-// ===========================================================================
-describe('VoteAwards — loading state', () => {
-  it('shows "Loading nominees..." while fetch is in flight', async () => {
-    let resolveFn;
-    const pending = new Promise((r) => { resolveFn = r; });
-    server.use(
-      http.get(`${API}/v1/vote/nominees`, async () => {
-        await pending;
-        return HttpResponse.json([]);
-      })
-    );
-    renderWithProviders(<VoteAwards />, { as: 'listener' });
-    expect(await screen.findByText(/loading nominees/i)).toBeInTheDocument();
-    resolveFn();
+describe('VoteAwards — loading, error and empty states', () => {
+  it('shows "Loading nominees..." while the board is in flight', async () => {
+    let finish;
+    fetchStandings.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    renderPage();
+    expect(screen.getByText(/loading nominees/i)).toBeInTheDocument();
+    finish(board(ARTISTS));
+    expect(await screen.findByRole('heading', { level: 3, name: 'Tony Fadd' })).toBeInTheDocument();
+  });
+
+  it('shows an error when the board cannot be loaded', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    fetchStandings.mockRejectedValue(new Error('down'));
+    renderPage();
+    expect(await screen.findByText(/failed to load nominees\. please try again/i)).toBeInTheDocument();
+    expect(document.querySelector('.va-grid')).toBeNull();
+  });
+
+  it('says there is nobody in this scope yet when the board is empty', async () => {
+    fetchStandings.mockResolvedValue(board([]));
+    await renderLoaded();
+    expect(document.querySelector('.va-no-nominees')).toHaveTextContent('No Rap artists in Harlem yet.');
+  });
+
+  it('with nobody to vote for, the winner card does not ask for votes', async () => {
+    fetchStandings.mockResolvedValue(board([]));
+    await renderLoaded();
     await waitFor(() =>
-      expect(screen.queryByText(/loading nominees/i)).not.toBeInTheDocument()
-    );
-  });
-});
-
-describe('VoteAwards — error state', () => {
-  // axios mock fallback interferes — axiosInstance.jsx returns { data: [] } on
-  // GET errors instead of throwing, so the .catch in fetchNominees never runs
-  // and setError is never called. This is the same gotcha documented for
-  // leaderboardsPage. To properly test, axiosInstance would need a refactor.
-  it.skip('shows "Failed to load nominees" when API errors', async () => {
-    server.use(
-      http.get(`${API}/v1/vote/nominees`, () => HttpResponse.error())
-    );
-    renderWithProviders(<VoteAwards />, { as: 'listener' });
-    expect(await screen.findByText(/failed to load nominees/i)).toBeInTheDocument();
-  });
-});
-
-describe('VoteAwards — empty state', () => {
-  it('shows "No nominees found for this category yet" when result is empty', async () => {
-    await renderAndWait({ payload: [] });
-    expect(screen.getByText(/no nominees found for this category/i)).toBeInTheDocument();
+      expect(document.querySelector('.va-last-winner-empty')).toHaveTextContent('No Rap artists in Harlem yet.'));
   });
 });
 
 // ===========================================================================
-// ARTIST NOMINEE RENDERING
-// ===========================================================================
-describe('VoteAwards — artist nominee rendering', () => {
-  it('renders artist name, jurisdiction, and lifetime vote count', async () => {
-    await renderAndWait({ payload: [artistNomineeFixture()] });
-    expect(screen.getByText('Tony Fadd')).toBeInTheDocument();
-    // "Harlem" appears in the jurisdiction dropdown AND on the card; scope to the card
-    const jurisdictionLabel = document.querySelector('.va-card-jurisdiction');
-    expect(jurisdictionLabel).not.toBeNull();
-    expect(jurisdictionLabel.textContent).toMatch(/harlem/i);
-    expect(screen.getByText('42')).toBeInTheDocument();
+describe('VoteAwards — status line', () => {
+  it('a live board says "Live today"', async () => {
+    await renderLoaded();
+    const status = document.querySelector('.va-board-status');
+    expect(status).toHaveTextContent('Live today.');
+    expect(status).not.toHaveTextContent(/nominees are in that order/i);
   });
 
-  it('renders the +N badge when current-period votes > 0', async () => {
-    await renderAndWait({ payload: [artistNomineeFixture({ voteCount: 7, totalVotes: 42 })] });
-    expect(screen.getByText('+7')).toBeInTheDocument();
+  it('before anyone scores, it explains the order comes from the last period', async () => {
+    fetchStandings.mockResolvedValue(board(ARTISTS, { state: 'PREVIOUS_FINAL' }));
+    await renderLoaded();
+    const status = document.querySelector('.va-board-status');
+    expect(status).toHaveTextContent("Yesterday's final.");
+    expect(status).toHaveTextContent('Nominees are in that order until then.');
   });
 
-  it('does not render the +N badge when current-period votes are 0', async () => {
-    await renderAndWait({ payload: [artistNomineeFixture({ voteCount: 0, totalVotes: 42 })] });
-    expect(screen.queryByText(/^\+/)).not.toBeInTheDocument();
+  it('labels points for the period they belong to', async () => {
+    await renderLoaded();
+    expect(within(cardOf('Tony Fadd')).getByText('Points today')).toBeInTheDocument();
   });
 
-  it('renders "Total Votes" label for artists', async () => {
-    await renderAndWait({ payload: [artistNomineeFixture()] });
-    expect(screen.getByText(/total votes/i)).toBeInTheDocument();
-  });
-
-  it('renders Listen and Vote buttons for artists', async () => {
-    await renderAndWait({ payload: [artistNomineeFixture()] });
-    expect(screen.getByRole('button', { name: /^listen$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^vote$/i })).toBeInTheDocument();
+  it('labels points as the last period\'s when the board is not live', async () => {
+    fetchStandings.mockResolvedValue(board(ARTISTS, { state: 'PREVIOUS_FINAL' }));
+    await renderLoaded();
+    expect(within(cardOf('Tony Fadd')).getByText('Points yesterday')).toBeInTheDocument();
   });
 });
 
 // ===========================================================================
-// SONG NOMINEE RENDERING
-// ===========================================================================
-describe('VoteAwards — song nominee rendering', () => {
-  async function renderAsSongs(payload = [songNomineeFixture()]) {
-    const user = userEvent.setup();
-    mockNominees(payload);
-    renderWithProviders(<VoteAwards />, { as: 'listener' });
-    await waitFor(() => {
-      expect(screen.queryByText(/loading nominees/i)).not.toBeInTheDocument();
-    });
-    // Switch type to song
-    const selects = document.querySelectorAll('.va-pill select');
-    mockNominees(payload);
-    await user.selectOptions(selects[1], 'song');
-    await waitFor(() => {
-      expect(screen.getByText(payload[0].title)).toBeInTheDocument();
-    });
-    return user;
-  }
-
-  it('renders song title and "by Artist" subtitle', async () => {
-    await renderAsSongs();
-    expect(screen.getByText('Midnight Uptown')).toBeInTheDocument();
-    expect(screen.getByText(/by tony fadd/i)).toBeInTheDocument();
+describe('VoteAwards — nominee cards', () => {
+  it('shows name, home jurisdiction and points', async () => {
+    await renderLoaded();
+    const card = cardOf('Tony Fadd');
+    expect(card.querySelector('.va-card-jurisdiction')).toHaveTextContent('Uptown Harlem');
+    expect(card.querySelector('.va-stat-value')).toHaveTextContent('1,200');
   });
 
-  it('renders "Plays" label for songs', async () => {
-    await renderAsSongs();
-    expect(screen.getByText(/^plays$/i)).toBeInTheDocument();
+  it('shows the rank and how far the nominee moved', async () => {
+    await renderLoaded();
+    const card = cardOf('Tony Fadd');
+    expect(within(card).getByLabelText('Ranked 1')).toHaveTextContent('#1');
+    expect(within(card).getByLabelText('Up 1 place')).toBeInTheDocument();
   });
 
-  it('renders the play count formatted with commas', async () => {
-    await renderAsSongs([songNomineeFixture({ playCount: 12345 })]);
-    expect(screen.getByText('12,345')).toBeInTheDocument();
+  it('marks a nominee who did not chart last period as New', async () => {
+    await renderLoaded();
+    expect(within(cardOf('SD Boomin')).getByText('New')).toBeInTheDocument();
   });
 
-  it('renders +N badge for current-period votes on songs', async () => {
-    await renderAsSongs([songNomineeFixture({ voteCount: 9 })]);
-    expect(screen.getByText('+9')).toBeInTheDocument();
+  it('gives no rank to a nominee with no points', async () => {
+    await renderLoaded();
+    expect(cardOf('Harlem MC').querySelector('.va-card-rank')).toBeNull();
   });
 
-  it('shows Listen button only when mediaUrl is present', async () => {
-    await renderAsSongs([songNomineeFixture({ fileUrl: null })]);
-    expect(screen.queryByRole('button', { name: /^listen$/i })).not.toBeInTheDocument();
-  });
-});
-
-// ===========================================================================
-// HERO HEADLINE — REFLECTS CURRENT FILTERS
-// ===========================================================================
-describe('VoteAwards — hero headline', () => {
-  it('default hero says "Rap Artist of the Day in Harlem"', async () => {
-    await renderAndWait();
-    const headline = document.querySelector('.va-headline');
-    expect(headline).not.toBeNull();
-    expect(headline.textContent).toMatch(/rap/i);
-    expect(headline.textContent).toMatch(/artist/i);
-    expect(headline.textContent).toMatch(/of the day/i);
-    expect(headline.textContent).toMatch(/harlem/i);
+  it('shows the vote badge with singular and plural wording', async () => {
+    await renderLoaded();
+    expect(cardOf('Tony Fadd').querySelector('.va-stat-badge')).toHaveTextContent('7 votes');
+    expect(cardOf('SD Boomin').querySelector('.va-stat-badge')).toHaveTextContent('1 vote');
   });
 
-  it('updates headline when interval changes to monthly', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    await user.selectOptions(selects[2], 'monthly');
-    await waitFor(() => {
-      expect(document.querySelector('.va-headline').textContent).toMatch(/of the month/i);
-    });
+  it('hides the vote badge when there are no votes', async () => {
+    await renderLoaded();
+    expect(cardOf('Harlem MC').querySelector('.va-stat-badge')).toBeNull();
   });
 
-  it('updates headline when type changes to song', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    await user.selectOptions(selects[1], 'song');
-    await waitFor(() => {
-      expect(document.querySelector('.va-headline').textContent).toMatch(/song/i);
-    });
+  it('uses the placeholder image when a nominee has no artwork', async () => {
+    await renderLoaded();
+    expect(cardOf('SD Boomin').querySelector('.va-card-image').style.backgroundImage).toContain('randomrapper.jpeg');
+    expect(cardOf('Tony Fadd').querySelector('.va-card-image').style.backgroundImage).toContain('cdn.test/tony.jpg');
+  });
+
+  it('artists get Listen and Vote', async () => {
+    await renderLoaded();
+    const card = within(cardOf('Tony Fadd'));
+    expect(card.getByRole('button', { name: 'Listen' })).toBeInTheDocument();
+    expect(card.getByRole('button', { name: 'Vote' })).toBeInTheDocument();
+  });
+
+  it('song cards show "by Artist", falling back to Unknown Artist', async () => {
+    fetchStandings.mockResolvedValue(board(SONGS));
+    const { user } = await renderLoaded();
+    await user.selectOptions(typeSelect(), 'song');
+    await waitFor(() => expect(cardOf('Midnight Uptown').querySelector('.va-card-artist')).toHaveTextContent('by Tony Fadd'));
+    expect(cardOf('No File Yet').querySelector('.va-card-artist')).toHaveTextContent('by Unknown Artist');
+  });
+
+  it('a song only gets Listen when it has a file', async () => {
+    fetchStandings.mockResolvedValue(board(SONGS));
+    await renderLoaded();
+    expect(within(cardOf('Midnight Uptown')).getByRole('button', { name: 'Listen' })).toBeInTheDocument();
+    expect(within(cardOf('No File Yet')).queryByRole('button', { name: 'Listen' })).not.toBeInTheDocument();
   });
 });
 
 // ===========================================================================
-// SEARCH UX
+describe('VoteAwards — show more nominees', () => {
+  it('is hidden when the whole board is already showing', async () => {
+    await renderLoaded();
+    expect(screen.queryByRole('button', { name: /show more nominees/i })).not.toBeInTheDocument();
+  });
+
+  it('says how many more there are', async () => {
+    fetchStandings.mockResolvedValue(board(ARTISTS, { total: 10 }));
+    await renderLoaded();
+    expect(screen.getByRole('button', { name: 'Show more nominees (7 more)' })).toBeInTheDocument();
+  });
+
+  it('loads the next page from where the list ends and skips repeats', async () => {
+    fetchStandings.mockResolvedValue(board(ARTISTS, { total: 5 }));
+    const { user } = await renderLoaded();
+
+    fetchStandings.mockResolvedValue(board([
+      ARTISTS[2], // a repeat
+      entry({ id: 'artist-04', rank: 4, name: 'Fourth Act', points: 3 }),
+      entry({ id: 'artist-05', rank: 5, name: 'Fifth Act', points: 1 }),
+    ], { total: 5 }));
+    await user.click(screen.getByRole('button', { name: /show more nominees/i }));
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Fifth Act' })).toBeInTheDocument();
+    expect(lastStandingsArgs()).toMatchObject({ limit: 48, offset: 3 });
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Harlem MC' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /show more nominees/i })).not.toBeInTheDocument();
+  });
+
+  it('a failed page leaves the nominees already shown', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    fetchStandings.mockResolvedValue(board(ARTISTS, { total: 10 }));
+    const { user } = await renderLoaded();
+
+    fetchStandings.mockRejectedValue(new Error('down'));
+    await user.click(screen.getByRole('button', { name: /show more nominees/i }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /show more nominees/i })).toBeEnabled());
+    expect(screen.getByRole('heading', { level: 3, name: 'Tony Fadd' })).toBeInTheDocument();
+  });
+});
+
 // ===========================================================================
 describe('VoteAwards — search', () => {
-  it('search input is hidden by default', async () => {
-    await renderAndWait();
-    expect(document.querySelector('.va-search-expand')).toBeNull();
+  const openSearch = (user) => user.click(screen.getByRole('button', { name: /toggle search/i }));
+
+  it('is hidden until the toggle is pressed, then focused', async () => {
+    const { user } = await renderLoaded();
+    expect(screen.queryByPlaceholderText(/search artists/i)).not.toBeInTheDocument();
+    await openSearch(user);
+    expect(screen.getByPlaceholderText(/search artists/i)).toHaveFocus();
   });
 
-  it('clicking the search button reveals the input', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    await user.click(screen.getByRole('button', { name: /toggle search/i }));
-    expect(document.querySelector('.va-search-expand')).not.toBeNull();
+  it('filters nominees as the user types, ignoring case', async () => {
+    const { user } = await renderLoaded();
+    await openSearch(user);
+    await user.type(screen.getByPlaceholderText(/search artists/i), 'tONY');
+    expect(screen.getByRole('heading', { level: 3, name: 'Tony Fadd' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 3, name: 'SD Boomin' })).not.toBeInTheDocument();
   });
 
-  it('typing in search filters the visible nominees', async () => {
-    const user = userEvent.setup();
-    await renderAndWait({
-      payload: [
-        artistNomineeFixture({ userId: 'a1', username: 'Tony Fadd' }),
-        artistNomineeFixture({ userId: 'a2', username: 'SD Boomin' }),
-        artistNomineeFixture({ userId: 'a3', username: 'Harlem MC' }),
-      ],
-    });
-    await user.click(screen.getByRole('button', { name: /toggle search/i }));
-    const input = document.querySelector('.va-search-input');
-    await user.type(input, 'tony');
-    expect(screen.getByText('Tony Fadd')).toBeInTheDocument();
-    expect(screen.queryByText('SD Boomin')).not.toBeInTheDocument();
-    expect(screen.queryByText('Harlem MC')).not.toBeInTheDocument();
+  it('says when nothing matches', async () => {
+    const { user } = await renderLoaded();
+    await openSearch(user);
+    await user.type(screen.getByPlaceholderText(/search artists/i), 'zzz');
+    expect(screen.getByText('No nominees match your search.')).toBeInTheDocument();
   });
 
-  it('search is case-insensitive', async () => {
-    const user = userEvent.setup();
-    await renderAndWait({
-      payload: [
-        artistNomineeFixture({ userId: 'a1', username: 'Tony Fadd' }),
-        artistNomineeFixture({ userId: 'a2', username: 'SD Boomin' }),
-      ],
-    });
-    await user.click(screen.getByRole('button', { name: /toggle search/i }));
-    const input = document.querySelector('.va-search-input');
-    await user.type(input, 'TONY');
-    expect(screen.getByText('Tony Fadd')).toBeInTheDocument();
-    expect(screen.queryByText('SD Boomin')).not.toBeInTheDocument();
+  it('closing search clears the query and brings everyone back', async () => {
+    const { user } = await renderLoaded();
+    await openSearch(user);
+    await user.type(screen.getByPlaceholderText(/search artists/i), 'tony');
+    await openSearch(user);
+
+    expect(screen.queryByPlaceholderText(/search artists/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'SD Boomin' })).toBeInTheDocument();
   });
 
-  it('shows "No nominees match your search" when search has no results', async () => {
-    const user = userEvent.setup();
-    await renderAndWait({
-      payload: [artistNomineeFixture({ userId: 'a1', username: 'Tony Fadd' })],
-    });
-    await user.click(screen.getByRole('button', { name: /toggle search/i }));
-    const input = document.querySelector('.va-search-input');
-    await user.type(input, 'xyznotfound');
-    expect(screen.getByText(/no nominees match your search/i)).toBeInTheDocument();
-  });
-
-  it('clicking the X button closes search and clears the query', async () => {
-    const user = userEvent.setup();
-    await renderAndWait({
-      payload: [
-        artistNomineeFixture({ userId: 'a1', username: 'Tony Fadd' }),
-        artistNomineeFixture({ userId: 'a2', username: 'SD Boomin' }),
-      ],
-    });
-    await user.click(screen.getByRole('button', { name: /toggle search/i }));
-    const input = document.querySelector('.va-search-input');
-    await user.type(input, 'tony');
-    // Click X
-    await user.click(screen.getByRole('button', { name: /toggle search/i }));
-    // Search should be hidden, both nominees visible
-    expect(document.querySelector('.va-search-expand')).toBeNull();
-    expect(screen.getByText('Tony Fadd')).toBeInTheDocument();
-    expect(screen.getByText('SD Boomin')).toBeInTheDocument();
+  it('the placeholder follows the type filter', async () => {
+    fetchStandings.mockResolvedValue(board(SONGS));
+    const { user } = await renderLoaded();
+    await user.selectOptions(typeSelect(), 'song');
+    await openSearch(user);
+    expect(screen.getByPlaceholderText(/search songs/i)).toBeInTheDocument();
   });
 });
 
 // ===========================================================================
-// LISTEN — ARTIST (default song fetch)
-// ===========================================================================
-describe('VoteAwards — Listen on artist nominee', () => {
-  it('fetches the artist\'s default song and calls playMedia', async () => {
-    const user = userEvent.setup();
-    await renderAndWait({ payload: [artistNomineeFixture({ userId: 'art-1' })] });
-    await user.click(screen.getByRole('button', { name: /^listen$/i }));
-
-    await waitFor(() => expect(playMediaSpy).toHaveBeenCalled());
-    const [media] = playMediaSpy.mock.calls[0];
-    expect(media.type).toBe('default-song');
-    expect(media.artist).toBe('Tony Fadd');
-  });
-
-  it('does not POST /play itself after default-song fetch (the Player counts plays)', async () => {
-    const user = userEvent.setup();
-    await renderAndWait({ payload: [artistNomineeFixture({ userId: 'art-1' })] });
-    await user.click(screen.getByRole('button', { name: /^listen$/i }));
-    await new Promise((r) => setTimeout(r, 50));
-    expect(callsTo('/v1/media/song/song-001/play', 'post')).toHaveLength(0);
-  });
-
-  it('shows alert when artist has no default song', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-    server.use(
-      http.get(`${API}/v1/users/:id/default-song`, () =>
-        HttpResponse.json({})
-      )
+describe('VoteAwards — listening', () => {
+  it('Listen on an artist plays their featured song through playEntry', async () => {
+    const { user } = await renderLoaded();
+    await user.click(within(cardOf('Tony Fadd')).getByRole('button', { name: 'Listen' }));
+    expect(playEntry).toHaveBeenCalledWith(
+      { type: 'artist', id: 'artist-01', name: 'Tony Fadd', artwork: 'https://cdn.test/tony.jpg' },
+      requestPlay,
+      'voteawards'
     );
-    const user = userEvent.setup();
-    await renderAndWait({ payload: [artistNomineeFixture({ userId: 'art-1' })] });
-    await user.click(screen.getByRole('button', { name: /^listen$/i }));
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalled();
-      expect(alertSpy.mock.calls[0][0]).toMatch(/has not set a default song/i);
-    });
+    expect(feedback.info).not.toHaveBeenCalled();
+  });
+
+  it('tells the user when the artist has no featured song', async () => {
+    playEntry.mockResolvedValue(false);
+    const { user } = await renderLoaded();
+    await user.click(within(cardOf('SD Boomin')).getByRole('button', { name: 'Listen' }));
+    await waitFor(() =>
+      expect(feedback.info).toHaveBeenCalledWith('SD Boomin hasn’t picked a song to feature yet'));
+  });
+
+  it('Listen on a song plays its own file', async () => {
+    fetchStandings.mockResolvedValue(board(SONGS));
+    const { user } = await renderLoaded();
+    await user.click(within(cardOf('Midnight Uptown')).getByRole('button', { name: 'Listen' }));
+    expect(playEntry).toHaveBeenCalledWith(
+      {
+        type: 'song',
+        id: 'song-01',
+        name: 'Midnight Uptown',
+        artistName: 'Tony Fadd',
+        artistId: 'artist-01',
+        fileUrl: 'https://cdn.test/s1.mp3',
+        artwork: 'https://cdn.test/s1.jpg',
+      },
+      requestPlay,
+      'voteawards'
+    );
+  });
+
+  it('the page records no play and no ad view of its own', async () => {
+    const { user } = await renderLoaded();
+    await user.click(within(cardOf('Tony Fadd')).getByRole('button', { name: 'Listen' }));
+    const others = apiSpy.mock.calls.map(([c]) => c).filter((c) => !c.url.startsWith('/v1/awards/past'));
+    expect(others).toHaveLength(0);
   });
 });
 
 // ===========================================================================
-// LISTEN — SONG (direct play)
-// ===========================================================================
-describe('VoteAwards — Listen on song nominee', () => {
-  async function setupSongs(payload = [songNomineeFixture()]) {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    mockNominees(payload);
-    await user.selectOptions(selects[1], 'song');
-    await waitFor(() => {
-      expect(screen.getByText(payload[0].title)).toBeInTheDocument();
+describe('VoteAwards — voting', () => {
+  it('a guest pressing Vote is asked to log in and the wizard stays closed', async () => {
+    const { user } = await renderLoaded();
+    await user.click(within(cardOf('Tony Fadd')).getByRole('button', { name: 'Vote' }));
+
+    expect(screen.queryByTestId('voting-wizard')).not.toBeInTheDocument();
+    expect(feedback.info).toHaveBeenCalledWith(
+      'Sign up or log in to vote',
+      expect.objectContaining({ action: expect.objectContaining({ label: 'Log in' }) })
+    );
+    feedback.info.mock.calls[0][1].action.onClick();
+    expect(navigateSpy).toHaveBeenCalledWith('/login');
+  });
+
+  it('a signed-in user pressing Vote opens the wizard for that nominee', async () => {
+    const { user } = await renderLoaded({ loggedIn: true });
+    await user.click(within(cardOf('SD Boomin')).getByRole('button', { name: 'Vote' }));
+
+    expect(screen.getByTestId('vw-nominee-id')).toHaveTextContent('artist-02');
+    expect(screen.getByTestId('vw-nominee-name')).toHaveTextContent('SD Boomin');
+    expect(screen.getByTestId('vw-user')).toHaveTextContent('user-listener-001');
+    expect(feedback.info).not.toHaveBeenCalled();
+  });
+
+  it('passes the current filters to the wizard', async () => {
+    const { user } = await renderLoaded({ loggedIn: true });
+    await user.selectOptions(genreSelect(), 'pop');
+    await user.selectOptions(intervalSelect(), 'weekly');
+    await user.selectOptions(jurisdictionSelect(), 'uptown-harlem');
+    await waitFor(() => expect(lastStandingsArgs()).toMatchObject({ jurisdictionId: UPTOWN_ID }));
+
+    await user.click(within(cardOf('Tony Fadd')).getByRole('button', { name: 'Vote' }));
+    expect(JSON.parse(screen.getByTestId('vw-filters').textContent)).toEqual({
+      selectedGenre: 'pop',
+      selectedType: 'artist',
+      selectedInterval: 'weekly',
+      selectedJurisdiction: 'uptown-harlem',
     });
-    return user;
-  }
-
-  it('plays the song fileUrl directly (no default-song fetch)', async () => {
-    const user = await setupSongs();
-    await user.click(screen.getByRole('button', { name: /^listen$/i }));
-    await waitFor(() => expect(playMediaSpy).toHaveBeenCalled());
-    const [media] = playMediaSpy.mock.calls[0];
-    expect(media.type).toBe('song');
-    expect(media.url).toContain('/uploads/song1.mp3');
   });
 
-  it('does not POST /play itself for a song nominee (the Player counts plays)', async () => {
-    const user = await setupSongs([songNomineeFixture({ songId: 'song-xyz' })]);
-    await user.click(screen.getByRole('button', { name: /^listen$/i }));
-    await new Promise((r) => setTimeout(r, 50));
-    expect(callsTo('/v1/media/song/song-xyz/play', 'post')).toHaveLength(0);
-  });
-});
-
-// ===========================================================================
-// VOTE FLOW — VotingWizard integration
-// ===========================================================================
-describe('VoteAwards — Vote button opens VotingWizard', () => {
-  it('clicking Vote shows the VotingWizard with the right nominee', async () => {
-    const user = userEvent.setup();
-    await renderAndWait({ payload: [artistNomineeFixture({ userId: 'art-1', username: 'Tony Fadd' })] });
-    await user.click(screen.getByRole('button', { name: /^vote$/i }));
-    expect(screen.getByTestId('voting-wizard')).toBeInTheDocument();
-    expect(screen.getByTestId('vw-nominee-id').textContent).toBe('art-1');
-    expect(screen.getByTestId('vw-nominee-name').textContent).toBe('Tony Fadd');
-  });
-
-  it('passes current filter state to VotingWizard', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    await user.selectOptions(selects[2], 'monthly');
-    await waitFor(() => screen.getByText('Tony Fadd'));
-    await user.click(screen.getByRole('button', { name: /^vote$/i }));
-    expect(screen.getByTestId('vw-genre').textContent).toBe('rap');
-    expect(screen.getByTestId('vw-type').textContent).toBe('artist');
-    expect(screen.getByTestId('vw-interval').textContent).toBe('monthly');
-    expect(screen.getByTestId('vw-jurisdiction').textContent).toBe('harlem');
-  });
-
-  it('VotingWizard onClose hides the wizard', async () => {
-    const user = userEvent.setup();
-    await renderAndWait({ payload: [artistNomineeFixture()] });
-    await user.click(screen.getByRole('button', { name: /^vote$/i }));
-    await user.click(screen.getByRole('button', { name: /vw-close/i }));
+  it('closing the wizard hides it', async () => {
+    const { user } = await renderLoaded({ loggedIn: true });
+    await user.click(within(cardOf('Tony Fadd')).getByRole('button', { name: 'Vote' }));
+    await user.click(screen.getByRole('button', { name: 'vw-close' }));
     expect(screen.queryByTestId('voting-wizard')).not.toBeInTheDocument();
   });
 
-  it('successful vote closes wizard and refetches nominees', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const beforeCount = callsTo('/v1/vote/nominees').length;
-    await user.click(screen.getByRole('button', { name: /^vote$/i }));
-    await user.click(screen.getByRole('button', { name: /vw-confirm/i }));
-    await waitFor(() => {
-      expect(screen.queryByTestId('voting-wizard')).not.toBeInTheDocument();
-      expect(callsTo('/v1/vote/nominees').length).toBeGreaterThan(beforeCount);
-    });
+  it('a successful vote closes the wizard and reloads the nominees', async () => {
+    const { user } = await renderLoaded({ loggedIn: true });
+    const before = fetchStandings.mock.calls.length;
+    await user.click(within(cardOf('Tony Fadd')).getByRole('button', { name: 'Vote' }));
+    await user.click(screen.getByRole('button', { name: 'vw-confirm' }));
+
+    await waitFor(() => expect(screen.queryByTestId('voting-wizard')).not.toBeInTheDocument());
+    await waitFor(() => expect(fetchStandings.mock.calls.length).toBe(before + 1));
+  });
+
+  it('a malformed token is treated as signed out', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    localStorage.setItem('token', 'not-a-jwt');
+    const { user } = await renderLoaded();
+    await user.click(within(cardOf('Tony Fadd')).getByRole('button', { name: 'Vote' }));
+    expect(screen.queryByTestId('voting-wizard')).not.toBeInTheDocument();
+    expect(feedback.info).toHaveBeenCalledWith('Sign up or log in to vote', expect.anything());
   });
 });
 
 // ===========================================================================
-// CARD CLICK NAVIGATION
-// ===========================================================================
-describe('VoteAwards — card click navigation', () => {
-  it('clicking an artist card navigates to /artist/:id', async () => {
-    const user = userEvent.setup();
-    await renderAndWait({ payload: [artistNomineeFixture({ userId: 'art-99' })] });
-    // The image is the click target — find by role on the card overlay
-    const overlay = document.querySelector('.va-card-overlay');
-    await user.click(overlay);
-    expect(navigateSpy).toHaveBeenCalledWith('/artist/art-99');
+describe('VoteAwards — current winner card', () => {
+  it('asks for past awards in the selected scope', async () => {
+    await renderLoaded();
+    await waitFor(() => expect(pastCalls().length).toBeGreaterThan(0));
+    const params = paramsOf(pastCalls().at(-1).url);
+    expect(params).toMatchObject({
+      type: 'artist',
+      jurisdictionId: HARLEM_ID,
+      intervalId: DAILY_ID,
+      genreId: RAP_ID,
+    });
+    expect(params.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(params.endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('clicking a song card navigates to /song/:id', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    mockNominees([songNomineeFixture({ songId: 'song-999' })]);
-    await user.selectOptions(selects[1], 'song');
-    await waitFor(() => screen.getByText('Midnight Uptown'));
-    const overlay = document.querySelector('.va-card-overlay');
-    await user.click(overlay);
-    expect(navigateSpy).toHaveBeenCalledWith('/song/song-999');
+  it.each([
+    ['daily', 30],
+    ['weekly', 90],
+    ['monthly', 400],
+    ['quarterly', 500],
+    ['annual', 800],
+  ])('looks back %s polls over %i days, ending yesterday', async (interval, days) => {
+    const { user } = await renderLoaded();
+    if (interval !== 'daily') await user.selectOptions(intervalSelect(), interval);
+    await waitFor(() => {
+      const { startDate, endDate } = paramsOf(pastCalls().at(-1).url);
+      const span = Math.round((new Date(endDate) - new Date(startDate)) / 86400000);
+      expect(span).toBe(days);
+    });
+  });
+
+  it('says the first winner is pending when there are no awards', async () => {
+    await renderLoaded();
+    await waitFor(() =>
+      expect(document.querySelector('.va-last-winner-empty'))
+        .toHaveTextContent('Vote to crown the first Artist of the Day.'));
+    expect(screen.getByText('First winner pending')).toBeInTheDocument();
+    expect(document.querySelector('.va-last-winner')).toHaveAttribute('role', 'status');
+  });
+
+  it('shows the newest award as the current winner', async () => {
+    pastAwards = [
+      { awardDate: '2026-11-10', artist: { userId: 'artist-09', username: 'Older Winner' } },
+      { awardDate: '2026-11-14', artist: { userId: 'artist-01', username: 'Tony Fadd', photoUrl: 'https://cdn.test/tony.jpg' } },
+    ];
+    await renderLoaded();
+    const card = await screen.findByRole('button', { name: /tony fadd/i });
+    expect(within(card).getByText('Current')).toBeInTheDocument();
+    expect(within(card).getByText('Won Nov 14, 2026')).toBeInTheDocument();
+    expect(within(card).getByAltText('Tony Fadd winner artwork')).toHaveAttribute('src', 'https://cdn.test/tony.jpg');
+    expect(screen.queryByText('Older Winner')).not.toBeInTheDocument();
+  });
+
+  it('ignores awards with no winner attached', async () => {
+    pastAwards = [{ awardDate: '2026-11-14' }];
+    await renderLoaded();
+    await waitFor(() => expect(screen.getByText('First winner pending')).toBeInTheDocument());
+  });
+
+  it('clicking the winner opens the artist page', async () => {
+    pastAwards = [{ awardDate: '2026-11-14', artist: { userId: 'artist-01', username: 'Tony Fadd' } }];
+    const { user } = await renderLoaded();
+    await user.click(await screen.findByRole('button', { name: /tony fadd/i }));
+    expect(navigateSpy).toHaveBeenCalledWith('/artist/artist-01');
+  });
+
+  it('Enter on the winner card opens it too', async () => {
+    pastAwards = [{ awardDate: '2026-11-14', artist: { userId: 'artist-01', username: 'Tony Fadd' } }];
+    await renderLoaded();
+    fireEvent.keyDown(await screen.findByRole('button', { name: /tony fadd/i }), { key: 'Enter' });
+    expect(navigateSpy).toHaveBeenCalledWith('/artist/artist-01');
+  });
+
+  it('a song winner shows its artist and opens the song page', async () => {
+    fetchStandings.mockResolvedValue(board(SONGS));
+    pastAwards = [{
+      awardDate: '2026-11-14',
+      song: { songId: 'song-01', title: 'Midnight Uptown', artist: { username: 'Tony Fadd' } },
+    }];
+    const { user } = await renderLoaded();
+    await user.selectOptions(typeSelect(), 'song');
+
+    const card = await screen.findByRole('button', { name: /midnight uptown/i });
+    expect(within(card).getByText('by Tony Fadd')).toBeInTheDocument();
+    await user.click(card);
+    expect(navigateSpy).toHaveBeenCalledWith('/song/song-01');
+  });
+
+  it('a failed winner lookup falls back to pending without breaking the page', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    apiSpy.mockRejectedValue(new Error('down'));
+    await renderLoaded();
+    await waitFor(() => expect(screen.getByText('First winner pending')).toBeInTheDocument());
+    expect(screen.getByRole('heading', { level: 3, name: 'Tony Fadd' })).toBeInTheDocument();
   });
 });
 
 // ===========================================================================
-// REFETCH BEHAVIOR
-// ===========================================================================
-describe('VoteAwards — refetch on filter change', () => {
-  it('changing filters fires a new fetch (does not reuse stale data)', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const before = callsTo('/v1/vote/nominees').length;
-    const selects = document.querySelectorAll('.va-pill select');
-    await user.selectOptions(selects[0], 'pop');
-    await waitFor(() => {
-      expect(callsTo('/v1/vote/nominees').length).toBeGreaterThan(before);
-    });
+describe('VoteAwards — card navigation', () => {
+  it('clicking an artist card opens the artist page', async () => {
+    const { user } = await renderLoaded();
+    await user.click(screen.getByRole('heading', { level: 3, name: 'Tony Fadd' }));
+    expect(navigateSpy).toHaveBeenCalledWith('/artist/artist-01');
   });
 
-  it('fires fetches in distinct calls per filter change', async () => {
-    const user = userEvent.setup();
-    await renderAndWait();
-    const selects = document.querySelectorAll('.va-pill select');
-    const initialCount = callsTo('/v1/vote/nominees').length;
-    await user.selectOptions(selects[0], 'rock');
-    await user.selectOptions(selects[2], 'monthly');
-    await waitFor(() => {
-      expect(callsTo('/v1/vote/nominees').length).toBeGreaterThanOrEqual(initialCount + 2);
-    });
+  it('clicking the card image opens it too', async () => {
+    const { user } = await renderLoaded();
+    await user.click(cardOf('SD Boomin').querySelector('.va-card-image'));
+    expect(navigateSpy).toHaveBeenCalledWith('/artist/artist-02');
+  });
+
+  it('clicking a song card opens the song page', async () => {
+    fetchStandings.mockResolvedValue(board(SONGS));
+    const { user } = await renderLoaded();
+    await user.click(screen.getByRole('heading', { level: 3, name: 'Midnight Uptown' }));
+    expect(navigateSpy).toHaveBeenCalledWith('/song/song-01');
   });
 });

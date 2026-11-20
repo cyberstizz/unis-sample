@@ -27,8 +27,9 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { fixtures as handlerFixtures } from './test/mocks/handlers';
 import * as axiosModule from './components/axiosInstance';
 
 // ---------------------------------------------------------------------------
@@ -440,7 +441,10 @@ describe('EditSongWizard — cancel', () => {
     // the button is disabled and no API call would be made
     const saveBtn = screen.getByRole('button', { name: /save changes/i });
     expect(saveBtn).toBeDisabled();
-    expect(spy).not.toHaveBeenCalled();
+    // The only request an untouched wizard makes is reading the subgenre and
+    // mood lists for its "Sound & discovery" block.
+    const writes = spy.mock.calls.map(([c]) => c).filter((c) => c.url !== '/v1/taxonomy');
+    expect(writes).toHaveLength(0);
   });
 });
 
@@ -793,7 +797,22 @@ describe('EditSongWizard — submit errors', () => {
     await user.click(screen.getByRole('button', { name: /no download/i }));
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/failed to update the song/i); // ★
+    // The server's own message is shown when it sends one.
+    expect(await screen.findByRole('alert')).toHaveTextContent('Storage quota exceeded');
+  });
+
+  it('falls back to a generic message when the server sends none', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(axiosModule, 'apiCall').mockImplementation(async () => {
+      throw new Error('Network Error');
+    });
+
+    renderWizard();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /no download/i }));
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/failed to update the song/i);
   });
 
   it('does not call onSuccess on failure', async () => {
@@ -843,5 +862,149 @@ describe('EditSongWizard — submit errors', () => {
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
     await waitFor(() => expect(onClose).not.toHaveBeenCalled());
+  });
+});
+// ===========================================================================
+// SOUND & DISCOVERY — subgenre, mood, language
+// ===========================================================================
+describe('EditSongWizard — sound & discovery', () => {
+  const RAP = '00000000-0000-0000-0000-000000000101';
+
+  const TAGGED_SONG = {
+    ...BASE_SONG,
+    songId: 'song-tagged-1',
+    genre: { genreId: RAP, name: 'Rap' },
+    primarySubgenre: { subgenreId: 'sg-drill', name: 'Drill' },
+    primaryMood: { moodId: 'mood-hype', name: 'Hype' },
+    language: 'en',
+  };
+
+  // A song uploaded before subgenres existed.
+  const UNTAGGED_SONG = { ...BASE_SONG, songId: 'song-untagged-1', genre: { genreId: RAP, name: 'Rap' } };
+
+  let apiSpy;
+  const writes = () => apiSpy.mock.calls.map(([c]) => c).filter((c) => c.url !== '/v1/taxonomy');
+
+  beforeEach(() => {
+    apiSpy = vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
+      if (config.url === '/v1/taxonomy') return { data: handlerFixtures.taxonomy };
+      return { data: {} };
+    });
+  });
+
+  it('shows the song\'s current subgenre, mood and language', async () => {
+    renderWizard({ song: TAGGED_SONG });
+    expect(await screen.findByLabelText(/^Subgenre/i)).toHaveValue('sg-drill');
+    expect(screen.getByRole('button', { name: /Hype/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Language')).toHaveValue('en');
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeDisabled();
+  });
+
+  it('only offers subgenres from the song\'s own genre as the main subgenre', async () => {
+    renderWizard({ song: TAGGED_SONG });
+    const primary = await screen.findByLabelText(/^Subgenre/i);
+    expect(within(primary).getByRole('option', { name: 'Boom bap' })).toBeInTheDocument();
+    expect(within(primary).queryByRole('option', { name: 'Indie rock' })).not.toBeInTheDocument();
+  });
+
+  it('changing the subgenre enables Save and PATCHes only the discovery endpoint', async () => {
+    const { onSuccess, onClose } = renderWizard({ song: TAGGED_SONG });
+    const user = userEvent.setup();
+    await user.selectOptions(await screen.findByLabelText(/^Subgenre/i), 'sg-boombap');
+
+    const save = screen.getByRole('button', { name: /save changes/i });
+    expect(save).toBeEnabled();
+    await user.click(save);
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+    expect(writes()).toEqual([{
+      method: 'patch',
+      url: '/v1/media/song/song-tagged-1/discovery',
+      data: {
+        primarySubgenreId: 'sg-boombap',
+        subgenreWriteIn: null,
+        secondarySubgenreId: null,
+        primaryMoodId: 'mood-hype',
+        secondaryMoodId: null,
+        language: 'en',
+      },
+    }]);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('adding a second mood and changing the language are saved too', async () => {
+    renderWizard({ song: TAGGED_SONG });
+    const user = userEvent.setup();
+    await screen.findByLabelText(/^Subgenre/i);
+    await user.click(screen.getByRole('button', { name: 'Chill' }));
+    await user.selectOptions(screen.getByLabelText('Language'), 'es');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(writes()[0].data).toMatchObject({
+      primaryMoodId: 'mood-hype',
+      secondaryMoodId: 'mood-chill',
+      language: 'es',
+    });
+  });
+
+  it('a second subgenre can come from another genre', async () => {
+    renderWizard({ song: TAGGED_SONG });
+    const user = userEvent.setup();
+    await user.selectOptions(await screen.findByLabelText(/^Second subgenre/i), 'sg-indie');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(writes()[0].data.secondarySubgenreId).toBe('sg-indie');
+  });
+
+  it('"None of these fit" sends the artist\'s own description instead of a subgenre id', async () => {
+    renderWizard({ song: TAGGED_SONG });
+    const user = userEvent.setup();
+    await user.selectOptions(await screen.findByLabelText(/^Subgenre/i), '__other');
+    await user.type(screen.getByLabelText('Describe the sound'), '  Jersey club  ');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(writes()[0].data).toMatchObject({ primarySubgenreId: null, subgenreWriteIn: 'Jersey club' });
+  });
+
+  it('refuses to save a half-finished tag: a subgenre with no mood', async () => {
+    const { onSuccess } = renderWizard({ song: UNTAGGED_SONG });
+    const user = userEvent.setup();
+    await user.selectOptions(await screen.findByLabelText(/^Subgenre/i), 'sg-drill');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/pick at least one mood/i);
+    expect(writes()).toHaveLength(0);
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it('an older song with no tags can be tagged from here', async () => {
+    const { onSuccess } = renderWizard({ song: UNTAGGED_SONG });
+    const user = userEvent.setup();
+    const primary = await screen.findByLabelText(/^Subgenre/i);
+    expect(primary).toHaveValue('');
+
+    await user.selectOptions(primary, 'sg-drill');
+    await user.click(screen.getByRole('button', { name: 'Dark' }));
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+    expect(writes()[0]).toMatchObject({
+      url: '/v1/media/song/song-untagged-1/discovery',
+      data: { primarySubgenreId: 'sg-drill', primaryMoodId: 'mood-dark' },
+    });
+  });
+
+  it('an untagged song can still have other details saved without touching its tags', async () => {
+    const { onSuccess } = renderWizard({ song: UNTAGGED_SONG });
+    const user = userEvent.setup();
+    await screen.findByLabelText(/^Subgenre/i);
+    await user.click(screen.getByRole('button', { name: /no download/i }));
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+    expect(writes().map((c) => c.url)).toEqual(['/v1/songs/song-untagged-1/download-settings']);
   });
 });

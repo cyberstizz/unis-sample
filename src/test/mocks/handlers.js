@@ -47,6 +47,26 @@ export const fixtures = {
     payoutReady: false,
     cpm: 3.5,
   },
+  // GET /v1/taxonomy — the subgenre, mood and language lists behind the
+  // "Sound & discovery" block (upload wizard, signup debut song, edit song).
+  taxonomy: {
+    subgenres: [
+      { subgenreId: 'sg-drill', genreId: '00000000-0000-0000-0000-000000000101', name: 'Drill', soundsLike: 'sliding 808s' },
+      { subgenreId: 'sg-boombap', genreId: '00000000-0000-0000-0000-000000000101', name: 'Boom bap' },
+      { subgenreId: 'sg-indie', genreId: '00000000-0000-0000-0000-000000000102', name: 'Indie rock' },
+      { subgenreId: 'sg-punk', genreId: '00000000-0000-0000-0000-000000000102', name: 'Punk' },
+      { subgenreId: 'sg-synth', genreId: '00000000-0000-0000-0000-000000000103', name: 'Synth-pop' },
+    ],
+    moods: [
+      { moodId: 'mood-hype', name: 'Hype' },
+      { moodId: 'mood-chill', name: 'Chill' },
+      { moodId: 'mood-dark', name: 'Dark' },
+    ],
+    languages: [
+      { code: 'en', name: 'English' },
+      { code: 'es', name: 'Spanish' },
+    ],
+  },
 };
 
 // ─── JWT helpers — tokens are opaque to the frontend except for the payload ───
@@ -293,6 +313,9 @@ export const handlers = [
     callTracker.track('upload-song');
     return HttpResponse.json({ songId: 'new-song-id', title: 'Uploaded Track' });
   }),
+
+  // ─── Subgenres, moods, languages ───
+  http.get(`${API}/v1/taxonomy`, () => HttpResponse.json(fixtures.taxonomy)),
 
   // ─── Jurisdictions ───
   http.get(`${API}/v1/jurisdictions/byName/:name`, () =>

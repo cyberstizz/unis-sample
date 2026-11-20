@@ -384,7 +384,9 @@ describe('song picker — leaderboard mode', () => {
     renderPage();
     await waitFor(() => screen.getByText('Harlem Heat'));
     await userEvent.click(screen.getByText('Harlem Heat'));
-    await waitFor(() => screen.getByText('Trending Song A'));
+    // The song shows twice here: once in the playlist's own track list and
+    // once in the trending list it can be added from.
+    await waitFor(() => expect(screen.getAllByText('Trending Song A')).toHaveLength(2));
 
     const addedButton = screen.getByRole('button', { name: /added/i });
     expect(addedButton).toBeDisabled();

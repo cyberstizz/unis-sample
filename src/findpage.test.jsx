@@ -57,19 +57,37 @@ const harlem = { jurisdictionId: HARLEM_ID, name: 'Harlem', hasChildren: true, p
 const uptown = { jurisdictionId: UPTOWN_ID, name: 'Uptown Harlem', hasChildren: false, polygon: poly };
 const socal = { jurisdictionId: 'ca-1', name: 'Southern California', hasChildren: true, polygon: poly };
 
-// Two rap rows and one rock row per column, so genre filtering is observable.
-const topsFixture = {
-  topArtists: [
-    { userId: 'a1', username: 'RapArtistOne', score: 90, genre: { genreId: RAP }, photoUrl: '/uploads/a1.jpg' },
-    { userId: 'a2', username: 'RapArtistTwo', score: 80, genre: { genreId: RAP }, photoUrl: null },
-    { userId: 'a3', username: 'RockArtistOne', score: 70, genre: { genreId: ROCK }, photoUrl: '/uploads/a3.jpg' },
+// Rows as GET /v1/awards/standings returns them. Two rap rows and one rock
+// row per board, so genre filtering is observable; `genreId` here is only for
+// the mock handler below, which filters by the genreId in the request the way
+// the backend does.
+const standingsFixture = {
+  artist: [
+    { targetId: 'a1', targetType: 'artist', rank: 1, name: 'RapArtistOne', totalPoints: 90, artworkUrl: '/uploads/a1.jpg', genreId: RAP, movement: 1 },
+    { targetId: 'a2', targetType: 'artist', rank: 2, name: 'RapArtistTwo', totalPoints: 80, artworkUrl: null, genreId: RAP },
+    { targetId: 'a3', targetType: 'artist', rank: 1, name: 'RockArtistOne', totalPoints: 70, artworkUrl: '/uploads/a3.jpg', genreId: ROCK },
+    { targetId: 'a4', targetType: 'artist', rank: 3, name: 'RapArtistNoPoints', totalPoints: 0, artworkUrl: null, genreId: RAP },
   ],
-  topSongs: [
-    { songId: 's1', title: 'Rap Song One', score: 95, genre: { genreId: RAP }, artist: { userId: 'a1', username: 'RapArtistOne' }, fileUrl: '/uploads/s1.mp3', artworkUrl: '/uploads/s1.jpg' },
-    { songId: 's2', title: 'Rap Song Two', score: 85, genre: { genreId: RAP }, artist: { userId: 'a2', username: 'RapArtistTwo' }, fileUrl: '/uploads/s2.mp3', artworkUrl: null },
-    { songId: 's3', title: 'Rock Song One', score: 75, genre: { genreId: ROCK }, artist: { userId: 'a3', username: 'RockArtistOne' }, fileUrl: '/uploads/s3.mp3', artworkUrl: '/uploads/s3.jpg' },
+  song: [
+    { targetId: 's1', targetType: 'song', rank: 1, name: 'Rap Song One', totalPoints: 95, artistName: 'RapArtistOne', artistId: 'a1', fileUrl: '/uploads/s1.mp3', artworkUrl: '/uploads/s1.jpg', genreId: RAP },
+    { targetId: 's2', targetType: 'song', rank: 2, name: 'Rap Song Two', totalPoints: 85, artistName: 'RapArtistTwo', artistId: 'a2', fileUrl: '/uploads/s2.mp3', artworkUrl: null, genreId: RAP },
+    { targetId: 's3', targetType: 'song', rank: 1, name: 'Rock Song One', totalPoints: 75, artistName: 'RockArtistOne', artistId: 'a3', fileUrl: '/uploads/s3.mp3', artworkUrl: '/uploads/s3.jpg', genreId: ROCK },
   ],
 };
+
+let boardState = 'LIVE';
+
+function standingsResponse(url) {
+  const params = new URL(url, 'http://x.test').searchParams;
+  const type = params.get('type');
+  const genreId = params.get('genreId');
+  const entries = standingsFixture[type].filter((e) => !genreId || e.genreId === genreId);
+  return { data: { type, state: boardState, interval: 'Weekly', total: entries.length, entries } };
+}
+
+const STANDINGS = /^\/v1\/awards\/standings\?/;
+const standingsParams = () =>
+  callsTo(STANDINGS).map((c) => Object.fromEntries(new URL(c.url, 'http://x.test').searchParams));
 
 let apiSpy;
 
@@ -116,7 +134,7 @@ function defaultApiHandler(config) {
     return { data: [] };
   }
   if (url.match(/\/children$/)) return { data: [] };
-  if (url.match(/\/tops$/)) return { data: topsFixture };
+  if (STANDINGS.test(url)) return standingsResponse(url);
   if (url.match(/^\/v1\/jurisdictions\/[^/]+$/)) {
     const id = url.split('/').pop();
     if (id === NY_ID) return { data: nyJurisdiction };
@@ -137,6 +155,7 @@ const callsTo = (matcher) =>
 
 beforeEach(() => {
   localStorage.clear();
+  boardState = 'LIVE';
   apiSpy = vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (cfg) => defaultApiHandler(cfg));
 });
 
@@ -234,11 +253,22 @@ describe('FindPage — entering a live state', () => {
     expect(screen.getByText('map:Manhattan')).toBeInTheDocument();
   });
 
-  it('fetches tops for a live state', async () => {
+  it('reads this week\'s top three artists and songs for the place it lands on', async () => {
     renderWithProviders(<FindPage />);
     await screen.findByTestId('unis-map');
     await enterNewYork();
-    await waitFor(() => expect(callsTo(/\/tops$/).length).toBeGreaterThan(0));
+    await screen.findByText('Rap Song One');
+
+    const forHarlem = standingsParams().filter((p) => p.jurisdictionId === HARLEM_ID);
+    expect(forHarlem.map((p) => p.type).sort()).toEqual(['artist', 'song']);
+    forHarlem.forEach((p) => {
+      expect(p).toMatchObject({
+        genreId: RAP,
+        intervalId: '00000000-0000-0000-0000-000000000202', // weekly
+        limit: '3',
+        offset: '0',
+      });
+    });
   });
 
   it('resolves the state by name exactly once, not once per render', async () => {
@@ -272,12 +302,12 @@ describe('FindPage — dormant states are enterable, one level deep', () => {
     expect(screen.getByText('map:Southern California')).toBeInTheDocument();
   });
 
-  it('does NOT request tops for a dormant state — there is nothing to rank', async () => {
+  it('does NOT request standings for a dormant state — there is nothing to rank', async () => {
     renderWithProviders(<FindPage />);
     await screen.findByTestId('unis-map');
     fireEvent.click(screen.getByText('map:California'));
     await waitFor(() => expect(screen.getByTestId('unis-map')).toHaveAttribute('data-focus-state', 'California'));
-    expect(callsTo(/\/tops$/)).toHaveLength(0);
+    expect(callsTo(STANDINGS)).toHaveLength(0);
   });
 
   it('shows the waitlist panel rather than charts', async () => {
@@ -319,7 +349,21 @@ describe('FindPage — genre filtering', () => {
     expect(screen.getAllByText('RockArtistOne').length).toBeGreaterThan(0);
   });
 
-  it('switching genre costs no extra API calls — filtering is client-side', async () => {
+  it('switching genre reloads the same place in the new genre — the backend ranks per genre', async () => {
+    renderWithProviders(<FindPage />);
+    await screen.findByTestId('unis-map');
+    await enterNewYork();
+    await screen.findByText('Rap Song One');
+    const before = callsTo(STANDINGS).length;
+    fireEvent.click(screen.getByRole('button', { name: 'Rock' }));
+    await screen.findByText('Rock Song One');
+
+    const fresh = standingsParams().slice(before);
+    expect(fresh).toHaveLength(2);
+    fresh.forEach((p) => expect(p).toMatchObject({ jurisdictionId: HARLEM_ID, genreId: ROCK }));
+  });
+
+  it('switching genre asks for nothing else — no place lookups are repeated', async () => {
     renderWithProviders(<FindPage />);
     await screen.findByTestId('unis-map');
     await enterNewYork();
@@ -327,7 +371,29 @@ describe('FindPage — genre filtering', () => {
     const before = apiSpy.mock.calls.length;
     fireEvent.click(screen.getByRole('button', { name: 'Rock' }));
     await screen.findByText('Rock Song One');
-    expect(apiSpy.mock.calls.length).toBe(before);
+    const added = apiSpy.mock.calls.slice(before).map(([c]) => c.url);
+    expect(added.every((url) => STANDINGS.test(url))).toBe(true);
+  });
+
+  it('leaves entries with no points off the list', async () => {
+    renderWithProviders(<FindPage />);
+    await screen.findByTestId('unis-map');
+    await enterNewYork();
+    await screen.findByText('Rap Song One');
+    expect(screen.queryByText('RapArtistNoPoints')).not.toBeInTheDocument();
+  });
+
+  it('says "this week" on a live board and "last week" before anyone scores in the new one', async () => {
+    renderWithProviders(<FindPage />);
+    await screen.findByTestId('unis-map');
+    await enterNewYork();
+    await screen.findByText('Rap Song One');
+    expect(screen.getByText(/top songs this week in harlem/i)).toBeInTheDocument();
+
+    boardState = 'PREVIOUS_FINAL';
+    fireEvent.click(screen.getByRole('button', { name: 'Rock' }));
+    await screen.findByText('Rock Song One');
+    expect(screen.getByText(/top songs last week in harlem/i)).toBeInTheDocument();
   });
 
   it('reports an empty genre honestly instead of showing another genre', async () => {
@@ -377,17 +443,28 @@ describe('FindPage — navigation', () => {
     renderWithProviders(<FindPage />);
     await screen.findByTestId('unis-map');
     await enterNewYork();
-    fireEvent.click(screen.getByText('map:Manhattan'));
+    // Entering New York walks down to Harlem; step back up to the state first.
+    fireEvent.click(within(document.querySelector('.crumbs')).getByRole('button', { name: 'New York' }));
+    fireEvent.click(await screen.findByText('map:Manhattan'));
     await waitFor(() => expect(screen.getByTestId('unis-map')).toHaveAttribute('data-mode', 'TERRITORY'));
     expect(await screen.findByText('map:Harlem')).toBeInTheDocument();
   });
 
-  it('back returns to the national view and clears results', async () => {
+  it('Back goes up one level at a time', async () => {
     renderWithProviders(<FindPage />);
     await screen.findByTestId('unis-map');
     await enterNewYork();
     await screen.findByText('Rap Song One');
     fireEvent.click(screen.getByRole('button', { name: /Back/i }));
+    await waitFor(() => expect(document.querySelector('.crumbs .here')).toHaveTextContent('Manhattan'));
+  });
+
+  it('the root crumb returns to the national view and clears results', async () => {
+    renderWithProviders(<FindPage />);
+    await screen.findByTestId('unis-map');
+    await enterNewYork();
+    await screen.findByText('Rap Song One');
+    fireEvent.click(within(document.querySelector('.crumbs')).getByRole('button', { name: 'United States' }));
     await waitFor(() => expect(screen.getByTestId('unis-map')).toHaveAttribute('data-mode', 'US'));
     expect(document.querySelector('.territory-name')).toHaveTextContent('United States');
     expect(screen.queryByText('Rap Song One')).not.toBeInTheDocument();
@@ -405,8 +482,9 @@ describe('FindPage — navigation', () => {
     renderWithProviders(<FindPage />);
     await screen.findByTestId('unis-map');
     await enterNewYork();
-    expect(await screen.findByText(/Regions in New York/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Manhattan/ })).toBeInTheDocument();
+    expect(await screen.findByText(/Regions in Harlem/i)).toBeInTheDocument();
+    const rail = screen.getByText(/Regions in Harlem/i).parentElement;
+    expect(within(rail).getByRole('button', { name: /^Uptown Harlem/ })).toBeInTheDocument();
   });
 });
 
@@ -442,9 +520,10 @@ describe('FindPage — playback', () => {
 });
 
 describe('FindPage — failure handling', () => {
-  it('surfaces an error when tops fails, without blanking the page', async () => {
+  it('surfaces an error when the standings fail, without blanking the page', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     apiSpy.mockImplementation(async (cfg) => {
-      if (/\/tops$/.test(cfg.url)) throw new Error('boom');
+      if (STANDINGS.test(cfg.url)) throw new Error('boom');
       return defaultApiHandler(cfg);
     });
     renderWithProviders(<FindPage />);

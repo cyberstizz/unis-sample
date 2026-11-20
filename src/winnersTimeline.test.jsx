@@ -171,7 +171,9 @@ describe('WinnersTimeline', () => {
       renderTimeline();
 
       expect(await screen.findByText('no more heroes')).toBeInTheDocument();
-      expect(screen.getAllByRole('button', { name: /^View / })).toHaveLength(1);
+      // One card survives (its "View award card" button also starts with
+      // "View", so count the cards themselves).
+      expect(screen.getAllByRole('button', { name: /^View award card for / })).toHaveLength(1);
     });
   });
 

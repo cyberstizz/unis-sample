@@ -362,7 +362,7 @@ describe('VotingWizard', () => {
       const user = await goToStep3();
       await submitValidVote(user);
 
-      expect(await screen.findByText(/vote locked in/i)).toBeInTheDocument();
+      expect(await screen.findByText(/vote counted/i)).toBeInTheDocument();
       expect(screen.getByText(/You backed/i)).toBeInTheDocument();
       // Same number the backend awards and the help center quotes.
       expect(screen.getAllByText(new RegExp(`\\+${VOTE_POINTS}`)).length).toBeGreaterThan(0);

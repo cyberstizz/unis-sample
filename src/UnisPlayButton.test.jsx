@@ -1,4 +1,4 @@
-// src/unisPlayButton.test.jsx
+// src/UnisPlayButton.test.jsx
 //
 // Unit tests for UnisPlayButton — a static SVG play icon.
 // Verifies the component renders the correct SVG elements: circle background
@@ -7,7 +7,7 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import UnisPlayButton from './unisPlayButton';
+import UnisPlayButton from './UnisPlayButton';
 
 describe('UnisPlayButton', () => {
 it('renders an svg element with correct dimensions and class', () => {

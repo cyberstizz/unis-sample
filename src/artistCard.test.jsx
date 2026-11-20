@@ -190,30 +190,35 @@ describe('ArtistCard', () => {
       .toBe(mockArtist.username.charAt(0).toUpperCase());
   });
 
-  test('starts hidden and becomes visible after the staggered timeout', () => {
+  // The entrance and the pulse are CSS animations now (ArtistCard.scss). The
+  // only thing the component sets inline is the per-card stagger delay.
+  test.each([
+    [0, '0ms'],
+    [1, '150ms'],
+    [4, '600ms'],
+  ])('staggers the entrance by 150ms per card (index %i → %s)', (index, delay) => {
     const { container } = render(
       <ArtistCard
         artist={mockArtist}
         onPress={vi.fn()}
         onViewPress={vi.fn()}
-        index={1}
+        index={index}
       />
     );
 
-    const outerWrapper = container.firstChild;
-
-    expect(outerWrapper).toHaveStyle('opacity: 0');
-    expect(outerWrapper).toHaveStyle('transform: translateX(80px)');
-
-    act(() => {
-      vi.advanceTimersByTime(166);
-    });
-
-    expect(outerWrapper).toHaveStyle('opacity: 1');
-    expect(outerWrapper).toHaveStyle('transform: translateX(0)');
+    expect(container.firstChild).toHaveClass('ac-wrap');
+    expect(container.firstChild.style.animationDelay).toBe(delay);
   });
 
-  test('starts the pulse animation on mount and cancels it on unmount', () => {
+  test('defaults to no delay when no index is given', () => {
+    const { container } = render(
+      <ArtistCard artist={mockArtist} onPress={vi.fn()} onViewPress={vi.fn()} />
+    );
+
+    expect(container.firstChild.style.animationDelay).toBe('0ms');
+  });
+
+  test('runs no JavaScript animation loop — nothing to leak on unmount', () => {
     const { unmount } = render(
       <ArtistCard
         artist={mockArtist}
@@ -222,10 +227,10 @@ describe('ArtistCard', () => {
       />
     );
 
-    expect(requestAnimationFrameSpy).toHaveBeenCalled();
+    expect(requestAnimationFrameSpy).not.toHaveBeenCalled();
 
     unmount();
 
-    expect(cancelAnimationFrameSpy).toHaveBeenCalled();
+    expect(cancelAnimationFrameSpy).not.toHaveBeenCalled();
   });
 });

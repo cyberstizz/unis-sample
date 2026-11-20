@@ -1,11 +1,12 @@
 // src/test/findings/01-02-earnings.test.jsx
 //
-// Findings 1 & 2 — Ad tracking coverage and earnings math correctness.
+// Findings 1 & 2 — Ad-view reporting and earnings display correctness.
 //
 // Note: Most of Finding 2 lives in the backend (EarningsService.java). These
-// frontend tests verify that (a) the ad-view endpoint is hit from the right
-// pages, (b) the earnings display correctly reflects whatever the API returns,
-// (c) the percentages the frontend displays match the documented split.
+// frontend tests verify that (a) no page reports ad views, now that earnings
+// follow listening through the Community Share, (b) the earnings display
+// reflects whatever the API returns, (c) the percentages the frontend displays
+// match the documented split.
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
@@ -16,19 +17,15 @@ import { renderWithProviders } from '../utils';
 
 const API = 'http://localhost:8080/api';
 
-describe('Finding 1 — Ad view tracking coverage', () => {
+// Finding 1 was originally "ad views aren't tracked on every ad-bearing page".
+// The earnings model has since changed: supporter and referral income now come
+// from the monthly Community Share, which follows listening, and paying out per
+// ad view is against Google's ad rules. So the rule is now the opposite of the
+// original finding — NO page may report an ad view. Each page's own suite
+// asserts this too (feed, findpage, voteawards, jurisdiction, leaderboards).
+describe('Finding 1 — no page reports ad views (Community Share model)', () => {
   beforeEach(() => {
     callTracker.reset();
-  });
-
-  it('Feed fires /track-view for logged-in users', async () => {
-    const { default: Feed } = await import('../../feed');
-    renderWithProviders(<Feed />, { as: 'listener' });
-
-    await waitFor(
-      () => expect(callTracker.get('ad-view')).toBe(1),
-      { timeout: 3000 }
-    );
   });
 
   it('Feed does NOT fire /track-view for guests', async () => {
@@ -40,14 +37,16 @@ describe('Finding 1 — Ad view tracking coverage', () => {
     expect(callTracker.get('ad-view')).toBe(0);
   });
 
-  // These tests document the CURRENT GAP. Once Finding 1 is fixed (tracker
-  // added to all ad-bearing pages), these .todo entries become real tests
-  // identical in shape to the Feed ones above.
-  it.todo('SongPage fires /track-view for logged-in users');
-  it.todo('ArtistPage fires /track-view for logged-in users');
-  it.todo('JurisdictionPage fires /track-view for logged-in users');
-  it.todo('MilestonesPage fires /track-view for logged-in users');
-  it.todo('LeaderboardsPage fires /track-view for logged-in users');
+  it('Feed does NOT fire /track-view for logged-in users either', async () => {
+    const { default: Feed } = await import('../../feed');
+    renderWithProviders(<Feed />, { as: 'listener' });
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading your feed/i)).not.toBeInTheDocument()
+    );
+    await new Promise((r) => setTimeout(r, 300));
+    expect(callTracker.get('ad-view')).toBe(0);
+  });
 });
 
 describe('Finding 2 — Earnings summary display correctness', () => {

@@ -74,7 +74,24 @@ vi.mock('./pages/ResetPassword', () => ({ default: stub('ResetPassword') }));
 vi.mock('./winnersNotification', () => ({ default: stub('WinnersNotification') }));
 vi.mock('./WaitlistPage',        () => ({ default: stub('WaitlistPage') }));
 vi.mock('./WaitlistLanding',     () => ({ default: stub('WaitlistLanding') }));
-vi.mock('./pages/SearchResultsPage', () => ({ default: stub('SearchResultsPage') }));
+vi.mock('./pages/VerifyEmail',   () => ({ default: stub('VerifyEmail') }));
+vi.mock('./HelpPage',            () => ({ default: stub('HelpPage') }));
+vi.mock('./SponsorLanding',      () => ({ default: stub('SponsorLanding') }));
+vi.mock('./SponsorPage',         () => ({ default: stub('SponsorPage') }));
+vi.mock('./JoinPage',            () => ({ default: stub('JoinPage') }));
+vi.mock('./TeamLanding',         () => ({ default: stub('TeamLanding') }));
+vi.mock('./TeamJoin',            () => ({ default: stub('TeamJoin') }));
+vi.mock('./TeamHome',            () => ({ default: stub('TeamHome') }));
+vi.mock('./playlistPage',        () => ({ default: stub('PlaylistPage') }));
+vi.mock('./videoPage',           () => ({ default: stub('VideoPage') }));
+vi.mock('./chartsPage',          () => ({ default: stub('ChartsPage') }));
+vi.mock('./DiscoverPage',        () => ({ default: stub('DiscoverPage') }));
+vi.mock('./BrowseTagPage',       () => ({ default: stub('BrowseTagPage') }));
+vi.mock('./ListenerPage',        () => ({ default: stub('ListenerPage') }));
+vi.mock('./AwardPage',           () => ({ default: stub('AwardPage') }));
+vi.mock('./winnersTimelinePage', () => ({ default: stub('WinnersTimelinePage') }));
+vi.mock('./MessagePage',         () => ({ default: stub('MessagesPage') }));
+vi.mock('./PlusPage',            () => ({ default: stub('PlusPage') }));
 vi.mock('./PlayChoiceModal',     () => ({ default: stub('PlayChoiceModal') }));
 vi.mock('./admin/AdminDashboard',    () => ({ default: stub('AdminDashboard') }));
 vi.mock('./admin/ModerationQueue',   () => ({ default: stub('ModerationQueue') }));
@@ -150,6 +167,15 @@ describe('App', () => {
       ['/report',         'ReportInfringement'],
       ['/waitlist',       'WaitlistLanding'],
       ['/waitlist/join',  'WaitlistPage'],
+      ['/verify-email',   'VerifyEmail'],
+      ['/help',           'HelpPage'],
+      ['/sponsor',        'SponsorLanding'],
+      ['/sponsor/book',   'SponsorPage'],
+      ['/join',           'JoinPage'],
+      ['/join/HARLEM',    'JoinPage'],
+      ['/team',           'TeamLanding'],
+      ['/team/join',      'TeamJoin'],
+      ['/team/me',        'TeamHome'],
     ])('renders %s without authentication', async (path, testId) => {
       renderAt(path);
       // Pages load on demand (React.lazy), so they appear a moment after the first render.
@@ -166,11 +192,31 @@ describe('App', () => {
       ['/milestones', 'MilestonesPage'],
       ['/leaderboards','Leaderboards'],
       ['/findpage',   'FindPage'],
-      ['/search',     'SearchResultsPage'],
+      ['/charts',     'ChartsPage'],
+      ['/discover',   'DiscoverPage'],
+      ['/voteawards', 'VoteAwards'],
+      ['/artist/artist-1',            'ArtistPage'],
+      ['/song/song-1',                'SongPage'],
+      ['/playlist/pl-1',              'PlaylistPage'],
+      ['/video/vid-1',                'VideoPage'],
+      ['/user/user-1',                'ListenerPage'],
+      ['/award/award-1',              'AwardPage'],
+      ['/browse/mood/hype',           'BrowseTagPage'],
+      ['/jurisdiction/Harlem',        'JurisdictionPage'],
+      ['/jurisdiction/Harlem/winners', 'WinnersTimelinePage'],
     ])('renders %s for a guest user', async (path, testId) => {
       renderAt(path);
       // Pages load on demand (React.lazy), so they appear a moment after the first render.
       expect(await screen.findByTestId(testId)).toBeInTheDocument();
+    });
+
+    // /search was folded into Discover. Old links and bookmarks still work,
+    // and keep what was being searched for.
+    it('sends /search to Discover, keeping the query', async () => {
+      renderAt('/search?q=tony');
+      expect(await screen.findByTestId('DiscoverPage')).toBeInTheDocument();
+      expect(window.location.pathname).toBe('/discover');
+      expect(window.location.search).toBe('?q=tony');
     });
   });
  
@@ -182,6 +228,8 @@ describe('App', () => {
       '/profile',
       '/earnings',
       '/artistDashboard',
+      '/messages',
+      '/plus',
     ])('redirects guest from %s to /login', async (path) => {
       renderAt(path, { user: null, authLoaded: true });
       await waitFor(() =>
@@ -196,6 +244,15 @@ describe('App', () => {
       );
     });
  
+    it.each([
+      ['/messages', 'MessagesPage'],
+      ['/plus',     'PlusPage'],
+      ['/earnings', 'Earnings'],
+    ])('renders %s for a logged-in user', async (path, testId) => {
+      renderAt(path, { user: loggedInUser, authLoaded: true });
+      expect(await screen.findByTestId(testId)).toBeInTheDocument();
+    });
+
     it('renders nothing while auth is still loading (authLoaded=false)', () => {
       renderAt('/profile', { user: null, authLoaded: false });
       // AuthRequiredRoute returns null while loading — no redirect yet

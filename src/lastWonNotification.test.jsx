@@ -630,8 +630,10 @@ describe('LastWonNotification — staged reveal', () => {
     // 1200ms initial + 1900ms stage 2 + buffer
     await vi.advanceTimersByTimeAsync(3300);
     await Promise.resolve();
-    const date = document.querySelector('.lwn-date');
-    expect(date.classList.contains('lwn-date-visible')).toBe(true);
+    // The reveal class sits on the callout wrapper, not the date text inside it.
+    const callout = document.querySelector('.lwn-date-callout');
+    expect(callout).not.toBeNull();
+    expect(callout.classList.contains('lwn-date-visible')).toBe(true);
   });
 
   it('after stage 3, title block + actions have visible classes', async () => {

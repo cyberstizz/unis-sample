@@ -96,7 +96,9 @@ describe('SupporterSection', () => {
     await user.type(box, 'New single out now!');
     await user.click(screen.getByRole('button', { name: /Send to all supporters/i }));
     await waitFor(() => expect(payload).toEqual({ body: 'New single out now!' }));
-    expect(await screen.findByText(/Sent to 12 supporters/i)).toBeInTheDocument();
+    // Confirmed twice: in the dialog itself, and in the app-wide toast.
+    expect(await screen.findByText('Sent to 12 supporters')).toBeInTheDocument();
+    expect(await screen.findByText('Message sent to 12 supporters')).toBeInTheDocument();
   });
 
   it('disables the broadcast send button until a message is typed', async () => {
@@ -118,7 +120,11 @@ describe('SupporterSection', () => {
     const box = await screen.findByPlaceholderText(/Share a new drop/i);
     await user.type(box, 'Hi everyone');
     await user.click(screen.getByRole('button', { name: /Send to all supporters/i }));
-    expect(await screen.findByText(/Could not send the broadcast/i)).toBeInTheDocument();
+    // Shown in the dialog and in the app-wide toast; the dialog stays open to retry.
+    const messages = await screen.findAllByText(/Could not send the broadcast/i);
+    expect(messages.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByPlaceholderText(/Share a new drop/i)).toHaveValue('Hi everyone');
+    expect(screen.getByRole('button', { name: /Send to all supporters/i })).toBeEnabled();
   });
 
   it('renders the 30-day trend chip, supporter photos, and plays', async () => {

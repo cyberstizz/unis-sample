@@ -29,7 +29,9 @@ const row = (name, overall, genre = null, depth = 0) => ({
 
 const payload = (overrides = {}) => ({
   status: 'ok',
-  computedAt: '2026-07-05T00:30:00Z',
+  // Mid-afternoon UTC, so it is July 5th in every US timezone (00:30Z was
+  // still July 4th in New York, which made the chip test fail there).
+  computedAt: '2026-07-05T16:30:00Z',
   defaultPeriod: 'year',
   genreId: 'g-rap',
   genreName: 'Rap',

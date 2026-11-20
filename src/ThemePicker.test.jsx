@@ -46,7 +46,7 @@ describe('ThemePicker', () => {
   test('renders all available theme options', () => {
     render(<ThemePicker userId="user-1" />);
 
-    expect(screen.getByRole('button', { name: /unis blue/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Select Blue theme' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /orange/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /red/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /green/i })).toBeInTheDocument();
@@ -64,7 +64,7 @@ describe('ThemePicker', () => {
   test('does not call setTheme when clicking the already active theme', () => {
     render(<ThemePicker userId="user-1" />);
 
-    fireEvent.click(screen.getByRole('button', { name: /unis blue/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select Blue theme' }));
 
     expect(setTheme).not.toHaveBeenCalled();
   });

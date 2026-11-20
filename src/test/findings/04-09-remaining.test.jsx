@@ -87,9 +87,11 @@ describe('Finding 5 — Cashout flow end-to-end', () => {
     // or a "Setup Payouts" call-to-action — all indicate incomplete state.
     await waitFor(
       () => {
-        const hasConnectButton = screen.queryByRole('button', { name: /connect/i });
-        const hasSetupText = screen.queryByText(/stripe|setup|onboard|connect/i);
-        expect(hasConnectButton || hasSetupText).toBeTruthy();
+        // queryAll*: the earnings page now mentions Stripe in more than one
+        // place, and a single-match query throws when several are found.
+        const connectButtons = screen.queryAllByRole('button', { name: /connect/i });
+        const setupText = screen.queryAllByText(/stripe|setup|onboard|connect/i);
+        expect(connectButtons.length + setupText.length).toBeGreaterThan(0);
       },
       { timeout: 8000 }
     );

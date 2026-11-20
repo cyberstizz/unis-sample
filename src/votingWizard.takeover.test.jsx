@@ -114,20 +114,19 @@ describe('VotingWizard — success takeover', () => {
 
     // Takeover appears.
     await waitFor(() =>
-      expect(screen.getByText(/vote locked in/i)).toBeInTheDocument()
+      expect(screen.getByText(/vote counted/i)).toBeInTheDocument()
     );
+    const cel = document.querySelector('.vw-cel');
 
-    // Category badge derived from type + interval (also echoed in the body).
-    expect(screen.getAllByText(/Artist of the week/i).length).toBeGreaterThan(0);
-    // Themed points tag — the SAME value the backend awards (+2), echoed in
-    // the sub-line. It used to say +25 while the server gave +2.
-    expect(screen.getAllByText(/\+2\b/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/pts/i)).toBeInTheDocument();
-    // Headline names the nominee.
-    expect(screen.getByText(/You backed/i)).toBeInTheDocument();
-    // EXACT score line — the whole point. Not "7.3K → 7.3K".
-    expect(screen.getByText(/7,325/)).toBeInTheDocument();
-    expect(screen.getByText(/7,327/)).toBeInTheDocument();
+    // Headline names the nominee; the race line names the category.
+    expect(cel.querySelector('.vw-cel__head')).toHaveTextContent('You backed Tony Fadd');
+    expect(cel.querySelector('.vw-cel__race')).toHaveTextContent(/Artist of the week/i);
+    // The SAME value the backend awards (+2). It used to say +25 while the
+    // server gave +2.
+    const points = cel.querySelector('.vw-cel__points');
+    expect(points).toHaveTextContent('+2 points for you');
+    // EXACT score after the vote — not "7.3K".
+    expect(points).toHaveTextContent('score 7,327');
     // Single dismiss pill.
     expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument();
   });

@@ -101,8 +101,12 @@ describe('Header', () => {
   // Logo
   // =========================================================================
   describe('logo', () => {
+    // Themed logos belong to a signed-in user. A guest always gets the blue
+    // mark, so the header never shows the last user's theme after they log out.
+    const signedIn = { user: loggedInUser, isGuest: false };
+
     it('renders the blue logo by default', () => {
-      renderHeader({ theme: 'blue' });
+      renderHeader({ ...signedIn, theme: 'blue' });
       expect(screen.getByAltText('UNIS').getAttribute('src')).toBe('/logo-blue.svg');
     });
 
@@ -113,15 +117,21 @@ describe('Header', () => {
       ['purple', '/logo-purple.png'],
       ['yellow', '/logo-gold.png'],
       ['dianna', '/logo-dianna.png'],
-    ])('renders the %s logo when theme=%s', (theme, expectedSrc) => {
-      renderHeader({ theme });
+    ])('renders the %s logo for a signed-in user (%s)', (theme, expectedSrc) => {
+      renderHeader({ ...signedIn, theme });
       expect(screen.getByAltText('UNIS').getAttribute('src')).toBe(expectedSrc);
     });
 
     it('falls back to the blue logo when theme is unknown', () => {
-      renderHeader({ theme: 'puce' });
+      renderHeader({ ...signedIn, theme: 'puce' });
       expect(screen.getByAltText('UNIS').getAttribute('src')).toBe('/logo-blue.svg');
     });
+
+    it.each(['orange', 'red', 'dianna'])(
+      'a guest sees the blue logo even when a %s theme is left over', (theme) => {
+        renderHeader({ user: null, isGuest: true, theme });
+        expect(screen.getByAltText('UNIS').getAttribute('src')).toBe('/logo-blue.svg');
+      });
 
     it('navigates to / when the logo is clicked from a non-home page', async () => {
       const { user } = renderHeader({}, '/song/abc');
@@ -374,10 +384,10 @@ describe('Header', () => {
   // Guest actions
   // =========================================================================
   describe('guest actions', () => {
-    it('renders Sign In and Sign Up buttons', () => {
+    it('renders a single Sign In button (sign-up starts from the login page)', () => {
       renderHeader({ user: null, isGuest: true });
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /sign up/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /sign up/i })).not.toBeInTheDocument();
     });
 
     it('does not render the user avatar', () => {
@@ -391,10 +401,5 @@ describe('Header', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/login');
     });
 
-    it('navigates to /login when Sign Up is clicked', async () => {
-      const { user } = renderHeader({ user: null, isGuest: true });
-      await user.click(screen.getByRole('button', { name: /sign up/i }));
-      expect(mockNavigate).toHaveBeenCalledWith('/login');
-    });
   });
 });

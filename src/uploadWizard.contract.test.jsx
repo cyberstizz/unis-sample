@@ -3,11 +3,10 @@
 // Focused contract tests for the upload payload, written against the CURRENT
 // uploadWizard markup.
 //
-// Why this file exists separately: the legacy `uploadWizard.test.jsx` suite was
-// written against a previous design of this component (it targets
-// `.upload-wizard-overlay`, `select.input-field`, `.confirmation-summary`, and
-// old heading text). 68 of its 72 tests fail on a pristine checkout, so it
-// could not have caught anything. That suite needs a separate rewrite pass.
+// Why this file exists separately: `uploadWizard.test.jsx` covers the wizard's
+// behaviour step by step. This file pins the one thing that broke production
+// and that a UI-level suite can miss: exactly which fields go to which backend
+// request class.
 //
 // What broke in production: the wizard built ONE metadata object for both
 // media types and sent song-only keys (explicit, isrc, downloadPolicy,
@@ -22,6 +21,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as axiosModule from './components/axiosInstance';
+import { fixtures } from './test/mocks/handlers';
 import UploadWizard from './uploadWizard';
 
 const ARTIST_PROFILE = {
@@ -29,6 +29,7 @@ const ARTIST_PROFILE = {
   username: 'testartist',
   role: 'artist',
   photoUrl: null,
+  genreId: '00000000-0000-0000-0000-000000000101', // rap
   jurisdiction: { jurisdictionId: '52740de0-e4e9-4c9e-b68e-1e170f6788c4', name: 'Harlem' },
 };
 
@@ -36,7 +37,11 @@ const ARTIST_PROFILE = {
 // the rights box, Terms 3.6, required on every upload).
 const VIDEO_ALLOWED_KEYS = ['title', 'description', 'genreId', 'artistId', 'jurisdictionId', 'duration', 'rightsConfirmed'];
 // Fields that exist only on SongUploadRequest.
-const SONG_ONLY_KEYS = ['explicit', 'isrc', 'downloadPolicy', 'downloadPrice'];
+const SONG_ONLY_KEYS = [
+  'explicit', 'isrc', 'downloadPolicy', 'downloadPrice',
+  // Sound & discovery — songs only
+  'primarySubgenreId', 'subgenreWriteIn', 'secondarySubgenreId', 'primaryMoodId', 'secondaryMoodId', 'language',
+];
 
 const fakeFile = ({ name, type, sizeMB = 5 }) => {
   const file = new File(['x'], name, { type });
@@ -48,6 +53,8 @@ const fakeFile = ({ name, type, sizeMB = 5 }) => {
 const captureRequest = () => {
   const captured = {};
   vi.spyOn(axiosModule, 'apiCall').mockImplementation(async (config) => {
+    // The subgenre and mood lists the song step needs.
+    if (config.url === '/v1/taxonomy') return { data: fixtures.taxonomy };
     const fd = config.data;
     const key = Array.from(fd.keys()).find((k) => k === 'song' || k === 'video');
     captured.url = config.url;
@@ -83,6 +90,11 @@ const submitUpload = async ({ mediaType, file, confirmRights = true }) => {
   await user.type(document.querySelector('input.uw__input'), 'Test Title');
   const fileInput = document.querySelector('input[type="file"]');
   await user.upload(fileInput, file);
+  // A song can't reach review without a subgenre and a mood; a video has neither.
+  if (mediaType === 'song') {
+    await user.selectOptions(await screen.findByLabelText(/^Subgenre/i), 'sg-drill');
+    await user.click(screen.getByRole('button', { name: 'Hype' }));
+  }
   await waitFor(() => expect(next()).not.toBeDisabled());
   await user.click(next());
 
@@ -142,8 +154,13 @@ describe('UploadWizard — upload payload contract', () => {
 
     expect(captured.url).toBe('/v1/media/song');
     expect(captured.key).toBe('song');
-    expect(captured.metadata).toHaveProperty('explicit');
-    expect(captured.metadata).toHaveProperty('downloadPolicy');
+    SONG_ONLY_KEYS.forEach((k) => expect(captured.metadata).toHaveProperty(k));
+    expect(captured.metadata).toMatchObject({
+      primarySubgenreId: 'sg-drill',
+      primaryMoodId: 'mood-hype',
+      language: 'en',
+      rightsConfirmed: true,
+    });
   });
 
   it('uses an upload-sized timeout rather than the 10s global default', async () => {

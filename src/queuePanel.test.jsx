@@ -1,40 +1,79 @@
 // src/queuePanel.test.jsx
 //
-// Tests for the queue panel: header, Now Playing cockpit (like, transport),
-// the always-visible queue actions, the played-songs fold, select mode,
-// removal, the end-of-queue note and closing.
+// Tests for QueuePanel — the "playback cockpit" queue.
+//
+// Covers:
+//   • render gating, animated close (grab handle, chevron, overlay)
+//   • header: song count, upcoming count, avatar fallback chain
+//   • now-playing hero: title/artist, "Playing from" playlist link
+//   • transport: shuffle, previous, play/pause, next, repeat
+//   • live scrubber mirrors the real <audio> element
+//   • queue rows: tap to play the exact position, current/past states
+//   • removal is always confirmed in place (one song, a playlist group, clear)
+//   • playlist groups: label, count, "Remove all", open the playlist
+//   • overflow menu: Save as playlist, Clear queue
+//   • save-as-playlist modal: validation, success toast with View, failure
+//   • drag-and-drop reorder calls moveQueueItem once, on drop
+//
+// PlayerContext is supplied directly; useAuth, useFeedback and useNavigate
+// are mocked. DndContext is wrapped so a drop can be fired by hand — jsdom has
+// no layout, so a real pointer drag can't be simulated.
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, act } from '@testing-library/react';
+import { render, screen, within, act, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+
+vi.mock('./queuePanel.scss', () => ({}));
+
+const authState = { user: { username: 'charles', photoUrl: null } };
+vi.mock('./context/AuthContext', () => ({
+  useAuth: () => authState,
+}));
+
+const feedback = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+vi.mock('./context/FeedbackContext', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useFeedback: () => feedback,
+}));
+
+const navigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useNavigate: () => navigate,
+}));
+
+// Capture the drag handlers QueuePanel passes to DndContext.
+let dnd = {};
+vi.mock('@dnd-kit/core', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    DndContext: (props) => {
+      dnd = props;
+      return <actual.DndContext {...props} />;
+    },
+  };
+});
+
 import { PlayerContext } from './context/playercontext';
 import QueuePanel from './QueuePanel';
 
-vi.mock('./context/AuthContext', () => ({
-  useAuth: () => ({ user: { username: 'stizz', photoUrl: null } }),
-}));
-
-const feedbackMock = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
-vi.mock('./context/FeedbackContext', () => ({
-  useFeedback: () => feedbackMock,
-  errorMessage: (_e, fallback) => fallback,
-}));
-
 // ---------------------------------------------------------------------------
-// Fixtures
+// Fixtures & helpers
 // ---------------------------------------------------------------------------
+const makeTrack = (id, overrides = {}) => ({
+  qid: `q-${id}`,
+  songId: `song-${id}`,
+  title: `Track ${id}`,
+  artist: `Artist ${id}`,
+  artworkUrl: `/art/${id}.jpg`,
+  duration: 180000, // queue durations are milliseconds → 3:00
+  ...overrides,
+});
 
-// Durations are milliseconds; track n lasts n minutes.
-const makeTrack = (n, overrides = {}) => ({
-  qid: `q${n}`,
-  id: `song-${n}`,
-  title: `Track ${n}`,
-  artist: `Artist ${n}`,
-  artworkUrl: `/art/${n}.jpg`,
-  duration: n * 60_000,
-  origin: null,
+const fromPlaylist = (id, overrides = {}) => makeTrack(id, {
+  origin: { type: 'playlist', batchId: 'batch-1', playlistId: 'pl-9', name: 'Gym Mix' },
   ...overrides,
 });
 
@@ -44,13 +83,12 @@ const makeContext = (overrides = {}) => ({
   currentMedia: null,
   removeQueueItems: vi.fn(),
   moveQueueItem: vi.fn(),
-  moveQueueItemsNext: vi.fn(),
   clearQueue: vi.fn(),
-  saveQueueAsPlaylist: vi.fn().mockResolvedValue('pl-1'),
+  saveQueueAsPlaylist: vi.fn().mockResolvedValue('pl-new'),
   playQueueIndex: vi.fn(),
   isShuffled: false,
   toggleShuffle: vi.fn(),
-  isPlaying: true,
+  isPlaying: false,
   togglePlayPause: vi.fn(),
   next: vi.fn(),
   prev: vi.fn(),
@@ -60,280 +98,641 @@ const makeContext = (overrides = {}) => ({
   ...overrides,
 });
 
-const fourSongs = (currentIndex = 0) => {
-  const queue = [1, 2, 3, 4].map((n) => makeTrack(n));
-  return { queue, currentIndex, currentMedia: queue[currentIndex] };
-};
-
-const renderPanel = (contextOverrides = {}, props = {}) => {
+const renderQueuePanel = (contextOverrides = {}, props = {}) => {
   const ctx = makeContext(contextOverrides);
+  const onClose = props.onClose || vi.fn();
   const user = userEvent.setup();
-  const onClose = vi.fn();
   const result = render(
-    <MemoryRouter>
-      <PlayerContext.Provider value={ctx}>
-        <QueuePanel open onClose={onClose} {...props} />
-      </PlayerContext.Provider>
-    </MemoryRouter>
+    <PlayerContext.Provider value={ctx}>
+      <QueuePanel open={true} onClose={onClose} {...props} />
+    </PlayerContext.Provider>
   );
   return { ctx, user, onClose, ...result };
 };
 
-const rowFor = (title) => screen.getByText(title, { selector: '.qp-title' }).closest('.qp-item');
+const three = () => [makeTrack(1), makeTrack(2), makeTrack(3)];
+
+/** The clickable row for a track title. */
+const rowOf = (title) => screen.getAllByText(title)
+  .map((el) => el.closest('.qp-item'))
+  .find(Boolean);
+
+const openMenu = async (user) => user.click(screen.getByRole('button', { name: /queue options/i }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  authState.user = { username: 'charles', photoUrl: null };
+  dnd = {};
 });
 
-// ---------------------------------------------------------------------------
-
 describe('QueuePanel', () => {
-  describe('render gating and header', () => {
-    it('renders nothing when closed', () => {
+  // =========================================================================
+  describe('render gating and closing', () => {
+    it('renders nothing when open=false', () => {
       const { container } = render(
-        <MemoryRouter>
-          <PlayerContext.Provider value={makeContext()}>
-            <QueuePanel open={false} onClose={vi.fn()} />
-          </PlayerContext.Provider>
-        </MemoryRouter>
+        <PlayerContext.Provider value={makeContext()}>
+          <QueuePanel open={false} onClose={vi.fn()} />
+        </PlayerContext.Provider>
       );
       expect(container.firstChild).toBeNull();
     });
 
-    it('shows the song count and the listening time left', () => {
-      renderPanel(fourSongs(0));
-      // 1 + 2 + 3 + 4 minutes, nothing played yet
-      expect(screen.getByText(/4 songs/)).toBeInTheDocument();
-      expect(screen.getByText('10 min left')).toBeInTheDocument();
+    it('renders the panel when open=true', () => {
+      renderQueuePanel();
+      expect(screen.getByRole('heading', { name: 'Queue' })).toBeInTheDocument();
     });
 
-    it('uses the singular for one song', () => {
-      const t = makeTrack(1);
-      renderPanel({ queue: [t], currentMedia: t });
-      expect(screen.getByText(/^1 song/)).toBeInTheDocument();
+    it.each([
+      ['the chevron', () => screen.getAllByRole('button', { name: /close queue/i })[1]],
+      ['the grab handle', () => screen.getAllByRole('button', { name: /close queue/i })[0]],
+      ['the overlay', () => document.querySelector('.qp-overlay')],
+    ])('%s closes after the slide-out animation', (_label, target) => {
+      vi.useFakeTimers();
+      const { onClose } = renderQueuePanel();
+      fireEvent.click(target());
+
+      expect(document.querySelector('.qp-overlay')).toHaveClass('qp-closing');
+      expect(onClose).not.toHaveBeenCalled();
+      act(() => { vi.advanceTimersByTime(280); });
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('drops the time left when repeat one is on', () => {
-      renderPanel({ ...fourSongs(0), repeatMode: 'one' });
-      expect(screen.queryByText(/left$/)).not.toBeInTheDocument();
+    it('clicking inside the panel does not close it', async () => {
+      const { user, onClose } = renderQueuePanel();
+      await user.click(document.querySelector('.qp-container'));
+      expect(document.querySelector('.qp-overlay')).not.toHaveClass('qp-closing');
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
-  describe('Now Playing cockpit', () => {
-    it('renders the themed bottom edge and the artwork bleed', () => {
-      const { container } = renderPanel(fourSongs(0));
-      expect(container.querySelector('.qp-now .qp-now-edge')).toBeInTheDocument();
-      expect(container.querySelector('.qp-now .qp-now-bleed')).toBeInTheDocument();
+  // =========================================================================
+  describe('header', () => {
+    it('says "1 song" for a single track', () => {
+      renderQueuePanel({ queue: [makeTrack(1)] });
+      expect(document.querySelector('.qp-sub')).toHaveTextContent(/^1 song$/);
     });
 
-    it('shows a like button wired to the player', async () => {
-      const onToggleLike = vi.fn();
-      const { user } = renderPanel(fourSongs(0), { isLiked: false, onToggleLike });
-      const like = screen.getByRole('button', { name: 'Like this song' });
-      expect(like).toHaveAttribute('aria-pressed', 'false');
-      await user.click(like);
-      expect(onToggleLike).toHaveBeenCalledTimes(1);
+    it('says "songs" and counts what is upcoming', () => {
+      renderQueuePanel({ queue: three(), currentIndex: 0 });
+      expect(document.querySelector('.qp-sub')).toHaveTextContent('3 songs · 2 upcoming');
+      expect(document.querySelector('.qp-count')).toHaveTextContent('2');
     });
 
-    it('marks the like button when the song is liked', () => {
-      renderPanel(fourSongs(0), { isLiked: true, onToggleLike: vi.fn() });
-      const like = screen.getByRole('button', { name: 'Unlike this song' });
-      expect(like).toHaveAttribute('aria-pressed', 'true');
-      expect(like).toHaveClass('qp-like-on');
+    it('drops the upcoming count on the last track', () => {
+      renderQueuePanel({ queue: three(), currentIndex: 2 });
+      expect(document.querySelector('.qp-sub')).toHaveTextContent(/^3 songs$/);
+      expect(document.querySelector('.qp-count')).toBeNull();
     });
 
-    it('hides the like button when no handler is given', () => {
-      renderPanel(fourSongs(0));
-      expect(screen.queryByRole('button', { name: /like this song/i })).not.toBeInTheDocument();
+    it('shows the username initial when there is no photo', () => {
+      renderQueuePanel();
+      expect(document.querySelector('.qp-avatar')).toHaveTextContent('C');
     });
 
-    it('wires the transport buttons', async () => {
-      const { ctx, user } = renderPanel(fourSongs(1));
+    it('shows the profile photo when there is one', () => {
+      authState.user = { username: 'charles', photoUrl: 'https://cdn.unis.test/me.jpg' };
+      renderQueuePanel();
+      expect(document.querySelector('.qp-avatar img')).toHaveAttribute('src', 'https://cdn.unis.test/me.jpg');
+    });
+
+    it('falls back to an icon for a guest', () => {
+      authState.user = null;
+      renderQueuePanel();
+      const avatar = document.querySelector('.qp-avatar');
+      expect(avatar.querySelector('svg')).not.toBeNull();
+      expect(avatar).toHaveAttribute('title', 'You');
+    });
+  });
+
+  // =========================================================================
+  describe('now playing', () => {
+    it('is hidden when nothing is queued or playing', () => {
+      renderQueuePanel();
+      expect(screen.queryByText(/now playing/i)).not.toBeInTheDocument();
+    });
+
+    it('shows the current track from the queue', () => {
+      renderQueuePanel({ queue: three(), currentIndex: 1 });
+      const hero = document.querySelector('.qp-now');
+      expect(within(hero).getByText('Track 2')).toBeInTheDocument();
+      expect(within(hero).getByText('Artist 2')).toBeInTheDocument();
+    });
+
+    it('prefers currentMedia over the queue position', () => {
+      renderQueuePanel({
+        queue: three(),
+        currentMedia: { title: 'Live Cut', artistName: 'Someone Else' },
+      });
+      const hero = document.querySelector('.qp-now');
+      expect(within(hero).getByText('Live Cut')).toBeInTheDocument();
+      expect(within(hero).getByText('Someone Else')).toBeInTheDocument();
+    });
+
+    it('falls back to Untitled / Unknown', () => {
+      renderQueuePanel({ currentMedia: {} });
+      const hero = document.querySelector('.qp-now');
+      expect(within(hero).getByText('Untitled')).toBeInTheDocument();
+      expect(within(hero).getByText('Unknown')).toBeInTheDocument();
+    });
+
+    it('"Playing from" opens the playlist the song came from', () => {
+      vi.useFakeTimers();
+      const { onClose } = renderQueuePanel({ queue: [fromPlaylist(1), fromPlaylist(2)] });
+      fireEvent.click(document.querySelector('.qp-playing-from'));
+
+      expect(navigate).toHaveBeenCalledWith('/playlist/pl-9');
+      act(() => { vi.advanceTimersByTime(280); });
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // =========================================================================
+  describe('transport', () => {
+    it('wires previous, play/pause and next to the player', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
       await user.click(screen.getByRole('button', { name: 'Previous' }));
-      await user.click(screen.getByRole('button', { name: 'Pause' }));
+      await user.click(screen.getByRole('button', { name: 'Play' }));
       await user.click(screen.getByRole('button', { name: 'Next' }));
-      await user.click(screen.getByRole('button', { name: 'Shuffle off' }));
-      await user.click(screen.getByRole('button', { name: 'Repeat off' }));
-      expect(ctx.prev).toHaveBeenCalled();
-      expect(ctx.togglePlayPause).toHaveBeenCalled();
-      expect(ctx.next).toHaveBeenCalled();
-      expect(ctx.toggleShuffle).toHaveBeenCalled();
-      expect(ctx.cycleRepeat).toHaveBeenCalled();
+      expect(ctx.prev).toHaveBeenCalledTimes(1);
+      expect(ctx.togglePlayPause).toHaveBeenCalledTimes(1);
+      expect(ctx.next).toHaveBeenCalledTimes(1);
+    });
+
+    it('labels the main button Pause while playing', () => {
+      renderQueuePanel({ queue: three(), isPlaying: true });
+      expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
+    });
+
+    it('shuffle toggles and reflects its state', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three(), isShuffled: true });
+      const shuffle = screen.getByTitle('Shuffle on');
+      expect(shuffle).toHaveAttribute('aria-pressed', 'true');
+      await user.click(shuffle);
+      expect(ctx.toggleShuffle).toHaveBeenCalledTimes(1);
+    });
+
+    it('shuffle is disabled with fewer than two songs', () => {
+      renderQueuePanel({ queue: [makeTrack(1)] });
+      expect(screen.getByTitle('Shuffle off')).toBeDisabled();
+    });
+
+    it.each([
+      ['off', 'Repeat off', false],
+      ['all', 'Repeat all', true],
+      ['one', 'Repeat one', true],
+    ])('repeat mode "%s" is labelled "%s"', async (repeatMode, label, isOn) => {
+      const { ctx, user } = renderQueuePanel({ queue: three(), repeatMode });
+      const repeat = screen.getByRole('button', { name: label });
+      expect(repeat.classList.contains('qp-on')).toBe(isOn);
+      await user.click(repeat);
+      expect(ctx.cycleRepeat).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('queue actions', () => {
-    it('keeps Select, Save and Clear in view', () => {
-      renderPanel(fourSongs(0));
-      expect(screen.getByRole('button', { name: /select/i })).toBeEnabled();
-      expect(screen.getByRole('button', { name: 'Save queue as playlist' })).toBeEnabled();
-      expect(screen.getByRole('button', { name: 'Clear queue' })).toBeEnabled();
+  // =========================================================================
+  describe('scrubber', () => {
+    const makeAudio = (currentTime, duration) => {
+      const audio = document.createElement('audio');
+      Object.defineProperty(audio, 'duration', { value: duration, configurable: true });
+      audio.currentTime = currentTime;
+      return audio;
+    };
+
+    it('starts at 0:00 with no audio element', () => {
+      renderQueuePanel({ queue: three() });
+      expect(screen.getByRole('slider', { name: 'Seek' })).toHaveAttribute('aria-valuenow', '0');
+      expect(document.querySelector('.qp-seek-times')).toHaveTextContent('0:00-0:00');
     });
 
-    it('asks before clearing, then clears', async () => {
-      const { ctx, user } = renderPanel(fourSongs(0));
-      await user.click(screen.getByRole('button', { name: 'Clear queue' }));
-      expect(screen.getByText(/Clear the entire queue/)).toBeInTheDocument();
-      expect(ctx.clearQueue).not.toHaveBeenCalled();
-      await user.click(screen.getByRole('button', { name: 'Clear' }));
-      expect(ctx.clearQueue).toHaveBeenCalledTimes(1);
+    it('mirrors the audio element position and time left', () => {
+      const audio = makeAudio(30, 120);
+      renderQueuePanel({ queue: three(), audioRef: { current: audio } });
+      expect(screen.getByRole('slider', { name: 'Seek' })).toHaveAttribute('aria-valuenow', '25');
+      expect(document.querySelector('.qp-seek-times')).toHaveTextContent('0:30-1:30');
     });
 
-    it('cancelling the clear keeps the queue', async () => {
-      const { ctx, user } = renderPanel(fourSongs(0));
-      await user.click(screen.getByRole('button', { name: 'Clear queue' }));
-      await user.click(screen.getByRole('button', { name: 'Cancel' }));
-      expect(ctx.clearQueue).not.toHaveBeenCalled();
-      expect(screen.queryByText(/Clear the entire queue/)).not.toBeInTheDocument();
+    it('follows timeupdate events', () => {
+      const audio = makeAudio(0, 200);
+      renderQueuePanel({ queue: three(), audioRef: { current: audio } });
+      audio.currentTime = 100;
+      act(() => { audio.dispatchEvent(new Event('timeupdate')); });
+      expect(screen.getByRole('slider', { name: 'Seek' })).toHaveAttribute('aria-valuenow', '50');
     });
 
-    it('saves the queue as a playlist', async () => {
-      const { ctx, user } = renderPanel(fourSongs(0));
-      await user.click(screen.getByRole('button', { name: 'Save queue as playlist' }));
-      const save = screen.getByRole('button', { name: 'Save' });
-      expect(save).toBeDisabled();
-      await user.type(screen.getByPlaceholderText('Playlist name...'), 'Night drive');
-      await user.click(save);
-      expect(ctx.saveQueueAsPlaylist).toHaveBeenCalledWith('Night drive');
-      expect(feedbackMock.success).toHaveBeenCalled();
-    });
+    it('clicking the bar seeks the audio', () => {
+      const audio = makeAudio(0, 200);
+      renderQueuePanel({ queue: three(), audioRef: { current: audio } });
+      const bar = screen.getByRole('slider', { name: 'Seek' });
+      bar.getBoundingClientRect = () => ({ left: 0, width: 400, top: 0, height: 4, right: 400, bottom: 4 });
 
-    it('shows the empty state with no songs', () => {
-      renderPanel();
-      expect(screen.getByText('Your queue is empty')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Clear queue' })).toBeDisabled();
+      // jsdom's PointerEvent drops clientX, so send a MouseEvent of that type.
+      fireEvent(bar, new MouseEvent('pointerdown', { bubbles: true, clientX: 300 }));
+      expect(audio.currentTime).toBe(150);
+      expect(bar).toHaveAttribute('aria-valuenow', '75');
     });
   });
 
-  describe('the list', () => {
-    it('plays the exact position tapped', async () => {
-      const { ctx, user } = renderPanel(fourSongs(0));
-      await user.click(rowFor('Track 3'));
+  // =========================================================================
+  describe('queue list', () => {
+    it('shows the empty state and disables the options menu', () => {
+      renderQueuePanel();
+      expect(screen.getByText(/your queue is empty/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /queue options/i })).toBeDisabled();
+    });
+
+    it('renders one row per track with its duration', () => {
+      renderQueuePanel({ queue: three() });
+      expect(document.querySelectorAll('.qp-item')).toHaveLength(3);
+      expect(document.querySelectorAll('.qp-duration')[0]).toHaveTextContent('3:00');
+    });
+
+    it('falls back to Untitled / Unknown in a row', () => {
+      renderQueuePanel({ queue: [makeTrack(1), makeTrack(2, { title: undefined, artist: undefined })] });
+      const row = document.querySelectorAll('.qp-item')[1];
+      expect(within(row).getByText('Untitled')).toBeInTheDocument();
+      expect(within(row).getByText('Unknown')).toBeInTheDocument();
+    });
+
+    it('marks the current row and dims the ones already played', () => {
+      renderQueuePanel({ queue: three(), currentIndex: 1 });
+      const rows = document.querySelectorAll('.qp-item');
+      expect(rows[0]).toHaveClass('qp-past');
+      expect(rows[1]).toHaveClass('qp-current');
+      expect(rows[1]).toHaveAttribute('aria-current', 'true');
+      expect(rows[2]).not.toHaveClass('qp-past');
+    });
+
+    it('the current row has playing bars instead of a grip or a remove button', () => {
+      renderQueuePanel({ queue: three(), currentIndex: 0, isPlaying: true });
+      const current = document.querySelector('.qp-current');
+      expect(current.querySelector('.qp-now-playing')).not.toBeNull();
+      expect(current.querySelector('.qp-paused')).toBeNull();
+      expect(current.querySelector('.qp-grip')).toBeNull();
+      expect(current.querySelector('.qp-remove')).toBeNull();
+    });
+
+    it('the playing bars freeze when paused', () => {
+      renderQueuePanel({ queue: three(), isPlaying: false });
+      expect(document.querySelector('.qp-current .qp-now-playing')).toHaveClass('qp-paused');
+    });
+
+    it('tapping a row plays that exact queue position', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await user.click(rowOf('Track 3'));
       expect(ctx.playQueueIndex).toHaveBeenCalledWith(2);
     });
 
-    it('marks the current song and gives it no grip or remove button', () => {
-      renderPanel(fourSongs(0));
-      const current = rowFor('Track 1');
-      expect(current).toHaveClass('qp-current');
-      expect(within(current).queryByRole('button', { name: /reorder/i })).not.toBeInTheDocument();
-      expect(within(current).queryByRole('button', { name: /remove/i })).not.toBeInTheDocument();
+    it('a song queued twice plays the copy that was tapped', async () => {
+      const queue = [makeTrack(1), makeTrack(2), makeTrack(2, { qid: 'q-2-again' })];
+      const { ctx, user } = renderQueuePanel({ queue });
+      await user.click(document.querySelectorAll('.qp-item')[2]);
+      expect(ctx.playQueueIndex).toHaveBeenCalledWith(2);
     });
 
-    it('asks before removing a song, then removes it', async () => {
-      const { ctx, user } = renderPanel(fourSongs(0));
-      await user.click(screen.getByRole('button', { name: 'Remove Track 2 from queue' }));
-      expect(ctx.removeQueueItems).not.toHaveBeenCalled();
-      await user.click(screen.getByRole('button', { name: 'Remove' }));
-      expect(ctx.removeQueueItems).toHaveBeenCalledWith(['q2']);
+    it('Enter on a focused row plays it', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      rowOf('Track 2').focus();
+      await user.keyboard('{Enter}');
+      expect(ctx.playQueueIndex).toHaveBeenCalledWith(1);
     });
 
-    it('formats durations as m:ss', () => {
-      renderPanel({ queue: [makeTrack(1, { duration: 65_000 })], currentIndex: 0 });
-      expect(screen.getByText('1:05')).toBeInTheDocument();
-    });
-  });
-
-  describe('played songs fold', () => {
-    it('folds songs already played into one row', () => {
-      renderPanel(fourSongs(2));
-      expect(screen.getByRole('button', { name: /Played · 2 songs/ })).toHaveAttribute('aria-expanded', 'false');
-      expect(screen.queryByText('Track 1', { selector: '.qp-title' })).not.toBeInTheDocument();
-      expect(screen.getByText('Track 3', { selector: '.qp-title' })).toBeInTheDocument();
-    });
-
-    it('opens to show them again, with a Now playing divider', async () => {
-      const { user, ctx } = renderPanel(fourSongs(2));
-      await user.click(screen.getByRole('button', { name: /Played · 2 songs/ }));
-      expect(screen.getByText('Track 1', { selector: '.qp-title' })).toBeInTheDocument();
-      expect(screen.getByText('Now playing', { selector: '.qp-now-divider span' })).toBeInTheDocument();
-      await user.click(rowFor('Track 1'));
-      expect(ctx.playQueueIndex).toHaveBeenCalledWith(0);
-    });
-
-    it('has no fold when nothing has played', () => {
-      renderPanel(fourSongs(0));
-      expect(screen.queryByRole('button', { name: /^Played/ })).not.toBeInTheDocument();
-    });
-  });
-
-  describe('select mode', () => {
-    it('selects songs and removes them together', async () => {
-      const { ctx, user } = renderPanel(fourSongs(0));
-      await user.click(screen.getByRole('button', { name: /select/i }));
-      expect(screen.getByText('Select songs')).toBeInTheDocument();
-
-      await user.click(rowFor('Track 2'));
-      await user.click(rowFor('Track 4'));
-      expect(screen.getByText('2 selected')).toBeInTheDocument();
+    it('clicking the grip does not play the row', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await user.click(screen.getByRole('button', { name: 'Reorder Track 2' }));
       expect(ctx.playQueueIndex).not.toHaveBeenCalled();
+    });
+  });
 
-      await user.click(screen.getByRole('button', { name: /Remove 2/ }));
-      expect(ctx.removeQueueItems).toHaveBeenCalledWith(['q2', 'q4']);
-      expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
+  // =========================================================================
+  describe('removing one song', () => {
+    it('asks first — nothing is removed on the first tap', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await user.click(screen.getByRole('button', { name: 'Remove Track 2 from queue' }));
+
+      expect(screen.getByText('Remove?')).toBeInTheDocument();
+      expect(ctx.removeQueueItems).not.toHaveBeenCalled();
+      expect(ctx.playQueueIndex).not.toHaveBeenCalled();
     });
 
-    it('moves the selection to play next', async () => {
-      const { ctx, user } = renderPanel(fourSongs(0));
-      await user.click(screen.getByRole('button', { name: /select/i }));
-      await user.click(rowFor('Track 4'));
-      await user.click(screen.getByRole('button', { name: /Play next/ }));
-      expect(ctx.moveQueueItemsNext).toHaveBeenCalledWith(['q4']);
+    it('Remove confirms and removes by queue id', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await user.click(screen.getByRole('button', { name: 'Remove Track 2 from queue' }));
+      await user.click(screen.getByRole('button', { name: 'Remove' }));
+
+      expect(ctx.removeQueueItems).toHaveBeenCalledWith(['q-2']);
+      expect(screen.queryByText('Remove?')).not.toBeInTheDocument();
     });
 
-    it('cannot select the song playing now', async () => {
-      const { user } = renderPanel(fourSongs(0));
-      await user.click(screen.getByRole('button', { name: /select/i }));
-      await user.click(rowFor('Track 1'));
-      expect(screen.getByText('Select songs')).toBeInTheDocument();
+    it('Cancel keeps the song', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await user.click(screen.getByRole('button', { name: 'Remove Track 2 from queue' }));
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(ctx.removeQueueItems).not.toHaveBeenCalled();
+      expect(screen.queryByText('Remove?')).not.toBeInTheDocument();
     });
 
-    it('All selects every other song; Done leaves', async () => {
-      const { user } = renderPanel(fourSongs(0));
-      await user.click(screen.getByRole('button', { name: /select/i }));
-      await user.click(screen.getByRole('button', { name: 'All' }));
-      expect(screen.getByText('3 selected')).toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: 'Done' }));
+    it('Escape cancels the confirmation', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await user.click(screen.getByRole('button', { name: 'Remove Track 2 from queue' }));
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByText('Remove?')).not.toBeInTheDocument();
+      expect(ctx.removeQueueItems).not.toHaveBeenCalled();
+    });
+
+    it('tapping the row while it is confirming does not play it', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await user.click(screen.getByRole('button', { name: 'Remove Track 2 from queue' }));
+      await user.click(rowOf('Track 2'));
+      expect(ctx.playQueueIndex).not.toHaveBeenCalled();
+    });
+
+    it('playing another row drops the pending confirmation', async () => {
+      const { user } = renderQueuePanel({ queue: three() });
+      await user.click(screen.getByRole('button', { name: 'Remove Track 2 from queue' }));
+      await user.click(rowOf('Track 3'));
+      expect(screen.queryByText('Remove?')).not.toBeInTheDocument();
+    });
+  });
+
+  // =========================================================================
+  describe('playlist groups', () => {
+    const grouped = () => [makeTrack(1), fromPlaylist(2), fromPlaylist(3), fromPlaylist(4), makeTrack(5)];
+
+    it('labels the group once, with its song count', () => {
+      renderQueuePanel({ queue: grouped() });
+      const labels = document.querySelectorAll('.qp-group-label');
+      expect(labels).toHaveLength(1);
+      expect(within(labels[0]).getByText('Gym Mix')).toBeInTheDocument();
+      expect(labels[0].querySelector('.qp-group-count')).toHaveTextContent('3');
+    });
+
+    it('rails every song in the group and marks its first and last', () => {
+      renderQueuePanel({ queue: grouped() });
+      const railed = document.querySelectorAll('.qp-railed');
+      expect(railed).toHaveLength(3);
+      expect(railed[0]).toHaveClass('qp-rail-first');
+      expect(railed[2]).toHaveClass('qp-rail-last');
+    });
+
+    it('two separate adds of the same playlist are two groups', () => {
+      const queue = [
+        fromPlaylist(1), fromPlaylist(2),
+        makeTrack(3),
+        fromPlaylist(4, { origin: { type: 'playlist', batchId: 'batch-2', playlistId: 'pl-9', name: 'Gym Mix' } }),
+      ];
+      renderQueuePanel({ queue, currentIndex: 2 });
+      expect(document.querySelectorAll('.qp-group-label')).toHaveLength(2);
+    });
+
+    it('the group label opens the playlist', async () => {
+      const { user } = renderQueuePanel({ queue: grouped() });
+      await user.click(screen.getByTitle('Open Gym Mix'));
+      expect(navigate).toHaveBeenCalledWith('/playlist/pl-9');
+    });
+
+    it('"Remove all" asks first, then removes the whole group', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: grouped() });
+      await user.click(screen.getByRole('button', { name: /remove all songs from Gym Mix/i }));
+
+      expect(screen.getByText(/remove 3 songs from/i)).toBeInTheDocument();
+      expect(ctx.removeQueueItems).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole('button', { name: 'Remove' }));
+      expect(ctx.removeQueueItems).toHaveBeenCalledWith(['q-2', 'q-3', 'q-4']);
+    });
+
+    it('never removes the song that is playing', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: grouped(), currentIndex: 2 });
+      await user.click(screen.getByRole('button', { name: /remove all songs from Gym Mix/i }));
+      expect(screen.getByText(/remove 2 songs from/i)).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Remove' }));
+      expect(ctx.removeQueueItems).toHaveBeenCalledWith(['q-2', 'q-4']);
+    });
+
+    it('hides "Remove all" when only one song in the group can go', () => {
+      renderQueuePanel({ queue: [fromPlaylist(1), fromPlaylist(2)], currentIndex: 0 });
+      expect(screen.queryByRole('button', { name: /remove all songs/i })).not.toBeInTheDocument();
+    });
+
+    it('Cancel keeps the group', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: grouped() });
+      await user.click(screen.getByRole('button', { name: /remove all songs from Gym Mix/i }));
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(ctx.removeQueueItems).not.toHaveBeenCalled();
+      expect(screen.getByText('Gym Mix')).toBeInTheDocument();
+    });
+  });
+
+  // =========================================================================
+  describe('options menu and clearing', () => {
+    it('opens with Save as playlist and Clear queue', async () => {
+      const { user } = renderQueuePanel({ queue: three() });
+      expect(screen.queryByRole('button', { name: /clear queue/i })).not.toBeInTheDocument();
+      await openMenu(user);
+      expect(screen.getByRole('button', { name: /save as playlist/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /clear queue/i })).toBeInTheDocument();
+    });
+
+    it('the options button toggles the menu closed again', async () => {
+      const { user } = renderQueuePanel({ queue: three() });
+      await openMenu(user);
+      await openMenu(user);
+      expect(screen.queryByRole('button', { name: /clear queue/i })).not.toBeInTheDocument();
+    });
+
+    it('closes on a click that reaches the window', async () => {
+      const { user } = renderQueuePanel({ queue: three() });
+      await openMenu(user);
+      act(() => { window.dispatchEvent(new MouseEvent('click')); });
+      expect(screen.queryByRole('button', { name: /clear queue/i })).not.toBeInTheDocument();
+    });
+
+    it('Clear queue asks first', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await openMenu(user);
+      await user.click(screen.getByRole('button', { name: /clear queue/i }));
+
+      expect(screen.getByText(/clear the entire queue\? playback will stop/i)).toBeInTheDocument();
+      expect(ctx.clearQueue).not.toHaveBeenCalled();
+    });
+
+    it('Clear confirms and empties the queue', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await openMenu(user);
+      await user.click(screen.getByRole('button', { name: /clear queue/i }));
+      await user.click(screen.getByRole('button', { name: 'Clear' }));
+
+      expect(ctx.clearQueue).toHaveBeenCalledTimes(1);
       expect(screen.getByText('Up next')).toBeInTheDocument();
     });
 
-    it('disables the actions until something is picked', async () => {
-      const { user } = renderPanel(fourSongs(0));
-      await user.click(screen.getByRole('button', { name: /select/i }));
-      expect(screen.getByRole('button', { name: /Play next/ })).toBeDisabled();
-      expect(screen.getByRole('button', { name: /^Remove/ })).toBeDisabled();
+    it('Cancel keeps the queue', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await openMenu(user);
+      await user.click(screen.getByRole('button', { name: /clear queue/i }));
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(ctx.clearQueue).not.toHaveBeenCalled();
+      expect(screen.getByText('Up next')).toBeInTheDocument();
     });
   });
 
-  describe('end of queue note', () => {
-    it.each([
-      ['off', 'End of queue · playback stops here'],
-      ['all', 'End of queue · repeat all starts it over'],
-      ['one', 'Repeat one is on · this song keeps playing'],
-    ])('repeat %s', (repeatMode, text) => {
-      renderPanel({ ...fourSongs(0), repeatMode });
-      expect(screen.getByText(text)).toBeInTheDocument();
+  // =========================================================================
+  describe('save as playlist', () => {
+    const openSave = async (user) => {
+      await openMenu(user);
+      await user.click(screen.getByRole('button', { name: /save as playlist/i }));
+    };
+
+    it('opens the modal with Save disabled until a name is typed', async () => {
+      const { user } = renderQueuePanel({ queue: three() });
+      await openSave(user);
+
+      expect(screen.getByRole('heading', { name: /save queue as playlist/i })).toBeInTheDocument();
+      const save = screen.getByRole('button', { name: 'Save' });
+      expect(save).toBeDisabled();
+
+      await user.type(screen.getByPlaceholderText(/playlist name/i), '   ');
+      expect(save).toBeDisabled();
+
+      await user.type(screen.getByPlaceholderText(/playlist name/i), 'Late Night');
+      expect(save).toBeEnabled();
+    });
+
+    it('saves the trimmed name, closes, and confirms with a toast', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await openSave(user);
+      await user.type(screen.getByPlaceholderText(/playlist name/i), '  Late Night  ');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(ctx.saveQueueAsPlaylist).toHaveBeenCalledWith('Late Night'));
+      await waitFor(() => expect(screen.queryByPlaceholderText(/playlist name/i)).not.toBeInTheDocument());
+      expect(feedback.success).toHaveBeenCalledWith(
+        'Saved your queue as “Late Night”',
+        expect.objectContaining({ action: expect.objectContaining({ label: 'View' }) })
+      );
+    });
+
+    it('the toast\'s View action opens the new playlist', async () => {
+      const { user } = renderQueuePanel({ queue: three() });
+      await openSave(user);
+      await user.type(screen.getByPlaceholderText(/playlist name/i), 'Late Night');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(feedback.success).toHaveBeenCalled());
+
+      act(() => { feedback.success.mock.calls[0][1].action.onClick(); });
+      expect(navigate).toHaveBeenCalledWith('/playlist/pl-new');
+    });
+
+    it('offers no View action when the save returns no id', async () => {
+      const { user } = renderQueuePanel({
+        queue: three(),
+        saveQueueAsPlaylist: vi.fn().mockResolvedValue(undefined),
+      });
+      await openSave(user);
+      await user.type(screen.getByPlaceholderText(/playlist name/i), 'Late Night');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(feedback.success).toHaveBeenCalled());
+      expect(feedback.success.mock.calls[0][1]).toBeUndefined();
+    });
+
+    it('Enter in the name box saves', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await openSave(user);
+      await user.type(screen.getByPlaceholderText(/playlist name/i), 'Late Night{Enter}');
+      await waitFor(() => expect(ctx.saveQueueAsPlaylist).toHaveBeenCalledWith('Late Night'));
+    });
+
+    it('Cancel closes the modal and forgets the name', async () => {
+      const { ctx, user } = renderQueuePanel({ queue: three() });
+      await openSave(user);
+      await user.type(screen.getByPlaceholderText(/playlist name/i), 'Late Night');
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(ctx.saveQueueAsPlaylist).not.toHaveBeenCalled();
+
+      await openSave(user);
+      expect(screen.getByPlaceholderText(/playlist name/i)).toHaveValue('');
+    });
+
+    it('a failed save tells the user and keeps the modal open', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { user } = renderQueuePanel({
+        queue: three(),
+        saveQueueAsPlaylist: vi.fn().mockRejectedValue(new Error('nope')),
+      });
+      await openSave(user);
+      await user.type(screen.getByPlaceholderText(/playlist name/i), 'Late Night');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(feedback.error).toHaveBeenCalledWith(
+        "Couldn't save your queue as a playlist. Try again."
+      ));
+      expect(feedback.success).not.toHaveBeenCalled();
+      expect(screen.getByPlaceholderText(/playlist name/i)).toHaveValue('Late Night');
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+
+    it('shows a busy label while saving', async () => {
+      let finish;
+      const { user } = renderQueuePanel({
+        queue: three(),
+        saveQueueAsPlaylist: vi.fn(() => new Promise((resolve) => { finish = resolve; })),
+      });
+      await openSave(user);
+      await user.type(screen.getByPlaceholderText(/playlist name/i), 'Late Night');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      expect(await screen.findByRole('button', { name: 'Saving...' })).toBeDisabled();
+      await act(async () => { finish('pl-new'); });
     });
   });
 
-  describe('closing', () => {
-    beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
-
-    it('closes from the chevron after the slide-out', async () => {
-      const { user, onClose } = renderPanel(fourSongs(0));
-      await user.click(screen.getAllByRole('button', { name: 'Close queue' })[1]);
-      act(() => { vi.advanceTimersByTime(300); });
-      expect(onClose).toHaveBeenCalled();
-      vi.useRealTimers();
+  // =========================================================================
+  describe('drag-and-drop reorder', () => {
+    it('gives every row except the current one a reorder grip', () => {
+      renderQueuePanel({ queue: three(), currentIndex: 0 });
+      expect(screen.queryByRole('button', { name: 'Reorder Track 1' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Reorder Track 2' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Reorder Track 3' })).toBeInTheDocument();
     });
 
-    it('does not close when the panel itself is clicked', async () => {
-      const { user, onClose, container } = renderPanel(fourSongs(0));
-      await user.click(container.querySelector('.qp-container'));
-      act(() => { vi.advanceTimersByTime(300); });
-      expect(onClose).not.toHaveBeenCalled();
-      vi.useRealTimers();
+    it('a drop moves the song from its old position to the new one', () => {
+      const { ctx } = renderQueuePanel({ queue: three() });
+      act(() => { dnd.onDragStart({ active: { id: 'q-3' } }); });
+      act(() => { dnd.onDragEnd({ active: { id: 'q-3' }, over: { id: 'q-2' } }); });
+      expect(ctx.moveQueueItem).toHaveBeenCalledTimes(1);
+      expect(ctx.moveQueueItem).toHaveBeenCalledWith(2, 1);
+    });
+
+    it('dropping a song back where it started changes nothing', () => {
+      const { ctx } = renderQueuePanel({ queue: three() });
+      act(() => { dnd.onDragEnd({ active: { id: 'q-2' }, over: { id: 'q-2' } }); });
+      expect(ctx.moveQueueItem).not.toHaveBeenCalled();
+    });
+
+    it('dropping outside the list changes nothing', () => {
+      const { ctx } = renderQueuePanel({ queue: three() });
+      act(() => { dnd.onDragEnd({ active: { id: 'q-2' }, over: null }); });
+      expect(ctx.moveQueueItem).not.toHaveBeenCalled();
+    });
+
+    it('marks the list while a drag is in progress and clears it on cancel', () => {
+      renderQueuePanel({ queue: three() });
+      act(() => { dnd.onDragStart({ active: { id: 'q-2' } }); });
+      expect(document.querySelector('.qp-list')).toHaveClass('qp-list-dragging');
+      act(() => { dnd.onDragCancel(); });
+      expect(document.querySelector('.qp-list')).not.toHaveClass('qp-list-dragging');
+    });
+
+    it('starting a drag drops a pending removal confirmation', async () => {
+      const { user } = renderQueuePanel({ queue: three() });
+      await user.click(screen.getByRole('button', { name: 'Remove Track 2 from queue' }));
+      act(() => { dnd.onDragStart({ active: { id: 'q-3' } }); });
+      expect(screen.queryByText('Remove?')).not.toBeInTheDocument();
     });
   });
 });

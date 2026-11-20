@@ -1,4 +1,4 @@
-// src/unisPauseButton.test.jsx
+// src/UnisPauseButton.test.jsx
 //
 // Unit tests for UnisPauseButton — a static SVG pause icon.
 // Verifies the component renders the correct SVG elements: circle background
@@ -7,7 +7,7 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import UnisPauseButton from './unisPauseButton';
+import UnisPauseButton from './UnisPauseButton';
 
 describe('UnisPauseButton', () => {
 it('renders an svg element with correct dimensions and class', () => {

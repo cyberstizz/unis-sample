@@ -21,8 +21,22 @@ vi.mock('../components/axiosInstance', () => ({ apiCall: (...args) => apiCall(..
 
 import CommunityShareAdmin from './CommunityShareAdmin';
 
+// The page always works on LAST month (a month can only be closed once it has
+// ended), so the fixture follows the calendar instead of naming a fixed month.
+// A hardcoded "September 2026" passed in October and failed from November on.
+const lastMonth = () => {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return {
+    key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+    label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+  };
+};
+const LAST_MONTH = lastMonth();
+const closeButtonName = new RegExp(`close ${LAST_MONTH.label}`, 'i');
+
 const PREVIEW = {
-  month: '2026-09',
+  month: LAST_MONTH.key,
   adIncome: 1000,
   otherIncome: 0,
   feeIncome: 40.5,
@@ -94,7 +108,7 @@ describe('CommunityShareAdmin', () => {
     renderPage();
     await preview(user);
 
-    const closeBtn = screen.getByRole('button', { name: /close september 2026/i });
+    const closeBtn = screen.getByRole('button', { name: closeButtonName });
     expect(closeBtn).toBeDisabled();
     await user.click(screen.getByRole('checkbox'));
     await user.click(closeBtn);
@@ -102,7 +116,7 @@ describe('CommunityShareAdmin', () => {
     await waitFor(() => expect(apiCall.mock.calls.some(([c]) => c.url === '/v1/admin/earnings/close')).toBe(true));
     const body = apiCall.mock.calls.find(([c]) => c.url === '/v1/admin/earnings/close')[0].data;
     expect(body).toMatchObject({ month: expect.stringMatching(/^\d{4}-\d{2}$/), adIncome: '1000', otherIncome: '0', feeIncome: '40.5' });
-    expect(await screen.findByText(/september 2026 is closed/i)).toBeInTheDocument();
+    expect(await screen.findByText(new RegExp(`${LAST_MONTH.label} is closed`, 'i'))).toBeInTheDocument();
   });
 
   it('does not offer closing or adjustments to a regular admin', async () => {
