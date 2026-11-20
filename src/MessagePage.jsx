@@ -1,6 +1,16 @@
 // src/MessagePage.jsx
-// Inbox — FOMO-inspired look on the two-lane backend, rebuilt for feel
-// (Oct 2026 premium pass):
+// Inbox — ★ Nov 2026 redesign (signed-off mockup "Unis messages inbox"):
+//   • header: title + "2 unread · 1 request", round Settings + New buttons
+//   • a real search bar at the top (the floating Search pill is gone)
+//   • requests are a card at the top, not a quiet tab — tapping it opens the
+//     Requests view, where each request has Accept / Decline right on the row
+//   • filter chips: All · Unread · Artists · Supporters (from data each row
+//     already carries — otherRole, otherSupportsMe, unreadCount)
+//   • each row shows the person's area (otherJurisdictionName)
+//   • first visit: "Say hi to the artists around you" — this week's top
+//     artists in the user's area (GET /v1/awards/standings), each with a
+//     Message button. Desktop shows the same as cards in the empty right pane.
+// Earlier passes (Oct 2026 premium pass, still true):
 //   • rows, tabs and buttons all answer a press; rows start loading their
 //     thread the moment a finger lands (utils/dmThreads)
 //   • Chats | Requests highlight slides between tabs; skeleton rows while
@@ -23,6 +33,7 @@ import buildUrl from './utils/buildUrl';
 import { useAuth } from './context/AuthContext';
 import { useMessagingSocket } from './useMessagingSocket';
 import { prefetchThread, parseServerTime, previewFor } from './utils/dmThreads';
+import { INTERVAL_IDS } from './utils/idMappings';
 import { haptic } from './utils/dmFeedback';
 import Layout from './layout';
 import MessageThread from './MessageThread';
@@ -185,13 +196,15 @@ export default function MessagesPage() {
   const [draft, setDraft] = useState(null);
   const [closing, setClosing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('chats');           // chats | requests
+  const [tab, setTab] = useState('chats');           // view: chats | requests
   const [showFiltered, setShowFiltered] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [filter, setFilter] = useState('');
-  const [indicator, setIndicator] = useState(null);  // { x, w } of the active tab
+  const [chip, setChip] = useState('all');           // ★ all | unread | artists | supporters
+  const [requestBusy, setRequestBusy] = useState({}); // ★ conversationId → 'accept' | 'decline'
+  // ★ This week's top artists in the user's area (first visit + desktop pane).
+  const [suggestions, setSuggestions] = useState({ status: 'idle', items: [], live: true });
 
   // Live events the open thread consumes.
   const [incoming, setIncoming] = useState(null);
@@ -200,13 +213,11 @@ export default function MessagesPage() {
   const [typingMap, setTypingMap] = useState({});    // conversationId → true
   const [presence, setPresence] = useState({});      // userId → online (overrides the last fetch)
 
-  const searchRef = useRef(null);
   const udmRef = useRef(null);
   const stageRef = useRef(null);
   // Where the phone thread screen is attached — found after the first render,
   // once the page is in the document (see the comment by createPortal below).
   const [stageHost, setStageHost] = useState(null);
-  const tabRefs = useRef({});
   const typingTimers = useRef({});
   const refreshTimer = useRef(null);
   const closeTimer = useRef(null);
@@ -460,10 +471,6 @@ export default function MessagesPage() {
     onConversation: () => scheduleRefresh(),
   });
 
-  useEffect(() => {
-    if (searchOpen) searchRef.current?.focus();
-  }, [searchOpen]);
-
   // ── Derived ───────────────────────────────────────────────────────────────
   const isOnline = useCallback(
     (c) => (c.otherUserId in presence ? presence[c.otherUserId] : !!c.otherOnline),
@@ -477,13 +484,21 @@ export default function MessagesPage() {
   const unreadThreads = chats.filter((c) => c.unreadCount > 0).length;
 
   const laneRows = tab === 'requests' ? (showFiltered ? filtered : requests) : chats;
+  const CHIP_TEST = {
+    all: () => true,
+    unread: (c) => c.unreadCount > 0,
+    artists: (c) => c.otherRole === 'artist',
+    supporters: (c) => !!c.otherSupportsMe,
+  };
   const visible = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return laneRows;
-    return laneRows.filter((c) =>
-      (c.otherUsername || '').toLowerCase().includes(q)
-      || (c.lastMessagePreview || '').toLowerCase().includes(q));
-  }, [laneRows, filter]);
+    const test = tab === 'chats' ? (CHIP_TEST[chip] || CHIP_TEST.all) : CHIP_TEST.all;
+    return laneRows.filter((c) => test(c) && (!q
+      || (c.otherUsername || '').toLowerCase().includes(q)
+      || (c.lastMessagePreview || '').toLowerCase().includes(q)
+      || (c.otherJurisdictionName || '').toLowerCase().includes(q)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [laneRows, filter, chip, tab]);
 
   const realSelected = useMemo(
     () => conversations.find((c) => c.id === selectedId) || null,
@@ -492,13 +507,43 @@ export default function MessagesPage() {
   const selected = realSelected || draft;
   const stageOpen = !!selected && !closing;
 
-  // The sliding Chats | Requests highlight.
-  useLayoutEffect(() => {
-    const b = tabRefs.current[tab];
-    if (!b) return;
-    setIndicator((cur) => (cur && cur.x === b.offsetLeft && cur.w === b.offsetWidth
-      ? cur : { x: b.offsetLeft, w: b.offsetWidth }));
-  }, [tab, requests.length, loading, activeNow.length]);
+  // ★ Artists around you — loaded only when it will be seen: a first visit
+  // (no chats yet) or the empty right-hand pane on desktop.
+  const homeJurisdictionId = user?.jurisdiction?.jurisdictionId || null;
+  const homeName = user?.jurisdiction?.name || 'your area';
+  const wantSuggestions = !loading && (chats.length === 0 || !isPhone);
+  useEffect(() => {
+    if (!wantSuggestions || suggestions.status !== 'idle') return undefined;
+    if (!homeJurisdictionId || !INTERVAL_IDS.weekly) {
+      setSuggestions({ status: 'none', items: [], live: true });
+      return undefined;
+    }
+    let cancelled = false;
+    setSuggestions((cur) => ({ ...cur, status: 'loading' }));
+    apiCall({
+      method: 'get',
+      url: `/v1/awards/standings?type=artist&jurisdictionId=${homeJurisdictionId}&intervalId=${INTERVAL_IDS.weekly}&limit=8`,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        const items = (res.data?.entries || [])
+          .filter((e) => e.targetId && String(e.targetId) !== String(me))
+          .slice(0, 6)
+          .map((e) => ({
+            id: e.targetId,
+            name: e.name || e.artistName || 'Artist',
+            photoUrl: e.artworkUrl || null,
+            rank: e.rank,
+          }));
+        setSuggestions({ status: items.length ? 'ready' : 'none', items, live: res.data?.state === 'LIVE' });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('[Messages] artist suggestions failed:', err?.response?.status, err?.message);
+        setSuggestions({ status: 'none', items: [], live: true });
+      });
+    return () => { cancelled = true; };
+  }, [wantSuggestions, suggestions.status, homeJurisdictionId, me]);
 
   useLayoutEffect(() => {
     const el = udmRef.current;
@@ -532,7 +577,6 @@ export default function MessagesPage() {
     };
   }, [isPhone, stageHost]);
 
-  const closeSearch = () => { setSearchOpen(false); setFilter(''); };
 
   const openPicker = () => { haptic('tap'); setPickerOpen(true); };
 
@@ -541,10 +585,50 @@ export default function MessagesPage() {
     openWithUser({ userId: person.id, username: person.name, photoUrl: person.artworkUrl });
   };
 
-  const switchTab = (next) => {
-    if (next !== tab) haptic('tap');
-    setTab(next);
+  const openRequests = () => {
+    haptic('tap');
+    setTab('requests');
     setShowFiltered(false);
+  };
+
+  const closeRequests = () => {
+    haptic('tap');
+    setTab('chats');
+    setShowFiltered(false);
+  };
+
+  const pickChip = (next) => {
+    if (next !== chip) haptic('tap');
+    setChip(next);
+  };
+
+  // ★ Accept / Decline right on the request row (same endpoints the thread uses).
+  const answerRequest = async (c, action) => {
+    if (requestBusy[c.id]) return;
+    const name = c.otherUsername || 'them';
+    setRequestBusy((b) => ({ ...b, [c.id]: action }));
+    try {
+      await apiCall({ method: 'post', url: `/v1/conversations/${c.id}/${action}` });
+      haptic(action === 'accept' ? 'success' : 'tap');
+      feedback.success(action === 'accept' ? `You can now message ${name}` : `Request from ${name} declined`);
+      await loadConversations();
+    } catch (err) {
+      console.error(`[Messages] ${action} request failed:`, err?.message || err);
+      feedback.error(action === 'accept'
+        ? 'Couldn’t accept this request. Try again.'
+        : 'Couldn’t decline this request. Try again.');
+    } finally {
+      setRequestBusy((b) => {
+        const next = { ...b };
+        delete next[c.id];
+        return next;
+      });
+    }
+  };
+
+  const messageArtist = (a) => {
+    haptic('tap');
+    openWithUser({ userId: a.id, username: a.name, photoUrl: a.photoUrl });
   };
 
   const onThreadActivity = useCallback((saved) => {
@@ -556,10 +640,12 @@ export default function MessagesPage() {
 
   const subline = loading
     ? ' '
-    : [
-      unreadThreads > 0 ? `${unreadThreads} unread` : 'All caught up',
-      requests.length > 0 ? `${requests.length} request${requests.length === 1 ? '' : 's'}` : null,
-    ].filter(Boolean).join(' · ');
+    : conversations.length === 0
+      ? 'No conversations yet'
+      : [
+        unreadThreads > 0 ? `${unreadThreads} unread` : 'All caught up',
+        requests.length > 0 ? `${requests.length} request${requests.length === 1 ? '' : 's'}` : null,
+      ].filter(Boolean).join(' · ');
 
   const emptyActions = (
     <div className="udm-empty__actions">
@@ -599,28 +685,82 @@ export default function MessagesPage() {
         <aside className="udm-list" aria-label="Conversations">
           <div className="udm-glow" aria-hidden="true" />
 
-          <header className="udm-list__head">
-            <div className="udm-list__toprow">
-              <button type="button" className="udm-round" onClick={() => navigate(-1)} aria-label="Back">
-                <ArrowBackIcon size={22} />
+          {tab === 'requests' ? (
+            <header className="udm-list__head udm-list__head--sub">
+              <button type="button" className="udm-round" onClick={closeRequests} aria-label="Back to messages">
+                <ArrowBackIcon size={20} />
               </button>
-              <button type="button" className="udm-round" onClick={() => { haptic('tap'); setSettingsOpen(true); }} aria-label="Message settings">
-                <SlidersIcon size={22} />
-              </button>
-            </div>
-            <div className="udm-list__titlerow">
-              <div className="udm-list__titles">
-                <h1 className="udm-list__title">Messages</h1>
-                <span className="udm-list__sub">{subline}</span>
+              <h1 className="udm-list__title udm-list__title--sub">
+                {showFiltered ? 'Filtered requests' : 'Requests'}
+              </h1>
+            </header>
+          ) : (
+            <header className="udm-list__head">
+              <div className="udm-list__titlerow">
+                <div className="udm-list__titles">
+                  <h1 className="udm-list__title">Messages</h1>
+                  <span className="udm-list__sub">
+                    {unreadThreads > 0 && !loading
+                      ? <><b>{unreadThreads} unread</b>{subline.replace(/^\d+ unread/, '')}</>
+                      : subline}
+                  </span>
+                </div>
+                <div className="udm-list__actions">
+                  <button type="button" className="udm-round" onClick={() => { haptic('tap'); setSettingsOpen(true); }} aria-label="Message settings">
+                    <SlidersIcon size={20} />
+                  </button>
+                  <button type="button" className="udm-round udm-round--solid" onClick={openPicker} aria-label="New message">
+                    <ComposeIcon size={19} tone="on" />
+                  </button>
+                </div>
               </div>
-              <button type="button" className="udm-new" onClick={openPicker}>
-                <ComposeIcon size={19} tone="on" />
-                New
-              </button>
-            </div>
-          </header>
+
+              {conversations.length > 0 || loading ? (
+                <label className="udm-search" htmlFor="udm-filter">
+                  <SearchIcon size={18} />
+                  <span className="udm-sr">Search messages</span>
+                  <input
+                    id="udm-filter"
+                    type="search"
+                    value={filter}
+                    placeholder="Search messages"
+                    onChange={(e) => setFilter(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Escape') setFilter(''); }}
+                    autoComplete="off"
+                  />
+                  {filter && (
+                    <button type="button" className="udm-search__clear" onClick={() => setFilter('')} aria-label="Clear search">
+                      <CloseIcon size={15} tone="on" />
+                    </button>
+                  )}
+                </label>
+              ) : (
+                // No chats yet: search means finding someone new.
+                <button type="button" className="udm-search udm-search--button" onClick={openPicker}>
+                  <SearchIcon size={18} />
+                  Search anyone on Unis
+                </button>
+              )}
+            </header>
+          )}
 
           <div className="udm-list__scroll">
+            {/* Requests can't hide: a card at the top, not a quiet tab */}
+            {tab === 'chats' && !loading && requests.length > 0 && (
+              <button type="button" className="udm-reqcard" onClick={openRequests}>
+                <Avatar name={requests[0].otherUsername} photoUrl={requests[0].otherPhotoUrl} size={40} />
+                <span className="udm-reqcard__text">
+                  <span className="udm-reqcard__title">Message requests</span>
+                  <span className="udm-reqcard__sub">
+                    {requests[0].otherUsername || 'Someone'}
+                    {requests.length > 1 ? ` and ${requests.length - 1} other${requests.length > 2 ? 's' : ''} want` : ' wants'} to message you
+                  </span>
+                </span>
+                <span className="udm-badge">{requests.length}</span>
+                <ArrowBackIcon size={15} tone="on" className="udm-folder__chev" />
+              </button>
+            )}
+
             {tab === 'chats' && activeNow.length > 0 && (
               <section className="udm-active" aria-label="Active now">
                 <h2 className="udm-active__label">
@@ -637,7 +777,7 @@ export default function MessagesPage() {
                       onClick={() => openExisting(c)}
                       aria-label={`${c.otherUsername || 'Unknown'}, active now`}
                     >
-                      <Avatar name={c.otherUsername} photoUrl={c.otherPhotoUrl} size={66} ring={c.otherSupportsMe} online />
+                      <Avatar name={c.otherUsername} photoUrl={c.otherPhotoUrl} size={60} ring={c.otherSupportsMe} online />
                       <span className="udm-active__name">{(c.otherUsername || 'Unknown').split(' ')[0]}</span>
                     </button>
                   ))}
@@ -645,91 +785,121 @@ export default function MessagesPage() {
               </section>
             )}
 
-            <div className="udm-tabs" role="tablist" aria-label="Inbox lanes">
-              <span
-                className={`udm-tabs__ind${indicator ? ' is-ready' : ''}`}
-                style={indicator ? { transform: `translateX(${indicator.x}px)`, width: indicator.w } : undefined}
-                aria-hidden="true"
-              />
-              <button
-                type="button"
-                role="tab"
-                ref={(el) => { tabRefs.current.chats = el; }}
-                aria-selected={tab === 'chats'}
-                className={`udm-tab${tab === 'chats' ? ' is-on' : ''}`}
-                onClick={() => switchTab('chats')}
-              >
-                Chats
-              </button>
-              <button
-                type="button"
-                role="tab"
-                ref={(el) => { tabRefs.current.requests = el; }}
-                aria-selected={tab === 'requests'}
-                className={`udm-tab${tab === 'requests' ? ' is-on' : ''}`}
-                onClick={() => switchTab('requests')}
-              >
-                Requests
-                {requests.length > 0 && <span className="udm-tab__count">{requests.length}</span>}
-              </button>
-            </div>
+            {tab === 'chats' && !loading && chats.length > 0 && (
+              <div className="udm-chips" role="tablist" aria-label="Filter conversations">
+                {[
+                  ['all', 'All', null],
+                  ['unread', 'Unread', unreadThreads || null],
+                  ['artists', 'Artists', null],
+                  ['supporters', 'Supporters', null],
+                ].map(([id, label, count]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={chip === id}
+                    className={`udm-chip${chip === id ? ' is-on' : ''}`}
+                    onClick={() => pickChip(id)}
+                  >
+                    {label}
+                    {count != null && chip !== id && <span className="udm-chip__count">{count}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
 
-            {tab === 'requests' && showFiltered && (
-              <button type="button" className="udm-folder udm-folder--back" onClick={() => setShowFiltered(false)}>
-                <ArrowBackIcon size={18} tone="on" />
-                Filtered requests
-              </button>
+            {tab === 'requests' && !showFiltered && !loading && requests.length > 0 && (
+              <p className="udm-list__note">
+                People you don&rsquo;t follow yet. They won&rsquo;t know you&rsquo;ve seen it until you accept.
+              </p>
             )}
 
             {loading && <InboxSkeleton />}
 
-            {!loading && laneRows.length === 0 && !(tab === 'chats' && draft) && (
-              tab === 'chats' ? (
-                <div className="udm-empty">
-                  <span className="udm-empty__icon"><MessagesIcon size={34} /></span>
-                  <h2 className="udm-empty__title">No chats <em>yet</em></h2>
-                  <p className="udm-empty__sub">Message an artist near you, or anyone on Unis.</p>
-                  {emptyActions}
-                </div>
-              ) : (
-                <div className="udm-empty udm-empty--quiet">
-                  <span className="udm-empty__icon">
-                    {showFiltered ? <FilterIcon size={30} /> : <MessagesIcon size={30} />}
-                  </span>
-                  <h2 className="udm-empty__title">
-                    {showFiltered ? <>Nothing <em>filtered</em></> : <>No <em>requests</em></>}
-                  </h2>
-                  <p className="udm-empty__sub">
-                    {showFiltered
-                      ? 'Bulk and low-quality requests would show up here.'
-                      : 'Messages from people you don’t know yet wait here. They never notify you.'}
-                  </p>
-                </div>
-              )
+            {/* First visit: the artists around you */}
+            {!loading && tab === 'chats' && chats.length === 0 && !draft && (
+              <div className="udm-first">
+                <h2 className="udm-first__title">Say hi to the artists <em>around you</em></h2>
+                <p className="udm-first__sub">
+                  Tell an artist you like their music. It&rsquo;s how a lot of Unis friendships start.
+                </p>
+                {suggestions.status === 'loading' && <InboxSkeleton />}
+                {suggestions.status === 'ready' && (
+                  <section className="udm-suggest" aria-label={`Top artists in ${homeName}`}>
+                    <p className="udm-suggest__label">
+                      Top in {homeName} {suggestions.live ? 'this week' : 'last week'}
+                    </p>
+                    {suggestions.items.slice(0, 5).map((a, i) => (
+                      <div key={a.id} className="udm-suggest__row">
+                        <span className="udm-suggest__rank">{a.rank || i + 1}</span>
+                        <Avatar name={a.name} photoUrl={a.photoUrl} size={44} />
+                        <span className="udm-suggest__name">
+                          <span className="udm-conv__name-text">{a.name}</span>
+                          <VerifiedCheck size={15} />
+                        </span>
+                        <button type="button" className="udm-suggest__msg" onClick={() => messageArtist(a)} aria-label={`Message ${a.name}`}>
+                          Message
+                        </button>
+                      </div>
+                    ))}
+                  </section>
+                )}
+                {suggestions.status === 'ready' ? (
+                  <button type="button" className="udm-ghost udm-ghost--wide" onClick={() => navigate('/findpage')}>
+                    <FindIcon size={17} />
+                    See more artists near you
+                  </button>
+                ) : suggestions.status !== 'loading' && emptyActions}
+              </div>
             )}
 
-            {!loading && filter && laneRows.length > 0 && visible.length === 0 && (
-              <div className="udm-list__hint">No conversations match &ldquo;{filter.trim()}&rdquo;.</div>
+            {!loading && tab === 'requests' && laneRows.length === 0 && (
+              <div className="udm-empty udm-empty--quiet">
+                <span className="udm-empty__icon">
+                  {showFiltered ? <FilterIcon size={30} /> : <MessagesIcon size={30} />}
+                </span>
+                <h2 className="udm-empty__title">
+                  {showFiltered ? <>Nothing <em>filtered</em></> : <>No <em>requests</em></>}
+                </h2>
+                <p className="udm-empty__sub">
+                  {showFiltered
+                    ? 'Bulk and low-quality requests would show up here.'
+                    : 'Messages from people you don’t know yet wait here. They never notify you.'}
+                </p>
+              </div>
+            )}
+
+            {!loading && laneRows.length > 0 && visible.length === 0 && (
+              <div className="udm-list__hint">
+                {filter.trim()
+                  ? <>No conversations match &ldquo;{filter.trim()}&rdquo;.</>
+                  : 'Nothing here right now.'}
+              </div>
             )}
 
             {!loading && visible.map((c) => {
               const unread = c.unreadCount > 0;
               const typing = !!typingMap[c.id];
               const online = isOnline(c);
-              return (
+              const isRequest = c.lane === 'requests';
+              const busy = requestBusy[c.id];
+              const row = (
                 <button
                   type="button"
                   key={c.id}
                   className={`udm-conv${c.id === selectedId ? ' active' : ''}${unread ? ' unread' : ''}`}
                   onPointerDown={() => prefetchThread(me, c.id)}
                   onClick={() => openExisting(c)}
-                  aria-label={`${c.otherUsername || 'Unknown'}${online ? ', active now' : ''}${unread ? `, ${c.unreadCount} unread` : ''}`}
+                  aria-label={`${c.otherUsername || 'Unknown'}${c.otherJurisdictionName ? `, ${c.otherJurisdictionName}` : ''}${online ? ', active now' : ''}${unread ? `, ${c.unreadCount} unread` : ''}`}
                 >
-                  <Avatar name={c.otherUsername} photoUrl={c.otherPhotoUrl} ring={c.otherSupportsMe} online={online} />
+                  <Avatar name={c.otherUsername} photoUrl={c.otherPhotoUrl} size={52} ring={c.otherSupportsMe} online={online} />
                   <span className="udm-conv__body">
                     <span className="udm-conv__name">
                       <span className="udm-conv__name-text">{c.otherUsername || 'Unknown'}</span>
-                      {c.otherRole === 'artist' && <VerifiedCheck />}
+                      {c.otherRole === 'artist' && <VerifiedCheck size={15} />}
+                      {c.otherJurisdictionName && (
+                        <span className="udm-conv__place">{c.otherJurisdictionName}</span>
+                      )}
                     </span>
                     <Preview conv={c} typing={typing} />
                   </span>
@@ -739,7 +909,7 @@ export default function MessagesPage() {
                       <span className="udm-badge" key={c.unreadCount}>{c.unreadCount}</span>
                     ) : c.lastMessageSeen ? (
                       <span className="udm-conv__seen" title="Seen">
-                        <Avatar name={c.otherUsername} photoUrl={c.otherPhotoUrl} size={18} />
+                        <Avatar name={c.otherUsername} photoUrl={c.otherPhotoUrl} size={16} />
                         <span className="udm-sr">Seen</span>
                       </span>
                     ) : (
@@ -748,83 +918,105 @@ export default function MessagesPage() {
                   </span>
                 </button>
               );
+              if (!isRequest) return row;
+              return (
+                <div key={c.id} className="udm-reqrow">
+                  {row}
+                  <div className="udm-reqrow__actions">
+                    <button
+                      type="button"
+                      className="udm-reqrow__btn udm-reqrow__btn--accept"
+                      onClick={() => answerRequest(c, 'accept')}
+                      disabled={!!busy}
+                    >
+                      {busy === 'accept' ? 'Accepting…' : 'Accept'}
+                    </button>
+                    <button
+                      type="button"
+                      className="udm-reqrow__btn"
+                      onClick={() => answerRequest(c, 'decline')}
+                      disabled={!!busy}
+                    >
+                      {busy === 'decline' ? 'Declining…' : 'Decline'}
+                    </button>
+                  </div>
+                </div>
+              );
             })}
 
             {tab === 'requests' && !showFiltered && !loading && (
-              <>
-                {requests.length > 0 && (
-                  <p className="udm-list__note">
-                    They won&rsquo;t know you&rsquo;ve seen a request until you accept it.
-                  </p>
-                )}
-                <button type="button" className="udm-folder" onClick={() => { haptic('tap'); setShowFiltered(true); }}>
-                  <FilterIcon size={19} />
-                  Filtered requests
-                  <span className="udm-folder__count">{filtered.length}</span>
-                  <ArrowBackIcon size={15} tone="on" className="udm-folder__chev" />
-                </button>
-              </>
+              <button type="button" className="udm-folder" onClick={() => { haptic('tap'); setShowFiltered(true); }}>
+                <FilterIcon size={19} />
+                Filtered requests
+                <span className="udm-folder__count">{filtered.length}</span>
+                <ArrowBackIcon size={15} tone="on" className="udm-folder__chev" />
+              </button>
+            )}
+            {tab === 'requests' && showFiltered && (
+              <button type="button" className="udm-folder udm-folder--back" onClick={() => setShowFiltered(false)}>
+                <ArrowBackIcon size={18} tone="on" />
+                Back to requests
+              </button>
             )}
           </div>
 
           <div className="udm-list__fade" aria-hidden="true" />
-
-          {searchOpen ? (
-            <div className="udm-float udm-float--input">
-              <SearchIcon size={19} />
-              <label className="udm-sr" htmlFor="udm-filter">Search conversations</label>
-              <input
-                id="udm-filter"
-                ref={searchRef}
-                type="search"
-                value={filter}
-                placeholder="Search conversations"
-                onChange={(e) => setFilter(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Escape') closeSearch(); }}
-                autoComplete="off"
-              />
-              <button type="button" className="udm-float__close" onClick={closeSearch} aria-label="Close search">
-                <CloseIcon size={17} tone="on" />
-              </button>
-            </div>
-          ) : (
-            conversations.length > 0 && (
-              <button type="button" className="udm-float" onClick={() => { haptic('tap'); setSearchOpen(true); }}>
-                <SearchIcon size={19} />
-                Search
-              </button>
-            )
-          )}
         </aside>
 
         {!isPhone && (
           <section className="udm-main">
             {thread || (
               <div className="udm-main__placeholder">
-                <span className="udm-empty__icon udm-empty__icon--lg"><MessagesIcon size={44} /></span>
-                <h2 className="udm-empty__title">Say <em>something</em></h2>
-                <p className="udm-empty__sub">
-                  {activeNow.length > 0
-                    ? `${activeNow.length} ${activeNow.length === 1 ? 'person is' : 'people are'} active now.`
-                    : 'Pick a chat, or start a new one.'}
-                </p>
-                {activeNow.length > 0 && (
-                  <div className="udm-placeholder__faces">
-                    {activeNow.slice(0, 5).map((c) => (
-                      <button
-                        type="button"
-                        key={c.id}
-                        className="udm-placeholder__face"
-                        onPointerDown={() => prefetchThread(me, c.id)}
-                        onClick={() => openExisting(c)}
-                        aria-label={`Message ${c.otherUsername || 'Unknown'}`}
-                      >
-                        <Avatar name={c.otherUsername} photoUrl={c.otherPhotoUrl} size={54} ring={c.otherSupportsMe} online />
-                      </button>
-                    ))}
-                  </div>
+                <span className="udm-empty__icon udm-empty__icon--lg"><MessagesIcon size={40} /></span>
+                <h2 className="udm-main__title">
+                  {chats.length > 0 ? 'Pick a chat, or say hi to the artists ' : 'Say hi to the artists '}
+                  <em>around you</em>
+                </h2>
+                {suggestions.status === 'ready' ? (
+                  <>
+                    <p className="udm-empty__sub">Top in {homeName} {suggestions.live ? 'this week' : 'last week'}</p>
+                    <div className="udm-cards">
+                      {suggestions.items.map((a, i) => (
+                        <div key={a.id} className="udm-card">
+                          <Avatar name={a.name} photoUrl={a.photoUrl} size={72} />
+                          <span className="udm-card__name">
+                            <span className="udm-conv__name-text">{a.name}</span>
+                            <VerifiedCheck size={15} />
+                          </span>
+                          <span className="udm-card__meta">#{a.rank || i + 1} this week</span>
+                          <button type="button" className="udm-suggest__msg" onClick={() => messageArtist(a)} aria-label={`Message ${a.name}`}>
+                            Message
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="udm-empty__sub">
+                      {activeNow.length > 0
+                        ? `${activeNow.length} ${activeNow.length === 1 ? 'person is' : 'people are'} active now.`
+                        : 'Pick a chat, or start a new one.'}
+                    </p>
+                    {activeNow.length > 0 && (
+                      <div className="udm-placeholder__faces">
+                        {activeNow.slice(0, 5).map((c) => (
+                          <button
+                            type="button"
+                            key={c.id}
+                            className="udm-placeholder__face"
+                            onPointerDown={() => prefetchThread(me, c.id)}
+                            onClick={() => openExisting(c)}
+                            aria-label={`Message ${c.otherUsername || 'Unknown'}`}
+                          >
+                            <Avatar name={c.otherUsername} photoUrl={c.otherPhotoUrl} size={54} ring={c.otherSupportsMe} online />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {emptyActions}
+                  </>
                 )}
-                {emptyActions}
               </div>
             )}
           </section>
