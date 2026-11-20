@@ -452,40 +452,10 @@ const STANDING_PERIODS = [
   { id: 'today', label: 'Day' },
 ];
 
-const ArtistStanding = ({ artistId, artistName, standing, className = '' }) => {
-  const [data, setData] = useState(null);
+const ArtistStanding = ({ artistName, standing, territory, className = '' }) => {
+  // The page reads /territory-rank once (the scroll bar uses it too).
+  const { state, data } = territory || { state: 'loading', data: null };
   const [period, setPeriod] = useState('week');
-  const [state, setState] = useState('loading'); // loading | ready | hidden
-
-  useEffect(() => {
-    if (!artistId) return undefined;
-    let cancelled = false;
-    setState('loading');
-    setPeriod('week');
-
-    apiCall({ method: 'get', url: `/v1/users/${artistId}/territory-rank` })
-      .then((res) => {
-        if (cancelled) return;
-        const payload = res.data || null;
-        const hasRows = payload?.periods
-          && STANDING_PERIODS.some(({ id }) => Array.isArray(payload.periods[id]) && payload.periods[id].length);
-        if (!payload || (!hasRows && payload.status !== 'calculating')) {
-          setState('hidden');
-          return;
-        }
-        setData(payload);
-        setState('ready');
-        console.log('[Standing] loaded:', { artistId, status: payload.status });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        // Never break the page over a ranking read — fall back or hide.
-        console.error('[Standing] load failed:', { artistId, err });
-        setState('hidden');
-      });
-
-    return () => { cancelled = true; };
-  }, [artistId]);
 
   if (state === 'loading') return null;
 
@@ -613,6 +583,12 @@ const PlayFill = ({ size = 22, color = '#fff' }) => (
     <path d="M8 5.2v13.6a1 1 0 0 0 1.5.86l11-6.8a1 1 0 0 0 0-1.72l-11-6.8A1 1 0 0 0 8 5.2z" />
   </svg>
 );
+const PauseFill = ({ size = 18, color = '#fff' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden="true" focusable="false">
+    <rect x="6.5" y="5" width="3.8" height="14" rx="1.2" />
+    <rect x="13.7" y="5" width="3.8" height="14" rx="1.2" />
+  </svg>
+);
 const ShuffleGlyph = ({ size = 24 }) => (
   <G size={size}>
     <path d="M3 7h3.5c4.5 0 6.5 10 11 10H20" />
@@ -666,7 +642,7 @@ const POPULAR_COUNT = 5;
 
 const ArtistPage = ({ isOwnProfile = false }) => {
   const { artistId } = useParams();
-  const { requestPlayCollection } = useContext(PlayerContext);
+  const { requestPlayCollection, currentMedia, isPlaying, togglePlayPause } = useContext(PlayerContext);
   const { user, isGuest, refreshUser } = useAuth();
   const navigate = useNavigate();
   const feedback = useFeedback();
@@ -715,23 +691,97 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     setShowAllSongs(false);
   }, [artistId]);
 
-  // Sticky header scroll detection
+  // ★ The bar that follows you (Nov 2026). As the big name slides under the
+  // app header it fades out and the bar's name rises in with the scroll; the
+  // round Play only docks in the bar once the page's own Play has gone under
+  // it, so there are never two on screen (Spotify's overlap complaint).
+  //
+  // The page scrolls the window on some layouts and .layout-content on
+  // others, so both are watched. (The old bar listened to only one of them,
+  // which is why it stopped showing after the v4 redesign.)
   const heroRef = useRef(null);
   const tabsRef = useRef(null);
-  const [showStickyHeader, setShowStickyHeader] = useState(false);
+  const nameRef = useRef(null);
+  const playRef = useRef(null);
+  const barRef = useRef(null);
+  const [barShown, setBarShown] = useState(false);
+  const [barDocked, setBarDocked] = useState(false);
 
-  const handleScroll = useCallback(() => {
-    if (!heroRef.current) return;
-    const heroBottom = heroRef.current.getBoundingClientRect().bottom;
-    // App header is a fixed 75px — reveal the bar once the hero passes under it.
-    setShowStickyHeader(heroBottom < 90);
+  const APP_HEADER = 75; // keep in sync with $ap2-header-h
+  const HAND_OFF = 70;   // px of scroll the name hand-off takes
+
+  const measureBar = useCallback(() => {
+    const name = nameRef.current;
+    const bar = barRef.current;
+    if (!name || !bar) return;
+    const barH = bar.offsetHeight || 56;
+    // 0 while the name sits clear of the header, 1 once it has gone under.
+    const top = name.getBoundingClientRect().top;
+    const hand = Math.max(0, Math.min(1, (APP_HEADER + 40 - top) / HAND_OFF));
+    bar.style.setProperty('--ap3-hand', hand.toFixed(3));
+    name.style.opacity = String(1 - hand);
+    setBarShown(hand > 0.5);
+
+    const play = playRef.current;
+    const playBottom = play ? play.getBoundingClientRect().bottom : -1;
+    setBarDocked(playBottom < APP_HEADER + barH);
   }, []);
 
   useEffect(() => {
-    const scrollTarget = heroRef.current?.closest('.layout-content') || window;
-    scrollTarget.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollTarget.removeEventListener('scroll', handleScroll);
-  }, [handleScroll, loading]);
+    if (loading) return undefined;
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => { frame = 0; measureBar(); });
+    };
+    const content = heroRef.current?.closest('.layout-content');
+    const targets = [window, content].filter(Boolean);
+    targets.forEach((t) => t.addEventListener('scroll', onScroll, { passive: true }));
+    window.addEventListener('resize', onScroll);
+    measureBar();
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      targets.forEach((t) => t.removeEventListener('scroll', onScroll));
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [loading, measureBar]);
+
+  const scrollToTop = () => {
+    const content = heroRef.current?.closest('.layout-content');
+    if (content && content.scrollTop > 0) content.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ★ Territory rank, read once: the Standing card and the bar's rank line.
+  const [territory, setTerritory] = useState({ state: 'loading', data: null });
+
+  useEffect(() => {
+    if (!artistId) return undefined;
+    let cancelled = false;
+    setTerritory({ state: 'loading', data: null });
+
+    apiCall({ method: 'get', url: `/v1/users/${artistId}/territory-rank` })
+      .then((res) => {
+        if (cancelled) return;
+        const payload = res.data || null;
+        const hasRows = payload?.periods
+          && STANDING_PERIODS.some(({ id }) => Array.isArray(payload.periods[id]) && payload.periods[id].length);
+        if (!payload || (!hasRows && payload.status !== 'calculating')) {
+          setTerritory({ state: 'hidden', data: null });
+          return;
+        }
+        setTerritory({ state: 'ready', data: payload });
+        console.log('[Standing] loaded:', { artistId, status: payload.status });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // Never break the page over a ranking read — fall back or hide.
+        console.error('[Standing] load failed:', { artistId, err });
+        setTerritory({ state: 'hidden', data: null });
+      });
+
+    return () => { cancelled = true; };
+  }, [artistId]);
 
   useEffect(() => {
     if (!artistId) return;
@@ -1102,6 +1152,17 @@ const ArtistPage = ({ isOwnProfile = false }) => {
   const standingArea = standing?.jurisdictionName || artist.jurisdiction?.name || 'your area';
   const hasRank = Boolean(standing && standing.rank != null);
 
+  // Bar line: what's playing (if it's theirs), else this week's home rank.
+  const playingThem = Boolean(currentMedia)
+    && (currentMedia.artistId === artistId || currentMedia.artistData?.userId === artistId);
+  const weekHome = territory.state === 'ready' ? territory.data?.periods?.week?.[0] : null;
+  const barRank = weekHome && weekHome.overallRank != null
+    ? `#${weekHome.overallRank} in ${weekHome.jurisdictionName} this week`
+    : hasRank
+      ? `#${standing.rank} in ${standing.jurisdictionName || standingArea} this week`
+      : (artist.jurisdiction?.name || '');
+  const onDockPlay = () => (playingThem ? togglePlayPause() : playCatalog());
+
   const supportSub = isSupporting
     ? `Your listening backs ${artist.username} every month.`
     : pendingSwitch
@@ -1128,27 +1189,61 @@ const ArtistPage = ({ isOwnProfile = false }) => {
     <Layout backgroundImage={artistPhoto}>
       <GlowDefs />
 
-      {/* ===== STICKY HEADER — slides in under the app header ===== */}
-      <div className={`ap2-sticky ${showStickyHeader ? 'ap2-sticky--visible' : ''}`}>
-        <div className="ap2-sticky__inner">
-          <div className="ap2-sticky__left">
-            <img src={artistPhoto} alt="" className="ap2-sticky__avatar" />
-            <span className="ap2-sticky__name">{artist.username}</span>
-          </div>
-          <div className="ap2-sticky__actions">
-            {showActionButtons && (
-              <button
-                onClick={handleFollow}
-                className={`ap2-sticky__btn ${isFollowing ? 'ap2-sticky__btn--following' : ''}`}
-              >
-                {isFollowing ? 'Following' : 'Follow'}
-              </button>
-            )}
-            <button onClick={() => playCatalog()} className="ap2-sticky__btn ap2-sticky__btn--play" disabled={!catalog.length}>
-              <PlayFill size={12} />
-              Play
+      {/* ===== THE BAR THAT FOLLOWS YOU — their photo, blurred and tinted, under the app header ===== */}
+      <div
+        ref={barRef}
+        className={`ap3-bar${barShown ? ' is-shown' : ''}${barDocked ? ' is-docked' : ''}`}
+        aria-hidden={!barShown}
+        inert={!barShown}
+      >
+        <img src={artistPhoto} alt="" className="ap3-bar__photo" />
+        <div className="ap3-bar__tint" />
+        <div className="ap3-bar__inner">
+          <button type="button" className="ap3-bar__who" onClick={scrollToTop} aria-label={`Back to the top of ${artist.username}`}>
+            <img src={artistPhoto} alt="" className="ap3-bar__avatar" />
+            <span className="ap3-bar__text">
+              <span className="ap3-bar__name">{artist.username}</span>
+              {playingThem && isPlaying ? (
+                <span className="ap3-bar__line">
+                  <span className="ap3-bar__eq" aria-hidden="true"><i /><i /><i /></span>
+                  Playing · {currentMedia.title}
+                </span>
+              ) : barRank ? (
+                <span className="ap3-bar__line">{barRank}</span>
+              ) : null}
+            </span>
+          </button>
+
+          {showActionButtons && (
+            <button type="button" className="ap3-bar__vote" onClick={handleVote}>
+              <VoteIcon size={16} />
+              Vote
             </button>
-          </div>
+          )}
+          {showActionButtons && !isFollowing && (
+            <button type="button" className="ap3-bar__follow ap3-hide-phone" onClick={handleFollow}>
+              Follow
+            </button>
+          )}
+          <button
+            type="button"
+            className="ap3-bar__shuffle ap3-hide-phone"
+            onClick={() => playCatalog({ shuffle: true })}
+            disabled={!catalog.length}
+            aria-label={`Shuffle all of ${artist.username}'s songs`}
+          >
+            <ShuffleGlyph size={20} />
+          </button>
+          <button
+            type="button"
+            className="ap3-bar__play"
+            onClick={onDockPlay}
+            disabled={!catalog.length && !playingThem}
+            aria-label={playingThem && isPlaying ? 'Pause' : `Play all of ${artist.username}'s songs`}
+            tabIndex={barDocked ? 0 : -1}
+          >
+            {playingThem && isPlaying ? <PauseFill size={16} /> : <PlayFill size={17} />}
+          </button>
         </div>
       </div>
 
@@ -1191,7 +1286,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                 </span>
               )}
             </div>
-            <h1 className="ap3-hero__name">{artist.username}</h1>
+            <h1 className="ap3-hero__name" ref={nameRef}>{artist.username}</h1>
             <div className="ap3-hide-phone">{stats}</div>
           </div>
         </section>
@@ -1264,6 +1359,7 @@ const ArtistPage = ({ isOwnProfile = false }) => {
               <ShuffleGlyph />
             </button>
             <button
+              ref={playRef}
               type="button"
               className="ap3-play ap3-act--play"
               onClick={() => playCatalog()}
@@ -1398,9 +1494,9 @@ const ArtistPage = ({ isOwnProfile = false }) => {
               )}
 
               <ArtistStanding
-                artistId={artistId}
                 artistName={artist.username}
                 standing={standing}
+                territory={territory}
                 className="ap3-o-standing"
               />
 

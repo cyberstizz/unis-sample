@@ -8,9 +8,7 @@
 //     but the header is a fixed 75px — on tall viewports that leaves a dead
 //     band above the hero. Scoped :has() override sets exact clearance and
 //     removes the side gutters so the portrait runs edge-to-edge.
-//   • Sticky artist bar now actually shows: it used to sit at top:0 with
-//     z-index 200 — BEHIND the fixed app header (z-index 1000). It now pins
-//     at top:75px (under the header) and respects the sidebar.
+//   • (The v3 sticky bar is replaced by .ap3-bar, below, Nov 2026.)
 //   • Support button is theme-colored and gains a "Supporting" active state.
 //   • New: Instagram-style photo gallery grid + full-screen lightbox.
 //   • New: SupporterSheet confirm dialog (switch-supported-artist mechanism).
@@ -82,120 +80,6 @@ $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
   font-family: var(--unis-font-sans, 'Inter', sans-serif);
   font-size: 14px;
   margin: 0;
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// STICKY HEADER — the Spotify-style name-follows-you bar
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.ap2-sticky {
-  position: fixed;
-  top: $ap2-header-h;               // sits just under the fixed app header
-  left: var(--sidebar-width, 0px);  // clears the desktop sidebar
-  right: 0;
-  z-index: 900;                      // below the app header (1000), above page
-  transform: translateY(-110%);      // tucks up behind the opaque header
-  opacity: 0;
-  pointer-events: none;
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.3s ease;
-
-  &--visible {
-    transform: translateY(0);
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba($ap2-base, 0.85);
-    backdrop-filter: blur(28px) saturate(1.5);
-    -webkit-backdrop-filter: blur(28px) saturate(1.5);
-    border-bottom: 1px solid $ap2-border;
-  }
-
-  &__inner {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    // Left-anchored on the same gutter as the hero/cards, so the artist name
-    // in the sticky bar sits directly above the column it belongs to.
-    max-width: 1100px;
-    margin: 0;
-    box-sizing: border-box;
-    padding: 10px 48px;
-
-    @media (max-width: 900px) { padding: 10px 28px; }
-    @media (max-width: 600px) { padding: 8px 20px; }
-  }
-
-  &__left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-  }
-
-  &__avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid color-mix(in srgb, var(--unis-primary, #{$ap2-blue-raw}) 60%, transparent);
-    flex-shrink: 0;
-  }
-
-  &__name {
-    font-family: var(--unis-font-italic, 'Instrument Serif', Georgia, serif); // ★ was Playfair
-    font-style: italic;
-    font-size: 19px;
-    font-weight: 400;
-    color: $ap2-text-1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__actions {
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-
-  &__btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 16px;
-    border-radius: 50px;
-    font-family: var(--unis-font-sans, 'Inter', sans-serif); // ★ was DM Sans
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: transparent;
-    color: $ap2-text-1;
-    transition: all 0.2s;
-
-    &:hover { background: rgba(255, 255, 255, 0.08); }
-
-    &--following {
-      background: $ap2-blue;
-      border-color: $ap2-blue;
-    }
-
-    &--play {
-      background: $ap2-blue;
-      border-color: $ap2-blue;
-      color: white;
-
-      &:hover { filter: brightness(1.15); }
-      &:disabled { opacity: 0.35; cursor: not-allowed; }
-      svg { flex-shrink: 0; }
-    }
-  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1939,7 +1823,246 @@ $ap3-wide: 1200px;
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // REDUCED MOTION — quality floor
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// THE BAR THAT FOLLOWS YOU (Nov 2026)
+// Pinned under the app header. The artist's own photo, blurred and tinted
+// with the theme, trails behind it. --ap3-hand (0→1) is set from the scroll
+// in artistpage.jsx: the bar fades in and its name rises as the hero name
+// slides under the header. .is-docked brings the round Play in once the
+// page's own Play has scrolled away.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.ap3-bar {
+  --ap3-hand: 0;
+  position: fixed;
+  top: $ap2-header-h;
+  left: var(--sidebar-width, 0px);
+  right: 0;
+  z-index: 900; // below the app header (1000), above the page
+  height: 68px;
+  overflow: hidden;
+  font-family: $ap3-sans;
+  color: $ap3-text;
+  opacity: var(--ap3-hand);
+  pointer-events: none;
+  -webkit-font-smoothing: antialiased;
+
+  &.is-shown { pointer-events: auto; }
+
+  @media (max-width: $ap3-phone) { height: 56px; }
+
+  &__photo {
+    position: absolute;
+    inset: -40px;
+    width: calc(100% + 80px);
+    height: calc(100% + 80px);
+    object-fit: cover;
+    object-position: center 28%;
+    filter: blur(26px) saturate(1.35);
+    transform: scale(1.15);
+  }
+
+  &__tint {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+      color-mix(in srgb, var(--unis-primary, #163387) 55%, rgba(7, 9, 15, 0.75)) 0%,
+      rgba(7, 9, 15, 0.74) 62%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  &__inner {
+    position: relative;
+    height: 100%;
+    max-width: 1280px;
+    box-sizing: border-box;
+    padding: 0 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    @media (max-width: $ap3-phone) {
+      gap: 8px;
+      padding: 0 12px 0 16px;
+    }
+  }
+
+  button {
+    font-family: inherit;
+    color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    &:focus-visible { outline: 2px solid $ap3-p3; outline-offset: 2px; }
+  }
+
+  &__who {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    // The name rises into place as the hero name goes under the header.
+    transform: translateY(calc((1 - var(--ap3-hand)) * 14px));
+
+    @media (max-width: $ap3-phone) { gap: 10px; }
+  }
+
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 0 0 2px $ap3-p2;
+
+    @media (max-width: $ap3-phone) { width: 34px; height: 34px; }
+  }
+
+  &__text { min-width: 0; }
+
+  &__name {
+    display: block;
+    font-family: $ap3-serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 26px;
+    line-height: 1.02;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    @media (max-width: $ap3-phone) { font-size: 21px; }
+  }
+
+  &__line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.74);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    @media (max-width: $ap3-phone) { font-size: 11.5px; }
+  }
+
+  &__eq {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 10px;
+    flex: 0 0 auto;
+
+    i {
+      display: block;
+      width: 2.5px;
+      height: 3px;
+      border-radius: 1px;
+      background: $ap3-p3;
+      animation: ap3-bar-eq 0.9s ease-in-out infinite;
+
+      &:nth-child(2) { animation-delay: 0.15s; }
+      &:nth-child(3) { animation-delay: 0.3s; }
+    }
+  }
+
+  &__vote,
+  &__follow {
+    flex: 0 0 auto;
+    height: 36px;
+    padding: 0 15px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    background: rgba(255, 255, 255, 0.07);
+    font-size: 13.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: background-color 0.16s ease, transform 0.16s ease;
+
+    &:hover { background: rgba(255, 255, 255, 0.14); }
+    &:active { transform: scale(0.95); }
+
+    @media (max-width: $ap3-phone) {
+      height: 34px;
+      padding: 0 13px;
+      font-size: 13px;
+    }
+  }
+
+  &__shuffle {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover { background: rgba(255, 255, 255, 0.1); }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  }
+
+  &__play {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: $ap3-p;
+    box-shadow: 0 8px 20px -8px $ap3-pg, inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    // Waits off to the side until the page's own Play has gone under the bar.
+    opacity: 0;
+    transform: scale(0.4);
+    pointer-events: none;
+    margin-left: -46px; // takes no room until it docks
+    transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.25), opacity 0.2s ease, margin-left 0.25s ease;
+
+    svg { margin-left: 1px; }
+    &:hover { filter: brightness(1.1); }
+
+    @media (max-width: $ap3-phone) {
+      width: 40px;
+      height: 40px;
+      margin-left: -40px;
+    }
+  }
+
+  &.is-docked &__play {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+    margin-left: 0;
+
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  }
+}
+
+@keyframes ap3-bar-eq {
+  0%, 100% { height: 3px; }
+  50% { height: 10px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .ap3-bar__who { transform: none; }
+  .ap3-bar__play { transition: opacity 0.2s ease; transform: none; }
+  .ap3-bar__eq i { animation: none; height: 7px; }
+
   .ap3-hero__img,
   .ap3-hero__content,
   .ap2-lightbox,
@@ -1949,7 +2072,6 @@ $ap3-wide: 1200px;
     animation: none;
   }
 
-  .ap2-sticky,
   .ap3-circ,
   .ap3-pill,
   .ap3-play,
