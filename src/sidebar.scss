@@ -352,6 +352,19 @@ $ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 // ─────────────────────────────────────────────────────────────
 // Your playlists
 // ─────────────────────────────────────────────────────────────
+// "Your playlists" opens the library page; it reads as the heading it is.
+.sb-lib-head__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+  &:focus-visible { outline: 2px solid var(--unis-primary); outline-offset: 2px; border-radius: 4px; }
+}
+
 .sb-lib-head {
   flex-shrink: 0;
   display: flex;

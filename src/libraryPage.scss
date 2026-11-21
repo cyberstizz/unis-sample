@@ -1,0 +1,731 @@
+// src/libraryPage.scss — Your library (/playlists), Nov 2026.
+// Theme-aware through --unis-primary; same grammar as the playlist, messages
+// and jurisdiction pages (Inter UI, Instrument Serif italic accents).
+
+$lib-header-h: 75px; // keep in sync with $header-height in header.scss
+$lib-phone: 767px;
+$lib-p: var(--unis-primary, #163387);
+$lib-p3: color-mix(in srgb, var(--unis-primary, #163387), white 62%);
+$lib-pt: color-mix(in srgb, var(--unis-primary, #163387), transparent 82%);
+$lib-pg: color-mix(in srgb, var(--unis-primary, #163387), transparent 45%);
+$lib-serif: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+
+.layout-container:has(.lib) { padding-top: $lib-header-h; }
+.layout-container:has(.lib) .layout-content { padding-left: 0; padding-right: 0; }
+
+.lib {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 36px 40px 140px;
+  box-sizing: border-box;
+  color: var(--unis-text, #fff);
+  font-family: var(--unis-font-sans);
+  -webkit-font-smoothing: antialiased;
+  animation: lib-fade 0.3s ease;
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :where(button) {
+    font-family: inherit;
+    color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    &:focus-visible { outline: 2px solid $lib-p3; outline-offset: 2px; }
+  }
+
+  em {
+    font-family: $lib-serif;
+    font-style: italic;
+    font-weight: 400;
+    color: $lib-p3;
+    letter-spacing: 0;
+  }
+
+  @media (max-width: $lib-phone) { padding: 20px 0 140px; }
+}
+
+.lib-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: $lib-phone) { .lib .lib-wide { display: none !important; } }
+@media (min-width: $lib-phone + 1) { .lib .lib-narrow { display: none !important; } }
+
+.lib-glow {
+  position: absolute;
+  z-index: -1;
+  left: -120px;
+  top: -180px;
+  width: 720px;
+  height: 440px;
+  border-radius: 50%;
+  background: $lib-pt;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+// ── Header ──────────────────────────────────────────────────────────────────
+.lib-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+
+  &__actions { display: flex; gap: 8px; flex: none; }
+
+  @media (max-width: $lib-phone) { align-items: flex-start; padding: 0 20px; }
+}
+
+.lib-title {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+
+  em { font-size: 1.18em; }
+
+  @media (max-width: $lib-phone) { font-size: 30px; }
+}
+
+.lib-sub {
+  margin: 6px 0 0;
+  font-size: 14.5px;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.6));
+
+  @media (max-width: $lib-phone) { font-size: 13.5px; }
+}
+
+.lib-round {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.14s ease, transform 0.14s ease;
+
+  &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); }
+  &:active:not(:disabled) { transform: scale(0.93); }
+
+  &--solid {
+    border: 0;
+    background: $lib-p;
+    color: #fff;
+    box-shadow: 0 10px 24px -10px $lib-pg;
+    &:hover:not(:disabled) { background: $lib-p; filter: brightness(1.1); }
+  }
+}
+
+.lib-btn {
+  height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: $lib-p;
+  color: #fff;
+  box-shadow: 0 10px 24px -10px $lib-pg, inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  font-size: 14.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: filter 0.14s ease, transform 0.14s ease;
+
+  &:hover:not(:disabled) { filter: brightness(1.1); }
+  &:active:not(:disabled) { transform: scale(0.97); }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  &--wide { width: 100%; height: 48px; margin-top: 18px; font-size: 15px; }
+}
+
+[data-theme="yellow"] .lib-btn,
+[data-theme="yellow"] .lib-round--solid { color: #1a1300; }
+
+// ── Controls: chips · search · sort · view ──────────────────────────────────
+.lib-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+
+  @media (max-width: $lib-phone) { padding: 0 20px; margin-top: 16px; }
+}
+
+.lib-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.lib-chip {
+  flex: none;
+  height: 36px;
+  padding: 0 15px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13.5px;
+  font-weight: 650;
+  transition: background 0.14s ease, color 0.14s ease;
+
+  &:hover { border-color: rgba(255, 255, 255, 0.3); }
+  &.is-on { background: #fff; border-color: #fff; color: #07090f; }
+}
+
+.lib-search {
+  margin-left: auto;
+  width: 240px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: text;
+
+  &:focus-within { border-color: $lib-pg; background: rgba(255, 255, 255, 0.08); }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: #fff;
+    font: 500 16px var(--unis-font-sans); // 16px+ keeps iPhones from zooming
+    &::placeholder { color: rgba(255, 255, 255, 0.5); font-size: 14px; }
+    &::-webkit-search-cancel-button { display: none; }
+  }
+
+  &__clear {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // Phones: the search field opens from the round button in the header.
+  @media (max-width: $lib-phone) {
+    order: -1;
+    width: 100%;
+    margin: 0;
+    display: none;
+    &.is-open { display: flex; }
+  }
+}
+
+.lib-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  @media (max-width: $lib-phone) { width: 100%; justify-content: space-between; }
+}
+
+.lib-tool {
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13.5px;
+  font-weight: 650;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+
+  &:hover { background: rgba(255, 255, 255, 0.1); }
+  &--icon { width: 38px; padding: 0; justify-content: center; }
+}
+
+.lib-menu-wrap { position: relative; }
+
+.lib-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--unis-bg, #07090f) 88%, var(--unis-primary, #163387));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  animation: lib-pop 0.14s ease both;
+
+  @media (max-width: $lib-phone) { left: 0; right: auto; }
+
+  button {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 14px;
+    font-weight: 650;
+    text-align: left;
+
+    &:hover, &:focus-visible { background: rgba(255, 255, 255, 0.08); color: #fff; }
+    &.is-on { color: $lib-p3; }
+  }
+}
+
+// ── Covers ──────────────────────────────────────────────────────────────────
+.lib-cover {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 12px 24px -14px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+  > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  &__mosaic {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    width: 100%;
+    height: 100%;
+    img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  }
+
+  &__empty {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.45);
+    background: radial-gradient(120% 120% at 25% 15%, $lib-pt, transparent 70%);
+  }
+
+  &--row { width: 58px; height: 58px; flex: none; border-radius: 8px; }
+
+  &--start {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $lib-pt;
+    border: 1.5px dashed $lib-pg;
+    box-shadow: none;
+  }
+}
+
+// ── List view ───────────────────────────────────────────────────────────────
+.lib-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+
+  @media (max-width: $lib-phone) { margin-top: 8px; }
+}
+
+.lib-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  text-align: left;
+  transition: background 0.14s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.05); }
+  &.is-playing .lib-row__name { color: $lib-p3; }
+
+  &__text { flex: 1; min-width: 0; }
+
+  &__name {
+    display: block;
+    font-size: 15.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__sub {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 3px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.58);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  @media (max-width: $lib-phone) { padding: 7px 20px; border-radius: 0; }
+}
+
+// ── Grid view and rails ─────────────────────────────────────────────────────
+.lib-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+
+  @media (max-width: 1100px) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: $lib-phone) { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 20px; gap: 16px 14px; }
+}
+
+.lib-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  text-align: left;
+  transition: background 0.2s ease, transform 0.2s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.07); }
+  &:active { transform: scale(0.98); }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    font-size: 14.5px;
+    font-weight: 700;
+    min-width: 0;
+
+    > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  }
+
+  &__sub {
+    margin-top: 3px;
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.58);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &.is-playing .lib-card__name { color: $lib-p3; }
+
+  &--start { background: transparent; }
+
+  @media (max-width: $lib-phone) {
+    padding: 0;
+    background: transparent;
+    &:hover { background: transparent; }
+  }
+}
+
+.lib-rail {
+  margin-top: 36px;
+
+  @media (max-width: $lib-phone) { margin-top: 30px; }
+
+  &__row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+
+    @media (max-width: 1100px) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    // Phones: a row you swipe sideways.
+    @media (max-width: $lib-phone) {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      padding: 0 20px;
+      scroll-padding-inline: 20px;
+      scroll-snap-type: x proximity;
+      scrollbar-width: none;
+      &::-webkit-scrollbar { display: none; }
+
+      .lib-card { flex: 0 0 140px; scroll-snap-align: start; }
+    }
+  }
+}
+
+.lib-h2 {
+  margin: 0 0 14px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+
+  em { font-size: 1.15em; }
+
+  @media (max-width: $lib-phone) { font-size: 19px; padding: 0 20px; margin-bottom: 12px; }
+}
+
+// ── Notes, empty and signed-out states ──────────────────────────────────────
+.lib-note {
+  margin: 18px 0 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+
+  @media (max-width: $lib-phone) { padding: 0 20px; }
+}
+
+.lib-empty,
+.lib-guest {
+  margin-top: 22px;
+  padding: 28px 24px;
+  border-radius: 22px;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--unis-primary, #163387) 26%, #101219), #0d0e14 70%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+
+  @media (max-width: $lib-phone) { margin: 18px 20px 0; padding: 22px 20px; }
+}
+
+.lib-empty__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: $lib-pt;
+  color: $lib-p3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lib-empty__title,
+.lib-guest__title {
+  margin: 14px 0 0;
+  font-size: 22px;
+  font-weight: 800;
+
+  em { font-size: 1.15em; }
+}
+
+.lib-guest__title { margin-top: 0; }
+
+.lib-empty__sub,
+.lib-guest__sub {
+  margin: 8px 0 18px;
+  max-width: 480px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+// ── Moving bars on the playlist that's playing ──────────────────────────────
+.lib-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+  flex: none;
+
+  i {
+    display: block;
+    width: 3px;
+    height: 3px;
+    border-radius: 1px;
+    background: $lib-p3;
+    animation: lib-eq 0.9s ease-in-out infinite;
+
+    &:nth-child(2) { animation-delay: 0.15s; }
+    &:nth-child(3) { animation-delay: 0.3s; }
+  }
+}
+
+// ── New playlist sheet ──────────────────────────────────────────────────────
+.lib-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 3000; // above the player and header, below toasts
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  font-family: var(--unis-font-sans);
+  color: #fff;
+
+  @media (max-width: $lib-phone) { align-items: flex-end; padding: 0; }
+
+  button {
+    font-family: inherit;
+    color: inherit;
+    cursor: pointer;
+    &:focus-visible { outline: 2px solid $lib-p3; outline-offset: 2px; }
+  }
+
+  em {
+    font-family: $lib-serif;
+    font-style: italic;
+    font-weight: 400;
+    color: $lib-p3;
+  }
+}
+
+.lib-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 4, 8, 0.62);
+  backdrop-filter: blur(3px);
+  animation: lib-fade 0.25s ease both;
+}
+
+.lib-sheet {
+  position: relative;
+  width: 480px;
+  max-width: 100%;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 22px 24px;
+  border-radius: 24px;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--unis-primary, #163387) 30%, #12141c) 0%, #101219 55%, #0c0d13 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.7);
+  animation: lib-pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+
+  @media (max-width: $lib-phone) {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 28px 28px 0 0;
+    padding: 10px 20px calc(22px + env(safe-area-inset-bottom, 0px));
+    animation: lib-rise 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+  }
+
+  &__grab {
+    display: none;
+    width: 40px;
+    height: 5px;
+    margin: 0 auto 14px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.25);
+    @media (max-width: $lib-phone) { display: block; }
+  }
+
+  &__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+  &__title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    em { font-size: 1.15em; }
+  }
+
+  &__top { display: flex; gap: 14px; align-items: flex-end; margin-top: 16px; }
+
+  &__cover {
+    width: 88px;
+    height: 88px;
+    flex: none;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1.5px dashed rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.04);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+  }
+
+  .lib-round { width: 40px; height: 40px; }
+}
+
+.lib-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: rgba(255, 255, 255, 0.68);
+
+  .lib-sheet__top & { margin-top: 0; }
+
+  input {
+    height: 46px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    font: 600 16px var(--unis-font-sans);
+    outline: none;
+
+    &:focus { border-color: $lib-pg; background: rgba(255, 255, 255, 0.08); }
+    &::placeholder { color: rgba(255, 255, 255, 0.4); font-weight: 500; }
+  }
+}
+
+.lib-seg {
+  display: flex;
+  gap: 8px;
+
+  button {
+    flex: 1;
+    min-height: 40px;
+    padding: 0 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    font-weight: 650;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    &.is-on { background: #fff; border-color: #fff; color: #07090f; }
+  }
+}
+
+.lib-hint {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+@keyframes lib-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lib-pop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes lib-rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@keyframes lib-eq { 0%, 100% { height: 3px; } 50% { height: 12px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lib, .lib-menu, .lib-sheet, .lib-scrim { animation: none; }
+  .lib-eq i { animation: none; height: 8px; }
+  .lib-card, .lib-row, .lib-btn, .lib-round { transition: none; }
+}

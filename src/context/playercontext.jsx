@@ -308,7 +308,9 @@ export const PlayerProvider = ({ children }) => {
         followerCount: pl.followerCount || 0,
         coverImageUrl: pl.coverImageUrl,
         creatorName: pl.creatorName,
+        creatorId: pl.creatorId,
         firstFourArtworks: pl.firstFourArtworks || [],
+        updatedAt: pl.updatedAt,
         tracks: []
       })));
     } catch (error) {

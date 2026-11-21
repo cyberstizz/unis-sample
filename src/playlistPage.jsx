@@ -2,6 +2,18 @@
 //
 // The playlist page — /playlist/:playlistId
 //
+// v2 design (Nov 2026, Scout → Sketch → Ship; canvas "Unis playlist +
+// library pages"):
+//   • The cover sets the mood: it washes the top of the page, blended with
+//     the theme (Apple Music / YouTube Music moved to artwork-driven pages).
+//   • Never lose the playing song: a Now playing chip and the bar's line jump
+//     to its row (Spotify's longest-running complaint).
+//   • Find in playlist + Sort sit right above the songs. Drag-to-reorder only
+//     works in Custom order with no filter, so what you drag is what's saved.
+//   • The bar that follows you (shared FollowBar): cover, name, Shuffle, and
+//     Play once the page's own Play has scrolled away.
+//   • Same action row grammar as the artist page.
+//
 // How it relates to the queue:
 //   • Play (and clicking any row) POURS the playlist into the queue. It never
 //     replaces the queue. If the queue already has songs, the same prompt used
@@ -27,8 +39,11 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Play, Pause, Shuffle, MoreHorizontal, Heart, Clock, Music, GripVertical,
   ListPlus, Disc3, UserRound, Link2, Pencil, ImagePlus, Trash2, ThumbsUp, ThumbsDown,
-  Lock, Globe, EyeOff, MapPin, Check, X, ListMusic,
+  Lock, Globe, EyeOff, MapPin, X, ListMusic, Share2, ArrowLeft, ArrowDown,
+  ChevronDown, Search, ArrowUpDown,
 } from 'lucide-react';
+import FollowBar from './components/FollowBar';
+import { useFollowBar } from './hooks/useFollowBar';
 import Layout from './layout';
 import AdSlot from './components/AdSlot';
 import { PlayerContext } from './context/playercontext';
@@ -110,19 +125,26 @@ const normalizeTrack = (track) => ({
   status: track.status || 'active',
 });
 
+const SORTS = [
+  { id: 'custom', label: 'Custom order' },
+  { id: 'title', label: 'Title' },
+  { id: 'artist', label: 'Artist' },
+  { id: 'added', label: 'Recently added' },
+];
+
 // ============================================================================
 // TRACK ROW
 // ============================================================================
 
 const TrackRow = ({
-  track, index, canEdit, isCurrentRow, isPlaying, menuOpen, confirmingRemove,
+  track, index, num, canEdit, canDrag, isCurrentRow, isPlaying, menuOpen, confirmingRemove,
   onPlay, onToggleMenu, onAddToQueue, onGoSong, onGoArtist,
   onAskRemove, onConfirmRemove, onCancelRemove,
 }) => {
   const {
     attributes, listeners, setNodeRef, setActivatorNodeRef,
     transform, transition, isDragging,
-  } = useSortable({ id: track.playlistItemId || track.id, disabled: !canEdit });
+  } = useSortable({ id: track.playlistItemId || track.id, disabled: !canDrag });
 
   const style = { transform: CSS.Translate.toString(transform), transition };
 
@@ -131,9 +153,10 @@ const TrackRow = ({
       ref={setNodeRef}
       style={style}
       className={`plp-row-wrap ${isDragging ? 'plp-row-ghost' : ''}`}
+      data-row-key={track.playlistItemId || track.id}
     >
       <div
-        className={`plp-row ${isCurrentRow ? 'plp-row-current' : ''} ${canEdit ? 'plp-row-editable' : ''} ${confirmingRemove ? 'plp-row-confirming' : ''}`}
+        className={`plp-row ${isCurrentRow ? 'plp-row-current' : ''} ${canDrag ? 'plp-row-editable' : ''} ${confirmingRemove ? 'plp-row-confirming' : ''}`}
         onClick={() => { if (!confirmingRemove) onPlay(index); }}
         onKeyDown={(e) => {
           if ((e.key === 'Enter') && e.target === e.currentTarget) { e.preventDefault(); onPlay(index); }
@@ -142,7 +165,7 @@ const TrackRow = ({
         tabIndex={0}
         aria-label={`Play ${track.title} by ${track.artist}`}
       >
-        {canEdit && (
+        {canDrag && (
           <button
             type="button"
             className="plp-grip"
@@ -163,7 +186,7 @@ const TrackRow = ({
             </span>
           ) : (
             <>
-              <span className="plp-index-num">{index + 1}</span>
+              <span className="plp-index-num">{num}</span>
               <span className="plp-index-play" aria-hidden="true">
                 {isCurrentRow ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
               </span>
@@ -295,6 +318,13 @@ const PlaylistPage = () => {
 
   const coverInputRef = useRef(null);
 
+  // Find in playlist + Sort (v2)
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState('custom');
+
+  // ★ The bar that follows you (shared frame: components/FollowBar.jsx).
+  const bar = useFollowBar({ ready: status === 'ready' });
+
   // ── Load ──
   useEffect(() => {
     let cancelled = false;
@@ -398,6 +428,38 @@ const PlaylistPage = () => {
 
   const rowKey = (t) => t.playlistItemId || t.id;
   const totalLabel = formatTotal(tracks);
+
+  // What the list shows: filtered and sorted, each with its saved position.
+  const visibleTracks = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let list = tracks.map((t, i) => ({ t, i }));
+    if (q) list = list.filter(({ t }) => `${t.title} ${t.artist}`.toLowerCase().includes(q));
+    if (sort === 'title') list = [...list].sort((a, b) => a.t.title.localeCompare(b.t.title));
+    else if (sort === 'artist') list = [...list].sort((a, b) => a.t.artist.localeCompare(b.t.artist) || a.t.title.localeCompare(b.t.title));
+    else if (sort === 'added') list = [...list].sort((a, b) => (Date.parse(b.t.addedAt) || 0) - (Date.parse(a.t.addedAt) || 0));
+    return list;
+  }, [tracks, query, sort]);
+
+  // Reordering saves the order you see, so it only works in the saved order.
+  const canDrag = isOwner && sort === 'custom' && !query.trim();
+  const currentTrack = currentItemId ? tracks.find((t) => t.playlistItemId === currentItemId) : null;
+  const sortLabel = (SORTS.find((o) => o.id === sort) || SORTS[0]).label;
+
+  // ── Never lose the playing song: scroll its row into view ──
+  const jumpToNowPlaying = () => {
+    if (!currentItemId) return;
+    const go = () => {
+      const key = window.CSS?.escape ? window.CSS.escape(String(currentItemId)) : String(currentItemId);
+      const el = document.querySelector(`[data-row-key="${key}"]`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.querySelector('.plp-row')?.focus({ preventScroll: true });
+    };
+    const needsRender = section !== 'tracks' || !!query.trim();
+    if (section !== 'tracks') setSection('tracks');
+    if (query.trim()) setQuery('');
+    if (needsRender) setTimeout(go, 80); else go();
+  };
 
   // ── Playback ──
   const handleHeroPlay = () => {
@@ -518,6 +580,20 @@ const PlaylistPage = () => {
   };
 
   // ── Header menu actions ──
+  const sharePlaylist = async () => {
+    setMenu(null);
+    const url = `${window.location.origin}/playlist/${pid}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: playlist?.name || 'Playlist', url });
+        return;
+      } catch (err) {
+        if (err?.name === 'AbortError') return; // they closed the share sheet
+      }
+    }
+    copyLink();
+  };
+
   const copyLink = async () => {
     setMenu(null);
     const url = `${window.location.origin}/playlist/${pid}`;
@@ -593,7 +669,7 @@ const PlaylistPage = () => {
     try {
       await deletePlaylist(pid);
       showToast(`Deleted \u201C${playlist?.name || 'playlist'}\u201D`);
-      navigate('/', { replace: true });
+      navigate('/playlists', { replace: true });
     } catch {
       setDeleting(false);
       setDeleteOpen(false);
@@ -650,7 +726,7 @@ const PlaylistPage = () => {
   if (status === 'loading') {
     return (
       <Layout>
-        <div className="plp-page plp-loading" aria-busy="true">
+        <div className="plp-page plp-v2 plp-loading" aria-busy="true">
           <div className="plp-hero">
             <div className="plp-cover plp-skel" />
             <div className="plp-hero-info">
@@ -672,11 +748,11 @@ const PlaylistPage = () => {
   if (status === 'unavailable' || !playlist) {
     return (
       <Layout>
-        <div className="plp-page plp-unavailable">
+        <div className="plp-page plp-v2 plp-unavailable">
           <div className="plp-unavailable-icon"><ListMusic size={34} /></div>
           <h1>This playlist isn&rsquo;t available</h1>
           <p>It may be private, or it may have been deleted.</p>
-          <button type="button" className="plp-btn-pill" onClick={() => navigate('/')}>Go home</button>
+          <button type="button" className="plp-btn-pill" onClick={() => navigate('/playlists')}>Back to your library</button>
         </div>
       </Layout>
     );
@@ -684,11 +760,59 @@ const PlaylistPage = () => {
 
   const typeLabel = isCommunity ? 'Community playlist' : isOfficial ? 'Official playlist' : 'Playlist';
   const showHeroPause = playingFromHere && isPlaying;
+  const songsWord = `${tracks.length} song${tracks.length !== 1 ? 's' : ''}`;
+  const barLine = [songsWord, playlist.creatorName].filter(Boolean).join(' · ');
+  const playGlyph = (size) => (showHeroPause
+    ? <Pause size={size} fill="currentColor" />
+    : <Play size={size} fill="currentColor" className="plp-play-glyph" />);
 
   return (
     <Layout>
-      <div className="plp-page">
-        {/* Ambient wash drawn from the cover — colours the page with the playlist's own art */}
+      {/* ── THE BAR THAT FOLLOWS YOU ──
+          The cover, blurred and tinted with the theme. While this playlist is
+          playing, its line names the song and jumps to its row. */}
+      <FollowBar bar={bar} backdrop={heroImage} label={playlist.name} className="plp-bar">
+        <div className="fb-who">
+          {heroImage
+            ? <img src={heroImage} alt="" className="plp-bar__cover" />
+            : <span className="plp-bar__cover plp-bar__cover--empty"><Music size={16} /></span>}
+          <span className="fb-text">
+            <button type="button" className="plp-bar__title" onClick={bar.scrollToTop} aria-label={`Back to the top of ${playlist.name}`}>
+              {playlist.name}
+            </button>
+            {playingFromHere && currentTrack ? (
+              <button type="button" className="fb-line plp-bar__jump" onClick={jumpToNowPlaying}>
+                {isPlaying && <span className="fb-eq" aria-hidden="true"><i /><i /><i /></span>}
+                <span>{currentTrack.title} · Jump to it</span>
+              </button>
+            ) : (
+              <span className="fb-line"><span>{barLine}</span></span>
+            )}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="fb-icon plp-bar__shuffle"
+          onClick={handleShufflePlay}
+          disabled={playable.length === 0}
+          aria-label={`Shuffle ${playlist.name}`}
+        >
+          <Shuffle size={18} />
+        </button>
+        <button
+          type="button"
+          className="fb-dock"
+          onClick={handleHeroPlay}
+          disabled={!playingFromHere && playable.length === 0}
+          aria-label={showHeroPause ? 'Pause' : `Play ${playlist.name}`}
+          tabIndex={bar.docked ? 0 : -1}
+        >
+          {playGlyph(16)}
+        </button>
+      </FollowBar>
+
+      <div className="plp-page plp-v2">
+        {/* The cover washes the top of the page, blended with the theme */}
         {heroImage && (
           <div className="plp-ambient" style={{ backgroundImage: `url("${heroImage}")` }} aria-hidden="true" />
         )}
@@ -696,6 +820,10 @@ const PlaylistPage = () => {
 
         {/* ── HERO ── */}
         <header className="plp-hero">
+          <button type="button" className="plp-back" onClick={() => navigate(-1)} aria-label="Back">
+            <ArrowLeft size={18} />
+          </button>
+
           <div className={`plp-cover ${isOwner ? 'plp-cover-editable' : ''}`}>
             {coverUrl ? (
               <img src={coverUrl} alt="" onError={() => setCoverError(true)} />
@@ -730,8 +858,21 @@ const PlaylistPage = () => {
           </div>
 
           <div className="plp-hero-info">
-            <span className="plp-kicker">{typeLabel}</span>
-            <h1 className="plp-title" title={playlist.name}>{playlist.name}</h1>
+            <div className="plp-chips">
+              <span className="plp-chip plp-chip-type">{typeLabel}</span>
+              {isCommunity && playlist.jurisdictionName && (
+                <span className="plp-chip"><MapPin size={12} /> {playlist.jurisdictionName}</span>
+              )}
+              {isOwner && !isCommunity && (
+                <span className="plp-chip">
+                  {playlist.visibility === 'public' ? <Globe size={12} />
+                    : playlist.visibility === 'unlisted' ? <EyeOff size={12} />
+                    : <Lock size={12} />}
+                  {playlist.visibility === 'public' ? 'Public' : playlist.visibility === 'unlisted' ? 'Unlisted' : 'Private'}
+                </span>
+              )}
+            </div>
+            <h1 className="plp-title" ref={bar.titleRef} title={playlist.name}>{playlist.name}</h1>
             {playlist.description && <p className="plp-description">{playlist.description}</p>}
 
             <div className="plp-meta">
@@ -747,74 +888,50 @@ const PlaylistPage = () => {
                   <strong>{playlist.creatorName}</strong>
                 </Link>
               )}
-              <span className="plp-meta-item">
-                {tracks.length} song{tracks.length !== 1 ? 's' : ''}{totalLabel && `, ${totalLabel}`}
-              </span>
               {playlist.followerCount > 0 && (
                 <span className="plp-meta-item">
-                  {playlist.followerCount.toLocaleString()} follower{playlist.followerCount !== 1 ? 's' : ''}
+                  {playlist.followerCount.toLocaleString()} save{playlist.followerCount !== 1 ? 's' : ''}
                 </span>
               )}
-              {isCommunity && playlist.jurisdictionName && (
-                <span className="plp-meta-item plp-meta-pill"><MapPin size={12} /> {playlist.jurisdictionName}</span>
-              )}
-              {isOwner && !isCommunity && (
-                <span className="plp-meta-item plp-meta-pill">
-                  {playlist.visibility === 'public' ? <Globe size={12} />
-                    : playlist.visibility === 'unlisted' ? <EyeOff size={12} />
-                    : <Lock size={12} />}
-                  {playlist.visibility}
-                </span>
-              )}
+              <span className="plp-meta-item">
+                {songsWord}{totalLabel && `, ${totalLabel}`}
+              </span>
             </div>
           </div>
         </header>
 
-        {/* ── ACTION BAR ── */}
+        {/* ── ACTION ROW: Save, Share, More · Shuffle, Play ── */}
         <div className="plp-actions">
-          <button
-            type="button"
-            className="plp-play"
-            onClick={handleHeroPlay}
-            disabled={!playingFromHere && playable.length === 0}
-            aria-label={showHeroPause ? 'Pause' : 'Play'}
-            title={showHeroPause ? 'Pause' : 'Play'}
-          >
-            {showHeroPause ? <Pause size={26} fill="currentColor" /> : <Play size={26} fill="currentColor" />}
-          </button>
-
-          <button
-            type="button"
-            className="plp-icon-btn"
-            onClick={handleShufflePlay}
-            disabled={playable.length === 0}
-            aria-label="Shuffle play"
-            title="Shuffle play"
-          >
-            <Shuffle size={22} />
-          </button>
-
           {canFollow && (
             <button
               type="button"
-              className={`plp-follow ${isFollowing ? 'plp-following' : ''}`}
+              className={`plp-ring ${isFollowing ? 'plp-ring-on' : ''}`}
               onClick={handleFollow}
               aria-pressed={isFollowing}
+              aria-label={isFollowing ? 'Remove from your library' : 'Save to your library'}
+              title={isFollowing ? 'Saved to your library' : 'Save to your library'}
             >
-              {isFollowing ? <Check size={16} /> : <Heart size={16} />}
-              {isFollowing ? 'Following' : 'Follow'}
+              <Heart size={19} fill={isFollowing ? 'currentColor' : 'none'} />
             </button>
           )}
+          {isOwner && (
+            <button type="button" className="plp-ring" onClick={openEdit} aria-label="Edit details" title="Edit details">
+              <Pencil size={17} />
+            </button>
+          )}
+          <button type="button" className="plp-ring" onClick={sharePlaylist} aria-label="Share" title="Share">
+            <Share2 size={17} />
+          </button>
 
           <div className="plp-menu-wrap">
             <button
               type="button"
-              className="plp-icon-btn"
+              className="plp-ring plp-ring-bare"
               onClick={(e) => { e.stopPropagation(); setMenu(m => (m?.kind === 'header' ? null : { kind: 'header' })); }}
               aria-label="More options"
               aria-expanded={menu?.kind === 'header'}
             >
-              <MoreHorizontal size={24} />
+              <MoreHorizontal size={22} />
             </button>
             {menu?.kind === 'header' && (
               <div className="plp-menu" onClick={(e) => e.stopPropagation()} role="menu">
@@ -844,46 +961,118 @@ const PlaylistPage = () => {
             )}
           </div>
 
-          {playingFromHere && (
-            <span className="plp-live">
-              <span className={`plp-eq plp-eq-small ${isPlaying ? '' : 'plp-eq-paused'}`}><span /><span /><span /></span>
-              Playing from this playlist
-            </span>
-          )}
+          <span className="plp-actions-spacer" />
+
+          <button
+            type="button"
+            className="plp-ring plp-ring-bare"
+            onClick={handleShufflePlay}
+            disabled={playable.length === 0}
+            aria-label="Shuffle play"
+            title="Shuffle play"
+          >
+            <Shuffle size={21} />
+          </button>
+          <button
+            ref={bar.playRef}
+            type="button"
+            className="plp-play"
+            onClick={handleHeroPlay}
+            disabled={!playingFromHere && playable.length === 0}
+            aria-label={showHeroPause ? 'Pause' : 'Play'}
+            title={showHeroPause ? 'Pause' : 'Play'}
+          >
+            {playGlyph(24)}
+          </button>
         </div>
 
-        {/* ── COMMUNITY TABS ── */}
-        {isCommunity && (
-          <div className="plp-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={section === 'tracks'}
-              className={section === 'tracks' ? 'plp-tab-on' : ''}
-              onClick={() => openSection('tracks')}
-            >
-              Songs <span className="plp-tab-count">{tracks.length}</span>
+        {/* ── TABS (community) · FIND · SORT ── */}
+        <div className="plp-tools">
+          {isCommunity && (
+            <div className="plp-tabs" role="tablist" aria-label="Playlist sections">
+              {[
+                ['tracks', 'Songs', tracks.length],
+                ['suggestions', 'Suggestions', pending.length],
+                ['activity', 'Activity', null],
+              ].map(([id, label, count]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={section === id}
+                  className={`plp-pill ${section === id ? 'plp-pill-on' : ''}`}
+                  onClick={() => openSection(id)}
+                >
+                  {label}{count != null && <span className="plp-pill-count">{count}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {section === 'tracks' && tracks.length > 0 && (
+            <div className="plp-find-row">
+              <label className="plp-find" htmlFor="plp-find">
+                <Search size={15} aria-hidden="true" />
+                <span className="plp-sr">Find in playlist</span>
+                <input
+                  id="plp-find"
+                  type="search"
+                  value={query}
+                  placeholder="Find in playlist"
+                  autoComplete="off"
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Escape') setQuery(''); }}
+                />
+                {query && (
+                  <button type="button" className="plp-find-clear" onClick={() => setQuery('')} aria-label="Clear search">
+                    <X size={14} />
+                  </button>
+                )}
+              </label>
+              <div className="plp-menu-wrap">
+                <button
+                  type="button"
+                  className="plp-pill"
+                  onClick={(e) => { e.stopPropagation(); setMenu(m => (m?.kind === 'sort' ? null : { kind: 'sort' })); }}
+                  aria-expanded={menu?.kind === 'sort'}
+                  aria-label={`Sort: ${sortLabel}`}
+                >
+                  <ArrowUpDown size={14} aria-hidden="true" />
+                  <span className="plp-sort-label">{sortLabel}</span>
+                  <ChevronDown size={14} aria-hidden="true" />
+                </button>
+                {menu?.kind === 'sort' && (
+                  <div className="plp-menu plp-sort-menu" onClick={(e) => e.stopPropagation()} role="menu">
+                    {SORTS.map((o) => (
+                      <button
+                        key={o.id}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={sort === o.id}
+                        className={sort === o.id ? 'plp-menu-on' : ''}
+                        onClick={() => { setSort(o.id); setMenu(null); }}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {playingFromHere && currentTrack && (
+            <button type="button" className="plp-now" onClick={jumpToNowPlaying}>
+              <span className={`plp-eq plp-eq-small ${isPlaying ? '' : 'plp-eq-paused'}`} aria-hidden="true"><span /><span /><span /></span>
+              <span className="plp-now-text">Now playing · {currentTrack.title}</span>
+              <ArrowDown size={14} aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={section === 'suggestions'}
-              className={section === 'suggestions' ? 'plp-tab-on' : ''}
-              onClick={() => openSection('suggestions')}
-            >
-              Suggestions <span className="plp-tab-count">{pending.length}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={section === 'activity'}
-              className={section === 'activity' ? 'plp-tab-on' : ''}
-              onClick={() => openSection('activity')}
-            >
-              Activity
-            </button>
-          </div>
-        )}
+          )}
+
+          {isOwner && section === 'tracks' && !canDrag && tracks.length > 1 && (
+            <p className="plp-drag-note">Switch to Custom order and clear the search to drag songs into a new order.</p>
+          )}
+        </div>
 
         {/* ── SONGS ── */}
         {section === 'tracks' && (
@@ -893,17 +1082,22 @@ const PlaylistPage = () => {
               <p className="plp-empty-title">{isOwner ? 'Your playlist is empty' : 'No songs yet'}</p>
               {isOwner && (
                 <p className="plp-empty-hint">
-                  While a song is playing, tap the playlist button in the player to add it here.
+                  On any song, open its ⋮ menu and choose Save to playlist. While a song is playing, the playlist button in the player works too.
                 </p>
               )}
             </div>
+          ) : visibleTracks.length === 0 ? (
+            <div className="plp-empty">
+              <p className="plp-empty-title">No songs match &ldquo;{query.trim()}&rdquo;</p>
+              <button type="button" className="plp-btn-ghost" onClick={() => setQuery('')}>Clear search</button>
+            </div>
           ) : (
             <div className="plp-list">
-              <div className={`plp-list-head ${isOwner ? 'plp-head-editable' : ''}`} aria-hidden="true">
-                {isOwner && <span className="plp-grip-spacer" />}
+              <div className={`plp-list-head ${canDrag ? 'plp-head-editable' : ''}`} aria-hidden="true">
+                {canDrag && <span className="plp-grip-spacer" />}
                 <span className="plp-col-index">#</span>
                 <span className="plp-col-title">Title</span>
-                <span className="plp-col-added">Date added</span>
+                <span className="plp-col-added">Added</span>
                 <span className="plp-col-time"><Clock size={15} /></span>
                 <span className="plp-col-menu" />
               </div>
@@ -916,8 +1110,8 @@ const PlaylistPage = () => {
                 onDragEnd={handleDragEnd}
                 onDragCancel={() => setActiveKey(null)}
               >
-                <SortableContext items={tracks.map(rowKey)} strategy={verticalListSortingStrategy}>
-                  {tracks.map((track, index) => {
+                <SortableContext items={visibleTracks.map(({ t }) => rowKey(t))} strategy={verticalListSortingStrategy}>
+                  {visibleTracks.map(({ t: track, i: index }) => {
                     const key = rowKey(track);
                     const isCurrentRow = !!currentItemId && currentItemId === track.playlistItemId;
                     return (
@@ -925,7 +1119,9 @@ const PlaylistPage = () => {
                         key={key}
                         track={track}
                         index={index}
+                        num={index + 1}
                         canEdit={isOwner}
+                        canDrag={canDrag}
                         isCurrentRow={isCurrentRow}
                         isPlaying={isPlaying}
                         menuOpen={menu?.kind === 'row' && menu.key === key}
@@ -964,9 +1160,6 @@ const PlaylistPage = () => {
           )
         )}
 
-        {/* ── AD SPACE (none for Unis Plus) ── */}
-        <AdSlot placement="playlist" />
-
         {/* ── SUGGESTIONS (community) ── */}
         {section === 'suggestions' && isCommunity && (
           pending.length === 0 ? (
@@ -982,6 +1175,8 @@ const PlaylistPage = () => {
                 const isMine = !!user && (
                   track.addedById ? track.addedById === user.userId : track.addedByUsername === user.username
                 );
+                const votes = (track.upvotes || 0) + (track.downvotes || 0);
+                const share = votes ? Math.round(((track.upvotes || 0) / votes) * 100) : 0;
                 return (
                 <div key={track.playlistItemId} className="plp-suggestion">
                   <img src={track.artworkUrl || '/assets/placeholder.jpg'} alt="" className="plp-art" />
@@ -989,7 +1184,14 @@ const PlaylistPage = () => {
                     <div className="plp-track-title">{track.title}</div>
                     <div className="plp-suggestion-sub">
                       {track.artist}
-                      {track.addedByUsername && <span> · suggested by {track.addedByUsername}</span>}
+                      {track.addedByUsername && <span> · from {track.addedByUsername}</span>}
+                    </div>
+                    <div
+                      className="plp-suggestion-meter"
+                      role="img"
+                      aria-label={`${track.upvotes} for, ${track.downvotes} against`}
+                    >
+                      <span style={{ width: `${share}%` }} />
                     </div>
                   </div>
                   {isMine ? (
@@ -1009,7 +1211,7 @@ const PlaylistPage = () => {
                         aria-pressed={track.myVote === 'up'}
                         aria-label={track.myVote === 'up' ? 'You voted to add' : 'Vote to add'}
                       >
-                        <ThumbsUp size={15} /> <span>{track.upvotes}</span>
+                        <ThumbsUp size={14} /> <span>Add · {track.upvotes}</span>
                       </button>
                       <button
                         type="button"
@@ -1018,7 +1220,7 @@ const PlaylistPage = () => {
                         aria-pressed={track.myVote === 'down'}
                         aria-label={track.myVote === 'down' ? 'You voted against' : 'Vote against'}
                       >
-                        <ThumbsDown size={15} /> <span>{track.downvotes}</span>
+                        <ThumbsDown size={14} /> <span>Skip · {track.downvotes}</span>
                       </button>
                     </div>
                   )}
@@ -1055,12 +1257,15 @@ const PlaylistPage = () => {
           )
         )}
 
+        {/* ── AD SPACE (none for Unis Plus) ── */}
+        <AdSlot placement="playlist" />
+
         {/* ── EDIT DETAILS ── */}
         {editOpen && (
           <div className="plp-dialog-backdrop" onClick={() => !saving && setEditOpen(false)}>
             <div className="plp-dialog" role="dialog" aria-modal="true" aria-labelledby="plp-edit-title" onClick={(e) => e.stopPropagation()}>
               <div className="plp-dialog-head">
-                <h2 id="plp-edit-title">Edit details</h2>
+                <h2 id="plp-edit-title">Edit <em>details</em></h2>
                 <button type="button" className="plp-dialog-x" onClick={() => setEditOpen(false)} aria-label="Close" disabled={saving}>
                   <X size={18} />
                 </button>
@@ -1091,12 +1296,12 @@ const PlaylistPage = () => {
                   <span>Who can see it</span>
                   <p className="plp-field-hint">
                     {editVisibility === 'private' && 'Only you can open it.'}
-                    {editVisibility === 'unlisted' && 'Anyone with the link can open it. It won\u2019t appear in search or on Discover.'}
+                    {editVisibility === 'unlisted' && 'Anyone with the link can open it. It won’t appear in search or on Discover.'}
                     {editVisibility === 'public' && 'Anyone can open it, and it shows up in search and on Discover.'}
                   </p>
                   <div className="plp-seg">
                     {[
-                      // Same names as the Playlist Manager and the help center.
+                      // Same names as the library page and the help center.
                       { v: 'private', label: 'Private', icon: <Lock size={14} /> },
                       { v: 'unlisted', label: 'Unlisted', icon: <EyeOff size={14} /> },
                       { v: 'public', label: 'Public', icon: <Globe size={14} /> },

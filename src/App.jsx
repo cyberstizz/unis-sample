@@ -37,6 +37,8 @@ import './visual-fixes.scss';
 const ArtistPage = lazyWithRetry(() => import('./artistpage'));
 const SongPage = lazyWithRetry(() => import('./songPage'));
 const PlaylistPage = lazyWithRetry(() => import('./playlistPage'));
+// ★ Your library: every playlist you made or saved, plus local and official picks (Nov 2026).
+const LibraryPage = lazyWithRetry(() => import('./libraryPage'));
 const VideoPage = lazyWithRetry(() => import('./videoPage'));
 const VoteAwards = lazyWithRetry(() => import('./voteawards'));
 const Profile = lazyWithRetry(() => import('./profile'));
@@ -193,6 +195,7 @@ const AppLayout = () => {
           <Route path="/" element={<Feed />} />
           <Route path="/artist/:artistId" element={<ArtistPage />} />
           <Route path="/song/:songId" element={<SongPage />} />
+          <Route path="/playlists" element={<LibraryPage />} />
           <Route path="/playlist/:playlistId" element={<PlaylistPage />} />
           <Route path="/video/:videoId" element={<VideoPage />} />
           <Route path="/jurisdiction/:jurisdiction" element={<JurisdictionPage />} />

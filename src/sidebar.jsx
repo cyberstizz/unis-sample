@@ -201,7 +201,6 @@ const Sidebar = () => {
   const { triggerGate, gateProps } = useAuthGate();
   const player = useContext(PlayerContext) || {};
   const {
-    openPlaylistManager,
     playlists = [],
     followedPlaylists = [],
     currentMedia,
@@ -353,10 +352,10 @@ const Sidebar = () => {
     else handleNav('/profile');
   };
 
-  const handleNewPlaylist = () => {
-    openPlaylistManager?.();
-    if (!isDesktop()) setIsOpen(false);
-  };
+  // ★ Playlists live on their own page now (/playlists). New playlist opens
+  // its create sheet there; the old popup manager is no longer opened.
+  const handleNewPlaylist = () => handleNav('/playlists?new=1');
+  const handleLibrary = () => handleNav('/playlists');
 
   // Gated actions (same behaviour as before the redesign)
   const onMessages = () => { if (isGuest) { triggerGate('profile'); return; } handleNav('/messages'); };
@@ -532,7 +531,9 @@ const Sidebar = () => {
             </button>
           ) : (
             <>
-              <div className="sb-lib-head"><span className="sb-lib-head__title">Your playlists</span></div>
+              <div className="sb-lib-head">
+                <button type="button" className="sb-lib-head__title sb-lib-head__link" onClick={handleLibrary}>Your playlists</button>
+              </div>
               <div className="sb-card">
                 <p className="sb-card__title">Create your first playlist</p>
                 <p className="sb-card__body">Collect the songs you love from your block and beyond.</p>
@@ -548,7 +549,7 @@ const Sidebar = () => {
               </button>
             ) : (
               <div className="sb-lib-head">
-                <span className="sb-lib-head__title">Your playlists</span>
+                <button type="button" className="sb-lib-head__title sb-lib-head__link" onClick={handleLibrary}>Your playlists</button>
                 <button type="button" className="sb-icon-btn" onClick={handleNewPlaylist} aria-label="New playlist" title="New playlist">
                   {ICONS.add}
                 </button>
