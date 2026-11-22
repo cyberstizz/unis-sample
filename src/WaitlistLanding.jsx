@@ -169,6 +169,7 @@ const WaitlistLanding = () => {
             <p className="wl-hero__lede">
               Unis is a music app where local artists get heard first and the neighborhood decides
               who&rsquo;s best. It opens one city at a time, and the waitlist decides which city is next.
+              Join today and use it as a visitor while you wait: everything but the vote.
             </p>
             <div className="wl-actions">
               <Link className="wl-btn" to={joinHref()}>Join the waitlist</Link>
@@ -219,7 +220,7 @@ const WaitlistLanding = () => {
           <ol className="wl-steps">
             <li>
               <h3>Join the list</h3>
-              <p>Pick your city and your username. It&rsquo;s held for you until Unis opens there.</p>
+              <p>Pick your city and your username. You&rsquo;re in today as a visitor, and the name is yours.</p>
             </li>
             <li>
               <h3>Bring your people</h3>
@@ -234,7 +235,7 @@ const WaitlistLanding = () => {
             </li>
             <li>
               <h3>Unis opens</h3>
-              <p>Unis goes live in your city, and the username you picked is waiting for you.</p>
+              <p>Your city gets its own charts and races, and your vote turns on.</p>
             </li>
           </ol>
         </section>

@@ -2192,13 +2192,13 @@ export const HELP_SECTIONS = [
   },
   {
     id: 'waitlist',
-    title: 'Waitlist',
-    blurb: 'Unis is not everywhere yet. How a region gets unlocked, and how you speed it up.',
+    title: 'Waitlist and visitors',
+    blurb: 'Unis opens city by city. Joining from anywhere else, what a visitor can do, and how your city opens.',
     status: 'published',
     articles: [
       {
         id: 'waitlist-why',
-        q: 'Why can I not use Unis where I live?',
+        q: 'Why can I not vote where I live yet?',
         a: (
           <>
             <p>
@@ -2211,6 +2211,44 @@ export const HELP_SECTIONS = [
               So Unis opens region by region, and a region opens when enough
               people from it have signed up to make it a real scene rather than
               an empty leaderboard.
+            </p>
+            <p>
+              You don&rsquo;t have to wait to use it, though. Anyone outside an
+              open area can join today as a visitor: the whole app, minus the
+              vote.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'waitlist-visitor',
+        q: 'What can I do as a visitor?',
+        a: (
+          <>
+            <p>
+              Almost everything. As a visitor you can listen to every song, like
+              and save, make playlists, follow people, comment and message
+              anyone.
+            </p>
+            <p>Three things wait until your own city opens:</p>
+            <ul>
+              <li>
+                <b>Voting.</b> Harlem votes on Harlem. Each area&rsquo;s races are
+                decided by the people who live there.
+              </li>
+              <li>
+                <b>Uploading,</b> if you&rsquo;re an artist. Your artist name is
+                held, and your songs go up on day one.
+              </li>
+              <li><b>Your city&rsquo;s own charts.</b></li>
+            </ul>
+            <p>
+              Your plays and likes still count for the artist: their play
+              counts, their points and what they earn. They just don&rsquo;t move
+              another area&rsquo;s charts or races.
+            </p>
+            <p className="help-note">
+              Your profile shows your real city, like <b>Dallas, TX · Visitor</b>.
             </p>
           </>
         ),
@@ -2235,28 +2273,49 @@ export const HELP_SECTIONS = [
       },
       {
         id: 'waitlist-signup',
-        q: 'What happens when I join the waitlist?',
+        q: 'How do I join from outside Harlem?',
         a: (
           <>
             <p>
-              You enter the referral code of whoever told you about Unis, pick
-              your state and your metro area, choose whether you are a listener
-              or an artist, and set your username and password.
+              From the visitor sign-up. You pick your state and city, choose
+              whether you are a listener or an artist, and enter your email, a
+              username, a password, your date of birth and the referral code of
+              whoever told you about Unis. We email you a link to confirm your
+              address, then you sign in.
             </p>
             <p>
-              Every sign-up needs a referral code, on the waitlist too. Everyone
-              hears about Unis from someone, and that person gets the credit. A
-              friend&rsquo;s waitlist code, a member&rsquo;s code, or the code on
-              a Unis poster all work.
+              Every sign-up needs a referral code, visitors too. Everyone hears
+              about Unis from someone, and that person gets the credit. A
+              friend&rsquo;s code, a member&rsquo;s code, or the code on a Unis
+              poster all work.
             </p>
             <p>
-              Your username is reserved from that moment. Nobody else can take
-              it while you wait, in any capitalization.
+              You need to be 13 or older, the same as everywhere on Unis. Your
+              birth date is never shown publicly. Your username is yours from
+              that moment, in any capitalization.
             </p>
             <p className="help-note">
               If your city is not in the list, choose <b>Other</b> and type it
               in. It becomes its own region with its own count, so small towns
               are not stuck waiting behind a metro they do not belong to.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'waitlist-held',
+        q: 'Why does it say I am on the list instead of letting me in?',
+        a: (
+          <>
+            <p>
+              Sometimes Unis lets out-of-town visitors in a few at a time, so the
+              app stays fast for everyone while it grows. When that&rsquo;s on,
+              your username, your code and your place in your city&rsquo;s count
+              are all held, and we email you the moment you&rsquo;re in.
+            </p>
+            <p>
+              Confirm your email in the meantime, so you can sign in as soon as
+              that email arrives.
             </p>
           </>
         ),
@@ -2290,9 +2349,10 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              Email, the moment it activates. That is the only thing your
-              address is used for on the waitlist — no newsletters, and your
-              details are not passed to anyone else.
+              Email, the moment it opens. The day it does, your vote turns on
+              with nothing to redo. Your email is only used for your account and
+              for that news — no newsletters, and your details are not passed to
+              anyone else.
             </p>
           </>
         ),
@@ -2330,9 +2390,15 @@ export const HELP_SECTIONS = [
         a: (
           <>
             <p>
-              From the address you give when you create your account. Unis finds
-              the most specific neighborhood that contains it — not the city, not
-              the state, the smallest place you actually belong to.
+              From the address you give when you create your account, or the
+              area you choose. Unis finds the most specific neighborhood that
+              contains it — not the city, not the state, the smallest place you
+              actually belong to.
+            </p>
+            <p>
+              Before you go on, sign-up asks you to confirm that you live there,
+              because it&rsquo;s permanent. Not from Harlem? You can join from
+              your own city as a visitor instead.
             </p>
             <p className="help-note">
               You can see yours at the top of the sidebar at any time. Tapping it
@@ -2412,13 +2478,16 @@ export const HELP_SECTIONS = [
         // you intend to add a move flow, rewrite this rather than shipping it
         // as the permanent answer.
         id: 'jurisdiction-change',
-        q: 'What if I move, or my jurisdiction is wrong?',
+        q: 'Can I change my jurisdiction?',
         a: (
           <>
             <p>
-              Your jurisdiction is set once, when you create your account, and it
-              stays put after that. If the wrong one was picked, or you have
-              moved, contact us and we will correct it.
+              No. Your jurisdiction is set once, when you create your account,
+              and it stays put after that. If the wrong one was picked, the only
+              fix is deleting your account, and you&rsquo;d lose your username
+              (it stays reserved forever), the credit for whoever referred you,
+              the artist you support, your points and playlists, and any earnings
+              under $50.
             </p>
             <p>
               It is deliberately not a switch you can flip. If people could
@@ -2939,7 +3008,8 @@ export const HELP_SECTIONS = [
               <li>
                 <b>Half to the artist they support</b>, whatever they played:
                 $2.50 of every $4.99. Ten supporters on Plus is $25 a month,
-                guaranteed.
+                for every month they stay subscribed and your account can be
+                paid.
               </li>
               <li>
                 <b>Stripe&rsquo;s card and billing fees</b>: about 49&cent;.
@@ -2958,7 +3028,8 @@ export const HELP_SECTIONS = [
             <p>
               If a subscriber played nobody that month, the played
               artists&rsquo; half goes to the artist they support too, so
-              they get $3.50.
+              they get $3.50. If they support nobody, or their artist
+              can&rsquo;t be paid, that $2.50 follows their plays instead.
             </p>
             <p>
               It&rsquo;s credited to your Earnings balance when the month is

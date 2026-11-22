@@ -204,14 +204,31 @@ const Login = () => {
                 <path d="M28 16v12l7 3.5" stroke="#163387" strokeWidth="2.5" strokeLinecap="round" />
               </svg>
             </div>
-            <h3 style={{ color: '#fff', fontSize: '20px', fontWeight: '700', marginBottom: '8px' }}>
-              You're on the waitlist, {waitlistInfo.username}!
-            </h3>
-            <p style={{ color: '#A9A9A9', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
-              Unis isn't in <strong style={{ color: '#fff' }}>{waitlistInfo.metroRegion}</strong>,{' '}
-              <strong style={{ color: '#fff' }}>{waitlistInfo.stateName}</strong> yet.
-              Share your code to unlock it faster.
-            </p>
+            {waitlistInfo.held ? (
+              // A visitor who joined while out-of-town sign-ups were paused or
+              // the day's cap was reached (VisitorService on the backend).
+              <>
+                <h3 style={{ color: '#fff', fontSize: '20px', fontWeight: '700', marginBottom: '8px' }}>
+                  You&rsquo;re on the list, {waitlistInfo.metroRegion}.
+                </h3>
+                <p style={{ color: '#A9A9A9', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
+                  We&rsquo;re letting out-of-town visitors in a few at a time right now. Your username and
+                  your spot are held, and your code already counts for {waitlistInfo.metroRegion}. We&rsquo;ll
+                  email you the moment you&rsquo;re in.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 style={{ color: '#fff', fontSize: '20px', fontWeight: '700', marginBottom: '8px' }}>
+                  You're on the waitlist, {waitlistInfo.username}!
+                </h3>
+                <p style={{ color: '#A9A9A9', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
+                  Unis isn't in <strong style={{ color: '#fff' }}>{waitlistInfo.metroRegion}</strong>,{' '}
+                  <strong style={{ color: '#fff' }}>{waitlistInfo.stateName}</strong> yet.
+                  Share your code to unlock it faster.
+                </p>
+              </>
+            )}
 
             <div style={{
               background: '#0a0a0c',

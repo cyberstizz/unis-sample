@@ -1,0 +1,489 @@
+// The visitor sign-up (/waitlist/join, WaitlistPage.jsx). Standalone page in
+// the same family as /waitlist (waitlistLanding.scss): dark ground, Inter,
+// Instrument Serif accents, theme-aware through --unis-primary.
+// Phone first; two columns (pitch | form) from 960px.
+
+.wlj {
+  --wlj-serif: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+  --wlj-sans: var(--unis-font-sans, 'Inter', system-ui, sans-serif);
+  --wlj-tint: var(--unis-primary-2, #4a6bd0);
+  --wlj-field: #0e121b;
+  --wlj-line: rgba(255, 255, 255, 0.14);
+  --wlj-ok: #7fd6a4;
+  --wlj-bad: #f4a3a3;
+
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 0 20px 48px;
+  background:
+    radial-gradient(110% 50% at 10% -5%, var(--unis-primary-soft, rgba(22, 51, 135, 0.16)), transparent 60%),
+    var(--unis-bg, #07090f);
+  color: var(--unis-text, #fff);
+  font-family: var(--wlj-sans);
+
+  :where(h1, h2, h3, p, ul, fieldset) { margin: 0; }
+  :where(a) { color: var(--wlj-tint); }
+  :is(a, button, input, select):focus-visible { outline: 2px solid var(--wlj-tint); outline-offset: 2px; }
+
+  em { font-family: var(--wlj-serif); font-style: italic; font-weight: 400; }
+
+  @media (min-width: 960px) { padding: 0 40px 64px; }
+}
+
+// ── Top bar ──────────────────────────────────────────────────────────────────
+.wlj-top {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  &__back {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    border: 1px solid var(--wlj-line);
+    background: transparent;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    @media (min-width: 960px) { display: none; }
+  }
+
+  &__brand img { display: block; height: 30px; width: auto; }
+
+  &__nav {
+    display: none;
+    gap: 20px;
+    font-size: 14px;
+
+    @media (min-width: 960px) { display: flex; }
+  }
+
+  // Keeps the logo centered on phones.
+  &::after {
+    content: '';
+    width: 44px;
+
+    @media (min-width: 960px) { display: none; }
+  }
+}
+
+// ── Shared text ──────────────────────────────────────────────────────────────
+.wlj-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wlj-tint);
+}
+
+.wlj-lede {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  max-width: 520px;
+
+  @media (min-width: 960px) { font-size: 18px; }
+}
+
+.wlj-only-wide { display: none !important; }
+@media (min-width: 960px) {
+  .wlj-only-wide { display: flex !important; }
+  .wlj-only-narrow { display: none !important; }
+}
+
+// ── Layout ───────────────────────────────────────────────────────────────────
+.wlj-main {
+  max-width: 1200px;
+  margin: 12px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+
+  @media (min-width: 960px) {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 56px;
+    margin-top: 40px;
+  }
+}
+
+.wlj-pitch {
+  flex: 1 1 440px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  @media (min-width: 960px) { gap: 24px; position: sticky; top: 24px; }
+
+  &__title {
+    font-size: 36px;
+    line-height: 1.08;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+
+    @media (min-width: 960px) { font-size: 64px; line-height: 1.02; letter-spacing: -0.03em; }
+  }
+}
+
+// ── City meter ───────────────────────────────────────────────────────────────
+.wlj-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 520px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--unis-primary-soft, rgba(22, 51, 135, 0.15));
+  border: 1px solid var(--unis-primary-glow, rgba(22, 51, 135, 0.45));
+
+  &--empty {
+    background: #0d111a;
+    border-color: rgba(255, 255, 255, 0.08);
+
+    p { font-size: 14px; color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }
+  }
+
+  &__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 14px;
+
+    b { font-size: 16px; }
+    span { color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }
+  }
+
+  &__bar {
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      background: var(--wlj-tint);
+
+      @media (prefers-reduced-motion: no-preference) { transition: width 0.6s ease; }
+    }
+  }
+
+  &__line { font-size: 13px; color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }
+}
+
+// ── Open now / later ─────────────────────────────────────────────────────────
+.wlj-can {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 520px;
+
+  &__col {
+    padding: 14px;
+    border-radius: 16px;
+    background: #0d111a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+
+    &--now { color: var(--wlj-tint); }
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  }
+
+  &__later { color: var(--unis-text-3, rgba(255, 255, 255, 0.55)) !important; }
+}
+
+.wlj-harlem { font-size: 13px; color: var(--unis-text-3, rgba(255, 255, 255, 0.55)); }
+
+// ── Form card ────────────────────────────────────────────────────────────────
+.wlj-card {
+  flex: 1 1 420px;
+  min-width: 0;
+  max-width: 520px;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  @media (min-width: 960px) {
+    padding: 28px;
+    border-radius: 24px;
+    background: #0d111a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  &__title {
+    font-size: 22px;
+    font-weight: 700;
+    display: none;
+
+    @media (min-width: 960px) { display: block; }
+  }
+}
+
+.wlj-error {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(240, 138, 138, 0.1);
+  border: 1px solid rgba(240, 138, 138, 0.45);
+  color: var(--wlj-bad);
+  font-size: 14px;
+  line-height: 1.45;
+  outline: none;
+}
+
+.wlj-seg {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--wlj-field);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  button {
+    min-height: 44px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+
+    &.is-on {
+      background: var(--unis-primary, #163387);
+      color: #fff;
+      font-weight: 600;
+    }
+  }
+}
+
+.wlj-group {
+  border: none;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  legend {
+    padding: 0;
+    margin-bottom: 14px;
+    font-size: 18px;
+    font-weight: 600;
+  }
+}
+
+.wlj-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.wlj-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+
+  label { font-size: 13px; color: var(--unis-text-2, #c3c9d4); }
+
+  input,
+  select {
+    height: 48px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1px solid var(--wlj-line);
+    background: var(--wlj-field);
+    color: var(--unis-text, #fff);
+    font: inherit;
+    font-size: 15px;
+    color-scheme: dark;
+
+    &:disabled { opacity: 0.55; }
+    &[aria-invalid='true'] { border-color: rgba(240, 138, 138, 0.8); }
+  }
+}
+
+.wlj-code-input { letter-spacing: 0.06em; }
+
+.wlj-help {
+  min-height: 1em;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.55));
+
+  &.is-ok { color: var(--wlj-ok); }
+  &.is-bad { color: var(--wlj-bad); }
+}
+
+.wlj-nyc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--unis-primary-soft, rgba(22, 51, 135, 0.15));
+  border: 1px solid var(--unis-primary-glow, rgba(22, 51, 135, 0.45));
+  font-size: 14px;
+
+  span { color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }
+  a { font-weight: 600; }
+}
+
+.wlj-fine {
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--unis-text-3, rgba(255, 255, 255, 0.55));
+}
+
+// ── Buttons ──────────────────────────────────────────────────────────────────
+.wlj-btn {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 23px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+
+  &--primary {
+    border: none;
+    background: var(--unis-primary, #163387);
+    color: #fff;
+
+    &:hover:not(:disabled) { background: var(--unis-primary-hover, var(--unis-primary, #163387)); }
+    &:disabled { opacity: 0.6; cursor: wait; }
+  }
+
+  &--ghost {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: transparent;
+    color: var(--unis-text, #fff);
+
+    &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.05); }
+  }
+
+  &--small { min-height: 44px; padding: 0 12px; font-size: 13px; }
+  &--block { width: 100%; }
+  &--big { min-height: 54px; border-radius: 27px; font-size: 16px; }
+}
+
+[data-theme='yellow'] .wlj-btn--primary,
+[data-theme='yellow'] .wlj-seg button.is-on { color: #1a1300; }
+
+// ── Done ─────────────────────────────────────────────────────────────────────
+.wlj-done {
+  max-width: 520px;
+  margin: 24px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  &__title {
+    font-size: 38px;
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+
+    @media (min-width: 960px) { font-size: 52px; }
+  }
+}
+
+.wlj-mail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #0d111a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  &__icon {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--unis-primary-soft, rgba(22, 51, 135, 0.2));
+    color: var(--wlj-tint);
+  }
+
+  &__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 14px;
+
+    span {
+      font-size: 13px;
+      color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+.wlj-code {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #0d111a;
+  border: 1px solid var(--unis-primary-glow, rgba(22, 51, 135, 0.6));
+
+  &__label {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  }
+
+  &__value { font-size: 28px; font-weight: 700; letter-spacing: 0.12em; overflow-wrap: anywhere; }
+
+  &__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+.wlj-note { font-size: 13px; line-height: 1.5; color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }

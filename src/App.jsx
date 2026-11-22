@@ -156,7 +156,8 @@ const AppLayout = () => {
   // notifications. The two pitch pages (/sponsor for shop owners, /waitlist
   // for people outside Harlem) and the booking form are always standalone.
   const isSponsorPage = pathname === '/sponsor' || pathname.startsWith('/sponsor/');
-  const isWaitlistPitch = pathname === '/waitlist' || pathname === '/waitlist/';
+  // /waitlist (the pitch) and /waitlist/join (the visitor sign-up form).
+  const isWaitlistPitch = pathname === '/waitlist' || pathname.startsWith('/waitlist/');
   // The street team pages and /join links stand alone too.
   const isTeamPage = pathname === '/team' || pathname.startsWith('/team/');
   const isJoinLink = pathname === '/join' || pathname.startsWith('/join/');

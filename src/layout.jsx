@@ -1,6 +1,7 @@
 import React from 'react';
 import Header from './header';
 import Footer from './footer';
+import VisitorBanner from './components/VisitorBanner';
 import './layout.scss';
 
 // =============================================================================
@@ -24,6 +25,8 @@ const Layout = ({ children, backgroundImage, hideFooter = false }) => {
       <Header />
 
       <main className="layout-content">
+        {/* Visitors only (joined from outside an open area); renders nothing for everyone else. */}
+        <VisitorBanner />
         {children}
       </main>
 

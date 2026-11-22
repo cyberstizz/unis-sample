@@ -10,13 +10,16 @@ import {
   EMPTY_DISCOVERY, isDiscoveryComplete, discoveryProblem, toDiscoveryPayload,
   describeDiscovery, useTaxonomy,
 } from './utils/taxonomy';
+import VisitorLockSheet from './components/VisitorLockSheet';
 import './uploadWizard.scss';
 
 // Media uploads can be up to 50 MB; the shared axios instance times out at
 // 10s, which aborts video uploads mid-transfer.
 const UPLOAD_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
-const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
+// `visitor` (optional): the signed-in user joined from outside an open area,
+// so the lock sheet shows instead of the wizard (components/VisitorLockSheet).
+const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {}, visitor = false }) => {
   const [step, setStep] = useState(1);
   const [mediaType, setMediaType] = useState('song');
   const [genreId, setGenreId] = useState(
@@ -639,6 +642,12 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {} }) => {
   const stepEyebrow = ['', 'Step 1 of 3', 'Step 2 of 3', 'Step 3 of 3', 'Optional'][step];
 
   if (!show) return null;
+
+  // Visitors upload once their own city opens (the server refuses it too:
+  // VISITOR_UPLOAD_LOCKED). No song or video is stored before that.
+  if (visitor || userProfile?.visitor) {
+    return <VisitorLockSheet kind="upload" onClose={onClose} />;
+  }
 
   return (
     <div className="uw-overlay" onClick={onClose}>

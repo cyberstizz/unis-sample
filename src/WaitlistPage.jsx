@@ -1,19 +1,32 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { useFeedback } from './context/FeedbackContext';
-import Layout from './layout';
+import useRegionProgress from './hooks/useRegionProgress';
 import US_STATES_AND_METROS from './data/Usstatesandmetros';
+import logo from './assets/unisLogoThree.svg';
+import './waitlistPage.scss';
 
-// The waitlist form — /waitlist/join. The pitch page at /waitlist
-// (WaitlistLanding) comes first and passes along what the visitor already
-// chose: ?ref (a friend's code from a share link), ?state and ?metro (the city
-// they checked), ?type=artist.
+// The visitor sign-up — /waitlist/join. Standalone page (no sidebar/player).
+//
+// Unis opens city by city. People outside an open area join here and come in
+// right away as VISITORS: they can listen, like, make playlists, follow,
+// comment and message; voting and uploads wait until their own city opens.
+// Every sign-up also counts toward their city's opening number. The server
+// makes both the waitlist entry and the account (VisitorService).
+//
+// The pitch page at /waitlist (WaitlistLanding) and the Harlem sign-up's
+// "Not from Harlem?" links pass along: ?ref (whoever told them about Unis),
+// ?state and ?metro (the city they checked), ?type=artist.
 //
 // A referral code is required: everyone hears about Unis from someone, and
-// that person gets the credit. Any code works — someone else's waitlist code
-// (UNIS-AB12CD), a member's code, or a short code from a poster (HARLEM). The
-// backend refuses a sign-up without one (PreRegistrationService).
+// that person gets the credit. A birth date is required too (13 or older),
+// because visitors can message people. Email is confirmed before sign-in.
+
+const MIN_AGE = 13;
+
+const cleanCode = (raw) => (raw || '').replace(/[^A-Za-z0-9_-]/g, '').toUpperCase().slice(0, 40);
+
 const initialForm = (params) => {
   const state = (params.get('state') || '').toUpperCase();
   const stateCode = US_STATES_AND_METROS[state] ? state : '';
@@ -24,52 +37,134 @@ const initialForm = (params) => {
     username: '',
     password: '',
     confirmPassword: '',
-    displayName: '',
+    dateOfBirth: '',
     userType: params.get('type') === 'artist' ? 'ARTIST' : 'LISTENER',
     stateCode,
     metroRegion,
     cityFreetext: '',
-    referredByCode: (params.get('ref') || '').replace(/[^A-Za-z0-9_-]/g, '').toUpperCase().slice(0, 40),
+    referredByCode: cleanCode(params.get('ref')),
   };
 };
 
+const ageOn = (isoDate) => {
+  const dob = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(dob.getTime())) return -1;
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const m = now.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age -= 1;
+  return age;
+};
+
+const todayIso = () => new Date().toISOString().slice(0, 10);
+const count = (n) => Number(n || 0).toLocaleString('en-US');
+
+// ─── City meter ──────────────────────────────────────────────────────────────
+const CityMeter = ({ city, progress, loading, className = '' }) => {
+  if (!city) {
+    return (
+      <div className={`wlj-meter wlj-meter--empty ${className}`}>
+        <p>Pick your city to see how close it is to opening.</p>
+      </div>
+    );
+  }
+  const pct = progress ? Math.max(0, Math.min(100, Number(progress.progressPercent) || 0)) : 0;
+  const left = progress ? Math.max(0, Number(progress.threshold) - Number(progress.signupCount)) : 0;
+  let line;
+  if (loading && !progress) line = 'Counting…';
+  else if (!progress) line = 'We couldn’t load the count just now.';
+  else if (progress.readyToActivate) line = `${city} hit its number. It opens soon.`;
+  else line = `${count(left)} more sign-ups and Unis opens in ${city}.`;
+
+  return (
+    <div className={`wlj-meter ${className}`}>
+      <div className="wlj-meter__top">
+        <b>{city}</b>
+        {progress && <span>{count(progress.signupCount)} of {count(progress.threshold)}</span>}
+      </div>
+      <div className="wlj-meter__bar" role="progressbar" aria-label={`${city} sign-ups`}
+        aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
+        <span style={{ width: `${pct}%` }} />
+      </div>
+      <p className="wlj-meter__line" aria-live="polite">{line}</p>
+    </div>
+  );
+};
+
+const OpenNow = () => (
+  <div className="wlj-can">
+    <div className="wlj-can__col">
+      <h3 className="wlj-can__title wlj-can__title--now">Open to you now</h3>
+      <ul>
+        <li>Listen to everything</li>
+        <li>Like and save</li>
+        <li>Make playlists</li>
+        <li>Follow and message</li>
+        <li>Comment</li>
+      </ul>
+    </div>
+    <div className="wlj-can__col">
+      <h3 className="wlj-can__title">When your city opens</h3>
+      <ul className="wlj-can__later">
+        <li>Voting</li>
+        <li>Uploading music (artists)</li>
+        <li>Your city&rsquo;s own charts</li>
+      </ul>
+    </div>
+  </div>
+);
+
+const HarlemLink = ({ className = '' }) => (
+  <p className={`wlj-harlem ${className}`}>
+    Live in Harlem? <Link to="/login?signup=1">Harlem is open. Sign up as a resident</Link>
+  </p>
+);
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 const WaitlistPage = () => {
   const [params] = useSearchParams();
-  const [step, setStep] = useState(1);
+  const navigate = useNavigate();
+  const feedback = useFeedback();
+
+  const [form, setForm] = useState(() => initialForm(params));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [result, setResult] = useState(null);
+
   const [referralValid, setReferralValid] = useState(null);
   const [referralChecking, setReferralChecking] = useState(false);
   const [referrerName, setReferrerName] = useState('');
-  const [copied, setCopied] = useState(false);
-  const feedback = useFeedback();
+  const [usernameStatus, setUsernameStatus] = useState(null);   // null | 'checking' | 'ok' | 'taken'
+  const [resending, setResending] = useState(false);
 
-  // FIX #10: Live region signup count (fetched when state+metro both selected)
-  const [regionStats, setRegionStats] = useState(null);
-  const [regionStatsLoading, setRegionStatsLoading] = useState(false);
-
-  const [form, setForm] = useState(() => initialForm(params));
-
-  const [result, setResult] = useState(null);
-
-  // FIX #1: Ref to scroll the top-of-form error banner into view on submit failure
-  const formTopRef = useRef(null);
+  const errorRef = useRef(null);
 
   const selectedState = US_STATES_AND_METROS[form.stateCode];
   const metros = selectedState ? [...selectedState.metros, 'Other'] : [];
+  const cityName = form.metroRegion === 'Other' ? form.cityFreetext.trim() : form.metroRegion;
+
+  // The count follows what they type for "Other", without asking on every key.
+  const [meterCity, setMeterCity] = useState(cityName);
+  useEffect(() => {
+    const t = setTimeout(() => setMeterCity(cityName.length >= 2 ? cityName : ''), 400);
+    return () => clearTimeout(t);
+  }, [cityName]);
+  const { loading: meterLoading, progress } = useRegionProgress(form.stateCode, meterCity);
+
+  // After sign-up, the count includes them.
+  const done = useRegionProgress(result?.stateCode, result?.metroRegion, { fresh: true });
 
   const handleChange = (field, value) => {
-    setForm(prev => {
+    setForm((prev) => {
       const updated = { ...prev, [field]: value };
       if (field === 'stateCode') {
         updated.metroRegion = '';
         updated.cityFreetext = '';
       }
-      if (field === 'metroRegion' && value !== 'Other') {
-        updated.cityFreetext = '';
-      }
+      if (field === 'metroRegion' && value !== 'Other') updated.cityFreetext = '';
       return updated;
     });
+    if (field === 'username') setUsernameStatus(null);
     setError('');
   };
 
@@ -86,9 +181,10 @@ const WaitlistPage = () => {
         method: 'get',
         useCache: false,
       });
-      setReferralValid(res.data.valid);
-      setReferrerName(res.data.valid ? res.data.referrerUsername || '' : '');
-    } catch {
+      setReferralValid(Boolean(res.data?.valid));
+      setReferrerName(res.data?.valid ? res.data.referrerUsername || '' : '');
+    } catch (err) {
+      console.error('[VisitorSignup] referral check failed:', err?.response?.status, err?.message);
       setReferralValid(null);
       setReferrerName('');
     } finally {
@@ -103,675 +199,325 @@ const WaitlistPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // FIX #10: Live region stats fetch
-  useEffect(() => {
-    if (!form.stateCode || !form.metroRegion) {
-      setRegionStats(null);
-      return;
+  const checkUsername = async () => {
+    const name = form.username.trim();
+    if (name.length < 3) return;
+    setUsernameStatus('checking');
+    try {
+      const res = await apiCall({
+        url: `/v1/users/check-username?username=${encodeURIComponent(name)}`
+          + (form.email ? `&email=${encodeURIComponent(form.email.trim())}` : ''),
+        method: 'get',
+        useCache: false,
+      });
+      setUsernameStatus(res.data?.available ? 'ok' : 'taken');
+    } catch (err) {
+      console.error('[VisitorSignup] username check failed:', err?.response?.status, err?.message);
+      setUsernameStatus(null);
     }
-    let cancelled = false;
-    const fetchStats = async () => {
-      setRegionStatsLoading(true);
-      try {
-        const res = await apiCall({
-          url: `/v1/waitlist/region-progress?state=${encodeURIComponent(form.stateCode)}&metro=${encodeURIComponent(form.metroRegion)}`,
-          method: 'get',
-        });
-        if (!cancelled) setRegionStats(res.data);
-      } catch {
-        if (!cancelled) setRegionStats(null);
-      } finally {
-        if (!cancelled) setRegionStatsLoading(false);
-      }
-    };
-    fetchStats();
-    return () => { cancelled = true; };
-  }, [form.stateCode, form.metroRegion]);
-
-  // FIX #1: Scroll to the top-of-form error banner after any validation/submit failure
-  const scrollToError = () => {
-    setTimeout(() => {
-      if (formTopRef.current && typeof formTopRef.current.scrollIntoView === 'function') {
-        formTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 50);
   };
 
-  const handleSubmit = async () => {
-    if (!form.email || !form.username || !form.password) {
-      setError('Email, username, and password are required.');
-      scrollToError();
-      return;
-    }
-    if (form.password.length < 8) {
-      setError('Password must be at least 8 characters.');
-      scrollToError();
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match.');
-      scrollToError();
-      return;
-    }
-    if (!form.stateCode) {
-      setError('Please select your state.');
-      scrollToError();
-      return;
-    }
-    if (!form.metroRegion) {
-      setError('Please select your metro area.');
-      scrollToError();
-      return;
-    }
-    if (form.metroRegion === 'Other' && !form.cityFreetext.trim()) {
-      setError('Please enter your city or area name.');
-      scrollToError();
-      return;
-    }
+  const fail = (msg) => {
+    setError(msg);
+    setTimeout(() => errorRef.current?.focus?.(), 30);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.stateCode) return fail('Please pick your state.');
+    if (!form.metroRegion) return fail('Please pick your city.');
+    if (form.metroRegion === 'Other' && !form.cityFreetext.trim()) return fail('Please type your city.');
+    if (!form.email || !form.username || !form.password) return fail('Email, username and password are required.');
+    if (form.username.trim().length < 3) return fail('Usernames are at least 3 characters.');
+    if (usernameStatus === 'taken') return fail('That username is taken. Try another.');
+    if (form.password.length < 8) return fail('Password must be at least 8 characters.');
+    if (form.password !== form.confirmPassword) return fail('Passwords don’t match.');
+    if (!form.dateOfBirth) return fail('Please enter your date of birth.');
+    if (ageOn(form.dateOfBirth) < MIN_AGE) return fail('You need to be 13 or older to join Unis.');
     if (!form.referredByCode.trim()) {
-      setError('A referral code is required. Ask the person who told you about Unis for theirs.');
-      scrollToError();
-      return;
+      return fail('A referral code is required. Ask the person who told you about Unis for theirs.');
     }
-    if (referralValid === false) {
-      setError('That referral code isn’t valid. Check it with the person who gave it to you.');
-      scrollToError();
-      return;
-    }
+    if (referralValid === false) return fail('That code isn’t valid. Check it with the person who gave it to you.');
 
     setLoading(true);
     setError('');
-
     try {
-      const payload = {
-        email: form.email,
-        username: form.username,
-        password: form.password,
-        displayName: form.displayName || form.username,
-        userType: form.userType,
-        stateCode: form.stateCode,
-        stateName: selectedState.name,
-        metroRegion: form.metroRegion,
-        cityFreetext: form.cityFreetext || null,
-        referredByCode: form.referredByCode.trim(),
-      };
-      const res = await apiCall({ url: '/v1/waitlist/register', method: 'post', data: payload });
-      setResult(res.data);
-      setStep(2);
+      const res = await apiCall({
+        url: '/v1/waitlist/register',
+        method: 'post',
+        useCache: false,
+        data: {
+          email: form.email.trim(),
+          username: form.username.trim(),
+          password: form.password,
+          dateOfBirth: form.dateOfBirth,
+          userType: form.userType,
+          stateCode: form.stateCode,
+          stateName: selectedState.name,
+          metroRegion: form.metroRegion,
+          cityFreetext: form.metroRegion === 'Other' ? form.cityFreetext.trim() : null,
+          referredByCode: form.referredByCode.trim(),
+        },
+      });
+      setResult({ ...res.data, email: form.email.trim() });
+      feedback.success(res.data?.visitorHeld ? 'You’re on the list' : 'Your visitor account is ready');
+      window.scrollTo?.({ top: 0 });
     } catch (err) {
-      const msg = err.response?.data?.error || 'Registration failed. Please try again.';
-      setError(msg);
-      scrollToError();
+      console.error('[VisitorSignup] register failed:', err?.response?.status, err?.message);
+      fail(err?.response?.data?.error || 'We couldn’t create your account. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // FIX #2: Copy referral code
-  const handleCopyCode = async () => {
+  // ─── Success actions ──
+  const copyCode = async () => {
     if (!result?.referralCode) return;
     try {
       await navigator.clipboard.writeText(result.referralCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      feedback.success(`Copied ${result.referralCode}`);
     } catch {
-      setCopied(false);
-      feedback.info(`Copy your code: ${result.referralCode}`);
+      feedback.info(`Your code: ${result.referralCode}`);
     }
   };
 
-  // FIX #3: Native share with fallback to copy
-  const handleShare = async () => {
-    if (!result) return;
-    const shareText = `I just joined the Unis waitlist for ${result.metroRegion}! Use my code ${result.referralCode} to help unlock Unis here faster.`;
-    const shareUrl = `${window.location.origin}/waitlist?ref=${result.referralCode}`;
+  const shareCode = async () => {
+    if (!result?.referralCode) return;
+    const text = `I just joined Unis from ${result.metroRegion}. Use my code ${result.referralCode} to help open it here.`;
+    const url = `${window.location.origin}/waitlist?ref=${encodeURIComponent(result.referralCode)}`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Join me on Unis', text: shareText, url: shareUrl });
-      } catch {
-        // user cancelled
+        await navigator.share({ title: 'Join me on Unis', text, url });
+        feedback.success('Shared');
+        return;
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
       }
-    } else {
-      handleCopyCode();
+    }
+    copyCode();
+  };
+
+  const resendEmail = async () => {
+    if (!result?.email) return;
+    setResending(true);
+    try {
+      await apiCall({ url: '/auth/resend-verification', method: 'post', data: { email: result.email }, useCache: false });
+      feedback.success('Sent. Check your inbox and spam folder.');
+    } catch (err) {
+      console.error('[VisitorSignup] resend failed:', err?.response?.status, err?.message);
+      feedback.error(err?.response?.data?.message || 'We couldn’t send it just now. Try again in a minute.');
+    } finally {
+      setResending(false);
     }
   };
 
-  const inputStyle = {
-    width: '100%',
-    padding: '14px 16px',
-    background: '#111114',
-    border: '1px solid rgba(255,255,255,0.12)',
-    borderRadius: '10px',
-    color: '#fff',
-    fontSize: '15px',
-    fontFamily: "'DM Sans', sans-serif",
-    outline: 'none',
-    transition: 'border-color 0.2s',
-    boxSizing: 'border-box',
-  };
+  const nycHint = form.stateCode === 'NY' && form.metroRegion === 'New York City';
 
-  const labelStyle = {
-    display: 'block',
-    color: '#A9A9A9',
-    fontSize: '13px',
-    fontFamily: "'DM Sans', sans-serif",
-    marginBottom: '6px',
-    letterSpacing: '0.3px',
-  };
-
-  const fieldGroup = { marginBottom: '18px' };
-
-  // ─── Success screen ───
-  if (step === 2 && result) {
-    const remaining = Math.max(0, result.regionThreshold - result.regionSignupCount);
-
-    return (
-      <Layout>
-        <div style={{
-          maxWidth: '560px', margin: '60px auto', padding: '0 20px',
-          fontFamily: "'DM Sans', sans-serif",
-        }}>
-          <div style={{
-            background: '#111114', borderRadius: '16px', padding: '40px',
-            border: '1px solid rgba(255,255,255,0.08)',
-            textAlign: 'center',
-          }}>
-            <div style={{ marginBottom: '24px' }}>
-              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                <circle cx="32" cy="32" r="30" stroke="#163387" strokeWidth="3" fill="rgba(22,51,135,0.15)" />
-                <path d="M20 33 L28 41 L44 24" stroke="#163387" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              </svg>
-            </div>
-
-            <h1 style={{ color: '#fff', fontSize: '26px', fontWeight: '700', marginBottom: '12px' }}>
-              You're on the waitlist!
-            </h1>
-            <p style={{ color: '#A9A9A9', fontSize: '15px', lineHeight: '1.6', marginBottom: '28px' }}>
-              Unis is coming to <strong style={{ color: '#fff' }}>{result.metroRegion}</strong>,{' '}
-              <strong style={{ color: '#fff' }}>{result.stateName}</strong>.
-              Share your referral code to unlock your region faster.
-            </p>
-
-            {/* FIX #2 + #3: Code card with Copy + Share buttons */}
-            <div style={{
-              background: '#0a0a0c', borderRadius: '12px', padding: '24px',
-              border: '1px solid rgba(22,51,135,0.4)', marginBottom: '16px',
-            }}>
-              <div style={{ color: '#A9A9A9', fontSize: '12px', letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase' }}>
-                Your Referral Code
-              </div>
-              <div style={{
-                color: '#fff', fontSize: '32px', fontWeight: '700',
-                letterSpacing: '3px', marginBottom: '16px',
-              }}>
-                {result.referralCode}
-              </div>
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                <button
-                  onClick={handleCopyCode}
-                  aria-label="Copy referral code"
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    background: copied ? 'rgba(34,197,94,0.15)' : 'rgba(22,51,135,0.2)',
-                    border: `1px solid ${copied ? '#22c55e' : 'rgba(22,51,135,0.5)'}`,
-                    borderRadius: '10px',
-                    color: copied ? '#22c55e' : '#fff',
-                    fontSize: '14px',
-                    fontFamily: "'DM Sans', sans-serif",
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {copied ? '✓ Copied!' : 'Copy Code'}
-                </button>
-                <button
-                  onClick={handleShare}
-                  aria-label="Share referral code"
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    background: '#163387',
-                    border: 'none',
-                    borderRadius: '10px',
-                    color: '#fff',
-                    fontSize: '14px',
-                    fontFamily: "'DM Sans', sans-serif",
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  Share
-                </button>
-              </div>
-            </div>
-
-            {/* FIX #4: Motivating copy — "N more to unlock!" */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ color: '#A9A9A9', fontSize: '13px' }}>
-                  {remaining > 0 ? `${remaining} more to unlock!` : "Region activated — you're in!"}
-                </span>
-                <span style={{ color: '#163387', fontSize: '13px', fontWeight: '600' }}>
-                  {result.regionProgressPercent}%
-                </span>
-              </div>
-              <div style={{
-                width: '100%', height: '8px', background: 'rgba(255,255,255,0.08)',
-                borderRadius: '4px', overflow: 'hidden',
-              }}>
-                <div style={{
-                  width: `${result.regionProgressPercent}%`,
-                  height: '100%',
-                  background: 'linear-gradient(90deg, #163387, #2952cc)',
-                  borderRadius: '4px',
-                  transition: 'width 0.6s ease',
-                }} />
-              </div>
-              <div style={{ color: '#888', fontSize: '12px', marginTop: '6px', textAlign: 'left' }}>
-                {result.regionSignupCount} of {result.regionThreshold} signups
-              </div>
-            </div>
-
-            <p style={{ color: '#666', fontSize: '13px', lineHeight: '1.5', marginBottom: '12px' }}>
-              When your region reaches {result.regionThreshold} signups, it will be activated and
-              you'll get full access to Unis — voting, earning, and discovering music in your area.
-            </p>
-
-            {/* FIX #7: Explain what happens next */}
-            <p style={{ color: '#666', fontSize: '12px', lineHeight: '1.5' }}>
-              We'll email you the moment your region activates. No spam, no forwarding — just the
-              one message you've been waiting for.
-            </p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  // ─── Form ───
+  // ─── Render ──
   return (
-    <Layout>
-      <div
-        ref={formTopRef}
-        style={{
-          maxWidth: '560px', margin: '40px auto', padding: '0 20px',
-          fontFamily: "'DM Sans', sans-serif",
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-          <h1 style={{ color: '#fff', fontSize: '30px', fontWeight: '700', marginBottom: '10px' }}>
-            Join the Unis Waitlist
+    <div className="wlj">
+      <header className="wlj-top">
+        <button type="button" className="wlj-top__back" aria-label="Back" onClick={() => navigate('/waitlist')}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+        </button>
+        <Link to="/waitlist" className="wlj-top__brand" aria-label="Unis">
+          <img src={logo} alt="" />
+        </Link>
+        <nav className="wlj-top__nav" aria-label="Unis">
+          <Link to="/waitlist">How Unis works</Link>
+          <Link to="/login">Sign in</Link>
+        </nav>
+      </header>
+
+      {result ? (
+        <main className="wlj-done">
+          <p className="wlj-eyebrow">{result.visitorHeld ? 'Your spot is held' : 'Visitor account ready'}</p>
+          <h1 className="wlj-done__title">
+            {result.visitorHeld ? 'You’re on the list, ' : 'You’re in, '}
+            <em>{result.metroRegion}.</em>
           </h1>
-          <p style={{ color: '#A9A9A9', fontSize: '15px', lineHeight: '1.6', maxWidth: '420px', margin: '0 auto' }}>
-            Unis isn't in your area yet — but it can be. Sign up now, get your referral code,
-            and help unlock Unis in your region.
+          <p className="wlj-lede">
+            {result.visitorHeld
+              ? `We’re letting out-of-town visitors in a few at a time right now. Your username and your spot are held, and your code already counts for ${result.metroRegion}. We’ll email you the moment you’re in.`
+              : `Listen, like, make playlists and message anyone on Unis. Your vote opens the day ${result.metroRegion} does.`}
           </p>
-        </div>
 
-        {/* FIX #1: Top-of-form error banner (scrolled into view on submit) */}
-        {error && (
-          <div
-            role="alert"
-            style={{
-              background: 'rgba(239,68,68,0.1)',
-              border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: '10px',
-              padding: '12px 16px',
-              marginBottom: '18px',
-              color: '#ef4444',
-              fontSize: '14px',
-            }}
-          >
-            {error}
+          <div className="wlj-mail">
+            <div className="wlj-mail__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3.5 6.5l8.5 6 8.5-6" /></svg>
+            </div>
+            <div className="wlj-mail__text">
+              <b>{result.visitorHeld ? 'Confirm your email now' : 'One step left: confirm your email'}</b>
+              <span>We sent a link to {result.email}</span>
+            </div>
+            <button type="button" className="wlj-btn wlj-btn--ghost wlj-btn--small" onClick={resendEmail} disabled={resending}>
+              {resending ? 'Sending…' : 'Resend'}
+            </button>
           </div>
-        )}
 
-        <div style={{
-          background: '#111114', borderRadius: '16px', padding: '32px',
-          border: '1px solid rgba(255,255,255,0.08)',
-        }}>
-          <div style={fieldGroup}>
-            <label style={labelStyle}>I am a...</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              {['LISTENER', 'ARTIST'].map(type => (
-                <button
-                  key={type}
-                  onClick={() => handleChange('userType', type)}
-                  style={{
-                    flex: 1, padding: '12px',
-                    background: form.userType === type ? 'rgba(22,51,135,0.25)' : '#0a0a0c',
-                    border: `1px solid ${form.userType === type ? '#163387' : 'rgba(255,255,255,0.12)'}`,
-                    borderRadius: '10px', color: '#fff', fontSize: '14px',
-                    fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
-                    fontWeight: form.userType === type ? '600' : '400',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {type === 'LISTENER' ? 'Listener' : 'Artist'}
+          <div className="wlj-code">
+            <span className="wlj-code__label">Your referral code</span>
+            <span className="wlj-code__value">{result.referralCode}</span>
+            <div className="wlj-code__actions">
+              <button type="button" className="wlj-btn wlj-btn--ghost" onClick={copyCode}>Copy</button>
+              <button type="button" className="wlj-btn wlj-btn--primary" onClick={shareCode}>Share</button>
+            </div>
+          </div>
+
+          <CityMeter city={result.metroRegion} progress={done.progress} loading={done.loading} />
+          {done.progress?.readyToActivate ? (
+            <p className="wlj-note">
+              {result.metroRegion} opens soon. The day it does, your vote turns on with nothing to redo.
+            </p>
+          ) : (
+            <p className="wlj-note">Everyone who joins with your code brings {result.metroRegion} closer.</p>
+          )}
+
+          {!result.visitorHeld && (
+            <Link to="/login" className="wlj-btn wlj-btn--primary wlj-btn--block">Sign in to Unis</Link>
+          )}
+        </main>
+      ) : (
+        <main className="wlj-main">
+          <section className="wlj-pitch" aria-labelledby="wlj-title">
+            <p className="wlj-eyebrow">Not in Harlem yet?</p>
+            <h1 id="wlj-title" className="wlj-pitch__title">Use Unis from <em>anywhere.</em></h1>
+            <p className="wlj-lede">
+              Unis opens city by city. Until yours opens, come in as a visitor: the whole app, minus the vote.
+              Every sign-up from your city brings it closer.
+            </p>
+            <CityMeter className="wlj-only-wide" city={meterCity} progress={progress} loading={meterLoading} />
+            <OpenNow />
+            <HarlemLink className="wlj-only-wide" />
+          </section>
+
+          <form className="wlj-card" onSubmit={handleSubmit} noValidate>
+            <h2 className="wlj-card__title">Create your visitor account</h2>
+
+            {error && (
+              <div className="wlj-error" role="alert" tabIndex={-1} ref={errorRef}>{error}</div>
+            )}
+
+            <div className="wlj-seg" role="group" aria-label="I am a">
+              {[['LISTENER', 'Listener'], ['ARTIST', 'Artist']].map(([value, label]) => (
+                <button key={value} type="button" aria-pressed={form.userType === value}
+                  className={form.userType === value ? 'is-on' : ''}
+                  onClick={() => handleChange('userType', value)}>
+                  {label}
                 </button>
               ))}
             </div>
-          </div>
 
-          <div style={fieldGroup}>
-            <label style={labelStyle}>Email</label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={e => handleChange('email', e.target.value)}
-              placeholder="your@email.com"
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-            />
-          </div>
-
-          <div style={fieldGroup}>
-            <label style={labelStyle}>Username</label>
-            <input
-              type="text"
-              value={form.username}
-              onChange={e => handleChange('username', e.target.value)}
-              placeholder="Choose a username"
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-            />
-          </div>
-
-          {/* FIX #8: Context for where Display Name shows up */}
-          <div style={fieldGroup}>
-            <label style={labelStyle}>
-              Display Name <span style={{ color: '#555' }}>(optional)</span>
-            </label>
-            <input
-              type="text"
-              value={form.displayName}
-              onChange={e => handleChange('displayName', e.target.value)}
-              placeholder={form.userType === 'ARTIST' ? 'Your artist name' : 'Your display name'}
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-            />
-            <div style={{ color: '#666', fontSize: '12px', marginTop: '6px' }}>
-              Shown on votes, comments, and your public profile. Defaults to your username.
-            </div>
-          </div>
-
-          <div style={fieldGroup}>
-            <label style={labelStyle}>Password</label>
-            <input
-              type="password"
-              value={form.password}
-              onChange={e => handleChange('password', e.target.value)}
-              placeholder="Min 8 characters"
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-            />
-          </div>
-
-          <div style={fieldGroup}>
-            <label style={labelStyle}>Confirm Password</label>
-            <input
-              type="password"
-              value={form.confirmPassword}
-              onChange={e => handleChange('confirmPassword', e.target.value)}
-              placeholder="Re-enter password"
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-            />
-          </div>
-
-          <div style={{
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            marginTop: '24px', paddingTop: '24px', marginBottom: '18px',
-          }}>
-            <div style={{ color: '#fff', fontSize: '15px', fontWeight: '600', marginBottom: '4px' }}>
-              Where are you?
-            </div>
-            <div style={{ color: '#666', fontSize: '13px', marginBottom: '18px' }}>
-              This determines which Unis jurisdiction you'll join when it activates.
-            </div>
-          </div>
-
-          {/* FIX #9: State field with type-ahead via datalist */}
-          <div style={fieldGroup}>
-            <label style={labelStyle}>
-              State
-              <span style={{ color: '#555', fontWeight: 400, marginLeft: '8px' }}>
-                (type to search, or pick below)
-              </span>
-            </label>
-            <input
-              list="state-list"
-              value={selectedState ? selectedState.name : ''}
-              onChange={e => {
-                const typed = e.target.value;
-                const match = Object.entries(US_STATES_AND_METROS).find(
-                  ([, data]) => data.name.toLowerCase() === typed.toLowerCase()
-                );
-                if (match) {
-                  handleChange('stateCode', match[0]);
-                } else if (!typed) {
-                  handleChange('stateCode', '');
-                }
-              }}
-              placeholder="Start typing a state..."
-              style={{ ...inputStyle, marginBottom: '8px' }}
-              onFocus={e => e.target.style.borderColor = '#163387'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-              aria-label="Type to search state"
-            />
-            <datalist id="state-list">
-              {Object.entries(US_STATES_AND_METROS)
-                .sort((a, b) => a[1].name.localeCompare(b[1].name))
-                .map(([code, data]) => (
-                  <option key={code} value={data.name} />
-                ))}
-            </datalist>
-            <select
-              value={form.stateCode}
-              onChange={e => handleChange('stateCode', e.target.value)}
-              style={{
-                ...inputStyle,
-                cursor: 'pointer',
-                appearance: 'none',
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23A9A9A9' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 16px center',
-              }}
-            >
-              <option value="" style={{ background: '#111114' }}>Select your state</option>
-              {Object.entries(US_STATES_AND_METROS)
-                .sort((a, b) => a[1].name.localeCompare(b[1].name))
-                .map(([code, data]) => (
-                  <option key={code} value={code} style={{ background: '#111114' }}>
-                    {data.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          {form.stateCode && (
-            <div style={fieldGroup}>
-              <label style={labelStyle}>Metro / Region</label>
-              <select
-                value={form.metroRegion}
-                onChange={e => handleChange('metroRegion', e.target.value)}
-                style={{
-                  ...inputStyle,
-                  cursor: 'pointer',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23A9A9A9' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 16px center',
-                }}
-              >
-                <option value="" style={{ background: '#111114' }}>Select your area</option>
-                {metros.map(m => (
-                  <option key={m} value={m} style={{ background: '#111114' }}>{m}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {form.metroRegion === 'Other' && (
-            <div style={fieldGroup}>
-              <label style={labelStyle}>Your City or Area</label>
-              <input
-                type="text"
-                value={form.cityFreetext}
-                onChange={e => handleChange('cityFreetext', e.target.value)}
-                placeholder="e.g. Shreveport, Bakersfield"
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = '#163387'}
-                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-              />
-            </div>
-          )}
-
-          {/* FIX #10: Live region stats shown BEFORE submit */}
-          {form.stateCode && form.metroRegion && (
-            <div style={{
-              background: 'rgba(22,51,135,0.08)',
-              border: '1px solid rgba(22,51,135,0.25)',
-              borderRadius: '10px',
-              padding: '14px 16px',
-              marginBottom: '18px',
-            }}>
-              {regionStatsLoading ? (
-                <div style={{ color: '#A9A9A9', fontSize: '13px' }}>
-                  Checking region progress...
+            <fieldset className="wlj-group">
+              <legend>Where you live</legend>
+              <div className="wlj-row">
+                <div className="wlj-field">
+                  <label htmlFor="wlj-state">State</label>
+                  <select id="wlj-state" value={form.stateCode} onChange={(e) => handleChange('stateCode', e.target.value)}>
+                    <option value="">Choose…</option>
+                    {Object.entries(US_STATES_AND_METROS)
+                      .sort((a, b) => a[1].name.localeCompare(b[1].name))
+                      .map(([code, s]) => <option key={code} value={code}>{s.name}</option>)}
+                  </select>
                 </div>
-              ) : regionStats ? (
-                <>
-                  <div style={{ color: '#fff', fontSize: '13px', marginBottom: '8px' }}>
-                    {regionStats.signupCount > 0
-                      ? `${regionStats.signupCount} people already waiting in ${form.metroRegion}.`
-                      : `You'll be the first from ${form.metroRegion}!`}
-                    {' '}
-                    {regionStats.threshold - regionStats.signupCount > 0 && (
-                      <strong style={{ color: '#6b8cff' }}>
-                        {regionStats.threshold - regionStats.signupCount} more to unlock.
-                      </strong>
-                    )}
-                  </div>
-                  <div style={{
-                    width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)',
-                    borderRadius: '3px', overflow: 'hidden',
-                  }}>
-                    <div style={{
-                      width: `${regionStats.progressPercent}%`,
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #163387, #2952cc)',
-                      borderRadius: '3px',
-                      transition: 'width 0.6s ease',
-                    }} />
-                  </div>
-                </>
-              ) : (
-                <div style={{ color: '#A9A9A9', fontSize: '13px' }}>
-                  Sign up to start the waitlist for {form.metroRegion}!
+                <div className="wlj-field">
+                  <label htmlFor="wlj-city">City</label>
+                  <select id="wlj-city" value={form.metroRegion} disabled={!selectedState}
+                    onChange={(e) => handleChange('metroRegion', e.target.value)}>
+                    <option value="">{selectedState ? 'Choose…' : 'Pick a state first'}</option>
+                    {metros.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* FIX #5: Referral code with benefit explanation */}
-          <div style={fieldGroup}>
-            <label style={labelStyle}>
-              Referral code
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                value={form.referredByCode}
-                onChange={e => { handleChange('referredByCode', e.target.value.toUpperCase()); setReferralValid(null); setReferrerName(''); }}
-                onBlur={e => checkReferral(e.target.value)}
-                placeholder="e.g. UNIS-AB12CD or HARLEM"
-                aria-required="true"
-                aria-invalid={referralValid === false || undefined}
-                style={{
-                  ...inputStyle,
-                  paddingRight: '44px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                }}
-                onFocus={e => e.target.style.borderColor = '#163387'}
-              />
-              {referralChecking && (
-                <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#A9A9A9', fontSize: '12px' }}>
-                  ...
-                </div>
-              )}
-              {referralValid === true && (
-                <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)' }}>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="9" fill="rgba(34,197,94,0.2)" stroke="#22c55e" strokeWidth="1.5" />
-                    <path d="M6 10.5L9 13.5L14 7.5" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                  </svg>
-                </div>
-              )}
-              {referralValid === false && form.referredByCode.length >= 3 && (
-                <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)' }}>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="9" fill="rgba(239,68,68,0.2)" stroke="#ef4444" strokeWidth="1.5" />
-                    <path d="M7 7L13 13M13 7L7 13" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                </div>
-              )}
-            </div>
-            {referralValid === true ? (
-              <div style={{ color: '#22c55e', fontSize: '12px', marginTop: '6px' }}>
-                ✓ {referrerName ? `${referrerName} gets the credit for bringing you to Unis.` : 'Valid code.'}
               </div>
-            ) : referralValid === false && form.referredByCode.length >= 3 ? (
-              <div style={{ color: '#ef4444', fontSize: '12px', marginTop: '6px' }}>
-                That code isn’t valid. Check it with the person who gave it to you.
-              </div>
-            ) : (
-              <div style={{ color: '#666', fontSize: '12px', marginTop: '6px' }}>
-                Everyone gets to Unis through someone. Enter the code of the friend, artist or shop that
-                told you about Unis. They get the credit.
-              </div>
-            )}
-          </div>
+              {form.metroRegion === 'Other' && (
+                <div className="wlj-field">
+                  <label htmlFor="wlj-other">Your city</label>
+                  <input id="wlj-other" type="text" maxLength={100} value={form.cityFreetext}
+                    onChange={(e) => handleChange('cityFreetext', e.target.value)} />
+                </div>
+              )}
+              {nycHint && (
+                <div className="wlj-nyc">
+                  <b>Live in Harlem? Harlem is open.</b>
+                  <span>Sign up as a resident and vote from day one. Anywhere else in the city, keep going here.</span>
+                  <Link to="/login?signup=1">Sign up as a Harlem resident</Link>
+                </div>
+              )}
+              <CityMeter className="wlj-only-narrow" city={meterCity} progress={progress} loading={meterLoading} />
+              {!nycHint && <HarlemLink className="wlj-only-narrow" />}
+            </fieldset>
 
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            style={{
-              width: '100%', padding: '16px',
-              background: loading ? 'rgba(22,51,135,0.5)' : '#163387',
-              color: '#fff', border: 'none', borderRadius: '10px',
-              fontSize: '16px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer',
-              fontFamily: "'DM Sans', sans-serif",
-              transition: 'background 0.2s',
-            }}
-          >
-            {loading ? 'Joining...' : 'Join the Waitlist'}
-          </button>
+            <fieldset className="wlj-group">
+              <legend>You</legend>
+              <div className="wlj-field">
+                <label htmlFor="wlj-email">Email</label>
+                <input id="wlj-email" type="email" autoComplete="email" value={form.email}
+                  onChange={(e) => handleChange('email', e.target.value)} />
+              </div>
+              <div className="wlj-field">
+                <label htmlFor="wlj-user">Username</label>
+                <input id="wlj-user" type="text" autoComplete="username" maxLength={50} value={form.username}
+                  aria-invalid={usernameStatus === 'taken'} aria-describedby="wlj-user-help"
+                  onChange={(e) => handleChange('username', e.target.value)} onBlur={checkUsername} />
+                <span id="wlj-user-help" className={`wlj-help ${usernameStatus === 'ok' ? 'is-ok' : ''} ${usernameStatus === 'taken' ? 'is-bad' : ''}`}>
+                  {usernameStatus === 'checking' && 'Checking…'}
+                  {usernameStatus === 'ok' && 'Available. It’s yours from today, in any capitalization.'}
+                  {usernameStatus === 'taken' && 'That username is taken. Try another.'}
+                </span>
+              </div>
+              <div className="wlj-row">
+                <div className="wlj-field">
+                  <label htmlFor="wlj-pw">Password</label>
+                  <input id="wlj-pw" type="password" autoComplete="new-password" value={form.password}
+                    aria-describedby="wlj-pw-help" onChange={(e) => handleChange('password', e.target.value)} />
+                  <span id="wlj-pw-help" className="wlj-help">At least 8 characters.</span>
+                </div>
+                <div className="wlj-field">
+                  <label htmlFor="wlj-pw2">Confirm password</label>
+                  <input id="wlj-pw2" type="password" autoComplete="new-password" value={form.confirmPassword}
+                    onChange={(e) => handleChange('confirmPassword', e.target.value)} />
+                </div>
+              </div>
+              <div className="wlj-field">
+                <label htmlFor="wlj-dob">Date of birth</label>
+                <input id="wlj-dob" type="date" max={todayIso()} value={form.dateOfBirth}
+                  aria-describedby="wlj-dob-help" onChange={(e) => handleChange('dateOfBirth', e.target.value)} />
+                <span id="wlj-dob-help" className="wlj-help">
+                  You need to be 13 or older, same as everywhere on Unis. It&rsquo;s never shown publicly.
+                </span>
+              </div>
+            </fieldset>
 
-          {/* FIX #6: Clickable Terms + Privacy links */}
-          <p style={{ color: '#555', fontSize: '12px', textAlign: 'center', marginTop: '16px', lineHeight: '1.5' }}>
-            By joining, you agree to Unis{' '}
-            <a href="/terms" style={{ color: '#6b8cff', textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">
-              Terms of Service
-            </a>
-            {' '}and{' '}
-            <a href="/privacy" style={{ color: '#6b8cff', textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">
-              Privacy Policy
-            </a>
-            . Your account will activate when your region reaches its signup threshold. No uploads or media storage until activation.
-          </p>
-        </div>
-      </div>
-    </Layout>
+            <fieldset className="wlj-group">
+              <legend>Who told you about Unis?</legend>
+              <div className="wlj-field">
+                <label htmlFor="wlj-ref">Referral code</label>
+                <input id="wlj-ref" type="text" className="wlj-code-input" value={form.referredByCode}
+                  aria-invalid={referralValid === false} aria-describedby="wlj-ref-help"
+                  onChange={(e) => { handleChange('referredByCode', cleanCode(e.target.value)); setReferralValid(null); setReferrerName(''); }}
+                  onBlur={() => checkReferral(form.referredByCode)} />
+                <span id="wlj-ref-help" className={`wlj-help ${referralValid ? 'is-ok' : ''} ${referralValid === false ? 'is-bad' : ''}`}>
+                  {referralChecking && 'Checking…'}
+                  {!referralChecking && referralValid && (referrerName ? `${referrerName} gets the credit for bringing you.` : 'Code accepted.')}
+                  {!referralChecking && referralValid === false && 'That code isn’t valid. Check it with the person who gave it to you.'}
+                  {!referralChecking && referralValid === null && 'Ask the person who told you about Unis for theirs.'}
+                </span>
+              </div>
+            </fieldset>
+
+            <button type="submit" className="wlj-btn wlj-btn--primary wlj-btn--block wlj-btn--big" disabled={loading}>
+              {loading ? 'Creating your account…' : 'Create my visitor account'}
+            </button>
+            <p className="wlj-fine">
+              We&rsquo;ll email you a link to confirm your address. By joining you agree to the{' '}
+              <Link to="/terms">Terms</Link> and <Link to="/privacy">Privacy Policy</Link>.
+            </p>
+          </form>
+        </main>
+      )}
+    </div>
   );
 };
 

@@ -1638,6 +1638,7 @@ const ArtistDashboard = () => {
             onClose={() => setShowUploadWizard(false)}
             onUploadSuccess={handleUploadSuccess}
             userProfile={userProfile}
+            visitor={Boolean(user?.visitor)}
           />
         )}
 

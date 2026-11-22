@@ -13,6 +13,7 @@ import { GENRE_IDS, GENRE_NAMES, JURISDICTION_IDS, INTERVAL_IDS } from './utils/
 import { VOTE_POINTS, INTERVAL_WEIGHTS } from './data/helpContent';
 import { buildUrl } from './utils/buildUrl';
 import PhoneVerificationModal from './phoneVerificationModal';
+import VisitorLockSheet from './components/VisitorLockSheet';
 // The app's standard "no artwork" image — the song and artist pages use the
 // same one, so a nominee with no photo looks the same here as everywhere else.
 import fallbackArtwork from './assets/theQuiet.jpg';
@@ -1427,6 +1428,13 @@ const VotingWizard = ({ show, onClose, onVoteSuccess, nominee, userId, filters }
   const stepVariants = direction >= 0 ? stepVariantsForward : stepVariantsBackward;
 
   const modalStyle = artRGB ? { '--vw-art': artRGB.join(', ') } : undefined;
+
+  // Visitors (joined from outside an open area) vote once their own city
+  // opens. The server refuses their vote too (VISITOR_NO_VOTE); this says why
+  // before they fill anything in, and offers their referral code instead.
+  if (show && user?.visitor) {
+    return <VisitorLockSheet kind="vote" nomineeName={nomineeName} onClose={onClose} />;
+  }
 
   return (
     <>

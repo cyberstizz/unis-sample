@@ -9,6 +9,7 @@ import VoteHistorySection from "./VoteHistorySection"; // ★ read-only; fetches
 import ProfilePhotos from "./ProfilePhotos"; // Instagram-style photo grid + full-screen viewer
 import "./ListenerPage.scss";
 import UnisLoader from './components/UnisLoader';
+import { visitorChip } from './utils/visitor';
 
 // ----------------------------------------------------------------------------
 // inline icons
@@ -129,6 +130,8 @@ const ListenerPage = () => {
   const initial = (user.username || "?").charAt(0).toUpperCase();
   const votes = user.totalVotes ?? 0;
   const jName = user.jurisdiction?.name || null;
+  // A visitor (joined from outside an open area) shows their real city: "Dallas, TX · Visitor".
+  const placeName = jName || visitorChip(user);
   const jId = user.jurisdiction?.jurisdictionId || user.jurisdictionId || null;
   const since = memberSince(user.createdAt);
   const badges = deriveBadges({ votes, supporting: Boolean(supportedArtist), level: tier });
@@ -153,7 +156,7 @@ const ListenerPage = () => {
             <div className="lpr-hp"><Headphones /></div>
           </div>
           <div className="lpr-id">
-            <p className="eyebrow"><span className="dot" /> Listener{jName ? ` · ${jName}` : ""}</p>
+            <p className="eyebrow"><span className="dot" /> Listener{placeName ? ` · ${placeName}` : ""}</p>
             <h1 className="lpr-name">{user.username}</h1>
             <p className="lpr-tagline">
               <b>{tier.toUpperCase()}</b> &nbsp;·&nbsp; <em>{user.bio || "exploring Harlem's finest"}</em>
@@ -272,7 +275,7 @@ const ListenerPage = () => {
               <h2 className="lpr-sec-title">About</h2>
               {user.bio && <p>{user.bio}</p>}
               <div className="lpr-meta">
-                {jName && <div className="r"><Pin /> <b>{jName}</b></div>}
+                {placeName && <div className="r"><Pin /> <b>{placeName}</b></div>}
                 {since && <div className="r"><Cal /> Member since <b>{since}</b></div>}
               </div>
               {socials.length > 0 && (

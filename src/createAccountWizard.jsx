@@ -15,6 +15,8 @@ import SoundDiscoveryFields from './SoundDiscoveryFields';
 import RightsConfirm from './RightsConfirm';
 import { getSignupCampaign } from './utils/signupCampaign';
 import { cleanReferral, getStoredReferral } from './utils/referralLink';
+import HarlemCheckSheet from './components/HarlemCheckSheet';
+import { useFeedback } from './context/FeedbackContext';
 import {
   EMPTY_DISCOVERY, isDiscoveryComplete, discoveryProblem, toDiscoveryPayload,
   describeDiscovery, useTaxonomy,
@@ -154,6 +156,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false, init
   const [currentStep, setCurrentStep] = useState(1);
   const [stepDirection, setStepDirection] = useState('forward');
   const navigate = useNavigate();
+  const feedback = useFeedback();
+  const [showHarlemCheck, setShowHarlemCheck] = useState(false);
 
   // Pre-launch finish: hand control back to the Coming soon page.
   const finishPrelaunch = () => {
@@ -193,6 +197,8 @@ const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false, init
     detectingLocation: false,
     detectedCoords: null,
     showWaitlistPrompt: false,
+    // The Harlem honesty check: which area the person confirmed they live in.
+    attestedJurisdictionId: '',
     gender: '',              
     themePreference: 'blue', 
   });
@@ -705,6 +711,12 @@ const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false, init
       setShowSongRightsAlert(true);
       return;
     }
+    // One honest answer before leaving "Your Hood": asked once per area picked.
+    if (currentStepData?.id === 'location' && formData.jurisdictionId
+        && formData.attestedJurisdictionId !== formData.jurisdictionId) {
+      setShowHarlemCheck(true);
+      return;
+    }
     if (currentStep < totalSteps) {
       setStepDirection('forward');
       setCurrentStep(prev => prev + 1);
@@ -716,6 +728,25 @@ const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false, init
     if (currentStep > 1) {
       setStepDirection('back');
       setCurrentStep(prev => prev - 1);
+      setError('');
+    }
+  };
+
+  // Out-of-towners go to the visitor sign-up with their referral code, so
+  // whoever told them about Unis still gets the credit.
+  const goToVisitorSignup = () => {
+    const code = cleanReferral(formData.referralCode);
+    onClose();
+    navigate(`/waitlist/join${code ? `?ref=${encodeURIComponent(code)}` : ''}`);
+  };
+
+  const confirmHome = () => {
+    updateForm('attestedJurisdictionId', formData.jurisdictionId);
+    setShowHarlemCheck(false);
+    feedback.success(`Welcome home, ${formData.jurisdictionName}.`);
+    if (currentStep < totalSteps) {
+      setStepDirection('forward');
+      setCurrentStep(prev => prev + 1);
       setError('');
     }
   };
@@ -795,6 +826,7 @@ const handleSubmit = async () => {
         password: formData.password,
         role: formData.role,
         jurisdictionId: formData.jurisdictionId,
+        homeAttested: formData.attestedJurisdictionId === formData.jurisdictionId,
         supportedArtistId: formData.supportedArtistId,
         referralCode: formData.referralCode,
         bio: formData.bio || null,
@@ -1015,7 +1047,7 @@ const handleSubmit = async () => {
             <div 
               role="button"
               tabIndex={0}
-              aria-label="Join the national waitlist"
+              aria-label="Not from Harlem? Use Unis as a visitor"
               style={{
                 marginTop: '16px',
                 padding: '14px 18px',
@@ -1025,17 +1057,17 @@ const handleSubmit = async () => {
                 textAlign: 'center',
                 cursor: 'pointer',
               }}
-              onClick={() => { onClose(); navigate('/waitlist'); }}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClose(); navigate('/waitlist'); } }}
+              onClick={goToVisitorSignup}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToVisitorSignup(); } }}
             >
               <span style={{ color: 'var(--unis-text-2)', fontSize: '14px' }}>
                 Not from Harlem?{' '}
               </span>
               <span style={{ color: 'var(--unis-primary-2)', fontSize: '14px', fontWeight: '600' }}>
-                Join the national waitlist
+                Use Unis as a visitor
               </span>
               <span style={{ color: 'var(--unis-text-2)', fontSize: '14px' }}>
-                {' '}and help unlock Unis in your area.
+                {' '}and help open your city.
               </span>
             </div>
           </>
@@ -1241,56 +1273,37 @@ const handleSubmit = async () => {
               style={{ width: '100%', marginBottom: 20 }}
               onClick={async () => {
                     if (!formData.address) return;
-                    
+
                     setError('');
+                    updateForm('showWaitlistPrompt', false);
                     updateForm('detectingLocation', true);
-                    
+
+                    // Checked on the server (US Census geocoder), so people's home
+                    // addresses no longer go from the browser to OpenStreetMap's
+                    // volunteer-run server. Same Harlem box and 125th St line as before.
                     try {
-                      const geoResponse = await fetch(
-                        `https://nominatim.openstreetmap.org/search?` +
-                        `q=${encodeURIComponent(formData.address)}&format=json&limit=1`,
-                        { headers: { 'User-Agent': 'UnisMusic/1.0' } }
-                      );
-                      const geoData = await geoResponse.json();
-                      
-                      if (!geoData || geoData.length === 0) {
-                        setError('Address not found. Please try a more specific address.');
-                        updateForm('detectingLocation', false);
+                      const res = await apiCall({
+                        url: '/v1/waitlist/home-area',
+                        method: 'post',
+                        data: { address: formData.address },
+                        useCache: false,
+                      });
+                      const r = res?.data || {};
+
+                      if (!r.found) {
+                        setError('We couldn’t find that address. Try adding the city and ZIP, or choose your area below.');
                         return;
                       }
-                      
-                      const lat = parseFloat(geoData[0].lat);
-                      const lon = parseFloat(geoData[0].lon);
-                      
-                      const HARLEM_BOUNDS = {
-                        north: 40.8282,
-                        south: 40.7967,
-                        east: -73.9262,
-                        west: -73.9595,
-                      };
-                      
-                      const DIVIDING_LINE = 40.8095;
-                      
-                      if (lat < HARLEM_BOUNDS.south || lat > HARLEM_BOUNDS.north ||
-                          lon < HARLEM_BOUNDS.west || lon > HARLEM_BOUNDS.east) {
-                        updateForm('detectingLocation', false);
+                      if (!r.inHarlem) {
                         updateForm('showWaitlistPrompt', true);
                         return;
                       }
-                      
-                      if (lat >= DIVIDING_LINE) {
-                        updateForm('jurisdictionId', JURISDICTION_IDS['uptown-harlem']);
-                        updateForm('jurisdictionName', 'Uptown Harlem');
-                      } else {
-                        updateForm('jurisdictionId', JURISDICTION_IDS['downtown-harlem']);
-                        updateForm('jurisdictionName', 'Downtown Harlem');
-                      }
-                      
-                      updateForm('detectedCoords', { lat, lon });
-                      
+                      updateForm('jurisdictionId', JURISDICTION_IDS[r.area]);
+                      updateForm('jurisdictionName', r.areaName);
                     } catch (err) {
-                      console.error('[wizard] geocode/jurisdiction lookup failed:', err);
-                      setError('Could not verify location. Please try again.');
+                      console.error('[wizard] home-area lookup failed:', err?.response?.status, err?.message);
+                      setError(err?.response?.data?.error
+                        || 'We couldn’t check that address right now. Choose your area below instead.');
                     } finally {
                       updateForm('detectingLocation', false);
                     }
@@ -1320,12 +1333,11 @@ const handleSubmit = async () => {
                   </svg>
                 </div>
                 <h3 style={{ color: 'var(--unis-text)', fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>
-                  Unis isn't in your area yet
+                  That address isn&rsquo;t in Harlem.
                 </h3>
                 <p style={{ color: 'var(--unis-text-2)', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
-                  But it can be. Join the national waitlist, get your referral code, 
-                  and help unlock Unis in your region. When enough people sign up 
-                  from your area, it activates.
+                  You can still use Unis as a visitor: listen, like, make playlists and message
+                  anyone. Voting opens when your city does.
                 </p>
                 <button
                   type="button"
@@ -1342,9 +1354,9 @@ const handleSubmit = async () => {
                     fontFamily: "'DM Sans', sans-serif",
                     marginBottom: '12px',
                   }}
-                  onClick={() => { onClose(); navigate('/waitlist'); }}
+                  onClick={goToVisitorSignup}
                 >
-                  Join the Waitlist
+                  Join from my city
                 </button>
                 <button
                   type="button"
@@ -1364,7 +1376,7 @@ const handleSubmit = async () => {
                     setError('');
                   }}
                 >
-                  I do live in Harlem — let me try again
+                  I do live in Harlem. Try again
                 </button>
               </div>
             )}
@@ -2036,6 +2048,17 @@ const handleSubmit = async () => {
       <button className="wizard-close" onClick={onClose} aria-label="Close">{/* ★ uses existing .wizard-close + Lucide X */}
         <X size={10} />
       </button>
+
+      {showHarlemCheck && (
+        <HarlemCheckSheet
+          areaName={formData.jurisdictionName || 'Harlem'}
+          referrerName={formData.referrerUsername}
+          referralCode={cleanReferral(formData.referralCode)}
+          onConfirm={confirmHome}
+          onChangeArea={() => setShowHarlemCheck(false)}
+          onVisitor={goToVisitorSignup}
+        />
+      )}
       
         <div className="wizard-illustration">{/* ★ fixed brand backdrop, no data-step */}
           <div className="wizard-step-icon">

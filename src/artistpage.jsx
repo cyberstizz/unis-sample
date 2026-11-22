@@ -17,6 +17,7 @@ import DownloadModal from './DownloadModal';
 import useModalA11y from './hooks/useModalA11y';
 import SongMenu, { KebabIcon, anchorFromEvent } from './SongMenu'; // ★ song ⋮ menu
 import { VoteIcon, SupportIcon } from './icons/UnisIcons';            // ★ Glow icons
+import { visitorChip } from './utils/visitor';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ArtistPage — v4 redesign (Nov 2026, signed-off mockup "Unis artist page
@@ -1275,6 +1276,12 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                   {artist.jurisdiction.name}
                 </button>
               )}
+              {!artist.jurisdiction?.name && visitorChip(artist) && (
+                <span className="ap3-chip">
+                  <PinGlyph />
+                  {visitorChip(artist)}
+                </span>
+              )}
               {hasRank && (
                 <span className="ap3-chip ap3-chip--rank">
                   #{standing.rank}{standingPlace ? ` in ${standingPlace}` : ''}
@@ -1644,12 +1651,15 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                 <div className="ap3-stat"><b>{fmt(totalWins)}</b><span>Awards won</span></div>
               </div>
 
-              {(artist.jurisdiction?.name || artist.genre?.name) && (
+              {(artist.jurisdiction?.name || visitorChip(artist) || artist.genre?.name) && (
                 <div className="ap3-about__tags">
                   {artist.jurisdiction?.name && (
                     <button type="button" className="ap3-chip ap3-chip--flat" onClick={() => navigate(`/jurisdiction/${artist.jurisdiction.name}`)}>
                       <PinGlyph />{artist.jurisdiction.name}
                     </button>
+                  )}
+                  {!artist.jurisdiction?.name && visitorChip(artist) && (
+                    <span className="ap3-chip ap3-chip--flat"><PinGlyph />{visitorChip(artist)}</span>
                   )}
                   {artist.genre?.name && <span className="ap3-chip ap3-chip--flat">{artist.genre.name}</span>}
                 </div>
