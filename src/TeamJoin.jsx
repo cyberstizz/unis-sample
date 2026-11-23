@@ -9,7 +9,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
-import logo from './assets/unisLogoThree.svg';
+import { useThemeLogo } from './utils/themeLogo';
 import './sponsorLanding.scss';
 import './teamPages.scss';
 
@@ -34,6 +34,7 @@ const SIDES = [
 const toggle = (list, key) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]);
 
 const TeamJoin = () => {
+  const logo = useThemeLogo(); // the Unis logo in the user's theme colour
   const [form, setForm] = useState({
     name: '', email: '', phone: '', roles: ['in_person'], availability: [], side: 'either',
     adult: false, acceptedRules: false,

@@ -19,7 +19,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { SponsorCard } from './components/AdSlot';
-import logo from './assets/unisLogoThree.svg';
+import { useThemeLogo } from './utils/themeLogo';
 import './components/adSlot.scss';
 import './sponsorPage.scss';
 
@@ -52,6 +52,7 @@ const errorText = (err, fallback) => err?.response?.data?.error || fallback;
 const cleanRef = (raw) => (raw || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
 
 const SponsorPage = () => {
+  const logo = useThemeLogo(); // the Unis logo in the user's theme colour
   const [params] = useSearchParams();
   const returned = params.get('status');
   const ref = cleanRef(params.get('ref'));

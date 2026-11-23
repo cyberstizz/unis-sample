@@ -477,6 +477,24 @@ $transition-ambient: 1.2s ease;
   &::-webkit-scrollbar-thumb { background: $border-hover; border-radius: 2px; }
 }
 
+// Timed lyrics while this song plays: the theme-coloured stage from
+// components/lyricsLines.scss, lines lighting up with the song.
+.sp-lyrics-live {
+  height: 400px;
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  .ll-wrap { flex: 1; }
+}
+
+.sp-lyrics-hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: $text-secondary;
+}
+
 .sp-comments {
   padding: 8px 40px 40px;
 }

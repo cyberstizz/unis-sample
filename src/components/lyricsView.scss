@@ -1,0 +1,189 @@
+// src/components/lyricsView.scss
+// The player's lyrics view (LyricsView.jsx). Lives inside .player, which is
+// fixed with its own stacking layer, so position: fixed here is the screen.
+// Colours come from .lyrics-stage (components/lyricsLines.scss).
+
+$lv-player-bar: 80px; // matches $player-height in player.scss
+
+.lv {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: $lv-player-bar;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--unis-font-sans, 'Inter', system-ui, sans-serif);
+  animation: lv-rise 0.34s cubic-bezier(0.2, 0.85, 0.2, 1) both;
+
+  button { font-family: inherit; }
+}
+
+.lv--full { bottom: 0; }
+
+.lv__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: max(18px, env(safe-area-inset-top)) 22px 10px;
+}
+
+.lv__art {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.lv__who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+
+  strong, span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  strong { font-size: 15px; font-weight: 800; color: var(--ll-now); }
+  span { font-size: 13px; font-weight: 600; color: var(--ll-past); }
+}
+
+.lv__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  border: 0;
+  background: var(--ll-pill-bg);
+  color: var(--ll-pill-fg);
+  cursor: pointer;
+
+  &:focus-visible { outline: 2px solid var(--ll-now); outline-offset: 2px; }
+}
+
+.lv__body {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.lv__lines { flex: 1; }
+
+.lv__note {
+  margin: 4px 24px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ll-past);
+}
+
+.lv__msg {
+  margin: 8px 24px;
+  font-size: 15px;
+  color: var(--ll-past);
+}
+
+.lv__empty {
+  margin: auto 0;
+  padding: 0 24px 10vh;
+  text-align: center;
+}
+
+.lv__empty-title {
+  margin: 0;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-style: italic;
+  font-size: 34px;
+  line-height: 1.1;
+  color: var(--ll-now);
+}
+
+// Controls: only on phones and over the expanded player (on computers the
+// player bar below is still there).
+.lv__foot {
+  display: none;
+  flex: none;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 8px 24px max(18px, env(safe-area-inset-bottom));
+}
+
+.lv--full .lv__foot { display: flex; }
+
+.lv__bar {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--ll-next);
+  cursor: pointer;
+  overflow: hidden;
+
+  span { display: block; height: 100%; background: var(--ll-now); }
+}
+
+.lv__times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ll-past);
+  font-variant-numeric: tabular-nums;
+}
+
+.lv__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 0;
+    border-radius: 24px;
+    background: transparent;
+    color: var(--ll-now);
+    cursor: pointer;
+
+    &:focus-visible { outline: 2px solid var(--ll-now); outline-offset: 2px; }
+  }
+
+  .lv__play {
+    width: 64px;
+    height: 64px;
+    border-radius: 32px;
+    background: var(--ll-now);
+    color: var(--unis-primary);
+  }
+}
+
+[data-theme='yellow'] .lv__controls .lv__play { color: #ffffff; }
+
+@media (max-width: 600px) {
+  .lv { bottom: 0; }
+  .lv__foot { display: flex; }
+}
+
+@keyframes lv-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lv { animation: none; }
+}

@@ -10,7 +10,7 @@
 
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import logo from './assets/unisLogoThree.svg';
+import { useThemeLogo } from './utils/themeLogo';
 import './sponsorLanding.scss';
 import './teamPages.scss';
 
@@ -42,6 +42,7 @@ const QUESTIONS = [
 ];
 
 const TeamLanding = () => {
+  const logo = useThemeLogo(); // the Unis logo in the user's theme colour
   useEffect(() => {
     const previous = document.title;
     document.title = 'The Unis street team';

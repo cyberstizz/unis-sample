@@ -17,13 +17,14 @@ import { apiCall } from './components/axiosInstance';
 import { useFeedback } from './context/FeedbackContext';
 import { joinLink } from './utils/referralLink';
 import { meetupWhen as when } from './utils/teamTime';
-import logo from './assets/unisLogoThree.svg';
+import { useThemeLogo } from './utils/themeLogo';
 import './sponsorLanding.scss';
 import './teamPages.scss';
 
 const SIDE = { uptown: 'Uptown', downtown: 'Downtown', either: 'All of Harlem' };
 
 const TeamHome = () => {
+  const logo = useThemeLogo(); // the Unis logo in the user's theme colour
   const [params, setParams] = useSearchParams();
   const token = params.get('t') || '';
   const pendingMeetup = params.get('m');

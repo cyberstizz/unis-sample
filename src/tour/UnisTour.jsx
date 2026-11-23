@@ -115,9 +115,12 @@ const ArrowRight = () => (
   </svg>
 );
 
-export default function UnisTour({ isGuest = false, onClose, onAction }) {
+// `steps` defaults to the welcome tour; other tours (the lyric-timing tour in
+// lyricsTourSteps.jsx) pass their own. A step may carry `art`, a small
+// illustration shown in its card, and the outro may carry `action`, passed to
+// onAction when its main button is pressed.
+export default function UnisTour({ isGuest = false, onClose, onAction, steps = TOUR_STEPS }) {
   const { theme } = useAuth();
-  const steps = TOUR_STEPS;
   const spotSteps = useMemo(() => steps.filter((s) => s.kind === 'spot'), [steps]);
 
   const [index, setIndex] = useState(0);
@@ -330,6 +333,7 @@ export default function UnisTour({ isGuest = false, onClose, onAction }) {
   const wordmark = `/brand/splash/wordmark-${safeTheme}.${safeTheme === 'blue' ? 'svg' : 'png'}`;
 
   const Glyph = step.glyph;
+  const Art = step.art;
   const kindClass = step.kind === 'spot' && !hasTarget ? 'center' : step.kind;
 
   // ── Card content ──────────────────────────────────────────
@@ -337,10 +341,14 @@ export default function UnisTour({ isGuest = false, onClose, onAction }) {
   if (step.kind === 'intro') {
     content = (
       <>
-        <div className="ut-hero" aria-hidden="true">
-          <span className="ut-hero__aura" />
-          <img className="ut-hero__word" src={wordmark} alt="" draggable="false" />
-        </div>
+        {Art ? (
+          <div className="ut-art ut-art--hero" aria-hidden="true"><Art /></div>
+        ) : (
+          <div className="ut-hero" aria-hidden="true">
+            <span className="ut-hero__aura" />
+            <img className="ut-hero__word" src={wordmark} alt="" draggable="false" />
+          </div>
+        )}
         <p className="ut-eyebrow ut-eyebrow--center">
           <span className="ut-meter" aria-hidden="true"><i /><i /><i /><i /></span>
           {step.eyebrow}
@@ -392,9 +400,21 @@ export default function UnisTour({ isGuest = false, onClose, onAction }) {
               </button>
             </>
           ) : (
-            <button ref={primaryRef} type="button" className="ut-btn ut-btn--primary" onClick={() => close('finished')}>
-              {step.cta}<ArrowRight />
-            </button>
+            <>
+              <button
+                ref={primaryRef}
+                type="button"
+                className="ut-btn ut-btn--primary"
+                onClick={() => { close('finished'); if (step.action) onAction?.(step.action); }}
+              >
+                {step.cta}<ArrowRight />
+              </button>
+              {step.secondary && (
+                <button type="button" className="ut-btn ut-btn--text" onClick={() => close('finished')}>
+                  {step.secondary}
+                </button>
+              )}
+            </>
           )}
         </div>
       </>
@@ -413,6 +433,7 @@ export default function UnisTour({ isGuest = false, onClose, onAction }) {
           </span>
           <button type="button" className="ut-skip" onClick={() => close('skipped')}>Skip</button>
         </div>
+        {Art && <div className="ut-art" aria-hidden="true"><Art /></div>}
         <h2 id="ut-title" className="ut-title">{renderTitle(step.title)}</h2>
         <p id="ut-body" className="ut-body">{step.body}</p>
         {isGuest && step.guest && (

@@ -1,0 +1,224 @@
+// src/tour/lyricsTourArt.scss — art for the lyric-timing tour.
+// Each loop runs 6s. The stage colours come from .lyrics-stage
+// (components/lyricsLines.scss is loaded by the wizard and player; the
+// variables below repeat the essentials so the art stands on its own).
+
+.lta {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  height: 118px;
+  margin: 0 auto 14px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+// ── Karaoke ────────────────────────────────────────────────────────────────
+.lta-karaoke {
+  --lta-now: #fff;
+  --lta-dim: rgba(255, 255, 255, 0.42);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 18px;
+  background: linear-gradient(180deg, var(--unis-primary), color-mix(in srgb, var(--unis-primary), black 28%));
+  text-align: left;
+}
+
+[data-theme='yellow'] .lta-karaoke {
+  --lta-now: #111318;
+  --lta-dim: rgba(17, 19, 24, 0.45);
+}
+
+.lta-karaoke__line {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--lta-dim);
+  animation: lta-sing 6s calc(var(--i) * 1.5s) infinite;
+}
+
+@keyframes lta-sing {
+  0%, 2% { color: var(--lta-dim); }
+  5%, 22% { color: var(--lta-now); }
+  26%, 100% { color: var(--lta-dim); }
+}
+
+// ── Words sheet ────────────────────────────────────────────────────────────
+.lta-sheet {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lta-sheet__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.lta-sheet__n {
+  width: 12px;
+  font-style: normal;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: right;
+}
+
+.lta-sheet__ink {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.78);
+  width: 0;
+  animation: lta-write 6s calc(var(--i) * 0.45s) infinite;
+}
+
+@keyframes lta-write {
+  0%, 4% { width: 0; }
+  18%, 86% { width: var(--w); }
+  96%, 100% { width: 0; }
+}
+
+// ── Tap ────────────────────────────────────────────────────────────────────
+.lta-tap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 18px;
+  background: color-mix(in srgb, var(--unis-primary), transparent 78%);
+  border: 1px solid color-mix(in srgb, var(--unis-primary), transparent 55%);
+}
+
+.lta-tap__pad {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--unis-primary);
+  font-size: 14px;
+  font-weight: 800;
+  animation: lta-press 1.5s infinite;
+}
+
+[data-theme='yellow'] .lta-tap__pad { color: #111318; }
+
+.lta-tap__ring {
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  opacity: 0;
+  animation: lta-ring 1.5s infinite;
+}
+
+.lta-tap__track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.lta-tap__head {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: #fff;
+  animation: lta-head 6s linear infinite;
+}
+
+.lta-tap__tick {
+  position: absolute;
+  top: -5px;
+  left: calc(12% + var(--i) * 25%);
+  width: 2px;
+  height: 16px;
+  background: #fff;
+  opacity: 0;
+  animation: lta-tick 6s calc(var(--i) * 1.5s) infinite;
+}
+
+@keyframes lta-press {
+  0%, 8% { transform: scale(0.92); }
+  20%, 100% { transform: scale(1); }
+}
+@keyframes lta-ring {
+  0% { opacity: 0.6; transform: scale(0.9); }
+  60%, 100% { opacity: 0; transform: scale(1.3); }
+}
+@keyframes lta-head {
+  from { left: 0; }
+  to { left: 100%; }
+}
+@keyframes lta-tick {
+  0%, 9% { opacity: 0; }
+  12%, 92% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+// ── Check ──────────────────────────────────────────────────────────────────
+.lta-check {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lta-check__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  animation: lta-row 6s calc(var(--i) * 2s) infinite;
+
+  i { font-style: normal; font-size: 11px; color: rgba(255, 255, 255, 0.75); font-variant-numeric: tabular-nums; }
+}
+
+.lta-check__nudge {
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+}
+
+.lta-check__words {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+@keyframes lta-row {
+  0%, 2% { background: transparent; border-left-color: transparent; }
+  6%, 30% { background: color-mix(in srgb, var(--unis-primary), transparent 70%); border-left-color: var(--unis-primary); }
+  34%, 100% { background: transparent; border-left-color: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lta *, .lta { animation: none !important; }
+  .lta-karaoke__line:nth-child(2) { color: var(--lta-now); }
+  .lta-sheet__ink { width: var(--w); }
+  .lta-tap__tick { opacity: 1; }
+  .lta-tap__head { left: 60%; }
+}

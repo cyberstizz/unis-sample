@@ -1,9 +1,9 @@
-import React, { useContext, useEffect, useState, useRef, useMemo } from 'react';
+import React, { useCallback, useContext, useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
-import { Heart, Headphones, Vote, ChevronUp, ChevronDown, ListMusic, Lock, MessageCircle, X } from 'lucide-react'; // ★ comments: icons for the new button/sheet
+import { Heart, Headphones, Vote, ChevronUp, ChevronDown, ListMusic, Lock, MessageCircle, X, Mic2 } from 'lucide-react'; // ★ comments: icons for the new button/sheet
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
 import VotingWizard from './votingWizard';
@@ -15,6 +15,7 @@ import { useFeedback, errorMessage } from './context/FeedbackContext';
 import QueuePanel from './QueuePanel';
 import DownloadModal from './DownloadModal';
 import PocketLockOverlay from './PocketLockOverlay';
+import LyricsView from './components/LyricsView'; // timed lyrics view (mic button)
 import './player.scss';
 
 // ─── Inline SVG icons ───
@@ -132,6 +133,7 @@ const Player = () => {
 
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [showComments, setShowComments] = useState(false); // ★ comments: slide-up comment sheet
+  const [showLyrics, setShowLyrics] = useState(false); // lyrics view (mic button)
   const [userId, setUserId] = useState(null);
 
   // Pocket Lock — visual scaffold only for step 1.
@@ -712,6 +714,25 @@ const Player = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // ── Lyrics view ──
+  const closeLyrics = useCallback(() => setShowLyrics(false), []);
+  const toggleLyrics = (e) => {
+    e?.stopPropagation?.();
+    setShowMobileActions(false);
+    setShowLyrics((v) => !v);
+  };
+  const lyricsSeek = (t) => {
+    if (!audioRef.current) return;
+    audioRef.current.currentTime = t;
+    setCurrentTime(t);
+  };
+  const lyricsTogglePlay = () => {
+    const media = audioRef.current;
+    if (!media) return;
+    if (media.paused) media.play().catch(console.error);
+    else media.pause();
+  };
+
   // Shared modal block — rendered in BOTH branches below
   const modalsAndPanels = (
     <>
@@ -918,6 +939,11 @@ const Player = () => {
               <Vote size={24} />
             </button>
             <button onClick={handleDownload}>⬇</button>
+            {!isVideo && (
+              <button onClick={toggleLyrics} aria-label="Lyrics" aria-pressed={showLyrics} className={showLyrics ? 'active' : ''}>
+                <Mic2 size={22} />
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -944,6 +970,16 @@ const Player = () => {
               >
                 <MessageCircle size={13} aria-hidden="true" /> Comments
               </button>
+              {!isVideo && (
+                <button
+                  type="button"
+                  className="tray-comments-btn"
+                  onClick={toggleLyrics}
+                  aria-label="Open lyrics"
+                >
+                  <Mic2 size={13} aria-hidden="true" /> Lyrics
+                </button>
+              )}
               <span className="tray-status-pill">
                 {queue.length > 0 ? `${queue.length} in queue` : 'Live session'}
               </span>
@@ -1079,6 +1115,17 @@ const Player = () => {
 
             {/* RIGHT — Queue + Download + Volume */}
             <div className="player-right">
+              {!isVideo && (
+                <button
+                  className={`player-btn player-lyrics-btn ${showLyrics ? 'active' : ''}`}
+                  onClick={toggleLyrics}
+                  title="Lyrics"
+                  aria-label="Lyrics"
+                  aria-pressed={showLyrics}
+                >
+                  <Mic2 size={16} />
+                </button>
+              )}
               <button
                 className={`player-btn player-queue-btn ${showQueue ? 'active' : ''}`}
                 onClick={() => setShowQueue(!showQueue)}
@@ -1118,6 +1165,22 @@ const Player = () => {
             </div>
           </div>
         </>
+      )}
+
+      {showLyrics && !isVideo && (
+        <LyricsView
+          media={currentMedia}
+          mediaRef={audioRef}
+          isPlaying={isPlaying}
+          currentTime={currentTime}
+          duration={duration}
+          full={isExpanded}
+          onTogglePlay={lyricsTogglePlay}
+          onPrev={() => prev()}
+          onNext={() => next()}
+          onSeek={lyricsSeek}
+          onClose={closeLyrics}
+        />
       )}
 
       {/* --- WIZARDS & PANELS --- */}

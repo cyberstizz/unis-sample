@@ -1,8 +1,10 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import songArtwork from './assets/theQuiet.jpg';
 import LyricsWizard from './lyricsWizard';
+import LyricsLines from './components/LyricsLines';
+import { parseLrc } from './utils/lrc';
 import { FileText, Heart } from 'lucide-react';
 import './songPage.scss';
 import Layout from './layout';
@@ -25,7 +27,7 @@ const SongPage = () => {
   const { songId } = useParams();
   // ── Player sync: we now also read isPlaying + togglePlayPause so the hero
   //    button can mirror the player's true state for THIS exact song.
-  const { requestPlay, currentMedia, isPlaying, togglePlayPause } = useContext(PlayerContext);
+  const { requestPlay, currentMedia, isPlaying, togglePlayPause, audioRef } = useContext(PlayerContext);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { taxonomy } = useTaxonomy(); // language names for the details panel
@@ -51,6 +53,8 @@ const SongPage = () => {
   const [ambientRGB, setAmbientRGB] = useState({ r: 80, g: 60, b: 40 });
   // ★ Weekly standing for the bar's line: { rank, when } or null (not ranked).
   const [standing, setStanding] = useState(null);
+  // Timed lyrics (LRC) parsed once per song; they move on the page while it plays.
+  const timedLyrics = useMemo(() => parseLrc(song?.syncedLyrics), [song?.syncedLyrics]);
 
   // ★ The bar that follows you (shared frame: components/FollowBar.jsx).
   //   titleRef goes on the song title, playRef on the page's own Play.
@@ -142,6 +146,7 @@ const SongPage = () => {
           playsToday: songData.playsToday || 0,
           explicit: songData.explicit || false,
           lyrics: songData.lyrics || '',
+          syncedLyrics: songData.syncedLyrics || '',
           voteCount: 0,
           duration: songData.duration ? Math.round(songData.duration / 1000) : null,
           createdAt: songData.createdAt,
@@ -237,7 +242,7 @@ const SongPage = () => {
     try {
       const response = await apiCall({ method: 'get', url: `/v1/media/song/${songId}`, useCache: false });
       const songData = response.data;
-      setSong(prev => ({ ...prev, lyrics: songData.lyrics || '', description: songData.description || prev.description }));
+      setSong(prev => ({ ...prev, lyrics: songData.lyrics || '', syncedLyrics: songData.syncedLyrics || '', description: songData.description || prev.description }));
     } catch (err) { console.error('Failed to refresh song:', err); }
   };
 
@@ -606,7 +611,26 @@ const SongPage = () => {
                     </button>
                   )}
                 </div>
-                {song.lyrics && <div className="sp-lyrics-body">{song.lyrics}</div>}
+                {song.lyrics && timedLyrics.length > 0 && isThisSongLoaded ? (
+                  <div className="sp-lyrics-live lyrics-stage">
+                    <LyricsLines
+                      lines={timedLyrics}
+                      mediaRef={audioRef}
+                      size="md"
+                      playing={isPlaying}
+                      onSeek={(t) => {
+                        if (audioRef?.current) audioRef.current.currentTime = t;
+                        if (!isPlaying) togglePlayPause?.();
+                      }}
+                      label={`Lyrics for ${song.title}`}
+                    />
+                  </div>
+                ) : (
+                  song.lyrics && <div className="sp-lyrics-body">{song.lyrics}</div>
+                )}
+                {song.lyrics && timedLyrics.length > 0 && !isThisSongLoaded && (
+                  <p className="sp-lyrics-hint">Press play and these lyrics move with the song.</p>
+                )}
               </div>
             )}
 

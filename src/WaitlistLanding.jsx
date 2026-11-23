@@ -21,7 +21,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import { buildSkyline } from './prelaunch/ComingSoon';
 import US_STATES_AND_METROS from './data/Usstatesandmetros';
-import logo from './assets/unisLogoThree.svg';
+import { useThemeLogo } from './utils/themeLogo';
 import './waitlistLanding.scss';
 
 const METER_BARS = 44;
@@ -101,6 +101,7 @@ const CityMeter = ({ stateCode, metro, onState, onMetro, progress, loading }) =>
 };
 
 const WaitlistLanding = () => {
+  const logo = useThemeLogo(); // the Unis logo in the user's theme colour
   const [params] = useSearchParams();
   const ref = cleanRef(params.get('ref'));
   const [stateCode, setStateCode] = useState('');

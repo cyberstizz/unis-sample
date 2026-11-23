@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef, Suspense } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Upload,
   Play,
-  FileText,
+  Mic2,
+  HelpCircle,
   Vote,
   Heart,
   Music,
@@ -20,6 +21,8 @@ import {
   Video,
 } from 'lucide-react';
 import LyricsWizard from './lyricsWizard';
+import lazyWithRetry from './utils/lazyWithRetry';
+import { lyricsTourSteps } from './tour/lyricsTourSteps';
 import UploadWizard from './uploadWizard';
 import ChangeDefaultSongWizard from './changeDefaultSongWizard';
 import SongSalesModal from './SongSalesModal';
@@ -54,6 +57,9 @@ import RevenueSection from './revenueSection';
 import VerificationGate from './verificationGate';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import ArtistPhotosManager from './artistPhotosManager';
+
+// The lyric-timing tour uses the welcome tour's engine; it downloads only when opened.
+const UnisTour = lazyWithRetry(() => import('./tour/UnisTour'));
 
 // =============================================================================
 // ArtistDashboard
@@ -339,6 +345,7 @@ const ArtistDashboard = () => {
   const [songToDelete, setSongToDelete] = useState(null);
   const [showLyricsWizard, setShowLyricsWizard] = useState(false);
   const [lyricsSong, setLyricsSong] = useState(null);
+  const [showLyricsTour, setShowLyricsTour] = useState(false); // "How timed lyrics work"
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showArtistPicker, setShowArtistPicker] = useState(false);
   const [cancellingPending, setCancellingPending] = useState(false);
@@ -1017,9 +1024,14 @@ const ArtistDashboard = () => {
           <h2 id="ad-songs-title">
             Songs <span className="ad-count">{songs.length}</span>
           </h2>
-          <button type="button" className="artist-btn artist-btn--primary artist-btn--small" onClick={() => setShowUploadWizard(true)}>
-            <Upload size={14} aria-hidden="true" /> Upload a song or video
-          </button>
+          <div className="ad-panel__tools">
+            <button type="button" className="artist-btn artist-btn--ghost artist-btn--small" onClick={() => setShowLyricsTour(true)}>
+              <HelpCircle size={14} aria-hidden="true" /> How timed lyrics work
+            </button>
+            <button type="button" className="artist-btn artist-btn--primary artist-btn--small" onClick={() => setShowUploadWizard(true)}>
+              <Upload size={14} aria-hidden="true" /> Upload a song or video
+            </button>
+          </div>
         </div>
 
         <div className="artist-catalog">
@@ -1071,13 +1083,15 @@ const ArtistDashboard = () => {
                     </button>
                     <button
                       type="button"
+                      className="ad-lyrics-btn"
                       onClick={() => {
                         setLyricsSong(song);
                         setShowLyricsWizard(true);
                       }}
-                      aria-label={`Edit lyrics for ${song.title}`}
+                      aria-label={`Lyrics for ${song.title}`}
+                      title="Lyrics"
                     >
-                      <FileText size={16} />
+                      <Mic2 size={16} />
                     </button>
                     <button
                       type="button"
@@ -1682,7 +1696,23 @@ const ArtistDashboard = () => {
             }}
             song={lyricsSong}
             onSuccess={() => refetchSongs()}
+            onHelp={() => setShowLyricsTour(true)}
           />
+        )}
+
+        {showLyricsTour && (
+          <Suspense fallback={null}>
+            <UnisTour
+              steps={lyricsTourSteps({ hasSongs: songs.length > 0 })}
+              onClose={() => setShowLyricsTour(false)}
+              onAction={(action) => {
+                if (action === 'start' && songs[0]) {
+                  setLyricsSong(songs[0]);
+                  setShowLyricsWizard(true);
+                }
+              }}
+            />
+          </Suspense>
         )}
 
         <DeleteSongModal

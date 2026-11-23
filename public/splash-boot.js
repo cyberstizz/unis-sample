@@ -7,8 +7,9 @@
  *   1. Theme: a signed-in visitor's splash plays in their own colour, read
  *      from the same localStorage keys AuthContext uses ('token' +
  *      'unis-theme'). Guests always get blue, matching the header.
- *   2. Quick mode: the full intro plays once per browser session. A reload in
- *      the same session gets the short version (the logo is already lit).
+ *   2. Quick mode: the first visit of a browser session waits for the light
+ *      sweep to write the logo in; a reload in the same session can leave
+ *      sooner (bootSplash.js reads the class).
  *
  * It lives in its own file, not inline in index.html, because the site's
  * Content-Security-Policy forbids inline scripts.

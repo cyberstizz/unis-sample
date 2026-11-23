@@ -17,8 +17,9 @@
 
 .aw-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: clamp(24px, 4vw, 56px);
+  grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
+  justify-content: center;
+  gap: clamp(28px, 5vw, 64px);
   align-items: start;
 }
 
@@ -33,9 +34,109 @@
 
   &__placeholder {
     aspect-ratio: 4 / 5;
-    background: linear-gradient(180deg, #07080c, #0c1430);
+    background: linear-gradient(180deg, #07080c, color-mix(in srgb, var(--unis-primary, #163387), #07080c 50%));
+  }
+
+  &--story &__placeholder { aspect-ratio: 9 / 16; }
+}
+
+// Story / Post switch
+.aw-shape {
+  align-self: flex-start;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(110px, auto));
+  gap: 4px;
+  margin-top: 12px;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.1));
+
+  button {
+    height: 40px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+
+    span { margin-left: 4px; font-size: 12px; opacity: 0.7; font-variant-numeric: tabular-nums; }
+
+    &[aria-pressed='true'] {
+      background: var(--unis-primary, #163387);
+      color: #fff;
+    }
+    &:focus-visible { outline: 2px solid var(--unis-primary-2, #8fa8ff); outline-offset: 2px; }
   }
 }
+
+[data-theme='yellow'] .aw-shape button[aria-pressed='true'],
+[data-theme='yellow'] .aw-btn--primary { color: #111318; }
+
+// The winner, with a way to play it
+.aw-winner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.08));
+
+  &__art {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    object-fit: cover;
+
+    &.is-round { border-radius: 50%; }
+
+    &--blank {
+      display: grid;
+      place-items: center;
+      background: var(--unis-primary, #163387);
+      color: #fff;
+      font-family: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+      font-size: 30px;
+    }
+  }
+
+  &__who {
+    flex: 1;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+
+    strong, span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    strong { font-size: 15px; font-weight: 700; }
+    span { font-size: 13px; color: var(--unis-text-2, rgba(255, 255, 255, 0.72)); }
+  }
+
+  &__go {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 22px;
+    background: #fff;
+    color: #0a0c12;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+
+    &:focus-visible { outline: 2px solid var(--unis-primary-2, #8fa8ff); outline-offset: 3px; }
+  }
+}
+
+[data-theme='yellow'] .aw-winner__art--blank { color: #111318; }
 
 .aw-info {
   display: flex;
@@ -126,4 +227,5 @@
 
 @media (max-width: 760px) {
   .aw-layout { grid-template-columns: 1fr; }
+  .aw-card { max-width: 340px; width: 100%; margin: 0 auto; }
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import unisLogo from '../assets/unisLogoThree.svg';
+import { useThemeLogo } from '../utils/themeLogo';
 import spaceVideo from '../assets/space-bg.mp4';
 import CreateAccountWizard from '../createAccountWizard'; 
 import ForgotPasswordWizard from '../forgotPasswordWizard';
@@ -17,6 +17,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, completeLogin } = useAuth();
+  const unisLogo = useThemeLogo(); // the Unis logo in the user's theme colour
   const [mfa, setMfa] = useState(null);   // staff accounts: { setupRequired, mfaToken }
   // /login?signup=1 (where /join/CODE sends people after launch) opens sign-up
   // straight away; the wizard fills in the code from the link.

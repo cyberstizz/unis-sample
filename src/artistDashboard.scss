@@ -2291,6 +2291,13 @@
       }
     }
   }
+
+  // Buttons on the right of a panel's heading (Music: lyrics tour + upload)
+  &__tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
 }
 
 .ad-count {

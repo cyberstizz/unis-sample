@@ -4,7 +4,7 @@ import { apiCall } from './components/axiosInstance';
 import { useFeedback } from './context/FeedbackContext';
 import useRegionProgress from './hooks/useRegionProgress';
 import US_STATES_AND_METROS from './data/Usstatesandmetros';
-import logo from './assets/unisLogoThree.svg';
+import { useThemeLogo } from './utils/themeLogo';
 import './waitlistPage.scss';
 
 // The visitor sign-up — /waitlist/join. Standalone page (no sidebar/player).
@@ -122,6 +122,7 @@ const HarlemLink = ({ className = '' }) => (
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 const WaitlistPage = () => {
+  const logo = useThemeLogo(); // the Unis logo in the user's theme colour
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const feedback = useFeedback();

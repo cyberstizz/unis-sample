@@ -19,6 +19,7 @@ import RewardScoreSync from './RewardScoreSync';
 import ThemeDocumentSync from "./ThemeDocumentSync";
 import { resolveGate } from './prelaunch/prelaunchConfig';
 import { SplashHold, markAppReady } from './boot/bootSplash';
+import UnisLoader from './components/UnisLoader';
 import TourLauncher from './tour/TourLauncher';
 
 // Theme
@@ -111,10 +112,14 @@ const AuthRequiredRoute = () => {
 // until the next one is ready, so this mostly appears when someone opens a
 // shared link straight to a page. The height keeps the player and the
 // notifications from jumping while it loads. On a first visit the launch
-// splash is still up, and SplashHold keeps it there until the page is ready.
+// splash is still up, and SplashHold keeps it there until the page is ready;
+// after that, the in-app loader (the same sweep as the splash) shows.
 const PageFallback = () => (
   <div className="route-loading" aria-busy="true" style={{ minHeight: '100vh' }}>
     <SplashHold />
+    {/* Once the launch splash is gone, the same light-sweep logo shows here
+        instead of a blank page. */}
+    <UnisLoader label="" />
   </div>
 );
 
