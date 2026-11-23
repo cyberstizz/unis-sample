@@ -17,8 +17,13 @@
 //
 // Keys in Tap along: Space or Enter taps (the tap pad has focus), Backspace
 // undoes the last tap.
+//
+// It opens in a portal straight under #root (see `#root > .lw-overlay` in
+// lyricsWizard.scss), so it sits above the player bar and the sidebar.
+// Rendered inside the page, the player bar covered its Next/Save buttons.
 // =============================================================================
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, AlertCircle, Play, Pause, Undo2, RotateCcw, Upload, HelpCircle, ChevronLeft, Check } from 'lucide-react';
 import './lyricsWizard.scss';
 import { apiCall } from './components/axiosInstance';
@@ -330,7 +335,7 @@ const LyricsWizard = ({ show, onClose, song, onSuccess, onHelp }) => {
     </div>
   );
 
-  return (
+  return createPortal(
     <div className="lw-overlay" onClick={requestClose}>
       <div
         className={`lw lw--${step}`}
@@ -625,7 +630,8 @@ const LyricsWizard = ({ show, onClose, song, onSuccess, onHelp }) => {
           )}
         </footer>
       </div>
-    </div>
+    </div>,
+    document.getElementById('root') || document.body,
   );
 };
 

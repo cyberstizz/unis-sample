@@ -8,7 +8,7 @@
 .lw-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 3000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,12 +19,22 @@
   animation: lw-fade-in 0.2s ease both;
 }
 
+// The wizard is portalled straight under #root, where the global
+// `#root > * { position: relative; z-index: 1 }` rule would pull it back
+// under the player bar. This puts it on top of everything: page, sidebar,
+// player bar (1000) and the phone sidebar drawer (1200).
+#root > .lw-overlay {
+  position: fixed;
+  z-index: 3000;
+}
+
 .lw {
   --lw-on-primary: #ffffff;
   position: relative;
   width: 100%;
   max-width: 620px;
   max-height: min(92vh, 880px);
+  max-height: min(92dvh, 880px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -721,7 +731,8 @@
 
 @media (max-width: 560px) {
   .lw-overlay { padding: 0; align-items: flex-end; }
-  .lw { max-height: 96vh; border-radius: 24px 24px 0 0; }
+  .lw { max-height: 96vh; max-height: 96dvh; border-radius: 24px 24px 0 0; }
+  .lw__footer { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
   .lw__header { padding: 16px 16px 12px; gap: 12px; }
   .lw__titles h2 { font-size: 24px; }
   .lw__help { padding: 0 10px; font-size: 12px; }

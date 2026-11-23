@@ -511,7 +511,10 @@ const Sidebar = () => {
 
         <div className="sb-divider" />
 
-        {/* ── Your playlists ── */}
+        {/* ── Your playlists ──
+            Everything in this zone gives way (shrinks, then scrolls) before
+            the account row below it does: Settings is never pushed off. */}
+        <div className="sb-zone">
         {!signedIn ? (
           !rail && (
             <div className="sb-card">
@@ -534,11 +537,15 @@ const Sidebar = () => {
               <div className="sb-lib-head">
                 <button type="button" className="sb-lib-head__title sb-lib-head__link" onClick={handleLibrary}>Your playlists</button>
               </div>
-              <div className="sb-card">
-                <p className="sb-card__title">Create your first playlist</p>
-                <p className="sb-card__body">Collect the songs you love from your block and beyond.</p>
-                <button type="button" className="sb-card__btn" onClick={handleNewPlaylist}>New playlist</button>
-              </div>
+              {/* One playlist-sized row, not a card, so it never crowds out
+                  the account row. */}
+              <button type="button" className="sb-pl sb-pl--new" onClick={handleNewPlaylist} aria-label="New playlist">
+                <span className="sb-cover sb-cover--new" aria-hidden="true">{ICONS.add}</span>
+                <span className="sb-pl__text">
+                  <span className="sb-pl__name">Create your first playlist</span>
+                  <span className="sb-pl__meta">Collect the songs you love</span>
+                </span>
+              </button>
             </>
           )
         ) : (
@@ -589,6 +596,7 @@ const Sidebar = () => {
             </ul>
           </>
         )}
+        </div>
 
         {/* ── Account ── */}
         <div className="sb-foot">

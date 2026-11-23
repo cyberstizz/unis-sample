@@ -381,6 +381,41 @@ $ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   .sb-icon-btn { margin-left: auto; }
 }
 
+// The playlists zone: takes the room left between the links and the
+// account row, and gives it up first. When the panel is short, this zone
+// shrinks (the playlist list scrolls inside it; the signed-out card scrolls
+// with it), so the account row with Settings always stays on screen.
+.sb-zone {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &:hover { scrollbar-color: rgba(255, 255, 255, 0.18) transparent; }
+}
+
+// "Create your first playlist": a playlist-sized row with a dashed cover
+.sb-pl--new {
+  flex-shrink: 0;
+
+  .sb-pl__name { font-weight: 600; }
+}
+
+.sb-cover--new {
+  display: grid;
+  place-items: center;
+  background: transparent;
+  box-shadow: none;
+  border: 1.5px dashed var(--sb-edge);
+  color: var(--sb-accent);
+
+  svg { width: 18px; height: 18px; }
+}
+
 // The one part of the panel that scrolls
 .sb-lib {
   flex: 1 1 auto;
@@ -520,6 +555,17 @@ $ease: cubic-bezier(0.2, 0.8, 0.2, 1);
       background: #fff;
       color: #0b0d14;
     }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Above the player bar (desktop). The player bar (80px, fixed to the bottom,
+// on a higher layer) used to cover the bottom of the panel, and with it the
+// account row. While a song is loaded, the panel now ends above the bar.
+// ─────────────────────────────────────────────────────────────
+@media (min-width: 1025px) {
+  body:has(.player:not(.expanded)) .sidebar {
+    bottom: calc(80px + #{$gutter});
   }
 }
 
