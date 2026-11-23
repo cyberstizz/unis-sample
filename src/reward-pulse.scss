@@ -140,8 +140,11 @@
   margin-block: auto;
 }
 
+// Floats up from the player: --unp-stack is the player's top edge + a gap
+// (set by player.jsx), so the pill clears the mini player, the dock, or
+// Now Playing's tray, whichever is showing.
 .reward-pulse--player {
-  bottom: calc(92px + (var(--reward-stack-index, 0) * 62px));
+  bottom: calc(var(--unp-stack, 92px) + env(safe-area-inset-bottom, 0px) + (var(--reward-stack-index, 0) * 62px));
 }
 
 .reward-pulse--header {
@@ -154,6 +157,10 @@
     bottom: calc(84px + (var(--reward-stack-index, 0) * 60px));
     max-width: min(320px, calc(100vw - 24px));
     padding: 10px 13px;
+  }
+
+  .reward-pulse--player {
+    bottom: calc(var(--unp-stack, 84px) + env(safe-area-inset-bottom, 0px) + (var(--reward-stack-index, 0) * 60px));
   }
 
   .reward-pulse--header {

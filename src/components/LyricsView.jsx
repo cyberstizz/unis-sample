@@ -8,11 +8,11 @@
 // The backdrop is the listener's theme colour with white lines (dark lines
 // on the yellow theme), from .lyrics-stage.
 //
-// On computers it fills the screen above the player bar, so the bar's own
-// controls stay in reach. On phones (and over the expanded player) it fills
-// the whole screen and brings its own play / skip / progress controls.
-// Rendered inside .player, so it sits above the page and below nothing.
-// Esc closes it.
+// On computers it fills the screen behind the floating player dock, so the
+// dock's controls stay in reach. With `full` it brings its own play / skip /
+// progress controls. With `embedded` it is only the lines: Now Playing's
+// lyrics view hosts it and supplies the header, controls and Esc handling.
+// Esc closes it (except when embedded).
 // ─────────────────────────────────────────────────────────────
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
@@ -28,6 +28,7 @@ export default function LyricsView({
   currentTime,
   duration,
   full = false,
+  embedded = false,
   onTogglePlay,
   onPrev,
   onNext,
@@ -45,8 +46,9 @@ export default function LyricsView({
     return () => { alive = false; };
   }, [songId]);
 
-  // Focus the close button on open; Esc closes.
+  // Focus the close button on open; Esc closes. Embedded: the host does both.
   useEffect(() => {
+    if (embedded) return undefined;
     const before = document.activeElement;
     closeRef.current?.focus({ preventScroll: true });
     const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); onClose?.(); } };
@@ -55,7 +57,7 @@ export default function LyricsView({
       window.removeEventListener('keydown', onKey);
       try { before?.focus?.({ preventScroll: true }); } catch { /* gone */ }
     };
-  }, [onClose]);
+  }, [onClose, embedded]);
 
   const timed = useMemo(() => parseLrc(data?.syncedLyrics), [data]);
   const plain = useMemo(() => wordsToLines(data?.lyrics).map((text) => ({ text, t: null })), [data]);
@@ -69,11 +71,12 @@ export default function LyricsView({
 
   return (
     <div
-      className={`lv lyrics-stage ${full ? 'lv--full' : ''}`}
-      role="dialog"
+      className={`lv lyrics-stage ${full ? 'lv--full' : ''} ${embedded ? 'lv--embedded' : ''}`}
+      role={embedded ? 'region' : 'dialog'}
       aria-label={`Lyrics: ${media?.title || 'this song'}`}
       onClick={(e) => e.stopPropagation()}
     >
+      {!embedded && (
       <header className="lv__head">
         {media?.artwork && <img className="lv__art" src={media.artwork} alt="" />}
         <div className="lv__who">
@@ -84,6 +87,7 @@ export default function LyricsView({
           <ChevronDown size={22} />
         </button>
       </header>
+      )}
 
       <div className="lv__body">
         {mode === 'loading' && <p className="lv__msg">Loading lyrics…</p>}
@@ -112,6 +116,7 @@ export default function LyricsView({
         )}
       </div>
 
+      {!embedded && (
       <footer className="lv__foot">
         <div className="lv__bar" onClick={seekFromBar} aria-hidden="true">
           <span style={{ width: `${progress}%` }} />
@@ -136,6 +141,7 @@ export default function LyricsView({
           </button>
         </div>
       </footer>
+      )}
     </div>
   );
 }

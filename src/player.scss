@@ -1,1294 +1,1208 @@
-// Player.scss — 3-column layout matching the new feed aesthetic
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+// player.scss — the Unis player
+// ─────────────────────────────────────────────────────────────
+// Four surfaces, one look:
+//   .unp-mini   phones / tablets: floating mini player
+//   .unp-tray   phones / tablets: song actions tray (the arrow)
+//   .unp-dock   computers: floating dock beside the sidebar
+//   .unp-np     Now Playing, full screen
+//
+// Colour rule: the artwork paints the surfaces (--unp-* from
+// useArtworkPalette), white runs the transport, the listener's theme
+// (--unis-primary / -2 / -glow) marks Unis actions: Vote, active tray
+// items, toggles that are on. Dark text on the yellow theme.
+//
+// Motion rule: resting = the tinted card. Scrolling (.is-glass +
+// .is-tucked on the root) = glass, tucked in. Pages with a big artwork hero
+// keep .is-glass. Text on glass sits on a darkening layer so it stays
+// readable over bright art.
+//
+// .player itself is display: contents. Its classes are hooks only; every
+// visible piece is fixed on its own. Nothing here sets transform, filter or
+// backdrop-filter on an element that holds a fixed-position child.
+// ─────────────────────────────────────────────────────────────
+
+$ease: cubic-bezier(0.2, 0.9, 0.25, 1);
+$spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+$font: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+$mini-side: max(10px, calc(50% - 340px));
+$mini-side-tucked: max(26px, calc(50% - 300px));
+$safe-bottom: env(safe-area-inset-bottom, 0px);
+
+.player.unp { display: contents; }
+.hidden-media { display: none; }
+
+// Layers. Lyrics (computers) sits under the dock; wizards, sheets and the
+// queue drawer sit over Now Playing.
+.unp-layer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+}
+.unp-layer--lyrics { z-index: 1000; }
+.unp-layer--modals { z-index: 1200; }
 
 // ═══════════════════════════════════════
-//  DESIGN TOKENS — matches feed.scss
+//  SHARED SURFACE — mini player + dock
 // ═══════════════════════════════════════
-$bg-base: #0a0a0c;
-$bg-surface: #111114;
-$bg-elevated: #18181c;
-$bg-hover: #1f1f24;
+.unp-mini,
+.unp-dock {
+  position: fixed;
+  z-index: 1001;
+  overflow: hidden;
+  color: #fff;
+  font-family: $font;
+  background:
+    linear-gradient(rgba(7, 9, 15, 0.22), rgba(7, 9, 15, 0.22)),
+    var(--unp-glass);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
+    0 14px 32px rgba(0, 0, 0, 0.5);
+  transition:
+    left 0.5s $ease, right 0.5s $ease, bottom 0.5s $ease, height 0.5s $ease,
+    border-radius 0.5s $ease, transform 0.45s $ease, opacity 0.3s ease;
 
-$border-subtle: rgba(255, 255, 255, 0.06);
-$border-medium: rgba(255, 255, 255, 0.1);
+  button { font-family: inherit; }
+}
 
-$text-primary: #f0f0f2;
-$text-secondary: rgba(255, 255, 255, 0.55);
-$text-tertiary: rgba(255, 255, 255, 0.35);
+.unp-surface__tint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, var(--unp-rest-1), var(--unp-rest-2));
+  transition: opacity 0.45s ease;
+}
+.unp.is-glass .unp-surface__tint { opacity: 0; }
+.unp.is-glass .unp-mini__title,
+.unp.is-glass .unp-mini__artist,
+.unp.is-glass .unp-dock__text { text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45); }
 
+// Hidden while Now Playing is open, and in a phone message thread.
+.unp.expanded .unp-mini,
+.unp.expanded .unp-dock,
+body.udm-immersive .unp:not(.expanded) .unp-mini,
+body.udm-immersive .unp:not(.expanded) .unp-dock {
+  transform: translateY(calc(100% + 40px));
+  opacity: 0;
+  pointer-events: none;
+}
 
-// Legacy tokens for expanded view / mobile tray
-$unis-blue: var(--unis-primary);
-$unis-silver: #918f8f;
-$text-silver: #C0C0C0;
-$text-gray: #A9A9A9;
-$accent-white: #FFFFFF;
-$accent: var(--unis-primary);
-$accent-hover: $unis-blue;
-$player-height: 80px;
-$radius-sm: 6px;
+// Thin progress strip along the bottom edge.
+.unp-strip {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 0;
+  height: 2.5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  pointer-events: none;
 
+  span {
+    display: block;
+    height: 100%;
+    width: var(--unp-progress, 0%);
+    border-radius: 2px;
+    background: #fff;
+    transition: width 0.25s linear;
+  }
+}
 
-// Ripple Animation
-@keyframes unis-ripple {
-  0% { transform: scale(0); opacity: 0.5; }
-  100% { transform: scale(4); opacity: 0; }
+.unp-badge {
+  position: absolute;
+  top: 6px;
+  right: 1px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: #fff;
+  color: #07090f;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
+
+.unp-video-mark {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.unp-spinner {
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.22);
+  border-top-color: #fff;
+  animation: unpSpin 0.9s linear infinite;
+}
+.unp-play .unp-spinner {
+  border-color: rgba(7, 9, 15, 0.18);
+  border-top-color: #07090f;
+}
+@keyframes unpSpin { to { transform: rotate(360deg); } }
+
+.unp-link {
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+
+  &:hover { text-decoration: underline; text-underline-offset: 2px; }
+}
+
+.unp-serif {
+  font-family: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.15em;
+  color: #fff;
 }
 
 // ═══════════════════════════════════════
-//  PLAYER SHELL
+//  BUTTONS
 // ═══════════════════════════════════════
-.player {
-  --player-bg: #{$bg-surface};
+.unp-icon {
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 20px;
+  background: none;
+  color: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.18s ease;
 
+  &:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  &:active { transform: scale(0.92); }
+  &.is-on {
+    color: #fff;
+    background: color-mix(in srgb, var(--unis-primary), transparent 45%);
+  }
+
+  .unp-badge { top: 3px; right: 0; }
+}
+.unp-icon--lg { width: 44px; height: 44px; border-radius: 22px; }
+.unp-like.is-on { color: var(--unis-primary-2); background: none; }
+
+.unp-skip {
+  color: #fff;
+
+  .skip-glyph {
+    width: 22px;
+    height: 22px;
+    display: block;
+    fill: currentColor;
+    pointer-events: none;
+  }
+}
+.unp-skip--lg {
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+
+  .skip-glyph { width: 34px; height: 34px; }
+}
+
+.unp-play {
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #07090f;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+  transition: transform 0.25s $spring;
+
+  &:active { transform: scale(0.93); }
+}
+.unp-play--sm { width: 40px; height: 40px; }
+.unp-play--md { width: 48px; height: 48px; }
+.unp-play--lg {
+  width: 72px;
+  height: 72px;
+
+  .pp-glyph { transform: scale(1.35); }
+  .unp-spinner { width: 30px; height: 30px; }
+}
+
+// Vote: the one button in the listener's theme colour.
+.unp-vote {
+  width: 100%;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 24px;
+  color: #fff;
+  font-family: $font;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--unis-primary-2), var(--unis-primary));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 10px 26px var(--unis-primary-glow);
+  transition: transform 0.18s ease, filter 0.2s ease;
+
+  &:hover { filter: brightness(1.08); }
+  &:active { transform: scale(0.98); }
+  svg { flex: none; }
+}
+.unp-vote--lg { height: 52px; border-radius: 26px; margin-top: 18px; flex: none; }
+.unp-vote--sm {
+  width: auto;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+  gap: 7px;
+  font-size: 13px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.unp-vote-dot {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 21px;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--unis-primary-2), var(--unis-primary));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 18px var(--unis-primary-glow);
+
+  &:active { transform: scale(0.94); }
+}
+
+[data-theme='yellow'] {
+  .unp-vote,
+  .unp-vote-dot,
+  .unp-like-pill.is-on,
+  .unp-dock-btn.is-on,
+  .unp-tile.is-on .unp-tile__icon { color: #111318; }
+}
+
+// Play ⇄ pause: both glyphs are stacked; the outgoing one shrinks and
+// fades while the incoming one springs up. The svg rules stay
+// !important: a global svg rule once ate this icon.
+.pp-glyph {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: block;
+  pointer-events: none;
+  transition: transform 0.25s $spring;
+
+  svg {
+    position: absolute;
+    inset: 0;
+    width: 24px !important;
+    height: 24px !important;
+    display: block !important;
+    fill: #fff !important;
+    opacity: 1;
+    visibility: visible !important;
+    overflow: visible !important;
+    transition:
+      opacity 0.16s ease,
+      transform 0.32s $spring;
+
+    path,
+    rect {
+      fill: #fff !important;
+      visibility: visible !important;
+    }
+  }
+
+  &[data-playing='true'] .pp-glyph__play,
+  &[data-playing='false'] .pp-glyph__pause {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+}
+.pp-glyph.pp-glyph--dark svg,
+.pp-glyph.pp-glyph--dark svg path,
+.pp-glyph.pp-glyph--dark svg rect { fill: #07090f !important; }
+
+// Sliders: seek and volume.
+.unp-range {
+  --track: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &::-webkit-slider-runnable-track {
+    height: var(--track);
+    border-radius: 999px;
+    background: linear-gradient(90deg, #fff var(--p, var(--unp-progress, 0%)), rgba(255, 255, 255, 0.24) var(--p, var(--unp-progress, 0%)));
+    transition: height 0.2s ease;
+  }
+  &::-moz-range-track { height: var(--track); border-radius: 999px; background: rgba(255, 255, 255, 0.24); }
+  &::-moz-range-progress { height: var(--track); border-radius: 999px; background: #fff; }
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    margin-top: calc((var(--track) - 12px) / 2);
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    transform: scale(var(--thumb, 1));
+    transition: transform 0.2s ease;
+  }
+  &::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: #fff; transform: scale(var(--thumb, 1)); }
+  &:focus { outline: none; }
+}
+
+// ═══════════════════════════════════════
+//  MINI PLAYER — phones / tablets
+// ═══════════════════════════════════════
+.unp-mini {
+  left: $mini-side;
+  right: $mini-side;
+  bottom: calc(14px + #{$safe-bottom});
+  height: 64px;
+  border-radius: 20px;
+}
+.unp.is-tucked .unp-mini {
+  left: $mini-side-tucked;
+  right: $mini-side-tucked;
+  bottom: calc(12px + #{$safe-bottom});
+  height: 54px;
+  border-radius: 27px;
+}
+
+.unp-mini__row {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px 0 9px;
+}
+
+.unp-mini__open {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.unp-mini__art {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: width 0.5s $ease, height 0.5s $ease, border-radius 0.5s $ease, opacity 0.3s ease;
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+.unp.is-tucked .unp-mini__art { width: 36px; height: 36px; border-radius: 10px; }
+.unp.is-paused .unp-mini__art { opacity: 0.8; }
+
+.unp-mini__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// Long titles fade at the edge instead of cutting to "…".
+.unp-mini__title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, #000 84%, transparent);
+  mask-image: linear-gradient(90deg, #000 84%, transparent);
+}
+
+.unp-mini__artist {
+  max-height: 18px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.35s ease, max-height 0.45s $ease;
+}
+.unp.is-tucked .unp-mini__artist { opacity: 0; max-height: 0; }
+
+.unp-mini__btn {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, width 0.45s $ease, opacity 0.3s ease;
+
+  &:active { transform: scale(0.9); }
+}
+
+.unp-mini__arrow {
+  svg { transition: transform 0.4s $ease; }
+
+  &.is-open {
+    background: rgba(255, 255, 255, 0.14);
+
+    svg { transform: rotate(180deg); }
+  }
+}
+
+.unp.is-tucked .unp-mini__queue {
+  width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+// ═══════════════════════════════════════
+//  SONG ACTIONS TRAY — phones / tablets
+//  Rises out of the mini player from the arrow, dressed in the same
+//  artwork blend as Now Playing.
+// ═══════════════════════════════════════
+.unp-tray {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: $player-height;
-  background: var(--player-bg);
-  border-top: 1px solid $border-subtle;
+  z-index: 1002;
+  left: $mini-side;
+  right: $mini-side;
+  bottom: calc(88px + #{$safe-bottom});
+  overflow: hidden;
+  border-radius: 24px;
+  color: #fff;
+  font-family: $font;
+  background: var(--unp-deep);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
+    0 22px 48px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(18px) scale(0.96);
+  transform-origin: 78% 100%;
+  transition: opacity 0.25s ease, transform 0.4s $ease, visibility 0s linear 0.4s;
+
+  &.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+    transition: opacity 0.28s ease, transform 0.45s $ease, visibility 0s;
+  }
+
+  button { font-family: inherit; }
+}
+
+// The artwork blend: the cover, blurred and saturated, darkening downward.
+.unp-blend {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.unp-blend__art {
+  position: absolute;
+  inset: -40%;
+  background: var(--unp-art) center / cover no-repeat, var(--unp-deep);
+  filter: blur(34px) saturate(1.35);
+}
+.unp-blend__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(7, 9, 15, 0.3), rgba(7, 9, 15, 0.66));
+}
+
+.unp-tray__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.unp-tray__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.unp-tray__kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.unp-tray__status {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.unp-tray__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.unp-tile {
+  height: 80px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 1000;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  transition: all 0.3s ease;
+  justify-content: center;
+  gap: 1px;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.2s ease;
 
-  // ═══════════════════════════════════════
-  //  MOBILE ACTIONS TRAY
-  // ═══════════════════════════════════════
-  .mobile-actions-tray {
-    display: none;
-    position: absolute;
-    bottom: 100%;
-    left: 0;
-    right: 0;
-    max-height: 0;
-    overflow: hidden;
-    padding: 0 8px;
-    pointer-events: none;
-    transform: translateY(10px);
-    opacity: 0;
-    transition:
-      max-height 0.42s cubic-bezier(0.2, 0.9, 0.2, 1),
-      padding 0.42s cubic-bezier(0.2, 0.9, 0.2, 1),
-      transform 0.32s cubic-bezier(0.2, 0.9, 0.2, 1),
-      opacity 0.24s ease;
-
-    &.open {
-      max-height: 166px;
-      padding: 0 8px 0;
-      transform: translateY(0);
-      opacity: 1;
-      pointer-events: auto;
-    }
-  .tray-shell {
-    position: relative;
-    overflow: hidden;
-    border-radius: 24px 24px 0 0;
-    padding: 9px 10px 10px;
-    background:
-      radial-gradient(420px 180px at 20% 0%, var(--unis-primary-soft), transparent 66%),
-      radial-gradient(380px 180px at 92% 20%, var(--unis-glow-1), transparent 62%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.092), rgba(255, 255, 255, 0.032)),
-      rgba(7, 9, 15, 0.92);
-    border: 1px solid var(--unis-border-hi);
-    border-bottom: 0;
-    box-shadow:
-      0 -24px 70px rgba(0, 0, 0, 0.5),
-      0 0 48px -26px var(--unis-primary),
-      inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(24px) saturate(1.25);
-    -webkit-backdrop-filter: blur(24px) saturate(1.25);
-
-      &::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background:
-          linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-        opacity: 0.42;
-        pointer-events: none;
-        transform: translateX(-55%);
-      }
-
-      &::after {
-        content: '';
-        position: absolute;
-        left: 14px;
-        right: 14px;
-        bottom: 0;
-        height: 1px;
-        background: linear-gradient(
-          90deg,
-          transparent,
-          color-mix(in srgb, var(--unis-primary) 62%, white 12%),
-          transparent
-        );
-        opacity: 0.65;
-        pointer-events: none;
-      }
-    }
-
-    &.open .tray-shell::before {
-      animation: trayPremiumSheen 1.1s ease 0.08s both;
-    }
-
-    .tray-handle {
-      width: 42px;
-      height: 4px;
-      margin: 0 auto 10px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.2);
-      box-shadow: 0 0 18px var(--unis-primary-glow);
-    }
-
-  .tray-header {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 9px;
-    padding: 0 1px;
-
-    > div {
-      min-width: 0;
-      display: flex;
-      flex-direction: row;
-      gap: 2px;
-    }
-
-    .tray-kicker {
-      color: var(--unis-primary-2);
-      font-size: 8px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.13em;
-    }
-
-    strong {
-      color: var(--unis-text);
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-    }
-
-    .tray-status-pill {
-      flex-shrink: 0;
-      padding: 5px 7px;
-      border-radius: 999px;
-      color: var(--unis-text-2);
-      font-size: 9px;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.09);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    }
-  }
-    .tray-content {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 6px;
-      align-items: stretch;
-    }
-
-  .tray-action {
-    min-width: 0;
-    min-height: 70px;
-    position: relative;
-    overflow: hidden;
-    display: grid;
-    grid-template-rows: 31px 1fr;
-    place-items: center;
-    gap: 6px;
-    padding: 8px 4px 7px;
-    border-radius: 16px;
-    color: var(--unis-text-2);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.082), rgba(255, 255, 255, 0.032)),
-      rgba(255, 255, 255, 0.025);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    box-shadow:
-      0 14px 30px rgba(0, 0, 0, 0.24),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    cursor: pointer;
-    transform: translateY(0) scale(1);
-    transition:
-      transform 0.18s ease,
-      border-color 0.18s ease,
-      background 0.18s ease,
-      color 0.18s ease,
-      box-shadow 0.18s ease;
-
-    &::before {
-      content: '';
-      position: absolute;
-      inset: -1px;
-      border-radius: inherit;
-      background:
-        radial-gradient(circle at 50% 0%, var(--unis-primary-soft), transparent 58%);
-      opacity: 0;
-      transition: opacity 0.18s ease;
-      pointer-events: none;
-    }
-
-    &:hover,
-    &:active {
-      color: var(--unis-text);
-      border-color: color-mix(in srgb, var(--unis-primary) 46%, rgba(255, 255, 255, 0.14));
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.115), rgba(255, 255, 255, 0.04)),
-        color-mix(in srgb, var(--unis-primary) 10%, transparent);
-      box-shadow:
-        0 18px 34px rgba(0, 0, 0, 0.3),
-        0 0 28px -18px var(--unis-primary),
-        inset 0 1px 0 rgba(255, 255, 255, 0.12);
-      transform: translateY(-2px) scale(1.015);
-
-      &::before {
-        opacity: 1;
-      }
-
-      .tray-icon {
-        color: var(--unis-primary-2);
-        transform: translateY(-1px) scale(1.04);
-      }
-    }
-
-    &.liked,
-    &.locked,
-    &.tray-action-featured {
-      color: var(--unis-text);
-      border-color: color-mix(in srgb, var(--unis-primary) 55%, rgba(255, 255, 255, 0.14));
-      background:
-        radial-gradient(circle at 30% 0%, var(--unis-primary-soft), transparent 62%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.035));
-    }
-
-    &.liked,
-    &.locked {
-      box-shadow:
-        0 18px 40px rgba(0, 0, 0, 0.28),
-        0 0 34px -20px var(--unis-primary),
-        inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    }
-
-    &.tray-action-featured {
-      box-shadow:
-        0 18px 42px rgba(0, 0, 0, 0.28),
-        0 0 38px -22px var(--unis-primary),
-        inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    }
-
-    .tray-icon {
-      width: 31px;
-      height: 31px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 12px;
-      color: var(--unis-primary-2);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.045));
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow:
-        0 10px 18px rgba(0, 0, 0, 0.22),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      transition:
-        transform 0.18s ease,
-        color 0.18s ease,
-        background 0.18s ease;
-
-      svg {
-        width: 18px;
-        height: 18px;
-        flex-shrink: 0;
-      }
-    }
-
-    .tray-copy {
-      min-width: 0;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      text-align: center;
-    }
-
-    .label {
-      width: 100%;
-      color: var(--unis-text);
-      font-size: 10px;
-      font-weight: 850;
-      line-height: 1;
-      letter-spacing: -0.02em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      text-align: center;
-    }
-
-    .hint {
-      width: 100%;
-      color: var(--unis-text-4);
-      font-size: 8px;
-      font-weight: 750;
-      line-height: 1.1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      text-align: center;
-    }
-  }
-    .tray-action-lock {
-      .pocket-lock-switch {
-        position: absolute;
-        top: 10px;
-        right: 9px;
-        width: 25px;
-        height: 14px;
-        border-radius: 999px;
-        padding: 2px;
-        background: rgba(255, 255, 255, 0.13);
-        border: 1px solid rgba(255, 255, 255, 0.11);
-        display: inline-flex;
-        align-items: center;
-        transition:
-          background 0.18s ease,
-          border-color 0.18s ease,
-          box-shadow 0.18s ease;
-      }
-
-      .pocket-lock-switch-thumb {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.72);
-        transform: translateX(0);
-        transition:
-          transform 0.18s ease,
-          background 0.18s ease,
-          box-shadow 0.18s ease;
-      }
-
-      &.locked {
-        .pocket-lock-switch {
-          background: var(--unis-primary);
-          border-color: rgba(255, 255, 255, 0.22);
-          box-shadow: 0 0 16px var(--unis-primary-glow);
-        }
-
-        .pocket-lock-switch-thumb {
-          transform: translateX(11px);
-          background: #fff;
-          box-shadow: 0 0 8px rgba(255, 255, 255, 0.58);
-        }
-      }
-    }
-
-    @media (max-width: 600px) {
-      display: block;
-    }
-
-    @media (max-width: 390px) {
-      padding: 0 6px;
-
-      &.open {
-        padding: 0 6px 0;
-      }
-
-      .tray-shell {
-        padding: 8px 8px 9px;
-        border-radius: 22px 22px 0 0;
-      }
-
-      .tray-header {
-        margin-bottom: 8px;
-
-        .tray-kicker {
-          font-size: 7.5px;
-          letter-spacing: 0.11em;
-        }
-
-        strong {
-          font-size: 12px;
-        }
-
-        .tray-status-pill {
-          font-size: 8px;
-          padding: 4px 6px;
-        }
-      }
-
-      .tray-content {
-        gap: 5px;
-      }
-
-      .tray-action {
-        min-height: 67px;
-        padding: 7px 3px 6px;
-        border-radius: 15px;
-        gap: 5px;
-
-        .tray-icon {
-          width: 29px;
-          height: 29px;
-          border-radius: 11px;
-        }
-
-        .label {
-          font-size: 9px;
-        }
-
-        .hint {
-          font-size: 7.5px;
-        }
-      }
-    }
-
+  &:hover { background: rgba(255, 255, 255, 0.16); }
+  &:active { transform: scale(0.96); }
 }
 
-@keyframes trayPremiumSheen {
-  0% {
-    transform: translateX(-65%);
-    opacity: 0;
+.unp-tile__icon {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 17px;
+  color: #fff;
+  background: color-mix(in srgb, var(--unis-primary), transparent 55%);
+}
+.unp-tile.is-on .unp-tile__icon {
+  background: linear-gradient(135deg, var(--unis-primary-2), var(--unis-primary));
+  box-shadow: 0 4px 14px var(--unis-primary-glow);
+}
+.unp-tile__label { font-size: 12.5px; font-weight: 700; }
+.unp-tile__hint { font-size: 10.5px; color: rgba(255, 255, 255, 0.64); }
+
+// ═══════════════════════════════════════
+//  DOCK — computers
+// ═══════════════════════════════════════
+.unp-dock {
+  left: var(--sidebar-width, 8px);
+  right: 8px;
+  bottom: 8px;
+  height: 78px;
+  border-radius: 22px;
+}
+
+.unp-dock__row {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+}
+
+.unp-dock__left {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.unp-dock__art {
+  position: relative;
+  flex: none;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease, opacity 0.3s ease;
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  &:hover { transform: scale(1.04); }
+}
+.unp.is-paused .unp-dock__art { opacity: 0.85; }
+
+.unp-dock__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.unp-dock__title { font-size: 15px; font-weight: 650; }
+
+.unp-dock__sub {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unp-dock__center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.unp-time {
+  width: 38px;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.62);
+  font-variant-numeric: tabular-nums;
+
+  &:first-child { text-align: right; }
+}
+
+.unp-dock__right {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.unp-volume { width: 76px; }
+
+// The strip on the dock's bottom edge is the seek bar: it thickens on hover
+// (or keyboard focus) and shows its handle.
+.unp-dock__seek {
+  --track: 3px;
+  --thumb: 0;
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: -5px;
+  height: 14px;
+  z-index: 2;
+}
+.unp-dock:hover .unp-dock__seek,
+.unp-dock__seek:focus-visible {
+  --track: 6px;
+  --thumb: 1;
+}
+
+@media (max-width: 1180px) {
+  .unp-dock .unp-time { display: none; }
+  .unp-volume { width: 60px; }
+}
+
+// ═══════════════════════════════════════
+//  NOW PLAYING
+// ═══════════════════════════════════════
+.unp-np {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  overflow: hidden;
+  color: #fff;
+  font-family: $font;
+  background: var(--unp-deep);
+  border-radius: 40px 40px 0 0;
+  transform: translateY(100%);
+  visibility: hidden;
+  transition: transform 0.5s $ease, border-radius 0.5s $ease, visibility 0s linear 0.5s;
+
+  &.is-open {
+    transform: none;
+    border-radius: 0;
+    visibility: visible;
+    transition: transform 0.5s $ease, border-radius 0.5s $ease, visibility 0s;
   }
 
-  35% {
-    opacity: 0.42;
-  }
+  button { font-family: inherit; }
+}
 
-  100% {
-    transform: translateX(65%);
-    opacity: 0;
+body.unp-np-open { overflow: hidden; }
+
+// The moving background: the cover, blurred, with two slow colour blooms,
+// darkening toward the bottom.
+.unp-np__ambient {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -30%;
+    background: var(--unp-art) center / cover no-repeat;
+    filter: blur(60px) saturate(1.35);
+    opacity: 0.85;
+    animation: unpDrift 22s ease-in-out infinite alternate;
   }
 }
 
-  // ═══════════════════════════════════════
-  //  MOBILE ACTIONS TOGGLE
-  // ═══════════════════════════════════════
-.mobile-actions-toggle {
-    display: none;
-    background: transparent;
-    border: none;
-    color: $unis-blue;
-    cursor: pointer;
-    padding: 4px;
-    transition: all 0.2s ease;
+.unp-np__blob {
+  position: absolute;
+  inset: -25%;
+  background:
+    radial-gradient(circle at 30% 28%, var(--unp-glow), transparent 55%),
+    radial-gradient(circle at 72% 72%, var(--unp-deep), transparent 60%);
+  filter: blur(50px);
+  opacity: 0.75;
+  animation: unpDrift 18s ease-in-out infinite alternate-reverse;
+}
 
-    &:hover {
-      color: $text-primary;
-      transform: scale(1.1);
-    }
+.unp-np:not(.is-open) .unp-np__ambient::before,
+.unp-np:not(.is-open) .unp-np__blob { animation-play-state: paused; }
 
-    @media (max-width: 600px) {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+@keyframes unpDrift {
+  from { transform: scale(1.15) rotate(0deg); }
+  to { transform: scale(1.35) rotate(28deg); }
+}
+
+.unp-np__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(7, 9, 15, 0.12) 0%, rgba(7, 9, 15, 0.38) 45%, rgba(7, 9, 15, 0.8) 100%);
+}
+
+.unp-np__inner {
+  position: relative;
+  height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: max(10px, env(safe-area-inset-top)) 24px calc(122px + #{$safe-bottom});
+}
+
+.unp-np__top {
+  flex: none;
+  height: 52px;
+  margin: 0 -10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.unp-np__from {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+
+  span {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.62);
   }
 
-  // ═══════════════════════════════════════
-  //  MOBILE RIGHT CLUSTER — toggle stacked over queue
-  //  Gives the queue button one-tap access on mobile
-  // ═══════════════════════════════════════
-  .mobile-right-cluster {
-    display: none;
-
-    @media (max-width: 600px) {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      margin-left: 8px;
-      flex-shrink: 0;
-    }
-  }
-
-  .mobile-queue-btn {
-    display: none;
-
-    @media (max-width: 600px) {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      background: none;
-      border: none;
-      color: $text-secondary;
-      cursor: pointer;
-      padding: 4px;
-      transition: color 0.2s ease, transform 0.2s ease;
-
-      &:hover {
-        color: $text-primary;
-        transform: scale(1.1);
-      }
-
-      &.active {
-        color: $unis-blue;
-      }
-
-      svg {
-        width: 18px;
-        height: 18px;
-      }
-    }
-  }
-
-  .mobile-queue-badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    min-width: 14px;
-    height: 14px;
-    padding: 0 3px;
-    border-radius: 7px;
-    background: $unis-blue;
-    color: #fff;
-    font-size: 8px;
-    font-weight: 700;
-    font-family: 'DM Sans', sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-    pointer-events: none;
-  }
-
-  // ═══════════════════════════════════════
-  //  3-COLUMN MINI PLAYER
-  // ═══════════════════════════════════════
-  .Unis-mini-player {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    padding: 0 20px;
-
-    @media (max-width: 600px) {
-      padding: 0 10px;
-    }
-  }
-
-  // --- LEFT: Track info ---
-  .player-track {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    width: 260px;
-    min-width: 200px;
-
-    @media (max-width: 600px) {
-      width: auto;
-      min-width: 0;
-      flex: 0 0 auto;
-      max-width: 35%;
-      gap: 10px;
-    }
-  }
-
-  .player-art {
-    width: 50px;
-    height: 50px;
-    border-radius: $radius-sm;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    flex-shrink: 0;
-    cursor: pointer;
-    transition: transform 0.2s ease;
-
-    &:hover {
-      transform: scale(1.05);
-    }
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    @media (max-width: 600px) {
-      width: 42px;
-      height: 42px;
-    }
-  }
-
-  .player-track-info {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .player-track-title {
+  strong {
     font-size: 13.5px;
-    font-weight: 600;
-    color: $text-primary;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: color 0.2s;
-
-    &.clickable {
-      cursor: pointer;
-      &:hover { color: $unis-blue; }
-    }
-
-    @media (max-width: 600px) {
-      font-size: 12px;
-    }
-  }
-
-  .player-track-artist {
-    font-size: 12px;
-    color: $text-secondary;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: color 0.2s;
-
-    &.clickable {
-      cursor: pointer;
-      &:hover { color: $text-primary; }
-    }
-
-    @media (max-width: 600px) {
-      font-size: 10px;
-    }
-  }
-
-  .player-heart {
-    background: none;
-    border: none;
-    color: $text-tertiary;
-    cursor: pointer;
-    transition: color 0.2s;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-
-    &:hover {
-      color: $unis-blue;
-    }
-
-    .liked {
-      color: $unis-blue;
-    }
-
-    @media (max-width: 600px) {
-      display: none;
-    }
-  }
-
-  .player-queue-btn {
-    position: relative;
-
-    &.active {
-      color: $unis-blue;
-    }
-  }
-
-  .player-queue-badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 4px;
-    border-radius: 8px;
-    background: $unis-blue;
-    color: #fff;
-    font-size: 9px;
     font-weight: 700;
-    font-family: 'DM Sans', sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-    pointer-events: none;
-  }
-
-  // --- CENTER: Controls + progress ---
-  .player-controls {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    max-width: 600px;
-    margin: 0 auto;
-
-    @media (max-width: 600px) {
-      flex: 1;
-      max-width: none;
-      gap: 4px;
-    }
-  }
-
-  .player-buttons {
-    display: flex;
-    align-items: center;
-    // The skip buttons now have 40px tap targets (the icons were 26px), so the
-    // gap shrinks to keep the icons visually where they were.
-    gap: 12px;
-
-    @media (max-width: 600px) {
-      gap: 4px;
-
-      // Hide vote and playlist on mobile (they're in the tray)
-      .player-btn:first-child,
-      .player-btn:last-child {
-        display: none;
-      }
-    }
-  }
-
-  .player-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: $text-secondary;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-
-    &:hover {
-      color: $text-primary;
-      transform: scale(1.1);
-    }
-
-    svg {
-      width: 18px;
-      height: 18px;
-    }
-  }
-
-  // ─── TRANSPORT: previous · play/pause · next ───────────────────────────
-  // One rule drives this trio: play is the only coloured control. It's the
-  // action you came for, so it alone carries the theme. The skip buttons stay
-  // neutral (bright, not dim) and borrow the theme only when you touch them:
-  // a tinted halo on hover, a theme focus ring, a press that nudges the arrow
-  // the way it's pointing. That ties them to the theme without three
-  // coloured blobs competing for your eye.
-
-  .player-skip {
-    position: relative;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border-radius: 50%;
-    border: none;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.86);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: color 0.18s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-
-    // The halo is its own layer so it can grow in without moving the icon.
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: color-mix(in srgb, var(--unis-primary, #163387) 34%, rgba(255, 255, 255, 0.08));
-      opacity: 0;
-      transform: scale(0.7);
-      transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-
-    .skip-glyph {
-      position: relative;
-      width: 20px !important;
-      height: 20px !important;
-      display: block !important;
-      fill: currentColor !important;
-      overflow: visible;
-      pointer-events: none;
-      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-
-      rect,
-      path { fill: currentColor !important; }
-    }
-
-    // Cancel the shared .player-btn hover scale on every device (it would
-    // fight the halo, and on phones it sticks after a tap).
-    &:hover { transform: none; }
-
-    @media (hover: hover) {
-      &:hover {
-        color: #fff;
-
-        &::before {
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
-    }
-
-    &:active {
-      transform: scale(0.9);
-      transition-duration: 0.08s;
-
-      &::before {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    // The press nudges the arrow the way it points.
-    &--prev:active .skip-glyph { transform: translateX(-2px); }
-    &--next:active .skip-glyph { transform: translateX(2px); }
-
-    &:focus-visible {
-      outline: 2px solid var(--unis-primary-2, #4f6fd1);
-      outline-offset: 2px;
-    }
-
-    @media (max-width: 600px) {
-      width: 38px;
-      height: 38px;
-    }
-  }
-
-  .player-btn-play {
-    --pp: var(--unis-primary, #163387);
-
-    position: relative;
-    width: 50px;
-    height: 50px;
-    padding: 0;
-    border-radius: 50%;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    overflow: visible;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    // Lit from the top-left, like the chrome in the wordmark: a lighter
-    // shade of the theme up top falling to a deeper one below.
-    background:
-      radial-gradient(120% 120% at 30% 18%,
-        color-mix(in srgb, var(--pp), white 18%) 0%,
-        var(--pp) 55%,
-        color-mix(in srgb, var(--pp), black 20%) 100%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.28),  // top edge catching light
-      inset 0 -2px 6px rgba(0, 0, 0, 0.2),        // weight at the bottom
-      0 6px 18px color-mix(in srgb, var(--pp), transparent 55%), // theme glow
-      0 2px 4px rgba(0, 0, 0, 0.35);              // contact shadow
-    transition:
-      transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
-      box-shadow 0.25s ease;
-
-    @media (hover: hover) {
-      &:hover {
-        transform: scale(1.06);
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.32),
-          inset 0 -2px 6px rgba(0, 0, 0, 0.2),
-          0 8px 26px color-mix(in srgb, var(--pp), transparent 35%),
-          0 2px 4px rgba(0, 0, 0, 0.35);
-      }
-    }
-
-    &:active {
-      transform: scale(0.93);
-      transition-duration: 0.08s;
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--unis-primary-2, #4f6fd1);
-      outline-offset: 3px;
-    }
-  }
-
-  // Play ⇄ pause: both glyphs are stacked; the outgoing one shrinks and
-  // fades while the incoming one springs up. The svg rules stay
-  // !important: a global svg rule once ate this icon.
-  .pp-glyph {
-    position: relative;
-    width: 24px;
-    height: 24px;
-    display: block;
-    pointer-events: none;
-
-    svg {
-      position: absolute;
-      inset: 0;
-      width: 24px !important;
-      height: 24px !important;
-      display: block !important;
-      fill: #fff !important;
-      opacity: 1;
-      visibility: visible !important;
-      overflow: visible !important;
-      transition:
-        opacity 0.16s ease,
-        transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
-
-      path,
-      rect {
-        fill: #fff !important;
-        visibility: visible !important;
-      }
-    }
-
-    &[data-playing='true'] .pp-glyph__play,
-    &[data-playing='false'] .pp-glyph__pause {
-      opacity: 0;
-      transform: scale(0.55);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .player-skip,
-    .player-skip::before,
-    .player-skip .skip-glyph,
-    .player-btn-play,
-    .pp-glyph svg {
-      transition: none !important;
-    }
-  }
-
-  .player-progress {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    max-width: 500px;
-
-    @media (max-width: 600px) {
-      max-width: 100%;
-      gap: 6px;
-    }
-  }
-
-  .player-time {
-    font-size: 11px;
-    color: $text-tertiary;
-    font-variant-numeric: tabular-nums;
-    min-width: 36px;
-    text-align: center;
-
-    @media (max-width: 600px) {
-      font-size: 10px;
-      min-width: 28px;
-    }
-  }
-
-  .progress-bar {
-    flex: 1;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
-    cursor: pointer;
-    position: relative;
+    white-space: nowrap;
     overflow: hidden;
-    transition: height 0.15s;
-
-    &:hover {
-      height: 6px;
-
-      .progress-fill::after {
-        content: '';
-        position: absolute;
-        right: -5px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: $unis-blue;
-      }
-    }
+    text-overflow: ellipsis;
   }
+}
 
-  .progress-fill {
-    height: 100%;
-    background: $unis-blue;
-    border-radius: 2px;
-    position: relative;
-    transition: width 0.1s linear;
+// The artwork fits whatever room the screen leaves (container units), so
+// the controls never get pushed off a short phone.
+.unp-np__stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+.unp-np:not(.unp-np--main) .unp-np__stage { display: none; }
+
+.unp-np__art {
+  width: min(100cqw, 100cqh, 380px);
+  height: min(100cqw, 100cqh, 380px);
+  object-fit: cover;
+  border-radius: 18px;
+  box-shadow: 0 26px 54px rgba(0, 0, 0, 0.5);
+  transition: transform 0.55s $ease;
+}
+.unp.is-paused .unp-np__art { transform: scale(0.84); }
+
+.unp-np__video {
+  width: 100%;
+  max-height: 100%;
+  border-radius: 16px;
+  background: #000;
+  box-shadow: 0 26px 54px rgba(0, 0, 0, 0.5);
+}
+
+.unp-np__meta {
+  flex: none;
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.unp-np__names {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.unp-np__title { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+
+.unp-np__artist {
+  margin-top: 2px;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unp-like-pill {
+  flex: none;
+  height: 40px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.18s ease;
+
+  &:active { transform: scale(0.95); }
+  &.is-on { background: linear-gradient(135deg, var(--unis-primary-2), var(--unis-primary)); }
+}
+
+.unp-np__seek { flex: none; margin-top: 16px; }
+.unp-range--np { width: 100%; display: block; }
+
+.unp-np__times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.62);
+  font-variant-numeric: tabular-nums;
+}
+
+.unp-np__transport {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 6px;
+}
+.unp-np__transport--md { gap: 34px; margin-top: 10px; }
+
+// Lyrics and queue views: the cover shrinks into this row.
+.unp-np__compact {
+  flex: none;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.unp-np__compact-art {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+.unp-np__compact-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.unp-np__compact-title { font-size: 16px; font-weight: 700; }
+.unp-np__compact-artist { font-size: 14px; color: rgba(255, 255, 255, 0.7); }
+
+.unp-np__lyrics {
+  flex: 1;
+  min-height: 0;
+  margin-top: 14px;
+}
+
+.unp-np__queue {
+  flex: 1;
+  min-height: 0;
+}
+
+// Now Playing's tray: Lyrics · Comments · Queue · More. The active view
+// wears the theme colour.
+.unp-np__dock {
+  position: absolute;
+  left: 50%;
+  bottom: calc(30px + #{$safe-bottom});
+  width: min(432px, calc(100% - 48px));
+  height: 60px;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  display: flex;
+  padding: 5px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.14),
+    0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.unp-dock-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 0;
+  border-radius: 25px;
+  background: transparent;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.3s $ease, color 0.3s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.08); }
+  &.is-on {
+    background: linear-gradient(135deg, var(--unis-primary-2), var(--unis-primary));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 6px 18px var(--unis-primary-glow);
   }
+}
 
-  // --- RIGHT: Volume + actions ---
-  .player-right {
-    width: 260px;
-    min-width: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 16px;
+// More sheet
+.unp-more {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+}
 
-    .player-btn svg {
-      width: 16px;
-      height: 16px;
-    }
+.unp-more__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.45);
+  cursor: default;
+  animation: unpFade 0.2s ease both;
+}
 
-    @media (max-width: 600px) {
-      display: none;
-    }
+.unp-more__sheet {
+  position: absolute;
+  left: 50%;
+  bottom: calc(10px + #{$safe-bottom});
+  width: min(460px, calc(100% - 20px));
+  box-sizing: border-box;
+  padding: 18px 16px 16px;
+  border-radius: 30px;
+  background: rgba(24, 24, 32, 0.82);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 -10px 40px rgba(0, 0, 0, 0.4);
+  transform: translateX(-50%);
+  animation: unpSheetIn 0.4s $ease both;
+}
+
+.unp-more__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 4px 14px;
+
+  img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex: none; }
+  div { min-width: 0; display: flex; flex-direction: column; }
+  strong, span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  strong { font-size: 15px; font-weight: 700; }
+  span { font-size: 13px; color: rgba(255, 255, 255, 0.62); }
+}
+
+.unp-more__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.unp-more__item {
+  height: 80px;
+  padding: 0 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.18s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.14); }
+  &:active { transform: scale(0.96); }
+  &.is-on { background: color-mix(in srgb, var(--unis-primary), transparent 40%); }
+}
+
+@keyframes unpFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes unpSheetIn {
+  from { opacity: 0; transform: translate(-50%, 24px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+// Computers: Now Playing is a centred column over the full-screen blend.
+@media (min-width: 1025px) {
+  .unp-np { border-radius: 0; }
+  .unp-np__inner { padding-top: 24px; }
+}
+
+// ═══════════════════════════════════════
+//  ACCESSIBILITY PREFERENCES
+// ═══════════════════════════════════════
+@media (prefers-reduced-motion: reduce) {
+  .unp-mini,
+  .unp-dock,
+  .unp-tray,
+  .unp-mini__art,
+  .unp-mini__artist,
+  .unp-mini__btn,
+  .unp-surface__tint,
+  .unp-np__art,
+  .unp-strip span,
+  .pp-glyph,
+  .pp-glyph svg { transition: none !important; }
+
+  .unp-np__ambient::before,
+  .unp-np__blob,
+  .unp-more__sheet,
+  .unp-more__backdrop { animation: none; }
+
+  .unp-np,
+  .unp-np.is-open {
+    transform: none;
+    transition: opacity 0.2s ease, visibility 0s linear 0.2s;
   }
+  .unp-np { opacity: 0; }
+  .unp-np.is-open { opacity: 1; transition: opacity 0.2s ease, visibility 0s; }
+  .unp-more__sheet { transform: translateX(-50%); }
+}
 
-  .player-volume-icon {
-    flex-shrink: 0;
-  }
+// Reduced transparency: the tinted card everywhere, solid sheets.
+@media (prefers-reduced-transparency: reduce) {
+  .unp.is-glass .unp-surface__tint { opacity: 1; }
+  .unp-np__dock,
+  .unp-more__sheet { background: rgba(24, 24, 32, 0.97); }
+}
 
-  .volume-bar {
-    width: 90px;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
-    cursor: pointer;
-    position: relative;
-    transition: height 0.15s;
+// ★ no-outline: per product decision, no focus/click outline anywhere in the
+//   player surfaces (mini player, dock, tray, Now Playing, comments). Also
+//   kills the mobile tap highlight. NOTE: this removes the keyboard focus
+//   ring inside the player; flagged in the QA summary.
+.player,
+.player-comments-sheet {
+  -webkit-tap-highlight-color: transparent;
 
-    &:hover {
-      height: 6px;
-    }
-  }
+  button,
+  a,
+  input,
+  [role='button'],
+  [tabindex] {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent;
 
-  .volume-fill {
-    height: 100%;
-    background: $unis-blue;
-    border-radius: 2px;
-    transition: width 0.05s linear;
-  }
-
-  // ═══════════════════════════════════════
-  //  EXPANDED PLAYER
-  // ═══════════════════════════════════════
-  &.expanded {
-    height: 100vh;
-    top: 0;
-    padding: 0;
-    background-color: #000;
-
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image: var(--bg-image);
-      background-size: cover;
-      background-position: center;
-      filter: blur(20px) brightness(0.4);
-      z-index: -1;
-    }
-
-    .expanded-view {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
-      position: relative;
-
-      .minimize-button {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        background: transparent;
-        border: none;
-        color: white;
-        font-size: 24px;
-        cursor: pointer;
-        z-index: 10;
-        font-family: 'DM Sans', sans-serif;
-      }
-
-      .media-element {
-        width: 100%;
-        max-width: 350px;
-        aspect-ratio: 1/1;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        border-radius: 12px;
-        margin-bottom: 40px;
-        background-size: cover;
-        background-position: center;
-      }
-
-      .expanded-artwork {
-        img {
-          width: 100%;
-          max-width: 350px;
-          aspect-ratio: 1/1;
-          object-fit: cover;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-          border-radius: 12px;
-          margin-bottom: 40px;
-        }
-      }
-
-      .info {
-        text-align: center;
-        margin-bottom: 30px;
-
-        h2 {
-          color: white;
-          font-size: 24px;
-          margin-bottom: 5px;
-          font-family: 'DM Sans', sans-serif;
-        }
-        p {
-          color: $text-silver;
-          font-size: 18px;
-        }
-      }
-
-      .time-info {
-        display: flex;
-        justify-content: space-between;
-        width: 100%;
-        max-width: 500px;
-        margin-bottom: 10px;
-        color: $text-secondary;
-        font-size: 14px;
-        font-variant-numeric: tabular-nums;
-      }
-
-      .expanded-seekbar {
-        width: 100%;
-        max-width: 500px;
-        margin-bottom: 30px;
-        appearance: none;
-        height: 6px;
-        background: rgba(255, 255, 255, 0.15);
-        cursor: pointer;
-        border-radius: 3px;
-        outline: none;
-
-        &::-webkit-slider-thumb {
-          appearance: none;
-          width: 16px;
-          height: 16px;
-          background: $unis-blue;
-          border: 2px solid white;
-          border-radius: 50%;
-          cursor: pointer;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-          transition: transform 0.2s ease;
-
-          &:hover {
-            transform: scale(1.3);
-          }
-        }
-
-        &::-moz-range-thumb {
-          width: 16px;
-          height: 16px;
-          background: $unis-blue;
-          border: 2px solid white;
-          border-radius: 50%;
-          cursor: pointer;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-        }
-      }
-
-      .controls {
-        display: flex;
-        align-items: center;
-        gap: 30px;
-        margin-bottom: 20px;
-
-        button {
-          font-size: 35px;
-          background: transparent;
-          border: none;
-          color: white;
-          cursor: pointer;
-          transition: all 0.2s;
-
-          &:hover {
-            color: $unis-blue;
-            transform: scale(1.05);
-          }
-
-          &.play-pause-btn {
-            font-size: 60px;
-            color: $unis-blue;
-          }
-        }
-
-        // Full-screen view: same three controls as the bar, scaled up.
-        button.player-skip {
-          width: 56px;
-          height: 56px;
-          color: rgba(255, 255, 255, 0.9);
-
-          &:hover { color: #fff; transform: none; }
-
-          .skip-glyph {
-            width: 28px !important;
-            height: 28px !important;
-          }
-        }
-
-        button.player-btn-play {
-          width: 72px;
-          height: 72px;
-          background:
-            radial-gradient(120% 120% at 30% 18%,
-              color-mix(in srgb, var(--pp), white 18%) 0%,
-              var(--pp) 55%,
-              color-mix(in srgb, var(--pp), black 20%) 100%);
-
-          &:hover { color: inherit; transform: scale(1.05); }
-
-          .pp-glyph,
-          .pp-glyph svg {
-            width: 32px !important;
-            height: 32px !important;
-          }
-        }
-      }
-
-      .expanded-actions {
-        display: flex;
-        gap: 20px;
-
-        button {
-          background: transparent;
-          border: none;
-          color: $text-secondary;
-          font-size: 24px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-
-          &:hover {
-            color: $unis-blue;
-            transform: scale(1.1);
-          }
-
-          &.like-button.liked {
-            color: $unis-blue;
-          }
-        }
-      }
+    &:focus,
+    &:focus-visible,
+    &:active {
+      outline: none !important;
     }
   }
 }
@@ -1595,79 +1509,6 @@ $radius-sm: 6px;
     border-radius: 26px;
   }
 }
-// ═══════════════════════════════════════
-//  ★ QA PASS ADDITIONS
-// ═══════════════════════════════════════
-
-// ★ no-outline: per product decision, no focus/click outline anywhere in the
-//   player surfaces (bar, tray, queue, comments). Also kills the mobile tap
-//   highlight. NOTE: this removes the keyboard focus ring inside the player;
-//   flagged in the QA summary.
-.player,
-.mobile-actions-tray,
-.player-comments-sheet {
-  -webkit-tap-highlight-color: transparent;
-
-  button,
-  a,
-  input,
-  [role='button'],
-  [tabindex] {
-    outline: none !important;
-    -webkit-tap-highlight-color: transparent;
-
-    &:focus,
-    &:focus-visible,
-    &:active {
-      outline: none !important;
-    }
-  }
-}
-
-// ★ sidebar-fit: on desktop the sidebar occupies the left column
-//   (--sidebar-width, same token layout.scss uses); the player previously
-//   spanned left:0 and covered it. Breakpoint mirrors sidebar.scss (1025px).
-@media (min-width: 1025px) {
-  .player {
-    left: var(--sidebar-width, 0px);
-    width: calc(100% - var(--sidebar-width, 0px));
-    right: 0;
-  }
-}
-
-// ★ comments: button beside the in-queue pill
-.tray-header-side {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 7px;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.tray-comments-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  padding: 5px 9px;
-  border-radius: 999px;
-  border: 1px solid var(--unis-primary);
-  background: var(--unis-primary-soft);
-  color: var(--unis-primary-2);
-  font-family: inherit;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  transition: filter 0.15s ease, background 0.15s ease;
-
-  &:hover { filter: brightness(1.15); }
-
-  svg { flex: none; }
-}
-
 // ★ comments: slide-up sheet hosting the songPage CommentSection
 .player-comments-sheet {
   position: fixed;
@@ -1686,12 +1527,12 @@ $radius-sm: 6px;
   animation: player-comments-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 
   @media (min-width: 1025px) {
-    left: calc(var(--sidebar-width, 0px) + 24px);
+    left: var(--sidebar-width, 8px);
     right: auto;
     width: 430px;
     max-height: 64vh;
     border-radius: 18px;
-    bottom: calc(#{$player-height} + 16px);
+    bottom: var(--unp-stack, 96px);
     border-bottom: 1px solid var(--unis-border-hi, rgba(255, 255, 255, 0.12));
   }
 

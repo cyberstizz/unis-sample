@@ -559,15 +559,11 @@ $ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 // ─────────────────────────────────────────────────────────────
-// Above the player bar (desktop). The player bar (80px, fixed to the bottom,
-// on a higher layer) used to cover the bottom of the panel, and with it the
-// account row. While a song is loaded, the panel now ends above the bar.
+// The player (desktop) is a floating dock that starts at --sidebar-width,
+// beside the panel rather than under it, so the panel keeps its full height
+// and its bottom lines up with the dock's. The content column glides with
+// the panel; the dock glides with it too.
 // ─────────────────────────────────────────────────────────────
-@media (min-width: 1025px) {
-  body:has(.player:not(.expanded)) .sidebar {
-    bottom: calc(80px + #{$gutter});
-  }
-}
 
 // ─────────────────────────────────────────────────────────────
 // Account row
@@ -760,8 +756,8 @@ $ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     transition: margin-left 0.28s $ease, width 0.28s $ease;
   }
 
-  .player {
-    transition: left 0.28s $ease, width 0.28s $ease;
+  .unp-dock {
+    transition: left 0.28s $ease;
   }
 }
 
@@ -864,7 +860,7 @@ $ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   .sidebar *,
   .sidebar-overlay,
   .sb-animating .layout-container,
-  .sb-animating .player {
+  .sb-animating .unp-dock {
     transition: none !important;
     animation: none !important;
   }

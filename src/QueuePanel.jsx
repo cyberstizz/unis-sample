@@ -321,7 +321,12 @@ const dropAnimation = {
  * @param onToggleLike  the player's like handler — shared so the heart here and
  *                      the one in the player bar can never disagree
  */
-const QueuePanel = ({ open, onClose, isLiked = false, onToggleLike }) => {
+// `embedded`: rendered inside Now Playing's queue view (phones/tablets).
+// Only the queue itself shows — Now Playing supplies the header, artwork and
+// transport — plus Shuffle and Repeat chips, since the cockpit that holds
+// them is hidden. Reorder, swipe-to-remove, select, save and clear all work
+// exactly as in the drawer.
+const QueuePanel = ({ open, onClose, isLiked = false, onToggleLike, embedded = false }) => {
   const { user } = useAuth(); // ★ signed-in user (same source as the header avatar)
   const {
     queue, currentIndex, currentMedia,
@@ -471,6 +476,7 @@ const QueuePanel = ({ open, onClose, isLiked = false, onToggleLike }) => {
 
   // ★ animated dismiss — gives the "slide back out" feel on mobile + desktop
   const handleClose = () => {
+    if (embedded) { onClose?.(); return; }
     setClosing(true);
     setTimeout(() => { setClosing(false); onClose?.(); }, 280);
   };
@@ -632,12 +638,24 @@ const QueuePanel = ({ open, onClose, isLiked = false, onToggleLike }) => {
       : repeatMode === 'all' ? 'End of queue · repeat all starts it over'
         : 'End of queue · playback stops here';
 
-  return (
+  // A plain function, not a component: the wrapper's element types stay
+  // stable between renders, so nothing inside remounts.
+  const wrap = (children) => (embedded ? (
+    <div className={`qp-embedded ${selecting ? 'qp-selecting' : ''}`}>{children}</div>
+  ) : (
     <div className={`qp-overlay ${closing ? 'qp-closing' : ''}`} onClick={handleClose}>
       <div
         className={`qp-container ${selecting ? 'qp-selecting' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
+        {children}
+      </div>
+    </div>
+  ));
+
+  return wrap(
+    <>
+        {!embedded && <>
         {/* ★ grab handle — tap to dismiss */}
         <button className="qp-grab" onClick={handleClose} aria-label="Close queue" />
 
@@ -780,6 +798,32 @@ const QueuePanel = ({ open, onClose, isLiked = false, onToggleLike }) => {
             </div>
 
             <div className="qp-now-edge" aria-hidden="true" />
+          </div>
+        )}
+        </>}
+
+        {/* Embedded: Shuffle and Repeat, which live in the hidden cockpit */}
+        {embedded && (
+          <div className="qp-embedded-modes">
+            <button
+              type="button"
+              className={`qp-chip ${isShuffled ? 'qp-chip-on' : ''}`}
+              onClick={toggleShuffle}
+              disabled={queue.length < 2}
+              aria-pressed={isShuffled}
+            >
+              <Shuffle size={14} /> Shuffle
+            </button>
+            <button
+              type="button"
+              className={`qp-chip ${repeatMode !== 'off' ? 'qp-chip-on' : ''}`}
+              onClick={cycleRepeat}
+              aria-label={repeatTitle}
+            >
+              {repeatMode === 'one' ? <Repeat1 size={14} /> : <Repeat size={14} />}
+              {repeatMode === 'one' ? 'Repeat one' : 'Repeat'}
+            </button>
+            {timeLeft && <span className="qp-embedded-left">{queue.length} song{queue.length !== 1 ? 's' : ''} · {timeLeft} left</span>}
           </div>
         )}
 
@@ -1003,8 +1047,7 @@ const QueuePanel = ({ open, onClose, isLiked = false, onToggleLike }) => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </>
   );
 };
 

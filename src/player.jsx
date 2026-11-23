@@ -1,9 +1,12 @@
 import React, { useCallback, useContext, useEffect, useState, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
-import { Heart, Headphones, Vote, ChevronUp, ChevronDown, ListMusic, Lock, MessageCircle, X, Mic2 } from 'lucide-react'; // ★ comments: icons for the new button/sheet
+import {
+  Heart, Vote, ChevronUp, ChevronDown, ListMusic, Lock, MessageCircle, X, Mic2,
+  MoreHorizontal, Maximize2, Disc3, UserRound,
+} from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
 import VotingWizard from './votingWizard';
@@ -16,7 +19,35 @@ import QueuePanel from './QueuePanel';
 import DownloadModal from './DownloadModal';
 import PocketLockOverlay from './PocketLockOverlay';
 import LyricsView from './components/LyricsView'; // timed lyrics view (mic button)
+import useArtworkPalette from './hooks/useArtworkPalette';
+import useScrollMotion from './hooks/useScrollMotion';
 import './player.scss';
+
+// ─────────────────────────────────────────────────────────────
+// Player
+//
+// Three surfaces share one set of handlers:
+//
+//   • Phones and tablets (≤1024px): a floating mini player. At rest it is a
+//     card tinted with the artwork's colours, with a thin progress strip on
+//     its bottom edge. While the page scrolls it turns to glass and tucks in,
+//     and settles back 0.7s after scrolling stops. On pages with a big
+//     artwork hero (song, artist, jurisdiction, playlist) it stays glass.
+//     The arrow opens the song actions tray (Vote, Like, Add, Download,
+//     Lyrics, Comments, Pocket Lock), dressed in the same artwork blend.
+//   • Computers (≥1025px): the same card as a floating dock beside the
+//     sidebar. Its strip thickens into a scrubber on hover.
+//   • Now Playing: the full-screen player, opened by tapping the mini player,
+//     the dock's artwork or expand button, or anything that calls the
+//     context's toggleExpand (Messages does). Its tray switches between the
+//     main view, lyrics and the queue, and More holds the rest.
+//
+// Colour rule: the artwork paints the surfaces, white runs the transport,
+// the listener's theme colour marks Unis actions (Vote, active tray items).
+//
+// Play counting, likes, votes, downloads, Pocket Lock, comments and the
+// queue behave exactly as before — only how you reach them changed.
+// ─────────────────────────────────────────────────────────────
 
 // ─── Inline SVG icons ───
 // Transport glyphs (previous / play-pause / next). Drawn on one 24 grid with
@@ -27,8 +58,8 @@ import './player.scss';
 
 // Play and pause are stacked, and the button crossfades between them
 // (player.scss → .pp-glyph), so the change feels like one morph.
-const PlayPauseGlyph = ({ playing }) => (
-  <span className="pp-glyph" data-playing={playing ? 'true' : 'false'} aria-hidden="true">
+const PlayPauseGlyph = ({ playing, dark = false }) => (
+  <span className={`pp-glyph ${dark ? 'pp-glyph--dark' : ''}`} data-playing={playing ? 'true' : 'false'} aria-hidden="true">
     <svg className="pp-glyph__play" viewBox="0 0 24 24" focusable="false">
       <path d="M8.6 6.32v11.36a1.3 1.3 0 0 0 1.97 1.11l9.27-5.68a1.3 1.3 0 0 0 0-2.22L10.57 5.21A1.3 1.3 0 0 0 8.6 6.32z" />
     </svg>
@@ -59,15 +90,15 @@ const NextIcon = () => (
   </svg>
 );
 
-const PlusIcon = () => (
-  <svg viewBox="0 0 24 24" width="18" height="18" style={{ width: 18, height: 18, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2">
+const PlusIcon = ({ size = 18 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} style={{ width: size, height: size, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
     <line x1="12" y1="5" x2="12" y2="19"/>
     <line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
 );
 
 const DownloadIcon = ({ size = 16 }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} style={{ width: size, height: size, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2">
+  <svg viewBox="0 0 24 24" width={size} height={size} style={{ width: size, height: size, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
     <polyline points="7 10 12 15 17 10"/>
     <line x1="12" y1="15" x2="12" y2="3"/>
@@ -77,7 +108,7 @@ const DownloadIcon = ({ size = 16 }) => (
 const VolumeIcon = ({ level }) => {
   if (level === 0) {
     return (
-      <svg viewBox="0 0 24 24" width="16" height="16" style={{ width: 16, height: 16, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2">
+      <svg viewBox="0 0 24 24" width="17" height="17" style={{ width: 17, height: 17, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
         <line x1="23" y1="9" x2="17" y2="15" />
         <line x1="17" y1="9" x2="23" y2="15" />
@@ -85,12 +116,46 @@ const VolumeIcon = ({ level }) => {
     );
   }
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" style={{ width: 16, height: 16, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2">
+    <svg viewBox="0 0 24 24" width="17" height="17" style={{ width: 17, height: 17, display: 'block' }} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
       <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
       {level > 0.3 && <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />}
     </svg>
   );
+};
+
+const VideoMark = () => (
+  <span className="unp-video-mark" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M8 5v14l11-7z" fill="#fff" /></svg>
+  </span>
+);
+
+const Spinner = () => <span className="unp-spinner" aria-hidden="true" />;
+
+// Pages with a big artwork hero: the mini player stays glass on these so
+// the art shows through.
+const ART_HERO_ROUTE = /^\/(song|artist|jurisdiction|playlist)\//;
+
+const DESKTOP_QUERY = '(min-width: 1025px)';
+const useIsDesktop = () => {
+  const [desktop, setDesktop] = useState(
+    () => (typeof window !== 'undefined' && !!window.matchMedia?.(DESKTOP_QUERY)?.matches),
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const mq = window.matchMedia?.(DESKTOP_QUERY);
+    if (!mq) return undefined;
+    const update = () => setDesktop(!!mq.matches);
+    update();
+    mq.addEventListener?.('change', update);
+    return () => mq.removeEventListener?.('change', update);
+  }, []);
+  return desktop;
+};
+
+const jurisdictionNameOf = (m) => {
+  if (!m?.jurisdiction) return '';
+  return typeof m.jurisdiction === 'string' ? m.jurisdiction : (m.jurisdiction.name || '');
 };
 
 
@@ -103,8 +168,6 @@ const Player = () => {
     prev,
     repeatMode,        // ★ REPEAT: read loop mode so `ended` can honor it
     audioRef,
-    playlists,
-    openPlaylistManager,
     showPlaylistManager,
     closePlaylistManager,
     queue,
@@ -115,25 +178,30 @@ const Player = () => {
   const { triggerGate, gateProps } = useAuthGate();
   const { showReward } = useReward();
   const feedback = useFeedback();
+  const location = useLocation();
+  const isDesktop = useIsDesktop();
 
   // --- LOCAL STATE ---
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [specificVoteData, setSpecificVoteData] = useState(null);
   const [volume, setVolume] = useState(0.7);
-  const [showQueue, setShowQueue] = useState(false);
+  const [showQueue, setShowQueue] = useState(false); // desktop queue drawer
   const [showDownloadModal, setShowDownloadModal] = useState(false);
 
   // Wizards State
   const [showPlaylistWizard, setShowPlaylistWizard] = useState(false);
   const [showVoteWizard, setShowVoteWizard] = useState(false);
 
-  const [showMobileActions, setShowMobileActions] = useState(false);
+  const [trayOpen, setTrayOpen] = useState(false);     // phone: song actions tray
+  const [npMode, setNpMode] = useState('main');        // Now Playing: main | lyrics | queue
+  const [npMore, setNpMore] = useState(false);         // Now Playing: More sheet
   const [showComments, setShowComments] = useState(false); // ★ comments: slide-up comment sheet
-  const [showLyrics, setShowLyrics] = useState(false); // lyrics view (mic button)
+  const [showLyrics, setShowLyrics] = useState(false); // desktop lyrics view (mic button)
   const [userId, setUserId] = useState(null);
 
   // Pocket Lock — visual scaffold only for step 1.
@@ -141,9 +209,12 @@ const Player = () => {
   const [pocketLockEnabled, setPocketLockEnabled] = useState(false);
   const [showPocketLockIntro, setShowPocketLockIntro] = useState(false);
 
-  const seekbarRef = useRef(null);
-  const mobileTrayRef = useRef(null);
-  const mobileActionsToggleRef = useRef(null);
+  const trayRef = useRef(null);
+  const trayToggleRef = useRef(null);
+  const miniOpenRef = useRef(null);
+  const npCloseRef = useRef(null);
+  const gestureRef = useRef({ x: 0, y: 0, swiped: false });
+  const wasOpenRef = useRef(false);
   const playRewardedRef = useRef(false);
   const activeRewardSongIdRef = useRef(null);
 
@@ -157,6 +228,15 @@ const Player = () => {
   const currentPlayIsAnonRef = useRef(false);
 
   const navigate = useNavigate();
+  const hasMedia = !!currentMedia;
+
+  // --- LOOK: artwork colours + motion ---
+  const artSrc = currentMedia?.artwork || currentMedia?.artworkUrl || null;
+  const palette = useArtworkPalette(artSrc);
+  const moving = useScrollMotion({ enabled: !!currentMedia && !isExpanded });
+  const pinnedGlass = ART_HERO_ROUTE.test(location.pathname);
+  const glass = moving || pinnedGlass;
+  const tucked = moving && !isDesktop;
 
   // --- DERIVE VOTING DATA ---
   const voteNominee = useMemo(() => {
@@ -340,18 +420,6 @@ const Player = () => {
   ]);
 
 
-  // 3. Navigation
-  const handleNavigateToSong = (e) => {
-    e.stopPropagation();
-    const id = currentMedia?.id || currentMedia?.songId;
-    if (id) navigate(`/song/${id}`);
-  };
-
-  const handleNavigateToArtist = (e) => {
-    e.stopPropagation();
-    if (currentMedia?.artistId) navigate(`/artist/${currentMedia.artistId}`);
-  };
-
   // 4. Audio Listeners — load + play when the track changes
   useEffect(() => {
     if (currentMedia && audioRef.current) {
@@ -415,13 +483,16 @@ const Player = () => {
     }
   }, [currentMedia, audioRef]);
 
-  // 4b. Audio Listeners — play/pause/time/end events
+  // 4b. Audio Listeners — play/pause/time/end/buffering events
+  // Re-attached when the media element changes (first song, audio ⇄ video).
   useEffect(() => {
     const media = audioRef.current;
     if (!media) return;
 
     const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
+    const handlePause = () => { setIsPlaying(false); setIsBuffering(false); };
+    const handleWaiting = () => setIsBuffering(true);
+    const handleReady = () => setIsBuffering(false);
 
     const handleTimeUpdate = () => {
       setCurrentTime(media.currentTime);
@@ -447,6 +518,9 @@ const Player = () => {
 
     media.addEventListener('play', handlePlay);
     media.addEventListener('pause', handlePause);
+    media.addEventListener('waiting', handleWaiting);
+    media.addEventListener('playing', handleReady);
+    media.addEventListener('canplay', handleReady);
     media.addEventListener('timeupdate', handleTimeUpdate);
     media.addEventListener('loadedmetadata', handleLoadedMetadata);
     media.addEventListener('ended', handleEnded);
@@ -454,11 +528,14 @@ const Player = () => {
     return () => {
       media.removeEventListener('play', handlePlay);
       media.removeEventListener('pause', handlePause);
+      media.removeEventListener('waiting', handleWaiting);
+      media.removeEventListener('playing', handleReady);
+      media.removeEventListener('canplay', handleReady);
       media.removeEventListener('timeupdate', handleTimeUpdate);
       media.removeEventListener('loadedmetadata', handleLoadedMetadata);
       media.removeEventListener('ended', handleEnded);
     };
-  }, [next, audioRef, repeatMode]);
+  }, [next, audioRef, repeatMode, currentMedia?.type, hasMedia]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -466,23 +543,139 @@ const Player = () => {
     }
   }, [volume, audioRef]);
 
+  // --- Now Playing open / close ---
+  const openNowPlaying = (mode = 'main') => {
+    setTrayOpen(false);
+    setNpMore(false);
+    setNpMode(mode);
+    if (!isExpanded) toggleExpand();
+  };
+
+  const closeNowPlaying = () => {
+    setNpMore(false);
+    if (isExpanded) toggleExpand();
+  };
+
+  // Focus moves into Now Playing when it opens and back to the mini player
+  // when it closes. The view resets to "main" once the slide-out finishes.
+  useEffect(() => {
+    if (isExpanded && currentMedia) {
+      wasOpenRef.current = true;
+      const raf = requestAnimationFrame(() => npCloseRef.current?.focus({ preventScroll: true }));
+      return () => cancelAnimationFrame(raf);
+    }
+    if (wasOpenRef.current) {
+      wasOpenRef.current = false;
+      setNpMore(false);
+      miniOpenRef.current?.focus?.({ preventScroll: true });
+      const t = setTimeout(() => setNpMode('main'), 420);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [isExpanded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Body flags: lock page scroll under Now Playing, and let the song
+  // notification hide itself while Now Playing or the tray is open.
+  useEffect(() => {
+    const on = !!isExpanded && !!currentMedia;
+    document.body.classList.toggle('unp-np-open', on);
+    return () => document.body.classList.remove('unp-np-open');
+  }, [isExpanded, currentMedia]);
+
+  useEffect(() => {
+    document.body.classList.toggle('unp-tray-open', trayOpen);
+    return () => document.body.classList.remove('unp-tray-open');
+  }, [trayOpen]);
+
+  // Where things that float above the player (song notification, points
+  // pill, cookie banner) should sit: the player's top edge + a 10px gap.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!currentMedia) {
+      root.style.removeProperty('--unp-stack');
+      return;
+    }
+    const stack = isExpanded ? 104 : isDesktop ? 96 : tucked ? 76 : 88;
+    root.style.setProperty('--unp-stack', `${stack}px`);
+  }, [currentMedia, isExpanded, isDesktop, tucked]);
+
+  useEffect(() => () => document.documentElement.style.removeProperty('--unp-stack'), []);
+
+  // The tray gets out of the way as soon as the page moves.
+  useEffect(() => {
+    if (moving && trayOpen) setTrayOpen(false);
+  }, [moving, trayOpen]);
+
+  // Esc closes the tray, then the More sheet, then Now Playing — but never
+  // while a wizard, sheet or modal opened from the player is on top.
+  useEffect(() => {
+    const modalOnTop = showVoteWizard || showComments || showPlaylistWizard || showDownloadModal
+      || showPocketLockIntro || showPlaylistManager;
+    if (modalOnTop || (!trayOpen && !isExpanded)) return undefined;
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      if (trayOpen) { setTrayOpen(false); trayToggleRef.current?.focus(); return; }
+      if (npMore) { setNpMore(false); return; }
+      if (isExpanded) toggleExpand();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [trayOpen, npMore, isExpanded, toggleExpand, showVoteWizard, showComments, showPlaylistWizard,
+    showDownloadModal, showPocketLockIntro, showPlaylistManager]);
+
+  // Tap outside the tray closes it.
+  useEffect(() => {
+    if (!trayOpen) return;
+
+    const handleOutsidePointerDown = (event) => {
+      const target = event.target;
+
+      if (trayRef.current?.contains(target)) return;
+      if (trayToggleRef.current?.contains(target)) return;
+
+      setTrayOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handleOutsidePointerDown, true);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+    };
+  }, [trayOpen]);
+
   const isVideo = currentMedia?.type === 'video';
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  // 3. Navigation
+  const handleNavigateToSong = (e) => {
+    e?.stopPropagation?.();
+    const id = currentMedia?.id || currentMedia?.songId;
+    if (!id) return;
+    closeNowPlaying();
+    navigate(`/song/${id}`);
+  };
+
+  const handleNavigateToArtist = (e) => {
+    e?.stopPropagation?.();
+    if (!currentMedia?.artistId) return;
+    closeNowPlaying();
+    navigate(`/artist/${currentMedia.artistId}`);
+  };
+
   // 5. Functional Handlers
   const handlePlayPause = (e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
     const media = audioRef.current;
     if (!media) return;
     if (media.paused) media.play().catch(console.error);
     else media.pause();
   };
 
-  const handlePrev = (e) => { e.stopPropagation(); prev(); };
-  const handleNext = (e) => { e.stopPropagation(); next(); };
+  const handlePrev = (e) => { e?.stopPropagation?.(); prev(); };
+  const handleNext = (e) => { e?.stopPropagation?.(); next(); };
 
   const handleLike = async (e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
 
     if (isGuest) {
       triggerGate('generic');
@@ -510,7 +703,7 @@ const Player = () => {
         // were really added. A like pays once per person per track, ever, so
         // a re-like comes back with pointsAwarded: 0 and shows no pill.
         const earned = res.data.pointsAwarded;
-        const title = currentMedia.title ? `\u201C${currentMedia.title}\u201D` : 'this song';
+        const title = currentMedia.title ? `“${currentMedia.title}”` : 'this song';
         if (nextLiked && (earned === undefined || earned > 0)) {
           // The points pill is the confirmation here — no toast on top.
           showReward({
@@ -537,7 +730,8 @@ const Player = () => {
 
 
   const handleVoteClick = async (e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
+    setTrayOpen(false);
     if (isGuest) { triggerGate('vote'); return; }
 
     const safeId = currentMedia.id || currentMedia.songId;
@@ -600,69 +794,77 @@ const Player = () => {
   };
 
   const handleAddToPlaylist = (e) => {
-    if (e) e.stopPropagation();
+    e?.stopPropagation?.();
+    setTrayOpen(false);
+    setNpMore(false);
     if (isGuest) { triggerGate('generic'); return; }
     setShowPlaylistWizard(true);
   };
 
   const handleDownload = (e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
+    setTrayOpen(false);
+    setNpMore(false);
     if (isGuest) { triggerGate('generic'); return; }
     setShowDownloadModal(true);
   };
 
-
-  const handleSeek = (e) => {
-    const newTime = (e.target.value / 100) * duration;
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
+  const handleOpenComments = (e) => {
+    e?.stopPropagation?.();
+    setTrayOpen(false);
+    setNpMore(false);
+    setShowComments(true);
   };
 
-  const handleSeekbarClick = (e) => {
-    e.stopPropagation();
-    const rect = seekbarRef.current.getBoundingClientRect();
-    const percentage = ((e.clientX - rect.left) / rect.width) * 100;
-    const newTime = (Math.max(0, Math.min(100, percentage)) / 100) * duration;
-    audioRef.current.currentTime = newTime;
+  const handleSeek = (e) => {
+    const media = audioRef.current;
+    if (!media || !duration) return;
+    const newTime = (Number(e.target.value) / 100) * duration;
+    media.currentTime = newTime;
     setCurrentTime(newTime);
   };
 
   const handleVolumeChange = (e) => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const percentage = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    setVolume(percentage);
-    if (audioRef.current) {
-      audioRef.current.volume = percentage;
+    const v = Math.max(0, Math.min(1, Number(e.target.value) / 100));
+    setVolume(v);
+    if (audioRef.current) audioRef.current.volume = v;
+  };
+
+  const toggleTray = (e) => {
+    e?.stopPropagation?.();
+    setTrayOpen((v) => !v);
+  };
+
+  // Mini player gestures: swipe sideways to skip, swipe up to open Now
+  // Playing, tap to open it. Buttons do all of this too.
+  const onMiniPointerDown = (e) => {
+    gestureRef.current = { x: e.clientX, y: e.clientY, swiped: false };
+  };
+  const onMiniPointerUp = (e) => {
+    const g = gestureRef.current;
+    const dx = e.clientX - g.x;
+    const dy = e.clientY - g.y;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      g.swiped = true;
+      try { navigator.vibrate?.(8); } catch { /* not supported */ }
+      if (dx < 0) next(); else prev();
+    } else if (dy < -40 && Math.abs(dy) > Math.abs(dx)) {
+      g.swiped = true;
+      openNowPlaying('main');
     }
   };
-
-  const toggleMobileActions = (e) => {
-    e.stopPropagation();
-    setShowMobileActions(!showMobileActions);
+  const onMiniClick = () => {
+    if (gestureRef.current.swiped) { gestureRef.current.swiped = false; return; }
+    openNowPlaying('main');
   };
 
-  useEffect(() => {
-    if (!showMobileActions) return;
-
-    const handleOutsidePointerDown = (event) => {
-      const target = event.target;
-
-      if (mobileTrayRef.current?.contains(target)) return;
-      if (mobileActionsToggleRef.current?.contains(target)) return;
-
-      setShowMobileActions(false);
-    };
-
-    document.addEventListener('pointerdown', handleOutsidePointerDown, true);
-
-    return () => {
-      document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
-    };
-  }, [showMobileActions]);
+  // Now Playing tray: tapping the active view goes back to the main view.
+  const switchNpMode = (mode) => setNpMode((cur) => (cur === mode ? 'main' : mode));
 
   const handlePocketLockToggle = (e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
+    setTrayOpen(false);
+    setNpMore(false);
 
     const introSeen = localStorage.getItem('unis-pocket-lock-intro-seen') === 'true';
 
@@ -714,12 +916,18 @@ const Player = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // ── Lyrics view ──
+  // ── Lyrics ──
+  // Computers: the lyrics view over the page, with the dock still in reach.
+  // Phones (and inside Now Playing anywhere): Now Playing's lyrics view.
   const closeLyrics = useCallback(() => setShowLyrics(false), []);
   const toggleLyrics = (e) => {
     e?.stopPropagation?.();
-    setShowMobileActions(false);
-    setShowLyrics((v) => !v);
+    setTrayOpen(false);
+    if (isDesktop && !isExpanded) {
+      setShowLyrics((v) => !v);
+      return;
+    }
+    openNowPlaying('lyrics');
   };
   const lyricsSeek = (t) => {
     if (!audioRef.current) return;
@@ -733,9 +941,10 @@ const Player = () => {
     else media.pause();
   };
 
-  // Shared modal block — rendered in BOTH branches below
+  // Shared modal block — rendered in BOTH branches below. Its layer sits above
+  // Now Playing, so wizards and sheets opened from it appear on top.
   const modalsAndPanels = (
-    <>
+    <div className="unp-layer unp-layer--modals">
       {pocketLockEnabled && currentMedia && (
         <PocketLockOverlay
           currentMedia={currentMedia}
@@ -760,7 +969,7 @@ const Player = () => {
           setShowVoteWizard(false);
           setSpecificVoteData(null);
         }}
-        onVoteSuccess={(id) => setShowVoteWizard(false)}
+        onVoteSuccess={() => setShowVoteWizard(false)}
         nominee={specificVoteData?.nominee || voteNominee}
         userId={userId}
         filters={specificVoteData?.filters || { selectedType: 'song' }}
@@ -879,7 +1088,7 @@ const Player = () => {
         </div>
       )}
       <AuthGateSheet {...gateProps} />
-    </>
+    </div>
   );
 
   // No song playing yet → render ONLY the modals (so sidebar/etc. can open them)
@@ -887,301 +1096,516 @@ const Player = () => {
     return modalsAndPanels;
   }
 
-  // Song is playing → render the full player + modals
+  const title = currentMedia.title || 'Untitled';
+  const artist = currentMedia.artist || currentMedia.artistName || 'Unknown Artist';
+  const artUrl = artSrc || '/assets/placeholder.jpg';
+  const jurisdiction = jurisdictionNameOf(currentMedia);
+  const origin = currentMedia.origin;
+  const fromPlaylist = origin?.type === 'playlist' && origin.name;
+  const fromKicker = fromPlaylist ? 'Playing from' : 'Now playing';
+  const fromLabel = fromPlaylist ? origin.name : (jurisdiction || 'Unis');
+  const queueCount = queue.length;
+  const playLabel = isBuffering ? 'Loading' : isPlaying ? 'Pause' : 'Play';
+  const timeText = `${formatTime(currentTime)} of ${formatTime(duration)}`;
+
+  const paletteVars = {
+    '--unp-glow': palette.glow,
+    '--unp-deep': palette.deep,
+    '--unp-rest-1': palette.rest1,
+    '--unp-rest-2': palette.rest2,
+    '--unp-glass': palette.glass,
+    '--unp-art': `url("${artUrl}")`,
+    '--unp-progress': `${progress}%`,
+  };
+
+  const voteIcon = <Vote size={19} aria-hidden="true" />;
+
+  // ── Phones / tablets: the mini player ──
+  const mini = (
+    <div className="unp-mini" role="region" aria-label="Player">
+      <div className="unp-surface__tint" aria-hidden="true" />
+      <div className="unp-mini__row">
+        <button
+          ref={miniOpenRef}
+          type="button"
+          className="unp-mini__open"
+          onPointerDown={onMiniPointerDown}
+          onPointerUp={onMiniPointerUp}
+          onClick={onMiniClick}
+          aria-label={`Open Now Playing: ${title} by ${artist}`}
+        >
+          <span className="unp-mini__art">
+            <img src={artUrl} alt="" />
+            {isVideo && <VideoMark />}
+          </span>
+          <span className="unp-mini__text">
+            <span className="unp-mini__title">{title}</span>
+            <span className="unp-mini__artist">{artist}</span>
+          </span>
+        </button>
+        <button
+          ref={trayToggleRef}
+          type="button"
+          className={`unp-mini__btn unp-mini__arrow ${trayOpen ? 'is-open' : ''}`}
+          onClick={toggleTray}
+          aria-expanded={trayOpen}
+          aria-controls="unp-tray"
+          aria-label={trayOpen ? 'Close song actions' : 'Song actions: vote, like, add and more'}
+        >
+          <ChevronUp size={22} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="unp-mini__btn unp-mini__queue"
+          onClick={() => openNowPlaying('queue')}
+          aria-label={`Queue${queueCount ? `, ${queueCount} songs` : ''}`}
+        >
+          <ListMusic size={21} aria-hidden="true" />
+          {queueCount > 0 && <span className="unp-badge">{queueCount}</span>}
+        </button>
+        <button
+          type="button"
+          className="unp-mini__btn unp-mini__play"
+          onClick={handlePlayPause}
+          aria-label={playLabel}
+        >
+          {isBuffering ? <Spinner /> : <PlayPauseGlyph playing={isPlaying} />}
+        </button>
+      </div>
+      <div className="unp-strip" aria-hidden="true"><span /></div>
+    </div>
+  );
+
+  // ── Phones / tablets: the song actions tray (opened by the arrow) ──
+  const tray = (
+    <div
+      id="unp-tray"
+      ref={trayRef}
+      className={`unp-tray ${trayOpen ? 'is-open' : ''}`}
+      role="dialog"
+      aria-label="Song actions"
+      aria-hidden={!trayOpen}
+      inert={!trayOpen}
+    >
+      <div className="unp-blend" aria-hidden="true"><span className="unp-blend__art" /><span className="unp-blend__scrim" /></div>
+      <div className="unp-tray__body">
+        <div className="unp-tray__head">
+          <span className="unp-tray__kicker">Song actions</span>
+          <span className="unp-tray__status">{queueCount > 0 ? `${queueCount} in queue` : 'Live session'}</span>
+        </div>
+        <button type="button" className="unp-vote" onClick={handleVoteClick}>
+          {voteIcon}<span>Vote for this song</span>
+        </button>
+        <div className="unp-tray__grid">
+          <button type="button" className={`unp-tile ${isLiked ? 'is-on' : ''}`} onClick={handleLike} aria-pressed={isLiked}>
+            <span className="unp-tile__icon"><Heart size={20} fill={isLiked ? 'currentColor' : 'none'} aria-hidden="true" /></span>
+            <span className="unp-tile__label">{isLiked ? 'Liked' : 'Like'}</span>
+            <span className="unp-tile__hint">{likeCount > 0 ? `${likeCount} total` : 'Support'}</span>
+          </button>
+          <button type="button" className="unp-tile" onClick={handleAddToPlaylist}>
+            <span className="unp-tile__icon"><PlusIcon size={20} /></span>
+            <span className="unp-tile__label">Add</span>
+            <span className="unp-tile__hint">Playlist</span>
+          </button>
+          <button type="button" className="unp-tile" onClick={handleDownload}>
+            <span className="unp-tile__icon"><DownloadIcon size={19} /></span>
+            <span className="unp-tile__label">Download</span>
+            <span className="unp-tile__hint">Offline</span>
+          </button>
+          {!isVideo && (
+            <button type="button" className="unp-tile" onClick={toggleLyrics}>
+              <span className="unp-tile__icon"><Mic2 size={19} aria-hidden="true" /></span>
+              <span className="unp-tile__label">Lyrics</span>
+              <span className="unp-tile__hint">Sing along</span>
+            </button>
+          )}
+          <button type="button" className="unp-tile" onClick={handleOpenComments}>
+            <span className="unp-tile__icon"><MessageCircle size={19} aria-hidden="true" /></span>
+            <span className="unp-tile__label">Comments</span>
+            <span className="unp-tile__hint">Talk</span>
+          </button>
+          <button
+            type="button"
+            className={`unp-tile ${pocketLockEnabled ? 'is-on' : ''}`}
+            onClick={handlePocketLockToggle}
+            aria-pressed={pocketLockEnabled}
+          >
+            <span className="unp-tile__icon"><Lock size={19} aria-hidden="true" /></span>
+            <span className="unp-tile__label">Lock</span>
+            <span className="unp-tile__hint">{pocketLockEnabled ? 'Protected' : 'Pocket'}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Computers: the dock ──
+  const dock = (
+    <div className="unp-dock" role="region" aria-label="Player">
+      <div className="unp-surface__tint" aria-hidden="true" />
+      <div className="unp-dock__row">
+        <div className="unp-dock__left">
+          <button type="button" className="unp-dock__art" onClick={() => openNowPlaying('main')} aria-label={`Open Now Playing: ${title}`}>
+            <img src={artUrl} alt="" />
+            {isVideo && <VideoMark />}
+          </button>
+          <div className="unp-dock__text">
+            <button type="button" className="unp-link unp-dock__title" onClick={handleNavigateToSong}>{title}</button>
+            <span className="unp-dock__sub">
+              <button type="button" className="unp-link" onClick={handleNavigateToArtist}>{artist}</button>
+              {jurisdiction && <> · <em className="unp-serif">{jurisdiction}</em></>}
+            </span>
+          </div>
+          <button
+            type="button"
+            className={`unp-icon unp-like ${isLiked ? 'is-on' : ''}`}
+            onClick={handleLike}
+            aria-pressed={isLiked}
+            aria-label={isLiked ? 'Unlike this song' : 'Like this song'}
+          >
+            <Heart size={19} fill={isLiked ? 'currentColor' : 'none'} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="unp-dock__center">
+          <span className="unp-time">{formatTime(currentTime)}</span>
+          <button type="button" className="unp-vote unp-vote--sm" onClick={handleVoteClick}>
+            <Vote size={16} aria-hidden="true" /><span>Vote</span>
+          </button>
+          <button type="button" className="unp-icon unp-skip" onClick={handlePrev} aria-label="Previous"><PrevIcon /></button>
+          <button type="button" className="unp-play unp-play--md" onClick={handlePlayPause} aria-label={playLabel}>
+            {isBuffering ? <Spinner /> : <PlayPauseGlyph playing={isPlaying} dark />}
+          </button>
+          <button type="button" className="unp-icon unp-skip" onClick={handleNext} aria-label="Next"><NextIcon /></button>
+          <button type="button" className="unp-icon" onClick={handleAddToPlaylist} aria-label="Add to playlist or queue"><PlusIcon size={19} /></button>
+          <span className="unp-time">{formatTime(duration)}</span>
+        </div>
+
+        <div className="unp-dock__right">
+          {!isVideo && (
+            <button
+              type="button"
+              className={`unp-icon ${showLyrics ? 'is-on' : ''}`}
+              onClick={toggleLyrics}
+              aria-label="Lyrics"
+              aria-pressed={showLyrics}
+            >
+              <Mic2 size={18} aria-hidden="true" />
+            </button>
+          )}
+          <button
+            type="button"
+            className={`unp-icon ${showQueue ? 'is-on' : ''}`}
+            onClick={() => setShowQueue((v) => !v)}
+            aria-label={`Queue${queueCount ? `, ${queueCount} songs` : ''}`}
+            aria-pressed={showQueue}
+          >
+            <ListMusic size={19} aria-hidden="true" />
+            {queueCount > 0 && <span className="unp-badge">{queueCount}</span>}
+          </button>
+          <button type="button" className="unp-icon" onClick={handleDownload} aria-label="Download"><DownloadIcon size={18} /></button>
+          <button
+            type="button"
+            className="unp-icon"
+            onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
+            aria-label={volume === 0 ? 'Unmute' : 'Mute'}
+          >
+            <VolumeIcon level={volume} />
+          </button>
+          <input
+            type="range"
+            className="unp-range unp-volume"
+            min="0"
+            max="100"
+            step="1"
+            value={Math.round(volume * 100)}
+            onChange={handleVolumeChange}
+            aria-label="Volume"
+            style={{ '--p': `${volume * 100}%` }}
+          />
+          <button type="button" className="unp-icon" onClick={() => openNowPlaying('main')} aria-label="Open full-screen player">
+            <Maximize2 size={17} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+      <input
+        type="range"
+        className="unp-range unp-dock__seek"
+        min="0"
+        max="100"
+        step="0.1"
+        value={progress}
+        onChange={handleSeek}
+        aria-label="Seek"
+        aria-valuetext={timeText}
+      />
+    </div>
+  );
+
+  // ── Now Playing ──
+  const compactPlay = (
+    <button type="button" className="unp-play unp-play--sm" onClick={handlePlayPause} aria-label={playLabel}>
+      {isBuffering ? <Spinner /> : <PlayPauseGlyph playing={isPlaying} dark />}
+    </button>
+  );
+
+  const transport = (size) => (
+    <div className={`unp-np__transport unp-np__transport--${size}`}>
+      <button type="button" className="unp-icon unp-skip unp-skip--lg" onClick={handlePrev} aria-label="Previous"><PrevIcon /></button>
+      <button type="button" className={`unp-play unp-play--${size}`} onClick={handlePlayPause} aria-label={playLabel}>
+        {isBuffering ? <Spinner /> : <PlayPauseGlyph playing={isPlaying} dark />}
+      </button>
+      <button type="button" className="unp-icon unp-skip unp-skip--lg" onClick={handleNext} aria-label="Next"><NextIcon /></button>
+    </div>
+  );
+
+  const nowPlaying = (
+    <div
+      className={`unp-np unp-np--${npMode} ${isExpanded ? 'is-open' : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Now Playing"
+      aria-hidden={!isExpanded}
+      inert={!isExpanded}
+    >
+      <div className="unp-np__ambient" aria-hidden="true"><span className="unp-np__blob" /></div>
+      <div className="unp-np__scrim" aria-hidden="true" />
+
+      <div className="unp-np__inner">
+        <header className="unp-np__top">
+          <button ref={npCloseRef} type="button" className="unp-icon unp-icon--lg" onClick={closeNowPlaying} aria-label="Close Now Playing">
+            <ChevronDown size={26} aria-hidden="true" />
+          </button>
+          <div className="unp-np__from">
+            <span>{fromKicker}</span>
+            <strong>{fromLabel}</strong>
+          </div>
+          <button
+            type="button"
+            className="unp-icon unp-icon--lg"
+            onClick={() => setNpMore(true)}
+            aria-label="More options"
+            aria-haspopup="dialog"
+            aria-expanded={npMore}
+          >
+            <MoreHorizontal size={24} aria-hidden="true" />
+          </button>
+        </header>
+
+        {/* The stage is always mounted (it may hold the video element), and
+            hidden by CSS outside the main view. */}
+        <div className="unp-np__stage">
+          {isVideo ? (
+            <video ref={audioRef} crossOrigin="anonymous" playsInline className="unp-np__video">
+              <source src={currentMedia.url} type="video/mp4" />
+            </video>
+          ) : (
+            <img className="unp-np__art" src={artUrl} alt={`Artwork for ${title}`} />
+          )}
+        </div>
+
+        {npMode === 'main' && (
+          <>
+            <div className="unp-np__meta">
+              <div className="unp-np__names">
+                <button type="button" className="unp-link unp-np__title" onClick={handleNavigateToSong}>{title}</button>
+                <span className="unp-np__artist">
+                  <button type="button" className="unp-link" onClick={handleNavigateToArtist}>{artist}</button>
+                  {jurisdiction && <> · <em className="unp-serif">{jurisdiction}</em></>}
+                </span>
+              </div>
+              <button
+                type="button"
+                className={`unp-like-pill ${isLiked ? 'is-on' : ''}`}
+                onClick={handleLike}
+                aria-pressed={isLiked}
+                aria-label={isLiked ? `Unlike this song, ${likeCount} likes` : `Like this song, ${likeCount} likes`}
+              >
+                <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} aria-hidden="true" />
+                <span>{likeCount}</span>
+              </button>
+            </div>
+
+            <div className="unp-np__seek">
+              <input
+                type="range"
+                className="unp-range unp-range--np"
+                min="0"
+                max="100"
+                step="0.1"
+                value={progress}
+                onChange={handleSeek}
+                aria-label="Seek"
+                aria-valuetext={timeText}
+              />
+              <div className="unp-np__times">
+                <span>{formatTime(currentTime)}</span>
+                <span>-{formatTime(Math.max(0, duration - currentTime))}</span>
+              </div>
+            </div>
+
+            {transport('lg')}
+
+            <button type="button" className="unp-vote unp-vote--lg" onClick={handleVoteClick}>
+              {voteIcon}<span>Vote for this song</span>
+            </button>
+          </>
+        )}
+
+        {npMode !== 'main' && (
+          <div className="unp-np__compact">
+            <img className="unp-np__compact-art" src={artUrl} alt="" />
+            <div className="unp-np__compact-text">
+              <button type="button" className="unp-link unp-np__compact-title" onClick={handleNavigateToSong}>{title}</button>
+              <button type="button" className="unp-link unp-np__compact-artist" onClick={handleNavigateToArtist}>{artist}</button>
+            </div>
+            {npMode === 'queue' && compactPlay}
+            <button type="button" className="unp-vote-dot" onClick={handleVoteClick} aria-label="Vote for this song">
+              <Vote size={18} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
+        {npMode === 'lyrics' && !isVideo && (
+          <>
+            <div className="unp-np__lyrics">
+              <LyricsView
+                embedded
+                media={currentMedia}
+                mediaRef={audioRef}
+                isPlaying={isPlaying}
+                currentTime={currentTime}
+                duration={duration}
+                onTogglePlay={lyricsTogglePlay}
+                onPrev={() => prev()}
+                onNext={() => next()}
+                onSeek={lyricsSeek}
+                onClose={() => setNpMode('main')}
+              />
+            </div>
+            {transport('md')}
+          </>
+        )}
+
+        {npMode === 'queue' && (
+          <div className="unp-np__queue">
+            <QueuePanel
+              embedded
+              open={isExpanded}
+              onClose={closeNowPlaying}
+              isLiked={isLiked}
+              onToggleLike={handleLike}
+            />
+          </div>
+        )}
+      </div>
+
+      <nav className="unp-np__dock" aria-label="Now Playing tools">
+        {!isVideo && (
+          <button
+            type="button"
+            className={`unp-dock-btn ${npMode === 'lyrics' ? 'is-on' : ''}`}
+            onClick={() => switchNpMode('lyrics')}
+            aria-pressed={npMode === 'lyrics'}
+          >
+            <Mic2 size={20} aria-hidden="true" /><span>Lyrics</span>
+          </button>
+        )}
+        <button type="button" className="unp-dock-btn" onClick={handleOpenComments}>
+          <MessageCircle size={20} aria-hidden="true" /><span>Comments</span>
+        </button>
+        <button
+          type="button"
+          className={`unp-dock-btn ${npMode === 'queue' ? 'is-on' : ''}`}
+          onClick={() => switchNpMode('queue')}
+          aria-pressed={npMode === 'queue'}
+        >
+          <ListMusic size={20} aria-hidden="true" /><span>{queueCount > 0 ? `Queue · ${queueCount}` : 'Queue'}</span>
+        </button>
+        <button type="button" className="unp-dock-btn" onClick={() => setNpMore(true)} aria-haspopup="dialog">
+          <MoreHorizontal size={20} aria-hidden="true" /><span>More</span>
+        </button>
+      </nav>
+
+      {npMore && (
+        <div className="unp-more">
+          <button type="button" className="unp-more__backdrop" onClick={() => setNpMore(false)} aria-label="Close options" />
+          <div className="unp-more__sheet" role="dialog" aria-label="More options">
+            <div className="unp-more__head">
+              <img src={artUrl} alt="" />
+              <div>
+                <strong>{title}</strong>
+                <span>{artist}</span>
+              </div>
+            </div>
+            <div className="unp-more__grid">
+              <button type="button" className="unp-more__item" onClick={handleAddToPlaylist}>
+                <PlusIcon size={22} /><span>Add to playlist</span>
+              </button>
+              <button type="button" className="unp-more__item" onClick={handleDownload}>
+                <DownloadIcon size={21} /><span>Download</span>
+              </button>
+              <button
+                type="button"
+                className={`unp-more__item ${pocketLockEnabled ? 'is-on' : ''}`}
+                onClick={handlePocketLockToggle}
+                aria-pressed={pocketLockEnabled}
+              >
+                <Lock size={21} aria-hidden="true" /><span>{pocketLockEnabled ? 'Pocket Lock on' : 'Pocket Lock'}</span>
+              </button>
+              <button type="button" className="unp-more__item" onClick={handleNavigateToSong}>
+                <Disc3 size={21} aria-hidden="true" /><span>Song page</span>
+              </button>
+              <button type="button" className="unp-more__item" onClick={handleNavigateToArtist}>
+                <UserRound size={21} aria-hidden="true" /><span>Artist page</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Song is playing → render the player + modals
+  const rootClass = [
+    'player',
+    'unp',
+    isExpanded ? 'expanded' : '',
+    glass ? 'is-glass' : '',
+    tucked ? 'is-tucked' : '',
+    isPlaying ? 'is-playing' : 'is-paused',
+    trayOpen ? 'is-tray-open' : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className={`player ${isExpanded ? 'expanded' : ''}`} style={isExpanded ? { backgroundImage: `url(${currentMedia.artwork || '/assets/placeholder.jpg'})` } : {}}>
-      {isVideo ? (
-        <video ref={audioRef} crossOrigin="anonymous" className={isExpanded ? "media-element" : "hidden-media"} style={isExpanded ? {} : { display: 'none' }}>
-          <source src={currentMedia.url} type="video/mp4" />
-        </video>
-      ) : (
+    <div className={rootClass} style={paletteVars}>
+      {!isVideo && (
         <audio ref={audioRef} crossOrigin="anonymous" className="hidden-media" style={{ display: 'none' }}>
           <source src={currentMedia.url} type="audio/mpeg" />
         </audio>
       )}
 
-      {isExpanded ? (
-        <div className="expanded-view">
-          <button className="minimize-button" onClick={(e) => { e.stopPropagation(); toggleExpand(); }}>Minimize</button>
-          <div className="expanded-artwork">
-            {!isVideo && <img src={currentMedia.artwork || '/assets/placeholder.jpg'} alt="Artwork" className="expanded-album-art" />}
-          </div>
-          <div className="info">
-            <h2>{currentMedia.title}</h2>
-            <p>{currentMedia.artist}</p>
-          </div>
-          <div className="time-info">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
-          <input type="range" value={progress} onChange={handleSeek} className="expanded-seekbar" min="0" max="100" />
-          <div className="controls">
-            <button className="player-skip player-skip--prev" onClick={handlePrev} aria-label="Previous">
-              <PrevIcon />
-            </button>
-            <button
-              className="player-btn-play"
-              onClick={handlePlayPause}
-              title={isPlaying ? 'Pause' : 'Play'}
-              aria-label={isPlaying ? 'Pause' : 'Play'}
-            >
-              <PlayPauseGlyph playing={isPlaying} />
-            </button>
-            <button className="player-skip player-skip--next" onClick={handleNext} aria-label="Next">
-              <NextIcon />
-            </button>
-          </div>
-          <div className="expanded-actions">
-            <button onClick={handleLike} className={`like-button ${isLiked ? 'liked' : ''}`}>
-              <Heart fill={isLiked ? "white" : "none"} />
-            </button>
-            <button onClick={handleVoteClick}>
-              <Vote size={24} />
-            </button>
-            <button onClick={handleDownload}>⬇</button>
-            {!isVideo && (
-              <button onClick={toggleLyrics} aria-label="Lyrics" aria-pressed={showLyrics} className={showLyrics ? 'active' : ''}>
-                <Mic2 size={22} />
-              </button>
-            )}
-          </div>
+      {showLyrics && isDesktop && !isExpanded && !isVideo && (
+        <div className="unp-layer unp-layer--lyrics">
+          <LyricsView
+            media={currentMedia}
+            mediaRef={audioRef}
+            isPlaying={isPlaying}
+            currentTime={currentTime}
+            duration={duration}
+            full={false}
+            onTogglePlay={lyricsTogglePlay}
+            onPrev={() => prev()}
+            onNext={() => next()}
+            onSeek={lyricsSeek}
+            onClose={closeLyrics}
+          />
         </div>
-      ) : (
-        <>
-      {/* ═══════ MOBILE ACTIONS TRAY ═══════ */}
-        <div
-          ref={mobileTrayRef}
-          className={`mobile-actions-tray ${showMobileActions ? 'open' : ''}`}
-        >
-        <div className="tray-shell">
-          <div className="tray-handle" aria-hidden="true" />
-
-          <div className="tray-header">
-            <div>
-              <span className="tray-kicker">Now playing tools</span>
-            </div>
-
-            <div className="tray-header-side"> {/* ★ comments: comments button (left) + pill (right), side by side */}
-              <button
-                type="button"
-                className="tray-comments-btn"
-                onClick={() => { setShowMobileActions(false); setShowComments(true); }}
-                aria-label="Open comments"
-              >
-                <MessageCircle size={13} aria-hidden="true" /> Comments
-              </button>
-              {!isVideo && (
-                <button
-                  type="button"
-                  className="tray-comments-btn"
-                  onClick={toggleLyrics}
-                  aria-label="Open lyrics"
-                >
-                  <Mic2 size={13} aria-hidden="true" /> Lyrics
-                </button>
-              )}
-              <span className="tray-status-pill">
-                {queue.length > 0 ? `${queue.length} in queue` : 'Live session'}
-              </span>
-            </div>
-          </div>
-
-          <div className="tray-content">
-            <button type="button" onClick={handleVoteClick} className="tray-action tray-action-featured">
-              <span className="tray-icon">
-                <Vote size={20} />
-              </span>
-              <span className="tray-copy">
-                <span className="label">Vote</span>
-                <span className="hint">Influence</span>
-              </span>
-            </button>
-
-            <button type="button" onClick={handleAddToPlaylist} className="tray-action">
-              <span className="tray-icon">
-                <PlusIcon />
-              </span>
-              <span className="tray-copy">
-                <span className="label">Add</span>
-                <span className="hint">Playlist</span>
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleLike}
-              className={`tray-action ${isLiked ? 'liked' : ''}`}
-            >
-              <span className="tray-icon">
-                <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} />
-              </span>
-              <span className="tray-copy">
-                <span className="label">{isLiked ? 'Liked' : 'Like'}</span>
-                <span className="hint">{likeCount > 0 ? `${likeCount} total` : 'Support'}</span>
-              </span>
-            </button>
-
-            <button type="button" onClick={handleDownload} className="tray-action">
-              <span className="tray-icon">
-                <DownloadIcon size={18} />
-              </span>
-              <span className="tray-copy">
-                <span className="label">Download</span>
-                <span className="hint">Offline</span>
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handlePocketLockToggle}
-              className={`tray-action tray-action-lock ${pocketLockEnabled ? 'locked' : ''}`}
-              aria-pressed={pocketLockEnabled}
-              title={pocketLockEnabled ? 'Pocket Lock on' : 'Pocket Lock off'}
-            >
-              <span className="tray-icon">
-                <Lock size={19} />
-              </span>
-
-              <span className="tray-copy">
-                <span className="label">Lock</span>
-                <span className="hint">{pocketLockEnabled ? 'Protected' : 'Pocket'}</span>
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-          {/* ═══════ 3-COLUMN MINI PLAYER ═══════ */}
-          <div className="Unis-mini-player">
-
-            {/* LEFT — Track info */}
-            <div className="player-track">
-              <div className="player-art" onClick={handleNavigateToSong}>
-                <img src={currentMedia.artwork || '/assets/placeholder.jpg'} alt="Artwork" />
-              </div>
-              <div className="player-track-info">
-                <div className="player-track-title clickable" onClick={handleNavigateToSong}>{currentMedia.title}</div>
-                <div className="player-track-artist clickable" onClick={handleNavigateToArtist}>{currentMedia.artist}</div>
-              </div>
-              <button className="player-heart" onClick={handleLike}>
-                <Heart size={18} fill={isLiked ? "currentColor" : "none"} className={isLiked ? 'liked' : ''} />
-              </button>
-            </div>
-
-            {/* CENTER — Controls + progress */}
-            <div className="player-controls">
-              <div className="player-buttons">
-                <button className="player-btn" onClick={handleVoteClick} title="Vote for this song">
-                  <Vote size={18} />
-                </button>
-                <button
-                  className="player-btn player-skip player-skip--prev"
-                  onClick={handlePrev}
-                  title="Previous"
-                  aria-label="Previous"
-                >
-                  <PrevIcon />
-                </button>
-
-                <button
-                  className="player-btn-play"
-                  onClick={handlePlayPause}
-                  title={isPlaying ? 'Pause' : 'Play'}
-                  aria-label={isPlaying ? 'Pause' : 'Play'}
-                >
-                  <PlayPauseGlyph playing={isPlaying} />
-                </button>
-
-                <button
-                  className="player-btn player-skip player-skip--next"
-                  onClick={handleNext}
-                  title="Next"
-                  aria-label="Next"
-                >
-                  <NextIcon />
-                </button>
-                <button className="player-btn" onClick={handleAddToPlaylist} title="Add to playlist or queue">
-                  <PlusIcon />
-                </button>
-              </div>
-              <div className="player-progress">
-                <span className="player-time">{formatTime(currentTime)}</span>
-                <div className="progress-bar" ref={seekbarRef} onClick={handleSeekbarClick}>
-                  <div className="progress-fill" style={{ width: `${progress}%` }} />
-                </div>
-                <span className="player-time">{formatTime(duration)}</span>
-              </div>
-            </div>
-
-            {/* RIGHT — Queue + Download + Volume */}
-            <div className="player-right">
-              {!isVideo && (
-                <button
-                  className={`player-btn player-lyrics-btn ${showLyrics ? 'active' : ''}`}
-                  onClick={toggleLyrics}
-                  title="Lyrics"
-                  aria-label="Lyrics"
-                  aria-pressed={showLyrics}
-                >
-                  <Mic2 size={16} />
-                </button>
-              )}
-              <button
-                className={`player-btn player-queue-btn ${showQueue ? 'active' : ''}`}
-                onClick={() => setShowQueue(!showQueue)}
-                title={`Queue${queue.length > 0 ? ` (${queue.length})` : ''}`}
-              >
-                <ListMusic size={16} />
-                {queue.length > 0 && (
-                  <span className="player-queue-badge">{queue.length}</span>
-                )}
-              </button>
-              <button className="player-btn" onClick={handleDownload} title="Download">
-                <DownloadIcon />
-              </button>
-              <button className="player-btn player-volume-icon" title="Volume" onClick={() => setVolume(volume === 0 ? 0.7 : 0)}>
-                <VolumeIcon level={volume} />
-              </button>
-              <div className="volume-bar" onClick={handleVolumeChange}>
-                <div className="volume-fill" style={{ width: `${volume * 100}%` }} />
-              </div>
-            </div>
-
-            {/* MOBILE toggle */}
-            <div className="mobile-right-cluster">
-              <button className="mobile-actions-toggle" ref={mobileActionsToggleRef} onClick={toggleMobileActions}>
-                {showMobileActions ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
-              </button>
-              <button
-                className={`mobile-queue-btn ${showQueue ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); setShowQueue(!showQueue); }}
-                title={`Queue${queue.length > 0 ? ` (${queue.length})` : ''}`}
-              >
-                <ListMusic size={18} />
-                {queue.length > 0 && (
-                  <span className="mobile-queue-badge">{queue.length}</span>
-                )}
-              </button>
-            </div>
-          </div>
-        </>
       )}
 
-      {showLyrics && !isVideo && (
-        <LyricsView
-          media={currentMedia}
-          mediaRef={audioRef}
-          isPlaying={isPlaying}
-          currentTime={currentTime}
-          duration={duration}
-          full={isExpanded}
-          onTogglePlay={lyricsTogglePlay}
-          onPrev={() => prev()}
-          onNext={() => next()}
-          onSeek={lyricsSeek}
-          onClose={closeLyrics}
-        />
-      )}
+      {isDesktop ? dock : mini}
+      {!isDesktop && tray}
+      {nowPlaying}
 
       {/* --- WIZARDS & PANELS --- */}
       {modalsAndPanels}

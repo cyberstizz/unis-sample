@@ -1486,3 +1486,87 @@
   .qp-select-bar { animation: none; }
   .qp-swipe .qp-item:not(.qp-item-swiping) { transition: none; }
 }
+
+// ═════════════════════════════════════════════════════════════
+//  EMBEDDED — the queue inside Now Playing (phones / tablets)
+//  No panel of its own: the artwork blend behind Now Playing shows
+//  through. Chips are glass pills; an "on" chip wears the theme colour.
+// ═════════════════════════════════════════════════════════════
+.qp-embedded {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+
+  button:focus { outline: none; }
+  button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--unis-primary-soft); }
+
+  .qp-section { margin: 0; padding: 14px 0 8px; }
+  .qp-section-label { color: rgba(255, 255, 255, 0.82); }
+  .qp-count { color: #fff; background: rgba(255, 255, 255, 0.16); }
+
+  .qp-chip {
+    height: 34px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 17px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 650;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+
+    &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); border-color: transparent; color: #fff; }
+    &.qp-chip-strong,
+    &.qp-chip-on {
+      background: linear-gradient(135deg, var(--unis-primary-2), var(--unis-primary));
+      color: #fff;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 6px 18px var(--unis-primary-glow);
+    }
+  }
+
+  .qp-body {
+    padding: 2px 0 20px;
+    -webkit-mask-image: linear-gradient(#000 92%, transparent);
+    mask-image: linear-gradient(#000 92%, transparent);
+  }
+
+  .qp-item {
+    &:hover { transform: none; background: rgba(255, 255, 255, 0.06); border-color: transparent; box-shadow: none; }
+  }
+
+  .qp-title { color: #fff; }
+  .qp-artist, .qp-duration { color: rgba(255, 255, 255, 0.62); }
+
+  .qp-item.qp-current {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+    .qp-artist { color: rgba(255, 255, 255, 0.82); }
+  }
+
+  .qp-select-bar { left: 0; right: 0; bottom: 8px; }
+  .qp-save-modal { border-radius: 22px; }
+}
+
+[data-theme='yellow'] .qp-embedded .qp-chip.qp-chip-on,
+[data-theme='yellow'] .qp-embedded .qp-chip.qp-chip-strong { color: #111318; }
+
+.qp-embedded-modes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 16px;
+  flex-wrap: wrap;
+}
+
+.qp-embedded-left {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.62);
+  white-space: nowrap;
+}

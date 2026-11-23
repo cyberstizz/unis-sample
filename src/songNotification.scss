@@ -1,11 +1,19 @@
 $unis-blue: var(--unis-primary);
 
+// The notification rises out of the top of the player and sinks back into
+// it. --unp-stack (set by player.jsx) is the player's top edge + a 10px gap,
+// so it never covers the player, whatever size the player is right now.
+// It stays out of the way while Now Playing or the song actions tray is open.
 .song-notification {
   position: fixed;
-  bottom: 100px;
+  bottom: calc(var(--unp-stack, 100px) + env(safe-area-inset-bottom, 0px));
   left: 20px;
   z-index: 101;
-  animation: slideIn 0.5s ease-out forwards, slideOut 0.5s 2.5s ease-in forwards;
+  transform-origin: 50% 100%;
+  transition: bottom 0.45s cubic-bezier(0.2, 0.9, 0.25, 1);
+  animation:
+    unpNotifRise 0.5s cubic-bezier(0.2, 0.9, 0.25, 1) both,
+    unpNotifSink 0.45s 2.55s cubic-bezier(0.4, 0, 1, 1) forwards;
 
   .card {
     display: flex;
@@ -196,14 +204,55 @@ $unis-blue: var(--unis-primary);
   }
 }
 
-@media (max-width: 480px) {
+body.unp-np-open .song-notification,
+body.unp-tray-open .song-notification {
+  display: none;
+}
+
+@keyframes unpNotifRise {
+  from { opacity: 0; transform: translateY(26px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes unpNotifSink {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(22px) scale(0.96); }
+}
+
+@media (prefers-reduced-motion: reduce) {
   .song-notification {
-    left: 10px;
-    right: 10px;
+    transition: none;
+    animation: unpNotifFade 3s linear forwards;
+  }
+}
+
+@keyframes unpNotifFade {
+  0% { opacity: 0; }
+  8%, 88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+// Computers: lined up with the player dock, beside the sidebar.
+@media (min-width: 1025px) {
+  .song-notification { left: var(--sidebar-width, 20px); }
+}
+
+// Phones and tablets: the same width as the mini player.
+@media (max-width: 1024px) {
+  .song-notification {
+    left: max(10px, calc(50% - 340px));
+    right: max(10px, calc(50% - 340px));
 
     .card {
       min-width: auto;
-      width: calc(100% - 20px);
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .song-notification {
+    .card {
 
       .notification-info h3 {
         max-width: 180px;

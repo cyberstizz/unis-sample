@@ -1,6 +1,7 @@
 // cookieConsent.scss — the cookie banner and Cookie settings (Nov 2026).
-// Theme-aware from --unis-primary. The banner sits above the player bar
-// (80px) when the player is on the page, and at the bottom edge otherwise.
+// Theme-aware from --unis-primary. The banner sits above the floating player
+// (--unp-stack: the player's top edge + a gap, set by player.jsx) when the
+// player is on the page, and at the bottom edge otherwise.
 
 $ck-p: var(--unis-primary, #163387);
 $ck-p3: color-mix(in srgb, var(--unis-primary, #163387), white 64%);
@@ -73,10 +74,10 @@ $ck-phone: 640px;
 
 // Clear the player bar when it's on the page.
 body:has(.player) .ck-banner {
-  bottom: calc(#{$ck-player} + 16px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--unp-stack, #{$ck-player}) + 6px + env(safe-area-inset-bottom, 0px));
 
   @media (max-width: $ck-phone) {
-    bottom: calc(#{$ck-player} + 12px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--unp-stack, #{$ck-player}) + 2px + env(safe-area-inset-bottom, 0px));
   }
 }
 

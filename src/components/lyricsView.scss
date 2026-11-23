@@ -1,16 +1,18 @@
 // src/components/lyricsView.scss
-// The player's lyrics view (LyricsView.jsx). Lives inside .player, which is
-// fixed with its own stacking layer, so position: fixed here is the screen.
-// Colours come from .lyrics-stage (components/lyricsLines.scss).
+// The player's lyrics view (LyricsView.jsx). position: fixed here is the
+// screen. Colours come from .lyrics-stage (components/lyricsLines.scss).
+//
+// On computers it runs behind the floating player dock (16px from the
+// bottom, 78px tall), so the body leaves room for it at the bottom.
 
-$lv-player-bar: 80px; // matches $player-height in player.scss
+$lv-dock-clearance: 110px; // dock height + its 16px offset + breathing room
 
 .lv {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  bottom: $lv-player-bar;
+  bottom: 0;
   z-index: 40;
   display: flex;
   flex-direction: column;
@@ -21,6 +23,29 @@ $lv-player-bar: 80px; // matches $player-height in player.scss
 }
 
 .lv--full { bottom: 0; }
+
+.lv:not(.lv--full):not(.lv--embedded) .lv__body { padding-bottom: $lv-dock-clearance; }
+
+// Inside Now Playing: no backdrop of its own (the artwork blend shows
+// through), white lines on every theme, and it fills its slot.
+.lv.lv--embedded.lyrics-stage {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  height: 100%;
+  background: none;
+  animation: none;
+  --ll-now: #ffffff;
+  --ll-past: rgba(255, 255, 255, 0.5);
+  --ll-next: rgba(255, 255, 255, 0.36);
+  --ll-pill-bg: rgba(255, 255, 255, 0.16);
+  --ll-pill-fg: #ffffff;
+  -webkit-mask-image: linear-gradient(transparent, #000 8%, #000 86%, transparent);
+  mask-image: linear-gradient(transparent, #000 8%, #000 86%, transparent);
+
+  .lv__body { max-width: none; }
+  .lv__msg, .lv__note { margin-left: 0; margin-right: 0; }
+}
 
 .lv__head {
   flex: none;
@@ -175,8 +200,7 @@ $lv-player-bar: 80px; // matches $player-height in player.scss
 [data-theme='yellow'] .lv__controls .lv__play { color: #ffffff; }
 
 @media (max-width: 600px) {
-  .lv { bottom: 0; }
-  .lv__foot { display: flex; }
+  .lv:not(.lv--embedded) .lv__foot { display: flex; }
 }
 
 @keyframes lv-rise {
