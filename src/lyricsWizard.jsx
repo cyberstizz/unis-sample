@@ -188,7 +188,14 @@ const LyricsWizard = ({ show, onClose, song, onSuccess, onHelp }) => {
   const importLrc = async (file) => {
     if (!file) return;
     try {
-      const text = await file.text();
+      const text = typeof file.text === 'function'
+        ? await file.text()
+        : await new Promise((resolve, reject) => {   // older browsers
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = reject;
+          reader.readAsText(file);
+        });
       const parsed = parseLrc(text);
       if (!parsed.length) { setError('That file has no timed lines in it.'); return; }
       setWords(parsed.map((l) => l.text).join('\n'));

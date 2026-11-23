@@ -9,13 +9,13 @@ const UnisPlayButton = () => (
     // Apply CSS class for easy targeting/sizing in your SCSS
     className="unis-play-button-icon"
   >
-    {/* 1. The main circle background in $unis-blue (#163387) */}
+    {/* 1. The main circle background in the theme colour (--unis-primary) */}
     <circle 
       cx="50" 
       cy="50" 
       r="48" 
-      fill="#163387" 
-      style={{color: "silver"}}
+      fill="#163387" // fallback; the style below wins and follows the theme
+      style={{ fill: "var(--unis-primary, #163387)", color: "silver" }}
     />
     
     {/* 2. The play icon (triangle) in white for contrast */}

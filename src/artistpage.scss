@@ -21,10 +21,10 @@ $ap2-text-1: #f2f2f4;
 $ap2-text-2: #a8a8b3;
 $ap2-text-3: #6a6a78;
 $ap2-blue: var(--unis-primary, #163387);
-$ap2-blue-raw: #163387;
+$ap2-blue-raw: var(--unis-primary);
 $ap2-border: rgba(255, 255, 255, 0.08);
 $ap2-border-hover: rgba(255, 255, 255, 0.14);
-$ap2-glow: rgba(22, 51, 135, 0.4);
+$ap2-glow: color-mix(in srgb, var(--unis-primary) 40%, transparent);
 $ap2-header-h: 75px; // keep in sync with $header-height in header.scss
 
 // ─── Keyframes (prefixed) ──────────────────────────────────────

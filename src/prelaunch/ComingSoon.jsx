@@ -96,7 +96,7 @@ export default function ComingSoon({ autoSignup = false, initialReferralCode = '
   const [showSignup, setShowSignup] = useState(autoSignup);
   const [justSignedUp, setJustSignedUp] = useState(false);
   const bars = useMemo(() => buildSkyline(), []);
-  // e.g. "December 5th", or null while no launch date is set.
+  // e.g. "January 1st", or null while no launch date is set.
   const launchLabel = useMemo(() => getLaunchLabel(), []);
   const statusLine = launchLabel ? `Launching ${launchLabel}` : 'Opening soon in Harlem';
 

@@ -4,7 +4,7 @@
 $bg-surface:       #0a0a0f;
 $bg-elevated:      #111118;
 $unis-blue: var(--unis-primary);
-$unis-blue-bright: #1d42a8;
+$unis-blue-bright: var(--unis-primary-hover);
 $unis-silver:      #918f8f;
 $text-primary:     #e8e8ec;
 $text-muted:       #7a7a88;
@@ -60,11 +60,11 @@ $header-height: 75px;
 // If you have canonical values for the blue theme, swap the two hex literals
 // below (primary #1d42a8, accent #4a9eff); everything else derives from them.
 .app-header.app-header--guest {
-  --unis-primary:       #1d42a8;
-  --unis-primary-2:     #1d42a8;
-  --unis-primary-hover: #163387;
-  --unis-primary-soft:  #{color-mix(in srgb, #1d42a8, transparent 88%)};
-  --unis-primary-glow:  #{color-mix(in srgb, #1d42a8, transparent 60%)};
+  --unis-primary:       var(--unis-primary-hover);
+  --unis-primary-2:     var(--unis-primary-hover);
+  --unis-primary-hover: var(--unis-primary);
+  --unis-primary-soft:  #{color-mix(in srgb, var(--unis-primary-hover), transparent 88%)};
+  --unis-primary-glow:  #{color-mix(in srgb, var(--unis-primary-hover), transparent 60%)};
 }
 
 // ─── SINGLE-ROW LAYOUT ──────────────────────────────────────────
@@ -181,7 +181,7 @@ $header-height: 75px;
   // ("0%, $x, 6% 100%") which invalidated the whole declaration, leaving the
   // button with no background — so it showed the header surface / stale theme
   // glow behind it and read as grey/tinted.
-  background: linear-gradient(135deg, $unis-blue-bright 0%, #163387 100%);
+  background: linear-gradient(135deg, $unis-blue-bright 0%, var(--unis-primary) 100%);
   border: 1px solid rgba($unis-silver, 0.25);
   color: #fff;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -220,14 +220,14 @@ $header-height: 75px;
 
 // ─── LOGO STRETCH ANIMATION ─────────────────────────────────────
 @keyframes logoStretch {
-  0%   { transform: scaleX(1)    scaleY(1);    filter: drop-shadow(0 0 0 rgba(29, 66, 168, 0)); }
-  18%  { transform: scaleX(1.15) scaleY(0.91); filter: drop-shadow(0 0 12px rgba(29, 66, 168, 0.35)); }
-  36%  { transform: scaleX(0.92) scaleY(1.06); filter: drop-shadow(0 0 4px rgba(29, 66, 168, 0.1)); }
+  0%   { transform: scaleX(1)    scaleY(1);    filter: drop-shadow(0 0 0 color-mix(in srgb, var(--unis-primary) 0%, transparent)); }
+  18%  { transform: scaleX(1.15) scaleY(0.91); filter: drop-shadow(0 0 12px color-mix(in srgb, var(--unis-primary) 35%, transparent)); }
+  36%  { transform: scaleX(0.92) scaleY(1.06); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--unis-primary) 10%, transparent)); }
   52%  { transform: scaleX(1.08) scaleY(0.96); }
   65%  { transform: scaleX(0.97) scaleY(1.02); }
   76%  { transform: scaleX(1.03) scaleY(0.99); }
   86%  { transform: scaleX(0.99) scaleY(1.01); }
-  100% { transform: scaleX(1)    scaleY(1);    filter: drop-shadow(0 0 0 rgba(29, 66, 168, 0)); }
+  100% { transform: scaleX(1)    scaleY(1);    filter: drop-shadow(0 0 0 color-mix(in srgb, var(--unis-primary) 0%, transparent)); }
 }
 
 @media (prefers-reduced-motion: reduce) {

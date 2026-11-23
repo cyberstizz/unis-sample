@@ -194,8 +194,8 @@ describe('PlaylistPage — loading and availability', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('This playlist isn’t available');
     expect(screen.getByText('It may be private, or it may have been deleted.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Go home' }));
-    expect(navigateSpy).toHaveBeenCalledWith('/');
+    await user.click(screen.getByRole('button', { name: 'Back to your library' }));
+    expect(navigateSpy).toHaveBeenCalledWith('/playlists');
   });
 
   it('has the playlist ad slot', async () => {
@@ -210,7 +210,7 @@ describe('PlaylistPage — hero', () => {
     await renderPage();
     expect(screen.getByRole('heading', { level: 1, name: 'Late Night' })).toBeInTheDocument();
     expect(screen.getByText('After hours only.')).toBeInTheDocument();
-    expect(document.querySelector('.plp-kicker')).toHaveTextContent(/^Playlist$/);
+    expect(document.querySelector('.plp-chip-type')).toHaveTextContent(/^Playlist$/);
   });
 
   it.each([
@@ -218,7 +218,7 @@ describe('PlaylistPage — hero', () => {
     ['official', 'Official playlist'],
   ])('labels a %s playlist', async (type, label) => {
     await renderPage(playlistData({ type }));
-    expect(document.querySelector('.plp-kicker')).toHaveTextContent(label);
+    expect(document.querySelector('.plp-chip-type')).toHaveTextContent(label);
   });
 
   it('links to the creator\'s profile', async () => {
@@ -243,14 +243,20 @@ describe('PlaylistPage — hero', () => {
     expect(screen.getByText('2 songs, 1 hr 10 min')).toBeInTheDocument();
   });
 
-  it('shows the follower count, singular and plural', async () => {
+  // Followers show as "saves" (people who saved it to their library).
+  it('shows how many people saved it, singular and plural', async () => {
     await renderPage();
-    expect(screen.getByText('12 followers')).toBeInTheDocument();
+    expect(screen.getByText('12 saves')).toBeInTheDocument();
   });
 
-  it('hides the follower count at zero', async () => {
+  it('says "1 save"', async () => {
+    await renderPage(playlistData({ followerCount: 1 }));
+    expect(screen.getByText('1 save')).toBeInTheDocument();
+  });
+
+  it('hides the save count at zero', async () => {
     await renderPage(playlistData({ followerCount: 0 }));
-    expect(screen.queryByText(/follower/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\bsaves?\b/)).not.toBeInTheDocument();
   });
 
   it('only counts and lists active songs', async () => {
@@ -334,7 +340,7 @@ describe('PlaylistPage — track list', () => {
   it('tells the owner how to add songs to an empty playlist', async () => {
     await renderPage(playlistData({ tracks: [], owner: true }));
     expect(screen.getByText('Your playlist is empty')).toBeInTheDocument();
-    expect(screen.getByText(/tap the playlist button in the player/i)).toBeInTheDocument();
+    expect(screen.getByText(/choose Save to playlist/i)).toBeInTheDocument();
   });
 
   it('the artist name opens the artist page without playing the row', async () => {
@@ -429,7 +435,7 @@ describe('PlaylistPage — while a song from this playlist is playing', () => {
 
   it('says it is playing from this playlist and marks the row', async () => {
     await renderPage(playlistData(), live());
-    expect(screen.getByText('Playing from this playlist')).toBeInTheDocument();
+    expect(screen.getByText('Now playing · Track 2')).toBeInTheDocument();
     expect(row('Track 2')).toHaveClass('plp-row-current');
     expect(within(row('Track 2')).getByLabelText('Now playing')).toBeInTheDocument();
     expect(row('Track 1')).not.toHaveClass('plp-row-current');
@@ -478,7 +484,7 @@ describe('PlaylistPage — while a song from this playlist is playing', () => {
       currentMedia: { playlistItemId: 'item-2', origin: { type: 'playlist', playlistId: 'pl-other' } },
       isPlaying: true,
     });
-    expect(screen.queryByText('Playing from this playlist')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Now playing ·/)).not.toBeInTheDocument();
     expect(playButton()).toHaveAccessibleName('Play');
   });
 });
@@ -564,12 +570,12 @@ describe('PlaylistPage — who owns it (Jackson may send owner or isOwner)', () 
 
   it('shows the owner their playlist\'s visibility', async () => {
     await renderPage(playlistData({ owner: true, visibility: 'unlisted' }));
-    expect(document.querySelector('.plp-meta-pill')).toHaveTextContent('unlisted');
+    expect(screen.getByText('Unlisted')).toBeInTheDocument();
   });
 
   it('does not show the visibility to visitors', async () => {
     await renderPage();
-    expect(document.querySelector('.plp-meta-pill')).toBeNull();
+    expect(screen.queryByText(/^(Public|Unlisted|Private)$/)).not.toBeInTheDocument();
   });
 });
 
@@ -643,11 +649,12 @@ describe('PlaylistPage — removing a song (owner)', () => {
 
 // ===========================================================================
 describe('PlaylistPage — follow and unfollow', () => {
-  const followButton = () => document.querySelector('.plp-follow');
+  // Follow is the heart in the action row: "Save to your library".
+  const followButton = () => screen.queryByRole('button', { name: /(save to|remove from) your library/i });
 
   it('offers Follow to a signed-in visitor on a public playlist', async () => {
     await renderPage();
-    expect(followButton()).toHaveTextContent('Follow');
+    expect(followButton()).toHaveAccessibleName('Save to your library');
     expect(followButton()).toHaveAttribute('aria-pressed', 'false');
   });
 
@@ -671,7 +678,7 @@ describe('PlaylistPage — follow and unfollow', () => {
     ['isFollowing: true', { isFollowing: true }],
   ])('starts as Following for %s', async (_label, flags) => {
     await renderPage(playlistData(flags));
-    expect(followButton()).toHaveTextContent('Following');
+    expect(followButton()).toHaveAccessibleName('Remove from your library');
     expect(followButton()).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -679,8 +686,8 @@ describe('PlaylistPage — follow and unfollow', () => {
     const { ctx, user } = await renderPage();
     await user.click(followButton());
 
-    expect(followButton()).toHaveTextContent('Following');
-    expect(screen.getByText('13 followers')).toBeInTheDocument();
+    expect(followButton()).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('13 saves')).toBeInTheDocument();
     await waitFor(() => expect(ctx.followPlaylist).toHaveBeenCalledWith('pl-1'));
     expect(ctx.unfollowPlaylist).not.toHaveBeenCalled();
     await waitFor(() => expect(feedback.success).toHaveBeenCalledWith('Added “Late Night” to your library'));
@@ -690,8 +697,8 @@ describe('PlaylistPage — follow and unfollow', () => {
     const { ctx, user } = await renderPage(playlistData({ following: true }));
     await user.click(followButton());
 
-    expect(followButton()).toHaveTextContent('Follow');
-    expect(screen.getByText('11 followers')).toBeInTheDocument();
+    expect(followButton()).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText('11 saves')).toBeInTheDocument();
     await waitFor(() => expect(ctx.unfollowPlaylist).toHaveBeenCalledWith('pl-1'));
     expect(ctx.followPlaylist).not.toHaveBeenCalled();
     await waitFor(() => expect(feedback.success).toHaveBeenCalledWith('Removed “Late Night” from your library'));
@@ -704,8 +711,8 @@ describe('PlaylistPage — follow and unfollow', () => {
     await user.click(followButton());
 
     await waitFor(() => expect(feedback.error).toHaveBeenCalledWith("Couldn't add it to your library. Try again."));
-    expect(followButton()).toHaveTextContent('Follow');
-    expect(screen.getByText('12 followers')).toBeInTheDocument();
+    expect(followButton()).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText('12 saves')).toBeInTheDocument();
   });
 
   it('a failed unfollow rolls back too', async () => {
@@ -715,8 +722,8 @@ describe('PlaylistPage — follow and unfollow', () => {
     await user.click(followButton());
 
     await waitFor(() => expect(feedback.error).toHaveBeenCalledWith("Couldn't remove it from your library. Try again."));
-    expect(followButton()).toHaveTextContent('Following');
-    expect(screen.getByText('12 followers')).toBeInTheDocument();
+    expect(followButton()).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('12 saves')).toBeInTheDocument();
   });
 });
 
@@ -911,13 +918,13 @@ describe('PlaylistPage — delete (owner)', () => {
     expect(dialog).not.toHaveTextContent(/points/);
   });
 
-  it('Delete removes the playlist and goes home', async () => {
+  it('Delete removes the playlist and goes back to the library', async () => {
     const { ctx, user } = await renderPage(playlistData({ owner: true }));
     const dialog = await openDelete(user);
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(ctx.deletePlaylist).toHaveBeenCalledWith('pl-1'));
-    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/', { replace: true }));
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/playlists', { replace: true }));
     expect(feedback.success).toHaveBeenCalledWith('Deleted “Late Night”');
   });
 
@@ -1011,20 +1018,20 @@ describe('PlaylistPage — community playlists', () => {
     await renderPage(community());
     expect(screen.getByRole('tab', { name: /songs/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: /activity/i })).toBeInTheDocument();
-    expect(document.querySelector('.plp-meta-pill')).toHaveTextContent('Harlem');
+    expect(screen.getByText('Harlem')).toBeInTheDocument();
   });
 
   it('loads suggestions from their own endpoint and counts them on the tab', async () => {
     await renderPage(community());
     expect(http.get).toHaveBeenCalledWith('/v1/playlists/pl-1/pending');
-    await waitFor(() => expect(screen.getByRole('tab', { name: /suggestions/i })).toHaveTextContent('Suggestions 2'));
+    await waitFor(() => expect(screen.getByRole('tab', { name: /suggestions/i })).toHaveTextContent(/^Suggestions\s*2$/));
   });
 
   it('lists each suggestion with who suggested it and its votes', async () => {
     const { user } = await renderPage(community());
     await openSuggestions(user);
     const first = (await screen.findByText('Track 7')).closest('.plp-suggestion');
-    expect(first).toHaveTextContent('Artist 7 · suggested by maya');
+    expect(first).toHaveTextContent('Artist 7 · from maya');
     expect(within(first).getByRole('button', { name: 'Vote to add' })).toHaveTextContent('2');
     expect(within(first).getByRole('button', { name: 'Vote against' })).toHaveTextContent('1');
   });
@@ -1080,7 +1087,7 @@ describe('PlaylistPage — community playlists', () => {
 
     await waitFor(() => expect(feedback.success).toHaveBeenCalledWith('Your vote put “Track 7” in the playlist'));
     expect(screen.queryByText('Track 7')).not.toBeInTheDocument(); // gone from suggestions
-    expect(screen.getByRole('tab', { name: /suggestions/i })).toHaveTextContent('Suggestions 1');
+    expect(screen.getByRole('tab', { name: /suggestions/i })).toHaveTextContent(/^Suggestions\s*1$/);
 
     await user.click(screen.getByRole('tab', { name: /songs/i }));
     expect(rowTitles()).toEqual(['Track 1', 'Track 2', 'Track 3', 'Track 7']);
@@ -1123,7 +1130,7 @@ describe('PlaylistPage — community playlists', () => {
     http.get.mockRejectedValue(new Error('down'));
     await renderPage(community());
     expect(rowTitles()).toEqual(['Track 1', 'Track 2', 'Track 3']);
-    expect(screen.getByRole('tab', { name: /suggestions/i })).toHaveTextContent('Suggestions 0');
+    expect(screen.getByRole('tab', { name: /suggestions/i })).toHaveTextContent(/^Suggestions\s*0$/);
   });
 
   it('Activity loads once, on first open, and reads like a sentence', async () => {

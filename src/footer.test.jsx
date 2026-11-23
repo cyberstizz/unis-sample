@@ -46,10 +46,10 @@ describe('Footer', () => {
       expect(screen.getAllByRole('link')).toHaveLength(4);
     });
 
-    it('renders three "|" separators between links', () => {
+    it('renders four "|" separators between the five footer items', () => {
       renderFooter();
       const separators = document.querySelectorAll('.footer-separator');
-      expect(separators).toHaveLength(3);
+      expect(separators).toHaveLength(4);
       separators.forEach((sep) => expect(sep.textContent).toBe('|'));
     });
   });

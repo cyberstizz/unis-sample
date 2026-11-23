@@ -244,17 +244,18 @@ describe('Sidebar', () => {
       expect(screen.getByRole('img', { name: 'Playing' })).toBeInTheDocument();
     });
 
-    it('New playlist opens the playlist manager', async () => {
-      const { user, playerCtx } = signedIn({}, { playlists });
+    // Playlists live on their own page; New playlist opens it ready to create.
+    it('New playlist opens the playlists page ready to create one', async () => {
+      const { user } = signedIn({}, { playlists });
       await user.click(screen.getByRole('button', { name: 'New playlist' }));
-      expect(playerCtx.openPlaylistManager).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith('/playlists?new=1');
     });
 
-    it('shows the first-playlist card when there are none', async () => {
-      const { user, playerCtx } = signedIn();
+    it('shows the one-row first-playlist prompt when there are none', async () => {
+      const { user } = signedIn();
       expect(screen.getByText('Create your first playlist')).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: 'New playlist' }));
-      expect(playerCtx.openPlaylistManager).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith('/playlists?new=1');
     });
 
     it('asks signed-out visitors to sign in', async () => {

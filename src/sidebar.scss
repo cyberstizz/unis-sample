@@ -852,11 +852,11 @@ $ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 // can still hold the last user's theme. A guest always sees blue.
 // ─────────────────────────────────────────────────────────────
 .sidebar.sidebar--guest {
-  --unis-primary:       #1d42a8;
-  --unis-primary-2:     #4a9eff;
-  --unis-primary-hover: #163387;
-  --unis-primary-soft:  #{color-mix(in srgb, #1d42a8, transparent 88%)};
-  --unis-primary-glow:  #{color-mix(in srgb, #1d42a8, transparent 60%)};
+  --unis-primary:       var(--unis-primary-hover);
+  --unis-primary-2:     var(--unis-primary-2);
+  --unis-primary-hover: var(--unis-primary);
+  --unis-primary-soft:  #{color-mix(in srgb, var(--unis-primary-hover), transparent 88%)};
+  --unis-primary-glow:  #{color-mix(in srgb, var(--unis-primary-hover), transparent 60%)};
 }
 
 @media (prefers-reduced-motion: reduce) {

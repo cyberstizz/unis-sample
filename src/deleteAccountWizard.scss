@@ -45,7 +45,7 @@ $unis-blue: var(--unis-primary);
       font-size: 1.6rem;
       font-weight: 600;
       margin-bottom: 1rem;
-      color: #004aad;
+      color: var(--unis-primary);
     }
 
     .wizard-intro {
@@ -64,12 +64,12 @@ $unis-blue: var(--unis-primary);
       /* Section Headers for uploads */
       .upload-section-header {
         font-weight: 600;
-        color: #004aad;
+        color: var(--unis-primary);
         text-align: left;
         font-size: 1.1rem;
         margin-top: 1rem;
         margin-bottom: 0.5rem;
-        border-left: 3px solid #004aad;
+        border-left: 3px solid var(--unis-primary);
         padding-left: 0.5rem;
       }
 
@@ -93,7 +93,7 @@ $unis-blue: var(--unis-primary);
           transition: border 0.2s ease;
           &:focus {
             outline: none;
-            border-color: #004aad;
+            border-color: var(--unis-primary);
           }
         }
       }
@@ -119,7 +119,7 @@ $unis-blue: var(--unis-primary);
           box-sizing: border-box;
           &:focus {
             outline: none;
-            border-color: #004aad;
+            border-color: var(--unis-primary);
           }
         }
 
@@ -135,7 +135,7 @@ $unis-blue: var(--unis-primary);
           border-radius: 6px;
           cursor: pointer;
           &:hover {
-            border-color: #004aad;
+            border-color: var(--unis-primary);
           }
         }
 
@@ -211,10 +211,10 @@ $unis-blue: var(--unis-primary);
       }
 
       .next-button {
-        background: #004aad;
+        background: var(--unis-primary);
         color: white;
         &:hover {
-          background: #00367d;
+          background: var(--unis-primary);
         }
       }
 

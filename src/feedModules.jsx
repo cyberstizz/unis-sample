@@ -18,6 +18,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { formatCount } from './utils/standings';
 import { formatScore } from './context/RewardContext';
+import useFitLine from './hooks/useFitLine';
 import './feedModules.scss';
 
 // ── Small shared pieces ──────────────────────────────────────────────────────
@@ -266,11 +267,15 @@ export const FeedSpotlight = ({
 
   const hour = new Date().getHours();
   const when = hour < 12 ? 'This morning' : hour < 17 ? 'This afternoon' : 'Tonight';
+  // One line for any jurisdiction name: shrinks a little, then ellipsis.
+  const headlineRef = useRef(null);
+  useFitLine(headlineRef, `${when} ${jurisdictionName}`, { min: 0.6 });
 
   return (
     <section className="fm-spot" aria-roledescription="carousel" aria-label="Spotlight">
-      <h1 className="fm-spot__headline">
-        {when} in <em>{jurisdictionName}</em>
+      <h1 className="fm-spot__headline" ref={headlineRef} title={`${when} in ${jurisdictionName}`}>
+        <span className="fm-spot__when">{when} in&nbsp;</span>
+        <em>{jurisdictionName}</em>
       </h1>
 
       <div className="fm-spot__track" ref={trackRef} onScroll={onScroll}>

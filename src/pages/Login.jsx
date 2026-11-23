@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useThemeLogo } from '../utils/themeLogo';
-import spaceVideo from '../assets/space-bg.mp4';
 import CreateAccountWizard from '../createAccountWizard'; 
 import ForgotPasswordWizard from '../forgotPasswordWizard';
 import { apiCall } from '../components/axiosInstance'; 
@@ -105,15 +104,8 @@ const Login = () => {
 
   return (
     <div className="login-wrapper">
-      <video
-        className="login-bg-video"
-        autoPlay
-        loop
-        muted
-        playsInline
-        src={spaceVideo}
-      />
-
+      {/* One background on every screen: the dark stage with the theme glow
+          (it used to be a stock space video on computers only). */}
       <div className="login-overlay" />
 
       <div className="login-card">
@@ -195,14 +187,14 @@ const Login = () => {
             background: 'rgba(17,17,20,0.95)',
             borderRadius: '16px',
             padding: '32px',
-            border: '1px solid rgba(22,51,135,0.3)',
+            border: '1px solid color-mix(in srgb, var(--unis-primary) 30%, transparent)',
             marginTop: '20px',
             textAlign: 'center',
           }}>
             <div style={{ marginBottom: '16px' }}>
               <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-                <circle cx="28" cy="28" r="26" stroke="#163387" strokeWidth="2" fill="rgba(22,51,135,0.15)" />
-                <path d="M28 16v12l7 3.5" stroke="#163387" strokeWidth="2.5" strokeLinecap="round" />
+                <circle cx="28" cy="28" r="26" strokeWidth="2" style={{ stroke: 'var(--unis-primary-2)', fill: 'color-mix(in srgb, var(--unis-primary) 15%, transparent)' }} />
+                <path d="M28 16v12l7 3.5" strokeWidth="2.5" strokeLinecap="round" style={{ stroke: 'var(--unis-primary-2)' }} />
               </svg>
             </div>
             {waitlistInfo.held ? (
@@ -235,7 +227,7 @@ const Login = () => {
               background: '#0a0a0c',
               borderRadius: '12px',
               padding: '20px',
-              border: '1px solid rgba(22,51,135,0.4)',
+              border: '1px solid color-mix(in srgb, var(--unis-primary) 40%, transparent)',
               marginBottom: '20px',
             }}>
               <div style={{
@@ -258,7 +250,7 @@ const Login = () => {
                 <span style={{ color: '#A9A9A9', fontSize: '13px' }}>
                   {waitlistInfo.regionSignupCount} of {waitlistInfo.regionThreshold} signups
                 </span>
-                <span style={{ color: '#163387', fontSize: '13px', fontWeight: '600' }}>
+                <span style={{ color: 'var(--unis-primary-2)', fontSize: '13px', fontWeight: '600' }}>
                   {waitlistProgress}%
                 </span>
               </div>
@@ -270,7 +262,7 @@ const Login = () => {
                 <div style={{
                   width: `${waitlistProgress}%`,
                   height: '100%',
-                  background: 'linear-gradient(90deg, #163387, #2952cc)',
+                  background: 'linear-gradient(90deg, var(--unis-primary), var(--unis-primary-2))',
                   borderRadius: '4px',
                   transition: 'width 0.6s ease',
                 }} />
@@ -281,7 +273,7 @@ const Login = () => {
               onClick={handleCopyCode}
               style={{
                 width: '100%', padding: '14px',
-                background: '#163387', color: '#fff', border: 'none',
+                background: 'var(--unis-primary)', color: '#fff', border: 'none',
                 borderRadius: '10px', fontSize: '15px', fontWeight: '600',
                 cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
               }}

@@ -13,7 +13,7 @@ $text-primary: #e8e6e1;
 $text-secondary: #9a978f;
 $text-tertiary: #5f5d58;
 $unis-blue: var(--unis-primary);
-$accent-blue-dim: rgba(74, 143, 231, 0.15);
+$accent-blue-dim: color-mix(in srgb, var(--unis-primary-2) 15%, transparent);
 $accent-red: #e24b4b;
 $border-default: rgba(255, 255, 255, 0.06);
 $border-hover: rgba(255, 255, 255, 0.12);

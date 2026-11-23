@@ -26,7 +26,7 @@ $text-dim: #6f7887;
 // Level / stream accent tones. These are semantic (they identify referral
 // depth, not brand), so they stay fixed across themes — but they live here as
 // classes instead of inline style objects in the JSX.
-$tone-blue: #3b82f6;
+$tone-blue: var(--unis-primary-2);
 $tone-violet: #8b5cf6;
 $tone-cyan: #06b6d4;
 $tone-purple: #a855f7;
@@ -142,7 +142,7 @@ $tone-gold: #f59e0b;
   width: 48px; height: 48px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   &.card-icon-green { background: rgba(34, 197, 94, 0.15); color: $tone-green; }
-  &.card-icon-blue { background: rgba(59, 130, 246, 0.15); color: $tone-blue; }
+  &.card-icon-blue { background: color-mix(in srgb, var(--unis-primary-2) 15%, transparent); color: $tone-blue; }
   &.card-icon-purple { background: rgba(168, 85, 247, 0.15); color: $tone-purple; }
   &.card-icon-gold { background: rgba(245, 158, 11, 0.15); color: $tone-gold; }
 }
@@ -549,7 +549,7 @@ $tone-gold: #f59e0b;
   font-size: 0.88rem; text-align: center; min-width: 200px;
   // ★ theme: the "YOU" node was hardcoded rgba(22,51,135,.3) / #163387
   &.chain-you { background: $unis-blue-glow; border: 2px solid $unis-blue; color: #fff; font-size: 1rem; }
-  &.chain-l1 { background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.3); color: #d1d5db; }
+  &.chain-l1 { background: color-mix(in srgb, var(--unis-primary-2) 12%, transparent); border: 1px solid color-mix(in srgb, var(--unis-primary-2) 30%, transparent); color: #d1d5db; }
   &.chain-l2 { background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.3); color: #d1d5db; }
   &.chain-l3 { background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.3); color: #d1d5db; }
 }

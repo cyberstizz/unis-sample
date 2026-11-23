@@ -49,12 +49,12 @@ describe('CookiePolicy', () => {
 
     const internalPrivacyLinks = screen
       .getAllByRole('link', { name: /^privacy policy$/i })
-      .filter((link) => link.getAttribute('href') === '/privacy-policy');
+      .filter((link) => link.getAttribute('href') === '/privacy'); // the app's route (App.jsx)
 
     expect(internalPrivacyLinks.length).toBeGreaterThan(0);
 
     internalPrivacyLinks.forEach((link) => {
-      expect(link).toHaveAttribute('href', '/privacy-policy');
+      expect(link).toHaveAttribute('href', '/privacy');
     });
   });
 

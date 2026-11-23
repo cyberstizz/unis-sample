@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useCallback } from 'react';
+import React, { useState, useContext, useEffect, useCallback, useRef } from 'react';
 import { PlayerContext } from './context/playercontext'; 
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
@@ -32,6 +32,7 @@ import { FeedSpotlight, TodayRace, DayTiles, MoversCard, FollowingDrops } from '
 import { SplashHold } from './boot/bootSplash';
 import ArtistOfWeekCard from './ArtistOfWeekCard';
 import SongMenu, { KebabIcon, anchorFromEvent, useSongMenuGestures, hasSongMenu } from './SongMenu'; // ★ song ⋮ menu
+import useFitLine from './hooks/useFitLine';
 import './feed.scss';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -513,6 +514,10 @@ const Feed = () => {
   const selectedJurisdictionName = ACTIVE_JURISDICTIONS.find(
     (j) => j.id === selectedJurisdictionId
   )?.name || 'Your Area';
+
+  // "Trending Today in [Downtown Harlem ▾]" stays on one line (useFitLine).
+  const trendingTitleRef = useRef(null);
+  useFitLine(trendingTitleRef, `${selectedJurisdictionName}|${activeLens}`);
 
   const normalizeMedia = useCallback((items) => (items || []).map(item => ({
     id: item.songId || item.videoId,
@@ -1028,8 +1033,9 @@ const Feed = () => {
               {/* ═══════ TRENDING TODAY ═══════ */}
               <section className={`feed-section ${animate ? 'animate' : ''}`}>
                 <div className="section-header">
-                  <h2 className="section-title">
-                    Trending Today in{' '}
+                  {/* One line for any jurisdiction name (see useFitLine). */}
+                  <h2 className="section-title section-title--fit" ref={trendingTitleRef}>
+                    <span className="section-title__lead">Trending Today in</span>
                     <JurisdictionSelect
                       jurisdictions={ACTIVE_JURISDICTIONS}
                       value={selectedJurisdictionId}

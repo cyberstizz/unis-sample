@@ -137,7 +137,15 @@ describe('CreateAccountWizard', () => {
     );
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
+    // Leaving "Your Hood" asks one honest question first (HarlemCheckSheet).
+    await passHarlemCheck(user, 'Uptown Harlem');
     await screen.findByText(/How Will You Use Unis/i);
+  }
+
+  async function passHarlemCheck(user, area) {
+    await screen.findByRole('heading', { name: new RegExp(`Do you live in ${area}`, 'i') });
+    await user.click(screen.getByRole('checkbox', { name: `I live in ${area}` }));
+    await user.click(screen.getByRole('button', { name: 'Yes, I live here' }));
   }
 
   // ========================================================================
@@ -254,13 +262,22 @@ describe('CreateAccountWizard', () => {
       expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
     });
 
-    it('routes to the national waitlist from the welcome prompt', async () => {
+    it('sends people from outside Harlem to the visitor sign-up', async () => {
       const onClose = vi.fn();
       renderWithProviders(<CreateAccountWizard show={true} onClose={onClose} />);
       const user = userEvent.setup();
-      await user.click(screen.getByText(/Join the national waitlist/i));
+      await user.click(screen.getByRole('button', { name: /not from harlem\? use unis as a visitor/i }));
       expect(onClose).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith('/waitlist');
+      expect(mockNavigate).toHaveBeenCalledWith('/waitlist/join');
+    });
+
+    it('carries the referral code typed so far to the visitor sign-up', async () => {
+      const onClose = vi.fn();
+      renderWithProviders(<CreateAccountWizard show={true} onClose={onClose} />);
+      const user = userEvent.setup();
+      await user.type(screen.getByPlaceholderText(/HARLEM-JOHN/i), 'goodcode');
+      await user.click(screen.getByRole('button', { name: /not from harlem\? use unis as a visitor/i }));
+      expect(mockNavigate).toHaveBeenCalledWith('/waitlist/join?ref=GOODCODE');
     });
   });
 
@@ -400,9 +417,11 @@ describe('CreateAccountWizard', () => {
   });
 
   // ========================================================================
-  // Location step — Nominatim geocode (mock global.fetch)
+  // Location step — the address is checked on the server
+  // (POST /v1/waitlist/home-area, US Census geocoder), then "Your Hood" asks
+  // one honest question before moving on (HarlemCheckSheet).
   // ========================================================================
-  describe('location step — geocode', () => {
+  describe('location step — address lookup and the Harlem check', () => {
     async function gotoLocation(user) {
       await advanceToBasicInfo(user);
       await fillBasicInfo(user);
@@ -414,94 +433,95 @@ describe('CreateAccountWizard', () => {
       await screen.findByText(/Where Are You From/i);
     }
 
-    it('uptown: lat above the dividing line resolves to Uptown Harlem', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValue({
-        json: async () => [{ lat: '40.8200', lon: '-73.9400' }],
-      });
+    const homeArea = (reply) => server.use(
+      http.post(`${API}/v1/waitlist/home-area`, () => reply())
+    );
 
+    async function lookUp(user, address) {
+      await user.type(screen.getByPlaceholderText(/125th St/i), address);
+      await user.click(screen.getByRole('button', { name: /Find My Jurisdiction/i }));
+    }
+
+    it.each([
+      ['uptown-harlem', 'Uptown Harlem'],
+      ['downtown-harlem', 'Downtown Harlem'],
+    ])('a Harlem address resolves to its area (%s)', async (area, areaName) => {
+      homeArea(() => HttpResponse.json({ found: true, inHarlem: true, area, areaName }));
       renderWithProviders(<CreateAccountWizard show={true} onClose={() => {}} />);
       const user = userEvent.setup();
       await gotoLocation(user);
-
-      await user.type(screen.getByPlaceholderText(/125th St/i), '125 W 125th St');
-      await user.click(screen.getByRole('button', { name: /Find My Jurisdiction/i }));
-
-      await waitFor(
-        () => expect(screen.getByText(/Found: Uptown Harlem/i)).toBeInTheDocument(),
-        { timeout: 3000 }
-      );
+      await lookUp(user, '125 W 125th St');
+      expect(await screen.findByText(`Found: ${areaName}`)).toBeInTheDocument();
     });
 
-    it('downtown: lat below the dividing line resolves to Downtown Harlem', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValue({
-        json: async () => [{ lat: '40.8000', lon: '-73.9400' }],
-      });
-
+    it('an address outside Harlem offers the visitor sign-up, and "Try again" dismisses it', async () => {
+      homeArea(() => HttpResponse.json({ found: true, inHarlem: false }));
       renderWithProviders(<CreateAccountWizard show={true} onClose={() => {}} />);
       const user = userEvent.setup();
       await gotoLocation(user);
+      await lookUp(user, 'Los Angeles');
+      expect(await screen.findByText(/That address isn.t in Harlem/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Join from my city' })).toBeInTheDocument();
 
-      await user.type(screen.getByPlaceholderText(/125th St/i), '110 St');
-      await user.click(screen.getByRole('button', { name: /Find My Jurisdiction/i }));
-
-      await waitFor(
-        () => expect(screen.getByText(/Found: Downtown Harlem/i)).toBeInTheDocument(),
-        { timeout: 3000 }
-      );
+      await user.click(screen.getByRole('button', { name: /I do live in Harlem/i }));
+      expect(screen.queryByText(/That address isn.t in Harlem/i)).not.toBeInTheDocument();
     });
 
-    it('out-of-bounds address surfaces the national-waitlist prompt', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValue({
-        json: async () => [{ lat: '34.0522', lon: '-118.2437' }], // Los Angeles
-      });
-
+    it('says when the address can’t be found', async () => {
+      homeArea(() => HttpResponse.json({ found: false }));
       renderWithProviders(<CreateAccountWizard show={true} onClose={() => {}} />);
       const user = userEvent.setup();
       await gotoLocation(user);
-
-      await user.type(screen.getByPlaceholderText(/125th St/i), 'Los Angeles');
-      await user.click(screen.getByRole('button', { name: /Find My Jurisdiction/i }));
-
-      await waitFor(
-        () => expect(screen.getByText(/Unis isn't in your area yet/i)).toBeInTheDocument(),
-        { timeout: 3000 }
-      );
-
-      // "let me try again" dismisses the prompt
-      await user.click(screen.getByText(/I do live in Harlem/i));
-      expect(screen.queryByText(/Unis isn't in your area yet/i)).not.toBeInTheDocument();
+      await lookUp(user, 'asdfqwer');
+      expect(await screen.findByText(/couldn.t find that address/i)).toBeInTheDocument();
     });
 
-    it('shows "Address not found" when geocode returns no matches', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValue({ json: async () => [] });
-
+    it('falls back to choosing by hand when the lookup fails', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      homeArea(() => HttpResponse.json({}, { status: 503 }));
       renderWithProviders(<CreateAccountWizard show={true} onClose={() => {}} />);
       const user = userEvent.setup();
       await gotoLocation(user);
-
-      await user.type(screen.getByPlaceholderText(/125th St/i), 'asdfqwer');
-      await user.click(screen.getByRole('button', { name: /Find My Jurisdiction/i }));
-
-      await waitFor(
-        () => expect(screen.getByText(/Address not found/i)).toBeInTheDocument(),
-        { timeout: 3000 }
-      );
+      await lookUp(user, '125 St');
+      expect(await screen.findByText(/couldn.t check that address right now/i)).toBeInTheDocument();
     });
 
-    it('shows a verify error when the geocode request throws', async () => {
-      vi.spyOn(global, 'fetch').mockRejectedValue(new Error('network down'));
-
+    it('Continue asks "Do you live in…?" and only goes on once it is ticked', async () => {
       renderWithProviders(<CreateAccountWizard show={true} onClose={() => {}} />);
       const user = userEvent.setup();
       await gotoLocation(user);
+      await user.selectOptions(screen.getByRole('combobox'), 'Downtown Harlem');
+      await user.click(screen.getByRole('button', { name: /continue/i }));
 
-      await user.type(screen.getByPlaceholderText(/125th St/i), '125 St');
-      await user.click(screen.getByRole('button', { name: /Find My Jurisdiction/i }));
+      await screen.findByRole('heading', { name: /Do you live in Downtown Harlem/i });
+      expect(screen.getByRole('button', { name: 'Yes, I live here' })).toBeDisabled();
+      await user.click(screen.getByRole('checkbox', { name: 'I live in Downtown Harlem' }));
+      await user.click(screen.getByRole('button', { name: 'Yes, I live here' }));
+      expect(await screen.findByText(/How Will You Use Unis/i)).toBeInTheDocument();
+    });
 
-      await waitFor(
-        () => expect(screen.getByText(/Could not verify location/i)).toBeInTheDocument(),
-        { timeout: 3000 }
-      );
+    it('"Change area" goes back to the area without moving on', async () => {
+      renderWithProviders(<CreateAccountWizard show={true} onClose={() => {}} />);
+      const user = userEvent.setup();
+      await gotoLocation(user);
+      await user.selectOptions(screen.getByRole('combobox'), 'Uptown Harlem');
+      await user.click(screen.getByRole('button', { name: /continue/i }));
+      await user.click(await screen.findByRole('button', { name: 'Change area' }));
+      expect(screen.queryByRole('heading', { name: /Do you live in/i })).not.toBeInTheDocument();
+      expect(screen.getByText(/Where Are You From/i)).toBeInTheDocument();
+    });
+
+    it('"Join from my city" leads to the visitor sign-up with the referral code', async () => {
+      const onClose = vi.fn();
+      renderWithProviders(<CreateAccountWizard show={true} onClose={onClose} />);
+      const user = userEvent.setup();
+      await gotoLocation(user);
+      await user.selectOptions(screen.getByRole('combobox'), 'Uptown Harlem');
+      await user.click(screen.getByRole('button', { name: /continue/i }));
+      await user.click(await screen.findByRole('button', { name: 'Join from my city' }));
+      await user.click(screen.getByRole('button', { name: 'Continue to visitor sign-up' }));
+      expect(onClose).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith('/waitlist/join?ref=GOODCODE');
     });
   });
 

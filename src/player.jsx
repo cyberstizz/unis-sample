@@ -497,7 +497,7 @@ const Player = () => {
     try {
       const res = await apiCall({
         method: wasLiked ? 'delete' : 'post',
-        url: `/v1/media/song/${songId}/like?userId=${userId}`,
+        url: `/v1/media/song/${songId}/like`, // the server takes the user from the login
       });
 
       if (res.data.success) {

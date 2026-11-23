@@ -40,9 +40,9 @@
 
   .usb-container--focused & {
     background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(29, 66, 168, 0.45);
+    border-color: color-mix(in srgb, var(--unis-primary) 45%, transparent);
     box-shadow:
-      0 0 0 3px rgba(29, 66, 168, 0.08),
+      0 0 0 3px color-mix(in srgb, var(--unis-primary) 8%, transparent),
       0 2px 16px rgba(0, 0, 0, 0.25);
   }
 }
@@ -121,7 +121,7 @@ input.usb-field {
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.08);
-  border-top-color: #1d42a8;
+  border-top-color: var(--unis-primary-hover);
   border-radius: 50%;
   animation: usb-spin 0.6s linear infinite;
   flex-shrink: 0;
@@ -194,7 +194,7 @@ input.usb-field {
   padding: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-  &:hover { color: #3a6fd8; }
+  &:hover { color: var(--unis-primary); }
 }
 
 // ── Result rows ─────────────────────────────────────────────────
@@ -300,8 +300,8 @@ input.usb-field {
   flex-shrink: 0;
 
   &.usb-badge--artist {
-    color: #7cb3ff;
-    background: rgba(29, 66, 168, 0.2);
+    color: var(--unis-primary-2);
+    background: color-mix(in srgb, var(--unis-primary) 20%, transparent);
   }
   &.usb-badge--song {
     color: #a0d995;
@@ -360,12 +360,12 @@ input.usb-field {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
   font-weight: 500;
-  color: #1d42a8;
+  color: var(--unis-primary-hover);
   transition: background 0.15s ease, color 0.15s ease;
 
   &:hover {
     background: rgba(255, 255, 255, 0.05);
-    color: #3a6fd8;
+    color: var(--unis-primary);
   }
 }
 

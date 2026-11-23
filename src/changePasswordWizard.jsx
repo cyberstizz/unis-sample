@@ -147,7 +147,7 @@ const ChangePasswordWizard = ({ show, onClose }) => {
               <button onClick={handleSubmit} disabled={loading}
                 style={{
                   flex: 1, padding: '12px', borderRadius: '8px',
-                  background: '#163387', color: '#fff', border: 'none',
+                  background: 'var(--unis-primary)', color: '#fff', border: 'none',
                   cursor: loading ? 'not-allowed' : 'pointer',
                   opacity: loading ? 0.6 : 1
                 }}>
@@ -166,7 +166,7 @@ const ChangePasswordWizard = ({ show, onClose }) => {
             <button onClick={handleClose}
               style={{
                 width: '100%', padding: '12px', borderRadius: '8px',
-                background: '#163387', color: '#fff', border: 'none', cursor: 'pointer'
+                background: 'var(--unis-primary)', color: '#fff', border: 'none', cursor: 'pointer'
               }}>
               Done
             </button>

@@ -46,7 +46,7 @@ const buildActiveMessage = (leader, totalVotes, jurisdictionName) => {
     icon: '🗳️',
     title: 'Polls Are Open',
     message: `${totalVotes} vote${totalVotes === 1 ? '' : 's'} cast so far today in ${jurisdictionName}. Every vote counts — make yours heard!`,
-    color: '#4ea8f5',
+    color: 'var(--unis-primary-2)',
     artwork: leader?.artwork || null,
   };
 };
@@ -68,7 +68,7 @@ const buildFallbackMessage = () => {
     icon: '🎵',
     title: 'Welcome to Unis',
     message: 'Check out the leaderboards and support your favorite local artists.',
-    color: '#163387',
+    color: 'var(--unis-primary)',
     artwork: null,
   };
 };

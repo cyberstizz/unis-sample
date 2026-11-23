@@ -180,7 +180,7 @@ const VideoPage = () => {
       playsToday: prev.playsToday + 1,
     } : prev);
 
-    apiCall({ method: 'post', url: `/v1/media/video/${video.id}/play?userId=${userId}` })
+    apiCall({ method: 'post', url: `/v1/media/video/${video.id}/play` }) // user from the login
       .catch(err => {
         console.error('Failed to track video play:', err);
         hasTrackedPlayRef.current = false;

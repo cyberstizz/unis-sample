@@ -16,7 +16,7 @@ $gradient-purple: #f97316;
 $gradient-pink: #ec4899;
 $gradient-orange: #f97316;
 $gradient-teal: #14b8a6;
-$gradient-blue: #3b82f6;
+$gradient-blue: var(--unis-primary-2);
 $gradient-green: #22c55e;
 $error-red: #ef4444;
 $success-green: #22c55e;
@@ -24,11 +24,11 @@ $warning-amber: #f59e0b;
 
 // Step-specific gradient themes
 $step-gradients: (
-  1: linear-gradient(135deg, $unis-blue 0%, #4a90d9 50%, #6bb3f0 100%),
+  1: linear-gradient(135deg, $unis-blue 0%, var(--unis-primary-2) 50%, var(--unis-primary-2) 100%),
   2: linear-gradient(135deg, $unis-blue 0%, $gradient-teal 100%),
-  3: linear-gradient(135deg, $unis-blue 0%, #4a90d9 100%),
+  3: linear-gradient(135deg, $unis-blue 0%, var(--unis-primary-2) 100%),
   4: linear-gradient(135deg, $gradient-teal 0%, $gradient-green 100%),
-  5: linear-gradient(135deg, $unis-blue 0%, #4a90d9 100%),
+  5: linear-gradient(135deg, $unis-blue 0%, var(--unis-primary-2) 100%),
   6: linear-gradient(135deg, $unis-blue 0%, $gradient-teal 100%),
   7: linear-gradient(135deg, $gradient-blue 0%, $unis-blue 100%),
   8: linear-gradient(135deg, $gradient-green 0%, $gradient-teal 50%, $unis-blue 100%)
@@ -221,7 +221,7 @@ $step-gradients: (
     inset: 0;
     padding: 2px;
     border-radius: 24px;
-    background: linear-gradient(135deg, $unis-blue, #4a90d9, #6bb3f0, $gradient-teal);
+    background: linear-gradient(135deg, $unis-blue, var(--unis-primary-2), var(--unis-primary-2), $gradient-teal);
     background-size: 400% 400%;
     animation: gradientShift 8s ease infinite;
     -webkit-mask: 
@@ -280,7 +280,7 @@ $step-gradients: (
   // ★ Fixed brand backdrop — no longer tied to --unis-primary, so the
   //   signup header can never inherit the last user's theme color.
   background:
-    radial-gradient(120% 130% at 50% 125%, rgba(41, 82, 204, 0.30), transparent 60%),
+    radial-gradient(120% 130% at 50% 125%, color-mix(in srgb, var(--unis-primary) 30%, transparent), transparent 60%),
     linear-gradient(160deg, #0e1838 0%, #0a0d1c 55%, #07090f 100%);
 
   // ★ Ambient aurora (replaces the old white/black wave pseudo-elements)
@@ -296,12 +296,12 @@ $step-gradients: (
     pointer-events: none;
   }
   &::before {
-    background: radial-gradient(circle, rgba(41, 82, 204, 0.9), transparent 70%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--unis-primary) 90%, transparent), transparent 70%);
     top: -130px; left: -70px;
     animation: auroraDriftA 16s ease-in-out infinite;
   }
   &::after {
-    background: radial-gradient(circle, rgba(107, 138, 255, 0.65), transparent 70%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--unis-primary-2) 65%, transparent), transparent 70%);
     bottom: -150px; right: -70px;
     animation: auroraDriftB 20s ease-in-out infinite;
   }
@@ -396,7 +396,7 @@ $step-gradients: (
     }
     
     &.active {
-      background: linear-gradient(90deg, $unis-blue, #4a90d9);
+      background: linear-gradient(90deg, $unis-blue, var(--unis-primary-2));
       animation: shimmer 2s linear infinite;
       background-size: 200% 100%;
     }
@@ -1302,13 +1302,13 @@ $step-gradients: (
   }
   
     .btn-primary {
-    background: linear-gradient(135deg, #2952cc, #163387);
+    background: linear-gradient(135deg, var(--unis-primary), var(--unis-primary));
     border: none;
     color: $accent-white;
     
     &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(22, 51, 135, 0.45)
+      box-shadow: 0 10px 30px color-mix(in srgb, var(--unis-primary) 45%, transparent)
     }
     
     &.loading {

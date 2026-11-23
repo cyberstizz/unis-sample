@@ -9,13 +9,13 @@
 
 // ── Design Tokens ────────────────────────────────────────────
 $unis-blue: var(--unis-primary);
-$unis-blue-light: #1e44a8;
-$unis-blue-glow: rgba(22, 51, 135, 0.35);
+$unis-blue-light: var(--unis-primary);
+$unis-blue-glow: color-mix(in srgb, var(--unis-primary) 35%, transparent);
 $card-bg: #111111;
 $surface-dim: rgba(255, 255, 255, 0.04);
 $border-dim: rgba(255, 255, 255, 0.08);
 $border-hover: rgba(255, 255, 255, 0.12);
-$border-active: rgba(22, 51, 135, 0.5);
+$border-active: color-mix(in srgb, var(--unis-primary) 50%, transparent);
 $text-white: #ffffff;
 $text-silver: #c0c0c0;
 $text-gray: #aaaaaa;

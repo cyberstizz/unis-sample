@@ -40,8 +40,8 @@ export const OPEN_PATHS = [
 //   VITE_LAUNCH_AT unset (or not a real date) → no countdown, and the page
 //     says "Opening soon in Harlem". This is the setting until the launch
 //     gates are close to being met.
-//   VITE_LAUNCH_AT set to an ISO date (e.g. 2026-12-05T00:00:00-05:00, which
-//     is midnight in Harlem) → the "Launching December 5th" line and the
+//   VITE_LAUNCH_AT set to an ISO date (launch is 2027-01-01T00:00:00-05:00,
+//     midnight in Harlem) → the "Launching January 1st" line and the
 //     countdown come back. Set it in Netlify and redeploy; no code change needed.
 export function getLaunchAt() {
   const raw = String(import.meta.env.VITE_LAUNCH_AT ?? '').trim();
@@ -50,7 +50,7 @@ export function getLaunchAt() {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-// "December 5th", in Harlem time, or null when no launch date is set.
+// "January 1st", in Harlem time, or null when no launch date is set.
 export function getLaunchLabel() {
   const launchAt = getLaunchAt();
   if (launchAt === null) return null;

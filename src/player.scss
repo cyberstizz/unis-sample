@@ -23,7 +23,7 @@ $unis-silver: #918f8f;
 $text-silver: #C0C0C0;
 $text-gray: #A9A9A9;
 $accent-white: #FFFFFF;
-$accent: #163387;
+$accent: var(--unis-primary);
 $accent-hover: $unis-blue;
 $player-height: 80px;
 $radius-sm: 6px;

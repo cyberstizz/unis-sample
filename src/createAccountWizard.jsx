@@ -621,27 +621,17 @@ const CreateAccountWizard = ({ show, onClose, onSuccess, prelaunch = false, init
       }
     };
   
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    
-    const updateProgress = () => {
-      if (audio.duration) setAudioProgress((audio.currentTime / audio.duration) * 100);
-    };
-    
-    const handleEnded = () => {
-      setPlayingArtistId(null);
-      setAudioProgress(0);
-    };
-    
-    audio.addEventListener('timeupdate', updateProgress);
-    audio.addEventListener('ended', handleEnded);
-    
-    return () => {
-      audio.removeEventListener('timeupdate', updateProgress);
-      audio.removeEventListener('ended', handleEnded);
-    };
-  }, []);
+  // Preview progress and reset-on-end are handled by onTimeUpdate/onEnded on
+  // the <audio> element itself (QA finding 10c: the old mount-time effect ran
+  // before the element existed, so neither ever worked).
+  const handlePreviewTime = (e) => {
+    const audio = e.currentTarget;
+    if (audio.duration) setAudioProgress((audio.currentTime / audio.duration) * 100);
+  };
+  const handlePreviewEnded = () => {
+    setPlayingArtistId(null);
+    setAudioProgress(0);
+  };
   
   
   // ============================================
@@ -1819,7 +1809,7 @@ const handleSubmit = async () => {
               )}
             </div>
             
-            <audio ref={audioRef} />
+            <audio ref={audioRef} onTimeUpdate={handlePreviewTime} onEnded={handlePreviewEnded} />
             
             {playingArtistId && (
               <div className="mini-player">

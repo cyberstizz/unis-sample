@@ -50,7 +50,11 @@ export default function LyricsLines({
     const el = lineRefs.current[Math.max(index, 0)];
     if (!box || !el) return;
     const top = el.offsetTop - box.clientHeight * 0.36 + el.offsetHeight / 2;
-    box.scrollTo({ top: Math.max(0, top), behavior: reduced ? 'auto' : 'smooth' });
+    if (typeof box.scrollTo === 'function') {
+      box.scrollTo({ top: Math.max(0, top), behavior: reduced ? 'auto' : 'smooth' });
+    } else {
+      box.scrollTop = Math.max(0, top);
+    }
   }, [index, away, timed, reduced]);
 
   // Hand scrolling (wheel, drag, keys) pauses following.

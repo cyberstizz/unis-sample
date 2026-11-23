@@ -88,8 +88,8 @@ $surface-raised: #16161c;
   justify-content: center;
   margin-bottom: 20px;
   font-size: 26px;
-  background: rgba(78, 168, 245, 0.1);
-  border: 1px solid rgba(78, 168, 245, 0.15);
+  background: color-mix(in srgb, var(--unis-primary-2) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--unis-primary-2) 15%, transparent);
 
   // Stagger animation
   opacity: 0;
@@ -110,7 +110,7 @@ $surface-raised: #16161c;
   font-family: 'Caveat', cursive;
   font-weight: 700;
   font-size: 20px;
-  color: #4ea8f5;
+  color: var(--unis-primary-2);
   margin: 0 0 4px;
   letter-spacing: 0.02em;
 
@@ -203,7 +203,7 @@ $surface-raised: #16161c;
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
-  background: rgba(78, 168, 245, 0.08);
+  background: color-mix(in srgb, var(--unis-primary-2) 8%, transparent);
 }
 
 .ags-perk-text {
@@ -231,13 +231,13 @@ $surface-raised: #16161c;
   gap: 10px;
   padding: 12px 16px;
   border-radius: 12px;
-  background: rgba(78, 168, 245, 0.06);
-  border: 1px solid rgba(78, 168, 245, 0.1);
+  background: color-mix(in srgb, var(--unis-primary-2) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--unis-primary-2) 10%, transparent);
   margin-bottom: 24px;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 13px;
   font-weight: 500;
-  color: #4ea8f5;
+  color: var(--unis-primary-2);
 
   opacity: 0;
   transition: opacity 0.4s ease;
@@ -293,7 +293,7 @@ $surface-raised: #16161c;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(22, 51, 135, 0.4);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--unis-primary) 40%, transparent);
   }
 
   &:active {

@@ -5,7 +5,7 @@ $text:       #f4f6fb;
 $text-muted: #9aa3b2;
 $border:     rgba(255, 255, 255, 0.10);
 $glass:      rgba(255, 255, 255, 0.045);
-$blue:       #6b8aff;
+$blue:       var(--unis-primary-2);
 
 .tfa {
   display: flex;
@@ -133,5 +133,5 @@ $blue:       #6b8aff;
   color: $text;
   cursor: pointer;
 
-  input { width: 18px; height: 18px; accent-color: #2952cc; }
+  input { width: 18px; height: 18px; accent-color: var(--unis-primary); }
 }

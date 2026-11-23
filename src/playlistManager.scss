@@ -153,8 +153,8 @@ $unis-blue: var(--unis-primary);
   align-items: flex-start;
   gap: 8px;
   padding: 10px 16px;
-  background: rgba(22, 51, 135, 0.15);
-  border-bottom: 1px solid rgba(22, 51, 135, 0.2);
+  background: color-mix(in srgb, var(--unis-primary) 15%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--unis-primary) 20%, transparent);
   font-size: 12px;
   color: rgba(255, 255, 255, 0.6);
   line-height: 1.4;
@@ -162,7 +162,7 @@ $unis-blue: var(--unis-primary);
   svg {
     flex-shrink: 0;
     margin-top: 1px;
-    color: #6b8cff;
+    color: var(--unis-primary-2);
   }
  
   span {
@@ -224,18 +224,18 @@ $unis-blue: var(--unis-primary);
   gap: 8px;
   width: 100%;
   padding: 10px 14px;
-  background: rgba(22, 51, 135, 0.2);
-  border: 1px dashed rgba(22, 51, 135, 0.5);
+  background: color-mix(in srgb, var(--unis-primary) 20%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--unis-primary) 50%, transparent);
   border-radius: 8px;
-  color: #6b8cff;
+  color: var(--unis-primary-2);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
  
   &:hover {
-    background: rgba(22, 51, 135, 0.3);
-    border-color: rgba(22, 51, 135, 0.7);
+    background: color-mix(in srgb, var(--unis-primary) 30%, transparent);
+    border-color: color-mix(in srgb, var(--unis-primary) 70%, transparent);
   }
 }
  
@@ -258,7 +258,7 @@ $unis-blue: var(--unis-primary);
     outline: none;
     box-sizing: border-box;
  
-    &:focus { border-color: rgba(22, 51, 135, 0.6); }
+    &:focus { border-color: color-mix(in srgb, var(--unis-primary) 60%, transparent); }
     &::placeholder { color: rgba(255, 255, 255, 0.3); }
   }
 }
@@ -282,9 +282,9 @@ $unis-blue: var(--unis-primary);
     }
  
     &:last-child {
-      background: #163387;
+      background: var(--unis-primary);
       color: #fff;
-      &:hover { background: #1e44a8; }
+      &:hover { background: var(--unis-primary); }
       &:disabled { opacity: 0.4; cursor: not-allowed; }
     }
   }
@@ -324,7 +324,7 @@ $unis-blue: var(--unis-primary);
  
   &.pm-tab-active {
     color: #fff;
-    border-bottom-color: #6b8cff;
+    border-bottom-color: var(--unis-primary-2);
   }
 }
  
@@ -341,8 +341,8 @@ $unis-blue: var(--unis-primary);
 }
  
 .pm-badge-community {
-  background: rgba(107, 140, 255, 0.15);
-  color: #6b8cff;
+  background: color-mix(in srgb, var(--unis-primary-2) 15%, transparent);
+  color: var(--unis-primary-2);
 }
  
 .pm-badge-official {
@@ -382,7 +382,7 @@ $unis-blue: var(--unis-primary);
   position: relative;
  
   &.active {
-    color: #6b8cff;
+    color: var(--unis-primary-2);
   }
 }
  
@@ -390,7 +390,7 @@ $unis-blue: var(--unis-primary);
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #163387;
+  background: var(--unis-primary);
   color: #fff;
   font-size: 9px;
   font-weight: 700;
@@ -428,7 +428,7 @@ $unis-blue: var(--unis-primary);
   min-height: 56px;
  
   &:hover {
-    border-color: rgba(74, 125, 255, 0.5);
+    border-color: color-mix(in srgb, var(--unis-primary-2) 50%, transparent);
     color: rgba(255, 255, 255, 0.8);
   }
 }
@@ -483,9 +483,9 @@ $unis-blue: var(--unis-primary);
   }
  
   &.active {
-    background: rgba(74, 125, 255, 0.15);
-    border-color: #4a7dff;
-    color: #4a7dff;
+    background: color-mix(in srgb, var(--unis-primary-2) 15%, transparent);
+    border-color: var(--unis-primary-2);
+    color: var(--unis-primary-2);
   }
 }
  

@@ -146,22 +146,36 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
 .fm-spot {
   margin-bottom: 28px;
 
+  // Always one line: useFitLine lowers --fit for long jurisdiction names
+  // (Downtown Harlem), then the name ellipsizes if it still won't fit.
   &__headline {
+    --fit-base: 30px;
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
     margin: 0 2px 16px;
-    font-size: 30px;
-    line-height: 1;
+    font-size: calc(var(--fit-base) * var(--fit, 1));
+    line-height: 1.12;
     font-weight: 800;
     letter-spacing: -0.035em;
+    white-space: nowrap;
+    overflow: hidden;
 
     em {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
       font-family: var(--unis-font-italic);
       font-style: italic;
       font-weight: 400;
       font-size: 1.2em;
       letter-spacing: -0.01em;
       color: var(--fm-accent-light);
+      padding-right: 0.08em; // the italic's last letter leans past its box
     }
   }
+
+  &__when { flex: none; }
 
   &__track {
     display: flex;
@@ -529,7 +543,7 @@ $fm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
 
 @media (min-width: 720px) {
   .fm-spot {
-    &__headline { font-size: 36px; }
+    &__headline { --fit-base: 36px; }
     &__slide { height: 248px; }
     &__art { width: 150px; height: 150px; top: 62px; right: 36px; }
     &__title { font-size: 40px; }

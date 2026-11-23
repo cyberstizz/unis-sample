@@ -19,7 +19,7 @@ $accent-blue: var(--unis-primary);
 // Canonical brand default, matching theme.scss's base --unis-primary and
 // artistpage.scss's $ap2-blue-raw. Used ONLY as a var() fallback for guests
 // and any state where the theme token hasn't been set yet.
-$unis-fallback: #163387;
+$unis-fallback: var(--unis-primary);
 // Was `rgba(74, 143, 231, 0.15)` — a hardcoded blue tint that stayed blue no
 // matter which theme the user picked, so every avatar placeholder, Follow
 // button, and lyrics-edit chip on this page silently defied the theme.

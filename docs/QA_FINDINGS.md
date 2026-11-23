@@ -6,6 +6,31 @@
 
 This document records the findings from a code-level investigation of nine QA concerns. Each finding is labeled with severity, has concrete file/line references, and lists the tests that lock it in.
 
+## Status — re-checked against HEAD on November 23, 2026
+
+Every finding below was re-checked against the current code before launch.
+All blockers are closed; most were fixed by the later rebuilds rather than
+patched in place. The original write-ups are kept below for history.
+
+| # | Status | What closed it |
+|---|--------|----------------|
+| 1 | ✅ Closed (superseded) | Earnings no longer come from per-view ad tracking. `POST /earnings/track-view` records nothing; money flows through the Community Share ledger (Oct 2026 earnings model). |
+| 2 | ✅ Closed | `EarningsService` rebuilt: `currentBalance` is lifetime earned minus completed payouts (`getAvailableBalance`), and the monthly totals come from the closed-month ledger. |
+| 3 | ✅ Closed (superseded) | The Player is the only thing that counts a play (gated 15s / 25%, sends `source`, captures `playId`). No page posts its own play any more; the backend takes the listener from the login and ignores `?userId=`. |
+| 4 | ✅ Closed (superseded) | Both old award crons are gone. `RaceCloseScheduler` closes each race at its own local midnight (per-jurisdiction timezones) and records every close in `race_period_closures`. Since Nov 23 it also awards nothing for periods that end before launch day (`UNIS_LAUNCH_DATE`). |
+| 5 | ✅ Closed | `StripeWebhookController` handles `account.updated` (`StripeConnectService.onAccountUpdated`); links use `UNIS_APP_BASE_URL` (default `https://unismusic.com`); payouts follow closed months, paid on the 1st. |
+| 6 | ✅ Closed | `WinnersNotification` reads decided awards from `GET /v1/awards/past`. |
+| 7 | ✅ Closed | Songs are soft-removed (`removeSong`: hidden at once, files purged after 30 days by `RemovedMediaPurgeScheduler`); account deletion follows the Oct 2026 deletion rules. |
+| 8 | ✅ Closed (superseded) | Leaderboards read the live board from `RaceStandingsService` (one ranking formula everywhere); the old join is gone. |
+| 9 | ✅ Closed | Song purchases are recorded by `DownloadService` through the Stripe webhook and reach payouts (payments QA, Oct 2026). |
+| 10a | ✅ Closed | `GENRE_IDS` keeps the legacy aliases for lookup only; the pickers iterate `CANONICAL_GENRES` (rap, rock, pop). |
+| 10b | ✅ Closed | `onSuccess` is wired (the backstage pre-launch path calls it). |
+| 10c | ✅ Closed Nov 23 | The preview player's progress and reset-on-end now use `onTimeUpdate` / `onEnded` on the `<audio>` element itself. |
+| 10d | 🟢 Open (cosmetic) | Still no `--unis-warning` / `--unis-success` tokens; the few status colours stay literal. Not a launch item. |
+| 10e | ✅ By design | Unchanged. |
+
+---
+
 **Severity legend:**
 - 🔴 **BLOCKER** — must fix before launch. Money, data integrity, or correctness is at stake.
 - 🟠 **HIGH** — should fix before launch. Incorrect behavior users will notice.

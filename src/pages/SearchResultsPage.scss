@@ -80,7 +80,7 @@
 
   &.srp-tab--active {
     color: #e8e8ec;
-    border-bottom-color: #1d42a8;
+    border-bottom-color: var(--unis-primary-hover);
   }
 }
 
@@ -203,8 +203,8 @@
   flex-shrink: 0;
 
   &.srp-badge--artist {
-    color: #7cb3ff;
-    background: rgba(29, 66, 168, 0.15);
+    color: var(--unis-primary-2);
+    background: color-mix(in srgb, var(--unis-primary) 15%, transparent);
   }
   &.srp-badge--song {
     color: #a0d995;
@@ -251,7 +251,7 @@
   width: 24px;
   height: 24px;
   border: 2.5px solid rgba(255, 255, 255, 0.06);
-  border-top-color: #1d42a8;
+  border-top-color: var(--unis-primary-hover);
   border-radius: 50%;
   animation: srp-spin 0.6s linear infinite;
 }

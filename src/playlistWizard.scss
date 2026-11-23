@@ -268,11 +268,11 @@ $unis-silver: #918f8f;
     transition: all 0.2s;
 
     &:first-of-type {
-      background: #3b82f6;
+      background: var(--unis-primary-2);
       color: white;
 
       &:hover {
-        background: #2563eb;
+        background: var(--unis-primary-hover);
       }
     }
 
@@ -336,7 +336,7 @@ $unis-silver: #918f8f;
 }
 
 .pw-spinner {
-  color: #3b82f6;
+  color: var(--unis-primary-2);
   font-size: 20px;
   animation: spin 1s linear infinite;
 }
@@ -391,8 +391,8 @@ $unis-silver: #918f8f;
   transition: all 0.15s;
  
   &:hover {
-    background: rgba(22, 51, 135, 0.2);
-    border-color: rgba(22, 51, 135, 0.4);
+    background: color-mix(in srgb, var(--unis-primary) 20%, transparent);
+    border-color: color-mix(in srgb, var(--unis-primary) 40%, transparent);
   }
  
   svg {
@@ -419,7 +419,7 @@ $unis-silver: #918f8f;
  
 /* Queued success message variant */
 .pw-queued {
-  background: rgba(22, 51, 135, 0.3) !important;
+  background: color-mix(in srgb, var(--unis-primary) 30%, transparent) !important;
 }
  
 /* Playlist type icons in list items */
@@ -434,7 +434,7 @@ $unis-silver: #918f8f;
   opacity: 0.5;
 }
  
-.pw-type-community { color: #6b8cff; opacity: 1; }
+.pw-type-community { color: var(--unis-primary-2); opacity: 1; }
 .pw-type-public { color: #10b981; opacity: 0.7; }
 .pw-type-private { color: rgba(255, 255, 255, 0.3); }
  
@@ -446,7 +446,7 @@ $unis-silver: #918f8f;
 }
  
 .pw-community-item {
-  border-left: 2px solid rgba(107, 140, 255, 0.4);
+  border-left: 2px solid color-mix(in srgb, var(--unis-primary-2) 40%, transparent);
 }
  
 .pw-create-form {
@@ -468,7 +468,7 @@ $unis-silver: #918f8f;
     font-size: 14px;
     outline: none;
  
-    &:focus { border-color: #4a7dff; }
+    &:focus { border-color: var(--unis-primary-2); }
     &::placeholder { color: rgba(255, 255, 255, 0.3); }
   }
 }
@@ -499,7 +499,7 @@ $unis-silver: #918f8f;
   min-height: 60px;
  
   &:hover {
-    border-color: rgba(74, 125, 255, 0.5);
+    border-color: color-mix(in srgb, var(--unis-primary-2) 50%, transparent);
     color: rgba(255, 255, 255, 0.8);
   }
 }
@@ -555,9 +555,9 @@ $unis-silver: #918f8f;
   }
  
   &.active {
-    background: rgba(74, 125, 255, 0.15);
-    border-color: #4a7dff;
-    color: #4a7dff;
+    background: color-mix(in srgb, var(--unis-primary-2) 15%, transparent);
+    border-color: var(--unis-primary-2);
+    color: var(--unis-primary-2);
   }
 }
  
@@ -583,10 +583,10 @@ $unis-silver: #918f8f;
     }
  
     &.pw-create-confirm {
-      background: #4a7dff;
+      background: var(--unis-primary-2);
       color: #fff;
  
-      &:hover:not(:disabled) { background: #3a6def; }
+      &:hover:not(:disabled) { background: var(--unis-primary); }
       &:disabled { opacity: 0.4; cursor: not-allowed; }
     }
   }
