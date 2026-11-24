@@ -14,6 +14,18 @@
 //     Play once the page's own Play has scrolled away.
 //   • Same action row grammar as the artist page.
 //
+// v3 "poster front" (Nov 2026, Scout → Sketch → Ship; canvas "Unis playlist &
+// song pages"):
+//   • The cover runs edge to edge (phones) or fades in from the right
+//     (desktop) and melts into a colour taken from it. The page under it takes
+//     that colour, darkened so it never glows (hooks/useArtworkPalette).
+//   • No cover: the first four songs make a full-size 2×2 mosaic. Empty: the
+//     listener's theme colour.
+//   • Scrolling: the art drifts up slower than the page and dims, and the phone
+//     header turns to glass over it (hooks/useArtHero + header.scss).
+//   • Row menus open above every other row, and open upward when the player
+//     would cover them.
+//
 // How it relates to the queue:
 //   • Play (and clicking any row) POURS the playlist into the queue. It never
 //     replaces the queue. If the queue already has songs, the same prompt used
@@ -39,11 +51,13 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Play, Pause, Shuffle, MoreHorizontal, Heart, Clock, Music, GripVertical,
   ListPlus, Disc3, UserRound, Link2, Pencil, ImagePlus, Trash2, ThumbsUp, ThumbsDown,
-  Lock, Globe, EyeOff, MapPin, X, ListMusic, Share2, ArrowLeft, ArrowDown,
+  Lock, Globe, EyeOff, X, ListMusic, Share2, ArrowLeft, ArrowDown,
   ChevronDown, Search, ArrowUpDown,
 } from 'lucide-react';
 import FollowBar from './components/FollowBar';
 import { useFollowBar } from './hooks/useFollowBar';
+import useArtworkPalette from './hooks/useArtworkPalette';
+import useArtHero from './hooks/useArtHero';
 import Layout from './layout';
 import AdSlot from './components/AdSlot';
 import { PlayerContext } from './context/playercontext';
@@ -132,12 +146,20 @@ const SORTS = [
   { id: 'added', label: 'Recently added' },
 ];
 
+// Room between a button and the player (and anything stacked on it) at the
+// bottom of the screen. Row menus open upward when there isn't enough.
+const ROW_MENU_ROOM = 240;
+const roomBelow = (el) => {
+  const stack = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--unp-stack')) || 0;
+  return window.innerHeight - stack - el.getBoundingClientRect().bottom;
+};
+
 // ============================================================================
 // TRACK ROW
 // ============================================================================
 
 const TrackRow = ({
-  track, index, num, canEdit, canDrag, isCurrentRow, isPlaying, menuOpen, confirmingRemove,
+  track, index, num, canEdit, canDrag, isCurrentRow, isPlaying, menuOpen, menuUp, confirmingRemove,
   onPlay, onToggleMenu, onAddToQueue, onGoSong, onGoArtist,
   onAskRemove, onConfirmRemove, onCancelRemove,
 }) => {
@@ -152,7 +174,9 @@ const TrackRow = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`plp-row-wrap ${isDragging ? 'plp-row-ghost' : ''}`}
+      // The row whose menu is open sits above the rows after it, so they
+      // can't paint over the menu.
+      className={`plp-row-wrap ${isDragging ? 'plp-row-ghost' : ''} ${menuOpen ? 'plp-row-wrap--menu' : ''}`}
       data-row-key={track.playlistItemId || track.id}
     >
       <div
@@ -212,6 +236,10 @@ const TrackRow = ({
               {track.artist}
             </button>
           </div>
+          {/* Phones have no index column: the playing song shows its bars here. */}
+          {isCurrentRow && isPlaying && (
+            <span className="plp-eq plp-row-eq" aria-hidden="true"><span /><span /><span /></span>
+          )}
         </div>
 
         <div className="plp-col-added">{formatAdded(track.addedAt)}</div>
@@ -231,14 +259,14 @@ const TrackRow = ({
               <button
                 type="button"
                 className={`plp-row-menu-btn ${menuOpen ? 'plp-open' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onToggleMenu(track); }}
+                onClick={(e) => { e.stopPropagation(); onToggleMenu(track, roomBelow(e.currentTarget) < ROW_MENU_ROOM); }}
                 aria-label={`More options for ${track.title}`}
                 aria-expanded={menuOpen}
               >
                 <MoreHorizontal size={18} />
               </button>
               {menuOpen && (
-                <div className="plp-menu plp-row-menu" onClick={(e) => e.stopPropagation()} role="menu">
+                <div className={`plp-menu plp-row-menu ${menuUp ? 'plp-row-menu--up' : ''}`} onClick={(e) => e.stopPropagation()} role="menu">
                   <button type="button" role="menuitem" onClick={() => onAddToQueue(track)}>
                     <ListPlus size={16} /> Add to queue
                   </button>
@@ -413,6 +441,13 @@ const PlaylistPage = () => {
   }, [tracks]);
 
   const heroImage = coverUrl || mosaic[0] || null;
+
+  // ★ Poster front: the page takes the art's colour, darkened so it never
+  //   glows. No art → the listener's theme colour stands in.
+  const palette = useArtworkPalette(heroImage);
+  const deepColor = heroImage ? palette.deep : 'color-mix(in srgb, var(--unis-primary), #07090f 72%)';
+  const heroRef = useRef(null);
+  useArtHero(heroRef, { deep: deepColor, ready: status === 'ready' && !!playlist });
 
   const playable = useMemo(() => tracks.filter(t => t.url || t.fileUrl), [tracks]);
 
@@ -811,20 +846,16 @@ const PlaylistPage = () => {
         </button>
       </FollowBar>
 
-      <div className="plp-page plp-v2">
-        {/* The cover washes the top of the page, blended with the theme */}
-        {heroImage && (
-          <div className="plp-ambient" style={{ backgroundImage: `url("${heroImage}")` }} aria-hidden="true" />
-        )}
-        <div className="plp-ambient-fade" aria-hidden="true" />
-
-        {/* ── HERO ── */}
-        <header className="plp-hero">
-          <button type="button" className="plp-back" onClick={() => navigate(-1)} aria-label="Back">
-            <ArrowLeft size={18} />
-          </button>
-
-          <div className={`plp-cover ${isOwner ? 'plp-cover-editable' : ''}`}>
+      <div className="plp-shell plp-v2" style={{ '--plp-deep': deepColor }}>
+        {/* ── POSTER FRONT ──
+            Phones: the cover runs edge to edge under the glass header and melts
+            into the page colour. Desktop: it fades in from the right behind a
+            big title. */}
+        <header className={`plp-poster ${heroImage ? '' : 'is-empty'}`} ref={heroRef}>
+          {heroImage && (
+            <div className="plp-poster__glow" style={{ backgroundImage: `url("${heroImage}")` }} aria-hidden="true" />
+          )}
+          <div className="plp-poster__art">
             {coverUrl ? (
               <img src={coverUrl} alt="" onError={() => setCoverError(true)} />
             ) : mosaic.length >= 4 ? (
@@ -834,34 +865,43 @@ const PlaylistPage = () => {
             ) : mosaic.length > 0 ? (
               <img src={mosaic[0]} alt="" />
             ) : (
-              <div className="plp-cover-empty"><Music size={56} /></div>
+              <div className="plp-cover-empty"><Music size={88} strokeWidth={1.4} /></div>
             )}
-
-            {isOwner && (
-              <button
-                type="button"
-                className="plp-cover-change"
-                onClick={pickCover}
-                disabled={uploadingCover}
-              >
-                <ImagePlus size={20} />
-                <span>{uploadingCover ? 'Uploading…' : 'Choose photo'}</span>
-              </button>
-            )}
-            <input
-              ref={coverInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleCoverUpload}
-              hidden
-            />
           </div>
+          <div className="plp-poster__melt" aria-hidden="true" />
+          <div className="plp-poster__shade" aria-hidden="true" />
 
-          <div className="plp-hero-info">
-            <div className="plp-chips">
-              <span className="plp-chip plp-chip-type">{typeLabel}</span>
+          <button type="button" className="plp-back" onClick={() => navigate(-1)} aria-label="Back">
+            <ArrowLeft size={19} />
+          </button>
+
+          {isOwner && (
+            <button
+              type="button"
+              className="plp-cover-change"
+              onClick={pickCover}
+              disabled={uploadingCover}
+            >
+              <ImagePlus size={17} />
+              <span>{uploadingCover ? 'Uploading…' : 'Choose photo'}</span>
+            </button>
+          )}
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCoverUpload}
+            hidden
+          />
+
+          <div className="plp-poster__text">
+            <div className="plp-kicker">
+              <span>{typeLabel}</span>
               {isCommunity && playlist.jurisdictionName && (
-                <span className="plp-chip"><MapPin size={12} /> {playlist.jurisdictionName}</span>
+                <>
+                  <span className="plp-kicker-dot" aria-hidden="true" />
+                  <span className="plp-kicker-place">{playlist.jurisdictionName}</span>
+                </>
               )}
               {isOwner && !isCommunity && (
                 <span className="plp-chip">
@@ -872,7 +912,13 @@ const PlaylistPage = () => {
                 </span>
               )}
             </div>
-            <h1 className="plp-title" ref={bar.titleRef} title={playlist.name}>{playlist.name}</h1>
+            <h1
+              className={`plp-title ${playlist.name.length > 24 ? 'plp-title--long' : ''}`}
+              ref={bar.titleRef}
+              title={playlist.name}
+            >
+              {playlist.name}
+            </h1>
             {playlist.description && <p className="plp-description">{playlist.description}</p>}
 
             <div className="plp-meta">
@@ -900,6 +946,7 @@ const PlaylistPage = () => {
           </div>
         </header>
 
+      <div className="plp-page">
         {/* ── ACTION ROW: Save, Share, More · Shuffle, Play ── */}
         <div className="plp-actions">
           {canFollow && (
@@ -965,7 +1012,7 @@ const PlaylistPage = () => {
 
           <button
             type="button"
-            className="plp-ring plp-ring-bare"
+            className="plp-ring plp-ring-bare plp-shuffle"
             onClick={handleShufflePlay}
             disabled={playable.length === 0}
             aria-label="Shuffle play"
@@ -1125,9 +1172,10 @@ const PlaylistPage = () => {
                         isCurrentRow={isCurrentRow}
                         isPlaying={isPlaying}
                         menuOpen={menu?.kind === 'row' && menu.key === key}
+                        menuUp={menu?.kind === 'row' && menu.key === key && !!menu.up}
                         confirmingRemove={confirmRemoveKey === key}
                         onPlay={handleRowPlay}
-                        onToggleMenu={(t) => setMenu(m => (m?.kind === 'row' && m.key === rowKey(t) ? null : { kind: 'row', key: rowKey(t) }))}
+                        onToggleMenu={(t, up) => setMenu(m => (m?.kind === 'row' && m.key === rowKey(t) ? null : { kind: 'row', key: rowKey(t), up }))}
                         onAddToQueue={handleAddOneToQueue}
                         onGoSong={(t) => navigate(`/song/${t.songId || t.id}`)}
                         onGoArtist={(t) => t.artistId && navigate(`/artist/${t.artistId}`)}
@@ -1353,6 +1401,7 @@ const PlaylistPage = () => {
           </div>
         )}
 
+      </div>
       </div>
     </Layout>
   );

@@ -655,3 +655,39 @@ $header-height: 75px;
     padding: 6px 8px;
   }
 }
+// ─── OVER ARTWORK (playlist and song pages, phones) ─────────────
+// Those pages run their artwork edge to edge under the header
+// (hooks/useArtHero sets the body classes). The header turns to glass
+// over the art, keeping the theme line and the logo, then fills with the
+// art's deep colour once the art has scrolled away.
+// The glass lives on ::after: a backdrop-filter on .app-header itself
+// would trap the fixed search overlay inside the header's box.
+@media (max-width: 767px) {
+  body.unis-art-page .app-header {
+    background: transparent;
+    transition: background 0.35s ease;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: rgba(7, 9, 15, 0.38);
+      -webkit-backdrop-filter: blur(18px) saturate(160%);
+      backdrop-filter: blur(18px) saturate(160%);
+      transition: background 0.35s ease;
+    }
+  }
+
+  body.unis-art-page.unis-art-scrolled .app-header::after {
+    background: color-mix(in srgb, var(--unis-art-deep, #07090f), #07090f 30%);
+  }
+}
+
+@media (max-width: 767px) and (prefers-reduced-transparency: reduce) {
+  body.unis-art-page .app-header::after {
+    background: color-mix(in srgb, var(--unis-art-deep, #07090f), #07090f 30%);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

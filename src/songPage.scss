@@ -1,487 +1,669 @@
-// songPage.scss — Unis Song Page
-// Two-column layout with text-label buttons, ambient hero + sidebar
-// DM Sans throughout
+// songPage.scss — Unis song page
+//
+// v3 "poster front" (Nov 2026, Scout → Sketch → Ship; canvas "Unis playlist &
+// song pages"). Same grammar as the playlist page:
+//   • Phones: the artwork runs edge to edge under the glass header and melts
+//     into --sp-deep (the art's colour, darkened so it never glows).
+//     Desktop: the art fades in from the right behind a big title.
+//   • Your theme marks the actions: Play, Vote, Follow, the playing lyrics.
+//   • Text only sits where the art has already dissolved, on a darkening layer.
+//   • Phones read top to bottom like a Now Playing you can scroll: lyrics,
+//     About, the artist, details, photos, videos, Recommended, comments.
+//     Desktop keeps two columns.
+//
+// Inter for UI, Instrument Serif italic for accents, all colour from the
+// theme tokens.
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&display=swap');
+$sp-phone: 767px;
+$sp-header-h: 75px; // keep in sync with $header-height in header.scss
+$sp-poster-phone: 412px;
+$sp-p: var(--unis-primary, #163387);
+$sp-p2: color-mix(in srgb, var(--unis-primary, #163387), white 30%);
+$sp-p3: color-mix(in srgb, var(--unis-primary, #163387), white 62%);
+$sp-t2: color-mix(in srgb, var(--unis-primary, #163387), white 42%);
+$sp-pt: color-mix(in srgb, var(--unis-primary, #163387), transparent 84%);
+$sp-pg: color-mix(in srgb, var(--unis-primary, #163387), transparent 50%);
+$sp-text: #ffffff;
+$sp-text-2: rgba(255, 255, 255, 0.74);
+$sp-text-3: rgba(255, 255, 255, 0.56);
+$sp-line: rgba(255, 255, 255, 0.08);
+$sp-panel: rgba(255, 255, 255, 0.05);
+$sp-sans: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+$sp-serif: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+$sp-deep: var(--sp-deep, #0d0f14);
+$sp-accent-red: #e24b4b;
 
-$bg-primary: #0d0f14;
-$bg-secondary: #141720;
-$bg-tertiary: #1a1d28;
-$bg-surface: rgba(255, 255, 255, 0.03);
-$text-primary: #e8e6e1;
-$text-secondary: #9a978f;
-$text-tertiary: #5f5d58;
-$unis-blue: var(--unis-primary);
-$unis-blue-hover: var(--unis-primary);
-$unis-blue-dim: var(--unis-primary);
-$unis-blue-glow: var(--unis-primary);
-$accent-blue: var(--unis-primary);
-// Canonical brand default, matching theme.scss's base --unis-primary and
-// artistpage.scss's $ap2-blue-raw. Used ONLY as a var() fallback for guests
-// and any state where the theme token hasn't been set yet.
-$unis-fallback: var(--unis-primary);
-// Was `rgba(74, 143, 231, 0.15)` — a hardcoded blue tint that stayed blue no
-// matter which theme the user picked, so every avatar placeholder, Follow
-// button, and lyrics-edit chip on this page silently defied the theme.
-// color-mix derives the tint from the live token instead.
-$accent-blue-dim: color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 18%, transparent);
-$accent-red: #e24b4b;
-$accent-red-dim: rgba(226, 75, 75, 0.15);
-$accent-green: #4ecf7a;
-$border-default: rgba(255, 255, 255, 0.06);
-$border-hover: rgba(255, 255, 255, 0.12);
-$font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-$font-mono: 'Space Mono', monospace;
-$radius-sm: 6px;
-$radius-md: 8px;
-$radius-lg: 12px;
-$radius-full: 9999px;
-$transition-fast: 0.15s ease;
-$transition-ambient: 1.2s ease;
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+// Clear the fixed header exactly and let the art run edge to edge. On
+// phones the poster starts under the header, which turns to glass over it.
+.layout-container:has(.sp-shell) { padding-top: $sp-header-h; }
+.layout-container:has(.sp-shell) .layout-content { padding-left: 0; padding-right: 0; }
+@media (max-width: $sp-phone) {
+  .layout-container:has(.sp-shell) { padding-top: 0; }
 }
 
-// ── Container ──
-.song-page-container {
-  width: 100%;
-  min-height: 100vh;
-  background: transparent;
-  color: $text-primary;
-  font-family: $font-body;
-  -webkit-font-smoothing: antialiased;
-
-  // ── Page-wide interactive-state hygiene ────────────────────────────────
-  // Mobile browsers paint a translucent grey/blue box over any tapped
-  // control, and Chrome adds its own blue focus ring on mouse clicks. Both
-  // read as "the button changed colour on click" and both fight the theme.
-  //
-  // We suppress the tap highlight and the MOUSE focus ring, but deliberately
-  // keep a visible ring for :focus-visible so keyboard users can still see
-  // where they are. Stripping focus styling wholesale is the common version
-  // of this fix and it is an accessibility regression — this is not that.
-  button {
-    -webkit-tap-highlight-color: transparent;
-
-    &:focus { outline: none; }
-
-    &:focus-visible {
-      outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 70%, #ffffff);
-      outline-offset: 2px;
-    }
-  }
-
-  // Same treatment for the div-based controls that are now keyboard-reachable
-  // (see the role="button" / tabIndex additions in songPage.jsx).
-  [role='button'] {
-    -webkit-tap-highlight-color: transparent;
-
-    &:focus { outline: none; }
-
-    &:focus-visible {
-      outline: 2px solid color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 70%, #ffffff);
-      outline-offset: 3px;
-      border-radius: $radius-sm;
-    }
-  }
-}
-
-.sp-grid {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  min-height: calc(100vh - 56px);
-}
-
-.sp-song-main {
-  min-width: 0;
-  overflow: hidden;
-}
-// The song page's main column and hero are .sp-song-main / .sp-song-hero, not
-// .sp-main / .sp-hero: the sponsor booking page (sponsorPage.scss) uses those
-// two names, and all stylesheets share one global scope, so its centered,
-// fixed-width rules were landing here and pushing the page wider than phones.
-
-// ── Hero ──
-.sp-song-hero {
+// ── Shell: the art's colour fades down the page ──
+.sp-shell {
   position: relative;
-  padding: 48px 40px 0;
-  overflow: hidden;
-  transition: all $transition-ambient;
+  width: 100%;
+  color: $sp-text;
+  font-family: $sp-sans;
+  -webkit-font-smoothing: antialiased;
+  background: $sp-deep;
+
+  button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+
+  // Visible ring for keyboards only.
+  button:focus,
+  [role='button']:focus { outline: none; }
+  button:focus-visible,
+  [role='button']:focus-visible {
+    outline: 2px solid $sp-p3;
+    outline-offset: 2px;
+  }
 }
 
-.sp-hero-ambient {
+.sp-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+// ── Poster front ──
+.sp-poster {
+  position: relative;
+  overflow: hidden;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: $sp-deep;
+}
+
+.sp-poster__glow {
+  position: absolute;
+  inset: -25%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(90px) saturate(1.5);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.sp-poster__art {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(560px, 56%);
+  height: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 46%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 46%);
+
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: translateY(var(--art-par, 0px));
+    will-change: transform;
+  }
+}
+
+.sp-poster__melt { display: none; }
+
+.sp-poster__shade {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
-  transition: all $transition-ambient;
   background:
-    radial-gradient(ellipse 90% 70% at 25% 15%, rgba(var(--ambient-r, 80), var(--ambient-g, 60), var(--ambient-b, 40), 0.3) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 55% at 75% 45%, rgba(var(--ambient-r, 80), var(--ambient-g, 60), var(--ambient-b, 40), 0.15) 0%, transparent 55%),
-    linear-gradient(180deg, rgba($bg-primary, 0) 0%, $bg-primary 100%);
-}
+    linear-gradient(90deg, rgba(7, 9, 15, 0.42) 0, rgba(7, 9, 15, 0) 58%),
+    linear-gradient(180deg, rgba(7, 9, 15, 0) 58%, #{$sp-deep} 100%);
 
-.sp-hero-content {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  gap: 32px;
-  align-items: flex-end;
-  animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.sp-album-art {
-  width: 260px;
-  height: 260px;
-  border-radius: $radius-md;
-  overflow: hidden;
-  flex-shrink: 0;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 8px 20px rgba(0, 0, 0, 0.3);
-  animation: scaleIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-  img { width: 100%; height: 100%; object-fit: cover; display: block; }
-}
-
-.sp-hero-info {
-  padding-bottom: 8px;
-  min-width: 0;
-  animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
-}
-
-.sp-jurisdiction {
-  font-family: $font-mono;
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: $accent-blue;
-  margin-bottom: 8px;
-  cursor: pointer;
-  display: inline-block;
-  &:hover { color: $accent-blue; }
-}
-
-.sp-title {
-  font-size: 42px;
-  font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: -1px;
-  color: $text-primary;
-  margin-bottom: 12px;
-  word-wrap: break-word;
-}
-
-.sp-explicit {
-  display: inline-flex;
-  margin-left: 12px;
-  background: rgba($accent-red, 0.85);
-  color: white;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  vertical-align: middle;
-}
-
-.sp-artist-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  &:hover { opacity: 0.85; }
-}
-
-.sp-artist-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-  img { width: 100%; height: 100%; object-fit: cover; }
-  &.placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 600;
-    color: $accent-blue;
-    background: $accent-blue-dim;
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #07090f;
+    opacity: var(--art-dim, 0);
   }
 }
 
-.sp-artist-name {
-  font-size: 15px;
-  font-weight: 500;
-  color: $text-primary;
+.sp-poster__text {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 72px 40px 30px;
+  box-sizing: border-box;
 }
+
+.sp-back {
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  left: 12px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(7, 9, 15, 0.36);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 0 0 0.5px rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+// "#3 in Harlem this week" — the area in Instrument Serif, opening its page.
+.sp-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 5px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sp-kicker-place {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font-family: $sp-serif !important;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover { text-decoration: underline; text-underline-offset: 3px; }
+}
+
+.sp-title {
+  margin: 8px 0 0;
+  max-width: 760px;
+  font-size: clamp(44px, 6.4vw, 84px);
+  line-height: 0.98;
+  font-weight: 850;
+  letter-spacing: -0.035em;
+  color: #fff;
+  text-shadow: 0 2px 26px rgba(0, 0, 0, 0.3);
+  word-break: break-word;
+
+  &.sp-title--long { font-size: clamp(36px, 4.8vw, 64px); }
+}
+
+.sp-explicit {
+  position: relative;
+  top: -0.14em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 12px;
+  vertical-align: middle;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+  font-family: $sp-sans;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+.sp-artist-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+
+  &:hover .sp-artist-name { text-decoration: underline; text-underline-offset: 3px; }
+}
+
+.sp-artist-avatar {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: $sp-pt;
+  color: $sp-p3;
+  font-size: 12px;
+  font-weight: 800;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+}
+
+.sp-artist-name { font-size: 16px; font-weight: 700; }
 
 .sp-meta {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 13px;
-  color: $text-secondary;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
 }
 
 .sp-dot {
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: $text-tertiary;
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .sp-genre-pill {
-  font-family: $font-mono;
-  font-size: 11px;
-  color: $text-tertiary;
-  background: $bg-surface;
-  padding: 2px 8px;
-  border-radius: $radius-sm;
-  border: 1px solid $border-default;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  display: inline-flex;
+  align-items: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-// ── Primary actions — TEXT BUTTONS ──
-.sp-primary-actions {
+.sp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sp-tag {
+  height: 32px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.2); }
+}
+
+// ── Page body ──
+.song-page-container {
+  width: 100%;
+  padding: 22px 40px 48px;
+  box-sizing: border-box;
+  color: $sp-text;
+  font-family: $sp-sans;
+}
+
+// Under the poster: full width, fading from the art's colour to the app
+// background, the content centred inside.
+.sp-shell .song-page-container {
+  padding-left: max(40px, calc((100% - 1100px) / 2));
+  padding-right: max(40px, calc((100% - 1100px) / 2));
+  background:
+    linear-gradient(180deg,
+      #{$sp-deep} 0,
+      color-mix(in srgb, #{$sp-deep}, var(--unis-bg, #07090f) 60%) 360px,
+      var(--unis-bg, #07090f) 760px);
+}
+
+// ── Actions: Like, Copy link, ⋯ · Vote, Play ──
+.sp-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sp-actions-spacer { flex: 1; }
+
+.sp-icon-btn {
   position: relative;
-  z-index: 1;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, transform 0.14s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+  &:active { transform: scale(0.94); }
+  &.is-on { color: $sp-t2; }
+}
+
+.sp-play {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: $sp-p;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 26px $sp-pg, inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform 0.14s ease, filter 0.14s ease;
+
+  &:hover { transform: scale(1.05); filter: brightness(1.1); }
+  &:active { transform: scale(0.96); }
+}
+
+.sp-vote-pill {
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px 0 16px;
+  border: 0;
+  border-radius: 23px;
+  background: color-mix(in srgb, var(--unis-primary, #163387), #07090f 42%);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--unis-primary, #163387), white 22%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease;
+
+  &:hover { filter: brightness(1.15); }
+  &:active { transform: scale(0.97); }
+}
+
+// Desktop: Play leads, Vote right after it (the mockup's order).
+@media (min-width: $sp-phone + 1) {
+  .sp-actions {
+    gap: 6px;
+    .sp-play { order: -2; margin: 0 6px 0 0; }
+    .sp-vote-pill { order: -1; margin-right: 4px; }
+  }
+}
+
+// Phones: Vote spans the screen, the same card as the artist page's.
+.sp-votecard {
+  width: 100%;
+  margin-top: 14px;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 24px 40px 20px;
-  animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both;
-  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid $sp-p2;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--unis-primary, #163387), transparent 60%), rgba(255, 255, 255, 0.03));
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.15s ease;
+
+  &:hover { filter: brightness(1.08); }
+  &:active { transform: scale(0.99); }
+
+  > svg:first-child { flex: 0 0 auto; }
+  > svg:last-child { opacity: 0.6; flex: 0 0 auto; }
 }
 
-.sp-btn-play-circle {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    // Fallback matters: a logged-out visitor has no --unis-primary set, and a
-    // bare var() with no fallback resolves to transparent — an invisible button.
-    background-color: var(--unis-primary, #{$unis-fallback});
-    border: none;
-    cursor: pointer;
+.sp-votecard__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sp-votecard__title {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-votecard__sub { font-size: 12.5px; color: $sp-text-3; }
+
+@media (max-width: $sp-phone) {
+  .sp-hide-phone { display: none !important; }
+}
+@media (min-width: $sp-phone + 1) {
+  .sp-hide-desktop { display: none !important; }
+}
+
+[data-theme='yellow'] {
+  .sp-play { color: #1a1300; }
+}
+
+// ── ⋯ menu: Don't Play, Report ──
+.sp-menu-wrap { position: relative; }
+
+.sp-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 250px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--unis-bg, #07090f) 86%, var(--unis-primary, #163387));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  animation: spPop 0.14s ease both;
+
+  button {
+    width: 100%;
+    min-height: 46px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 0;
-    flex-shrink: 0;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+    gap: 12px;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 14.5px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
 
-    // Removes the grey/blue flash iOS and Android paint over tapped controls.
-    -webkit-tap-highlight-color: transparent;
-
-    // ── THE BUG THIS REPLACES ────────────────────────────────────────────
-    // The old rule was `&:hover { background-color: #1c41ad; }` — a hardcoded
-    // blue that ignored the user's theme entirely. Two failures came from it:
-    //   1. Theme violation: a user themed to red/green/purple saw their play
-    //      button turn Unis-blue the instant they hovered it.
-    //   2. Sticky hover on touch: phones and trackpad-tap devices latch :hover
-    //      after a tap and hold it until the next tap elsewhere — so the button
-    //      stayed blue after being clicked, which is exactly what you saw.
-    // Fix: brightness() derives the hover shade FROM the active theme colour,
-    // and @media (hover: hover) means touch devices never enter the state at
-    // all. Same pattern already used in artistpage.scss.
-    @media (hover: hover) and (pointer: fine) {
-      &:hover {
-        transform: scale(1.05);
-        filter: brightness(1.12);
-        box-shadow: 0 6px 20px color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 45%, transparent);
-      }
-    }
-
-    &:active { transform: scale(0.95); }
-
-    // Never show the UA's default focus ring (it renders as a blue box on
-    // Chrome and was compounding the "turns blue" symptom), but keep a real,
-    // theme-aware ring for keyboard users — removing focus styling outright
-    // would be an accessibility regression.
-    &:focus { outline: none; }
-
-    &:focus-visible {
-      outline: 3px solid color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 70%, #ffffff);
-      outline-offset: 3px;
-    }
-
-    // Nuclear specificity — same approach as the player to survive any global SVG rules
-    svg {
-      width: 22px !important;
-      height: 22px !important;
-      display: block !important;
-      fill: #FFFFFF !important;
-      opacity: 1 !important;
-      visibility: visible !important;
-      pointer-events: none;
-
-      path {
-        fill: #FFFFFF !important;
-        opacity: 1 !important;
-      }
-    }
+    &:hover, &:focus-visible { background: rgba(255, 255, 255, 0.08); color: #fff; outline: none; }
+    > svg { flex: 0 0 auto; }
   }
-
-.sp-btn-vote {
-  padding: 10px 28px;
-  background: transparent;
-  color: $text-primary;
-  border: 2px solid $unis-blue;
-  border-radius: $radius-sm;
-  font-family: $font-body;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all $transition-fast;
-  &:hover { background: $unis-blue-dim; }
 }
 
-.sp-btn-like {
-  padding: 10px 20px;
-  background: transparent;
-  // Was `grey` (#808080) on a near-black surface: ~3.5:1, below the 4.5:1
-  // WCAG AA floor for body text. $text-primary clears it comfortably.
-  color: $text-primary;
-  border: 2px solid $unis-blue;
-  border-radius: $radius-sm;
-  font-family: $font-body;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
+.sp-menu__text {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s ease;
+  flex-direction: column;
 
-  &.liked {
-    background: $unis-blue;
-    color: white;
+  small { font-size: 12px; font-weight: 500; color: $sp-text-3; margin-top: 1px; }
+}
+
+// The Don't Play switch fills with your theme when it's on.
+.sp-switch {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  flex: 0 0 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.18);
+  transition: background 0.18s ease;
+
+  i {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.18s ease;
+  }
+
+  &.is-on {
+    background: $sp-p;
+    i { transform: translateX(16px); }
   }
 }
 
-// ── Stats row ──
+[data-theme='yellow'] .sp-switch.is-on i { background: #1a1300; }
+
+@keyframes spPop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+// ── Plays today ──
 .sp-stats-row {
   display: flex;
-  gap: 20px;
-  padding: 0 40px 16px;
-  font-size: 14px;
-  color: $text-secondary;
-
-  .sp-stat strong {
-    color: $unis-blue;
-    margin-right: 6px;
-  }
-
-  .sp-stat-hot {
-    color: $accent-green;
-    font-weight: 600;
-  }
+  margin-top: 14px;
 }
 
-// ── Secondary actions — TEXT BUTTONS ──
-.sp-secondary-actions {
-  display: flex;
-  gap: 10px;
-  padding: 0 40px 24px;
-  flex-wrap: wrap;
-  border-bottom: 1px solid $border-default;
-}
-
-.sp-action-btn {
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid $border-hover;
-  border-radius: $radius-sm;
-  color: $text-secondary;
-  font-family: $font-body;
+.sp-stat {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.08);
   font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all $transition-fast;
+  font-weight: 600;
 
-  &:hover {
-    color: $text-primary;
-    border-color: rgba(255, 255, 255, 0.2);
-    background: $bg-surface;
-  }
-
-  &.following {
-    color: $accent-blue;
-    // Was rgba($accent-blue, 0.3) -> compiled to rgba(var(--unis-primary), 0.3),
-    // which is invalid CSS (rgba() cannot take a hex) so the browser dropped it.
-    border-color: color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 30%, transparent);
-    background: $accent-blue-dim;
-  }
+  svg { color: $sp-t2; }
 }
 
-// ── Lyrics ──
-.sp-lyrics-section {
-  padding: 32px 40px;
-  border-bottom: 1px solid $border-default;
-  animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
+// ── Two columns (desktop) ──
+.sp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  margin-top: 26px;
+  align-items: start;
+}
+
+.sp-song-main { min-width: 0; }
+
+.sp-sidebar {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sp-song-main > * + * { margin-top: 16px; }
+
+// ── Cards ──
+.sp-card {
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: $sp-panel;
+  box-shadow: inset 0 0 0 1px $sp-line;
+}
+
+.sp-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.sp-about-text {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+// ── Lyrics: a card in the art's colour, the current line in white ──
+.sp-lyrics {
+  border-radius: 14px;
+  padding: 16px 18px 18px;
+  background: var(--sp-mid, #22242c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .sp-lyrics-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  gap: 8px;
 }
 
 .sp-lyrics-label {
-  font-family: $font-mono;
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: $text-tertiary;
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
 }
 
-.sp-lyrics-edit {
-  padding: 6px 14px;
-  background: $accent-blue-dim;
-  border: none;
-  border-radius: $radius-sm;
-  color: $accent-blue;
-  font-family: $font-body;
-  font-size: 12px;
-  font-weight: 500;
+.sp-chip-btn {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 15px;
+  background: rgba(7, 9, 15, 0.28);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  // Same invalid-rgba() problem as above — this hover was a no-op.
-  &:hover { background: color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 25%, transparent); }
+
+  &:hover { background: rgba(7, 9, 15, 0.42); }
 }
 
 .sp-lyrics-body {
+  margin-top: 12px;
+  color: #fff;
+  font-size: 21px;
+  line-height: 1.38;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   white-space: pre-wrap;
-  font-size: 15px;
-  line-height: 2;
-  color: $text-secondary;
-  max-height: 400px;
-  overflow-y: auto;
-  padding-right: 8px;
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: $border-hover; border-radius: 2px; }
+
+  &.is-clamped {
+    max-height: calc(1.38em * 7);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+    mask-image: linear-gradient(180deg, #000 70%, transparent);
+  }
 }
 
-// Timed lyrics while this song plays: the theme-coloured stage from
-// components/lyricsLines.scss, lines lighting up with the song.
+// Timed lyrics while this song plays: the lines light up on the card itself
+// (white on the art's colour, every theme).
 .sp-lyrics-live {
   height: 400px;
-  border-radius: 18px;
+  margin: 12px -18px -18px;
+  border-radius: 0 0 14px 14px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -489,254 +671,332 @@ $transition-ambient: 1.2s ease;
   .ll-wrap { flex: 1; }
 }
 
+.sp-lyrics .sp-lyrics-live.lyrics-stage,
+[data-theme='yellow'] .sp-lyrics .sp-lyrics-live.lyrics-stage {
+  --ll-now: #ffffff;
+  --ll-past: rgba(255, 255, 255, 0.6);
+  --ll-next: rgba(255, 255, 255, 0.5);
+  --ll-pill-bg: rgba(7, 9, 15, 0.4);
+  --ll-pill-fg: #ffffff;
+  background: transparent;
+  color: #fff;
+}
+
 .sp-lyrics-hint {
   margin: 10px 0 0;
   font-size: 13px;
-  color: $text-secondary;
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.sp-comments {
-  padding: 8px 40px 40px;
-}
-
-// ── Subgenre + mood chips (under the meta line) ──
-.sp-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.sp-tag {
-  padding: 4px 11px;
-  border-radius: $radius-full;
-  border: 1px solid $border-hover;
-  background: $bg-surface;
-  color: $text-secondary;
-  font-family: $font-body;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color $transition-fast, border-color $transition-fast, background $transition-fast;
-
-  &:hover { color: $text-primary; border-color: var(--unis-primary, #{$unis-fallback}); }
-  &:focus-visible { outline: 2px solid var(--unis-primary, #{$unis-fallback}); outline-offset: 2px; }
-
-  &--subgenre {
-    color: $text-primary;
-    background: $accent-blue-dim;
-    border-color: transparent;
-  }
-}
-
-// ── Loading / Error ──
-.sp-loading, .sp-error {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  font-size: 15px;
-  color: $text-secondary;
-}
-.sp-error { color: $accent-red; }
-
-// ═══════════════════════════════════════════
-// SIDEBAR — always-on ambient
-// ═══════════════════════════════════════════
-
-.sp-sidebar {
-  position: relative;
-  overflow: hidden;
-  border-left: 1px solid $border-default;
-  padding: 32px 24px;
-  background: $bg-secondary;
-}
-
-.sp-sidebar-ambient {
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background-size: cover;
-  background-position: center;
-  filter: blur(50px) saturate(200%);
-  opacity: 0.15;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.sp-sidebar-section {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 32px;
-  animation: fadeIn 0.5s ease both;
-  @for $i from 1 through 6 {
-    &:nth-child(#{$i}) { animation-delay: #{0.1 + ($i * 0.08)}s; }
-  }
-}
-
-.sp-sidebar-title {
-  font-family: $font-body;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 1.8px;
-  text-transform: uppercase;
-  color: $text-tertiary;
-  margin-bottom: 14px;
-}
-
-.sp-details-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.sp-detail {
-  background: $bg-tertiary;
-  border-radius: $radius-md;
-  padding: 12px;
-  &:hover { background: rgba(255, 255, 255, 0.05); }
-}
-
-.sp-detail-label {
-  font-size: 10px;
-  color: $text-tertiary;
-  font-weight: 500;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-
-.sp-detail-value {
-  font-size: 14px;
-  font-weight: 500;
-  color: $text-primary;
-}
-
-.sp-artist-card {
+// No lyrics yet — only the artist sees this.
+.sp-lyrics--empty {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  background: $bg-tertiary;
-  border-radius: $radius-lg;
-  cursor: pointer;
-  &:hover { background: rgba(255, 255, 255, 0.06); }
+  padding: 16px 18px;
+  background: transparent;
+  box-shadow: none;
+  border: 1.5px dashed rgba(255, 255, 255, 0.22);
 }
 
-.sp-artist-card-avatar {
-  width: 44px;
-  height: 44px;
+.sp-lyrics-empty-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
   border-radius: 50%;
-  background: $accent-blue-dim;
+  background: rgba(255, 255, 255, 0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sp-lyrics-empty-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+
+  strong { font-size: 15px; font-weight: 700; }
+  span { margin-top: 2px; font-size: 12.5px; color: $sp-text-3; }
+}
+
+.sp-lyrics-add {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 16px;
+  background: $sp-p;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+[data-theme='yellow'] .sp-lyrics-add { color: #1a1300; }
+
+// ── Details ──
+.sp-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 12px;
+  margin-top: 12px;
+}
+
+.sp-detail-label {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: $sp-text-3;
+}
+
+.sp-detail-value {
+  margin-top: 3px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+// ── Artist: a photo card with Follow ──
+.sp-artist-card {
+  position: relative;
+  height: 210px;
+  border-radius: 14px;
   overflow: hidden;
-  flex-shrink: 0;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px $sp-line;
+  background: $sp-panel;
+
+  &:hover .sp-artist-card-name { text-decoration: underline; text-underline-offset: 3px; }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(7, 9, 15, 0.35) 0, rgba(7, 9, 15, 0) 30%, rgba(7, 9, 15, 0) 45%, rgba(7, 9, 15, 0.82));
+  }
+}
+
+.sp-artist-card__photo {
+  position: absolute;
+  inset: 0;
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+
+// No photo: the initial on your theme colour.
+.sp-artist-card__initial {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  font-weight: 600;
-  color: $accent-blue;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--unis-primary, #163387), white 18%), color-mix(in srgb, var(--unis-primary, #163387), #07090f 62%));
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 72px;
+  font-weight: 800;
+}
 
-  &.has-photo {
-    background: none;
-  }
+.sp-artist-card__kicker {
+  position: absolute;
+  z-index: 1;
+  top: 14px;
+  left: 16px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
 
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-  }
+.sp-artist-card__foot {
+  position: absolute;
+  z-index: 1;
+  left: 16px;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
 }
 
 .sp-artist-card-info { flex: 1; min-width: 0; }
-.sp-artist-card-name { font-size: 14px; font-weight: 500; color: $text-primary; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sp-artist-card-jur { font-size: 11px; color: $text-tertiary; }
+
+.sp-artist-card-name {
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-artist-card-jur {
+  margin-top: 1px;
+  font-family: $sp-serif;
+  font-style: italic;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.86);
+}
 
 .sp-sidebar-follow {
-  font-family: $font-body;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: $accent-blue;
-  background: $accent-blue-dim;
-  border: none;
-  padding: 6px 14px;
-  border-radius: $radius-sm;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 17px;
+  background: rgba(7, 9, 15, 0.28);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.75);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
   cursor: pointer;
   flex-shrink: 0;
-  // Same invalid-rgba() problem as above — this hover was a no-op.
-  &:hover { background: color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 25%, transparent); }
-  &.following { background: $accent-blue; color: white; }
+
+  &.following {
+    background: color-mix(in srgb, var(--unis-primary, #163387), #07090f 42%);
+    box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--unis-primary, #163387), white 22%);
+  }
 }
 
-.sp-about-text {
-  font-size: 13px;
-  line-height: 1.6;
-  color: $text-secondary;
-}
-
+// ── Photos & videos ──
 .sp-media-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  figure { margin: 0; img { width: 100%; border-radius: $radius-sm; } figcaption { font-size: 10px; color: $text-tertiary; margin-top: 4px; } }
+  margin-top: 12px;
+
+  figure { margin: 0; }
+  img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 8px; display: block; }
+  figcaption { margin-top: 6px; font-size: 12px; color: $sp-text-3; }
 }
 
 .sp-video-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  .sp-video-item {
-    iframe { width: 100%; height: 140px; border-radius: $radius-sm; border: none; }
-    p { font-size: 11px; color: $text-tertiary; margin-top: 4px; }
-  }
+  gap: 12px;
+  margin-top: 12px;
 }
 
-// ═══════════════════════════════════════════
-// RESPONSIVE
-// ═══════════════════════════════════════════
+.sp-video-item {
+  iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 8px; display: block; }
+  p { margin: 6px 0 0; font-size: 12.5px; color: $sp-text-3; }
+}
 
+// ── Recommended, ad, comments keep their own styles ──
+.sp-comments { margin-top: 26px; }
+
+// ── Loading / error ──
+.sp-loading, .sp-error {
+  padding: 80px 20px;
+  text-align: center;
+  font-family: $sp-sans;
+  font-size: 16px;
+}
+.sp-error { color: $sp-accent-red; }
+
+// ── Tablets: one column ──
 @media (max-width: 1024px) {
-  .sp-grid { grid-template-columns: 1fr; }
-  .sp-sidebar { border-left: none; border-top: 1px solid $border-default; padding: 28px 24px; }
-  .sp-details-grid { grid-template-columns: repeat(4, 1fr); }
+  .sp-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
-@media (max-width: 768px) {
-  .sp-song-hero { padding: 32px 20px 0; }
-  .sp-hero-content { flex-direction: column; align-items: center; text-align: center; }
-  .sp-album-art { width: 200px; height: 200px; }
-  .sp-hero-info { display: flex; flex-direction: column; align-items: center; }
-  .sp-title { font-size: 28px; }
-  .sp-artist-row { justify-content: center; }
-  .sp-meta { justify-content: center; }
-  .sp-tags { justify-content: center; }
-  .sp-primary-actions { padding: 20px 20px 16px; justify-content: center; }
-  .sp-stats-row { padding: 0 20px 12px; justify-content: center; }
-  .sp-secondary-actions { padding: 0 20px 20px; justify-content: center; }
-  .sp-lyrics-section { padding: 24px 20px; }
-  .sp-comments { padding: 8px 20px 28px; }
-  .sp-sidebar { padding: 24px 20px; }
-  .sp-details-grid { grid-template-columns: 1fr 1fr; }
+// ── Phones: the poster under the header, one column woven in order ──
+@media (max-width: $sp-phone) {
+  .sp-poster {
+    min-height: 0;
+    justify-content: flex-start;
+    padding-top: 300px;
+  }
+
+  .sp-poster__glow { display: none; }
+
+  .sp-poster__art {
+    width: 100%;
+    height: $sp-poster-phone;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .sp-poster__melt {
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: $sp-poster-phone * 0.5;
+    height: $sp-poster-phone * 0.5;
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(26px) saturate(150%);
+    backdrop-filter: blur(26px) saturate(150%);
+    -webkit-mask-image: linear-gradient(transparent, #000 78%);
+    mask-image: linear-gradient(transparent, #000 78%);
+  }
+
+  .sp-poster__shade {
+    height: $sp-poster-phone;
+    bottom: auto;
+    background: linear-gradient(180deg,
+      rgba(7, 9, 15, 0.6) 0,
+      rgba(7, 9, 15, 0) 30%,
+      rgba(7, 9, 15, 0) 46%,
+      color-mix(in srgb, #{$sp-deep}, transparent 28%) 80%,
+      #{$sp-deep} 100%);
+  }
+
+  .sp-poster__text { padding: 0 18px 4px; }
+  .sp-back { display: inline-flex; top: 84px; }
+
+  .sp-kicker { font-size: 14px; }
+  .sp-kicker-place { font-size: 20px; }
+  .sp-title {
+    margin-top: 6px;
+    font-size: 36px;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    &.sp-title--long { font-size: 29px; line-height: 1.06; }
+  }
+  .sp-artist-row { margin-top: 12px; }
+  .sp-artist-name { font-size: 15.5px; }
+  .sp-meta { font-size: 13px; }
+
+  .sp-shell .song-page-container { padding: 14px 18px 40px; }
+  .sp-actions { margin: 0 -8px 0 -10px; }
+  .sp-play { width: 58px; height: 58px; }
+
+  // One column, read top to bottom: lyrics, About, the artist, details,
+  // photos, videos, Recommended, ad, comments.
+  .sp-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin-top: 22px;
+  }
+  .sp-song-main,
+  .sp-sidebar { display: contents; }
+  .sp-song-main > * + * { margin-top: 0; }
+
+  .sp-lyrics  { order: 1; }
+  .sp-about   { order: 2; }
+  .sp-artist  { order: 3; }
+  .sp-details { order: 4; }
+  .sp-photos  { order: 5; }
+  .sp-videos  { order: 6; }
+  .sp-recs    { order: 7; margin-top: 12px; }
+  .sp-ad      { order: 8; }
+  .sp-comments { order: 9; margin-top: 12px; }
+
+  .sp-lyrics, .sp-card, .sp-artist-card { margin-left: -4px; margin-right: -4px; }
 }
 
-@media (max-width: 480px) {
-  .sp-song-hero { padding: 24px 16px 0; }
-  .sp-album-art { width: 160px; height: 160px; }
-  .sp-title { font-size: 24px; letter-spacing: -0.5px; }
-  .sp-primary-actions { padding: 16px; gap: 8px; }
-  .sp-btn-vote, .sp-btn-like { padding: 8px 16px; font-size: 13px; }
-  .sp-btn-play-circle { width: 48px; height: 48px; }
-  .sp-stats-row { padding: 0 16px 10px; font-size: 13px; }
-  .sp-secondary-actions { padding: 0 16px 16px; gap: 6px; }
-  .sp-action-btn { padding: 6px 12px; font-size: 12px; }
-  .sp-lyrics-section { padding: 20px 16px; }
-  .sp-comments { padding: 8px 16px 24px; }
-  .sp-sidebar { padding: 20px 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .sp-poster__art img { transform: none; }
+  .sp-menu { animation: none; }
+  .sp-switch, .sp-switch i { transition: none; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .sp-back { background: rgba(7, 9, 15, 0.82); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .sp-poster__melt { display: none; }
 }
 
 // ━━━ THE BAR THAT FOLLOWS YOU (Nov 2026) ━━━
@@ -769,5 +1029,5 @@ $transition-ambient: 1.2s ease;
 
 .sp-bar__like.is-on {
   border-color: rgba(255, 255, 255, 0.5);
-  background: color-mix(in srgb, var(--unis-primary, #{$unis-fallback}) 45%, transparent);
+  background: color-mix(in srgb, var(--unis-primary, #163387) 45%, transparent);
 }

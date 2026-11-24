@@ -1,11 +1,31 @@
-import React, { useState, useContext, useEffect, useMemo } from 'react';
+// src/songPage.jsx — /song/:songId
+//
+// v3 "poster front" (Nov 2026, Scout → Sketch → Ship; canvas "Unis playlist &
+// song pages"):
+//   • The artwork runs edge to edge (phones) or fades in from the right
+//     (desktop) and melts into a colour taken from it; the page takes that
+//     colour, darkened so it never glows (hooks/useArtworkPalette).
+//   • Small actions on the left (Like, Copy link, ⋯), Play on the right in
+//     your theme. Don't Play and Report live in ⋯.
+//   • Vote is a full-width card on phones, like the artist page's, and a pill
+//     beside Play on desktop.
+//   • Reads like a Now Playing you can scroll: lyrics in a card the art's
+//     colour, About the song, the artist as a photo card, details, photos,
+//     videos, Recommended, comments.
+
+import React, { useState, useContext, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import songArtwork from './assets/theQuiet.jpg';
 import LyricsWizard from './lyricsWizard';
 import LyricsLines from './components/LyricsLines';
 import { parseLrc } from './utils/lrc';
-import { FileText, Heart } from 'lucide-react';
+import {
+  FileText, Heart, Link2, MoreHorizontal, ArrowLeft, Ban, Flag, ChevronRight, Check, Mic, TrendingUp,
+} from 'lucide-react';
+import { VoteIcon } from './icons/UnisIcons';
+import useArtworkPalette from './hooks/useArtworkPalette';
+import useArtHero from './hooks/useArtHero';
 import './songPage.scss';
 import Layout from './layout';
 import UnisLoader from './components/UnisLoader';
@@ -49,8 +69,8 @@ const SongPage = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [dominantColor, setDominantColor] = useState('rgba(255, 255, 255, 0.1)');
-  const [ambientRGB, setAmbientRGB] = useState({ r: 80, g: 60, b: 40 });
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
   // ★ Weekly standing for the bar's line: { rank, when } or null (not ranked).
   const [standing, setStanding] = useState(null);
   // Timed lyrics (LRC) parsed once per song; they move on the page while it plays.
@@ -60,21 +80,24 @@ const SongPage = () => {
   //   titleRef goes on the song title, playRef on the page's own Play.
   const bar = useFollowBar({ ready: !loading && !!song });
 
-  const extractColor = (url) => {
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.src = url;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = 1;
-      canvas.height = 1;
-      ctx.drawImage(img, 0, 0, 1, 1);
-      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-      setDominantColor(`rgba(${r}, ${g}, ${b}, 0.6)`);
-      setAmbientRGB({ r, g, b });
+  // ★ Poster front: the page takes the art's colour (deep for the page,
+  //   rest1 for the lyrics card). The header turns to glass over the art.
+  const palette = useArtworkPalette(song?.artwork);
+  const heroRef = useRef(null);
+  useArtHero(heroRef, { deep: palette.deep, ready: !loading && !!song });
+
+  // ⋯ menu: close on outside click or Escape.
+  useEffect(() => {
+    if (!moreOpen) return undefined;
+    const close = () => setMoreOpen(false);
+    const onKey = (e) => { if (e.key === 'Escape') setMoreOpen(false); };
+    window.addEventListener('click', close);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('keydown', onKey);
     };
-  };
+  }, [moreOpen]);
 
   const formatDuration = (seconds) => {
     if (!seconds) return '--:--';
@@ -163,7 +186,7 @@ const SongPage = () => {
         setSong(normalized);
         setIsLiked(likedRes.data.isLiked || false);
         setLikeCount(likeCountRes.data.count || 0);
-        if (normalized.artwork) extractColor(normalized.artwork);
+        setLyricsOpen(false);
       } catch (err) {
         console.error('Failed to load song:', err);
         setError(err?.response?.status === 404 ? 'Song not found' : 'Failed to load song details');
@@ -224,7 +247,7 @@ const SongPage = () => {
 
   const HeroPlayIcon = () => (
     <svg viewBox="0 0 24 24" width="22" height="22"
-      style={{ width: 22, height: 22, display: 'block', fill: '#FFFFFF', marginLeft: 2 }}>
+      style={{ width: 24, height: 24, display: 'block', fill: 'currentColor', marginLeft: 2 }}>
       <path d="M8 5v14l11-7z" />
     </svg>
   );
@@ -233,7 +256,7 @@ const SongPage = () => {
   // the play triangle needs the 2px nudge for optical centering, bars don't).
   const HeroPauseIcon = () => (
     <svg viewBox="0 0 24 24" width="22" height="22"
-      style={{ width: 22, height: 22, display: 'block', fill: '#FFFFFF' }}>
+      style={{ width: 24, height: 24, display: 'block', fill: 'currentColor' }}>
       <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
     </svg>
   );
@@ -422,11 +445,13 @@ const SongPage = () => {
     );
   }
 
+  const goJurisdiction = () => navigate(`/jurisdiction/${song.jurisdiction}`);
+  const liveLyrics = !!song.lyrics && timedLyrics.length > 0 && isThisSongLoaded;
+  const lyricsLong = !!song.lyrics && (song.lyrics.split('\n').length > 7 || song.lyrics.length > 360);
+  const hasAbout = !!song.description && song.description !== 'No description available';
+
   return (
     <Layout backgroundImage={song.artwork}>
-      {/* When a track is loaded, the fixed player tray (80px) covers the
-          bottom of the page — on mobile that's the comment input. Padding
-          the container by the tray height keeps comments fully usable. */}
       {/* ── THE BAR THAT FOLLOWS YOU ──
           The song's artwork, blurred and tinted with the theme. Shows once the
           title has gone under the header; Play docks once the page's own Play
@@ -467,269 +492,344 @@ const SongPage = () => {
         </button>
       </FollowBar>
 
-      <div
-        className="song-page-container"
-        style={{ paddingBottom: currentMedia ? 100 : undefined }}
-      >
-        <div className="sp-grid">
+      <div className="sp-shell" style={{ '--sp-deep': palette.deep, '--sp-mid': palette.rest1 }}>
+        {/* ── POSTER FRONT ──
+            Phones: the artwork runs edge to edge under the glass header and
+            melts into the page colour. Desktop: it fades in from the right
+            behind a big title. */}
+        <header className="sp-poster" ref={heroRef}>
+          <div className="sp-poster__glow" style={{ backgroundImage: `url("${song.artwork}")` }} aria-hidden="true" />
+          <div className="sp-poster__art">
+            <img src={song.artwork} alt={`${song.title} artwork`} />
+          </div>
+          <div className="sp-poster__melt" aria-hidden="true" />
+          <div className="sp-poster__shade" aria-hidden="true" />
 
-          {/* ━━━ LEFT / MAIN COLUMN ━━━ */}
-          <div className="sp-song-main">
+          <button type="button" className="sp-back" onClick={() => navigate(-1)} aria-label="Back">
+            <ArrowLeft size={19} />
+          </button>
 
-            {/* ── HERO ── */}
-            <div className="sp-song-hero" style={{ '--ambient-r': ambientRGB.r, '--ambient-g': ambientRGB.g, '--ambient-b': ambientRGB.b }}>
-              <div className="sp-hero-ambient" />
-              <div className="sp-hero-content">
-                <div className="sp-album-art">
-                  <img src={song.artwork} alt={`${song.title} artwork`} />
-                </div>
-                <div className="sp-hero-info">
-                  <div
-                    className="sp-jurisdiction"
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`View the ${song.jurisdiction} jurisdiction`}
-                    onClick={() => navigate(`/jurisdiction/${song.jurisdiction}`)}
-                    onKeyDown={onKeyActivate(() => navigate(`/jurisdiction/${song.jurisdiction}`))}
+          <div className="sp-poster__text">
+            {/* "#3 in Harlem this week" when ranked, otherwise just the area. */}
+            <div className="sp-kicker">
+              {standing && <span>#{standing.rank} in </span>}
+              <button
+                type="button"
+                className="sp-kicker-place"
+                onClick={goJurisdiction}
+                aria-label={`View the ${song.jurisdiction} jurisdiction`}
+              >
+                {song.jurisdiction}
+              </button>
+              {standing && <span> {standing.when}</span>}
+            </div>
+            <h1 className={`sp-title ${song.title.length > 24 ? 'sp-title--long' : ''}`} ref={bar.titleRef}>
+              {song.title}
+              {song.explicit && <span className="sp-explicit" title="Explicit" aria-label="Explicit">E</span>}
+            </h1>
+            <button
+              type="button"
+              className="sp-artist-row"
+              aria-label={`View ${song.artist}'s artist page`}
+              onClick={handleArtistClick}
+            >
+              <span className={`sp-artist-avatar ${song.artistPhoto ? '' : 'placeholder'}`}>
+                {song.artistPhoto
+                  ? <img src={song.artistPhoto} alt="" />
+                  : song.artist?.charAt(0).toUpperCase() || '?'}
+              </span>
+              <span className="sp-artist-name">{song.artist}</span>
+            </button>
+            <div className="sp-meta">
+              <span>{formatDuration(song.duration)}</span>
+              <span className="sp-dot" />
+              <span>{formatNumber(song.playCount)} plays</span>
+              <span className="sp-dot" />
+              <span>{formatDate(song.createdAt)}</span>
+              <span className="sp-genre-pill">{song.genre}</span>
+            </div>
+            {(song.subgenres.length > 0 || song.moods.length > 0) && (
+              <div className="sp-tags" aria-label="Subgenres and moods">
+                {song.subgenres.map((sg) => (
+                  <button
+                    key={sg.subgenreId}
+                    type="button"
+                    className="sp-tag sp-tag--subgenre"
+                    onClick={() => navigate(`/browse/subgenre/${sg.slug}`)}
+                    aria-label={`More ${sg.name} songs`}
                   >
-                    {song.jurisdiction}
-                  </div>
-                  <h1 className="sp-title" ref={bar.titleRef}>
-                    {song.title}
-                    {song.explicit && <span className="sp-explicit">Explicit</span>}
-                  </h1>
-                  <div
-                    className="sp-artist-row"
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`View ${song.artist}'s artist page`}
-                    onClick={handleArtistClick}
-                    onKeyDown={onKeyActivate(handleArtistClick)}
+                    {sg.name}
+                  </button>
+                ))}
+                {song.moods.map((m) => (
+                  <button
+                    key={m.moodId}
+                    type="button"
+                    className="sp-tag sp-tag--mood"
+                    onClick={() => navigate(`/browse/mood/${m.slug}`)}
+                    aria-label={`More ${m.name} songs`}
                   >
-                    <div className={`sp-artist-avatar ${song.artistPhoto ? '' : 'placeholder'}`}>
-                      {song.artistPhoto
-                        ? <img src={song.artistPhoto} alt={song.artist} />
-                        : song.artist?.charAt(0).toUpperCase() || '?'}
-                    </div>
-                    <span className="sp-artist-name">{song.artist}</span>
-                  </div>
-                  <div className="sp-meta">
-                    <span>{formatDuration(song.duration)}</span>
-                    <span className="sp-dot" />
-                    <span>{formatNumber(song.playCount)} plays</span>
-                    <span className="sp-dot" />
-                    <span>{formatDate(song.createdAt)}</span>
-                    <span className="sp-genre-pill">{song.genre}</span>
-                  </div>
-                  {(song.subgenres.length > 0 || song.moods.length > 0) && (
-                    <div className="sp-tags" aria-label="Subgenres and moods">
-                      {song.subgenres.map((sg) => (
-                        <button
-                          key={sg.subgenreId}
-                          type="button"
-                          className="sp-tag sp-tag--subgenre"
-                          onClick={() => navigate(`/browse/subgenre/${sg.slug}`)}
-                          aria-label={`More ${sg.name} songs`}
-                        >
-                          {sg.name}
-                        </button>
-                      ))}
-                      {song.moods.map((m) => (
-                        <button
-                          key={m.moodId}
-                          type="button"
-                          className="sp-tag sp-tag--mood"
-                          onClick={() => navigate(`/browse/mood/${m.slug}`)}
-                          aria-label={`More ${m.name} songs`}
-                        >
-                          {m.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                    {m.name}
+                  </button>
+                ))}
               </div>
-            </div>
+            )}
+          </div>
+        </header>
 
-            {/* ── PRIMARY ACTIONS — text buttons like original ── */}
-            <div className="sp-primary-actions">
+        {/* When a track is loaded the player covers the bottom of the page —
+            on phones that's the comment input. The padding keeps it usable. */}
+        <div
+          className="song-page-container"
+          style={{ paddingBottom: currentMedia ? 100 : undefined }}
+        >
+          {/* ── ACTIONS: Like, Copy link, ⋯ · (Vote) Play ── */}
+          <div className="sp-actions">
+            <button
+              type="button"
+              onClick={handleLike}
+              className={`sp-icon-btn ${isLiked ? 'is-on' : ''}`}
+              aria-pressed={isLiked}
+              aria-label={isLiked ? `Unlike ${song.title}` : `Like ${song.title}`}
+              title={isLiked ? 'Liked' : 'Like'}
+            >
+              <Heart size={24} fill={isLiked ? 'currentColor' : 'none'} aria-hidden="true" />
+            </button>
+            <button type="button" onClick={handleCopyLink} className="sp-icon-btn" aria-label="Copy link" title="Copy link">
+              <Link2 size={22} aria-hidden="true" />
+              {/* aria-live so screen readers hear the confirmation. */}
+              <span className="sp-sr" aria-live="polite">{copySuccess ? 'Link copied' : ''}</span>
+            </button>
+            <div className="sp-menu-wrap">
               <button
-                ref={bar.playRef}
-                onClick={handleHeroPlayClick}
-                className="sp-btn-play-circle"
-                aria-label={isThisSongPlaying ? 'Pause' : 'Play'}
+                type="button"
+                className="sp-icon-btn"
+                onClick={(e) => { e.stopPropagation(); setMoreOpen((o) => !o); }}
+                aria-label="More options"
+                aria-expanded={moreOpen}
+                aria-haspopup="menu"
               >
-                {isThisSongPlaying ? <HeroPauseIcon /> : <HeroPlayIcon />}
+                <MoreHorizontal size={22} aria-hidden="true" />
               </button>
-              <button onClick={handleVote} className="sp-btn-vote">Vote</button>
-              <button
-                onClick={handleLike}
-                className={`sp-btn-like ${isLiked ? 'liked' : ''}`}
-                aria-pressed={isLiked}
-              >
-                <Heart size={16} fill={isLiked ? 'white' : 'none'} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 6 }} />
-                {isLiked ? 'Liked' : 'Like'}
-              </button>
-            </div>
-
-            {/* ── STATS ROW ── */}
-            <div className="sp-stats-row">
-              {song.playsToday > 100 && (
-                <span className="sp-stat sp-stat-hot">{formatNumber(song.playsToday)} plays today</span>
+              {moreOpen && (
+                <div className="sp-menu" role="menu" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={isBlocked}
+                    onClick={() => { setMoreOpen(false); handleDontPlay(); }}
+                    aria-label={isBlocked ? `Allow ${song.title} to play again` : `Never play ${song.title}`}
+                  >
+                    <Ban size={18} aria-hidden="true" />
+                    <span className="sp-menu__text">
+                      <span>{isBlocked ? 'Won’t play' : 'Don’t play'}</span>
+                      <small>Your queue skips it</small>
+                    </span>
+                    <span className={`sp-switch ${isBlocked ? 'is-on' : ''}`} aria-hidden="true"><i /></span>
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); handleReport(); }}>
+                    <Flag size={18} aria-hidden="true" />
+                    <span className="sp-menu__text"><span>Report</span></span>
+                  </button>
+                </div>
               )}
             </div>
-
-            {/* ── SECONDARY ACTIONS — text buttons like original ── */}
-            <div className="sp-secondary-actions">
-              <button
-                onClick={handleDontPlay}
-                className="sp-action-btn"
-                aria-pressed={isBlocked}
-                aria-label={isBlocked
-                  ? `Allow ${song.title} to play again`
-                  : `Never play ${song.title}`}
-              >
-                {isBlocked ? "Won't Play ✓" : "Don't Play"}
-              </button>
-              <button onClick={handleReport} className="sp-action-btn">Report</button>
-              <button onClick={handleCopyLink} className="sp-action-btn">
-                {/* aria-live so screen readers announce the confirmation —
-                    a purely visual "Copied!" is invisible to them. */}
-                <span aria-live="polite">{copySuccess ? 'Copied!' : 'Copy Link'}</span>
-              </button>
-            </div>
-
-            {/* ── LYRICS ── */}
-            {(song.lyrics || isOwner) && (
-              <div className="sp-lyrics-section">
-                <div className="sp-lyrics-header">
-                  <span className="sp-lyrics-label">Lyrics</span>
-                  {isOwner && (
-                    <button className="sp-lyrics-edit" onClick={() => setShowLyricsWizard(true)}>
-                      <FileText size={13} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-                      {song.lyrics ? 'Edit' : 'Add Lyrics'}
-                    </button>
-                  )}
-                </div>
-                {song.lyrics && timedLyrics.length > 0 && isThisSongLoaded ? (
-                  <div className="sp-lyrics-live lyrics-stage">
-                    <LyricsLines
-                      lines={timedLyrics}
-                      mediaRef={audioRef}
-                      size="md"
-                      playing={isPlaying}
-                      onSeek={(t) => {
-                        if (audioRef?.current) audioRef.current.currentTime = t;
-                        if (!isPlaying) togglePlayPause?.();
-                      }}
-                      label={`Lyrics for ${song.title}`}
-                    />
-                  </div>
-                ) : (
-                  song.lyrics && <div className="sp-lyrics-body">{song.lyrics}</div>
-                )}
-                {song.lyrics && timedLyrics.length > 0 && !isThisSongLoaded && (
-                  <p className="sp-lyrics-hint">Press play and these lyrics move with the song.</p>
-                )}
-              </div>
-            )}
-
-            {/* ── RECOMMENDED ── */}
-            <RecommendedSongs songId={song.id} />
-
-            {/* ── AD SPACE (none for Unis Plus) ── */}
-            <AdSlot placement="song" />
-
-            {/* ── COMMENTS ── */}
-            <div className="sp-comments">
-              <CommentSection songId={song.id} userId={userId} songArtistId={song.artistId} />
-            </div>
+            <span className="sp-actions-spacer" />
+            <button type="button" onClick={handleVote} className="sp-vote-pill sp-hide-phone">
+              <VoteIcon size={18} tone="on" aria-hidden="true" />
+              Vote
+            </button>
+            <button
+              ref={bar.playRef}
+              type="button"
+              onClick={handleHeroPlayClick}
+              className="sp-play"
+              aria-label={isThisSongPlaying ? `Pause ${song.title}` : `Play ${song.title}`}
+            >
+              {isThisSongPlaying ? <HeroPauseIcon /> : <HeroPlayIcon />}
+            </button>
           </div>
 
-          {/* ━━━ RIGHT SIDEBAR ━━━ */}
-          <aside className="sp-sidebar">
-            <div className="sp-sidebar-ambient" style={{ backgroundImage: `url(${song.artwork})` }} />
+          {/* Phones: Vote spans the screen, like the artist page's vote card. */}
+          <button type="button" className="sp-votecard sp-hide-desktop" onClick={handleVote}>
+            <VoteIcon size={22} aria-hidden="true" />
+            <span className="sp-votecard__text">
+              <span className="sp-votecard__title">Vote for {song.title}</span>
+              <span className="sp-votecard__sub">Moves it up the {song.jurisdiction} rankings</span>
+            </span>
+            <ChevronRight size={18} aria-hidden="true" />
+          </button>
 
-            <div className="sp-sidebar-section">
-              <div className="sp-sidebar-title">Song Details</div>
-              <div className="sp-details-grid">
-                <div className="sp-detail"><div className="sp-detail-label">Duration</div><div className="sp-detail-value">{formatDuration(song.duration)}</div></div>
-                <div className="sp-detail"><div className="sp-detail-label">Uploaded</div><div className="sp-detail-value">{formatDate(song.createdAt)}</div></div>
-                <div className="sp-detail"><div className="sp-detail-label">Plays</div><div className="sp-detail-value">{formatNumber(song.playCount)}</div></div>
-                <div className="sp-detail"><div className="sp-detail-label">Likes</div><div className="sp-detail-value">{formatNumber(likeCount)}</div></div>
-                {song.language && (
-                  <div className="sp-detail">
-                    <div className="sp-detail-label">Language</div>
-                    <div className="sp-detail-value">
-                      {taxonomy?.languages.find((l) => l.code === song.language)?.name || song.language}
-                    </div>
+          {song.playsToday > 100 && (
+            <div className="sp-stats-row">
+              <span className="sp-stat sp-stat-hot">
+                <TrendingUp size={15} aria-hidden="true" />
+                {formatNumber(song.playsToday)} plays today
+              </span>
+            </div>
+          )}
+
+          <div className="sp-grid">
+            {/* ━━━ MAIN COLUMN ━━━ */}
+            <div className="sp-song-main">
+              {/* ── LYRICS ── */}
+              {song.lyrics ? (
+                <section className="sp-lyrics" aria-label="Lyrics">
+                  <div className="sp-lyrics-header">
+                    <h2 className="sp-lyrics-label">Lyrics</h2>
+                    {isOwner && (
+                      <button type="button" className="sp-chip-btn" onClick={() => setShowLyricsWizard(true)}>
+                        <FileText size={14} aria-hidden="true" /> Edit
+                      </button>
+                    )}
+                    {!liveLyrics && lyricsLong && (
+                      <button
+                        type="button"
+                        className="sp-chip-btn"
+                        onClick={() => setLyricsOpen((o) => !o)}
+                        aria-expanded={lyricsOpen}
+                      >
+                        {lyricsOpen ? 'Show less' : 'Show all'}
+                      </button>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-
-            <div className="sp-sidebar-section">
-              <div className="sp-sidebar-title">Artist</div>
-              <div
-                className="sp-artist-card"
-                role="button"
-                tabIndex={0}
-                aria-label={`View ${song.artist}'s artist page`}
-                onClick={handleArtistClick}
-                onKeyDown={onKeyActivate(handleArtistClick)}
-              >
-                <div className={`sp-artist-card-avatar ${song.artistPhoto ? 'has-photo' : ''}`}>
-                  {song.artistPhoto
-                    ? <img src={song.artistPhoto} alt={song.artist} />
-                    : song.artist?.charAt(0).toUpperCase() || '?'}
-                </div>
-                <div className="sp-artist-card-info">
-                  <div className="sp-artist-card-name">{song.artist}</div>
-                  <div className="sp-artist-card-jur">{song.jurisdiction}</div>
-                </div>
-                <button
-                  className={`sp-sidebar-follow ${isFollowing ? 'following' : ''}`}
-                  onClick={(e) => { e.stopPropagation(); handleFollow(); }}
-                >
-                  {isFollowing ? 'Following' : 'Follow'}
-                </button>
-              </div>
-            </div>
-
-            {song.description && song.description !== 'No description available' && (
-              <div className="sp-sidebar-section">
-                <div className="sp-sidebar-title">About</div>
-                <p className="sp-about-text">{song.description}</p>
-              </div>
-            )}
-
-            {/* Credits: removed (Nov 2026). The backend stores no producer,
-                writer or mix credits yet, so every song showed "N/A" three
-                times. Bring the section back when credits are stored. */}
-
-            {song.photos.length > 0 && (
-              <div className="sp-sidebar-section">
-                <div className="sp-sidebar-title">Photos</div>
-                <div className="sp-media-grid">
-                  {song.photos.map((photo, idx) => (<figure key={idx}><img src={photo.src} alt={photo.caption} /><figcaption>{photo.caption}</figcaption></figure>))}
-                </div>
-              </div>
-            )}
-
-            {song.videos.length > 0 && (
-              <div className="sp-sidebar-section">
-                <div className="sp-sidebar-title">Videos</div>
-                <div className="sp-video-list">
-                  {song.videos.map((vid, idx) => (
-                    <div key={idx} className="sp-video-item">
-                      <iframe src={vid.url} title={vid.caption} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                      <p>{vid.caption}</p>
+                  {liveLyrics ? (
+                    <div className="sp-lyrics-live lyrics-stage">
+                      <LyricsLines
+                        lines={timedLyrics}
+                        mediaRef={audioRef}
+                        size="md"
+                        playing={isPlaying}
+                        onSeek={(t) => {
+                          if (audioRef?.current) audioRef.current.currentTime = t;
+                          if (!isPlaying) togglePlayPause?.();
+                        }}
+                        label={`Lyrics for ${song.title}`}
+                      />
                     </div>
-                  ))}
-                </div>
+                  ) : (
+                    <div className={`sp-lyrics-body ${lyricsLong && !lyricsOpen ? 'is-clamped' : ''}`}>{song.lyrics}</div>
+                  )}
+                  {timedLyrics.length > 0 && !isThisSongLoaded && (
+                    <p className="sp-lyrics-hint">Press play and these lyrics move with the song.</p>
+                  )}
+                </section>
+              ) : isOwner && (
+                // Only the artist sees the empty box.
+                <section className="sp-lyrics sp-lyrics--empty" aria-label="Lyrics">
+                  <span className="sp-lyrics-empty-icon" aria-hidden="true"><Mic size={19} /></span>
+                  <span className="sp-lyrics-empty-text">
+                    <strong>Lyrics</strong>
+                    <span>Only you see this until you add them.</span>
+                  </span>
+                  <button type="button" className="sp-lyrics-add" onClick={() => setShowLyricsWizard(true)}>Add lyrics</button>
+                </section>
+              )}
+
+              {/* ── ABOUT THE SONG ── */}
+              {hasAbout && (
+                <section className="sp-card sp-about">
+                  <h2 className="sp-card-title">About the song</h2>
+                  <p className="sp-about-text">{song.description}</p>
+                </section>
+              )}
+
+              {/* ── RECOMMENDED ── */}
+              <div className="sp-recs">
+                <RecommendedSongs songId={song.id} />
               </div>
-            )}
-          </aside>
+
+              {/* ── AD SPACE (none for Unis Plus) ── */}
+              <div className="sp-ad">
+                <AdSlot placement="song" />
+              </div>
+
+              {/* ── COMMENTS ── */}
+              <div className="sp-comments">
+                <CommentSection songId={song.id} userId={userId} songArtistId={song.artistId} />
+              </div>
+            </div>
+
+            {/* ━━━ RIGHT COLUMN (phones: woven into the page above) ━━━ */}
+            <aside className="sp-sidebar">
+              <section className="sp-card sp-details">
+                <h2 className="sp-card-title">Song details</h2>
+                <div className="sp-details-grid">
+                  <div className="sp-detail"><div className="sp-detail-label">Duration</div><div className="sp-detail-value">{formatDuration(song.duration)}</div></div>
+                  <div className="sp-detail"><div className="sp-detail-label">Uploaded</div><div className="sp-detail-value">{formatDate(song.createdAt)}</div></div>
+                  <div className="sp-detail"><div className="sp-detail-label">Plays</div><div className="sp-detail-value">{formatNumber(song.playCount)}</div></div>
+                  <div className="sp-detail"><div className="sp-detail-label">Likes</div><div className="sp-detail-value">{formatNumber(likeCount)}</div></div>
+                  {song.language && (
+                    <div className="sp-detail">
+                      <div className="sp-detail-label">Language</div>
+                      <div className="sp-detail-value">
+                        {taxonomy?.languages.find((l) => l.code === song.language)?.name || song.language}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Credits: removed (Nov 2026). The backend stores no producer,
+                  writer or mix credits yet, so every song showed "N/A" three
+                  times. Bring the section back when credits are stored. */}
+
+              {/* ── ARTIST: a photo card with Follow ── */}
+              <section className="sp-artist" aria-label="Artist">
+                <div
+                  className="sp-artist-card"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${song.artist}'s artist page`}
+                  onClick={handleArtistClick}
+                  onKeyDown={onKeyActivate(handleArtistClick)}
+                >
+                  <div className="sp-artist-card__photo" aria-hidden="true">
+                    {song.artistPhoto
+                      ? <img src={song.artistPhoto} alt="" />
+                      : <span className="sp-artist-card__initial">{song.artist?.charAt(0).toUpperCase() || '?'}</span>}
+                  </div>
+                  <span className="sp-artist-card__kicker">Artist</span>
+                  <div className="sp-artist-card__foot">
+                    <div className="sp-artist-card-info">
+                      <div className="sp-artist-card-name">{song.artist}</div>
+                      <div className="sp-artist-card-jur">{song.jurisdiction}</div>
+                    </div>
+                    <button
+                      type="button"
+                      className={`sp-sidebar-follow ${isFollowing ? 'following' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); handleFollow(); }}
+                    >
+                      {isFollowing ? <><Check size={14} aria-hidden="true" /> Following</> : 'Follow'}
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              {song.photos.length > 0 && (
+                <section className="sp-card sp-photos">
+                  <h2 className="sp-card-title">Photos</h2>
+                  <div className="sp-media-grid">
+                    {song.photos.map((photo, idx) => (<figure key={idx}><img src={photo.src} alt={photo.caption} /><figcaption>{photo.caption}</figcaption></figure>))}
+                  </div>
+                </section>
+              )}
+
+              {song.videos.length > 0 && (
+                <section className="sp-card sp-videos">
+                  <h2 className="sp-card-title">Videos</h2>
+                  <div className="sp-video-list">
+                    {song.videos.map((vid, idx) => (
+                      <div key={idx} className="sp-video-item">
+                        <iframe src={vid.url} title={vid.caption} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                        <p>{vid.caption}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </aside>
+          </div>
         </div>
       </div>
 
