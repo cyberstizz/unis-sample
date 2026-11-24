@@ -13,7 +13,8 @@ import {
   GESTURE_CONFIG, playLogoGesture, isGestureRunning, createPlaybackGestureTracker,
 } from './utils/logoGestures';
 import { onSplashGone } from './boot/bootSplash';
-import { FindIcon, VoteIcon, AwardsIcon, EarningsIcon, MenuIcon, SearchIcon, SignInIcon } from './icons/UnisIcons';
+import { FindIcon, VoteIcon, AwardsIcon, EarningsIcon, MenuIcon, SearchIcon, SignInIcon, MessagesIcon } from './icons/UnisIcons';
+import useUnreadMessages from './hooks/useUnreadMessages';
 import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
 import logored from './assets/logo-red.png';
@@ -32,6 +33,9 @@ const Header = () => {
     ? (currentMedia.id ?? currentMedia.songId ?? currentMedia.url ?? currentMedia.fileUrl ?? null)
     : null;
   const { triggerGate, gateProps } = useAuthGate();
+  // Phones and tablets: Messages lives in the header now (with its badge),
+  // and your picture opens the menu (Nov 2026 bottom bar).
+  const unread = useUnreadMessages(!!user && !isGuest);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [shouldBreathe, setShouldBreathe] = useState(false);
@@ -361,7 +365,7 @@ const Header = () => {
       <div className="header-inner">
         {/* Left: Hamburger + Logo */}
         <div className="header-left">
-          {!locked && <button
+          {!locked && !user && <button
             type="button"
             className="header-hamburger"
             onClick={() => window.dispatchEvent(new CustomEvent('unis:toggle-sidebar'))}
@@ -369,6 +373,20 @@ const Header = () => {
           >
             <MenuIcon size={18} />
           </button>}
+
+          {/* Phones and tablets, signed in: your picture opens the menu. */}
+          {!locked && user && (
+            <button
+              type="button"
+              className="header-me"
+              onClick={() => window.dispatchEvent(new CustomEvent('unis:toggle-sidebar'))}
+              aria-label="Open menu"
+            >
+              {buildUrl(user?.photoUrl)
+                ? <img src={buildUrl(user.photoUrl)} alt="" />
+                : <span className="header-me__initial">{getInitial()}</span>}
+            </button>
+          )}
 
           <button
             ref={logoBtnRef}
@@ -445,6 +463,19 @@ const Header = () => {
           </nav>
 
           <div className="header-divider" />
+
+          {/* Phones and tablets, signed in: Messages with its unread badge. */}
+          {user && (
+            <button
+              type="button"
+              className="header-msgs"
+              onClick={() => navigate('/messages')}
+              aria-label={unread > 0 ? `Messages, ${unread} unread` : 'Messages'}
+            >
+              <MessagesIcon size={22} />
+              {unread > 0 && <span className="header-msgs__badge">{unread > 99 ? '99+' : unread}</span>}
+            </button>
+          )}
 
           {/* Authenticated: User avatar + dropdown */}
           {user && (

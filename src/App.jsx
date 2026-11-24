@@ -8,6 +8,8 @@ import { FeedbackProvider } from './context/FeedbackContext';
 import Player from './player';
 import Sidebar from './sidebar';
 import Feed from './feed';
+import HomePage from './homePage';
+import BottomBar from './components/BottomBar';
 import SongNotification from './songNotification';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './AdminRoute';
@@ -198,7 +200,8 @@ const AppLayout = () => {
 
         {/* Browsable routes — guests can view these freely */}
         <Route element={<PrivateRoute />}>
-          <Route path="/" element={<Feed />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/feed" element={<Feed />} />
           <Route path="/artist/:artistId" element={<ArtistPage />} />
           <Route path="/song/:songId" element={<SongPage />} />
           <Route path="/playlists" element={<LibraryPage />} />
@@ -262,6 +265,7 @@ const AppLayout = () => {
      {!isAuthPage && !chromeless && <SongNotification />}
 
       {!isAuthPage && !chromeless && <Player />}
+      {!isAuthPage && !chromeless && <BottomBar />}
       {!isAuthPage && !chromeless && <PlayChoiceModal />}
 
       {/* First-visit guided tour of the interface (src/tour). Starts by

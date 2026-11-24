@@ -66,6 +66,37 @@ const initials = (name) => (name || '')
 //   fillable primary shape (class `fs`) plus accent-fill detail (`fs2`).
 //   Stroke / fill are driven entirely by sidebar.scss.
 const ICONS = {
+  // ★ Nov 2026 bottom bar: Feed got its own page (/feed); Find, Awards,
+  //   Earnings and Log out joined the phone menu.
+  feed: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect className="fs" x="4" y="4" width="16" height="9" rx="2.4" />
+      <path d="M4.5 16.6h15M4.5 20h9.5" />
+    </svg>
+  ),
+  find: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path className="fs" d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </svg>
+  ),
+  awards: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path className="fs" d="M8 4h8v5a4 4 0 0 1-8 0z" />
+      <path d="M5 5h3v1.5a2.5 2.5 0 0 0 2.4 2.5M16 5h3v1.5A2.5 2.5 0 0 1 16.6 9M12 13v4M8.5 20h7" />
+    </svg>
+  ),
+  earnings: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle className="fs" cx="12" cy="12" r="8.4" />
+      <path d="M12 6.5v11M14.6 9.2c0-1.1-1.2-1.8-2.6-1.8s-2.6.7-2.6 1.8 1.2 1.6 2.6 1.8 2.6.8 2.6 1.9-1.2 1.8-2.6 1.8-2.6-.7-2.6-1.8" />
+    </svg>
+  ),
+  logout: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M14 4.5h3.6A1.4 1.4 0 0 1 19 5.9v12.2a1.4 1.4 0 0 1-1.4 1.4H14M10 16l-4-4 4-4M6 12h9" />
+    </svg>
+  ),
   home: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path className="fs" d="M4 10.5 12 4l8 6.5V19a1.4 1.4 0 0 1-1.4 1.4H5.4A1.4 1.4 0 0 1 4 19z" />
@@ -197,7 +228,7 @@ const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);          // the phone/tablet drawer
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [desktop, setDesktop] = useState(isDesktop);
-  const { user, isGuest, theme } = useAuth();
+  const { user, isGuest, theme, logout } = useAuth();
   const { triggerGate, gateProps } = useAuthGate();
   const player = useContext(PlayerContext) || {};
   const {
@@ -362,17 +393,30 @@ const Sidebar = () => {
   const onPlus = () => { if (isGuest) { triggerGate('plus'); return; } handleNav('/plus'); };
   const onSettings = () => { if (isGuest) { triggerGate('profile'); return; } handleProfile(); };
 
-  const links = [
-    { key: 'home',         label: 'Home',         icon: 'home',         onClick: () => handleNav('/'),             match: (p) => p === '/' },
-    { key: 'discover',     label: 'Discover',     icon: 'discover',     onClick: () => handleNav('/discover'),     match: (p) => p.startsWith('/discover') },
+  const onEarnings = () => { if (isGuest) { triggerGate('profile'); return; } handleNav('/earnings'); };
+  const onLogout = () => { setIsOpen(false); logout(); };
+
+  // bar: also in the phone bottom bar or header, so the phone menu leaves it
+  //      out. menu: phone menu only (the desktop header already has these).
+  const allLinks = [
+    { key: 'home',         label: 'Home',         icon: 'home',         onClick: () => handleNav('/'),             match: (p) => p === '/', bar: true },
+    { key: 'feed',         label: 'Feed',         icon: 'feed',         onClick: () => handleNav('/feed'),         match: (p) => p.startsWith('/feed'), bar: true },
+    { key: 'discover',     label: 'Discover',     icon: 'discover',     onClick: () => handleNav('/discover'),     match: (p) => p.startsWith('/discover'), bar: true },
     { key: 'charts',       label: 'Charts',       icon: 'charts',       onClick: () => handleNav('/charts'),       match: (p) => p.startsWith('/charts') },
-    { key: 'vote',         label: 'Vote',         icon: 'vote',         onClick: () => handleNav('/voteawards'),   match: (p) => p.startsWith('/voteawards') },
-    { key: 'messages',     label: 'Messages',     icon: 'messages',     onClick: onMessages, badge: unreadCount,  match: (p) => p.startsWith('/messages') },
+    { key: 'vote',         label: 'Vote',         icon: 'vote',         onClick: () => handleNav('/voteawards'),   match: (p) => p.startsWith('/voteawards'), bar: true },
+    { key: 'messages',     label: 'Messages',     icon: 'messages',     onClick: onMessages, badge: unreadCount,  match: (p) => p.startsWith('/messages'), bar: true },
+    { key: 'find',         label: 'Find on the map', icon: 'find',      onClick: () => handleNav('/findpage'),     match: (p) => p.startsWith('/findpage'), menu: true },
+    { key: 'awards',       label: 'Awards',       icon: 'awards',       onClick: () => handleNav('/milestones'),   match: (p) => p.startsWith('/milestones'), menu: true },
+    { key: 'earnings',     label: 'Earnings',     icon: 'earnings',     onClick: onEarnings,                       match: (p) => p.startsWith('/earnings'), menu: true },
     { key: 'plus',         label: 'Unis Plus',    icon: 'plus',         onClick: onPlus,                          match: (p) => p.startsWith('/plus') },
     ...(user && user.adminRole
       ? [{ key: 'admin', label: 'Admin', icon: 'admin', onClick: () => handleNav('/admin'), match: (p) => p.startsWith('/admin') }]
       : []),
+    ...(signedIn
+      ? [{ key: 'logout', label: 'Log out', icon: 'logout', onClick: onLogout, match: () => false, menu: true }]
+      : []),
   ];
+  const links = allLinks.filter((it) => (desktop ? !it.menu : !it.bar));
 
   // Own playlists first, then followed ones, never the same one twice.
   const library = useMemo(() => {

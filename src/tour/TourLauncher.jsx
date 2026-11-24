@@ -4,7 +4,7 @@
 // (UnisTour.jsx + its styles) downloads only when it is about to show.
 //
 // Opens by itself when ALL of these are true:
-//   • someone is on the feed ('/'), the page every first visit lands on
+//   • someone is on the feed ('/feed'), the page every first visit lands on
 //   • the launch splash is gone and the feed has drawn (its lens bar exists)
 //   • this account (or this device, for signed-out visitors) hasn't
 //     finished or skipped it before (tourStorage.js)
@@ -59,7 +59,7 @@ export default function TourLauncher() {
   const cookieChoice = useConsent();
   const autoTriedFor = useRef(null);
 
-  const onFeed = location.pathname === '/';
+  const onFeed = location.pathname === '/feed';
   const locked = isPrelaunch() && !canEnterApp(user);
   const replayRequested = !!location.state?.unisTour;
 
@@ -73,7 +73,7 @@ export default function TourLauncher() {
   const [replayCount, setReplayCount] = useState(0);
   useEffect(() => {
     if (!onFeed || !replayRequested || locked) return;
-    navigate('/', { replace: true, state: null }); // one replay per click
+    navigate('/feed', { replace: true, state: null }); // one replay per click
     setReplayCount((n) => n + 1);
   }, [onFeed, replayRequested, locked, navigate]);
 

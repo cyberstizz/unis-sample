@@ -599,7 +599,9 @@ const Player = () => {
       return;
     }
     const stack = isExpanded ? 104 : isDesktop ? 96 : 88;
-    root.style.setProperty('--unp-stack', `${stack}px`);
+    // The bottom bar (components/BottomBar.jsx) lifts everything stacked on
+    // the mini player by --unis-bar-lift (0 on desktop and while it's away).
+    root.style.setProperty('--unp-stack', `calc(${stack}px + var(--unis-bar-lift, 0px))`);
   }, [currentMedia, isExpanded, isDesktop]);
 
   useEffect(() => () => document.documentElement.style.removeProperty('--unp-stack'), []);

@@ -30,5 +30,5 @@ export function markTourSeen(user, how) {
 
 /** Replays the tour from anywhere: goes to the feed and starts it there. */
 export function startTour(navigate) {
-  navigate('/', { state: { unisTour: true } });
+  navigate('/feed', { state: { unisTour: true } });
 }

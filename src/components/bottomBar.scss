@@ -1,0 +1,139 @@
+// src/components/bottomBar.scss — the bottom bar on phones and tablets.
+// See BottomBar.jsx for the rules. Height: 62px + the home-indicator area.
+
+$bar-h: 62px;
+$safe: env(safe-area-inset-bottom, 0px);
+
+.unis-bar {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(#{$bar-h} + #{$safe});
+  padding: 0 2px $safe;
+  box-sizing: border-box;
+  display: flex;
+  background: rgba(9, 11, 18, 0.92);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  font-family: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  transition: transform 0.25s ease, opacity 0.2s ease;
+
+  // Keyboard up or Now Playing open: step aside (no motion while scrolling).
+  &.is-away {
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.unis-bar__tab {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  padding: 7px 0 0;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.62);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  > svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.15s ease;
+  }
+
+  &:active > svg { transform: scale(0.9); }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--unis-primary), white 62%);
+    outline-offset: -4px;
+    border-radius: 10px;
+  }
+
+  // The page you're on: the icon in your theme, filled softly; label white.
+  &.is-on {
+    color: #fff;
+
+    > svg {
+      color: color-mix(in srgb, var(--unis-primary), white 42%);
+      .fs { fill: color-mix(in srgb, var(--unis-primary), transparent 70%); }
+    }
+  }
+}
+
+.unis-bar__label {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Vote: a pill in the listener's theme.
+.unis-bar__tab--vote {
+  color: color-mix(in srgb, var(--unis-primary), white 42%);
+
+  &.is-on { color: #fff; }
+}
+
+.unis-bar__pill {
+  width: 46px;
+  height: 30px;
+  margin: -1px 0 -2px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--unis-primary-2), var(--unis-primary));
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 16px var(--unis-primary-glow);
+  transition: transform 0.15s ease;
+
+  svg {
+    width: 21px;
+    height: 21px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .unis-bar__tab--vote:active & { transform: scale(0.92); }
+}
+
+[data-theme='yellow'] .unis-bar__pill { color: #111318; }
+
+// Pages get room for the bar (the player already pads for itself).
+@media (max-width: 1024px) {
+  body.has-bottom-bar .layout-container { padding-bottom: 56px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unis-bar { transition: opacity 0.2s ease; }
+  .unis-bar.is-away { transform: none; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .unis-bar {
+    background: #0b0d16;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

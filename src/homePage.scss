@@ -1,0 +1,627 @@
+// src/homePage.scss — Home (/), Nov 2026. See homePage.jsx.
+// Inter for UI, Instrument Serif italic for the area name, all colour from
+// the theme tokens.
+
+$hm-phone: 767px;
+$hm-t2: color-mix(in srgb, var(--unis-primary, #163387), white 42%);
+$hm-ring: color-mix(in srgb, var(--unis-primary, #163387), white 22%);
+$hm-serif: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+$hm-sans: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+
+// Clear the fixed header exactly; Home sets its own side margins.
+.layout-container:has(.hm) { padding-top: 75px; }
+.layout-container:has(.hm) .layout-content { padding-left: 0; padding-right: 0; }
+@media (max-width: 768px) {
+  .layout-container:has(.hm) { padding-top: 72px; }
+}
+
+.hm {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 32px 120px;
+  box-sizing: border-box;
+  color: #fff;
+  font-family: $hm-sans;
+  -webkit-font-smoothing: antialiased;
+  background: linear-gradient(180deg, #0d1020, var(--unis-bg, #07090f) 420px);
+
+  button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  button:focus { outline: none; }
+  button:focus-visible { outline: 2px solid color-mix(in srgb, var(--unis-primary), white 62%); outline-offset: 2px; }
+
+  em {
+    font-family: $hm-serif;
+    font-style: italic;
+    font-weight: 400;
+    color: $hm-t2;
+  }
+
+  @media (max-width: $hm-phone) { padding: 12px 12px 140px; }
+}
+
+// ── Today's race ──
+.hm-race {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 22px;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-areas:
+    'intro list'
+    'cta   list';
+  column-gap: 26px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: #121522;
+
+  @media (max-width: $hm-phone) {
+    padding: 16px 16px 14px;
+    border-radius: 16px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'intro' 'list' 'note' 'cta';
+  }
+}
+
+// The #1 song's artwork paints the card.
+.hm-race__wash {
+  position: absolute;
+  inset: -30%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(60px) saturate(1.4);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.hm-race__shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(7, 9, 15, 0.55), rgba(7, 9, 15, 0.7));
+
+  @media (max-width: $hm-phone) {
+    background: linear-gradient(180deg, rgba(7, 9, 15, 0.35), rgba(7, 9, 15, 0.72));
+  }
+}
+
+.hm-race__intro { position: relative; grid-area: intro; }
+
+.hm-live {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+
+  @media (max-width: $hm-phone) { font-size: 11px; }
+}
+
+.hm-live__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: $hm-t2;
+  animation: hmPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes hmPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.hm-race__title {
+  margin: 10px 0 0;
+  font-size: 40px;
+  line-height: 1.02;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+
+  em { font-size: 1.2em; }
+
+  @media (max-width: $hm-phone) {
+    margin: 6px 0 4px;
+    font-size: 28px;
+    line-height: 1.08;
+  }
+}
+
+.hm-race__lede {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  line-height: 1.5;
+
+  @media (max-width: $hm-phone) { display: none; }
+}
+
+// Desktop: three cards. Phones: three rows.
+.hm-race__list {
+  position: relative;
+  grid-area: list;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 14px;
+  min-width: 0;
+
+  @media (max-width: $hm-phone) {
+    flex-direction: column;
+    gap: 0;
+    margin-top: 6px;
+  }
+}
+
+.hm-entry {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(7, 9, 15, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+
+  &--ghost { min-height: 240px; background: rgba(255, 255, 255, 0.05); }
+
+  @media (max-width: $hm-phone) {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    background: none;
+    box-shadow: none;
+    border-radius: 0;
+
+    &--ghost { min-height: 62px; margin: 4px 0; border-radius: 10px; background: rgba(255, 255, 255, 0.06); }
+  }
+}
+
+.hm-entry__rank {
+  display: none;
+  width: 24px;
+  flex: 0 0 24px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.55);
+
+  &.is-first { color: $hm-t2; }
+
+  @media (max-width: $hm-phone) { display: block; }
+}
+
+.hm-entry__art {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  @media (max-width: $hm-phone) {
+    width: 54px;
+    height: 54px;
+    flex: 0 0 54px;
+    border-radius: 6px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  }
+}
+
+// Desktop: the rank sits big on the artwork.
+.hm-entry__big {
+  position: absolute;
+  left: 10px;
+  top: 4px;
+  font-size: 54px;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  color: #fff;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+
+  @media (max-width: $hm-phone) { display: none; }
+}
+
+.hm-entry__text {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+
+  @media (max-width: $hm-phone) { flex: 1; margin-top: 0; }
+}
+
+.hm-entry__name,
+.hm-entry__sub {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hm-entry__name { font-size: 16px; font-weight: 700; @media (max-width: $hm-phone) { font-size: 15.5px; } }
+.hm-entry__sub { margin-top: 2px; font-size: 13.5px; color: rgba(255, 255, 255, 0.66); @media (max-width: $hm-phone) { font-size: 13px; } }
+
+// Glass play button: over the artwork on desktop, at the end of the row on phones.
+.hm-entry__play {
+  position: absolute;
+  right: 22px;
+  top: calc(12px + (100% - 24px) - 112px);
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 9, 15, 0.38);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 0 0 0.5px rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+
+  svg { margin-left: 2px; }
+
+  @media (max-width: $hm-phone) {
+    position: static;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+  }
+}
+
+.hm-race__note {
+  position: relative;
+  grid-area: list;
+  align-self: end;
+  margin: 8px 0 0;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13.5px;
+  line-height: 1.4;
+
+  @media (max-width: $hm-phone) { grid-area: note; }
+}
+
+.hm-race.is-quiet .hm-race__note { align-self: start; margin-top: 0; }
+
+.hm-race__cta {
+  position: relative;
+  grid-area: cta;
+  align-self: end;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 16px;
+
+  @media (max-width: $hm-phone) { margin-top: 10px; }
+}
+
+.hm-vote {
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--unis-primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 10px 24px var(--unis-primary-glow);
+  transition: transform 0.12s ease, filter 0.15s ease;
+
+  &:hover { filter: brightness(1.1); }
+  &:active { transform: scale(0.98); }
+}
+
+[data-theme='yellow'] .hm-vote { color: #111318; }
+
+.hm-voted {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 12px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px $hm-ring;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.hm-voted__tick {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--unis-primary);
+  color: #fff;
+}
+
+[data-theme='yellow'] .hm-voted__tick { color: #111318; }
+
+.hm-race__more {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover { color: #fff; }
+
+  @media (max-width: $hm-phone) { font-size: 13px; }
+}
+
+// ── Signed out ──
+.hm-join {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 16px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--unis-primary), #07090f 35%), rgba(255, 255, 255, 0.04));
+  box-shadow: inset 0 0 0 1px $hm-ring;
+
+  h2 { margin: 0; font-size: 18px; font-weight: 800; }
+  p { margin: 6px 0 12px; color: rgba(255, 255, 255, 0.78); font-size: 14px; line-height: 1.45; }
+
+  button {
+    height: 40px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 20px;
+    background: #fff;
+    color: #07090f;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
+
+// ── Section titles ──
+.hm-h2 {
+  margin: 28px 0 12px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+
+  em { font-size: 1.2em; }
+
+  @media (max-width: $hm-phone) { margin: 26px 4px 12px; font-size: 20px; }
+}
+
+// ── Jump back in: one tile size ──
+.hm-jump {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+
+  @media (max-width: 1024px) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+}
+
+.hm-tile {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 10px 0 0;
+  border: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.12); }
+
+  @media (max-width: 1024px) {
+    height: 56px;
+    gap: 10px;
+    font-size: 13.5px;
+
+    // Phones and tablets show six.
+    &:nth-child(n + 7) { display: none; }
+  }
+}
+
+.hm-tile__cover {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--unis-primary), #07090f 55%);
+  color: rgba(255, 255, 255, 0.7);
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  @media (max-width: 1024px) { width: 56px; height: 56px; flex-basis: 56px; }
+}
+
+.hm-tile__name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ── Shelves: one card size per row ──
+.hm-shelf {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px;
+
+  > :nth-child(n + 7) { display: none; }
+
+  @media (max-width: 1024px) {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    margin: 0 -12px;
+    padding: 0 16px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+
+    > :nth-child(n + 7) { display: block; }
+  }
+}
+
+.hm-card {
+  min-width: 0;
+
+  @media (max-width: 1024px) { flex: 0 0 148px; scroll-snap-align: start; }
+}
+
+.hm-card__art {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  &:hover .hm-card__play,
+  &:focus-visible .hm-card__play { opacity: 1; transform: none; }
+}
+
+.hm-card__empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.6);
+  background: color-mix(in srgb, var(--unis-primary), #07090f 55%);
+}
+
+.hm-card__play {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--unis-primary);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+
+  svg { margin-left: 2px; }
+
+  @media (hover: none) { display: none; }
+}
+
+[data-theme='yellow'] .hm-card__play { color: #111318; }
+
+.hm-card__title,
+.hm-card__sub {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.hm-card__title { margin-top: 9px; color: #fff; font-size: 14.5px; font-weight: 700; @media (max-width: 1024px) { margin-top: 8px; font-size: 14px; } }
+.hm-card__sub { margin-top: 1px; color: rgba(255, 255, 255, 0.6); font-size: 13px; @media (max-width: 1024px) { font-size: 12.5px; } }
+.hm-card__title:hover, .hm-card__sub:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+// ── Artists near you ──
+.hm-artist {
+  min-width: 0;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+
+  @media (max-width: 1024px) { flex: 0 0 104px; scroll-snap-align: start; }
+}
+
+.hm-artist__photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--unis-primary), #07090f 45%);
+  font-size: 34px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.85);
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+
+.hm-artist__name {
+  display: block;
+  margin-top: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hm-ad { margin-top: 24px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-live__dot { animation: none; }
+  .hm-card__play { transition: none; }
+}
