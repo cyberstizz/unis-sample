@@ -11,10 +11,13 @@
 // (--unis-primary / -2 / -glow) marks Unis actions: Vote, active tray
 // items, toggles that are on. Dark text on the yellow theme.
 //
-// Motion rule: resting = the tinted card. Scrolling (.is-glass +
-// .is-tucked on the root) = glass, tucked in. Pages with a big artwork hero
-// keep .is-glass. Text on glass sits on a darkening layer so it stays
-// readable over bright art.
+// Motion rule: the player never changes size or place. Resting = the
+// tinted card. Scrolling (.is-glass on the root) = the tint thins so the
+// card turns slightly see-through. Pages with a big artwork hero keep
+// .is-glass. Text on glass sits on a darkening layer so it stays readable.
+//
+// Shape: Spotify-like — gently rounded rectangles, not pills, so the thin
+// progress strip sits straight along the bottom edge.
 //
 // .player itself is display: contents. Its classes are hooks only; every
 // visible piece is fixed on its own. Nothing here sets transform, filter or
@@ -24,8 +27,7 @@
 $ease: cubic-bezier(0.2, 0.9, 0.25, 1);
 $spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 $font: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
-$mini-side: max(10px, calc(50% - 340px));
-$mini-side-tucked: max(26px, calc(50% - 300px));
+$mini-side: max(8px, calc(50% - 340px));
 $safe-bottom: env(safe-area-inset-bottom, 0px);
 
 .player.unp { display: contents; }
@@ -62,9 +64,7 @@ $safe-bottom: env(safe-area-inset-bottom, 0px);
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
     inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
     0 14px 32px rgba(0, 0, 0, 0.5);
-  transition:
-    left 0.5s $ease, right 0.5s $ease, bottom 0.5s $ease, height 0.5s $ease,
-    border-radius 0.5s $ease, transform 0.45s $ease, opacity 0.3s ease;
+  transition: transform 0.45s $ease, opacity 0.3s ease;
 
   button { font-family: inherit; }
 }
@@ -76,7 +76,7 @@ $safe-bottom: env(safe-area-inset-bottom, 0px);
   background: linear-gradient(120deg, var(--unp-rest-1), var(--unp-rest-2));
   transition: opacity 0.45s ease;
 }
-.unp.is-glass .unp-surface__tint { opacity: 0; }
+.unp.is-glass .unp-surface__tint { opacity: 0.5; }
 .unp.is-glass .unp-mini__title,
 .unp.is-glass .unp-mini__artist,
 .unp.is-glass .unp-dock__text { text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45); }
@@ -91,24 +91,30 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   pointer-events: none;
 }
 
+// Progress, everywhere in the player, is the listener's theme colour: the
+// same line as the queue's theme rules — brightest at the leading edge,
+// with a soft glow so it reads on any artwork tint.
+$theme-line: linear-gradient(90deg, var(--unis-primary), color-mix(in srgb, var(--unis-primary), white 45%));
+$theme-glow: 0 0 8px color-mix(in srgb, var(--unis-primary), transparent 30%);
+
 // Thin progress strip along the bottom edge.
 .unp-strip {
   position: absolute;
-  left: 16px;
-  right: 16px;
+  left: 8px;
+  right: 8px;
   bottom: 0;
-  height: 2.5px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.2);
-  overflow: hidden;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.18);
   pointer-events: none;
 
   span {
     display: block;
     height: 100%;
     width: var(--unp-progress, 0%);
-    border-radius: 2px;
-    background: #fff;
+    border-radius: 1px;
+    background: $theme-line;
+    box-shadow: $theme-glow;
     transition: width 0.25s linear;
   }
 }
@@ -261,7 +267,7 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   gap: 9px;
   padding: 0 18px;
   border: 0;
-  border-radius: 24px;
+  border-radius: 10px;
   color: #fff;
   font-family: $font;
   font-size: 15px;
@@ -276,12 +282,12 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   &:active { transform: scale(0.98); }
   svg { flex: none; }
 }
-.unp-vote--lg { height: 52px; border-radius: 26px; margin-top: 18px; flex: none; }
+.unp-vote--lg { height: 52px; border-radius: 12px; margin-top: 18px; flex: none; }
 .unp-vote--sm {
   width: auto;
   height: 36px;
   padding: 0 14px;
-  border-radius: 18px;
+  border-radius: 8px;
   gap: 7px;
   font-size: 13px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -387,6 +393,17 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   &:focus { outline: none; }
 }
 
+// Seek bars: filled in the theme line (volume stays white).
+.unp-range--theme {
+  &::-webkit-slider-runnable-track {
+    background:
+      $theme-line 0 0 / var(--p, var(--unp-progress, 0%)) 100% no-repeat,
+      rgba(255, 255, 255, 0.24);
+    box-shadow: 0 0 10px -3px color-mix(in srgb, var(--unis-primary), transparent 30%);
+  }
+  &::-moz-range-progress { background: $theme-line; }
+}
+
 // ═══════════════════════════════════════
 //  MINI PLAYER — phones / tablets
 // ═══════════════════════════════════════
@@ -395,14 +412,7 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   right: $mini-side;
   bottom: calc(14px + #{$safe-bottom});
   height: 64px;
-  border-radius: 20px;
-}
-.unp.is-tucked .unp-mini {
-  left: $mini-side-tucked;
-  right: $mini-side-tucked;
-  bottom: calc(12px + #{$safe-bottom});
-  height: 54px;
-  border-radius: 27px;
+  border-radius: 8px;
 }
 
 .unp-mini__row {
@@ -435,16 +445,15 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
 .unp-mini__art {
   position: relative;
   flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 46px;
+  height: 46px;
+  border-radius: 5px;
   overflow: hidden;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  transition: width 0.5s $ease, height 0.5s $ease, border-radius 0.5s $ease, opacity 0.3s ease;
+  transition: opacity 0.3s ease;
 
   img { width: 100%; height: 100%; object-fit: cover; display: block; }
 }
-.unp.is-tucked .unp-mini__art { width: 36px; height: 36px; border-radius: 10px; }
 .unp.is-paused .unp-mini__art { opacity: 0.8; }
 
 .unp-mini__text {
@@ -473,9 +482,7 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: opacity 0.35s ease, max-height 0.45s $ease;
 }
-.unp.is-tucked .unp-mini__artist { opacity: 0; max-height: 0; }
 
 .unp-mini__btn {
   position: relative;
@@ -487,11 +494,11 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   place-items: center;
   overflow: hidden;
   border: 0;
-  border-radius: 14px;
+  border-radius: 8px;
   background: none;
   color: #fff;
   cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease, width 0.45s $ease, opacity 0.3s ease;
+  transition: transform 0.2s ease, background 0.2s ease;
 
   &:active { transform: scale(0.9); }
 }
@@ -506,11 +513,6 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   }
 }
 
-.unp.is-tucked .unp-mini__queue {
-  width: 0;
-  opacity: 0;
-  pointer-events: none;
-}
 
 // ═══════════════════════════════════════
 //  SONG ACTIONS TRAY — phones / tablets
@@ -524,7 +526,7 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   right: $mini-side;
   bottom: calc(88px + #{$safe-bottom});
   overflow: hidden;
-  border-radius: 24px;
+  border-radius: 14px;
   color: #fff;
   font-family: $font;
   background: var(--unp-deep);
@@ -615,7 +617,7 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   justify-content: center;
   gap: 1px;
   border: 0;
-  border-radius: 18px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   color: #fff;
@@ -651,7 +653,7 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   right: 8px;
   bottom: 8px;
   height: 78px;
-  border-radius: 22px;
+  border-radius: 10px;
 }
 
 .unp-dock__row {
@@ -679,7 +681,7 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   padding: 0;
   overflow: hidden;
   border: 0;
-  border-radius: 12px;
+  border-radius: 6px;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
   transition: transform 0.2s ease, opacity 0.3s ease;
@@ -737,8 +739,8 @@ body.udm-immersive .unp:not(.expanded) .unp-dock {
   --track: 3px;
   --thumb: 0;
   position: absolute;
-  left: 22px;
-  right: 22px;
+  left: 10px;
+  right: 10px;
   bottom: -5px;
   height: 14px;
   z-index: 2;
@@ -840,34 +842,50 @@ body.unp-np-open { overflow: hidden; }
 
 .unp-np__top {
   flex: none;
-  height: 52px;
+  height: 60px;
   margin: 0 -10px;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.unp-np__from {
+// The listener's themed logo, with where the music is coming from under it.
+.unp-np__brand {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  text-align: center;
+  align-items: center;
+  gap: 1px;
+}
 
-  span {
-    font-size: 10.5px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.62);
-  }
+// The logo files are square with the wordmark in a band across the middle;
+// this window shows just the wordmark, at a size you can read at a glance.
+.unp-np__logo {
+  display: block;
+  width: 132px;
+  height: 34px;
+  overflow: hidden;
 
-  strong {
-    font-size: 13.5px;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  img {
+    display: block;
+    width: 132px;
+    height: 34px;
+    object-fit: cover;
+    object-position: 50% 45%;
+    -webkit-user-drag: none;
+    user-select: none;
   }
+}
+
+.unp-np__caption {
+  max-width: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 // The artwork fits whatever room the screen leaves (container units), so
@@ -1003,7 +1021,19 @@ body.unp-np-open { overflow: hidden; }
   margin-top: 14px;
 }
 
+// Queue view: framed like the old queue's top — a plain theme line above
+// the now-playing row, and the glowing one (QueuePanel's .qp-now-edge)
+// below Shuffle / Repeat. Both run to the screen edges.
+.unp-np__qline {
+  flex: none;
+  height: 2px;
+  margin: 10px -24px 0;
+  background: var(--unis-primary);
+}
+.unp-np--queue .unp-np__compact { margin-top: 14px; }
+
 .unp-np__queue {
+  --qp-embed-bleed: 24px;
   flex: 1;
   min-height: 0;
 }

@@ -1503,7 +1503,7 @@
   button:focus { outline: none; }
   button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--unis-primary-soft); }
 
-  .qp-section { margin: 0; padding: 14px 0 8px; }
+  .qp-section { margin: 0; padding: 16px 0 8px; }
   .qp-section-label { color: rgba(255, 255, 255, 0.82); }
   .qp-count { color: #fff; background: rgba(255, 255, 255, 0.16); }
 
@@ -1559,8 +1559,20 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-top: 16px;
+  padding: 16px 0 16px;
   flex-wrap: wrap;
+}
+
+// The same glowing theme line as the drawer's cockpit, as a full-width rule.
+// --qp-embed-bleed (set by the host) lets it run past the host's padding to
+// the screen edges, like the drawer's did.
+.qp-now-edge.qp-now-edge--embedded {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  flex: none;
+  margin: 0 calc(-1 * var(--qp-embed-bleed, 0px));
 }
 
 .qp-embedded-left {

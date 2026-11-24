@@ -21,6 +21,7 @@ import PocketLockOverlay from './PocketLockOverlay';
 import LyricsView from './components/LyricsView'; // timed lyrics view (mic button)
 import useArtworkPalette from './hooks/useArtworkPalette';
 import useScrollMotion from './hooks/useScrollMotion';
+import { useThemeLogo } from './utils/themeLogo';
 import './player.scss';
 
 // ─────────────────────────────────────────────────────────────
@@ -29,10 +30,11 @@ import './player.scss';
 // Three surfaces share one set of handlers:
 //
 //   • Phones and tablets (≤1024px): a floating mini player. At rest it is a
-//     card tinted with the artwork's colours, with a thin progress strip on
-//     its bottom edge. While the page scrolls it turns to glass and tucks in,
-//     and settles back 0.7s after scrolling stops. On pages with a big
-//     artwork hero (song, artist, jurisdiction, playlist) it stays glass.
+//     card tinted with the artwork's colours, with a thin progress strip in
+//     the listener's theme colour on its bottom edge. While the page scrolls
+//     it turns slightly see-through — same size, same place — and settles
+//     back 0.7s after scrolling stops. On pages with a big artwork hero
+//     (song, artist, jurisdiction, playlist) it stays see-through.
 //     The arrow opens the song actions tray (Vote, Like, Add, Download,
 //     Lyrics, Comments, Pocket Lock), dressed in the same artwork blend.
 //   • Computers (≥1025px): the same card as a floating dock beside the
@@ -43,7 +45,8 @@ import './player.scss';
 //     main view, lyrics and the queue, and More holds the rest.
 //
 // Colour rule: the artwork paints the surfaces, white runs the transport,
-// the listener's theme colour marks Unis actions (Vote, active tray items).
+// the listener's theme colour marks Unis actions (Vote, active tray items),
+// every progress bar, and the themed logo at the top of Now Playing.
 //
 // Play counting, likes, votes, downloads, Pocket Lock, comments and the
 // queue behave exactly as before — only how you reach them changed.
@@ -180,6 +183,7 @@ const Player = () => {
   const feedback = useFeedback();
   const location = useLocation();
   const isDesktop = useIsDesktop();
+  const logoSrc = useThemeLogo();
 
   // --- LOCAL STATE ---
   const [isPlaying, setIsPlaying] = useState(false);
@@ -236,7 +240,6 @@ const Player = () => {
   const moving = useScrollMotion({ enabled: !!currentMedia && !isExpanded });
   const pinnedGlass = ART_HERO_ROUTE.test(location.pathname);
   const glass = moving || pinnedGlass;
-  const tucked = moving && !isDesktop;
 
   // --- DERIVE VOTING DATA ---
   const voteNominee = useMemo(() => {
@@ -595,9 +598,9 @@ const Player = () => {
       root.style.removeProperty('--unp-stack');
       return;
     }
-    const stack = isExpanded ? 104 : isDesktop ? 96 : tucked ? 76 : 88;
+    const stack = isExpanded ? 104 : isDesktop ? 96 : 88;
     root.style.setProperty('--unp-stack', `${stack}px`);
-  }, [currentMedia, isExpanded, isDesktop, tucked]);
+  }, [currentMedia, isExpanded, isDesktop]);
 
   useEffect(() => () => document.documentElement.style.removeProperty('--unp-stack'), []);
 
@@ -1102,8 +1105,8 @@ const Player = () => {
   const jurisdiction = jurisdictionNameOf(currentMedia);
   const origin = currentMedia.origin;
   const fromPlaylist = origin?.type === 'playlist' && origin.name;
-  const fromKicker = fromPlaylist ? 'Playing from' : 'Now playing';
-  const fromLabel = fromPlaylist ? origin.name : (jurisdiction || 'Unis');
+  // Under the logo: where the music is coming from, when we know it.
+  const fromCaption = fromPlaylist ? `Playing from ${origin.name}` : jurisdiction;
   const queueCount = queue.length;
   const playLabel = isBuffering ? 'Loading' : isPlaying ? 'Pause' : 'Play';
   const timeText = `${formatTime(currentTime)} of ${formatTime(duration)}`;
@@ -1330,7 +1333,7 @@ const Player = () => {
       </div>
       <input
         type="range"
-        className="unp-range unp-dock__seek"
+        className="unp-range unp-range--theme unp-dock__seek"
         min="0"
         max="100"
         step="0.1"
@@ -1376,9 +1379,11 @@ const Player = () => {
           <button ref={npCloseRef} type="button" className="unp-icon unp-icon--lg" onClick={closeNowPlaying} aria-label="Close Now Playing">
             <ChevronDown size={26} aria-hidden="true" />
           </button>
-          <div className="unp-np__from">
-            <span>{fromKicker}</span>
-            <strong>{fromLabel}</strong>
+          <div className="unp-np__brand">
+            <span className="unp-np__logo">
+              <img src={logoSrc} alt="Unis" draggable="false" />
+            </span>
+            {fromCaption && <span className="unp-np__caption">{fromCaption}</span>}
           </div>
           <button
             type="button"
@@ -1429,7 +1434,7 @@ const Player = () => {
             <div className="unp-np__seek">
               <input
                 type="range"
-                className="unp-range unp-range--np"
+                className="unp-range unp-range--theme unp-range--np"
                 min="0"
                 max="100"
                 step="0.1"
@@ -1451,6 +1456,9 @@ const Player = () => {
             </button>
           </>
         )}
+
+        {/* Queue view: the theme line that framed the old queue's top */}
+        {npMode === 'queue' && <div className="unp-np__qline" aria-hidden="true" />}
 
         {npMode !== 'main' && (
           <div className="unp-np__compact">
@@ -1572,7 +1580,6 @@ const Player = () => {
     'unp',
     isExpanded ? 'expanded' : '',
     glass ? 'is-glass' : '',
-    tucked ? 'is-tucked' : '',
     isPlaying ? 'is-playing' : 'is-paused',
     trayOpen ? 'is-tray-open' : '',
   ].filter(Boolean).join(' ');

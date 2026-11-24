@@ -826,6 +826,8 @@ const QueuePanel = ({ open, onClose, isLiked = false, onToggleLike, embedded = f
             {timeLeft && <span className="qp-embedded-left">{queue.length} song{queue.length !== 1 ? 's' : ''} · {timeLeft} left</span>}
           </div>
         )}
+        {/* Embedded: the glowing theme line that closed the old cockpit */}
+        {embedded && <div className="qp-now-edge qp-now-edge--embedded" aria-hidden="true" />}
 
         {/* Section header — the queue's own actions, always in view */}
         {confirming?.kind === 'clear' ? (
