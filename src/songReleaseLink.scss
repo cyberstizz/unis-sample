@@ -1,0 +1,45 @@
+// src/songReleaseLink.scss — the "From the mixtape" row on the song page.
+.sp-release-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 58px;
+  margin: 12px 16px 0;
+  padding: 0 12px 0 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.15s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.12); }
+  &:focus-visible { outline: 2px solid color-mix(in srgb, var(--unis-primary), white 62%); outline-offset: 2px; }
+
+  @media (min-width: 900px) { max-width: 460px; margin-left: 0; }
+}
+
+.sp-release-link__art {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 5px;
+  object-fit: cover;
+
+  &--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--unis-primary), #07090f 55%);
+    color: rgba(255, 255, 255, 0.7);
+  }
+}
+
+.sp-release-link__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sp-release-link__from { font-size: 12px; color: rgba(255, 255, 255, 0.6); }
+.sp-release-link__title {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

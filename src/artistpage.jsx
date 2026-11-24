@@ -18,6 +18,7 @@ import useModalA11y from './hooks/useModalA11y';
 import SongMenu, { KebabIcon, anchorFromEvent } from './SongMenu'; // ★ song ⋮ menu
 import { VoteIcon, SupportIcon } from './icons/UnisIcons';            // ★ Glow icons
 import { visitorChip } from './utils/visitor';
+import ArtistDiscography from './ArtistDiscography'; // ★ albums, EPs, mixtapes, singles
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ArtistPage — v4 redesign (Nov 2026, signed-off mockup "Unis artist page
@@ -1536,6 +1537,16 @@ const ArtistPage = ({ isOwnProfile = false }) => {
             </div>
 
             <div className="ap3-music__wide">
+              {/* ★ Latest release + Discography (albums, EPs, mixtapes, singles) */}
+              <ArtistDiscography
+                artistId={artistId}
+                artistName={artist.username}
+                songs={songs}
+                onShowAllSongs={() => {
+                  setShowAllSongs(true);
+                  document.querySelector('.ap3-popular')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+              />
               {videoUrl && (
                 <section className="ap3-card ap3-video ap3-o-video" aria-label="Featured video">
                   <h3 className="ap3-h3 ap3-h3--sm">Featured video</h3>

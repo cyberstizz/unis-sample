@@ -44,6 +44,7 @@ import {
   MessagesIcon, NoteIcon, SupportIcon, FindIcon,
 } from './icons/UnisIcons';
 import './messages.scss';
+import TeamInviteCards from './TeamInviteCards'; // ★ artist team invites
 
 const PHONE_QUERY = '(max-width: 820px)';
 const TYPING_TTL_MS = 6000;      // a typing "on" with no follow-up expires after this
@@ -865,6 +866,9 @@ export default function MessagesPage() {
           )}
 
           <div className="udm-list__scroll">
+            {/* Artist team invites, pinned on top (Accept / Decline) */}
+            {tab === 'chats' && <TeamInviteCards />}
+
             {/* Requests can't hide: a card at the top, not a quiet tab */}
             {tab === 'chats' && !loading && requests.length > 0 && (
               <button type="button" className="udm-reqcard" onClick={openRequests}>

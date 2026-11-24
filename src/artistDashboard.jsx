@@ -19,6 +19,10 @@ import {
   SlidersHorizontal,
   ExternalLink,
   Video,
+  Lock,
+  Disc3,
+  MoreHorizontal,
+  Plus,
 } from 'lucide-react';
 import LyricsWizard from './lyricsWizard';
 import lazyWithRetry from './utils/lazyWithRetry';
@@ -57,6 +61,12 @@ import RevenueSection from './revenueSection';
 import VerificationGate from './verificationGate';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import ArtistPhotosManager from './artistPhotosManager';
+import { useTeam } from './context/TeamContext';
+import TeamSwitcher from './TeamSwitcher';
+import TeamPanel from './TeamPanel';
+import NewReleaseWizard from './NewReleaseWizard';
+import { RELEASE_TYPE_LABEL } from './utils/releases';
+import './teamAndReleases.scss';
 
 // The lyric-timing tour uses the welcome tour's engine; it downloads only when opened.
 const UnisTour = lazyWithRetry(() => import('./tour/UnisTour'));
@@ -226,9 +236,11 @@ const ArtistVideos = ({ artistId, onUpload, refreshKey }) => {
           <Video size={34} aria-hidden="true" />
           <h3>No videos yet</h3>
           <p>Upload a performance, a cover or a music video. Fans can watch and comment on it from your page.</p>
-          <button type="button" className="artist-btn artist-btn--primary" onClick={onUpload}>
-            <Upload size={14} aria-hidden="true" /> Upload a video
-          </button>
+          {onUpload && (
+            <button type="button" className="artist-btn artist-btn--primary" onClick={onUpload}>
+              <Upload size={14} aria-hidden="true" /> Upload a video
+            </button>
+          )}
         </div>
       ) : (
         <ul className="ad-videos">
@@ -259,8 +271,25 @@ const ArtistVideos = ({ artistId, onUpload, refreshKey }) => {
 };
 
 const ArtistDashboard = () => {
-  const { user, loading: authLoading, authLoaded, isGuest, refreshUser } = useAuth();
+  const { user: authUser, loading: authLoading, authLoaded, isGuest, refreshUser } = useAuth();
   const { triggerGate, gateProps } = useAuthGate();
+
+  // ★ Artist teams: a manager or viewer works on the artist's page with their
+  //   own account (context/TeamContext, utils/teamActing). Everything below
+  //   reads `user` as the artist whose page is open; the backend runs the
+  //   dashboard requests as that artist (TeamActAsFilter).
+  const { acting, managing, loaded: teamLoaded, startActing } = useTeam();
+  const user = acting && authUser
+    ? { userId: acting.artistId, username: acting.username, photoUrl: acting.photoUrl, role: 'artist', phoneVerified: true, visitor: false }
+    : authUser;
+  const onTeam = !!(acting && authUser);
+  const canEdit = !onTeam || acting.role === 'MANAGER';
+
+  // A listener who only helps run other artists' pages lands on the first one.
+  useEffect(() => {
+    if (!authUser || acting || !teamLoaded) return;
+    if (authUser.role !== 'artist' && managing.length > 0) startActing(managing[0]);
+  }, [authUser, acting, teamLoaded, managing, startActing]);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -352,6 +381,11 @@ const ArtistDashboard = () => {
   const [showPhoneVerify, setShowPhoneVerify] = useState(false);
   const [videosRefreshKey, setVideosRefreshKey] = useState(0);
 
+  // ---- Releases (albums, EPs, mixtapes, singles) --------------------------
+  const [releases, setReleases] = useState([]);
+  const [releaseWizard, setReleaseWizard] = useState(null); // { release } | { release: null }
+  const [releaseMenu, setReleaseMenu] = useState(null);
+
   // ---- Links form (Profile tab) -----------------------------------------
   const [links, setLinks] = useState(() => Object.fromEntries(LINK_FIELDS.map((f) => [f.key, ''])));
   const [savingLinks, setSavingLinks] = useState(false);
@@ -420,6 +454,16 @@ const ArtistDashboard = () => {
     }
   }, []);
 
+  const fetchReleases = useCallback(async (userId) => {
+    try {
+      const res = await apiCall({ url: `/v1/releases/artist/${userId}`, method: 'get', useCache: false });
+      setReleases(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Releases fetch failed:', err);
+      setReleases([]);
+    }
+  }, []);
+
   const fetchAwards = useCallback(async (userId) => {
     setAwardsLoading(true);
     setAwardsError(null);
@@ -483,7 +527,21 @@ const ArtistDashboard = () => {
     fetchStats(userId);
     fetchAwards(userId);
     fetchSongAwards(userId);
-  }, [user?.userId, authLoading, fetchCore, fetchStats, fetchAwards, fetchSongAwards]);
+    fetchReleases(userId);
+  }, [user?.userId, authLoading, fetchCore, fetchStats, fetchAwards, fetchSongAwards, fetchReleases]);
+
+  // Close a release's menu on an outside click.
+  useEffect(() => {
+    if (!releaseMenu) return undefined;
+    const close = () => setReleaseMenu(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [releaseMenu]);
+
+  // A team member can't open Settings (it's the artist's own account).
+  useEffect(() => {
+    if (onTeam && activeTab === 'settings') navigate({ hash: '' }, { replace: true });
+  }, [onTeam, activeTab, navigate]);
 
   // Keep the links form in step with the saved profile.
   useEffect(() => {
@@ -1017,8 +1075,100 @@ const ArtistDashboard = () => {
   // -----------------------------------------------------------------------
   // Tab panels
   // -----------------------------------------------------------------------
+  const releaseById = Object.fromEntries(releases.map((r) => [r.releaseId, r]));
+
+  const openReleaseEditor = async (rel) => {
+    setReleaseMenu(null);
+    try {
+      const res = await apiCall({ url: `/v1/releases/${rel.releaseId}`, method: 'get', useCache: false });
+      const detail = res.data?.release || rel;
+      setReleaseWizard({
+        release: { ...detail, trackIds: (res.data?.tracks || []).map((t) => t.songId || t.id) },
+      });
+    } catch (err) {
+      console.error('Release load failed:', err);
+      showToast("Couldn't open that release. Try again.", 'error');
+    }
+  };
+
+  const removeRelease = async (rel) => {
+    setReleaseMenu(null);
+    const ok = await feedback.confirm({
+      title: `Take down ${rel.title}?`,
+      message: 'Its songs stay on your page as singles, with all their plays, likes and votes.',
+      confirmLabel: 'Take down',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await apiCall({ url: `/v1/releases/${rel.releaseId}`, method: 'delete' });
+      showToast(`Took down ${rel.title}`, 'success');
+      fetchReleases(user.userId);
+      refetchSongs();
+    } catch (err) {
+      console.error('Release removal failed:', err);
+      showToast("Couldn't take down that release. Try again.", 'error');
+    }
+  };
+
+  const renderReleases = () => (
+    <section className="ad-panel" aria-labelledby="ad-releases-title">
+      <div className="ad-panel__head">
+        <h2 id="ad-releases-title">
+          Releases <span className="ad-count">{releases.length}</span>
+        </h2>
+      </div>
+      {canEdit && (
+        <button type="button" className="ad-newrel" onClick={() => setReleaseWizard({ release: null })} disabled={songs.length === 0}>
+          <Plus size={18} aria-hidden="true" /> New release
+        </button>
+      )}
+      {releases.length === 0 ? (
+        <p className="adr-empty">
+          {songs.length === 0
+            ? 'Upload a song first, then group your songs into an album, EP or mixtape.'
+            : 'Group your songs into an album, EP, mixtape or single. Each song keeps its own plays, likes and votes.'}
+        </p>
+      ) : (
+        <ul className="adr-list">
+          {releases.map((rel) => (
+            <li key={rel.releaseId} className="adr-row">
+              {rel.coverUrl
+                ? <img src={buildUrl(rel.coverUrl)} alt="" className="adr-art" />
+                : <span className="adr-art" aria-hidden="true" />}
+              <div className="adr-text">
+                <Link to={`/release/${rel.releaseId}`} className="adr-title">{rel.title}</Link>
+                <span className="adr-sub">
+                  {RELEASE_TYPE_LABEL[rel.type] || 'Release'} · {rel.trackCount} song{rel.trackCount === 1 ? '' : 's'}
+                </span>
+              </div>
+              <span className="adr-live">Live</span>
+              {canEdit && (
+                <div className="adr-menu-wrap">
+                  <button type="button" className="tm-icon" aria-label={`Options for ${rel.title}`} aria-expanded={releaseMenu === rel.releaseId}
+                    onClick={(e) => { e.stopPropagation(); setReleaseMenu(releaseMenu === rel.releaseId ? null : rel.releaseId); }}>
+                    <MoreHorizontal size={18} />
+                  </button>
+                  {releaseMenu === rel.releaseId && (
+                    <div className="tm-menu" role="menu" onClick={(e) => e.stopPropagation()}>
+                      <button type="button" role="menuitem" onClick={() => openReleaseEditor(rel)}>Edit release</button>
+                      <button type="button" role="menuitem" onClick={() => navigate(`/release/${rel.releaseId}`)}>View page</button>
+                      <button type="button" role="menuitem" className="tm-menu__danger" onClick={() => removeRelease(rel)}>Take down</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
   const renderMusic = () => (
     <>
+      {renderReleases()}
+
       <section className="ad-panel" aria-labelledby="ad-songs-title">
         <div className="ad-panel__head">
           <h2 id="ad-songs-title">
@@ -1028,9 +1178,11 @@ const ArtistDashboard = () => {
             <button type="button" className="artist-btn artist-btn--ghost artist-btn--small" onClick={() => setShowLyricsTour(true)}>
               <HelpCircle size={14} aria-hidden="true" /> How timed lyrics work
             </button>
-            <button type="button" className="artist-btn artist-btn--primary artist-btn--small" onClick={() => setShowUploadWizard(true)}>
-              <Upload size={14} aria-hidden="true" /> Upload a song or video
-            </button>
+            {canEdit && (
+              <button type="button" className="artist-btn artist-btn--primary artist-btn--small" onClick={() => setShowUploadWizard(true)}>
+                <Upload size={14} aria-hidden="true" /> Upload a song or video
+              </button>
+            )}
           </div>
         </div>
 
@@ -1051,7 +1203,14 @@ const ArtistDashboard = () => {
                     <div className="artist-song-card__title-row">
                       <div>
                         <h3>{song.title}</h3>
-                        <p>{isFeatured ? 'Featured song' : 'Song'}</p>
+                        <p>
+                          {isFeatured ? 'Featured song' : 'Song'}
+                          {song.releaseId && releaseById[song.releaseId] && (
+                            <span className="adr-tag">
+                              {RELEASE_TYPE_LABEL[releaseById[song.releaseId].type]} · {releaseById[song.releaseId].title}
+                            </span>
+                          )}
+                        </p>
                       </div>
                       {isFeatured && <span className="artist-song-card__badge">Featured</span>}
                     </div>
@@ -1078,9 +1237,12 @@ const ArtistDashboard = () => {
                     <button type="button" onClick={() => setSalesSong(song)} aria-label={`View sales for ${song.title}`}>
                       <DollarSign size={16} />
                     </button>
+                    {canEdit && (
                     <button type="button" onClick={() => setEditingSong(song)} aria-label={`Edit ${song.title}`}>
                       <Edit3 size={16} />
                     </button>
+                    )}
+                    {canEdit && (
                     <button
                       type="button"
                       className="ad-lyrics-btn"
@@ -1093,6 +1255,8 @@ const ArtistDashboard = () => {
                     >
                       <Mic2 size={16} />
                     </button>
+                    )}
+                    {canEdit && (
                     <button
                       type="button"
                       onClick={() => handleDeleteSongClick(song)}
@@ -1101,6 +1265,7 @@ const ArtistDashboard = () => {
                     >
                       {deletingSongId === song.songId ? '...' : <Trash2 size={16} />}
                     </button>
+                    )}
                   </div>
                 </article>
               );
@@ -1110,15 +1275,17 @@ const ArtistDashboard = () => {
               <Music size={34} aria-hidden="true" />
               <h3>No songs yet</h3>
               <p>Upload your first song and start building your local signal.</p>
-              <button type="button" className="artist-btn artist-btn--primary" onClick={() => setShowUploadWizard(true)}>
-                <Upload size={14} aria-hidden="true" /> Upload first song
-              </button>
+              {canEdit && (
+                <button type="button" className="artist-btn artist-btn--primary" onClick={() => setShowUploadWizard(true)}>
+                  <Upload size={14} aria-hidden="true" /> Upload first song
+                </button>
+              )}
             </div>
           )}
         </div>
       </section>
 
-      <ArtistVideos artistId={user.userId} onUpload={() => setShowUploadWizard(true)} refreshKey={videosRefreshKey} />
+      <ArtistVideos artistId={user.userId} onUpload={canEdit ? () => setShowUploadWizard(true) : undefined} refreshKey={videosRefreshKey} />
     </>
   );
 
@@ -1307,7 +1474,32 @@ const ArtistDashboard = () => {
     </>
   );
 
-  const renderEarnings = () => (
+  // A team member sees the numbers; payouts, bank and cash-out stay with the artist.
+  const renderTeamEarnings = () => (
+    <section className="ad-panel" aria-labelledby="ad-earn-team-title">
+      <div className="ad-panel__head">
+        <h2 id="ad-earn-team-title">
+          <em>Earnings</em>
+        </h2>
+      </div>
+      <div className="ad-earn-card">
+        <div className="ad-earn-card__label">Current balance</div>
+        <div className="ad-earn-card__amount">
+          ${Number(earningsSummary?.currentBalance || 0).toFixed(2)}
+        </div>
+        <div className="ad-earn-card__sub">Plays, supporters and the Community Share</div>
+      </div>
+      <div className="ad-lock">
+        <span className="ad-lock__icon" aria-hidden="true"><Lock size={18} /></span>
+        <div>
+          <b>Payouts and bank details</b>
+          <span>Only {displayName} can change where money goes or cash out.</span>
+        </div>
+      </div>
+    </section>
+  );
+
+  const renderEarnings = () => (onTeam ? renderTeamEarnings() : (
     <>
       {!user.phoneVerified && (
         <div className="ad-warn ad-warn--banner">
@@ -1341,7 +1533,7 @@ const ArtistDashboard = () => {
         </VerificationGate>
       </section>
     </>
-  );
+  ));
 
   const renderProfile = () => (
     <>
@@ -1373,11 +1565,13 @@ const ArtistDashboard = () => {
             </div>
           </div>
           <div className="ad-row">
-            <button type="button" className="artist-btn artist-btn--primary" onClick={() => setShowEditProfile(true)}>
-              <Edit3 size={14} aria-hidden="true" /> Edit profile
-            </button>
+            {canEdit && (
+              <button type="button" className="artist-btn artist-btn--primary" onClick={() => setShowEditProfile(true)}>
+                <Edit3 size={14} aria-hidden="true" /> Edit profile
+              </button>
+            )}
             <Link to={`/artist/${user.userId}`} className="artist-btn artist-btn--ghost">
-              <ExternalLink size={14} aria-hidden="true" /> View my page
+              <ExternalLink size={14} aria-hidden="true" /> {onTeam ? 'View page' : 'View my page'}
             </Link>
           </div>
           <div className="ad-featured-line">
@@ -1385,9 +1579,11 @@ const ArtistDashboard = () => {
               <span>Featured song</span>
               <strong>{defaultSong?.title || 'Not set'}</strong>
             </div>
-            <button type="button" className="artist-btn artist-btn--ghost artist-btn--small" onClick={() => setShowDefaultSongWizard(true)}>
-              {defaultSong ? 'Change' : 'Choose'}
-            </button>
+            {canEdit && (
+              <button type="button" className="artist-btn artist-btn--ghost artist-btn--small" onClick={() => setShowDefaultSongWizard(true)}>
+                {defaultSong ? 'Change' : 'Choose'}
+              </button>
+            )}
           </div>
         </section>
 
@@ -1398,6 +1594,7 @@ const ArtistDashboard = () => {
             </h2>
           </div>
           <form className="social-links-edit" onSubmit={handleSaveLinks} noValidate>
+            <fieldset disabled={!canEdit} className="ad-fieldset">
             {LINK_FIELDS.map((field) => (
               <div className="social-link-item" key={field.key}>
                 <label htmlFor={`social-${field.key}`}>{field.label}</label>
@@ -1413,10 +1610,13 @@ const ArtistDashboard = () => {
               </div>
             ))}
             <div className="ad-row">
-              <button type="submit" className="artist-btn artist-btn--primary" disabled={savingLinks || !linksDirty}>
-                {savingLinks ? 'Saving...' : 'Save links'}
-              </button>
+              {canEdit && (
+                <button type="submit" className="artist-btn artist-btn--primary" disabled={savingLinks || !linksDirty}>
+                  {savingLinks ? 'Saving...' : 'Save links'}
+                </button>
+              )}
             </div>
+            </fieldset>
           </form>
         </section>
       </div>
@@ -1427,9 +1627,12 @@ const ArtistDashboard = () => {
             Artist <em>photos</em>
           </h2>
         </div>
-        <ArtistPhotosManager artistId={user.userId} />
+        {canEdit
+          ? <ArtistPhotosManager artistId={user.userId} />
+          : <p className="adr-empty">Only the artist and managers can change photos.</p>}
       </section>
 
+      {!onTeam && (
       <section className="ad-panel ad-agreement" aria-labelledby="ad-agreement-title">
         <div>
           <h2 id="ad-agreement-title">
@@ -1441,6 +1644,7 @@ const ArtistDashboard = () => {
           <Download size={15} aria-hidden="true" /> Download agreement
         </button>
       </section>
+      )}
     </>
   );
 
@@ -1449,6 +1653,8 @@ const ArtistDashboard = () => {
       <h2 id="ad-settings-title" className="ad-settings-title">
         Settings
       </h2>
+
+      {isArtistRole && <TeamPanel owner={{ username: displayName, photoUrl: userProfile?.photoUrl }} />}
 
       <section className="ad-panel" aria-labelledby="ad-theme-title">
         <div className="ad-panel__head">
@@ -1589,6 +1795,7 @@ const ArtistDashboard = () => {
     <Layout backgroundImage={backimage}>
       <div className="artist-dashboard">
         <div className="dashboard-content">
+          <TeamSwitcher me={authUser} />
           <header className="ad-head">
             <div className="ad-head__id">
               {hasOwnPhoto ? (
@@ -1614,21 +1821,25 @@ const ArtistDashboard = () => {
               </div>
             </div>
             <div className="ad-head__actions">
-              <button type="button" className="artist-btn artist-btn--primary" onClick={() => setShowUploadWizard(true)}>
-                <Upload size={15} aria-hidden="true" /> Upload
-              </button>
+              {canEdit && (
+                <button type="button" className="artist-btn artist-btn--primary" onClick={() => setShowUploadWizard(true)}>
+                  <Upload size={15} aria-hidden="true" /> Upload
+                </button>
+              )}
               <Link to={`/artist/${user.userId}`} className="artist-btn artist-btn--ghost">
-                View my page
+                {onTeam ? 'View page' : 'View my page'}
               </Link>
-              <button
-                type="button"
-                className={`ad-gear ${activeTab === 'settings' ? 'is-active' : ''}`}
-                aria-label="Settings"
-                aria-pressed={activeTab === 'settings'}
-                onClick={() => goToTab(activeTab === 'settings' ? 'home' : 'settings')}
-              >
-                <SlidersHorizontal size={18} aria-hidden="true" />
-              </button>
+              {!onTeam && (
+                <button
+                  type="button"
+                  className={`ad-gear ${activeTab === 'settings' ? 'is-active' : ''}`}
+                  aria-label="Settings"
+                  aria-pressed={activeTab === 'settings'}
+                  onClick={() => goToTab(activeTab === 'settings' ? 'home' : 'settings')}
+                >
+                  <SlidersHorizontal size={18} aria-hidden="true" />
+                </button>
+              )}
             </div>
           </header>
 
@@ -1653,6 +1864,20 @@ const ArtistDashboard = () => {
             onUploadSuccess={handleUploadSuccess}
             userProfile={userProfile}
             visitor={Boolean(user?.visitor)}
+          />
+        )}
+
+        {releaseWizard && (
+          <NewReleaseWizard
+            open
+            release={releaseWizard.release}
+            songs={songs}
+            onClose={() => setReleaseWizard(null)}
+            onUploadNew={canEdit ? () => setShowUploadWizard(true) : undefined}
+            onSaved={() => {
+              fetchReleases(user.userId);
+              refetchSongs();
+            }}
           />
         )}
 

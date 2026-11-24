@@ -15,6 +15,7 @@ import {
 import { onSplashGone } from './boot/bootSplash';
 import { FindIcon, VoteIcon, AwardsIcon, EarningsIcon, MenuIcon, SearchIcon, SignInIcon, MessagesIcon } from './icons/UnisIcons';
 import useUnreadMessages from './hooks/useUnreadMessages';
+import { useTeam } from './context/TeamContext';
 import logoblue from './assets/unisLogoThree.svg';
 import logoorange from './assets/logo-orange.png';
 import logored from './assets/logo-red.png';
@@ -35,7 +36,10 @@ const Header = () => {
   const { triggerGate, gateProps } = useAuthGate();
   // Phones and tablets: Messages lives in the header now (with its badge),
   // and your picture opens the menu (Nov 2026 bottom bar).
-  const unread = useUnreadMessages(!!user && !isGuest);
+  const unreadMessages = useUnreadMessages(!!user && !isGuest);
+  // Team invites wait in Messages too, so they count toward the badge.
+  const { invites: teamInvites } = useTeam();
+  const unread = unreadMessages + (teamInvites?.length || 0);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [shouldBreathe, setShouldBreathe] = useState(false);

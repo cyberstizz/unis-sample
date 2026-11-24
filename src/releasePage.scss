@@ -1,0 +1,130 @@
+// src/releasePage.scss — the release page. Most of the look comes from
+// playlistPage.scss (poster front, follow bar, actions, rows); this file adds
+// only what a release needs on top.
+
+.rl-page {
+  // The plays column isn't used on a release: the row reads # · title · time.
+  .plp-col-added { visibility: hidden; }
+}
+
+// Phones have no index column on the playlist page; a release keeps its
+// track numbers, so show them before the title there.
+.rl-num {
+  display: none;
+  width: 22px;
+  flex: 0 0 22px;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.55);
+  font-variant-numeric: tabular-nums;
+
+  @media (max-width: 768px) { display: block; }
+}
+
+.rl-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.62);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rl-ex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.26);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.rl-foot {
+  margin: 18px 16px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.rl-h2 {
+  margin: 28px 16px 12px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: #fff;
+}
+
+.rl-shelf {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 16px 8px;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.rl-card {
+  flex: 0 0 148px;
+  min-width: 0;
+  color: #fff;
+  text-decoration: none;
+
+  &:hover .rl-card__title { text-decoration: underline; text-underline-offset: 2px; }
+  &:focus-visible { outline: 2px solid color-mix(in srgb, var(--unis-primary), white 62%); outline-offset: 3px; border-radius: 8px; }
+}
+
+.rl-card__art {
+  display: block;
+  width: 148px;
+  height: 148px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+
+  &--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.6);
+    background: color-mix(in srgb, var(--unis-primary), #07090f 55%);
+  }
+}
+
+.rl-card__title,
+.rl-card__sub {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rl-card__title { margin-top: 8px; font-size: 14px; font-weight: 700; }
+.rl-card__sub { margin-top: 1px; font-size: 12.5px; color: rgba(255, 255, 255, 0.6); }
+
+// Loading skeleton
+.rl-loading { padding: 96px 16px 0; }
+.rl-skel {
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  animation: rlPulse 1.4s ease-in-out infinite;
+
+  &--art { width: min(320px, 80vw); aspect-ratio: 1; }
+  &--line { height: 18px; margin-top: 16px; width: 60%; }
+  &--short { width: 35%; }
+}
+
+@keyframes rlPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rl-skel { animation: none; }
+}

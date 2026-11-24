@@ -38,6 +38,7 @@ import { PlayerContext } from './context/playercontext';
 import { buildUrl } from './utils/buildUrl';
 import { fetchStandings } from './utils/standings';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
+import { useTeam } from './context/TeamContext';
 
 const DESKTOP_MIN = 1025;          // matches sidebar.scss and player.scss
 const PANEL_W = 268;
@@ -90,6 +91,13 @@ const ICONS = {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle className="fs" cx="12" cy="12" r="8.4" />
       <path d="M12 6.5v11M14.6 9.2c0-1.1-1.2-1.8-2.6-1.8s-2.6.7-2.6 1.8 1.2 1.6 2.6 1.8 2.6.8 2.6 1.9-1.2 1.8-2.6 1.8-2.6-.7-2.6-1.8" />
+    </svg>
+  ),
+  // Artist pages a team member helps run (artist teams, Nov 2026)
+  team: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle className="fs" cx="9.5" cy="8.5" r="3.4" />
+      <path d="M3.6 19c.7-3 3-4.8 5.9-4.8s5.2 1.8 5.9 4.8M15.6 5.4a3.3 3.3 0 0 1 0 6.3M17.4 14.6c1.6.6 2.6 2.2 3 4.4" />
     </svg>
   ),
   logout: (
@@ -230,6 +238,7 @@ const Sidebar = () => {
   const [desktop, setDesktop] = useState(isDesktop);
   const { user, isGuest, theme, logout } = useAuth();
   const { triggerGate, gateProps } = useAuthGate();
+  const { managing } = useTeam();
   const player = useContext(PlayerContext) || {};
   const {
     playlists = [],
@@ -409,6 +418,10 @@ const Sidebar = () => {
     { key: 'awards',       label: 'Awards',       icon: 'awards',       onClick: () => handleNav('/milestones'),   match: (p) => p.startsWith('/milestones'), menu: true },
     { key: 'earnings',     label: 'Earnings',     icon: 'earnings',     onClick: onEarnings,                       match: (p) => p.startsWith('/earnings'), menu: true },
     { key: 'plus',         label: 'Unis Plus',    icon: 'plus',         onClick: onPlus,                          match: (p) => p.startsWith('/plus') },
+    // Someone on an artist's team (and not an artist themself): their way into the dashboard.
+    ...(signedIn && user?.role !== 'artist' && managing.length > 0
+      ? [{ key: 'team', label: 'Artist pages', icon: 'team', onClick: () => handleNav('/artistDashboard'), match: (p) => p.startsWith('/artistDashboard') }]
+      : []),
     ...(user && user.adminRole
       ? [{ key: 'admin', label: 'Admin', icon: 'admin', onClick: () => handleNav('/admin'), match: (p) => p.startsWith('/admin') }]
       : []),

@@ -1,0 +1,197 @@
+// src/artistDiscography.scss — Latest release + Discography on the artist page.
+
+.ap-disco {
+  margin-top: 8px;
+  color: #fff;
+
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, a:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--unis-primary), white 62%);
+    outline-offset: 2px;
+  }
+}
+
+.ap-disco__h {
+  margin: 22px 0 12px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.ap-disco__latest {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+.ap-disco__latest-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ap-disco__latest-art {
+  width: 92px;
+  height: 92px;
+  flex: 0 0 92px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+}
+
+.ap-disco__latest-text { min-width: 0; display: flex; flex-direction: column; }
+
+.ap-disco__kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.ap-disco__new {
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  background: var(--unis-primary);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.ap-disco__latest-title {
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ap-disco__latest-meta { margin-top: 2px; font-size: 13px; color: rgba(255, 255, 255, 0.62); }
+
+.ap-disco__play {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--unis-primary);
+  color: #fff;
+  box-shadow: 0 8px 18px var(--unis-primary-glow, transparent);
+  cursor: pointer;
+
+  svg { margin-left: 2px; }
+  &:disabled { opacity: 0.6; cursor: progress; }
+}
+
+.ap-disco__chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.ap-disco__chip {
+  height: 32px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &.is-on { background: var(--unis-primary); color: #fff; }
+}
+
+.ap-disco__shelf {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.ap-disco__card { flex: 0 0 148px; min-width: 0; }
+.ap-disco__card:hover .ap-disco__title { text-decoration: underline; text-underline-offset: 2px; }
+
+.ap-disco__art {
+  display: block;
+  width: 148px;
+  height: 148px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+
+  &--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.6);
+    background: color-mix(in srgb, var(--unis-primary), #07090f 55%);
+  }
+}
+
+.ap-disco__title,
+.ap-disco__sub {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ap-disco__title { margin-top: 8px; font-size: 14px; font-weight: 700; }
+.ap-disco__sub { margin-top: 1px; font-size: 12.5px; color: rgba(255, 255, 255, 0.6); }
+
+.ap-disco__all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover { color: #fff; }
+}
+
+// Dark text on the yellow theme
+[data-theme='yellow'] {
+  .ap-disco__new, .ap-disco__chip.is-on, .ap-disco__play { color: #111318; }
+}
+
+// Phones: the Music tab is one ordered column (artistpage.scss) — releases
+// come right after Popular. Desktop: they lead the full-width row.
+.ap3-music .ap-disco { order: 2; margin-top: 0; }
+.ap3-music .ap-disco .ap-disco__h:first-child { margin-top: 0; }
+
+@media (min-width: 900px) {
+  .ap-disco__latest { max-width: 560px; }
+}

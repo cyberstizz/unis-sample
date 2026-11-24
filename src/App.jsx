@@ -14,6 +14,7 @@ import SongNotification from './songNotification';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './AdminRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { TeamProvider } from './context/TeamContext';
 import WinnersNotification from './winnersNotification';
 import useActivityTracker from './hooks/useActivityTracker';
 import PlayChoiceModal from './PlayChoiceModal';
@@ -57,6 +58,7 @@ const CookiePolicy = lazyWithRetry(() => import('./cookiePolicy'));
 import CookieConsent from './CookieConsent';
 const ReportInfringement = lazyWithRetry(() => import('./reportInfringement'));
 const ArtistDashboard = lazyWithRetry(() => import('./artistDashboard'));
+const ReleasePage = lazyWithRetry(() => import('./releasePage'));
 const JurisdictionPage = lazyWithRetry(() => import('./jurisdictionPage'));
 const Login = lazyWithRetry(() => import('./pages/Login'));
 const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'));
@@ -206,6 +208,7 @@ const AppLayout = () => {
           <Route path="/song/:songId" element={<SongPage />} />
           <Route path="/playlists" element={<LibraryPage />} />
           <Route path="/playlist/:playlistId" element={<PlaylistPage />} />
+          <Route path="/release/:releaseId" element={<ReleasePage />} />
           <Route path="/video/:videoId" element={<VideoPage />} />
           <Route path="/jurisdiction/:jurisdiction" element={<JurisdictionPage />} />
           <Route path="/milestones" element={<MilestonesPage />} />
@@ -287,12 +290,14 @@ const App = () => {
       <AuthProvider>
         <ThemeDocumentSync />
         <RewardScoreSync />
-        <PlayerProvider>
-          <Router>
-            <AppLayout />
-            <CookieConsent />
-          </Router>
-        </PlayerProvider>
+        <TeamProvider>
+          <PlayerProvider>
+            <Router>
+              <AppLayout />
+              <CookieConsent />
+            </Router>
+          </PlayerProvider>
+        </TeamProvider>
       </AuthProvider>
     </FeedbackProvider>
   </RewardProvider>

@@ -3,6 +3,7 @@
 import axios from 'axios';
 import cacheService from '../services/cacheService';
 import { clearAllQueueState } from '../utils/queuePersistence';
+import { getActing, setActing } from '../utils/teamActing';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true';
@@ -23,6 +24,13 @@ axiosInstance.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // A team member working on an artist's page (utils/teamActing.js). The
+    // backend honours this on dashboard requests only.
+    const acting = token ? getActing() : null;
+    if (acting?.artistId) {
+      config.headers['X-Unis-Act-As'] = acting.artistId;
     }
 
     const method = (config.method || 'get').toLowerCase();
@@ -291,6 +299,7 @@ export const logoutUser = async () => {
     console.warn('Logout request failed', err);
   } finally {
     localStorage.removeItem('token');
+    setActing(null);
     cacheService.clearAll();
     clearAllQueueState();
     window.location.href = '/login';

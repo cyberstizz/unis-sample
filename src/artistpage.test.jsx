@@ -249,12 +249,13 @@ describe('ArtistPage — loading', () => {
     expect(await screen.findByText('Artist not found')).toBeInTheDocument();
   });
 
-  it('asks for the profile, followers, songs, awards, standing, photos and rank', async () => {
+  it('asks for the profile, followers, songs, awards, standing, photos, rank and releases', async () => {
     signInAs(null);
     await renderLoaded();
     const urls = apiSpy.mock.calls.map(([c]) => c.url).sort();
     expect(urls).toEqual([
       '/v1/media/songs/artist/artist-1',
+      '/v1/releases/artist/artist-1',
       '/v1/users/artist-1/awards',
       '/v1/users/artist-1/followers/count',
       '/v1/users/artist-1/photos',

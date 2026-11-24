@@ -39,6 +39,7 @@ import { useFeedback, errorMessage } from './context/FeedbackContext';
 import { useReward } from './context/RewardContext';
 import { buildUrl } from './utils/buildUrl';
 import RecommendedSongs from './RecommendedSongs';
+import SongReleaseLink from './SongReleaseLink'; // ★ "From the mixtape …"
 import { useTaxonomy } from './utils/taxonomy';
 import { fetchStandings } from './utils/standings';
 import FollowBar from './components/FollowBar';
@@ -184,6 +185,8 @@ const SongPage = () => {
           subgenres: [songData.primarySubgenre, songData.secondarySubgenre].filter(Boolean),
           moods: [songData.primaryMood, songData.secondaryMood].filter(Boolean),
           language: songData.language || null,
+          releaseId: songData.releaseId || null,
+          trackNumber: songData.trackNumber || null,
         };
 
         setSong(normalized);
@@ -708,6 +711,8 @@ const SongPage = () => {
               </span>
             </div>
           )}
+
+          {song.releaseId && <SongReleaseLink releaseId={song.releaseId} trackNumber={song.trackNumber} />}
 
           <div className="sp-grid">
             {/* ━━━ MAIN COLUMN ━━━ */}
