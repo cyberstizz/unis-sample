@@ -268,14 +268,15 @@ describe('ArtistDashboard', () => {
     it('lists the phone step and opens verification from it', async () => {
       await loadDashboard();
       const user = userEvent.setup();
-      const step = (await screen.findByText('Verify your phone')).closest('li');
+      await user.click(await screen.findByRole('button', { name: /see all steps/i }));
+      const step = screen.getByText('Verify your phone').closest('li');
       await user.click(within(step).getByRole('button', { name: /verify/i }));
       expect(screen.getByTestId('phone-verify-modal')).toBeInTheDocument();
     });
 
     it('shows progress out of seven for an artist', async () => {
       await loadDashboard();
-      expect(await screen.findByRole('img', { name: /of 7 setup steps done/i })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: /of 7 steps done/i })).toBeInTheDocument();
     });
 
     it('disappears once every step is done', async () => {
@@ -289,14 +290,15 @@ describe('ArtistDashboard', () => {
         stripe: { onboardingComplete: true, payoutsEnabled: true },
         authUser: { phoneVerified: true },
       });
-      await screen.findByText('This week');
-      await waitFor(() => expect(screen.queryByText(/Finish setting/i)).not.toBeInTheDocument());
+      await screen.findByRole('heading', { name: /this week/i });
+      await waitFor(() => expect(screen.queryByText(/steps done/i)).not.toBeInTheDocument());
     });
 
     it('sends the links step to the Profile tab', async () => {
       await loadDashboard();
       const user = userEvent.setup();
-      const step = (await screen.findByText('Add your links')).closest('li');
+      await user.click(await screen.findByRole('button', { name: /see all steps/i }));
+      const step = screen.getByText('Add your links').closest('li');
       await user.click(within(step).getByRole('button', { name: /add links/i }));
       expect(tab('Profile')).toHaveAttribute('aria-selected', 'true');
     });
@@ -308,24 +310,37 @@ describe('ArtistDashboard', () => {
       expect(await screen.findByText('1,284')).toBeInTheDocument();
       expect(screen.getByText('+196')).toBeInTheDocument();
       expect(screen.getByText('−4')).toBeInTheDocument();
-      expect(screen.getByText('No change')).toBeInTheDocument();
       expect(screen.getByText('12,345 all time')).toBeInTheDocument();
       // ★ followers were fetched but never shown before the redesign
       expect(screen.getByText('88 all time')).toBeInTheDocument();
     });
 
-    it('shows where the artist stands and the latest win', async () => {
+    it("shows today's race and the latest win", async () => {
+      server.use(
+        http.get(`${API}/v1/awards/standings`, () => HttpResponse.json({
+          type: 'artist',
+          state: 'LIVE',
+          entries: [
+            { targetId: 'other-1', targetType: 'artist', rank: 1, name: 'A', totalPoints: 60 },
+            { targetId: 'other-2', targetType: 'artist', rank: 2, name: 'B', totalPoints: 50 },
+            { targetId: ARTIST_ID, targetType: 'artist', rank: 3, name: 'testartist', totalPoints: 41 },
+          ],
+        })),
+      );
       await loadDashboard({
         awards: [{ interval: { name: 'weekly' }, jurisdiction: { name: 'Uptown Harlem' }, awardDate: '2026-10-12' }],
       });
       expect(await screen.findByText('#3')).toBeInTheDocument();
-      expect(screen.getByText('#2 in Rap')).toBeInTheDocument();
+      expect(screen.getByText('in Harlem today')).toBeInTheDocument();
+      expect(screen.getByText(/41 points/)).toBeInTheDocument();
       expect(await screen.findByText(/Latest win: Artist of the Week, Uptown Harlem/)).toBeInTheDocument();
     });
 
-    it('shows the featured song', async () => {
+    it('shows the featured song on the Profile tab, ready to play', async () => {
       await loadDashboard();
-      expect(await screen.findByRole('heading', { name: 'My Track' })).toBeInTheDocument();
+      const user = userEvent.setup();
+      await user.click(tab('Profile'));
+      expect(await screen.findByRole('button', { name: 'Play My Track' })).toBeInTheDocument();
     });
 
     it('opens the broadcast composer from the supporters card', async () => {
@@ -338,7 +353,7 @@ describe('ArtistDashboard', () => {
     it('shows the share balance toward the payout minimum', async () => {
       await loadDashboard();
       expect(await screen.findByText('$38.20')).toBeInTheDocument();
-      expect(screen.getByText(/\$11\.80 more and you can withdraw/)).toBeInTheDocument();
+      expect(screen.getByText(/\$11\.80 to the \$50 payout minimum/)).toBeInTheDocument();
     });
   });
 

@@ -45,6 +45,7 @@ import {
 } from './icons/UnisIcons';
 import './messages.scss';
 import TeamInviteCards from './TeamInviteCards'; // ★ artist team invites
+import { NewReleasesRow, NewReleasesView } from './NewReleases'; // ★ release alerts
 
 const PHONE_QUERY = '(max-width: 820px)';
 const TYPING_TTL_MS = 6000;      // a typing "on" with no follow-up expires after this
@@ -215,6 +216,11 @@ export default function MessagesPage() {
   const [closing, setClosing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('chats');           // view: chats | requests
+  // ★ Release alerts: the New releases list replaces the inbox while open
+  //   (/messages?view=releases opens it, e.g. from the daily email).
+  const [releasesOpen, setReleasesOpen] = useState(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('view') === 'releases'
+  );
   const [showFiltered, setShowFiltered] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -806,6 +812,9 @@ export default function MessagesPage() {
         <aside className="udm-list" aria-label="Conversations">
           <div className="udm-glow" aria-hidden="true" />
 
+          {releasesOpen ? (
+            <NewReleasesView onBack={() => { haptic('tap'); setReleasesOpen(false); }} />
+          ) : (<>
           {tab === 'requests' ? (
             <header className="udm-list__head udm-list__head--sub">
               <button type="button" className="udm-round" onClick={closeRequests} aria-label="Back to messages">
@@ -868,6 +877,9 @@ export default function MessagesPage() {
           <div className="udm-list__scroll">
             {/* Artist team invites, pinned on top (Accept / Decline) */}
             {tab === 'chats' && <TeamInviteCards />}
+
+            {/* New music from artists you follow, pinned above the chats */}
+            {tab === 'chats' && <NewReleasesRow onOpen={() => { haptic('tap'); setReleasesOpen(true); }} />}
 
             {/* Requests can't hide: a card at the top, not a quiet tab */}
             {tab === 'chats' && !loading && requests.length > 0 && (
@@ -1089,6 +1101,7 @@ export default function MessagesPage() {
               </button>
             )}
           </div>
+          </>)}
 
           <div className="udm-list__fade" aria-hidden="true" />
         </aside>

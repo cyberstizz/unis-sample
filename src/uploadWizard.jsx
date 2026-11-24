@@ -5,6 +5,7 @@ import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import SoundDiscoveryFields from './SoundDiscoveryFields';
 import RightsConfirm from './RightsConfirm';
+import { Switch } from './ReleaseAlertSettings';
 import { MIN_SONG_PRICE_CENTS, dollarsToCents, formatCents, priceHint } from './utils/platformFee';
 import {
   EMPTY_DISCOVERY, isDiscoveryComplete, discoveryProblem, toDiscoveryPayload,
@@ -46,6 +47,8 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {}, visito
   // The rights box on the review step (Terms 3.6). Required for every upload;
   // the server refuses one without it.
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  // ★ Release alerts: a new song alerts followers unless switched off.
+  const [notifyFollowers, setNotifyFollowers] = useState(true);
   const [showRightsAlert, setShowRightsAlert] = useState(false);
 
   // Clean version state
@@ -75,7 +78,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {}, visito
     setCleanVersionChoice(null); setCleanFile(null); setCleanPreview(null);
     setCleanLoading(false); setDownloadPolicy('free'); setDownloadPrice('');
     setDiscovery(EMPTY_DISCOVERY); setShowDiscoveryErrors(false);
-    setRightsConfirmed(false); setShowRightsAlert(false);
+    setRightsConfirmed(false); setShowRightsAlert(false); setNotifyFollowers(true);
   };
 
   const handleNext = () => {
@@ -185,6 +188,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {}, visito
             // In cents, like everywhere else (parseInt('1.99') used to send 1).
             downloadPrice: downloadPolicy === 'paid' ? dollarsToCents(downloadPrice) : null,
             ...toDiscoveryPayload(discovery),
+            notifyFollowers,
           }
         : baseMetadata;
 
@@ -533,6 +537,16 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {}, visito
             src={URL.createObjectURL(artwork)}
             alt="Artwork preview"
           />
+        </div>
+      )}
+
+      {mediaType === 'song' && (
+        <div className="ra-setting ra-setting--card">
+          <div>
+            <strong id="uw-notify-label">Tell my followers</strong>
+            <span>A single alert in Messages and tonight’s email. Uploading more today? They’re grouped into one alert.</span>
+          </div>
+          <Switch on={notifyFollowers} label="Tell my followers" onChange={setNotifyFollowers} disabled={loading} />
         </div>
       )}
 

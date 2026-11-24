@@ -1,0 +1,485 @@
+// src/releaseAlerts.scss — release alerts: the New releases row and list in
+// Messages, the bell and its sheet on artist pages, Settings → Release
+// alerts, the follower switches in the release and upload wizards, and
+// Home's NEW tag. Theme-aware through --unis-primary; dark text on yellow.
+
+$ra-t2: color-mix(in srgb, var(--unis-primary, #163387), white 42%);
+$ra-ring: color-mix(in srgb, var(--unis-primary, #163387), white 22%);
+$ra-serif: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+$ra-sans: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+
+%ra-focus {
+  &:focus { outline: none; }
+  &:focus-visible { outline: 2px solid color-mix(in srgb, var(--unis-primary), white 62%); outline-offset: 2px; }
+}
+
+// ═══ Messages: the pinned row ════════════════════════════════════════════════
+.ra-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 40px);
+  margin: 4px 20px 12px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 20px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--unis-primary) 34%, #121216), #121216 78%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--unis-primary) 38%, transparent);
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+  @extend %ra-focus;
+
+  &:hover { filter: brightness(1.08); }
+  &:active { filter: brightness(1.15); }
+
+  > svg { flex: none; color: rgba(255, 255, 255, 0.7); }
+
+  &__covers {
+    flex: none;
+    display: flex;
+    padding-left: 2px;
+
+    img, span {
+      width: 34px;
+      height: 34px;
+      border-radius: 7px;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 0 0 2px #15151b;
+
+      & + img, & + span { margin-left: -14px; }
+    }
+  }
+
+  // width: 0 keeps the long line from widening the whole Messages column.
+  &__text { flex: 1 1 0; width: 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  &__title { font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em; }
+  &__sub { font-size: 13.5px; color: rgba(255, 255, 255, 0.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  &__badge {
+    flex: none;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background: var(--unis-primary);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+// ═══ Messages: the list ══════════════════════════════════════════════════════
+.ra-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+
+  &__head { display: flex; align-items: center; gap: 8px; }
+  &__head .udm-list__title--sub { flex: 1; min-width: 0; font-size: clamp(22px, 6.4vw, 30px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  &__seen {
+    flex: none;
+    padding: 6px 4px;
+    border: 0;
+    background: none;
+    color: $ra-t2;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    @extend %ra-focus;
+  }
+
+  &__lede { margin: 0 20px 4px; font-size: 13px; color: rgba(255, 255, 255, 0.55); }
+}
+
+.ra-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 24px;
+
+  &__group {
+    margin: 14px 20px 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.ra-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+
+  &.is-new { background: color-mix(in srgb, var(--unis-primary) 14%, transparent); }
+
+  &__link {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    display: flex;
+    gap: 12px;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    @extend %ra-focus;
+
+    &:hover .ra-item__title { text-decoration: underline; text-underline-offset: 2px; }
+  }
+
+  &__art {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+  }
+
+  &__text { flex: 1 1 0; width: 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+  &__who { font-size: 12.5px; color: rgba(255, 255, 255, 0.72); line-height: 1.35; b { color: #fff; } }
+  &__title { font-size: 16px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  &__note {
+    font-size: 12.5px;
+    line-height: 1.4;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.7);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__play {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--unis-primary);
+    color: #fff;
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.12s ease;
+    @extend %ra-focus;
+
+    &:hover:not(:disabled) { filter: brightness(1.12); }
+    &:active:not(:disabled) { transform: scale(0.94); }
+    &:disabled { opacity: 0.55; cursor: progress; }
+    svg { margin-left: 2px; }
+  }
+}
+
+.ra-empty { margin: 16px 20px; font-size: 14px; line-height: 1.45; color: rgba(255, 255, 255, 0.62); }
+
+.ra-none {
+  margin: 24px 20px;
+  padding: 22px 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+
+  h2 { margin: 0; font-size: 20px; font-weight: 800; em { font-family: $ra-serif; font-style: italic; font-weight: 400; color: $ra-t2; } }
+  p { margin: 6px 0 14px; font-size: 14px; line-height: 1.45; color: rgba(255, 255, 255, 0.62); }
+
+  &__go {
+    display: inline-flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    @extend %ra-focus;
+  }
+}
+
+// ═══ Artist page: the bell ═══════════════════════════════════════════════════
+.ra-bell {
+  color: $ra-t2;
+  background: color-mix(in srgb, var(--unis-primary) 32%, #07090f);
+  border-color: $ra-ring;
+
+  &.is-off { color: rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.18); }
+}
+
+// ═══ Sheets (bell choices, per-artist list) ═══════════════════════════════════
+.ra-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1450;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+
+  @media (min-width: 768px) { align-items: center; }
+}
+
+.ra-sheet {
+  width: 100%;
+  max-width: 460px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 8px 0 calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 18px 18px 0 0;
+  background: #12151f;
+  color: #fff;
+  font-family: $ra-sans;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
+
+  button { font-family: inherit; }
+
+  @media (min-width: 768px) { border-radius: 18px; padding-bottom: 16px; }
+
+  &--tall { max-width: 520px; }
+
+  &__grab { display: block; width: 40px; height: 4px; margin: 0 auto; border-radius: 2px; background: rgba(255, 255, 255, 0.25); }
+
+  &__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-right: 16px; }
+
+  &__title { margin: 14px 16px 2px; font-size: 17px; font-weight: 800; }
+
+  &__sub { margin: 0 16px 8px; font-size: 12.5px; line-height: 1.4; color: rgba(255, 255, 255, 0.58); }
+
+  &__done {
+    margin-top: 12px;
+    padding: 6px 2px;
+    border: 0;
+    background: none;
+    color: $ra-t2;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    @extend %ra-focus;
+  }
+}
+
+.ra-levels { display: flex; flex-direction: column; }
+
+.ra-level {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  @extend %ra-focus;
+
+  &:hover { background: rgba(255, 255, 255, 0.04); }
+  &.is-on { background: rgba(255, 255, 255, 0.06); }
+  &:disabled { cursor: progress; }
+
+  &__icon {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &.is-on &__icon { background: var(--unis-primary); color: #fff; }
+
+  &__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  &__text strong { font-size: 15px; font-weight: 700; }
+  &__text span { font-size: 12.5px; color: rgba(255, 255, 255, 0.58); }
+  &__check { flex: none; color: $ra-t2; }
+}
+
+// ═══ Settings → Release alerts ═══════════════════════════════════════════════
+.ra-setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+
+  > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  strong { font-size: 14.5px; font-weight: 700; color: #fff; }
+  span { font-size: 12.5px; line-height: 1.38; color: rgba(255, 255, 255, 0.58); }
+
+  // Upload wizard: the same row on its own card.
+  &--card {
+    margin: 16px 0 4px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    text-align: left;
+  }
+}
+
+.ra-switch {
+  position: relative;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  @extend %ra-focus;
+
+  span {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.15s ease;
+  }
+
+  &.is-on { background: var(--unis-primary); span { transform: translateX(18px); } }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.ra-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 0 2px;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: none;
+  color: rgba(255, 255, 255, 0.85);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  @extend %ra-focus;
+
+  &:hover { color: #fff; }
+}
+
+.ra-per { list-style: none; margin: 4px 0 0; padding: 0; }
+
+.ra-per__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+
+  & + & { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+}
+
+.ra-per__face {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--unis-primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ra-per__name { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.ra-seg {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+
+  button {
+    height: 30px;
+    padding: 0 9px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    @extend %ra-focus;
+
+    &.is-on { background: var(--unis-primary); color: #fff; }
+    &:disabled { cursor: progress; }
+  }
+}
+
+// ═══ Release wizard: Tell my followers ═══════════════════════════════════════
+.nr-switch--btn {
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  @extend %ra-focus;
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.nr-optional { color: rgba(255, 255, 255, 0.45); font-weight: 500; }
+
+.nr-count { margin-top: 4px; font-size: 11.5px; color: rgba(255, 255, 255, 0.45); text-align: right; }
+
+// ═══ Home: NEW on songs you haven't seen ══════════════════════════════════════
+.hm-card__art { position: relative; }
+
+.hm-card__new {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--unis-primary);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+// Yellow theme: dark text on yellow.
+[data-theme='yellow'] {
+  .ra-row__badge,
+  .ra-item__play,
+  .ra-level.is-on .ra-level__icon,
+  .ra-seg button.is-on,
+  .hm-card__new { color: #111318; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ra-row, .ra-item__play, .ra-switch, .ra-switch span, .nr-switch--btn { transition: none; }
+}

@@ -39,6 +39,7 @@ import { buildUrl } from './utils/buildUrl';
 import { fetchStandings } from './utils/standings';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import { useTeam } from './context/TeamContext';
+import { ALERTS_CHANGED } from './utils/releaseAlerts';
 
 const DESKTOP_MIN = 1025;          // matches sidebar.scss and player.scss
 const PANEL_W = 268;
@@ -257,9 +258,10 @@ const Sidebar = () => {
 
   // ── Unread messages badge ──────────────────────────────────
   const [unreadCount, setUnreadCount] = useState(0);
+  const [alertCount, setAlertCount] = useState(0);
 
   useEffect(() => {
-    if (!signedIn) { setUnreadCount(0); return undefined; }
+    if (!signedIn) { setUnreadCount(0); setAlertCount(0); return undefined; }
     let alive = true;
     const load = async () => {
       try {
@@ -271,13 +273,28 @@ const Sidebar = () => {
         console.error('[Sidebar] message count failed (badge hidden):', err?.message || err);
       }
     };
-    load();
+    // ★ Unseen release alerts live in Messages too, so they count (Nov 2026).
+    const loadAlerts = async () => {
+      try {
+        const res = await apiCall({ url: '/v1/release-alerts/summary', useCache: false });
+        if (alive) setAlertCount(Number(res.data?.unseen) || 0);
+      } catch (err) {
+        console.error('[Sidebar] release alert count failed (not counted):', err?.message || err);
+      }
+    };
+    const loadAll = () => {
+      load();
+      loadAlerts();
+    };
+    loadAll();
     window.addEventListener('unis:messages-updated', load);
-    window.addEventListener('focus', load);
+    window.addEventListener(ALERTS_CHANGED, loadAlerts);
+    window.addEventListener('focus', loadAll);
     return () => {
       alive = false;
       window.removeEventListener('unis:messages-updated', load);
-      window.removeEventListener('focus', load);
+      window.removeEventListener(ALERTS_CHANGED, loadAlerts);
+      window.removeEventListener('focus', loadAll);
     };
   }, [signedIn]);
 
@@ -413,7 +430,7 @@ const Sidebar = () => {
     { key: 'discover',     label: 'Discover',     icon: 'discover',     onClick: () => handleNav('/discover'),     match: (p) => p.startsWith('/discover'), bar: true },
     { key: 'charts',       label: 'Charts',       icon: 'charts',       onClick: () => handleNav('/charts'),       match: (p) => p.startsWith('/charts') },
     { key: 'vote',         label: 'Vote',         icon: 'vote',         onClick: () => handleNav('/voteawards'),   match: (p) => p.startsWith('/voteawards'), bar: true },
-    { key: 'messages',     label: 'Messages',     icon: 'messages',     onClick: onMessages, badge: unreadCount,  match: (p) => p.startsWith('/messages'), bar: true },
+    { key: 'messages',     label: 'Messages',     icon: 'messages',     onClick: onMessages, badge: unreadCount + alertCount,  match: (p) => p.startsWith('/messages'), bar: true },
     { key: 'find',         label: 'Find on the map', icon: 'find',      onClick: () => handleNav('/findpage'),     match: (p) => p.startsWith('/findpage'), menu: true },
     { key: 'awards',       label: 'Awards',       icon: 'awards',       onClick: () => handleNav('/milestones'),   match: (p) => p.startsWith('/milestones'), menu: true },
     { key: 'earnings',     label: 'Earnings',     icon: 'earnings',     onClick: onEarnings,                       match: (p) => p.startsWith('/earnings'), menu: true },

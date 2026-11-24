@@ -715,6 +715,7 @@ describe('UploadWizard — song upload', () => {
       primaryMoodId: 'mood-hype',
       secondaryMoodId: null,
       language: 'en',
+      notifyFollowers: true, // ★ release alerts: on unless switched off
     });
   });
 

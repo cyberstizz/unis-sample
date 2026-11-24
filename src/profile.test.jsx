@@ -268,8 +268,10 @@ function mockSummary(summary = baseSummary()) {
   );
 }
 
-async function renderAndWait() {
-  renderWithProviders(<Profile />, { as: 'listener' });
+// The page has tabs (Home, Activity, Earn, Profile + Settings behind the gear);
+// pass a tab to open it through the URL hash, like /profile#settings.
+async function renderAndWait(tab) {
+  renderWithProviders(<Profile />, { as: 'listener', route: tab ? `/profile#${tab}` : '/profile' });
   await waitFor(
     () => {
       const stillLoading = !!screen.queryByText(/loading your profile/i);
@@ -418,21 +420,21 @@ describe('Profile — profile data render', () => {
 
   it('renders the bio when present', async () => {
     mockSummary(baseSummary({ profile: { ...baseSummary().profile, bio: 'Harlem rap fan' } }));
-    await renderAndWait();
+    await renderAndWait('profile');
     expect(screen.getByText('Harlem rap fan')).toBeInTheDocument();
   });
 
   it('renders fallback bio copy when bio is null', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('profile');
     expect(screen.getByText(/no bio yet/i)).toBeInTheDocument();
   });
 
   it('renders an initial-letter placeholder when photoUrl is null', async () => {
     mockSummary(baseSummary({ profile: { ...baseSummary().profile, username: 'CharlesUnis', photoUrl: null } }));
     await renderAndWait();
-    expect(document.querySelector('img.profile-hero__avatar')).toBeNull();
-    const placeholder = document.querySelector('.profile-hero__avatar--placeholder');
+    expect(document.querySelector('img.ad-head__avatar')).toBeNull();
+    const placeholder = document.querySelector('.ad-head__avatar--placeholder');
     expect(placeholder).not.toBeNull();
     expect(placeholder.textContent).toBe('C');
   });
@@ -440,7 +442,7 @@ describe('Profile — profile data render', () => {
   it('renders the photo when photoUrl is present', async () => {
     mockSummary(baseSummary({ profile: { ...baseSummary().profile, photoUrl: 'https://cdn.test/me.jpg' } }));
     await renderAndWait();
-    const img = document.querySelector('img.profile-hero__avatar');
+    const img = document.querySelector('img.ad-head__avatar');
     expect(img).not.toBeNull();
     expect(img.src).toContain('me.jpg');
   });
@@ -459,7 +461,7 @@ describe('Profile — stats grid', () => {
   it('falls back to 0 when score is missing', async () => {
     mockSummary();
     await renderAndWait();
-    const scoreCard = Array.from(document.querySelectorAll('.profile-hero__stat'))
+    const scoreCard = Array.from(document.querySelectorAll('.ad-tile'))
       .find((c) => c.textContent.includes('Score'));
     expect(scoreCard.textContent).toMatch(/0/);
   });
@@ -479,8 +481,8 @@ describe('Profile — stats grid', () => {
   it('renders Total Votes from voteHistory.totalCount', async () => {
     mockSummary(baseSummary({ voteHistory: { totalCount: 7, recent: [] } }));
     await renderAndWait();
-    const totalVotesCard = Array.from(document.querySelectorAll('.profile-hero__stat'))
-      .find((c) => c.textContent.includes('Total Votes'));
+    const totalVotesCard = Array.from(document.querySelectorAll('.ad-tile'))
+      .find((c) => c.textContent.includes('Votes'));
     expect(totalVotesCard.textContent).toMatch(/7/);
   });
 });
@@ -504,7 +506,7 @@ describe('Profile — supported artist hero', () => {
   it('uses the ARTIST photo as the featured background (not the song artwork)', async () => {
     mockSummary(baseSummary({ supportedArtist: supportedArtist() }));
     await renderAndWait();
-    const featured = document.querySelector('.profile-hero__featured');
+    const featured = document.querySelector('.lp-support__media');
     expect(featured).not.toBeNull();
     // Artist photo takes precedence over song artwork
     expect(featured.style.backgroundImage).toContain('tony.jpg');
@@ -516,7 +518,7 @@ describe('Profile — supported artist hero', () => {
       supportedArtist: supportedArtist({ photoUrl: null }),
     }));
     await renderAndWait();
-    const featured = document.querySelector('.profile-hero__featured');
+    const featured = document.querySelector('.lp-support__media');
     expect(featured.style.backgroundImage).toContain('banger.jpg');
   });
 
@@ -688,7 +690,7 @@ describe('Profile — supported-artist picker', () => {
 describe('Profile — child component wiring', () => {
   it('passes referralCode + username + isArtist=false to ReferralCodeCard', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('earn');
     const card = screen.getByTestId('referral-card');
     expect(card.dataset.referralcode).toBe('CHARLES-ABC12');
     expect(card.dataset.username).toBe('charles');
@@ -699,19 +701,19 @@ describe('Profile — child component wiring', () => {
     mockSummary(baseSummary({
       profile: { ...baseSummary().profile, role: 'artist' },
     }));
-    await renderAndWait();
+    await renderAndWait('earn');
     expect(screen.getByTestId('referral-card').dataset.isartist).toBe('true');
   });
 
   it('passes userId to ThemePicker', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('settings');
     expect(screen.getByTestId('theme-picker').dataset.userid).toBe(LISTENER_ID);
   });
 
   it('passes userId + profile to SocialLinksSection', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('profile');
     const links = screen.getByTestId('social-links');
     expect(links.dataset.userid).toBe(LISTENER_ID);
     const lastCall = socialLinksSpy.mock.calls[socialLinksSpy.mock.calls.length - 1][0];
@@ -721,7 +723,7 @@ describe('Profile — child component wiring', () => {
 
   it('passes userId + settings to AccountSettings', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('settings');
     const settings = screen.getByTestId('account-settings');
     expect(settings.dataset.userid).toBe(LISTENER_ID);
     const parsed = JSON.parse(settings.dataset.settings);
@@ -732,13 +734,13 @@ describe('Profile — child component wiring', () => {
 
   it('passes userId to VoteHistorySection', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('activity');
     expect(screen.getByTestId('vote-history-section').dataset.userid).toBe(LISTENER_ID);
   });
 
   it('AccountSettings.onUpdated reloads the summary', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('settings');
     const beforeCalls = callsTo('/v1/users/profile-summary/').length;
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /settings-updated/i }));
@@ -749,7 +751,7 @@ describe('Profile — child component wiring', () => {
 
   it('SocialLinksSection.onUpdated reloads the summary', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('profile');
     const beforeCalls = callsTo('/v1/users/profile-summary/').length;
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /social-updated/i }));
@@ -762,29 +764,32 @@ describe('Profile — child component wiring', () => {
 // ===========================================================================
 // COLLAPSIBLE SECTION LAYOUT
 // ===========================================================================
-describe('Profile — collapsible section layout', () => {
-  it('renders all five collapsible sections', async () => {
+describe('Profile — tabs', () => {
+  it('shows Home, Activity, Earn and Profile tabs, with Home open', async () => {
     mockSummary();
     await renderAndWait();
-    expect(screen.getByTestId('collapsible-vote-history')).toBeInTheDocument();
-    expect(screen.getByTestId('collapsible-referral')).toBeInTheDocument();
-    expect(screen.getByTestId('collapsible-social-links')).toBeInTheDocument();
-    expect(screen.getByTestId('collapsible-theme')).toBeInTheDocument();
-    expect(screen.getByTestId('collapsible-account')).toBeInTheDocument();
+    const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
+    expect(tabs).toEqual(['Home', 'Activity', 'Earn', 'Profile']);
+    expect(screen.getByRole('tab', { name: 'Home' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('mounts VoteHistorySection inside the vote-history collapsible', async () => {
+  it('opens a tab on click', async () => {
     mockSummary();
     await renderAndWait();
-    const panel = screen.getByTestId('collapsible-vote-history-children');
-    expect(panel.querySelector('[data-testid="vote-history-section"]')).not.toBeNull();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Activity' }));
+    expect(screen.getByTestId('vote-history-section')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Activity' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('mounts SocialLinksSection inside the social-links collapsible', async () => {
+  it('the gear opens Settings, with release alerts', async () => {
     mockSummary();
     await renderAndWait();
-    const panel = screen.getByTestId('collapsible-social-links-children');
-    expect(panel.querySelector('[data-testid="social-links"]')).not.toBeNull();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
+    expect(screen.getByTestId('theme-picker')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /release alerts/i })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /release alerts in unis/i })).toBeInTheDocument();
   });
 });
 
@@ -794,7 +799,7 @@ describe('Profile — collapsible section layout', () => {
 describe('Profile — Edit Profile wizard', () => {
   it('opens on click', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('profile');
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /edit profile/i }));
     expect(screen.getByTestId('edit-wizard')).toBeInTheDocument();
@@ -802,7 +807,7 @@ describe('Profile — Edit Profile wizard', () => {
 
   it('receives the profile as userProfile prop', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('profile');
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /edit profile/i }));
     const lastCall = editWizardSpy.mock.calls[editWizardSpy.mock.calls.length - 1][0];
@@ -811,7 +816,7 @@ describe('Profile — Edit Profile wizard', () => {
 
   it('onSuccess reloads the summary', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('profile');
     const beforeCalls = callsTo('/v1/users/profile-summary/').length;
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /edit profile/i }));
@@ -823,7 +828,7 @@ describe('Profile — Edit Profile wizard', () => {
 
   it('onClose hides the wizard', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('profile');
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /edit profile/i }));
     await user.click(screen.getByRole('button', { name: /edit-close/i }));
@@ -834,7 +839,7 @@ describe('Profile — Edit Profile wizard', () => {
 describe('Profile — Delete Account wizard', () => {
   it('opens on click', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('settings');
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /delete account/i }));
     expect(screen.getByTestId('delete-wizard')).toBeInTheDocument();
@@ -844,7 +849,7 @@ describe('Profile — Delete Account wizard', () => {
 describe('Profile — Change Password wizard', () => {
   it('opens on click', async () => {
     mockSummary();
-    await renderAndWait();
+    await renderAndWait('settings');
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /change password/i }));
     expect(screen.getByTestId('change-password-wizard')).toBeInTheDocument();

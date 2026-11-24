@@ -18,6 +18,8 @@
 
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ALERTS_CHANGED, fetchAlertSummary } from './utils/releaseAlerts';
+import './releaseAlerts.scss';
 import Layout from './layout';
 import AdSlot from './components/AdSlot';
 import { PlayerContext } from './context/playercontext';
@@ -74,6 +76,7 @@ const toSong = (item) => ({
   artworkUrl: buildUrl(item.artworkUrl),
   url: buildUrl(item.fileUrl),
   fileUrl: buildUrl(item.fileUrl),
+  createdAt: item.createdAt || null,
 });
 
 // A playlist's cover: its own image, else the first song's artwork.
@@ -98,6 +101,8 @@ const HomePage = () => {
   const [artists, setArtists] = useState([]);      // this week's top artists
   const [fresh, setFresh] = useState([]);          // new in the area
   const [following, setFollowing] = useState([]);  // new from artists you follow
+  // ★ Release alerts: songs newer than the last look at New releases get NEW.
+  const [alertSeen, setAlertSeen] = useState({ on: false, seenAt: null });
   const [voteHistory, setVoteHistory] = useState([]);
 
   // ── Today's race (top 3) ──
@@ -148,8 +153,21 @@ const HomePage = () => {
         console.error('[Home] following drops load failed (row hidden):', err?.message || err);
         if (alive) setFollowing([]);
       });
-    return () => { alive = false; };
+    const loadSeen = () => fetchAlertSummary()
+      .then((sum) => { if (alive) setAlertSeen({ on: !!sum?.inApp, seenAt: sum?.seenAt || null }); })
+      .catch((err) => console.error('[Home] release alert summary failed (no NEW tags):', err?.message || err));
+    loadSeen();
+    window.addEventListener(ALERTS_CHANGED, loadSeen);
+    return () => { alive = false; window.removeEventListener(ALERTS_CHANGED, loadSeen); };
   }, [signedIn, userId]);
+
+  const isNewToYou = (s) => {
+    if (!alertSeen.on || !s.createdAt) return false;
+    if (!alertSeen.seenAt) return true;
+    const made = Date.parse(s.createdAt);
+    const seen = Date.parse(alertSeen.seenAt);
+    return !Number.isNaN(made) && !Number.isNaN(seen) && made > seen;
+  };
 
   // Same rule as the feed: a daily song vote cast today, in this area.
   const votedToday = useMemo(() => {
@@ -211,6 +229,7 @@ const HomePage = () => {
       <button type="button" className="hm-card__art" onClick={() => play(s)} aria-label={`Play ${s.title} by ${s.artist}`}>
         {s.artwork ? <img src={s.artwork} alt="" loading="lazy" /> : <span className="hm-card__empty"><NoteGlyph /></span>}
         <span className="hm-card__play" aria-hidden="true"><PlayIcon size={18} /></span>
+        {s.isNew && <span className="hm-card__new">New</span>}
       </button>
       <button type="button" className="hm-card__title" onClick={() => navigate(`/song/${s.id}`)}>{s.title}</button>
       <button type="button" className="hm-card__sub" onClick={() => s.artistId && navigate(`/artist/${s.artistId}`)}>{s.artist}</button>
@@ -314,7 +333,7 @@ const HomePage = () => {
         {signedIn && following.length > 0 && (
           <section aria-labelledby="hm-follow">
             <h2 className="hm-h2" id="hm-follow">New from artists you follow</h2>
-            <div className="hm-shelf">{following.map(songCard)}</div>
+            <div className="hm-shelf">{following.map((s) => songCard({ ...s, isNew: isNewToYou(s) }))}</div>
           </section>
         )}
 

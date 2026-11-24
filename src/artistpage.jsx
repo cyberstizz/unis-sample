@@ -19,6 +19,7 @@ import SongMenu, { KebabIcon, anchorFromEvent } from './SongMenu'; // ★ song �
 import { VoteIcon, SupportIcon } from './icons/UnisIcons';            // ★ Glow icons
 import { visitorChip } from './utils/visitor';
 import ArtistDiscography from './ArtistDiscography'; // ★ albums, EPs, mixtapes, singles
+import ReleaseAlertBell from './ReleaseAlertBell'; // ★ release alerts
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ArtistPage — v4 redesign (Nov 2026, signed-off mockup "Unis artist page
@@ -1324,6 +1325,10 @@ const ArtistPage = ({ isOwnProfile = false }) => {
                 <FollowGlyph on={isFollowing} />
                 {isFollowing ? 'Following' : 'Follow'}
               </button>
+            )}
+            {/* ★ Release alerts: the bell picks every release, big releases only, or off */}
+            {showActionButtons && !isGuest && (
+              <ReleaseAlertBell artistId={artistId} artistName={artist.username} isFollowing={isFollowing} className="ap3-circ" />
             )}
             {showActionButtons && (
               <button type="button" className="ap3-pill ap3-pill--vote ap3-act--vote ap3-hide-phone" onClick={handleVote}>

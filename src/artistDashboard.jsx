@@ -16,7 +16,7 @@ import {
   BarChart3,
   Clock,
   Download,
-  SlidersHorizontal,
+  Settings as SettingsIcon,
   ExternalLink,
   Video,
   Lock,
@@ -66,7 +66,10 @@ import TeamSwitcher from './TeamSwitcher';
 import TeamPanel from './TeamPanel';
 import NewReleaseWizard from './NewReleaseWizard';
 import { RELEASE_TYPE_LABEL } from './utils/releases';
+import LiveStanding from './LiveStanding';
+import ReleaseAlertSettings from './ReleaseAlertSettings';
 import './teamAndReleases.scss';
+import './dashShell.scss';
 
 // The lyric-timing tour uses the welcome tour's engine; it downloads only when opened.
 const UnisTour = lazyWithRetry(() => import('./tour/UnisTour'));
@@ -88,6 +91,13 @@ const UnisTour = lazyWithRetry(() => import('./tour/UnisTour'));
 //
 //   The open tab lives in the URL hash (/artistDashboard#earnings), so any page
 //   can link straight to a tab and Back returns to the previous tab.
+//
+// ★ Nov 2026 look (approved mockup "Dashboards & release alerts"): the same
+//   frame as the listener page and the rest of the app — identity, round
+//   view-page and settings buttons, underline tabs, glass cards with one
+//   serif word, stat tiles (dashShell.scss). Home leads with the checklist,
+//   this week, the latest release and its alert reach; Races opens on the
+//   live Artist of the Day race; Settings gains Release alerts.
 //
 //   Fixes that came with it: the every-visit "Thank You!" pop-up is gone; the
 //   dead "Fanbase" jump button went with the jump grid; "Verify" opens phone
@@ -556,7 +566,7 @@ const ArtistDashboard = () => {
   if (!user) {
     return (
       <Layout backgroundImage={backimage}>
-        <div className="artist-dashboard ad-center">Please sign in to view your dashboard.</div>
+        <div className="artist-dashboard ds ad-center">Please sign in to view your dashboard.</div>
         <AuthGateSheet {...gateProps} />
       </Layout>
     );
@@ -565,7 +575,7 @@ const ArtistDashboard = () => {
   if (coreLoading) {
     return (
       <Layout backgroundImage={backimage}>
-        <div className="artist-dashboard ad-center">
+        <div className="artist-dashboard ds ad-center">
           <SectionLoader label="Loading your dashboard..." />
         </div>
       </Layout>
@@ -575,7 +585,7 @@ const ArtistDashboard = () => {
   if (coreError) {
     return (
       <Layout backgroundImage={backimage}>
-        <div className="artist-dashboard ad-center">
+        <div className="artist-dashboard ds ad-center">
           <SectionError message={coreError} onRetry={() => fetchCore(user.userId)} />
         </div>
       </Layout>
@@ -1118,11 +1128,6 @@ const ArtistDashboard = () => {
           Releases <span className="ad-count">{releases.length}</span>
         </h2>
       </div>
-      {canEdit && (
-        <button type="button" className="ad-newrel" onClick={() => setReleaseWizard({ release: null })} disabled={songs.length === 0}>
-          <Plus size={18} aria-hidden="true" /> New release
-        </button>
-      )}
       {releases.length === 0 ? (
         <p className="adr-empty">
           {songs.length === 0
@@ -1167,6 +1172,23 @@ const ArtistDashboard = () => {
 
   const renderMusic = () => (
     <>
+      {canEdit && (
+        <div className="ad-music-actions">
+          <button
+            type="button"
+            className="artist-btn artist-btn--primary"
+            onClick={() => setReleaseWizard({ release: null })}
+            disabled={songs.length === 0}
+            title={songs.length === 0 ? 'Upload a song first' : undefined}
+          >
+            <Plus size={18} aria-hidden="true" /> New release
+          </button>
+          <button type="button" className="artist-btn artist-btn--ghost" onClick={() => setShowUploadWizard(true)}>
+            <Upload size={16} aria-hidden="true" /> Upload a song or video
+          </button>
+        </div>
+      )}
+
       {renderReleases()}
 
       <section className="ad-panel" aria-labelledby="ad-songs-title">
@@ -1178,11 +1200,6 @@ const ArtistDashboard = () => {
             <button type="button" className="artist-btn artist-btn--ghost artist-btn--small" onClick={() => setShowLyricsTour(true)}>
               <HelpCircle size={14} aria-hidden="true" /> How timed lyrics work
             </button>
-            {canEdit && (
-              <button type="button" className="artist-btn artist-btn--primary artist-btn--small" onClick={() => setShowUploadWizard(true)}>
-                <Upload size={14} aria-hidden="true" /> Upload a song or video
-              </button>
-            )}
           </div>
         </div>
 
@@ -1415,6 +1432,13 @@ const ArtistDashboard = () => {
 
   const renderRaces = () => (
     <>
+      <LiveStanding
+        variant="hero"
+        artistId={user.userId}
+        jurisdictionId={userProfile.jurisdiction?.jurisdictionId}
+        placeName={artistJurisdiction}
+      />
+
       <div className="ad-tiles" aria-label="Your standing at a glance">
         <div className="ad-tile">
           <span>Score</span>
@@ -1439,7 +1463,7 @@ const ArtistDashboard = () => {
       <section className="ad-panel" aria-labelledby="ad-rank-title">
         <div className="ad-panel__head">
           <h2 id="ad-rank-title">
-            Your rank in every <em>place</em>
+            Territory <em>rank</em>
           </h2>
         </div>
         <TerritoryRankSection artistId={user.userId} />
@@ -1448,7 +1472,7 @@ const ArtistDashboard = () => {
       <section className="ad-panel artist-trophy-section" aria-labelledby="ad-trophy-title">
         <div className="ad-panel__head">
           <h2 id="ad-trophy-title">
-            Trophy <em>case</em>
+            Your <em>wins</em>
           </h2>
           <div className="artist-awards-toggle" role="group" aria-label="Award type">
             <button
@@ -1575,7 +1599,18 @@ const ArtistDashboard = () => {
             </Link>
           </div>
           <div className="ad-featured-line">
-            <div>
+            {defaultSong && (
+              <button
+                type="button"
+                className="ad-featured-line__art"
+                style={{ backgroundImage: `url(${featuredArtwork})` }}
+                onClick={playDefaultSong}
+                aria-label={`Play ${defaultSong.title}`}
+              >
+                <Play size={14} fill="currentColor" aria-hidden="true" />
+              </button>
+            )}
+            <div className="ad-featured-line__text">
               <span>Featured song</span>
               <strong>{defaultSong?.title || 'Not set'}</strong>
             </div>
@@ -1664,6 +1699,8 @@ const ArtistDashboard = () => {
         </div>
         <ThemePicker userId={user?.userId} />
       </section>
+
+      {!onTeam && <ReleaseAlertSettings />}
 
       <section className="ad-panel artist-support-section" aria-labelledby="ad-support-title">
         <div className="ad-panel__head">
@@ -1773,16 +1810,17 @@ const ArtistDashboard = () => {
             setupSteps={setupSteps}
             onSetupAction={handleSetupAction}
             totals={{ plays: totalPlays, followers, supporters }}
-            defaultSong={defaultSong}
-            featuredArtwork={featuredArtwork}
-            onPlayFeatured={playDefaultSong}
-            onChooseFeatured={() => setShowDefaultSongWizard(true)}
             latestWin={latestWin}
             earningsSummary={earningsSummary}
             phoneVerified={Boolean(user.phoneVerified)}
             onVerifyPhone={() => setShowPhoneVerify(true)}
             supportersCount={supporters}
             onGoTab={goToTab}
+            jurisdictionId={userProfile.jurisdiction?.jurisdictionId}
+            placeName={artistJurisdiction}
+            releases={releases}
+            songs={songs}
+            canEdit={canEdit}
           />
         );
     }
@@ -1793,7 +1831,7 @@ const ArtistDashboard = () => {
   // -----------------------------------------------------------------------
   return (
     <Layout backgroundImage={backimage}>
-      <div className="artist-dashboard">
+      <div className="artist-dashboard ds">
         <div className="dashboard-content">
           <TeamSwitcher me={authUser} />
           <header className="ad-head">
@@ -1822,12 +1860,17 @@ const ArtistDashboard = () => {
             </div>
             <div className="ad-head__actions">
               {canEdit && (
-                <button type="button" className="artist-btn artist-btn--primary" onClick={() => setShowUploadWizard(true)}>
-                  <Upload size={15} aria-hidden="true" /> Upload
+                <button type="button" className="artist-btn artist-btn--primary ad-head__upload" onClick={() => setShowUploadWizard(true)}>
+                  <Upload size={16} aria-hidden="true" /> Upload
                 </button>
               )}
-              <Link to={`/artist/${user.userId}`} className="artist-btn artist-btn--ghost">
-                {onTeam ? 'View page' : 'View my page'}
+              <Link
+                to={`/artist/${user.userId}`}
+                className="artist-btn artist-btn--ghost ad-head__view"
+                aria-label={onTeam ? 'View page' : 'View my page'}
+              >
+                <ExternalLink size={17} aria-hidden="true" />
+                <span className="ad-head__label" aria-hidden="true">{onTeam ? 'View page' : 'Your page'}</span>
               </Link>
               {!onTeam && (
                 <button
@@ -1837,7 +1880,7 @@ const ArtistDashboard = () => {
                   aria-pressed={activeTab === 'settings'}
                   onClick={() => goToTab(activeTab === 'settings' ? 'home' : 'settings')}
                 >
-                  <SlidersHorizontal size={18} aria-hidden="true" />
+                  <SettingsIcon size={19} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -1874,6 +1917,7 @@ const ArtistDashboard = () => {
             songs={songs}
             onClose={() => setReleaseWizard(null)}
             onUploadNew={canEdit ? () => setShowUploadWizard(true) : undefined}
+            followerCount={followers}
             onSaved={() => {
               fetchReleases(user.userId);
               refetchSongs();

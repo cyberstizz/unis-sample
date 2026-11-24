@@ -2,29 +2,33 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
+  Bell,
   Check,
+  ChevronDown,
   Megaphone,
-  Play,
   RefreshCw,
-  Trophy,
 } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
 import { BroadcastComposer } from './SupporterSection';
+import LiveStanding from './LiveStanding';
+import { RELEASE_TYPE_LABEL } from './utils/releases';
+import { fetchReach } from './utils/releaseAlerts';
 
 // =============================================================================
-// ArtistHomeTab — the dashboard's first screen.
+// ArtistHomeTab — the dashboard's first screen (Nov 2026 look).
 //
-// Leads with what matters today (Spotify for Artists' 2026 Home does the same):
-//   left:  setup progress (until done) · this week vs last week · featured song
-//   right: where you stand · share balance · supporters
+// Leads with what matters today, like Spotify for Artists' 2026 Home:
+//   main:  setup checklist (until done) · this week · latest release + reach
+//   side:  today's race · balance · supporters
 //
 // Data:
-//   • Everything already loaded by ArtistDashboard comes in as props.
-//   • Three small reads of its own, each failing quietly to its own card:
+//   • What ArtistDashboard already loaded comes in as props.
+//   • Small reads of its own, each failing quietly to its own card:
 //       /v1/artist-analytics/artist/{id}/fanbase?period=week   (this week)
-//       /v1/artist-analytics/artist/{id}/territory-rank        (where you stand)
 //       /v1/artist-analytics/artist/{id}/supporters            (newest supporters)
+//       /v1/release-alerts/reach                               (latest alert)
+//       /v1/awards/standings (LiveStanding)                    (today's race)
 // =============================================================================
 
 const formatNumber = (n) => Number(n || 0).toLocaleString('en-US');
@@ -33,24 +37,13 @@ const initialOf = (name) => (name ? name.charAt(0).toUpperCase() : '?');
 const formatDelta = (delta) => {
   if (delta === null || delta === undefined) return null;
   const n = Number(delta);
-  if (Number.isNaN(n)) return null;
-  if (n === 0) return { text: 'No change', tone: 'flat' };
+  if (Number.isNaN(n) || n === 0) return null;
   return { text: `${n > 0 ? '+' : '−'}${formatNumber(Math.abs(n))}`, tone: n > 0 ? 'up' : 'down' };
 };
 
-const RANK_PERIOD_LABEL = {
-  today: 'Yesterday',
-  week: 'This week',
-  month: 'This month',
-  year: 'This year',
-};
+// Ring geometry for the setup card (r = 22 in a 54-unit box).
+const RING_C = 2 * Math.PI * 22;
 
-// Ring geometry for the setup card's progress (r = 26 in a 64-unit box).
-const RING_C = 2 * Math.PI * 26;
-
-// -----------------------------------------------------------------------------
-// Small reusable read hook: one GET, its own loading/error, a retry.
-// -----------------------------------------------------------------------------
 function useArtistRead(url) {
   const [state, setState] = useState({ data: null, loading: Boolean(url), error: null });
 
@@ -93,10 +86,10 @@ const CardLoading = ({ label }) => (
 );
 
 // =============================================================================
-// Setup card — the dashboard's wizard. Seven steps, each with its own action
-// (steps come from utils/artistSetupSteps.js). Disappears once every step is done.
+// Setup — progress ring, the next step as one button, every step on request.
 // =============================================================================
 const SetupCard = ({ steps, onAction }) => {
+  const [open, setOpen] = useState(false);
   const doneCount = steps.filter((s) => s.done).length;
   const total = steps.length;
   const next = steps.find((s) => !s.done);
@@ -105,49 +98,67 @@ const SetupCard = ({ steps, onAction }) => {
   return (
     <section className="ad-card ad-setup" aria-labelledby="ad-setup-title">
       <div className="ad-setup__head">
-        <svg className="ad-setup__ring" viewBox="0 0 64 64" role="img" aria-label={`${doneCount} of ${total} setup steps done`}>
-          <circle cx="32" cy="32" r="26" className="ad-setup__ring-track" />
-          <circle cx="32" cy="32" r="26" className="ad-setup__ring-fill" strokeDasharray={dash} transform="rotate(-90 32 32)" />
-          <text x="32" y="37" textAnchor="middle" className="ad-setup__ring-text">
-            {doneCount}/{total}
-          </text>
+        <svg className="ad-setup__ring" viewBox="0 0 54 54" aria-hidden="true">
+          <circle cx="27" cy="27" r="22" className="ad-setup__ring-track" />
+          <circle cx="27" cy="27" r="22" className="ad-setup__ring-fill" strokeDasharray={dash} transform="rotate(-90 27 27)" />
         </svg>
-        <div>
+        <div className="ad-setup__copy">
           <h2 id="ad-setup-title">
-            Finish setting <em>up</em>
+            {doneCount} of {total} steps done
           </h2>
-          <p>{next ? `Next: ${next.title.toLowerCase()}.` : 'All set.'}</p>
+          {next && (
+            <p>
+              Next: {next.title.charAt(0).toLowerCase() + next.title.slice(1)}. {next.text}
+            </p>
+          )}
         </div>
       </div>
 
-      <ol className="ad-setup__list">
-        {steps.map((step) => (
-          <li key={step.key} className={`ad-setup__step ${step.done ? 'is-done' : ''}`}>
-            <span className="ad-setup__check" aria-hidden="true">
-              {step.done && <Check size={14} strokeWidth={3} />}
-            </span>
-            <div className="ad-setup__copy">
-              <strong>
-                {step.title}
-                {step.done && <span className="sr-only"> (done)</span>}
-              </strong>
-              {!step.done && <span>{step.text}</span>}
-            </div>
-            {!step.done && (
-              <button type="button" className="ad-setup__action" onClick={() => onAction(step.key)}>
-                {step.action}
-              </button>
-            )}
-          </li>
-        ))}
-      </ol>
+      {next && (
+        <button type="button" className="artist-btn artist-btn--primary ad-setup__next" onClick={() => onAction(next.key)}>
+          <Check size={16} aria-hidden="true" /> {next.action || next.title}
+        </button>
+      )}
+
+      <button
+        type="button"
+        className="ad-card__link ad-setup__toggle"
+        aria-expanded={open}
+        aria-controls="ad-setup-list"
+        onClick={() => setOpen((o) => !o)}
+      >
+        {open ? 'Hide steps' : 'See all steps'} <ChevronDown size={14} aria-hidden="true" className={open ? 'is-flipped' : ''} />
+      </button>
+
+      {open && (
+        <ol className="ad-setup__list" id="ad-setup-list">
+          {steps.map((step) => (
+            <li key={step.key} className={`ad-setup__step ${step.done ? 'is-done' : ''}`}>
+              <span className="ad-setup__check" aria-hidden="true">
+                {step.done && <Check size={14} strokeWidth={3} />}
+              </span>
+              <div className="ad-setup__stepcopy">
+                <strong>
+                  {step.title}
+                  {step.done && <span className="sr-only"> (done)</span>}
+                </strong>
+                {!step.done && <span>{step.text}</span>}
+              </div>
+              {!step.done && (
+                <button type="button" className="ad-setup__action" onClick={() => onAction(step.key)}>
+                  {step.action}
+                </button>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   );
 };
 
 // =============================================================================
-// This week — the fan funnel's week view, as cards with the change since
-// last week. All-time totals sit under the measures the dashboard already has.
+// This week — the fan funnel's week, as stat tiles with the change since last week.
 // =============================================================================
 const WeekStats = ({ artistId, totals }) => {
   const { data, loading, error, retry } = useArtistRead(
@@ -156,27 +167,29 @@ const WeekStats = ({ artistId, totals }) => {
   const stages = data?.funnel || [];
 
   return (
-    <section className="ad-week" aria-labelledby="ad-week-title">
-      <div className="ad-week__head">
-        <h2 id="ad-week-title">This week</h2>
-        <span>Compared with last week</span>
-      </div>
+    <section className="ad-card" aria-labelledby="ad-week-title">
+      <h2 id="ad-week-title" className="ad-card__title">
+        This <em>week</em>
+      </h2>
+      <p className="ad-card__sub">Compared with last week</p>
       {loading ? (
         <CardLoading label="Loading this week…" />
       ) : error ? (
         <CardError onRetry={retry} />
       ) : stages.length === 0 ? (
-        <p className="ad-week__empty">Your first plays will show up here.</p>
+        <p className="ad-card__note">Your first plays will show up here.</p>
       ) : (
-        <div className="ad-week__grid">
+        <div className="ad-stats">
           {stages.map((stage) => {
             const delta = formatDelta(stage.delta);
             const total = totals[stage.key];
             return (
               <div className="ad-stat" key={stage.key}>
+                <div className="ad-stat__top">
+                  <strong className="ad-stat__value">{formatNumber(stage.value)}</strong>
+                  {delta && <span className={`ad-stat__delta is-${delta.tone}`}>{delta.text}</span>}
+                </div>
                 <span className="ad-stat__label">{stage.label}</span>
-                <strong className="ad-stat__value">{formatNumber(stage.value)}</strong>
-                {delta && <span className={`ad-stat__delta is-${delta.tone}`}>{delta.text}</span>}
                 {total != null && <span className="ad-stat__total">{formatNumber(total)} all time</span>}
               </div>
             );
@@ -188,61 +201,116 @@ const WeekStats = ({ artistId, totals }) => {
 };
 
 // =============================================================================
-// Where you stand — the territory rank's home rows, plus the latest win.
+// Latest release — what came out last, and how far the follower alert went.
 // =============================================================================
-const Standing = ({ artistId, latestWin, onOpenRaces }) => {
-  const { data, loading, error, retry } = useArtistRead(
-    artistId ? `/v1/artist-analytics/artist/${artistId}/territory-rank` : null
+const daysSince = (iso) => {
+  const t = Date.parse(iso || '');
+  if (Number.isNaN(t)) return null;
+  const now = new Date();
+  const then = new Date(t);
+  const a = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const b = new Date(then.getFullYear(), then.getMonth(), then.getDate()).getTime();
+  return Math.max(0, Math.round((a - b) / 86400000));
+};
+
+const outLine = (days) => {
+  if (days == null) return '';
+  if (days === 0) return 'out today';
+  if (days === 1) return 'out 1 day';
+  return `out ${days} days`;
+};
+
+const LatestRelease = ({ releases, songs }) => {
+  const [reach, setReach] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetchReach()
+      .then((r) => {
+        if (active) setReach(r);
+      })
+      .catch((err) => console.error('Release reach failed:', err))
+      .finally(() => {
+        if (active) setLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const latest = releases?.[0] || null;
+  if (!loaded && !latest) return null;
+
+  // The latest alert when there is one (a release or a song); otherwise the latest release.
+  let item = null;
+  if (reach && (reach.kind === 'SONG' || reach.releaseId)) {
+    item = {
+      kind: reach.kind,
+      id: reach.kind === 'RELEASE' ? reach.releaseId : reach.songId,
+      title: reach.title,
+      cover: reach.coverUrl,
+      type: reach.kind === 'RELEASE' ? RELEASE_TYPE_LABEL[reach.releaseType] || 'Release' : 'Song',
+      at: reach.at,
+      reach: reach.reach,
+      newFollowers: reach.newFollowersSince,
+    };
+  } else if (latest) {
+    item = {
+      kind: 'RELEASE',
+      id: latest.releaseId,
+      title: latest.title,
+      cover: latest.coverUrl,
+      type: RELEASE_TYPE_LABEL[latest.type] || 'Release',
+      at: latest.releasedAt,
+      reach: null,
+      newFollowers: null,
+    };
+  }
+  if (!item) return null;
+
+  const tracks = (songs || []).filter((s) =>
+    item.kind === 'RELEASE' ? s.releaseId === item.id : (s.songId || s.id) === item.id
   );
-  const period = data?.defaultPeriod && data?.periods?.[data.defaultPeriod] ? data.defaultPeriod : 'week';
-  const rows = (data?.periods?.[period] || []).slice(0, 4);
+  const plays = tracks.reduce((n, s) => n + Number(s.playCount || s.plays || 0), 0);
+  const likes = tracks.reduce((n, s) => n + Number(s.likes || s.likeCount || 0), 0);
+  const votes = tracks.reduce((n, s) => n + Number(s.votes || s.voteCount || 0), 0);
+  const href = item.kind === 'RELEASE' ? `/release/${item.id}` : `/song/${item.id}`;
+  const cover = buildUrl(item.cover);
 
   return (
-    <section className="ad-card" aria-labelledby="ad-stand-title">
-      <h2 id="ad-stand-title" className="ad-card__title">
-        Where you <em>stand</em>
+    <section className="ad-card ad-latest" aria-labelledby="ad-latest-title">
+      <h2 id="ad-latest-title" className="ad-card__title">
+        Latest <em>release</em>
       </h2>
-      {loading ? (
-        <CardLoading label="Loading your rank…" />
-      ) : error ? (
-        <CardError onRetry={retry} />
-      ) : data?.status === 'calculating' || rows.length === 0 ? (
-        <p className="ad-card__note">Ranks are worked out once a night. Yours will show here after the next update.</p>
-      ) : (
-        <>
-          <p className="ad-card__sub">{RANK_PERIOD_LABEL[period] || 'Latest'}, as of last night</p>
-          <ol className="ad-stand">
-            {rows.map((row) => (
-              <li key={row.jurisdictionId} className="ad-stand__row">
-                <div>
-                  <strong>{row.jurisdictionName}</strong>
-                  {row.genreRank != null && data.genreName && (
-                    <span>
-                      #{row.genreRank} in {data.genreName}
-                    </span>
-                  )}
-                </div>
-                <span className="ad-stand__rank">{row.overallRank != null ? `#${formatNumber(row.overallRank)}` : '—'}</span>
-              </li>
-            ))}
-          </ol>
-        </>
+      <Link to={href} className="ad-latest__item">
+        {cover ? <img src={cover} alt="" className="ad-latest__art" /> : <span className="ad-latest__art" aria-hidden="true" />}
+        <span className="ad-latest__text">
+          <span className="ad-latest__kicker">
+            {item.type}
+            {item.at ? ` · ${outLine(daysSince(item.at))}` : ''}
+          </span>
+          <strong>{item.title}</strong>
+          <span className="ad-latest__meta">
+            {formatNumber(plays)} plays · {formatNumber(likes)} likes · {formatNumber(votes)} votes
+          </span>
+        </span>
+      </Link>
+      {item.reach != null && (
+        <p className="ad-latest__reach">
+          <Bell size={16} aria-hidden="true" />
+          <span>
+            Sent to <b>{formatNumber(item.reach)} {item.reach === 1 ? 'follower' : 'followers'}</b>
+            {item.newFollowers > 0 ? ` · ${formatNumber(item.newFollowers)} new ${item.newFollowers === 1 ? 'follower' : 'followers'} since` : ''}
+          </span>
+        </p>
       )}
-      {latestWin && (
-        <div className="ad-win">
-          <Trophy size={16} aria-hidden="true" />
-          <span>Latest win: {latestWin}</span>
-        </div>
-      )}
-      <button type="button" className="ad-card__link" onClick={onOpenRaces}>
-        Open Races <ArrowRight size={14} aria-hidden="true" />
-      </button>
     </section>
   );
 };
 
 // =============================================================================
-// Share balance — what's waiting toward the payout minimum.
+// Balance — what's waiting toward the payout minimum.
 // =============================================================================
 const Balance = ({ earningsSummary, phoneVerified, onVerify, onOpenEarnings }) => {
   const balance = Number.parseFloat(earningsSummary?.currentBalance || 0) || 0;
@@ -251,13 +319,13 @@ const Balance = ({ earningsSummary, phoneVerified, onVerify, onOpenEarnings }) =
   const toGo = Math.max(0, threshold - balance);
 
   return (
-    <section className="ad-card" aria-labelledby="ad-balance-title">
-      <h2 id="ad-balance-title" className="ad-card__title">
-        Share balance
-      </h2>
-      <strong className="ad-balance__amount">
-        ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </strong>
+    <section className="ad-card ad-balance" aria-labelledby="ad-balance-title">
+      <div className="ad-balance__row">
+        <h2 id="ad-balance-title">Balance</h2>
+        <strong className="ad-balance__amount">
+          ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </strong>
+      </div>
       <div
         className="ad-balance__bar"
         role="progressbar"
@@ -268,9 +336,9 @@ const Balance = ({ earningsSummary, phoneVerified, onVerify, onOpenEarnings }) =
       >
         <span style={{ width: `${pct}%` }} />
       </div>
-      <p className="ad-card__note">
+      <p className="ad-balance__note">
         {toGo > 0
-          ? `$${toGo.toFixed(2)} more and you can withdraw. Banks are paid on the 1st.`
+          ? `$${toGo.toFixed(2)} to the $${threshold.toFixed(0)} payout minimum. Banks are paid on the 1st.`
           : 'Ready to withdraw. Banks are paid on the 1st.'}
       </p>
       {!phoneVerified && (
@@ -289,9 +357,9 @@ const Balance = ({ earningsSummary, phoneVerified, onVerify, onOpenEarnings }) =
 };
 
 // =============================================================================
-// Supporters — the count, the newest faces, and the one-message-to-all button.
+// Supporters — the count, the newest faces, one message to all of them.
 // =============================================================================
-const Supporters = ({ artistId, fallbackCount, onOpenFans }) => {
+const Supporters = ({ artistId, fallbackCount, onOpenFans, canMessage }) => {
   const { data, loading, error, retry } = useArtistRead(
     artistId ? `/v1/artist-analytics/artist/${artistId}/supporters` : null
   );
@@ -301,10 +369,11 @@ const Supporters = ({ artistId, fallbackCount, onOpenFans }) => {
   const newLast30 = (data?.supporterGrowth || []).reduce((sum, g) => sum + Number(g.count || 0), 0);
 
   return (
-    <section className="ad-card" aria-labelledby="ad-sup-title">
-      <h2 id="ad-sup-title" className="ad-card__title">
-        {formatNumber(count)} {count === 1 ? 'supporter' : 'supporters'}
-      </h2>
+    <section className="ad-card ad-sup" aria-labelledby="ad-sup-title">
+      <div className="ad-balance__row">
+        <h2 id="ad-sup-title">Supporters</h2>
+        <strong className="ad-balance__amount">{formatNumber(count)}</strong>
+      </div>
       {loading ? (
         <CardLoading label="Loading your supporters…" />
       ) : error ? (
@@ -313,32 +382,35 @@ const Supporters = ({ artistId, fallbackCount, onOpenFans }) => {
         <p className="ad-card__note">When a listener picks you as their artist, they show up here by name.</p>
       ) : (
         <>
-          <p className="ad-card__sub">
-            {newLast30 > 0 ? `${formatNumber(newLast30)} new in the last 30 days. ` : ''}
-            Each one sends you 15% of their monthly share.
-          </p>
-          {recent.length > 0 && (
-            <ul className="ad-faces" aria-label="Newest supporters">
-              {recent.map((s) => (
-                <li key={s.userId} title={s.username}>
-                  {s.photoUrl ? (
-                    <img
-                      src={buildUrl(s.photoUrl)}
-                      alt={s.username || 'Supporter'}
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <span aria-label={s.username || 'Supporter'}>{initialOf(s.username)}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
+          <div className="ad-sup__line">
+            {recent.length > 0 && (
+              <ul className="ad-faces" aria-label="Newest supporters">
+                {recent.map((s) => (
+                  <li key={s.userId} title={s.username}>
+                    {s.photoUrl ? (
+                      <img
+                        src={buildUrl(s.photoUrl)}
+                        alt={s.username || 'Supporter'}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <span aria-label={s.username || 'Supporter'}>{initialOf(s.username)}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <span className="ad-sup__new">
+              {newLast30 > 0 ? `${formatNumber(newLast30)} new in 30 days` : 'Each sends you 15% of their share'}
+            </span>
+          </div>
+          {canMessage && (
+            <button type="button" className="artist-btn artist-btn--ghost ad-card__cta" onClick={() => setComposerOpen(true)}>
+              <Megaphone size={16} aria-hidden="true" /> Message all supporters
+            </button>
           )}
-          <button type="button" className="artist-btn artist-btn--primary ad-card__cta" onClick={() => setComposerOpen(true)}>
-            <Megaphone size={15} aria-hidden="true" /> Message all supporters
-          </button>
         </>
       )}
       <button type="button" className="ad-card__link" onClick={onOpenFans}>
@@ -357,16 +429,17 @@ const ArtistHomeTab = ({
   setupSteps,
   onSetupAction,
   totals,
-  defaultSong,
-  featuredArtwork,
-  onPlayFeatured,
-  onChooseFeatured,
   latestWin,
   earningsSummary,
   phoneVerified,
   onVerifyPhone,
   supportersCount,
   onGoTab,
+  jurisdictionId,
+  placeName,
+  releases,
+  songs,
+  canEdit = true,
 }) => {
   const setupDone = setupSteps.every((s) => s.done);
 
@@ -374,42 +447,30 @@ const ArtistHomeTab = ({
     <div className="ad-home">
       <div className="ad-home__main">
         {!setupDone && <SetupCard steps={setupSteps} onAction={onSetupAction} />}
-
         <WeekStats artistId={artistId} totals={totals} />
-
-        <div className="artist-featured ad-home__featured" style={{ backgroundImage: `url(${featuredArtwork})` }}>
-          <div className="artist-featured__overlay" />
-          <div className="artist-featured__content">
-            <span className="artist-featured__tag">Featured song</span>
-            <h2>{defaultSong?.title || 'No featured song set'}</h2>
-            <p>
-              {defaultSong
-                ? `${formatNumber(defaultSong.playCount)} plays · the first song people hear on your page.`
-                : 'Choose the song that should represent you first.'}
-            </p>
-            <div className="artist-featured__actions">
-              <button type="button" className="artist-featured__play" onClick={onPlayFeatured}>
-                <Play size={13} fill="currentColor" aria-hidden="true" /> {defaultSong ? 'Play' : 'Choose'}
-              </button>
-              {defaultSong && (
-                <button type="button" className="artist-featured__change" onClick={onChooseFeatured}>
-                  Change
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        <LatestRelease releases={releases} songs={songs} />
       </div>
 
       <aside className="ad-home__side" aria-label="At a glance">
-        <Standing artistId={artistId} latestWin={latestWin} onOpenRaces={() => onGoTab('races')} />
+        <LiveStanding
+          artistId={artistId}
+          jurisdictionId={jurisdictionId}
+          placeName={placeName}
+          latestWin={latestWin}
+          onOpen={() => onGoTab('races')}
+        />
         <Balance
           earningsSummary={earningsSummary}
           phoneVerified={phoneVerified}
           onVerify={onVerifyPhone}
           onOpenEarnings={() => onGoTab('earnings')}
         />
-        <Supporters artistId={artistId} fallbackCount={supportersCount} onOpenFans={() => onGoTab('fans')} />
+        <Supporters
+          artistId={artistId}
+          fallbackCount={supportersCount}
+          onOpenFans={() => onGoTab('fans')}
+          canMessage={canEdit}
+        />
         <Link to={`/artist/${artistId}`} className="ad-home__public">
           See your page the way fans do <ArrowRight size={14} aria-hidden="true" />
         </Link>

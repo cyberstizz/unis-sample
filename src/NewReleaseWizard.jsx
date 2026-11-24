@@ -20,6 +20,7 @@ import { buildUrl } from './utils/buildUrl';
 import useModalA11y from './hooks/useModalA11y';
 import { RELEASE_TYPES, RELEASE_TYPE_LABEL, suggestReleaseType, toSeconds, formatReleaseLength } from './utils/releases';
 import './teamAndReleases.scss';
+import './releaseAlerts.scss';
 
 const fmtTime = (d) => {
   const s = toSeconds(d);
@@ -49,7 +50,7 @@ const SongRow = ({ song, index, onRemove }) => {
   );
 };
 
-const NewReleaseWizard = ({ open, onClose, songs = [], release = null, onSaved, onUploadNew }) => {
+const NewReleaseWizard = ({ open, onClose, songs = [], release = null, onSaved, onUploadNew, followerCount = null }) => {
   const feedback = useFeedback();
   const editing = !!release;
   const dialogRef = useRef(null);
@@ -66,6 +67,9 @@ const NewReleaseWizard = ({ open, onClose, songs = [], release = null, onSaved, 
   const [order, setOrder] = useState([]);           // songIds
   const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState(false);
+  // ★ Release alerts: on by default, with an optional note that rides along.
+  const [notify, setNotify] = useState(true);
+  const [note, setNote] = useState('');
 
   // Fill from the release when editing; reset when opened fresh.
   useEffect(() => {
@@ -74,6 +78,8 @@ const NewReleaseWizard = ({ open, onClose, songs = [], release = null, onSaved, 
     setPicking(false);
     setSaving(false);
     setCover(null);
+    setNotify(true);
+    setNote('');
     if (release) {
       setTitle(release.title || '');
       setType(release.type || 'SINGLE');
@@ -140,12 +146,15 @@ const NewReleaseWizard = ({ open, onClose, songs = [], release = null, onSaved, 
         type,
         description: description.trim() || null,
         songIds: order,
+        ...(editing ? {} : { notifyFollowers: notify, followerNote: notify ? note.trim() || null : null }),
       }));
       if (cover) form.append('cover', cover);
       const res = await apiCall(editing
         ? { url: `/v1/releases/${release.releaseId}`, method: 'patch', data: form }
         : { url: '/v1/releases', method: 'post', data: form });
-      feedback.success(editing ? `Saved ${title.trim()}` : `Published ${title.trim()}`);
+      feedback.success(editing
+        ? `Saved ${title.trim()}`
+        : notify ? `Published ${title.trim()} · your followers are getting it` : `Published ${title.trim()}`);
       onSaved?.(res.data);
       onClose();
     } catch (err) {
@@ -276,10 +285,48 @@ const NewReleaseWizard = ({ open, onClose, songs = [], release = null, onSaved, 
                 <div><b>Out now</b><span>Goes live the moment you publish.</span></div>
                 <span className="nr-switch is-on" aria-hidden="true"><span /></span>
               </div>
-              <div className="nr-toggle is-disabled">
-                <div><b>Tell my followers</b><span>Follower alerts are coming soon.</span></div>
-                <span className="nr-switch" aria-hidden="true"><span /></span>
-              </div>
+              {!editing && (
+                <>
+                  <div className="nr-toggle">
+                    <div>
+                      <b id="nr-notify-label">Tell my followers</b>
+                      <span>
+                        {followerCount === 0
+                          ? 'No followers yet. Anyone who follows you later sees what you put out next.'
+                          : `${followerCount ? `${Number(followerCount).toLocaleString('en-US')} ${followerCount === 1 ? 'follower gets' : 'followers get'}` : 'Your followers get'} it in Messages; those with email on get it in tonight’s email.`}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={notify}
+                      aria-labelledby="nr-notify-label"
+                      className={`nr-switch nr-switch--btn ${notify ? 'is-on' : ''}`}
+                      onClick={() => setNotify((v) => !v)}
+                      disabled={saving}
+                    >
+                      <span />
+                    </button>
+                  </div>
+                  {notify && (
+                    <div className="nr-field nr-field--note">
+                      <label className="nr-label" htmlFor="nr-follower-note">
+                        A note for your followers <span className="nr-optional">(optional)</span>
+                      </label>
+                      <textarea
+                        id="nr-follower-note"
+                        value={note}
+                        onChange={(e) => setNote(e.target.value.slice(0, 280))}
+                        maxLength={280}
+                        rows={3}
+                        placeholder="What should they know about it?"
+                        disabled={saving}
+                      />
+                      <div className="nr-count" aria-live="polite">{note.length} / 280</div>
+                    </div>
+                  )}
+                </>
+              )}
               <p className="nr-dashed">Songs keep their own plays, likes and votes. Putting them on a release never resets anything.</p>
             </>
           )}

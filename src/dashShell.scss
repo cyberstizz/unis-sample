@@ -1,0 +1,1163 @@
+// =============================================================================
+// src/dashShell.scss — the Nov 2026 look shared by the artist dashboard
+// (.artist-dashboard.ds) and the listener page (.lp.ds).
+//
+// One frame for both: a theme-tinted top, the person (photo, chips, big name)
+// with round "view page" and settings buttons, underline tabs, glass cards
+// with a bold title and one Instrument Serif word, stat tiles, and 46px
+// theme buttons. Everything follows --unis-primary; on the yellow theme,
+// text that sits on yellow turns dark.
+//
+// Rules are scoped under .ds so they win over the older artistDashboard.scss
+// without touching it, and work on their own on the listener page.
+// =============================================================================
+
+$ds-t2: color-mix(in srgb, var(--unis-primary, #163387), white 42%);
+$ds-ring: color-mix(in srgb, var(--unis-primary, #163387), white 22%);
+$ds-serif: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+$ds-sans: var(--unis-font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+$ds-glass: rgba(255, 255, 255, 0.05);
+$ds-line: rgba(255, 255, 255, 0.07);
+$ds-muted: rgba(255, 255, 255, 0.6);
+
+%ds-focus {
+  &:focus { outline: none; }
+  &:focus-visible { outline: 2px solid color-mix(in srgb, var(--unis-primary), white 62%); outline-offset: 2px; }
+}
+
+// (.artist-dashboard.ds outranks the older .artist-dashboard rule whatever the load order.)
+.ds,
+.artist-dashboard.ds {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0.5rem 40px 6rem;
+  color: #fff;
+  font-family: $ds-sans;
+  box-sizing: border-box;
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  @media (max-width: 1100px) { padding: 0.5rem 20px 6rem; }
+  // Phones: the app layout already pads the sides.
+  @media (max-width: 700px) { padding: 0.25rem 0 5rem; }
+
+  // The theme tint behind the top of the page, fading out at the sides so it
+  // never shows as a box.
+  &::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: 0;
+    right: 0;
+    top: -40px;
+    height: 440px;
+    background: radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--unis-primary) 34%, transparent), transparent 72%);
+    pointer-events: none;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .dashboard-content,
+  .lp__content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  // ── Buttons ────────────────────────────────────────────────────────────────
+  .artist-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    height: auto;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 12px;
+    font-family: $ds-sans;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.12s ease, background 0.15s ease;
+    @extend %ds-focus;
+
+    &:active:not(:disabled) { transform: scale(0.98); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    &--primary {
+      background: var(--unis-primary);
+      color: #fff;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 10px 24px var(--unis-primary-glow, transparent);
+
+      &:hover:not(:disabled) { background: var(--unis-primary); filter: brightness(1.1); transform: none; }
+    }
+
+    &--ghost {
+      min-height: 42px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 0;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 14px;
+
+      &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.13); border-color: transparent; }
+    }
+
+    &--danger {
+      min-height: 42px;
+      background: rgba(220, 38, 38, 0.14);
+      border: 0;
+      box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.35);
+      color: #fecaca;
+      font-size: 14px;
+    }
+
+    &--small {
+      min-height: 36px;
+      padding: 0 12px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+  }
+
+  // ── The person ─────────────────────────────────────────────────────────────
+  .ad-head {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 12px;
+    padding-top: 10px;
+
+    @media (min-width: 900px) { gap: 18px; padding-top: 22px; }
+
+    &__id {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+
+      @media (min-width: 900px) { gap: 18px; }
+    }
+
+    &__avatar {
+      flex: none;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 0;
+      box-shadow: 0 0 0 2px $ds-ring, 0 10px 28px rgba(0, 0, 0, 0.4);
+
+      @media (min-width: 900px) { width: 84px; height: 84px; box-shadow: 0 0 0 3px $ds-ring, 0 14px 34px rgba(0, 0, 0, 0.45); }
+
+      &--placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--unis-primary), rgba(0, 0, 0, 0.55));
+        color: #fff;
+        font-size: 24px;
+        font-weight: 800;
+
+        @media (min-width: 900px) { font-size: 34px; }
+      }
+    }
+
+    &__copy {
+      min-width: 0;
+
+      h1 {
+        margin: 4px 0 0;
+        color: #fff;
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        line-height: 1.08;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        @media (min-width: 900px) { font-size: 40px; letter-spacing: -0.03em; }
+      }
+    }
+
+    &__chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    &__actions {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    // Upload lives in the Music tab on phones.
+    &__upload {
+      @media (max-width: 899px) { display: none; }
+    }
+
+    // "Your page": a round icon on phones, a labelled button on desktop.
+    &__view.artist-btn {
+      @media (max-width: 899px) {
+        width: 40px;
+        min-height: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 50%;
+
+        .ad-head__label { display: none; }
+      }
+    }
+  }
+
+  .ad-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 9px;
+    border: 0;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1;
+
+    @media (min-width: 900px) { height: 24px; padding: 0 10px; font-size: 12px; }
+
+    &--tier { color: #fff; background: rgba(255, 255, 255, 0.1); }
+  }
+
+  .ad-gear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    @extend %ds-focus;
+
+    &:hover { background: rgba(255, 255, 255, 0.14); }
+
+    &.is-active { background: var(--unis-primary); border-color: transparent; color: #fff; }
+  }
+
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  .ad-tabs {
+    display: flex;
+    gap: 18px;
+    align-self: stretch;
+    max-width: 100%;
+    padding: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+
+    &::-webkit-scrollbar { display: none; }
+
+    @media (max-width: 420px) { gap: 15px; }
+    @media (min-width: 900px) { gap: 26px; }
+
+    &__tab {
+      flex: 0 0 auto;
+      min-height: 44px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: none;
+      color: rgba(255, 255, 255, 0.55);
+      font-family: $ds-sans;
+      font-size: 14.5px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: color 0.15s ease, box-shadow 0.15s ease;
+
+      @media (max-width: 420px) { font-size: 14px; }
+      @extend %ds-focus;
+
+      @media (min-width: 900px) { font-size: 15px; }
+
+      &:hover { color: #fff; background: none; }
+
+      &.is-active {
+        background: none;
+        color: #fff;
+        box-shadow: inset 0 -2px 0 $ds-ring;
+      }
+    }
+  }
+
+  .ad-tabpanel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    padding-top: 2px;
+
+    @media (min-width: 900px) { gap: 16px; padding-top: 6px; }
+  }
+
+  // The gear shows where you are; the heading stays for screen readers.
+  .ad-settings-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  // ── Cards ──────────────────────────────────────────────────────────────────
+  .ad-panel,
+  .ad-card {
+    position: relative;
+    min-width: 0;
+    padding: 16px;
+    border: 0;
+    border-radius: 16px;
+    background: $ds-glass;
+    box-shadow: inset 0 0 0 1px $ds-line;
+    backdrop-filter: none;
+
+    @media (min-width: 900px) { padding: 20px; }
+  }
+
+  .ad-panel__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+
+    h2, h3 {
+      margin: 0;
+      color: #fff;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+
+      @media (min-width: 900px) { font-size: 19px; }
+
+      em {
+        color: $ds-t2;
+        font-family: $ds-serif;
+        font-style: italic;
+        font-weight: 400;
+        font-size: 1.12em;
+        letter-spacing: 0;
+      }
+    }
+  }
+
+  .ad-panel__tools { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .ad-card__title {
+    margin: 0 0 2px;
+    color: #fff;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+
+    @media (min-width: 900px) { font-size: 19px; }
+
+    em {
+      color: $ds-t2;
+      font-family: $ds-serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 1.12em;
+    }
+  }
+
+  .ad-card__sub,
+  .ad-card__note {
+    margin: 2px 0 12px;
+    color: $ds-muted;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .ad-card__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    color: $ds-t2;
+    font-family: $ds-sans;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    @extend %ds-focus;
+
+    &:hover { color: #fff; }
+
+    .is-flipped { transform: rotate(180deg); }
+  }
+
+  .ad-card__cta { width: 100%; margin-top: 12px; }
+
+  .ad-count { margin-left: 6px; color: rgba(255, 255, 255, 0.45); font-size: 0.78em; font-weight: 600; }
+
+  // ── Stat tiles ─────────────────────────────────────────────────────────────
+  .ad-tiles,
+  .ad-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+
+    @media (min-width: 900px) { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  }
+
+  .ad-stats { @media (min-width: 900px) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  .ad-tile,
+  .ad-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+
+    @media (min-width: 900px) { padding: 14px; }
+  }
+
+  // Races tiles: number on top, label under it (same as the stat tiles).
+  .ad-tile {
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+
+    span {
+      display: block;
+      color: $ds-muted;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    strong {
+      display: block;
+      margin: 0;
+      color: #fff;
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+  }
+
+  .ad-stat {
+    &__top { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+
+    &__value { color: #fff; font-size: 21px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+
+    &__delta {
+      padding: 0;
+      border-radius: 0;
+      background: none !important;
+      font-size: 11.5px;
+      font-weight: 700;
+
+      &.is-up { color: $ds-t2; }
+      &.is-down { color: #ff9b9b; }
+    }
+
+    &__label { color: $ds-muted; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+
+    &__total { color: rgba(255, 255, 255, 0.42); font-size: 11.5px; }
+  }
+
+  // ── Layout helpers ─────────────────────────────────────────────────────────
+  .ad-two {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+
+    @media (min-width: 900px) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  }
+
+  .ad-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+  .artist-empty-state {
+    padding: 26px 18px;
+    border: 0;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.12);
+    color: $ds-muted;
+    text-align: center;
+
+    svg { color: $ds-t2; margin-bottom: 8px; }
+    h3 { margin: 0; color: #fff; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+    p { max-width: 420px; margin: 6px auto 14px; color: $ds-muted; font-size: 14px; line-height: 1.5; }
+  }
+
+  .artist-danger {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin: 0;
+    padding: 16px;
+    border: 0;
+    border-radius: 16px;
+    background: $ds-glass;
+    box-shadow: inset 0 0 0 1px $ds-line;
+    text-align: left;
+
+    @media (min-width: 900px) { flex-direction: row; align-items: center; justify-content: space-between; padding: 20px; }
+
+    strong { display: block; margin-bottom: 2px; color: #fff; font-size: 17px; font-weight: 800; }
+    p { margin: 0; color: $ds-muted; font-size: 13px; line-height: 1.45; }
+
+    &__actions { display: flex; flex-wrap: wrap; gap: 8px; flex-direction: row; }
+  }
+
+  .ad-warn {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(251, 146, 60, 0.12);
+    color: #fdba74;
+    font-size: 13.5px;
+
+    button {
+      min-height: 34px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 10px;
+      background: #fdba74;
+      color: #1a1006;
+      font-family: $ds-sans;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    &--banner { margin-top: 0; padding: 12px 14px; border-radius: 14px; }
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Artist dashboard pieces
+// ═════════════════════════════════════════════════════════════════════════════
+.ds {
+  // ── Home layout: main column + side rail on desktop ───────────────────────
+  .ad-home {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+
+    @media (min-width: 1000px) { grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; }
+
+    &__main,
+    &__side { display: flex; flex-direction: column; gap: 12px; min-width: 0; @media (min-width: 1000px) { gap: 16px; } }
+
+    &__public {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 2px;
+      color: $ds-muted;
+      font-size: 13.5px;
+      font-weight: 600;
+      text-decoration: none;
+
+      &:hover { color: #fff; }
+    }
+  }
+
+  // ── Setup ─────────────────────────────────────────────────────────────────
+  .ad-setup {
+    background: $ds-glass;
+
+    &__head { display: flex; align-items: center; gap: 14px; margin: 0; }
+
+    &__ring { flex: none; width: 54px; height: 54px; }
+    &__ring-track { fill: none; stroke: rgba(255, 255, 255, 0.12); stroke-width: 6; }
+    &__ring-fill { fill: none; stroke: $ds-t2; stroke-width: 6; stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
+
+    &__copy {
+      flex: 1;
+      min-width: 0;
+
+      h2 { margin: 0; color: #fff; font-size: 15.5px; font-weight: 800; letter-spacing: 0; }
+      p { margin: 2px 0 0; color: rgba(255, 255, 255, 0.62); font-size: 12.5px; line-height: 1.4; }
+    }
+
+    &__next { width: 100%; margin-top: 12px; }
+
+    &__toggle { margin-top: 8px; }
+
+    &__list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+    &__step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+
+      &.is-done {
+        padding-block: 6px;
+        background: transparent;
+
+        .ad-setup__stepcopy strong { color: rgba(255, 255, 255, 0.45); font-weight: 500; }
+        .ad-setup__check { background: var(--unis-primary); border-color: var(--unis-primary); }
+      }
+    }
+
+    &__check {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid $ds-ring;
+      color: #fff;
+    }
+
+    &__stepcopy {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+
+      strong { color: #fff; font-size: 14px; font-weight: 650; }
+      span { color: $ds-muted; font-size: 12.5px; line-height: 1.35; }
+    }
+
+    &__action {
+      flex: none;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-family: $ds-sans;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      @extend %ds-focus;
+
+      &:hover { background: rgba(255, 255, 255, 0.16); transform: none; }
+    }
+  }
+
+  // ── Latest release ────────────────────────────────────────────────────────
+  .ad-latest {
+    &__item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 10px;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 10px;
+      @extend %ds-focus;
+
+      &:hover strong { text-decoration: underline; text-underline-offset: 2px; }
+    }
+
+    &__art {
+      flex: 0 0 72px;
+      width: 72px;
+      height: 72px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+    }
+
+    &__text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+
+    &__kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: $ds-muted; }
+
+    strong { font-size: 17px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    &__meta { margin-top: 1px; font-size: 12.5px; color: rgba(255, 255, 255, 0.62); }
+
+    &__reach {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 12px 0 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--unis-primary) 30%, #07090f);
+      font-size: 12.5px;
+      line-height: 1.35;
+      color: rgba(255, 255, 255, 0.85);
+
+      svg { flex: none; color: $ds-t2; }
+      b { color: #fff; }
+    }
+  }
+
+  // ── Today's race (card on Home, hero on Races) ────────────────────────────
+  .ad-live {
+    &__row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: #fff;
+      font-family: $ds-sans;
+      text-align: left;
+      cursor: pointer;
+      @extend %ds-focus;
+
+      > svg { flex: none; color: $ds-muted; }
+    }
+
+    &__num {
+      flex: none;
+      color: $ds-t2;
+      font-size: 40px;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      line-height: 1;
+    }
+
+    &__text {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      strong { font-size: 15px; font-weight: 800; }
+      span { font-size: 12.5px; color: $ds-muted; line-height: 1.35; }
+    }
+
+    &--hero {
+      background: linear-gradient(135deg, color-mix(in srgb, var(--unis-primary) 45%, #07090f), rgba(255, 255, 255, 0.04));
+
+      .ad-live__num { font-size: 56px; }
+    }
+
+    &__kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.65);
+    }
+
+    &__dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: $ds-t2;
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--unis-primary), white 42%);
+      animation: ds-pulse 1.8s ease-out infinite;
+    }
+
+    &__big {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 6px 0 0;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    &__where { font-size: 16px; font-weight: 700; color: #fff; }
+    &__muted { font-size: 15px; font-weight: 600; color: $ds-muted; }
+    &__detail { margin: 4px 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.65); line-height: 1.4; }
+  }
+
+  .ad-win {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(242, 184, 75, 0.1);
+    color: #f5cd78;
+    font-size: 13px;
+
+    svg { flex: none; }
+  }
+
+  // ── Balance / supporters ──────────────────────────────────────────────────
+  .ad-balance {
+    &__row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+
+      h2 { margin: 0; font-size: 13.5px; font-weight: 600; color: rgba(255, 255, 255, 0.65); letter-spacing: 0; }
+    }
+
+    &__amount { margin: 0; color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+
+    &__bar {
+      height: 6px;
+      margin-top: 10px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+
+      span { display: block; height: 100%; border-radius: 3px; background: var(--unis-primary); transition: width 0.6s ease; }
+    }
+
+    &__note { margin: 8px 0 0; font-size: 12.5px; color: rgba(255, 255, 255, 0.58); line-height: 1.4; }
+  }
+
+  .ad-sup {
+    &__line { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    &__new { font-size: 12.5px; color: rgba(255, 255, 255, 0.62); }
+  }
+
+  .ad-faces {
+    list-style: none;
+    display: flex;
+    margin: 0;
+    padding: 0;
+
+    li {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      margin-right: -8px;
+      overflow: hidden;
+      border-radius: 50%;
+      border: 0;
+      box-shadow: 0 0 0 2px #0f121b;
+      background: var(--unis-primary);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+
+      img { width: 100%; height: 100%; object-fit: cover; }
+    }
+  }
+
+  // ── Music tab ─────────────────────────────────────────────────────────────
+  .ad-music-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+
+    @media (min-width: 700px) { grid-template-columns: repeat(2, max-content); }
+  }
+
+  .adr-row + .adr-row { border-top: 1px solid rgba(255, 255, 255, 0.06); }
+
+  // ── Profile tab ───────────────────────────────────────────────────────────
+  .ad-page__avatar { width: 52px; height: 52px; border: 0; box-shadow: 0 0 0 2px $ds-ring; }
+  .ad-page__copy strong { font-size: 16px; }
+  .ad-page__bio { font-family: $ds-sans; font-style: normal; font-size: 13.5px; line-height: 1.45; color: rgba(255, 255, 255, 0.72); }
+
+  .ad-featured-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 10px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+
+    &__art {
+      flex: 0 0 40px;
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: 0;
+      border-radius: 6px;
+      background-size: cover;
+      background-position: center;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 999px rgba(0, 0, 0, 0.25);
+      @extend %ds-focus;
+    }
+
+    &__text {
+      flex: 1;
+      min-width: 0;
+
+      span { display: block; font-size: 11.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: rgba(255, 255, 255, 0.55); }
+      strong { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    }
+  }
+
+  .social-input {
+    height: 44px;
+    border-radius: 10px;
+    border: 0;
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 15px;
+
+    &:focus { outline: none; box-shadow: inset 0 0 0 1.5px $ds-ring; }
+  }
+
+  .social-link-item label { color: $ds-muted; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+
+  .ad-agreement { display: flex; flex-direction: column; align-items: stretch; gap: 12px; @media (min-width: 900px) { flex-direction: row; align-items: center; justify-content: space-between; } }
+  .ad-agreement h2 { margin: 0 0 4px; font-size: 17px; font-weight: 800; em { color: $ds-t2; font-family: $ds-serif; font-style: italic; font-weight: 400; } }
+  .ad-agreement p { margin: 0; color: $ds-muted; font-size: 13px; }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Listener page pieces
+// ═════════════════════════════════════════════════════════════════════════════
+.ds {
+  .lp-muted { margin: 0 0 12px; color: $ds-muted; font-size: 13.5px; line-height: 1.45; }
+
+  .lp-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); @media (min-width: 900px) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+  // Who you support: the artist's photo, full card.
+  .lp-support {
+    position: relative;
+    min-height: 200px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--unis-primary) 40%, #07090f);
+    box-shadow: inset 0 0 0 1px $ds-line;
+
+    @media (min-width: 900px) { min-height: 260px; }
+
+    &__media {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center 30%;
+    }
+
+    &__shade {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(7, 9, 15, 0.05) 20%, rgba(7, 9, 15, 0.88));
+    }
+
+    &__content {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      min-height: inherit;
+      padding: 16px;
+
+      @media (min-width: 900px) { padding: 22px; }
+    }
+
+    &__tag { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: $ds-t2; }
+
+    &__name { margin: 2px 0 0; color: #fff; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; @media (min-width: 900px) { font-size: 32px; } }
+
+    &__sub { margin-top: 2px; font-size: 13px; color: rgba(255, 255, 255, 0.78); }
+
+    &__actions { display: flex; gap: 8px; margin-top: 12px; }
+
+    &__listen,
+    &__change {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 36px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 18px;
+      font-family: $ds-sans;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      @extend %ds-focus;
+    }
+
+    &__listen { background: #fff; color: #07090f; }
+    &__change { background: rgba(255, 255, 255, 0.16); color: #fff; }
+
+    &__pending {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(7, 9, 15, 0.6);
+      font-size: 12.5px;
+      color: rgba(255, 255, 255, 0.85);
+
+      button {
+        margin-left: auto;
+        padding: 4px 10px;
+        border: 0;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+        font-family: $ds-sans;
+        font-size: 12.5px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+    }
+
+    &--empty {
+      .lp-support__name { font-size: 22px; }
+      .artist-btn { margin-top: 4px; }
+    }
+  }
+
+  // New from artists you follow
+  .lp-new {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    &__row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 0;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      @extend %ds-focus;
+
+      &:hover strong { text-decoration: underline; text-underline-offset: 2px; }
+    }
+
+    &__art {
+      flex: 0 0 44px;
+      width: 44px;
+      height: 44px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &__text {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+
+      strong { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      span { font-size: 12px; color: $ds-muted; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    }
+
+    &__dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: $ds-t2; }
+  }
+
+  // Your profile
+  .lp-me {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    &__avatar {
+      flex: 0 0 52px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 0 0 2px $ds-ring;
+      background: linear-gradient(135deg, var(--unis-primary), rgba(0, 0, 0, 0.55));
+      color: #fff;
+      font-size: 22px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    &__bio { margin: 0; font-size: 13.5px; line-height: 1.45; color: rgba(255, 255, 255, 0.72); }
+  }
+}
+
+@keyframes ds-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--unis-primary), white 42%); }
+  70% { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+// Yellow theme: dark text wherever it sits on yellow.
+[data-theme='yellow'] .ds {
+  .artist-btn--primary,
+  .ad-gear.is-active,
+  .ad-faces li { color: #111318; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds .ad-live__dot { animation: none; }
+  .ds .artist-btn,
+  .ds .ad-tabs__tab,
+  .ds .ad-balance__bar span,
+  .ds .ad-setup__ring-fill { transition: none; }
+}
