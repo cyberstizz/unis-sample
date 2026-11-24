@@ -5,17 +5,19 @@
 // the play-tracking logic (Finding 3) is most important.
 
 import React from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from './test/mocks/server';
-import { callTracker, fixtures, makeToken } from './test/mocks/handlers';
+import { callTracker } from './test/mocks/handlers';
 import { renderWithProviders } from './test/utils';
 import cacheService from './services/cacheService';
 import SongPage from './songPage';
 
 const API = 'http://localhost:8080/api';
+// The page's own action row (the follow bar repeats the Like button).
+const actions = () => within(document.querySelector('.sp-actions'));
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -84,14 +86,15 @@ describe('SongPage', () => {
 
       await screen.findByRole('heading', { name: /Track One/i });
 
-      const likeBtn = screen.getByRole('button', { name: /^like$/i });
+      // v3: Like is a heart button named for the song.
+      const likeBtn = actions().getByRole('button', { name: /^like track one$/i });
       expect(likeBtn).toBeInTheDocument();
 
       const user = userEvent.setup();
       await user.click(likeBtn);
 
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /^liked$/i })).toBeInTheDocument()
+        expect(actions().getByRole('button', { name: /^unlike track one$/i })).toHaveAttribute('aria-pressed', 'true')
       );
       expect(callTracker.get('like:song-001')).toBe(1);
     });
@@ -113,7 +116,7 @@ describe('SongPage', () => {
       renderWithProviders(<SongPage />, { as: 'listener' });
 
       await screen.findByRole('heading', { name: /Track One/i });
-      const likedBtn = await screen.findByRole('button', { name: /^liked$/i });
+      const likedBtn = await waitFor(() => actions().getByRole('button', { name: /^unlike track one$/i }));
 
       const user = userEvent.setup();
       await user.click(likedBtn);
@@ -129,7 +132,7 @@ describe('SongPage', () => {
 
       await screen.findByRole('heading', { name: /Track One/i });
       const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /^like$/i }));
+      await user.click(actions().getByRole('button', { name: /^like track one$/i }));
 
       expect(await screen.findByText(/log in to like songs/i)).toBeInTheDocument();
     });
@@ -145,15 +148,124 @@ describe('SongPage', () => {
       await screen.findByRole('heading', { name: /Track One/i });
       const user = userEvent.setup();
 
-      // Multiple "Vote" buttons exist in the DOM (Player also has one).
-      // Target SongPage's specifically via its class.
-      const voteBtn = document.querySelector('.sp-btn-vote');
-      expect(voteBtn).not.toBeNull();
-      await user.click(voteBtn);
+      // v3: on phones Vote is a full-width card like the artist page's.
+      const voteCard = screen.getByRole('button', { name: /vote for track one/i });
+      expect(voteCard).toHaveClass('sp-votecard');
+      expect(voteCard).toHaveTextContent(/moves it up the harlem rankings/i);
+      await user.click(voteCard);
 
       await waitFor(() =>
         expect(screen.getByText(/Confirm Your Vote For/i)).toBeInTheDocument()
       );
+    });
+
+    it('the desktop Vote pill opens it too', async () => {
+      renderWithProviders(<SongPage />, { as: 'listener' });
+
+      await screen.findByRole('heading', { name: /Track One/i });
+      const user = userEvent.setup();
+
+      // Several "Vote" buttons exist (the follow bar has one too); target the pill.
+      const pill = document.querySelector('.sp-vote-pill');
+      expect(pill).not.toBeNull();
+      await user.click(pill);
+
+      await waitFor(() =>
+        expect(screen.getByText(/Confirm Your Vote For/i)).toBeInTheDocument()
+      );
+    });
+  });
+
+  // ========================================================================
+  // ⋯ menu: Don't Play and Report moved in here (v3)
+  // ========================================================================
+  describe('more menu', () => {
+    it("holds Don't play and Report", async () => {
+      renderWithProviders(<SongPage />, { as: 'listener' });
+      await screen.findByRole('heading', { name: /Track One/i });
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole('button', { name: /more options/i }));
+      const menu = screen.getByRole('menu');
+      expect(menu).toBeInTheDocument();
+      expect(screen.getByRole('menuitemcheckbox', { name: /never play track one/i })).toHaveAttribute('aria-checked', 'false');
+      expect(screen.getByRole('menuitem', { name: /report/i })).toBeInTheDocument();
+    });
+
+    it("Don't play adds the song to the do-not-play list", async () => {
+      let posted = null;
+      server.use(
+        http.get(`${API}/v1/playlists/blocked-songs`, () => HttpResponse.json([])),
+        http.post(`${API}/v1/playlists/blocked-songs`, async ({ request }) => {
+          posted = await request.json();
+          return HttpResponse.json({ ok: true });
+        })
+      );
+      renderWithProviders(<SongPage />, { as: 'listener' });
+      await screen.findByRole('heading', { name: /Track One/i });
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole('button', { name: /more options/i }));
+      await user.click(screen.getByRole('menuitemcheckbox', { name: /never play track one/i }));
+
+      await waitFor(() => expect(posted).toEqual({ songId: 'song-001' }));
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+  });
+
+  // ========================================================================
+  // Photos and videos: the artist's (songs have none of their own)
+  // ========================================================================
+  describe('photos and videos', () => {
+    const withMedia = () => server.use(
+      http.get(`${API}/v1/users/:id/photos`, () => HttpResponse.json({
+        photos: [
+          { photoId: 'ph-1', photoUrl: 'https://cdn.test/ph-1.jpg' },
+          { photoId: 'ph-2', photoUrl: 'https://cdn.test/ph-2.jpg' },
+        ],
+        max: 12,
+      })),
+      http.get(`${API}/v1/media/videos/artist/:id`, () => HttpResponse.json([
+        { videoId: 'v-old', title: 'Older clip', artworkUrl: 'https://cdn.test/v-old.jpg', createdAt: '2026-01-01T00:00:00Z' },
+        { videoId: 'v-new', title: 'Live at the park', artworkUrl: 'https://cdn.test/v-new.jpg', createdAt: '2026-11-01T00:00:00Z' },
+      ]))
+    );
+
+    it("shows the artist's photos and opens them in the photo viewer", async () => {
+      withMedia();
+      renderWithProviders(<SongPage />, { as: 'listener' });
+      await screen.findByRole('heading', { name: /Track One/i });
+
+      expect(await screen.findByRole('heading', { name: 'Photos' })).toBeInTheDocument();
+      const photos = screen.getAllByRole('button', { name: /open photo \d of 2/i });
+      expect(photos).toHaveLength(2);
+
+      const user = userEvent.setup();
+      await user.click(photos[1]);
+      expect(screen.getByRole('dialog', { name: /photos, 2 of 2/i })).toBeInTheDocument();
+    });
+
+    it("shows the artist's videos, newest first", async () => {
+      withMedia();
+      renderWithProviders(<SongPage />, { as: 'listener' });
+      await screen.findByRole('heading', { name: /Track One/i });
+
+      expect(await screen.findByRole('heading', { name: 'Videos' })).toBeInTheDocument();
+      const videos = screen.getAllByRole('button', { name: /^watch /i });
+      expect(videos.map((v) => v.getAttribute('aria-label'))).toEqual(['Watch Live at the park', 'Watch Older clip']);
+    });
+
+    it('hides both sections when the artist has none', async () => {
+      server.use(
+        http.get(`${API}/v1/users/:id/photos`, () => HttpResponse.json({ photos: [], max: 12 })),
+        http.get(`${API}/v1/media/videos/artist/:id`, () => HttpResponse.json([]))
+      );
+      renderWithProviders(<SongPage />, { as: 'listener' });
+      await screen.findByRole('heading', { name: /Track One/i });
+      await new Promise((r) => setTimeout(r, 100));
+
+      expect(screen.queryByRole('heading', { name: 'Photos' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Videos' })).not.toBeInTheDocument();
     });
   });
 
@@ -172,7 +284,7 @@ describe('SongPage', () => {
   // ========================================================================
   // Copy link
   // ========================================================================
-  it('copies URL to clipboard and shows "Copied!" feedback', async () => {
+  it('copies the link and confirms it', async () => {
     renderWithProviders(<SongPage />, { as: 'listener' });
 
     await screen.findByRole('heading', { name: /Track One/i });
@@ -186,9 +298,8 @@ describe('SongPage', () => {
 
     await user.click(screen.getByRole('button', { name: /copy link/i }));
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /copied!/i })).toBeInTheDocument()
-    );
+    // The toast confirms it, and a live region tells screen readers.
+    expect((await screen.findAllByText(/link copied/i)).length).toBeGreaterThan(0);
     expect(writeTextSpy).toHaveBeenCalled();
   });
 });

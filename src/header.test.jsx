@@ -312,12 +312,15 @@ describe('Header', () => {
 
     it('shows the username initial when there is no photoUrl', () => {
       renderHeader({ user: { ...loggedInUser, username: 'alice' }, isGuest: false });
-      expect(screen.getByText('A')).toBeInTheDocument();
+      // Two avatars carry it: the desktop dropdown and the phone menu button.
+      expect(document.querySelector('.avatar-initial')).toHaveTextContent('A');
+      expect(document.querySelector('.header-me__initial')).toHaveTextContent('A');
     });
 
     it('falls back to "U" when the user has no username', () => {
       renderHeader({ user: { ...loggedInUser, username: null }, isGuest: false });
-      expect(screen.getByText('U')).toBeInTheDocument();
+      expect(document.querySelector('.avatar-initial')).toHaveTextContent('U');
+      expect(document.querySelector('.header-me__initial')).toHaveTextContent('U');
     });
 
     it('renders the avatar image when photoUrl is present', () => {

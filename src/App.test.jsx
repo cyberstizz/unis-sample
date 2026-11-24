@@ -54,6 +54,8 @@ const { stub } = vi.hoisted(() => {
 vi.mock('./player',              () => ({ default: stub('Player') }));
 vi.mock('./sidebar',             () => ({ default: stub('Sidebar') }));
 vi.mock('./feed',                () => ({ default: stub('Feed') }));
+vi.mock('./homePage',            () => ({ default: stub('HomePage') }));
+vi.mock('./components/BottomBar', () => ({ default: stub('BottomBar') }));
 vi.mock('./artistpage',          () => ({ default: stub('ArtistPage') }));
 vi.mock('./songPage',            () => ({ default: stub('SongPage') }));
 vi.mock('./voteawards',          () => ({ default: stub('VoteAwards') }));
@@ -188,7 +190,8 @@ describe('App', () => {
   // =========================================================================
   describe('browsable routes', () => {
     it.each([
-      ['/',           'Feed'],
+      ['/',           'HomePage'],
+      ['/feed',       'Feed'],
       ['/milestones', 'MilestonesPage'],
       ['/leaderboards','Leaderboards'],
       ['/findpage',   'FindPage'],

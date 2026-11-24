@@ -13,7 +13,7 @@
 //     colour, About the song, the artist as a photo card, details, photos,
 //     videos, Recommended, comments.
 
-import React, { useState, useContext, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useContext, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiCall } from './components/axiosInstance';
 import songArtwork from './assets/theQuiet.jpg';
@@ -21,8 +21,9 @@ import LyricsWizard from './lyricsWizard';
 import LyricsLines from './components/LyricsLines';
 import { parseLrc } from './utils/lrc';
 import {
-  FileText, Heart, Link2, MoreHorizontal, ArrowLeft, Ban, Flag, ChevronRight, Check, Mic, TrendingUp,
+  FileText, Heart, Link2, MoreHorizontal, ArrowLeft, Ban, Flag, ChevronRight, Check, Mic, TrendingUp, Play,
 } from 'lucide-react';
+import { PhotoLightbox } from './artistpage';
 import { VoteIcon } from './icons/UnisIcons';
 import useArtworkPalette from './hooks/useArtworkPalette';
 import useArtHero from './hooks/useArtHero';
@@ -71,6 +72,10 @@ const SongPage = () => {
   const [isBlocked, setIsBlocked] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
+  // The artist's photo gallery and videos (songs have none of their own).
+  const [artistPhotos, setArtistPhotos] = useState([]);
+  const [artistVideos, setArtistVideos] = useState([]);
+  const [photoIndex, setPhotoIndex] = useState(null);
   // ★ Weekly standing for the bar's line: { rank, when } or null (not ranked).
   const [standing, setStanding] = useState(null);
   // Timed lyrics (LRC) parsed once per song; they move on the page while it plays.
@@ -179,8 +184,6 @@ const SongPage = () => {
           subgenres: [songData.primarySubgenre, songData.secondarySubgenre].filter(Boolean),
           moods: [songData.primaryMood, songData.secondaryMood].filter(Boolean),
           language: songData.language || null,
-          photos: [],
-          videos: [],
         };
 
         setSong(normalized);
@@ -232,6 +235,43 @@ const SongPage = () => {
       });
     return () => { active = false; };
   }, [song?.id, song?.jurisdictionId]);
+
+  // ── The artist's photos and videos ──
+  // Songs carry no photos or videos of their own, so these sections used to
+  // stay hidden on every song. They show the artist's gallery (same endpoint
+  // and privacy rules as the artist page) and their newest videos.
+  useEffect(() => {
+    setPhotoIndex(null);
+    if (!song?.artistId) { setArtistPhotos([]); setArtistVideos([]); return undefined; }
+    let active = true;
+    Promise.all([
+      apiCall({ method: 'get', url: `/v1/users/${song.artistId}/photos` }).catch((err) => {
+        console.error('Failed to load artist photos:', err);
+        return { data: { photos: [] } };
+      }),
+      apiCall({ method: 'get', url: `/v1/media/videos/artist/${song.artistId}` }).catch((err) => {
+        console.error('Failed to load artist videos:', err);
+        return { data: [] };
+      }),
+    ]).then(([photosRes, videosRes]) => {
+      if (!active) return;
+      setArtistPhotos(Array.isArray(photosRes.data?.photos) ? photosRes.data.photos : []);
+      const videos = Array.isArray(videosRes.data) ? videosRes.data : [];
+      setArtistVideos(
+        [...videos]
+          .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0))
+          .slice(0, 4),
+      );
+    });
+    return () => { active = false; };
+  }, [song?.artistId]);
+
+  const showPrevPhoto = useCallback(() => {
+    setPhotoIndex((i) => (i == null ? i : (i - 1 + artistPhotos.length) % artistPhotos.length));
+  }, [artistPhotos.length]);
+  const showNextPhoto = useCallback(() => {
+    setPhotoIndex((i) => (i == null ? i : (i + 1) % artistPhotos.length));
+  }, [artistPhotos.length]);
 
   // ── Load whether this song is on the user's do-not-play list ──
   useEffect(() => {
@@ -806,25 +846,56 @@ const SongPage = () => {
                 </div>
               </section>
 
-              {song.photos.length > 0 && (
+              {/* ── PHOTOS: the artist's gallery, opened in the artist page's viewer ── */}
+              {artistPhotos.length > 0 && (
                 <section className="sp-card sp-photos">
-                  <h2 className="sp-card-title">Photos</h2>
+                  <div className="sp-card-head">
+                    <h2 className="sp-card-title">Photos</h2>
+                    {artistPhotos.length > 6 && (
+                      <button type="button" className="sp-card-link" onClick={handleArtistClick}>
+                        See all {artistPhotos.length}
+                      </button>
+                    )}
+                  </div>
                   <div className="sp-media-grid">
-                    {song.photos.map((photo, idx) => (<figure key={idx}><img src={photo.src} alt={photo.caption} /><figcaption>{photo.caption}</figcaption></figure>))}
+                    {artistPhotos.slice(0, 6).map((photo, idx) => (
+                      <button
+                        key={photo.photoId || idx}
+                        type="button"
+                        className="sp-media-photo"
+                        onClick={() => setPhotoIndex(idx)}
+                        aria-label={`Open photo ${idx + 1} of ${artistPhotos.length}`}
+                      >
+                        <img src={buildUrl(photo.photoUrl)} alt="" loading="lazy" />
+                      </button>
+                    ))}
                   </div>
                 </section>
               )}
 
-              {song.videos.length > 0 && (
+              {/* ── VIDEOS: the artist's newest, each opening its video page ── */}
+              {artistVideos.length > 0 && (
                 <section className="sp-card sp-videos">
                   <h2 className="sp-card-title">Videos</h2>
                   <div className="sp-video-list">
-                    {song.videos.map((vid, idx) => (
-                      <div key={idx} className="sp-video-item">
-                        <iframe src={vid.url} title={vid.caption} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                        <p>{vid.caption}</p>
-                      </div>
-                    ))}
+                    {artistVideos.map((video) => {
+                      const thumb = buildUrl(video.artworkUrl);
+                      return (
+                        <button
+                          key={video.videoId}
+                          type="button"
+                          className="sp-video-item"
+                          onClick={() => navigate(`/video/${video.videoId}`)}
+                          aria-label={`Watch ${video.title}`}
+                        >
+                          <span className={`sp-video-thumb ${thumb ? '' : 'is-empty'}`}>
+                            {thumb && <img src={thumb} alt="" loading="lazy" />}
+                            <span className="sp-video-play" aria-hidden="true"><Play size={20} fill="currentColor" /></span>
+                          </span>
+                          <span className="sp-video-title">{video.title}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </section>
               )}
@@ -832,6 +903,15 @@ const SongPage = () => {
           </div>
         </div>
       </div>
+
+      <PhotoLightbox
+        photos={artistPhotos}
+        index={photoIndex}
+        artistName={song.artist}
+        onClose={() => setPhotoIndex(null)}
+        onPrev={showPrevPhoto}
+        onNext={showNextPhoto}
+      />
 
       {showLyricsWizard && <LyricsWizard show={showLyricsWizard} onClose={() => setShowLyricsWizard(false)} song={song} onSuccess={fetchSongData} />}
 

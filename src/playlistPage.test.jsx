@@ -35,7 +35,7 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, within, act, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, within, act, fireEvent, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -210,7 +210,7 @@ describe('PlaylistPage — hero', () => {
     await renderPage();
     expect(screen.getByRole('heading', { level: 1, name: 'Late Night' })).toBeInTheDocument();
     expect(screen.getByText('After hours only.')).toBeInTheDocument();
-    expect(document.querySelector('.plp-chip-type')).toHaveTextContent(/^Playlist$/);
+    expect(document.querySelector('.plp-kicker-type')).toHaveTextContent(/^Playlist$/);
   });
 
   it.each([
@@ -218,7 +218,7 @@ describe('PlaylistPage — hero', () => {
     ['official', 'Official playlist'],
   ])('labels a %s playlist', async (type, label) => {
     await renderPage(playlistData({ type }));
-    expect(document.querySelector('.plp-chip-type')).toHaveTextContent(label);
+    expect(document.querySelector('.plp-kicker-type')).toHaveTextContent(label);
   });
 
   it('links to the creator\'s profile', async () => {
@@ -270,7 +270,7 @@ describe('PlaylistPage — hero', () => {
 describe('PlaylistPage — cover', () => {
   it('uses the playlist\'s own cover when it has one', async () => {
     await renderPage(playlistData({ coverImageUrl: 'https://cdn.test/cover.jpg' }));
-    expect(document.querySelector('.plp-cover > img')).toHaveAttribute('src', 'https://cdn.test/cover.jpg');
+    expect(document.querySelector('.plp-poster__art > img')).toHaveAttribute('src', 'https://cdn.test/cover.jpg');
     expect(document.querySelector('.plp-mosaic')).toBeNull();
   });
 
@@ -288,18 +288,32 @@ describe('PlaylistPage — cover', () => {
   it('uses a single artwork when there are fewer than four', async () => {
     await renderPage();
     expect(document.querySelector('.plp-mosaic')).toBeNull();
-    expect(document.querySelector('.plp-cover > img')).toHaveAttribute('src', 'https://cdn.test/art-1.jpg');
+    expect(document.querySelector('.plp-poster__art > img')).toHaveAttribute('src', 'https://cdn.test/art-1.jpg');
   });
 
-  it('shows an empty cover for an empty playlist', async () => {
+  it('shows an empty cover for an empty playlist, in the theme colour', async () => {
     await renderPage(playlistData({ tracks: [] }));
     expect(document.querySelector('.plp-cover-empty')).not.toBeNull();
+    expect(document.querySelector('.plp-poster')).toHaveClass('is-empty');
+  });
+
+  // Poster front (v3): the header turns to glass over the art on phones.
+  it('tells the header it sits over artwork, and lets go on leaving', async () => {
+    await renderPage();
+    expect(document.body).toHaveClass('unis-art-page');
+    cleanup();
+    expect(document.body).not.toHaveClass('unis-art-page');
+  });
+
+  it('gives the page the art\'s colour', async () => {
+    await renderPage();
+    expect(document.querySelector('.plp-shell').style.getPropertyValue('--plp-deep')).not.toBe('');
   });
 
   it('falls back to the mosaic when the cover image fails to load', async () => {
     await renderPage(playlistData({ coverImageUrl: 'https://cdn.test/broken.jpg' }));
-    fireEvent.error(document.querySelector('.plp-cover > img'));
-    expect(document.querySelector('.plp-cover > img')).toHaveAttribute('src', 'https://cdn.test/art-1.jpg');
+    fireEvent.error(document.querySelector('.plp-poster__art > img'));
+    expect(document.querySelector('.plp-poster__art > img')).toHaveAttribute('src', 'https://cdn.test/art-1.jpg');
   });
 });
 
@@ -521,6 +535,30 @@ describe('PlaylistPage — row menu', () => {
 
     await user.click(screen.getByRole('menuitem', { name: /go to artist/i }));
     expect(navigateSpy).toHaveBeenCalledWith('/artist/artist-2');
+  });
+
+  // The rows after an open menu used to paint over it.
+  it('lifts the row with the open menu above the rows after it', async () => {
+    const { user } = await renderPage();
+    await openRowMenu(user, 'Track 2');
+    const wraps = Array.from(document.querySelectorAll('.plp-row-wrap'));
+    expect(wraps.map((w) => w.classList.contains('plp-row-wrap--menu'))).toEqual([false, true, false]);
+  });
+
+  it('opens the menu upward when the player would cover it', async () => {
+    const { user } = await renderPage();
+    const btn = screen.getByRole('button', { name: 'More options for Track 3' });
+    btn.getBoundingClientRect = () => ({ top: window.innerHeight - 90, bottom: window.innerHeight - 60, left: 0, right: 0, width: 34, height: 34 });
+    await user.click(btn);
+    expect(screen.getByRole('menu')).toHaveClass('plp-row-menu--up');
+  });
+
+  it('opens the menu downward when there is room', async () => {
+    const { user } = await renderPage();
+    const btn = screen.getByRole('button', { name: 'More options for Track 1' });
+    btn.getBoundingClientRect = () => ({ top: 100, bottom: 134, left: 0, right: 0, width: 34, height: 34 });
+    await user.click(btn);
+    expect(screen.getByRole('menu')).not.toHaveClass('plp-row-menu--up');
   });
 
   it('leaves out Go to artist when the song has no artist id', async () => {
@@ -858,7 +896,7 @@ describe('PlaylistPage — cover upload (owner)', () => {
     Object.defineProperty(file, 'size', { value: sizeMB * 1024 * 1024 });
     return file;
   };
-  const coverInput = () => document.querySelector('.plp-cover input[type="file"]');
+  const coverInput = () => document.querySelector('.plp-poster input[type="file"]');
 
   it('uploads the image and shows the new cover', async () => {
     http.post.mockResolvedValue({ data: { coverImageUrl: 'https://cdn.test/new-cover.jpg' } });
@@ -870,7 +908,7 @@ describe('PlaylistPage — cover upload (owner)', () => {
     expect(url).toBe('/v1/playlists/pl-1/cover');
     expect(body.get('cover').name).toBe('cover.jpg');
     await waitFor(() =>
-      expect(document.querySelector('.plp-cover > img')).toHaveAttribute('src', 'https://cdn.test/new-cover.jpg'));
+      expect(document.querySelector('.plp-poster__art > img')).toHaveAttribute('src', 'https://cdn.test/new-cover.jpg'));
     expect(feedback.success).toHaveBeenCalledWith('Cover updated');
   });
 

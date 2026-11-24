@@ -23,6 +23,7 @@ import AdSlot from './components/AdSlot';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';
 import { useFeedback } from './context/FeedbackContext';
+import LastWonNotification from './LastWonNotification';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
 import { apiCall } from './components/axiosInstance';
 import { buildUrl } from './utils/buildUrl';
@@ -345,6 +346,8 @@ const HomePage = () => {
         {/* ── AD SPACE (none for Unis Plus) ── */}
         <div className="hm-ad"><AdSlot placement="feed" /></div>
       </div>
+      {/* Yesterday's winner, announced once per award */}
+      {signedIn && <LastWonNotification />}
       <AuthGateSheet {...gateProps} />
     </Layout>
   );

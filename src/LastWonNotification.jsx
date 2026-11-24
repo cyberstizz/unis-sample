@@ -1,3 +1,20 @@
+// src/LastWonNotification.jsx — "Last won" award card, redesigned Nov 2026.
+//
+// Shows the most recent winner in the listener's area (Song of the Day,
+// Song of the Week or Artist of the Day) once per award, when they land on
+// Home or the Feed.
+//
+// Rules this follows (from the research):
+//   • A results moment earns a ceremony (Duolingo's league results), so the
+//     staged reveal stays: badge → date → title and actions.
+//   • It never blocks the page (nonmodal, no dimmed backdrop) and it waits
+//     its turn: not while Now Playing or the welcome tour is open. Music-app
+//     users complain most about popups that land mid-task and on every open,
+//     so each award is announced once.
+//   • The auto-close timer pauses while the pointer or keyboard focus is on
+//     the card, and Escape closes it (WCAG 2.2.1 / 2.2.2).
+//   • Phones get it docked above the bottom bar and player; desktop gets a
+//     centred card.
 import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayerContext } from './context/playercontext';
@@ -5,22 +22,17 @@ import { apiCall } from './components/axiosInstance';
 import { buildUrl } from './utils/buildUrl';
 import { useAuth } from './context/AuthContext';
 import { INTERVAL_IDS } from './utils/idMappings';
-import unisLogo from './assets/unisLogoThree.svg';
 import './lastWonNotification.scss';
 
-const DISPLAY_DURATION = 12000; // Longer to appreciate the animations
+const DISPLAY_DURATION = 12000;
 
-// ─── Award category definitions ───
+// ─── Award categories ───
 const CATEGORIES = [
   {
     key: 'song-daily',
     type: 'song',
     intervalId: INTERVAL_IDS['daily'],
     badge: 'Song of the Day',
-    badgeClass: 'lwn-tag-song',
-    bgClass: 'lwn-bg-song',
-    fillClass: 'lwn-pfill-song',
-    icon: '🎵',
     secondaryLabel: 'Listen',
   },
   {
@@ -28,10 +40,6 @@ const CATEGORIES = [
     type: 'song',
     intervalId: INTERVAL_IDS['weekly'],
     badge: 'Song of the Week',
-    badgeClass: 'lwn-tag-weekly',
-    bgClass: 'lwn-bg-weekly',
-    fillClass: 'lwn-pfill-weekly',
-    icon: '🏆',
     secondaryLabel: 'Listen',
   },
   {
@@ -39,10 +47,6 @@ const CATEGORIES = [
     type: 'artist',
     intervalId: INTERVAL_IDS['daily'],
     badge: 'Artist of the Day',
-    badgeClass: 'lwn-tag-artist',
-    bgClass: 'lwn-bg-artist',
-    fillClass: 'lwn-pfill-artist',
-    icon: '👑',
     secondaryLabel: 'View Profile',
   },
 ];
@@ -54,104 +58,83 @@ const toApiDate = (date) => {
   return `${y}-${m}-${d}`;
 };
 
-// "Today" in America/New_York (the platform's canonical timezone), as YYYY-MM-DD.
-// Used to defensively filter out awards dated in the future, which can leak
-// through when the backend cron runs at UTC midnight (= EST 7pm previous day)
-// and writes tomorrow-in-EST as the awardDate.
-const todayInEst = () => {
-  // 'en-CA' locale yields YYYY-MM-DD format
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/New_York',
-  }).format(new Date());
-};
+// "Today" in America/New_York (the platform's timezone), as YYYY-MM-DD.
+// Awards dated after it are rejected: the backend cron runs at UTC midnight
+// (7pm the day before in New York) and can write tomorrow's date.
+const todayInEst = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
 
 const toDisplayDate = (dateStr) => {
   if (!dateStr) return '';
   const d = new Date(`${dateStr}T00:00:00`);
-  return d.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
 
 const toWeeklyRange = (dateStr) => {
   if (!dateStr) return '';
-
   const end = new Date(`${dateStr}T00:00:00`);
   const start = new Date(end);
   start.setDate(start.getDate() - 6);
 
-  const sameMonth = start.getMonth() === end.getMonth();
-  const startStr = start.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-  });
-  const endDay = end.getDate();
+  const startStr = start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
   const year = end.getFullYear();
+  if (start.getMonth() === end.getMonth()) return `${startStr} – ${end.getDate()}, ${year}`;
 
-  if (sameMonth) return `${startStr} – ${endDay}, ${year}`;
-
-  const endStr = end.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-  });
-
+  const endStr = end.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
   return `${startStr} – ${endStr}, ${year}`;
 };
 
-const getAwardDateLabel = (categoryKey) => {
-  if (categoryKey === 'song-weekly') return 'LAST WEEK';
-  return 'YESTERDAY';
-};
+const getAwardDateLabel = (categoryKey) => (categoryKey === 'song-weekly' ? 'LAST WEEK' : 'YESTERDAY');
 
+// The card waits while these are open.
+const isBusy = () =>
+  typeof document !== 'undefined' &&
+  (document.body.classList.contains('unp-np-open') || !!document.querySelector('.ut[role="dialog"]'));
+
+// ─── Icons ───
 const CloseIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    style={{
-      width: 16,
-      height: 16,
-      stroke: 'rgba(255,255,255,0.7)',
-      strokeWidth: 2,
-      fill: 'none',
-    }}
-  >
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 
+const CrownIcon = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+    <path d="M3 7.5l4.6 3.7L12 4l4.4 7.2L21 7.5l-1.8 10.2a1 1 0 0 1-1 .8H5.8a1 1 0 0 1-1-.8L3 7.5z" />
+  </svg>
+);
+
 const VoteIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
     <polyline points="22 4 12 14.01 9 11.01" />
   </svg>
 );
 
 const PlayIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-    <polygon points="5,3 19,12 5,21" />
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z" />
   </svg>
 );
 
-const LetterReveal = ({ text, baseDelay = 0.5 }) => (
-  <span className="lwn-tag-text">
+const PersonIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+  </svg>
+);
+
+const LetterReveal = ({ text, baseDelay = 0.35 }) => (
+  <span className="lwn-tag-text" aria-label={text}>
     {text.split('').map((ch, i) => (
       <span
         key={i}
         className="lwn-tag-letter"
-        style={{ animationDelay: `${baseDelay + i * 0.045}s` }}
+        aria-hidden="true"
+        style={{ animationDelay: `${baseDelay + i * 0.04}s` }}
       >
-        {ch === ' ' ? '\u00A0' : ch}
+        {ch === ' ' ? ' ' : ch}
       </span>
     ))}
   </span>
@@ -160,29 +143,49 @@ const LetterReveal = ({ text, baseDelay = 0.5 }) => (
 const LastWonNotification = () => {
   const [visible, setVisible] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [animStage, setAnimStage] = useState(0); // 0=hidden, 1=badge slides in, 2=date appears, 3=title+rest
-  const [ambientColor, setAmbientColor] = useState(null); // Extracted from artwork
+  const [animStage, setAnimStage] = useState(0); // 0 hidden, 1 badge, 2 date, 3 title + actions
 
   const navigate = useNavigate();
   const { requestPlay } = useContext(PlayerContext);
   const { user } = useAuth();
 
-  const timerRef = useRef(null);
-  const progressRef = useRef(null);
-  const progressIntervalRef = useRef(null);
   const hasFetchedRef = useRef(false);
+  const timersRef = useRef([]);          // reveal timers
+  const waitRef = useRef(null);          // "wait its turn" poll
+  const dismissTimerRef = useRef(null);
+  const progressIntervalRef = useRef(null);
+  const progressRef = useRef(null);
+  const remainingRef = useRef(DISPLAY_DURATION);
+  const runStartRef = useRef(0);
+  const pausedRef = useRef(false);
+  const cardRef = useRef(null);
+  const returnFocusRef = useRef(null);
 
   const jurisdictionId = user?.jurisdiction?.jurisdictionId;
+
+  const stopClock = useCallback(() => {
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    dismissTimerRef.current = null;
+    progressIntervalRef.current = null;
+  }, []);
 
   const dismiss = useCallback(() => {
     setVisible(false);
     setAnimStage(0);
+    stopClock();
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+    if (waitRef.current) clearInterval(waitRef.current);
+    // Hand focus back to where it was, if the card had taken it.
+    const back = returnFocusRef.current;
+    returnFocusRef.current = null;
+    if (back && cardRef.current?.contains(document.activeElement)) {
+      try { back.focus(); } catch { /* element gone */ }
+    }
+  }, [stopClock]);
 
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-  }, []);
-
-  // Fetch latest winners on mount (once per session)
+  // Fetch the latest winners once per session.
   useEffect(() => {
     if (!jurisdictionId || hasFetchedRef.current) return;
     hasFetchedRef.current = true;
@@ -191,7 +194,6 @@ const LastWonNotification = () => {
       const today = new Date();
       const thirtyDaysAgo = new Date(today);
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
       const endDate = toApiDate(today);
       const startDate = toApiDate(thirtyDaysAgo);
 
@@ -204,45 +206,34 @@ const LastWonNotification = () => {
                 url: `/v1/awards/past?type=${cat.type}&startDate=${startDate}&endDate=${endDate}&jurisdictionId=${jurisdictionId}&intervalId=${cat.intervalId}`,
               });
 
-              // Defensive filter: reject awards dated in the future. Without
-              // this, an award created prematurely by the backend cron
-              // (UTC midnight = EST 7pm prior day) would appear here as a
-              // tomorrow-in-EST notification before the day has actually started.
               const cutoff = todayInEst();
-              const awards = (res.data || []).filter(
-                (a) => !a?.awardDate || a.awardDate <= cutoff
-              );
-
+              const awards = (res.data || []).filter((a) => !a?.awardDate || a.awardDate <= cutoff);
               if (awards.length === 0) return null;
 
               const award = awards[0];
-              let displayData = null;
 
-              // A winner that has since been removed (song) or deleted (artist)
-              // stays in the winners history, but this card asks people to play
-              // and vote, so it skips them.
+              // Removed songs and deleted artists stay in the winners history,
+              // but this card asks people to play and vote, so it skips them.
               const songGone = award.song && (award.song.removed || award.song.deletedAt);
               const artistGone = award.user && (award.user.deleted || award.user.deletedAt);
               if (songGone || artistGone) return null;
 
               if (cat.type === 'song' && award.song) {
                 const isWeekly = cat.key === 'song-weekly';
-
-                displayData = {
+                return {
                   category: cat,
                   title: award.song.title || 'Unknown Song',
                   artist: award.song.artist?.username || 'Unknown Artist',
                   jurisdiction: award.jurisdiction?.name || 'Unknown',
                   dateLabel: getAwardDateLabel(cat.key),
-                  date: isWeekly
-                    ? toWeeklyRange(award.awardDate)
-                    : toDisplayDate(award.awardDate),
+                  date: isWeekly ? toWeeklyRange(award.awardDate) : toDisplayDate(award.awardDate),
                   image: buildUrl(award.song.artworkUrl) || buildUrl(award.song.artist?.photoUrl),
                   songData: award.song,
                   navigateTo: `/song/${award.song.songId || award.targetId}`,
                 };
-              } else if (cat.type === 'artist' && award.user) {
-                displayData = {
+              }
+              if (cat.type === 'artist' && award.user) {
+                return {
                   category: cat,
                   title: award.user.username || 'Unknown Artist',
                   artist: null,
@@ -253,8 +244,7 @@ const LastWonNotification = () => {
                   navigateTo: `/artist/${award.user.userId || award.targetId}`,
                 };
               }
-
-              return displayData;
+              return null;
             } catch {
               return null;
             }
@@ -266,35 +256,40 @@ const LastWonNotification = () => {
 
         const picked = valid[Math.floor(Math.random() * valid.length)];
 
-        // ★ FIX (feed #5 — "should only appear once, not on every visit"):
-        //   During development this fired on every Feed mount. It now shows a
-        //   given award ONCE. The key is per-award (category + date + title), so
-        //   the user still gets the notification when a NEW award lands — it just
-        //   won't re-announce the same win every time they open the Feed.
+        // Each award is announced once. The key is per award, so a new win
+        // still gets its moment.
         const seenKey = `unis-lwn-seen:${picked.dateLabel || 'award'}:${picked.date || ''}:${picked.title || ''}`;
-
         try {
-          if (localStorage.getItem(seenKey)) return; // already announced
+          if (localStorage.getItem(seenKey)) return;
           localStorage.setItem(seenKey, '1');
-        } catch (_) {
-          // Private mode / storage disabled — fall through and show it.
+        } catch {
+          // Storage disabled: show it anyway.
         }
 
         setNotification(picked);
 
-        // Staggered reveal sequence
-        setTimeout(() => {
+        const reveal = () => {
+          returnFocusRef.current = document.activeElement;
           setVisible(true);
+          timersRef.current.push(
+            setTimeout(() => setAnimStage(1), 400),
+            setTimeout(() => setAnimStage(2), 1900),
+            setTimeout(() => setAnimStage(3), 2600),
+          );
+        };
 
-          // Stage 1: badge slides in
-          setTimeout(() => setAnimStage(1), 400);
-
-          // Stage 2: date callout appears
-          setTimeout(() => setAnimStage(2), 1900);
-
-          // Stage 3: title + artist + actions reveal
-          setTimeout(() => setAnimStage(3), 2600);
-        }, 1200);
+        // Let the page settle, then wait for Now Playing or the tour to close.
+        timersRef.current.push(
+          setTimeout(() => {
+            if (!isBusy()) return reveal();
+            waitRef.current = setInterval(() => {
+              if (isBusy()) return;
+              clearInterval(waitRef.current);
+              waitRef.current = null;
+              reveal();
+            }, 500);
+          }, 1200),
+        );
       } catch (err) {
         console.error('LastWonNotification: Failed to fetch awards', err);
       }
@@ -303,54 +298,61 @@ const LastWonNotification = () => {
     fetchWinners();
   }, [jurisdictionId]);
 
-  // Extract dominant color from artwork for ambient glow
-  useEffect(() => {
-    if (!notification?.image) return;
+  // Clean up everything on unmount.
+  useEffect(() => () => {
+    timersRef.current.forEach(clearTimeout);
+    if (waitRef.current) clearInterval(waitRef.current);
+    stopClock();
+  }, [stopClock]);
 
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = 1;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, 1, 1);
-
-        const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-        setAmbientColor(`${r}, ${g}, ${b}`);
-      } catch (e) {
-        // CORS or canvas error — fall back to theme-aware defaults
-        console.warn('Ambient color extraction failed:', e);
-      }
-    };
-
-    img.src = notification.image;
-  }, [notification?.image]);
-
-  // Auto-dismiss timer + progress bar (starts after full reveal)
-  useEffect(() => {
-    if (animStage < 3) return;
-
-    const startTime = Date.now();
+  // The auto-close clock, which can pause and resume.
+  const runClock = useCallback(() => {
+    stopClock();
+    runStartRef.current = Date.now();
+    const remainingAtStart = remainingRef.current;
 
     progressIntervalRef.current = setInterval(() => {
-      if (progressRef.current) {
-        const elapsed = Date.now() - startTime;
-        const pct = Math.max(0, 100 - (elapsed / DISPLAY_DURATION) * 100);
-        progressRef.current.style.width = `${pct}%`;
-      }
+      if (!progressRef.current) return;
+      const left = remainingAtStart - (Date.now() - runStartRef.current);
+      const pct = Math.max(0, (left / DISPLAY_DURATION) * 100);
+      progressRef.current.style.width = `${pct}%`;
     }, 30);
 
-    timerRef.current = setTimeout(dismiss, DISPLAY_DURATION);
+    dismissTimerRef.current = setTimeout(dismiss, remainingAtStart);
+  }, [dismiss, stopClock]);
 
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-    };
-  }, [animStage, dismiss]);
+  const pause = useCallback(() => {
+    if (pausedRef.current || animStage < 3) return;
+    pausedRef.current = true;
+    remainingRef.current = Math.max(0, remainingRef.current - (Date.now() - runStartRef.current));
+    stopClock();
+  }, [animStage, stopClock]);
+
+  const resume = useCallback(() => {
+    if (!pausedRef.current || animStage < 3) return;
+    // Still hovered or focused? Stay paused.
+    const card = cardRef.current;
+    if (card && (card.matches(':hover') || card.contains(document.activeElement))) return;
+    pausedRef.current = false;
+    runClock();
+  }, [animStage, runClock]);
+
+  // Start the clock once the reveal finishes.
+  useEffect(() => {
+    if (animStage < 3) return undefined;
+    remainingRef.current = DISPLAY_DURATION;
+    pausedRef.current = false;
+    runClock();
+    return stopClock;
+  }, [animStage, runClock, stopClock]);
+
+  // Escape closes it.
+  useEffect(() => {
+    if (!visible) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') dismiss(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [visible, dismiss]);
 
   const handleVote = (e) => {
     e.stopPropagation();
@@ -364,21 +366,24 @@ const LastWonNotification = () => {
 
     if (notification?.songData) {
       const song = notification.songData;
-      const mediaObj = {
+      // Same rule as every other play surface: never replace the queue.
+      requestPlay({
         type: 'song',
         id: song.songId,
         url: buildUrl(song.fileUrl),
         title: song.title,
         artist: song.artist?.username || 'Unknown',
         artwork: buildUrl(song.artworkUrl),
-      };
-
-      // Same rule as every other play surface: never replace the user's queue.
-      // Empty queue → plays now; otherwise the Play now / Add to queue prompt.
-      requestPlay(mediaObj);
+      });
     } else if (notification?.navigateTo) {
       navigate(notification.navigateTo);
     }
+  };
+
+  const openDetail = () => {
+    if (!notification?.navigateTo) return;
+    dismiss();
+    navigate(notification.navigateTo);
   };
 
   const handleOverlayClick = (e) => {
@@ -388,178 +393,88 @@ const LastWonNotification = () => {
   if (!notification) return null;
 
   const cat = notification.category;
+  const isArtist = cat.type === 'artist';
 
   return (
-    <div
-      className={`lwn-overlay ${visible ? 'lwn-visible' : ''}`}
-      onClick={handleOverlayClick}
-    >
+    <div className={`lwn-overlay ${visible ? 'lwn-visible' : ''}`} onClick={handleOverlayClick}>
       <div
-        className="lwn-card"
-        style={
-          // With artwork, the card keeps its solid base and the blurred art
-          // layer supplies the color (this see-through gradient would let the
-          // page show through where the hero image fades out).
-          ambientColor && !notification.image
-            ? {
-                background: `linear-gradient(180deg, rgba(${ambientColor}, 0.15) 0%, rgba(${ambientColor}, 0.08) 30%, #0a0a0c 70%, #0a0a0c 100%)`,
-              }
-            : undefined
-        }
+        ref={cardRef}
+        className={`lwn-card ${isArtist ? 'lwn-card--artist' : ''}`}
+        role="dialog"
+        aria-modal="false"
+        aria-label={`${cat.badge}: ${notification.title}`}
+        inert={!visible}
+        onPointerEnter={pause}
+        onPointerLeave={resume}
+        onFocus={pause}
+        onBlur={resume}
       >
-        {/* The artwork itself, blurred, behind the whole card — the same blend
-            as the vote awards cards — so the lower half carries the art's
-            colors instead of flat black. A plain CSS background, so it works
-            even when the color sampling below can't read the image. */}
+        {/* The artwork, blurred, colours the whole card. */}
         {notification.image && (
-          <>
-            <div
-              className="lwn-art-bg"
-              style={{ backgroundImage: `url("${notification.image}")` }}
-              aria-hidden="true"
-            />
-            <div className="lwn-art-scrim" aria-hidden="true" />
-          </>
+          <div className="lwn-art-bg" style={{ backgroundImage: `url("${notification.image}")` }} aria-hidden="true" />
         )}
+        <div className="lwn-art-scrim" aria-hidden="true" />
 
-        {/* Ambient glow layers — inline styles so rgb interpolation works */}
-        {ambientColor && (
-          <>
-            <div
-              className="lwn-ambient-glow lwn-ambient-glow-top"
-              style={{
-                background: `radial-gradient(circle, rgba(${ambientColor}, 0.4) 0%, transparent 70%)`,
-              }}
-            />
-            <div
-              className="lwn-ambient-glow lwn-ambient-glow-bottom"
-              style={{
-                background: `radial-gradient(circle, rgba(${ambientColor}, 0.25) 0%, transparent 70%)`,
-              }}
-            />
-            <div
-              className="lwn-ambient-glow lwn-ambient-glow-edge"
-              style={{
-                background: `linear-gradient(180deg, rgba(${ambientColor}, 0.15) 0%, transparent 60%)`,
-              }}
-            />
-          </>
-        )}
-
-        {/* Card-wide ambient tint overlay */}
-        {ambientColor && (
-          <div
-            className="lwn-ambient-tint"
-            style={{
-              background: `linear-gradient(180deg, rgba(${ambientColor}, 0.08) 0%, transparent 40%, rgba(${ambientColor}, 0.05) 100%)`,
-            }}
-          />
-        )}
-
-        {/* ── Hero artwork ── */}
-        <div className="lwn-hero">
-          {notification.image ? (
-            <img
-              src={notification.image}
-              alt={notification.title}
-              className="lwn-hero-img"
-            />
-          ) : (
-            <div className="lwn-hero-placeholder" />
-          )}
-
-          {/* Hero fade uses ambient color for seamless blend */}
-          <div
-            className="lwn-hero-fade"
-            style={
-              ambientColor
-                ? {
-                    background: `linear-gradient(to top, rgba(${ambientColor}, 0.18) 0%, transparent 100%)`,
-                  }
-                : undefined
-            }
-          />
-
-          <div className="lwn-hero-vignette" />
-
-          {/* Close button */}
-          <button className="lwn-close" onClick={dismiss} aria-label="Dismiss">
-            <CloseIcon />
-          </button>
+        {/* Time left, along the top edge. */}
+        <div className="lwn-progress" aria-hidden="true">
+          <div className="lwn-pfill" ref={progressRef} style={{ width: '100%' }} />
         </div>
 
-        {/* ── Content ── */}
-        <div className="lwn-content">
-          {/* Unis logo — with ambient glow commented out for now and can easily be added back anytime */}
-          {/* <img
-            src={unisLogo}
-            alt="UNIS"
-            className="lwn-logo"
-            style={ambientColor ? { filter: `drop-shadow(0 0 16px rgba(${ambientColor}, 0.5))` } : undefined}
-          /> */}
+        <button type="button" className="lwn-close" onClick={dismiss} aria-label="Dismiss">
+          <CloseIcon />
+        </button>
 
-          {/* Badge — slides in from left */}
-          {/* Text accents (this badge, the date callout, the artist name) always
-              use the user's theme. The artwork's colour is only for the
-              atmosphere behind the card: averaged down to one pixel it is
-              almost always a muddy grey-brown, and it used to replace the
-              theme here whenever the artwork could be sampled. */}
-          <div className={`lwn-tag ${animStage >= 1 ? 'lwn-tag-visible' : ''}`}>
-            {/* <span className="lwn-tag-icon">{cat.icon}</span> */}
-            <LetterReveal text={cat.badge} baseDelay={0.5} />
-          </div>
+        <div className="lwn-body">
+          {/* ── Artwork ── */}
+          <button
+            type="button"
+            className="lwn-hero"
+            onClick={openDetail}
+            tabIndex={-1}
+            aria-hidden="true"
+          >
+            {notification.image ? (
+              <img src={notification.image} alt={notification.title} className="lwn-hero-img" />
+            ) : (
+              <div className="lwn-hero-placeholder">
+                <CrownIcon />
+              </div>
+            )}
+          </button>
 
-          {/* Date callout — bold context + supporting date */}
-          <div className={`lwn-date-callout ${animStage >= 2 ? 'lwn-date-visible' : ''}`}>
-            <div className="lwn-date-label">
-              {notification.dateLabel}
+          {/* ── Words ── */}
+          <div className="lwn-content">
+            <div className={`lwn-tag ${animStage >= 1 ? 'lwn-tag-visible' : ''}`}>
+              <span className="lwn-tag-icon"><CrownIcon /></span>
+              <LetterReveal text={cat.badge} />
             </div>
 
-            <div className="lwn-date">{notification.date}</div>
-          </div>
+            <div className={`lwn-date-callout ${animStage >= 2 ? 'lwn-date-visible' : ''}`}>
+              <div className="lwn-date-label">{notification.dateLabel}</div>
+              <div className="lwn-date">{notification.date}</div>
+            </div>
 
-          {/* Title + artist — reveals after date */}
-          <div className={`lwn-title-block ${animStage >= 3 ? 'lwn-title-visible' : ''}`}>
-            <h2 className="lwn-title">{notification.title}</h2>
+            <div className={`lwn-title-block ${animStage >= 3 ? 'lwn-title-visible' : ''}`}>
+              <h2 className="lwn-title">{notification.title}</h2>
+              {notification.artist && <p className="lwn-artist">{notification.artist}</p>}
+            </div>
 
-            {notification.artist && (
-              <p className="lwn-artist">
-                {notification.artist}
-              </p>
-            )}
-          </div>
-
-          {/* Jurisdiction badge */}
-          <div className={`lwn-jurisdiction ${animStage >= 3 ? 'lwn-jurisdiction-visible' : ''}`}>
-            {notification.jurisdiction.toUpperCase()}
-          </div>
-
-          {/* Action buttons */}
-          <div className={`lwn-actions ${animStage >= 3 ? 'lwn-actions-visible' : ''}`}>
-            <button className="lwn-btn-primary" onClick={handleVote}>
-              <VoteIcon />
-              Vote Now
-            </button>
-
-            <button className="lwn-btn-secondary" onClick={handleSecondary}>
-              <PlayIcon />
-              {cat.secondaryLabel}
-            </button>
+            <div className={`lwn-jurisdiction ${animStage >= 3 ? 'lwn-jurisdiction-visible' : ''}`}>
+              <span className="lwn-jurisdiction-dot" aria-hidden="true" />
+              {notification.jurisdiction.toUpperCase()}
+            </div>
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="lwn-progress">
-          <div
-            className="lwn-pfill"
-            ref={progressRef}
-            style={{
-              width: '100%',
-              background: ambientColor
-                ? `linear-gradient(90deg, rgba(${ambientColor}, 0.6), rgba(${ambientColor}, 1))`
-                : 'linear-gradient(90deg, var(--unis-primary), var(--unis-primary-2))',
-            }}
-          />
+        <div className={`lwn-actions ${animStage >= 3 ? 'lwn-actions-visible' : ''}`}>
+          <button type="button" className="lwn-btn-primary" onClick={handleVote}>
+            <VoteIcon />
+            Vote Now
+          </button>
+          <button type="button" className="lwn-btn-secondary" onClick={handleSecondary}>
+            {isArtist ? <PersonIcon /> : <PlayIcon />}
+            {cat.secondaryLabel}
+          </button>
         </div>
       </div>
     </div>

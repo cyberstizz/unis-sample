@@ -896,7 +896,7 @@ const PlaylistPage = () => {
 
           <div className="plp-poster__text">
             <div className="plp-kicker">
-              <span>{typeLabel}</span>
+              <span className="plp-kicker-type">{typeLabel}</span>
               {isCommunity && playlist.jurisdictionName && (
                 <>
                   <span className="plp-kicker-dot" aria-hidden="true" />

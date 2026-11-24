@@ -123,6 +123,10 @@ vi.mock('lucide-react', async (importOriginal) => {
 });
 
 import Player from './player';
+import { useLocation } from 'react-router-dom';
+
+// Shows the current path so navigation can be checked.
+const LocationProbe = () => <div data-testid="location">{useLocation().pathname}</div>;
 import { PlayerContext } from './context/playercontext';
 
 beforeEach(() => {
@@ -222,6 +226,7 @@ function renderPlayerWith(contextOverrides = {}, authMode = 'listener') {
   const ui = (
     <PlayerContext.Provider value={value}>
       <Player />
+      <LocationProbe />
     </PlayerContext.Provider>
   );
 
@@ -237,16 +242,57 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+// ---------------------------------------------------------------------------
+// The player has three faces (revamp, Nov 2026):
+//   • phones/tablets (≤1024px): the mini player (.unp-mini) plus the song
+//     actions tray (.unp-tray) opened by its arrow
+//   • computers (≥1025px): the dock (.unp-dock)
+//   • Now Playing (.unp-np), always mounted, open when isExpanded
+// jsdom's matchMedia matches nothing, so renders default to the phone face;
+// asDesktop() switches to the dock.
+// ---------------------------------------------------------------------------
+
+function asDesktop() {
+  vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+    matches: query === '(min-width: 1025px)',
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}
+
+const miniOf = (container) => container.querySelector('.unp-mini');
+const dockOf = (container) => container.querySelector('.unp-dock');
+const trayOf = (container) => container.querySelector('.unp-tray');
+
+async function openTray(user, container) {
+  await user.click(container.querySelector('.unp-mini__arrow'));
+  const tray = trayOf(container);
+  expect(tray).toHaveClass('is-open');
+  return tray;
+}
+
+async function clickInTray(user, container, name) {
+  const tray = await openTray(user, container);
+  await user.click(within(tray).getByRole('button', { name }));
+}
+
 describe('Player — conditional render (no current media)', () => {
   it('renders NOTHING visible when currentMedia is null (guest)', () => {
     const { container } = renderPlayerWith({ currentMedia: null }, 'guest');
-    expect(container.querySelector('.Unis-mini-player')).not.toBeInTheDocument();
+    expect(miniOf(container)).not.toBeInTheDocument();
+    expect(dockOf(container)).not.toBeInTheDocument();
     expect(container.querySelector('audio')).not.toBeInTheDocument();
   });
 
   it('renders NOTHING visible when currentMedia is null (listener)', () => {
     const { container } = renderPlayerWith({ currentMedia: null }, 'listener');
-    expect(container.querySelector('.Unis-mini-player')).not.toBeInTheDocument();
+    expect(miniOf(container)).not.toBeInTheDocument();
+    expect(container.querySelector('.unp-np')).not.toBeInTheDocument();
   });
 
   it('still renders modals when currentMedia is null (so sidebar can open PlaylistManager)', () => {
@@ -258,19 +304,21 @@ describe('Player — conditional render (no current media)', () => {
 describe('Player — mini-player render (with current media)', () => {
   it('renders the mini-player when currentMedia is present', () => {
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
-    expect(container.querySelector('.Unis-mini-player')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Player' })).toBe(miniOf(container));
+    expect(dockOf(container)).not.toBeInTheDocument();
   });
 
   it('displays the track title and artist', () => {
-    renderPlayerWith({ currentMedia: sampleSong }, 'listener');
-    expect(screen.getByText('Track One')).toBeInTheDocument();
-    expect(screen.getByText('testartist')).toBeInTheDocument();
+    const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
+    const mini = miniOf(container);
+    expect(within(mini).getByText('Track One')).toBeInTheDocument();
+    expect(within(mini).getByText('testartist')).toBeInTheDocument();
   });
 
   it('renders the artwork image with fallback placeholder', () => {
     const noArtwork = { ...sampleSong, artwork: null };
     const { container } = renderPlayerWith({ currentMedia: noArtwork }, 'listener');
-    const img = container.querySelector('.player-art img');
+    const img = container.querySelector('.unp-mini__art img');
     expect(img).toHaveAttribute('src', '/assets/placeholder.jpg');
   });
 
@@ -284,6 +332,24 @@ describe('Player — mini-player render (with current media)', () => {
     const video = { ...sampleSong, type: 'video' };
     const { container } = renderPlayerWith({ currentMedia: video, isExpanded: true }, 'listener');
     expect(container.querySelector('video')).toBeInTheDocument();
+  });
+
+  it('tapping the mini player opens Now Playing', async () => {
+    const toggleExpand = vi.fn();
+    const user = userEvent.setup();
+    renderPlayerWith({ currentMedia: sampleSong, toggleExpand }, 'listener');
+    await user.click(screen.getByRole('button', { name: /open now playing: track one by testartist/i }));
+    expect(toggleExpand).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Player — dock (computers)', () => {
+  it('renders the dock instead of the mini player and tray', () => {
+    asDesktop();
+    const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
+    expect(dockOf(container)).toBeInTheDocument();
+    expect(miniOf(container)).not.toBeInTheDocument();
+    expect(trayOf(container)).not.toBeInTheDocument();
   });
 });
 
@@ -306,9 +372,7 @@ describe('Player — like system', () => {
   it('triggers auth gate when guest clicks like', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'guest');
-    const heartBtn = container.querySelector('.player-heart');
-    expect(heartBtn).toBeInTheDocument();
-    await user.click(heartBtn);
+    await clickInTray(user, container, /^like/i);
     await waitFor(() => {
       expect(screen.getByTestId('auth-gate-sheet')).toBeInTheDocument();
       expect(screen.getByTestId('auth-gate-context')).toHaveTextContent('generic');
@@ -319,8 +383,7 @@ describe('Player — like system', () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
     await waitFor(() => expect(callsTo(/\/is-liked/).length).toBe(1));
-    const heartBtn = container.querySelector('.player-heart');
-    await user.click(heartBtn);
+    await clickInTray(user, container, /^like/i);
     await waitFor(() => {
       expect(callsTo(/\/like(\?|$)/, 'post').length).toBe(1);
     });
@@ -335,10 +398,21 @@ describe('Player — like system', () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
     await waitFor(() => expect(callsTo(/\/is-liked/).length).toBe(1));
-    const heartBtn = container.querySelector('.player-heart');
-    await user.click(heartBtn);
+    await waitFor(() => expect(within(trayOf(container)).getByText('Liked')).toBeInTheDocument());
+    await clickInTray(user, container, /^liked/i);
     await waitFor(() => {
       expect(callsTo(/\/like(\?|$)/, 'delete').length).toBe(1);
+    });
+  });
+
+  it('the dock heart likes the song on computers', async () => {
+    asDesktop();
+    const user = userEvent.setup();
+    renderPlayerWith({ currentMedia: sampleSong }, 'listener');
+    await waitFor(() => expect(callsTo(/\/is-liked/).length).toBe(1));
+    await user.click(screen.getByRole('button', { name: 'Like this song' }));
+    await waitFor(() => {
+      expect(callsTo(/\/like(\?|$)/, 'post').length).toBe(1);
     });
   });
 });
@@ -347,9 +421,7 @@ describe('Player — vote flow', () => {
   it('triggers auth gate when guest clicks vote', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'guest');
-    const voteBtn = container.querySelector('button[title="Vote for this song"]');
-    expect(voteBtn).toBeInTheDocument();
-    await user.click(voteBtn);
+    await clickInTray(user, container, /vote for this song/i);
     await waitFor(() => {
       expect(screen.getByTestId('auth-gate-sheet')).toBeInTheDocument();
       expect(screen.getByTestId('auth-gate-context')).toHaveTextContent('vote');
@@ -360,8 +432,7 @@ describe('Player — vote flow', () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
     await waitFor(() => expect(callsTo(/\/is-liked/).length).toBe(1));
-    const voteBtn = container.querySelector('button[title="Vote for this song"]');
-    await user.click(voteBtn);
+    await clickInTray(user, container, /vote for this song/i);
     await waitFor(() => {
       expect(screen.getByTestId('voting-wizard')).toBeInTheDocument();
     });
@@ -388,8 +459,7 @@ describe('Player — vote flow', () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
     await waitFor(() => expect(callsTo(/\/is-liked/).length).toBe(1));
-    const voteBtn = container.querySelector('button[title="Vote for this song"]');
-    await user.click(voteBtn);
+    await clickInTray(user, container, /vote for this song/i);
     await waitFor(() => {
       expect(screen.getByTestId('voting-wizard-jurisdiction')).toHaveTextContent('Uptown Harlem');
     });
@@ -412,8 +482,7 @@ describe('Player — vote flow', () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
     await waitFor(() => expect(callsTo(/\/is-liked/).length).toBe(1));
-    const voteBtn = container.querySelector('button[title="Vote for this song"]');
-    await user.click(voteBtn);
+    await clickInTray(user, container, /vote for this song/i);
     await waitFor(() => {
       expect(screen.getByTestId('voting-wizard-jurisdiction')).toHaveTextContent('Harlem');
     });
@@ -431,12 +500,22 @@ describe('Player — vote flow', () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
     await waitFor(() => expect(callsTo(/\/is-liked/).length).toBe(1));
-    const voteBtn = container.querySelector('button[title="Vote for this song"]');
-    await user.click(voteBtn);
+    await clickInTray(user, container, /vote for this song/i);
     await waitFor(() => {
       expect(screen.getByTestId('voting-wizard')).toBeInTheDocument();
     });
     expect(screen.getByTestId('voting-wizard-nominee-id')).toHaveTextContent('song-abc-123');
+  });
+
+  it('the dock Vote button opens VotingWizard on computers', async () => {
+    asDesktop();
+    const user = userEvent.setup();
+    const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
+    await waitFor(() => expect(callsTo(/\/is-liked/).length).toBe(1));
+    await user.click(within(dockOf(container)).getByRole('button', { name: /^vote$/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId('voting-wizard')).toBeInTheDocument();
+    });
   });
 });
 
@@ -444,9 +523,7 @@ describe('Player — download flow', () => {
   it('triggers auth gate when guest clicks download', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'guest');
-    const downloadBtn = container.querySelector('button[title="Download"]');
-    expect(downloadBtn).toBeInTheDocument();
-    await user.click(downloadBtn);
+    await clickInTray(user, container, /^download/i);
     await waitFor(() => {
       expect(screen.getByTestId('auth-gate-sheet')).toBeInTheDocument();
       expect(screen.getByTestId('auth-gate-context')).toHaveTextContent('generic');
@@ -456,8 +533,7 @@ describe('Player — download flow', () => {
   it('opens DownloadModal with song data for authenticated user', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
-    const downloadBtn = container.querySelector('button[title="Download"]');
-    await user.click(downloadBtn);
+    await clickInTray(user, container, /^download/i);
     await waitFor(() => {
       expect(screen.getByTestId('download-modal')).toBeInTheDocument();
     });
@@ -466,13 +542,14 @@ describe('Player — download flow', () => {
     expect(screen.getByTestId('download-modal-filename')).toHaveTextContent(
       'testartist - Track One.mp3'
     );
+    // the tray closes behind the modal
+    expect(trayOf(container)).not.toHaveClass('is-open');
   });
 
   it('passes paid download policy to DownloadModal', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: samplePaidSong }, 'listener');
-    const downloadBtn = container.querySelector('button[title="Download"]');
-    await user.click(downloadBtn);
+    await clickInTray(user, container, /^download/i);
     await waitFor(() => {
       expect(screen.getByTestId('download-modal-policy')).toHaveTextContent('paid');
     });
@@ -481,8 +558,7 @@ describe('Player — download flow', () => {
   it('defaults to "free" download policy when unspecified', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
-    const downloadBtn = container.querySelector('button[title="Download"]');
-    await user.click(downloadBtn);
+    await clickInTray(user, container, /^download/i);
     await waitFor(() => {
       expect(screen.getByTestId('download-modal-policy')).toHaveTextContent('free');
     });
@@ -493,8 +569,7 @@ describe('Player — add to playlist flow', () => {
   it('triggers auth gate when guest clicks "+"', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'guest');
-    const addBtn = container.querySelector('button[title="Add to playlist or queue"]');
-    await user.click(addBtn);
+    await clickInTray(user, container, /^add/i);
     await waitFor(() => {
       expect(screen.getByTestId('auth-gate-sheet')).toBeInTheDocument();
       expect(screen.getByTestId('auth-gate-context')).toHaveTextContent('generic');
@@ -504,12 +579,21 @@ describe('Player — add to playlist flow', () => {
   it('opens PlaylistWizard for authenticated user', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
-    const addBtn = container.querySelector('button[title="Add to playlist or queue"]');
-    await user.click(addBtn);
+    await clickInTray(user, container, /^add/i);
     await waitFor(() => {
       expect(screen.getByTestId('playlist-wizard')).toBeInTheDocument();
     });
     expect(screen.getByTestId('playlist-wizard-track-id')).toHaveTextContent('song-abc-123');
+  });
+
+  it('the dock "+" opens PlaylistWizard on computers', async () => {
+    asDesktop();
+    const user = userEvent.setup();
+    renderPlayerWith({ currentMedia: sampleSong }, 'listener');
+    await user.click(screen.getByRole('button', { name: /add to playlist or queue/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId('playlist-wizard')).toBeInTheDocument();
+    });
   });
 });
 
@@ -517,21 +601,29 @@ describe('Player — queue panel', () => {
   it('displays queue count badge when queue has items', () => {
     const queue = [sampleSong, samplePaidSong, { ...sampleSong, id: 's3' }];
     const { container } = renderPlayerWith({ currentMedia: sampleSong, queue }, 'listener');
-    const badge = container.querySelector('.player-queue-badge');
+    const badge = container.querySelector('.unp-mini__queue .unp-badge');
     expect(badge).toHaveTextContent('3');
+    expect(screen.getByRole('button', { name: 'Queue, 3 songs' })).toBeInTheDocument();
   });
 
   it('does NOT render queue badge when queue is empty', () => {
     const { container } = renderPlayerWith({ currentMedia: sampleSong, queue: [] }, 'listener');
-    const badge = container.querySelector('.player-queue-badge');
-    expect(badge).not.toBeInTheDocument();
+    expect(container.querySelector('.unp-mini__queue .unp-badge')).not.toBeInTheDocument();
   });
 
-  it('toggles QueuePanel when queue button is clicked', async () => {
+  it('phones: the queue button opens Now Playing', async () => {
+    const toggleExpand = vi.fn();
+    const user = userEvent.setup();
+    renderPlayerWith({ currentMedia: sampleSong, queue: [sampleSong], toggleExpand }, 'listener');
+    await user.click(screen.getByRole('button', { name: 'Queue, 1 songs' }));
+    expect(toggleExpand).toHaveBeenCalledTimes(1);
+  });
+
+  it('computers: toggles QueuePanel when queue button is clicked', async () => {
+    asDesktop();
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong, queue: [sampleSong] }, 'listener');
-    const queueBtn = container.querySelector('.player-queue-btn');
-    expect(queueBtn).toBeInTheDocument();
+    const queueBtn = within(dockOf(container)).getByRole('button', { name: 'Queue, 1 songs' });
 
     expect(screen.queryByTestId('queue-panel')).not.toBeInTheDocument();
     await user.click(queueBtn);
@@ -546,20 +638,20 @@ describe('Player — queue panel', () => {
 
 describe('Player — playback controls', () => {
   it('calls prev() from context when prev button clicked', async () => {
+    asDesktop();
     const prev = vi.fn();
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong, prev }, 'listener');
-    const prevBtn = container.querySelector('button[title="Previous"]');
-    await user.click(prevBtn);
+    await user.click(within(dockOf(container)).getByRole('button', { name: 'Previous' }));
     expect(prev).toHaveBeenCalledTimes(1);
   });
 
   it('calls next() from context when next button clicked', async () => {
+    asDesktop();
     const next = vi.fn();
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong, next }, 'listener');
-    const nextBtn = container.querySelector('button[title="Next"]');
-    await user.click(nextBtn);
+    await user.click(within(dockOf(container)).getByRole('button', { name: 'Next' }));
     expect(next).toHaveBeenCalledTimes(1);
   });
 
@@ -569,51 +661,63 @@ describe('Player — playback controls', () => {
     const audio = container.querySelector('audio');
     expect(audio).toBeInTheDocument();
     const playSpy = vi.spyOn(audio, 'play');
-    const playBtn = container.querySelector('.player-btn-play');
-    await user.click(playBtn);
+    await user.click(within(miniOf(container)).getByRole('button', { name: 'Play' }));
     expect(playSpy).toHaveBeenCalled();
   });
 });
 
 describe('Player — navigation clicks', () => {
   it('navigates to /song/:id when track title is clicked', async () => {
+    asDesktop();
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
-    const title = container.querySelector('.player-track-title');
-    expect(title).toBeInTheDocument();
-    await user.click(title);
-    expect(title).toBeInTheDocument();
+    await user.click(within(dockOf(container)).getByRole('button', { name: 'Track One' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/song/song-abc-123');
+  });
+
+  it('navigates to /artist/:id when the artist is clicked', async () => {
+    asDesktop();
+    const user = userEvent.setup();
+    const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
+    await user.click(within(dockOf(container)).getByRole('button', { name: 'testartist' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/artist/artist-xyz-789');
   });
 
   it('does not navigate to artist when artistId is missing', async () => {
+    asDesktop();
     const noArtistId = { ...sampleSong, artistId: null };
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: noArtistId }, 'listener');
-    const artistEl = container.querySelector('.player-track-artist');
-    await user.click(artistEl);
-    expect(artistEl).toBeInTheDocument();
+    await user.click(within(dockOf(container)).getByRole('button', { name: 'testartist' }));
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/);
   });
 });
 
-describe('Player — expanded view', () => {
+describe('Player — expanded view (Now Playing)', () => {
   it('renders the expanded view when isExpanded=true', () => {
     const { container } = renderPlayerWith(
       { currentMedia: sampleSong, isExpanded: true },
       'listener'
     );
-    expect(container.querySelector('.expanded-view')).toBeInTheDocument();
-    expect(container.querySelector('.expanded-album-art')).toBeInTheDocument();
+    expect(container.querySelector('.unp-np')).toHaveClass('is-open');
+    expect(screen.getByRole('dialog', { name: 'Now Playing' })).toBeInTheDocument();
+    expect(screen.getByAltText('Artwork for Track One')).toBeInTheDocument();
   });
 
-  it('calls toggleExpand when minimize button is clicked', async () => {
+  it('stays closed when isExpanded=false', () => {
+    const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
+    expect(container.querySelector('.unp-np')).not.toHaveClass('is-open');
+    expect(screen.queryByRole('dialog', { name: 'Now Playing' })).not.toBeInTheDocument();
+  });
+
+  it('calls toggleExpand when the close button is clicked', async () => {
     const toggleExpand = vi.fn();
     const user = userEvent.setup();
     renderPlayerWith(
       { currentMedia: sampleSong, isExpanded: true, toggleExpand },
       'listener'
     );
-    const minimize = screen.getByRole('button', { name: /minimize/i });
-    await user.click(minimize);
+    await user.click(screen.getByRole('button', { name: /close now playing/i }));
     expect(toggleExpand).toHaveBeenCalledTimes(1);
   });
 });
@@ -621,55 +725,40 @@ describe('Player — expanded view', () => {
 describe('Player — mobile actions tray', () => {
   it('tray is closed by default', () => {
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
-    const tray = container.querySelector('.mobile-actions-tray');
+    const tray = trayOf(container);
     expect(tray).toBeInTheDocument();
-    expect(tray).not.toHaveClass('open');
+    expect(tray).not.toHaveClass('is-open');
+    expect(container.querySelector('.unp-mini__arrow')).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('opens the tray when the toggle button is clicked', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
-    const toggle = container.querySelector('.mobile-actions-toggle');
-    await user.click(toggle);
-    const tray = container.querySelector('.mobile-actions-tray');
-    expect(tray).toHaveClass('open');
+    await openTray(user, container);
+    expect(container.querySelector('.unp-mini__arrow')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('dialog', { name: 'Song actions' })).toBeInTheDocument();
   });
 
-  it('opens QueuePanel from the player queue button', async () => {
-    // ★ QA: the old test clicked a tray "Queue" button that no longer exists —
-    //   the queue moved to the player bar in the queue-panel overhaul, so the
-    //   test could never pass against the current component.
+  it('shows how many songs are in the queue', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith(
       { currentMedia: sampleSong, queue: [sampleSong] },
       'listener'
     );
-    await user.click(container.querySelector('.player-queue-btn'));
-    expect(screen.getByTestId('queue-panel')).toBeInTheDocument();
+    const tray = await openTray(user, container);
+    expect(within(tray).getByText(/1 in queue/i)).toBeInTheDocument();
+    expect(within(tray).getByRole('button', { name: /comments/i })).toBeInTheDocument();
   });
 
-  it('shows a Comments button beside the in-queue pill', async () => { // ★ comments
+  it('Comments button closes the tray and opens the comment sheet for the current song', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith(
       { currentMedia: sampleSong, queue: [sampleSong] },
       'listener'
     );
-    await user.click(container.querySelector('.mobile-actions-toggle'));
-    const side = container.querySelector('.tray-header-side');
-    expect(within(side).getByText(/1 in queue/i)).toBeInTheDocument();
-    expect(within(side).getByRole('button', { name: /comments/i })).toBeInTheDocument();
-  });
-
-  it('Comments button closes the tray and opens the comment sheet for the current song', async () => { // ★ comments
-    const user = userEvent.setup();
-    const { container } = renderPlayerWith(
-      { currentMedia: sampleSong, queue: [sampleSong] },
-      'listener'
-    );
-    await user.click(container.querySelector('.mobile-actions-toggle'));
-    await user.click(screen.getByRole('button', { name: /open comments/i }));
-    expect(container.querySelector('.mobile-actions-tray')).not.toHaveClass('open');
-    const sheet = screen.getByRole('dialog', { name: /comments/i });
+    await clickInTray(user, container, /comments/i);
+    expect(trayOf(container)).not.toHaveClass('is-open');
+    const sheet = screen.getByRole('dialog', { name: /^comments$/i });
     expect(sheet).toBeInTheDocument();
     expect(screen.getByTestId('comment-section')).toHaveAttribute(
       'data-song-id',
@@ -677,7 +766,7 @@ describe('Player — mobile actions tray', () => {
     );
     // close button dismisses the sheet
     await user.click(within(sheet).getByRole('button', { name: /close comments/i }));
-    expect(screen.queryByRole('dialog', { name: /comments/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /^comments$/i })).not.toBeInTheDocument();
   });
 });
 
@@ -716,8 +805,7 @@ describe('Player — AuthGateSheet rendering', () => {
   it('dismisses the gate sheet when onClose fires', async () => {
     const user = userEvent.setup();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'guest');
-    const voteBtn = container.querySelector('button[title="Vote for this song"]');
-    await user.click(voteBtn);
+    await clickInTray(user, container, /vote for this song/i);
     expect(screen.getByTestId('auth-gate-sheet')).toBeInTheDocument();
     await user.click(screen.getByText('close-auth-gate'));
     await waitFor(() => {
@@ -728,9 +816,10 @@ describe('Player — AuthGateSheet rendering', () => {
 
 describe('Player — formatTime', () => {
   it('formats time correctly — indirectly via progress display', () => {
+    asDesktop();
     const { container } = renderPlayerWith({ currentMedia: sampleSong }, 'listener');
-    const timeSpans = container.querySelectorAll('.player-time');
-    expect(timeSpans.length).toBeGreaterThanOrEqual(2);
+    const timeSpans = dockOf(container).querySelectorAll('.unp-time');
+    expect(timeSpans.length).toBe(2);
     timeSpans.forEach((el) => {
       expect(el).toHaveTextContent('0:00');
     });

@@ -9,6 +9,9 @@ import { apiCall } from '../components/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 
 vi.mock('../components/axiosInstance', () => ({ apiCall: vi.fn() }));
+// The header's unread-messages badge also calls apiCall; keep it out of
+// the queued responses these tests set up for the page.
+vi.mock('../hooks/useUnreadMessages', () => ({ default: () => 0 }));
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: vi.fn(),

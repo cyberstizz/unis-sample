@@ -277,8 +277,9 @@ const SupporterSheet = ({
 // PhotoLightbox — Instagram-style full-screen viewer for the gallery grid.
 // Arrow keys + on-screen chevrons + touch swipe; Esc / backdrop / × to close
 // (Esc + focus trap come from useModalA11y).
+// Exported so the song page opens the artist's photos in the same viewer.
 // =============================================================================
-const PhotoLightbox = ({ photos, index, artistName, onClose, onPrev, onNext }) => {
+export const PhotoLightbox = ({ photos, index, artistName, onClose, onPrev, onNext }) => {
   const modalRef = useRef(null);
   const touchStartX = useRef(null);
   const active = index != null;
