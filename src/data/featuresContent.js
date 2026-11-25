@@ -1,210 +1,416 @@
 // src/data/featuresContent.js
 //
-// Everything Unis does, for the public Features page (/features), linked from
-// the Help center and open to everyone, even before launch. Keep it true:
-// only list what the app really does today. `isNew: true` marks the latest drop.
+// The public Features page (/features), linked from the Help center and open
+// to everyone, even before launch.
+//
+// Each section is a set of benefits (what Unis does for you), and each benefit
+// lists the features behind it as small tags. `isNew: true` marks the latest
+// update.
+//
+// SCREENSHOTS: put phone screenshots in /public/features/ with the file names
+// below (PNG, JPG or WebP all work; just match the name and extension here).
+// A screenshot that isn't there yet is simply left out, and a section with
+// none shows no strip. Set `wide: true` on a computer screenshot.
 
-export const FEATURE_GROUPS = [
+export const FEATURE_SECTIONS = [
   {
     id: 'local',
-    title: 'Your neighborhood’s music',
-    em: 'neighborhood’s',
-    intro: 'Unis is built around where music comes from. Every artist, song and race belongs to a real place.',
-    items: [
-      { t: 'Local areas (jurisdictions)', d: 'Every artist and listener belongs to an area, starting with Uptown and Downtown Harlem, nested up through Harlem, Manhattan, New York City and all of Unis.' },
-      { t: 'Home: what your area is playing', d: 'The top songs in your area right now, live, with new music from the artists you follow underneath.' },
-      { t: 'The Feed', d: 'A spotlight card (today’s race leader, Song and Artist of the Week), trending songs, new releases and cards about what’s happening near you.' },
-      { t: 'Discover', d: 'Search and browse music from your area first, with genre, subgenre and mood shelves.' },
-      { t: 'Genres, subgenres and moods', d: 'Rap, rock and pop, each with subgenres, plus moods and language, so songs can be found by how they sound.' },
-      { t: 'Browse by tag', d: 'A page for every subgenre and mood, showing the songs that carry it.' },
-      { t: 'Recommended songs', d: 'Every song page suggests similar songs, preferring your area and including one more song from the same artist.' },
-      { t: 'Artists near you', d: 'A row of artists from your area on Home and Discover.' },
-      { t: 'Find on the map', d: 'A map of every area with its top artists and songs, a genre filter, and a random pick.' },
-      { t: 'Area pages', d: 'Each area has its own page: its weekly charts and a timeline of its winners.' },
-      { t: 'Winners archive', d: 'The full history of an area’s winners, day by day and week by week.' },
-      { t: 'Charts', d: 'Long ranked charts of songs and artists, by area and by period.' },
-      { t: 'Leaderboards', d: 'Who’s leading each race right now.' },
-      { t: 'Search', d: 'Find songs, artists, listeners and playlists, even with typos.' },
+    title: 'Hear your neighborhood first',
+    em: 'neighborhood',
+    blurb: 'Music from where you live, ranked by the people who live there.',
+    shots: [
+      { src: '/features/local-home.png', caption: 'Home: what your area is playing' },
+      { src: '/features/local-discover.png', caption: 'Discover by genre and mood' },
+      { src: '/features/local-map.png', caption: 'Find on the map' },
+    ],
+    benefits: [
+      {
+        t: 'Find the artists on your block',
+        d: 'Every artist and listener belongs to a real area, from Uptown and Downtown Harlem up through Harlem, Manhattan, New York City and all of Unis.',
+        tags: ['Local areas', 'Artists near you', 'Area pages'],
+      },
+      {
+        t: 'Know what your area is playing right now',
+        d: 'Home shows the top songs in your area live, with new music from the artists you follow underneath.',
+        tags: ['Home', 'Live top songs', 'The Feed', 'Spotlight card', 'Trending and new releases'],
+      },
+      {
+        t: 'Discover by sound, not only by name',
+        d: 'Browse genres, subgenres and moods with your area first, and every song suggests similar ones.',
+        tags: ['Discover', 'Genres and subgenres', 'Moods', 'Tag pages', 'Recommended songs'],
+      },
+      {
+        t: 'Explore the whole map',
+        d: 'Every area on one map, with its top artists and songs, a genre filter and a random pick, plus charts and a full history of winners.',
+        tags: ['Find on the map', 'Charts', 'Winners archive'],
+      },
+      {
+        t: 'Search that forgives typos',
+        d: 'Find songs, artists, listeners and playlists even when you spell them wrong.',
+        tags: ['Search'],
+      },
     ],
   },
   {
     id: 'vote',
-    title: 'Vote, win and rank',
-    em: 'win',
-    intro: 'Listeners decide who rises, not editors.',
-    items: [
-      { t: 'Vote for songs and artists', d: 'One vote per category per period: song of the day, artist of the day, and so on.' },
-      { t: 'Your vote counts up the chain', d: 'A vote counts in every race you and the artist share, from your area all the way up to Unis.' },
-      { t: 'Awards for every period', d: 'Song and Artist of the Day, Week, Month, Quarter, Half-year and Year, in every area.' },
-      { t: 'Weighted, fair winners', d: 'Votes are weighted and ties are broken by a fixed set of rules, the same everywhere.' },
-      { t: 'Races close at local midnight', d: 'Each area’s race closes at its own midnight, with results right away.' },
-      { t: 'Live standings', d: 'See where you stand while a race is still open.' },
-      { t: 'Territory ranks', d: 'Your rank in your area, your borough, your city and all of Unis.' },
-      { t: 'Vote celebration', d: 'A full-screen moment after every vote, with the points it earned.' },
-      { t: 'Shareable award cards', d: 'Every win gets a card and a page you can share.' },
-      { t: 'Last winner announcement', d: 'The newest winner in your area shows once when you open Unis, then never again.' },
-      { t: 'Phone-verified voting', d: 'Voting, earning and commenting need a verified phone number, so one person gets one vote.' },
+    title: 'Your vote decides who rises',
+    em: 'decides',
+    blurb: 'Listeners pick the winners, not editors.',
+    shots: [
+      { src: '/features/vote-race.png', caption: 'The live race' },
+      { src: '/features/vote-award.png', caption: 'An award card' },
+    ],
+    benefits: [
+      {
+        t: 'One vote, counted all the way up',
+        d: 'A vote counts in every race you share with the artist, from your area to all of Unis.',
+        tags: ['Song votes', 'Artist votes', 'Weighted votes'],
+      },
+      {
+        t: 'Something to win every day',
+        d: 'Song and Artist of the Day, Week, Month, Quarter, Half-year and Year, in every area. Each race closes at its own local midnight, with results right away.',
+        tags: ['Six award periods', 'Local-midnight close', 'Fair tie-breaks'],
+      },
+      {
+        t: 'Watch the race live',
+        d: 'See where everyone stands while a race is still open, and your rank from your area to all of Unis.',
+        tags: ['Live standings', 'Leaderboards', 'Territory ranks'],
+      },
+      {
+        t: 'Wins worth sharing',
+        d: 'Every win gets its own card and page. The newest winner in your area is announced once when you open Unis.',
+        tags: ['Award cards', 'Winner announcement', 'Vote celebration'],
+      },
+      {
+        t: 'One person, one vote',
+        d: 'Voting, earning and commenting need a verified phone number.',
+        tags: ['Phone-verified voting'],
+      },
     ],
   },
   {
     id: 'listen',
-    title: 'Listening',
-    em: 'Listening',
-    intro: 'A player built to feel as good as the biggest apps, with things they don’t do.',
-    items: [
-      { t: 'Unis Mix', d: 'Songs blend into each other like a DJ set: beat-matched, on the bar line, with the incoming song’s tempo locked to the outgoing one (pitch kept).', isNew: true },
-      { t: 'Five blend styles, plus Cut and None', d: 'Fade, Rise, Bass swap, Echo out, Cut or None, and Auto picks the right one from the two songs’ tempo and key.', isNew: true },
-      { t: 'Live mix view', d: 'Now Playing shows both songs’ waveforms, the mix window, the volume and filter curves, and a playhead, while it happens.', isNew: true },
-      { t: 'Pick the style for the next transition', d: 'Tap a style in Now Playing to change how the next song comes in, just this once.', isNew: true },
-      { t: 'Never cuts a verse', d: 'Only the outgoing song’s outro overlaps, and the next song always starts from its beginning.', isNew: true },
-      { t: 'Albums stay gapless', d: 'Albums, EPs and mixtapes play straight through the way the artist made them, unless you choose to mix them too.', isNew: true },
-      { t: 'Crossfade', d: 'A plain fade between songs, from 1 to 12 seconds, if you’d rather not mix.', isNew: true },
-      { t: 'Volume levelling', d: 'Every song plays at about the same volume: Quiet, Normal or Loud (the same levels Spotify uses), on phones and on the web.', isNew: true },
-      { t: 'Album levelling', d: 'When you play a whole release it’s levelled as one, so quiet songs stay quiet.', isNew: true },
-      { t: 'Peak-safe levelling', d: 'Quiet songs are only turned up as far as their peaks allow, and Loud uses a limiter, so nothing distorts.', isNew: true },
-      { t: 'Autoplay', d: 'When your queue ends, similar music keeps going, local artists first. Switch it off and the music stops. Always.', isNew: true },
-      { t: 'Sleep timer', d: '5 to 60 minutes or “end of this song”. The music fades out over the last 10 seconds, then stops.', isNew: true },
-      { t: 'Floating mini player', d: 'Tinted in the artwork’s colours, glass-clear while you scroll, with a thin progress line in your theme colour.' },
-      { t: 'Full Now Playing', d: 'Big artwork over a blend of its colours, with the song’s actions one tap away.' },
-      { t: 'Song actions tray', d: 'Vote, like, add to a playlist, download, lyrics, comments, Pocket Lock, sleep timer and playback settings from the player.' },
-      { t: 'Desktop player', d: 'A full dock with volume, a queue drawer and a lyrics view.' },
-      { t: 'Timed lyrics', d: 'Sing-along lyrics that follow the song line by line.' },
-      { t: 'Pocket protection', d: 'Pocket Lock stops accidental taps while your phone is in your pocket; unlock it with your own pattern.' },
-      { t: 'Lock screen controls', d: 'Play, pause, skip and artwork on the lock screen and in your phone’s notifications.' },
-      { t: 'The logo dances', d: 'The Unis logo pops on every kick, snare and hi-hat of the song you’re playing, and reacts to pause, play and skip.' },
-      { t: 'Videos', d: 'Music videos with their own page, playing right in the player.' },
-      { t: 'Reduced motion', d: 'Animations calm down for anyone who asks their device for less motion.' },
+    title: 'A player that feels as good as it sounds',
+    em: 'feels',
+    blurb: 'Smooth transitions, even volume, and controls the big apps don’t have.',
+    shots: [
+      { src: '/features/listen-mix.png', caption: 'Unis Mix in Now Playing' },
+      { src: '/features/listen-sleep.png', caption: 'Sleep timer' },
+      { src: '/features/listen-mini.png', caption: 'The mini player' },
+    ],
+    benefits: [
+      {
+        t: 'Songs that flow like a DJ set',
+        d: 'Unis Mix lines the next song up on the beat, matches its tempo without changing its pitch, and only overlaps outros, so no verse gets cut. Albums still play gapless.',
+        tags: ['Unis Mix', 'Fade, Rise, Bass swap, Echo out, Cut', 'Auto style by tempo and key', 'Gapless albums', 'Crossfade 1–12 s'],
+        isNew: true,
+      },
+      {
+        t: 'See the mix happen',
+        d: 'Now Playing shows both songs’ waveforms, the mix window and the volume curves as it happens. Tap a style to change how the next song comes in.',
+        tags: ['Live mix view', 'Pick the next transition'],
+        isNew: true,
+      },
+      {
+        t: 'No more volume jumps',
+        d: 'Every song plays at about the same volume, Quiet, Normal or Loud. A whole release is levelled as one, and nothing is pushed past its peaks.',
+        tags: ['Volume levelling', 'Album levelling', 'Peak-safe limiter'],
+        isNew: true,
+      },
+      {
+        t: 'The music keeps going, or stops when you say',
+        d: 'When your queue ends, similar music keeps playing, local artists first. The sleep timer fades out after 5 to 60 minutes or at the end of the song.',
+        tags: ['Autoplay', 'Sleep timer'],
+        isNew: true,
+      },
+      {
+        t: 'Made for your pocket',
+        d: 'Pocket Lock stops accidental taps. Controls show on your lock screen, the mini player takes on the artwork’s colours, and lyrics follow the song line by line.',
+        tags: ['Pocket Lock', 'Lock-screen controls', 'Mini player', 'Timed lyrics', 'Music videos', 'Desktop dock'],
+      },
+      {
+        t: 'A logo that dances',
+        d: 'The Unis logo pops on every kick, snare and hi-hat of what you’re playing, and calms down for anyone who asks for less motion.',
+        tags: ['Beat-reactive logo', 'Reduced motion'],
+      },
     ],
   },
   {
     id: 'queue',
-    title: 'Queue and library',
-    em: 'library',
-    intro: 'Your music, organised the way you’d expect, and then some.',
-    items: [
-      { t: 'Play now or add to queue', d: 'Playing something never wipes your queue: you choose to play it now or add it to the end.' },
-      { t: 'Playlists poured into the queue', d: 'A playlist joins your queue as a group you can see, move and remove.' },
-      { t: 'True random shuffle', d: 'A real Fisher–Yates shuffle: every order is equally likely and nothing repeats.' },
-      { t: 'Repeat one or repeat all', d: 'Loop a song or your whole queue.' },
-      { t: 'Drag to reorder', d: 'Smooth drag-and-drop in the queue and in your playlists.' },
-      { t: 'Select several songs', d: 'Play them next or remove them together.' },
-      { t: 'Swipe to remove, with undo', d: 'Remove a song from the queue with a swipe and bring it back if you change your mind.' },
-      { t: 'Save your queue as a playlist', d: 'Keep a queue you like.' },
-      { t: 'Your queue survives a refresh', d: 'Close the page and come back: your queue and your place in the song are still there.' },
-      { t: 'Mix tags in the queue', d: 'Each upcoming song shows how it will come in, like “Bass swap in 0:12”.', isNew: true },
-      { t: 'Do-not-play list', d: 'Block a song and Unis skips it in your queue.' },
-      { t: 'Liked Songs', d: 'Every song you like, with search, sorting and genre filters that change what Play and Shuffle actually play.', isNew: true },
-      { t: 'Recently played', d: 'What you listened to, grouped by day, the same on every device. Remove a song from it without taking back its plays.', isNew: true },
-      { t: 'Jump back in', d: 'Your recent songs and Liked Songs at the top of the Feed.', isNew: true },
-      { t: 'Your library', d: 'Your playlists and saved playlists in a grid or a list, with search and filters.' },
+    title: 'Your music, organised',
+    em: 'organised',
+    blurb: 'A queue that respects you, and a library that remembers.',
+    shots: [
+      { src: '/features/queue.png', caption: 'The queue' },
+      { src: '/features/queue-liked.png', caption: 'Liked Songs' },
+    ],
+    benefits: [
+      {
+        t: 'Playing something never wipes your queue',
+        d: 'Play it now or add it to the end. Playlists join your queue as a group you can see, move and remove.',
+        tags: ['Play now or add to queue', 'Playlist groups', 'Drag to reorder', 'Select several songs', 'Swipe to remove, with undo'],
+      },
+      {
+        t: 'Shuffle that’s actually random',
+        d: 'A true Fisher–Yates shuffle: every order is equally likely and nothing repeats.',
+        tags: ['Fisher–Yates shuffle', 'Repeat one', 'Repeat all'],
+      },
+      {
+        t: 'Pick up where you left off',
+        d: 'Your queue and your place in the song survive a refresh. Recently played follows you to every device, and Jump back in sits at the top of the Feed.',
+        tags: ['Queue restore', 'Recently played', 'Jump back in'],
+        isNew: true,
+      },
+      {
+        t: 'Every like in one place',
+        d: 'Liked Songs, with search, sorting and genre filters that change what Play and Shuffle actually play.',
+        tags: ['Liked Songs'],
+        isNew: true,
+      },
+      {
+        t: 'Know what’s coming next',
+        d: 'Each upcoming song in the queue shows how it will come in, like “Bass swap in 0:12”.',
+        tags: ['Mix tags'],
+        isNew: true,
+      },
+      {
+        t: 'Skip what you never want to hear',
+        d: 'Block a song and Unis skips it. Like a queue? Save it as a playlist.',
+        tags: ['Do-not-play list', 'Save queue as playlist', 'Your library'],
+      },
     ],
   },
   {
     id: 'playlists',
-    title: 'Playlists',
-    em: 'Playlists',
-    intro: 'Playlists you’d actually want to share.',
-    items: [
-      { t: 'Make and edit playlists', d: 'Name, description, cover image and order, all editable.' },
-      { t: 'Private, unlisted or public', d: 'You decide who can see each playlist.' },
-      { t: 'Save other people’s playlists', d: 'Follow a playlist and it shows in your library.' },
-      { t: 'Community playlists', d: 'Anyone can suggest a song, and listeners vote it in.' },
-      { t: 'Unis playlists', d: 'Official playlists kept up to date by Unis.' },
-      { t: 'Find and sort inside a playlist', d: 'Search a playlist and sort it by title, artist or when songs were added.' },
-      { t: 'Mixed playlists', d: 'Turn on Mix and every song blends into the next, with each transition shown between the songs.', isNew: true },
-      { t: 'The Mix editor', d: 'Edit any transition with both songs’ waveforms in front of you: style, length in bars, start point, Preview and Save. Free for everyone.', isNew: true },
-      { t: 'BPM on every song', d: 'Mixed playlists show each song’s tempo.', isNew: true },
+    title: 'Playlists worth sharing',
+    em: 'sharing',
+    blurb: 'Make them, mix them, build them together.',
+    shots: [
+      { src: '/features/playlist-mix.png', caption: 'A mixed playlist' },
+      { src: '/features/playlist-editor.png', caption: 'The Mix editor' },
+    ],
+    benefits: [
+      {
+        t: 'Make them yours',
+        d: 'Name, description, cover image and order are all editable, and you decide who sees each playlist.',
+        tags: ['Custom covers', 'Private, unlisted or public', 'Search and sort inside'],
+      },
+      {
+        t: 'Build them together',
+        d: 'Anyone can suggest a song to a community playlist and listeners vote it in. Save anyone’s playlist to your library.',
+        tags: ['Community playlists', 'Saved playlists', 'Unis playlists'],
+      },
+      {
+        t: 'Turn any playlist into a mix',
+        d: 'Switch on Mix and every song blends into the next, with each transition and each song’s tempo shown right in the list.',
+        tags: ['Mixed playlists', 'BPM on every song'],
+        isNew: true,
+      },
+      {
+        t: 'Edit every transition',
+        d: 'The Mix editor puts both songs’ waveforms in front of you: pick the style, the length in bars and the start point, preview it, save it. Free for everyone.',
+        tags: ['Mix editor', 'Preview', 'Free'],
+        isNew: true,
+      },
     ],
   },
   {
     id: 'social',
-    title: 'People and messages',
-    em: 'People',
-    intro: 'Music is better with your neighbors.',
-    items: [
-      { t: 'Follow artists and listeners', d: 'Keep up with the people you care about.' },
-      { t: 'Release alerts', d: 'New music from artists you follow lands in Messages, with at most one email a day.' },
-      { t: 'Per-artist alert bell', d: 'Every release, big releases only, or off, for each artist you follow.' },
-      { t: 'Messages', d: 'Chats and message requests, typing and seen indicators, reactions, search, and songs you can share right in a chat.' },
-      { t: 'Control who can message you', d: 'Everyone, people you know, or no one, plus read receipts and activity status you can turn off.' },
-      { t: 'Spam protection', d: 'Message requests, daily limits, and block and report.' },
-      { t: 'Artist messages to supporters', d: 'Artists can message everyone who supports them at once.' },
-      { t: 'Comments', d: 'Comment on songs, reply, and like comments; artists can moderate their own songs.' },
-      { t: 'Listener profiles', d: 'A profile with a photo grid, the artist you support, and your votes.' },
-      { t: 'Share links that credit you', d: 'Links you share carry your referral code, so anyone who joins from them counts as yours.', isNew: true },
-      { t: 'Link previews', d: 'Songs, artists, playlists, releases and awards show a card with the cover when pasted into WhatsApp, iMessage and other apps.', isNew: true },
+    title: 'Music is better with your neighbors',
+    em: 'neighbors',
+    blurb: 'Follow, talk and share, on your terms.',
+    shots: [
+      { src: '/features/social-messages.png', caption: 'Messages' },
+      { src: '/features/social-preview.png', caption: 'A shared link' },
+    ],
+    benefits: [
+      {
+        t: 'Never miss a release',
+        d: 'New music from artists you follow lands in Messages, with at most one email a day. Set the bell for each artist.',
+        tags: ['Follow', 'Release alerts', 'Per-artist bell'],
+      },
+      {
+        t: 'Talk about it',
+        d: 'Chats with typing and seen indicators, reactions and songs you can play right in the chat. Comment on songs, reply and like comments.',
+        tags: ['Messages', 'Reactions', 'Share songs in chat', 'Comments'],
+      },
+      {
+        t: 'You stay in control',
+        d: 'Choose who can message you, turn off read receipts and activity status, and block or report anyone. Strangers land in requests.',
+        tags: ['Message requests', 'Privacy controls', 'Block and report', 'Daily limits'],
+      },
+      {
+        t: 'Shares that work for you',
+        d: 'Links you share carry your referral code, and they show a card with the cover in WhatsApp, iMessage and other apps.',
+        tags: ['Referral share links', 'Link previews'],
+        isNew: true,
+      },
+      {
+        t: 'A profile that shows your taste',
+        d: 'A photo grid, the artist you support and your votes.',
+        tags: ['Listener profiles'],
+      },
     ],
   },
   {
     id: 'artists',
-    title: 'For artists',
-    em: 'artists',
-    intro: 'Everything an independent artist needs to be heard, counted and paid.',
-    items: [
-      { t: 'Upload songs and videos', d: 'With artwork, lyrics, ISRC, explicit flag and sound tags; one song a day.' },
-      { t: 'Clean versions', d: 'Upload a clean version alongside an explicit one; listeners who avoid explicit songs get it.' },
-      { t: 'Sound check on upload', d: 'Right after you upload, see your song’s tempo, key, loudness, peaks, intro and outro, and what levelling will do with it.', isNew: true },
-      { t: 'Albums, EPs and mixtapes', d: 'A release wizard for whole projects, with a note to your followers, and a discography on your artist page.' },
-      { t: 'Release pages', d: 'Every release has its own page, and each song links back to it.' },
-      { t: 'Artist dashboard', d: 'Home, Music, Fans, Races, Earnings and Profile tabs: a setup checklist, this week’s numbers, your live rank and your balance.' },
-      { t: 'Fan insights', d: 'Your listener funnel, your supporters and where your fans listen.' },
-      { t: 'Song stats and sales', d: 'Plays, likes, votes and sales for every song.' },
-      { t: 'Release reach', d: 'See how many followers each release alert reached, and what happened next.' },
-      { t: 'Team access', d: 'Invite a manager or a viewer with clear roles, and switch between the artists you work for.' },
-      { t: 'Edit songs and lyrics', d: 'Change artwork, lyrics (with timing), tags and your featured song anytime.' },
-      { t: 'Artist page', d: 'Your photo, bio, links, photo gallery, featured song, discography and awards.' },
-      { t: 'Rights protection', d: 'Every upload confirms the artist controls the song, and anyone can report infringement.' },
+    title: 'Everything an independent artist needs',
+    em: 'artist',
+    blurb: 'Release, grow, get counted and get paid.',
+    shots: [
+      { src: '/features/artist-dashboard.png', caption: 'The artist dashboard' },
+      { src: '/features/artist-soundcheck.png', caption: 'Sound check' },
+      { src: '/features/artist-page.png', caption: 'An artist page' },
+    ],
+    benefits: [
+      {
+        t: 'Release it your way',
+        d: 'Songs and videos with artwork, lyrics, ISRC and an explicit flag, a clean version alongside, and whole albums, EPs and mixtapes with their own release pages.',
+        tags: ['Song and video uploads', 'Clean versions', 'Albums, EPs and mixtapes', 'Release pages', 'One song a day'],
+      },
+      {
+        t: 'Hear how it will sound',
+        d: 'Right after you upload, Sound check shows your song’s tempo, key, loudness, peaks, intro and outro, and what levelling will do with it.',
+        tags: ['Sound check'],
+        isNew: true,
+      },
+      {
+        t: 'Know your fans',
+        d: 'A dashboard with a setup checklist, this week’s numbers, your live rank and your balance, plus who your fans are and where they listen.',
+        tags: ['Artist dashboard', 'Fan insights', 'Song stats and sales', 'Release reach'],
+      },
+      {
+        t: 'Bring your team',
+        d: 'Invite a manager or a viewer with clear roles, and switch between the artists you work for.',
+        tags: ['Team access', 'Roles'],
+      },
+      {
+        t: 'Your page, your story',
+        d: 'Photo, bio, links, gallery, featured song, discography and awards, all editable anytime, including lyrics and their timing.',
+        tags: ['Artist page', 'Edit songs and lyrics'],
+      },
+      {
+        t: 'Your rights, protected',
+        d: 'Every upload confirms the artist controls the song, and anyone can report infringement.',
+        tags: ['Rights confirmation', 'Infringement reports'],
+      },
     ],
   },
   {
     id: 'money',
-    title: 'Money',
-    em: 'Money',
-    intro: 'Artists and listeners both earn.',
-    items: [
-      { t: 'Sell your songs', d: 'Set songs to free download, paid (from $0.94, under iTunes’ 99¢), or not downloadable.' },
-      { t: 'Support an artist', d: 'Every listener picks one artist to support; that artist earns from their listening.' },
-      { t: 'Direct support', d: 'Fans can pay an artist directly.' },
-      { t: 'Referral earnings, three levels deep', d: 'Earn from the Community Share for the people who join with your code, and the people they bring.' },
-      { t: 'Unis Plus', d: '$4.99 a month for no ads; half goes straight to the artist you support.' },
-      { t: 'Monthly payouts', d: 'Paid to your bank on the 1st once you pass $50, with Unis covering the payout fee.' },
-      { t: 'Earnings page', d: 'Your balance, progress to payout, and what each stream earned.' },
-      { t: 'Tax forms', d: 'Yearly tax information for everyone who gets paid.' },
-      { t: 'Local sponsors', d: 'Harlem businesses can sponsor Unis from their own booking page.' },
+    title: 'Everyone gets paid',
+    em: 'paid',
+    blurb: 'Artists and listeners both earn.',
+    shots: [
+      { src: '/features/money-earnings.png', caption: 'Earnings' },
+    ],
+    benefits: [
+      {
+        t: 'Sell your songs',
+        d: 'Make a song a free download, a paid one from $0.94 (under iTunes’ 99¢), or not downloadable at all.',
+        tags: ['Song sales', 'Free downloads'],
+      },
+      {
+        t: 'Fans who support you, pay you',
+        d: 'Every listener picks one artist to support, and fans can pay an artist directly. Unis Plus is $4.99 a month with no ads, and half goes to the artist you support.',
+        tags: ['Supporter earnings', 'Direct support', 'Unis Plus'],
+      },
+      {
+        t: 'Earn by bringing people',
+        d: 'Earn from the Community Share for the people who join with your code, and the people they bring, three levels deep.',
+        tags: ['Referral earnings'],
+      },
+      {
+        t: 'Payouts without the fine print',
+        d: 'Paid to your bank on the 1st of each month once you pass $50, with Unis covering the payout fee. See what every stream earned, and get your tax forms each year.',
+        tags: ['Monthly payouts', 'Earnings page', 'Tax forms'],
+      },
+      {
+        t: 'Local business, local music',
+        d: 'Harlem businesses can sponsor Unis from their own booking page.',
+        tags: ['Local sponsors'],
+      },
     ],
   },
   {
     id: 'account',
-    title: 'Your account',
-    em: 'account',
-    intro: 'Make Unis yours.',
-    items: [
-      { t: 'Seven colour themes', d: 'Blue, orange, red, green, purple, yellow and Dianna, with a matching logo.' },
-      { t: 'Playback settings', d: 'Levelling, transitions, Crossfade length, mixing inside releases and Autoplay, saved per device.', isNew: true },
-      { t: 'Points and levels', d: 'Earn points for listening, liking and voting, and climb levels.' },
-      { t: 'Guided tour', d: 'A 40-second tour on your first visit, which you can replay from Help.' },
-      { t: 'Help center', d: 'Every rule behind votes, wins and payouts, in plain language.' },
-      { t: 'Clear confirmations', d: 'Every action tells you it went through.' },
-      { t: 'Email verification and password reset', d: 'Your account stays yours.' },
-      { t: 'Privacy controls', d: 'Choose what others can see, and download or delete your account.' },
-      { t: 'Reserved usernames', d: 'A username is never handed to someone else, even after its owner leaves.' },
-      { t: 'Join from anywhere', d: 'Outside an open area? Join the waitlist, listen, like and message, and vote once your area opens.' },
+    title: 'Make it yours',
+    em: 'yours',
+    blurb: 'Your colours, your sound, your privacy.',
+    shots: [
+      { src: '/features/account-themes.png', caption: 'Themes' },
+      { src: '/features/account-playback.png', caption: 'Playback settings' },
+    ],
+    benefits: [
+      {
+        t: 'Seven themes, and a logo that matches',
+        d: 'Blue, orange, red, green, purple, yellow or Dianna. Buttons, progress bars and the logo all follow your pick.',
+        tags: ['Seven colour themes', 'Themed logo'],
+      },
+      {
+        t: 'Sound the way you like it',
+        d: 'Choose levelling, transitions, crossfade length, mixing inside releases and Autoplay, saved on each device.',
+        tags: ['Playback settings'],
+        isNew: true,
+      },
+      {
+        t: 'Rewarded for listening',
+        d: 'Earn points for listening, liking and voting, and climb levels.',
+        tags: ['Points', 'Levels'],
+      },
+      {
+        t: 'Learn it in 40 seconds',
+        d: 'A short tour on your first visit, and a Help center with every rule in plain language. Every action tells you it went through.',
+        tags: ['Guided tour', 'Help center', 'Clear confirmations'],
+      },
+      {
+        t: 'Your account stays yours',
+        d: 'Email verification and password reset, control over what others see, and you can download or delete your account. Usernames are never handed to someone else.',
+        tags: ['Privacy controls', 'Download or delete', 'Reserved usernames'],
+      },
+      {
+        t: 'Join from anywhere',
+        d: 'Outside an open area? Join the waitlist to listen, like and message now, and vote once your area opens.',
+        tags: ['Waitlist'],
+      },
     ],
   },
   {
     id: 'behind',
-    title: 'Behind the scenes',
-    em: 'scenes',
-    intro: 'The parts you don’t see, so the parts you do keep working.',
-    items: [
-      { t: 'Every song measured once, on the server', d: 'Loudness (to the broadcast standard), true peak, tempo, beats, key and waveform, so the first play sounds as good as the hundredth.', isNew: true },
-      { t: 'Fair play counting', d: 'A play counts after real listening, and repeat plays can’t be farmed.' },
-      { t: 'Moderation and takedowns', d: 'A full process for reports and copyright claims.' },
-      { t: 'Daily backups', d: 'The whole database is backed up every day and restores have been tested.' },
-      { t: 'Two-factor sign-in for staff', d: 'Everyone who runs Unis signs in with an authenticator app.' },
+    title: 'Built to last',
+    em: 'last',
+    blurb: 'The parts you don’t see, so the parts you do keep working.',
+    shots: [],
+    benefits: [
+      {
+        t: 'Every song measured once',
+        d: 'Loudness to the broadcast standard, true peak, tempo, beats, key and waveform are measured on the server, so the first play sounds as good as the hundredth.',
+        tags: ['Server-side analysis'],
+        isNew: true,
+      },
+      {
+        t: 'Plays that mean something',
+        d: 'A play counts after real listening, and repeat plays can’t be farmed.',
+        tags: ['Fair play counting'],
+      },
+      {
+        t: 'Safe and moderated',
+        d: 'A full process for reports and copyright claims.',
+        tags: ['Moderation', 'Takedowns'],
+      },
+      {
+        t: 'Your data, looked after',
+        d: 'The whole database is backed up every day with tested restores, and everyone who runs Unis signs in with two-factor.',
+        tags: ['Daily backups', 'Staff two-factor'],
+      },
     ],
   },
 ];
 
-export const FEATURE_COUNT = FEATURE_GROUPS.reduce((n, g) => n + g.items.length, 0);
-export const NEW_COUNT = FEATURE_GROUPS.reduce((n, g) => n + g.items.filter((i) => i.isNew).length, 0);
+export const FEATURE_COUNT = FEATURE_SECTIONS.reduce(
+  (n, s) => n + s.benefits.reduce((m, b) => m + b.tags.length, 0), 0,
+);
+
+export const NEW_COUNT = FEATURE_SECTIONS.reduce(
+  (n, s) => n + s.benefits.filter((b) => b.isNew).length, 0,
+);

@@ -199,7 +199,6 @@ const Player = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [specificVoteData, setSpecificVoteData] = useState(null);
   const [volume, setVolume] = useState(0.7);
-  const [showQueue, setShowQueue] = useState(false); // desktop queue drawer
   const [showDownloadModal, setShowDownloadModal] = useState(false);
 
   // Wizards State
@@ -1029,12 +1028,6 @@ const Player = () => {
       <SleepTimerSheet open={showSleep} onClose={() => setShowSleep(false)} />
       <PlaylistWizard open={showPlaylistWizard} onClose={() => setShowPlaylistWizard(false)} selectedTrack={currentMedia} />
       <PlaylistManager open={showPlaylistManager} onClose={closePlaylistManager} />
-      <QueuePanel
-        open={showQueue}
-        onClose={() => setShowQueue(false)}
-        isLiked={isLiked}
-        onToggleLike={currentMedia ? handleLike : undefined}
-      />
       <VotingWizard
         show={showVoteWizard}
         onClose={() => {
@@ -1377,10 +1370,10 @@ const Player = () => {
           )}
           <button
             type="button"
-            className={`unp-icon ${showQueue ? 'is-on' : ''}`}
-            onClick={() => setShowQueue((v) => !v)}
+            className={`unp-icon ${isExpanded && npMode === 'queue' ? 'is-on' : ''}`}
+            onClick={() => openNowPlaying('queue')}
             aria-label={`Queue${queueCount ? `, ${queueCount} songs` : ''}`}
-            aria-pressed={showQueue}
+            aria-pressed={isExpanded && npMode === 'queue'}
           >
             <ListMusic size={19} aria-hidden="true" />
             {queueCount > 0 && <span className="unp-badge">{queueCount}</span>}

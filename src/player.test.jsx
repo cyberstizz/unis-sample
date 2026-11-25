@@ -619,20 +619,17 @@ describe('Player — queue panel', () => {
     expect(toggleExpand).toHaveBeenCalledTimes(1);
   });
 
-  it('computers: toggles QueuePanel when queue button is clicked', async () => {
+  it('computers: the queue button opens the same queue as phones, in Now Playing', async () => {
     asDesktop();
+    const toggleExpand = vi.fn();
     const user = userEvent.setup();
-    const { container } = renderPlayerWith({ currentMedia: sampleSong, queue: [sampleSong] }, 'listener');
+    const { container } = renderPlayerWith({ currentMedia: sampleSong, queue: [sampleSong], toggleExpand }, 'listener');
     const queueBtn = within(dockOf(container)).getByRole('button', { name: 'Queue, 1 songs' });
 
+    await user.click(queueBtn);
+    expect(toggleExpand).toHaveBeenCalledTimes(1);
+    // No separate drawer any more.
     expect(screen.queryByTestId('queue-panel')).not.toBeInTheDocument();
-    await user.click(queueBtn);
-    expect(screen.getByTestId('queue-panel')).toBeInTheDocument();
-
-    await user.click(queueBtn);
-    await waitFor(() => {
-      expect(screen.queryByTestId('queue-panel')).not.toBeInTheDocument();
-    });
   });
 });
 

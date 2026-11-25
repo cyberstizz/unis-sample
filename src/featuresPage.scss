@@ -1,6 +1,6 @@
 // featuresPage.scss — /features (everything Unis does)
 // Same footing as helpPage.scss: every accent comes from --unis-primary, so
-// the page follows all seven themes.
+// the page follows all seven themes. Built phone-first.
 
 .ftp {
   --ft-accent: color-mix(in srgb, var(--unis-primary), white 32%);
@@ -9,11 +9,16 @@
   --ft-edge:   color-mix(in srgb, var(--unis-primary), transparent 80%);
   --ft-on:     #fff;
 
-  max-width: 960px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 820px;
   margin: 0 auto;
-  padding: 40px 20px 140px; // bottom clears the player
+  padding: 28px 16px 150px; // bottom clears the player
   font-family: var(--unis-font-sans, 'Inter', sans-serif);
   color: var(--unis-text, #fff);
+  overflow-wrap: break-word;
+
+  *, *::before, *::after { box-sizing: border-box; }
 
   em {
     font-family: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
@@ -22,8 +27,8 @@
     letter-spacing: 0;
   }
 
-  @media (max-width: 768px) {
-    padding: 26px 16px 160px;
+  @media (min-width: 769px) {
+    padding: 40px 24px 130px;
   }
 }
 
@@ -32,17 +37,10 @@
 
 // ── Hero ───────────────────────────────────────────────────────────
 .ftp-hero {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 26px;
-
-  &__text { min-width: 0; }
+  margin-bottom: 24px;
 
   &__eyebrow {
-    margin: 0 0 10px;
+    margin: 0 0 8px;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 1.8px;
@@ -51,20 +49,22 @@
   }
 
   &__title {
-    margin: 0 0 12px;
-    font-size: clamp(34px, 7vw, 54px);
+    margin: 0 0 10px;
+    font-size: 34px;
     font-weight: 700;
-    letter-spacing: -1px;
-    line-height: 1.02;
+    letter-spacing: -0.8px;
+    line-height: 1.05;
 
-    em { color: var(--ft-accent); font-size: 1.08em; }
+    em { color: var(--ft-accent); font-size: 1.1em; }
+
+    @media (min-width: 641px) { font-size: 48px; letter-spacing: -1px; }
   }
 
   &__sub {
     margin: 0;
-    max-width: 54ch;
-    font-size: 15px;
-    line-height: 1.6;
+    max-width: 52ch;
+    font-size: 14.5px;
+    line-height: 1.55;
     color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
   }
 
@@ -72,12 +72,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 18px;
-  }
-
-  @media (max-width: 640px) {
-    flex-direction: column;
-    align-items: flex-start;
+    margin-top: 16px;
   }
 }
 
@@ -85,14 +80,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
+  height: 30px;
   padding: 0 12px;
   border-radius: 999px;
   border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.08));
   background: var(--unis-panel-2, rgba(255, 255, 255, 0.04));
   font-size: 12.5px;
   color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
-  text-decoration: none;
 
   b { color: var(--unis-text, #fff); font-weight: 700; font-variant-numeric: tabular-nums; }
 
@@ -101,22 +95,14 @@
     background: var(--ft-soft);
     b { color: var(--ft-accent); }
   }
-
-  &--link {
-    color: var(--ft-accent);
-    font-weight: 600;
-    transition: background 0.15s ease, border-color 0.15s ease;
-    &:hover { background: var(--ft-soft); border-color: var(--ft-edge); }
-    &:focus-visible { outline: 2px solid var(--ft-accent); outline-offset: 2px; }
-  }
 }
 
-// The two crossing waveforms.
+// The two crossing waveforms, small, above the eyebrow.
 .ftp-art {
-  flex-shrink: 0;
-  width: 240px;
+  display: block;
+  width: 150px;
   height: auto;
-  margin-bottom: 4px;
+  margin: 0 0 14px;
 
   &__a { fill: var(--ft-accent); }
   &__b { fill: var(--ft-t2); }
@@ -130,261 +116,223 @@
     &--b { stroke: var(--ft-t2); }
   }
 
-  @media (max-width: 640px) {
-    width: 100%;
-    max-width: 320px;
-    order: -1;
-    margin: 0 0 6px;
-  }
+  @media (min-width: 641px) { width: 190px; }
 }
 
-// ── Search + New only ──────────────────────────────────────────────
-.ftp-bar {
+// ── Sections (open one at a time, like Help) ───────────────────────
+.ftp-list {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-items: center;
-  margin-bottom: 14px;
 }
 
-.ftp-search {
-  position: relative;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  height: 46px;
-  padding: 0 14px;
-  border-radius: 12px;
+.ftp-sec {
+  scroll-margin-top: 16px;
+  border-radius: 16px;
   background: var(--unis-panel-2, rgba(255, 255, 255, 0.045));
   border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
-  transition: border-color 0.15s ease, background 0.15s ease;
+  overflow: hidden;
+  transition: border-color 0.18s ease, background 0.18s ease;
 
-  &:focus-within {
-    border-color: color-mix(in srgb, var(--unis-primary), transparent 55%);
-    background: var(--unis-panel-hi, rgba(255, 255, 255, 0.07));
+  &:hover { border-color: var(--unis-border-hi, rgba(255, 255, 255, 0.14)); }
+
+  &.open {
+    background: var(--ft-soft);
+    border-color: var(--ft-edge);
   }
-
-  svg {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    fill: none;
-    stroke: var(--unis-text-3, rgba(255, 255, 255, 0.5));
-    stroke-width: 2;
-    stroke-linecap: round;
-  }
-
-  input {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: var(--unis-text, #fff);
-    font: inherit;
-    font-size: 15px;
-
-    &::placeholder { color: var(--unis-text-3, rgba(255, 255, 255, 0.45)); }
-    &::-webkit-search-cancel-button { display: none; }
-  }
-
-  button {
-    width: 28px;
-    height: 28px;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--unis-text, #fff);
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-    &:hover { background: rgba(255, 255, 255, 0.14); }
-  }
-}
-
-.ftp-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  height: 46px;
-  padding: 0 16px;
-  border-radius: 12px;
-  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.08));
-  background: var(--unis-panel-2, rgba(255, 255, 255, 0.045));
-  color: var(--unis-text, #fff);
-  font: inherit;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
-
-  &__dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--ft-accent);
-    box-shadow: 0 0 0 3px var(--ft-soft);
-  }
-
-  &:hover { border-color: var(--ft-edge); }
-  &:active { transform: scale(0.97); }
-  &:focus-visible { outline: 2px solid var(--ft-accent); outline-offset: 2px; }
-
-  &.is-on {
-    background: var(--unis-primary);
-    border-color: var(--unis-primary);
-    color: var(--ft-on);
-    .ftp-toggle__dot { background: var(--ft-on); box-shadow: none; }
-  }
-}
-
-// ── Jump chips ─────────────────────────────────────────────────────
-.ftp-jump {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  display: flex;
-  gap: 6px;
-  margin: 0 -20px 8px;
-  padding: 10px 20px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  background: linear-gradient(to bottom, var(--unis-bg, #07090f) 70%, transparent);
-  &::-webkit-scrollbar { display: none; }
-
-  &__chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    flex-shrink: 0;
-    height: 32px;
-    padding: 0 12px 0 10px;
-    border-radius: 999px;
-    border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.08));
-    background: var(--unis-panel-2, rgba(255, 255, 255, 0.04));
-    color: var(--unis-text, #fff);
-    font: inherit;
-    font-size: 12.5px;
-    font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: background 0.15s ease, border-color 0.15s ease;
-
-    &:hover { background: var(--ft-soft); border-color: var(--ft-edge); }
-    &:focus-visible { outline: 2px solid var(--ft-accent); outline-offset: 2px; }
-  }
-
-  &__n {
-    font-size: 10.5px;
-    font-weight: 700;
-    color: var(--ft-accent);
-    font-variant-numeric: tabular-nums;
-  }
-
-  @media (max-width: 768px) {
-    margin: 0 -16px 8px;
-    padding: 10px 16px;
-  }
-}
-
-.ftp-count {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 4px 0 10px;
-  font-size: 13px;
-  color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
-
-  button {
-    border: 0;
-    padding: 0;
-    background: none;
-    color: var(--ft-accent);
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-    &:hover { text-decoration: underline; }
-  }
-}
-
-// ── Groups ─────────────────────────────────────────────────────────
-.ftp-group {
-  scroll-margin-top: 64px;
-  padding-top: 30px;
-
-  & + & { border-top: 1px solid var(--unis-border, rgba(255, 255, 255, 0.06)); margin-top: 8px; }
 
   &__head {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 14px;
-    align-items: start;
-    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 72px;
+    padding: 14px 14px 14px 16px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    &:focus-visible {
+      outline: 2px solid var(--ft-accent);
+      outline-offset: -2px;
+      border-radius: 16px;
+    }
+
+    @media (min-width: 641px) { padding: 16px 18px; gap: 14px; }
   }
 
   &__n {
-    padding-top: 6px;
-    font-size: 12px;
+    flex: none;
+    align-self: flex-start;
+    padding-top: 3px;
+    font-size: 11.5px;
     font-weight: 700;
     color: var(--ft-accent);
     font-variant-numeric: tabular-nums;
+  }
+
+  &__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
   }
 
   &__title {
-    margin: 0 0 4px;
-    font-size: clamp(22px, 4vw, 28px);
+    font-size: 16.5px;
     font-weight: 700;
-    letter-spacing: -0.4px;
-    line-height: 1.15;
+    letter-spacing: -0.2px;
+    line-height: 1.25;
 
-    em { color: var(--ft-accent); font-size: 1.1em; }
+    em { color: var(--ft-accent); font-size: 1.12em; }
+
+    @media (min-width: 641px) { font-size: 18px; }
   }
 
-  &__intro {
-    margin: 0;
-    font-size: 14px;
-    line-height: 1.55;
-    color: var(--unis-text-2, rgba(255, 255, 255, 0.68));
-  }
-
-  &__count {
-    min-width: 30px;
-    height: 24px;
-    padding: 0 8px;
-    margin-top: 5px;
-    border-radius: 999px;
-    background: var(--unis-panel-2, rgba(255, 255, 255, 0.05));
+  &__blurb {
+    font-size: 13px;
+    line-height: 1.4;
     color: var(--unis-text-3, rgba(255, 255, 255, 0.55));
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 24px;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
+  }
+
+  &__panel {
+    padding: 0 12px 14px;
+
+    @media (min-width: 641px) { padding: 0 18px 18px; }
   }
 }
 
-.ftp-list {
+.ftp-chev {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s ease, stroke 0.2s ease;
+
+  .ftp-sec.open > .ftp-sec__head & {
+    transform: rotate(180deg);
+    stroke: var(--ft-accent);
+  }
+}
+
+.ftp-new {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--unis-primary);
+  color: var(--ft-on);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+}
+
+// ── Screenshots ────────────────────────────────────────────────────
+// A row of phone frames that swipes sideways; never wider than the page.
+.ftp-shots {
+  display: flex;
+  gap: 12px;
+  margin: 2px -12px 14px;
+  padding: 4px 12px 8px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 12px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  &::-webkit-scrollbar { display: none; }
+
+  &.is-single { justify-content: center; }
+
+  @media (min-width: 641px) {
+    margin: 2px -18px 16px;
+    padding: 4px 18px 8px;
+    scroll-padding: 0 18px;
+  }
+}
+
+.ftp-shot {
+  flex: 0 0 auto;
+  width: 168px;
+  margin: 0;
+  scroll-snap-align: start;
+
+  &__frame {
+    position: relative;
+    aspect-ratio: 9 / 19.5;
+    overflow: hidden;
+    border-radius: 22px;
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--unis-primary), #07090f 70%), rgba(255, 255, 255, 0.04));
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 14px 30px rgba(0, 0, 0, 0.4);
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+  }
+
+  &.is-loaded &__frame img { opacity: 1; }
+
+  // A computer screenshot.
+  &--wide { width: 300px; }
+  &--wide &__frame { aspect-ratio: 16 / 10; border-radius: 12px; }
+
+  figcaption {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: center;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  }
+
+  @media (min-width: 641px) {
+    width: 190px;
+    &--wide { width: 360px; }
+  }
+}
+
+// ── Benefits ───────────────────────────────────────────────────────
+.ftp-bens {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 
-  @media (max-width: 640px) { grid-template-columns: 1fr; gap: 8px; }
+  @media (min-width: 769px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
 }
 
-.ftp-item {
+.ftp-ben {
   position: relative;
-  padding: 14px 16px 15px;
+  min-width: 0;
+  padding: 13px 14px 14px;
   border-radius: 14px;
+  background: rgba(7, 9, 15, 0.38);
   border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
-  background: var(--unis-panel-2, rgba(255, 255, 255, 0.035));
   overflow: hidden;
 
   &__top {
@@ -392,30 +340,31 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
   }
 
   &__t {
     margin: 0;
-    font-size: 14.5px;
-    font-weight: 650;
-    line-height: 1.35;
-    letter-spacing: -0.1px;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.15px;
   }
 
   &__d {
     margin: 0;
     font-size: 13.5px;
     line-height: 1.55;
-    color: var(--unis-text-2, rgba(255, 255, 255, 0.68));
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.7));
   }
 
-  // New features get a theme wash and a thin accent edge.
+  // New benefits get a theme wash and a thin accent edge.
   &.is-new {
     border-color: var(--ft-edge);
     background:
-      linear-gradient(135deg, color-mix(in srgb, var(--unis-primary), transparent 86%), transparent 62%),
-      var(--unis-panel-2, rgba(255, 255, 255, 0.035));
+      linear-gradient(135deg, color-mix(in srgb, var(--unis-primary), transparent 84%), transparent 65%),
+      rgba(7, 9, 15, 0.38);
 
     &::before {
       content: '';
@@ -430,32 +379,38 @@
   }
 }
 
-.ftp-new {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: var(--unis-primary);
-  color: var(--ft-on);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.9px;
-  text-transform: uppercase;
+// The features behind each benefit.
+.ftp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
 
-  &--inline {
-    height: 18px;
-    padding: 0 7px;
-    vertical-align: 1px;
-    font-size: 9.5px;
+  li {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.8));
+  }
+
+  .ftp-ben.is-new & li {
+    background: var(--ft-soft);
+    box-shadow: inset 0 0 0 1px var(--ft-edge);
   }
 }
 
 // ── Footer ─────────────────────────────────────────────────────────
 .ftp-foot {
-  margin-top: 44px;
-  padding-top: 22px;
+  margin-top: 36px;
+  padding-top: 20px;
   border-top: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
   font-size: 13.5px;
   line-height: 1.6;
@@ -472,5 +427,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ftp-toggle, .ftp-jump__chip, .ftp-stat--link { transition: none; }
+  .ftp-sec, .ftp-chev, .ftp-shot__frame img { transition: none; }
 }

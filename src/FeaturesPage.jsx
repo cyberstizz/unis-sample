@@ -1,21 +1,29 @@
 // src/FeaturesPage.jsx — /features
 //
-// Everything Unis does, in one list. Linked from the Help center and open to
-// everyone, including people on the pre-launch "Coming soon" side
-// (prelaunchConfig OPEN_PATHS). The list itself lives in data/featuresContent.js.
+// What Unis does, section by section, opening one at a time like the Help
+// center. Each open section shows its screenshots (from /public/features/)
+// and its benefits, with the features behind each benefit as tags.
+// Linked from the Help center and open to everyone, including people on the
+// pre-launch side (prelaunchConfig OPEN_PATHS). Content: data/featuresContent.js.
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from './layout';
-import { FEATURE_GROUPS, FEATURE_COUNT, NEW_COUNT } from './data/featuresContent';
+import { FEATURE_SECTIONS, FEATURE_COUNT, NEW_COUNT } from './data/featuresContent';
 import './featuresPage.scss';
 
 const reduceMotion = () =>
   typeof window !== 'undefined' &&
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-// The group title with one word set in the italic serif, like the rest of Unis.
-const GroupTitle = ({ title, em }) => {
+const Chevron = () => (
+  <svg className="ftp-chev" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M8 10l4 4 4-4" />
+  </svg>
+);
+
+// The title with one word in the italic serif, like the rest of Unis.
+const SectionTitle = ({ title, em }) => {
   if (!em || !title.includes(em)) return title;
   const at = title.indexOf(em);
   return (
@@ -28,7 +36,7 @@ const GroupTitle = ({ title, em }) => {
 };
 
 // The small art in the hero: two songs' waveforms crossing, the way a Unis Mix
-// looks in Now Playing. Fixed shapes, so it renders the same every time.
+// looks in Now Playing. Fixed shapes, so it draws the same every time.
 const HeroArt = () => {
   const bars = 44;
   const shape = (i, seed) => {
@@ -56,150 +64,135 @@ const HeroArt = () => {
   );
 };
 
+// A section's screenshots. One that isn't uploaded yet is left out, and if
+// none are there the strip doesn't show at all.
+const Shots = ({ shots }) => {
+  const [missing, setMissing] = useState(() => new Set());
+  const [loaded, setLoaded] = useState(() => new Set());
+  const visible = shots.filter((s) => !missing.has(s.src));
+  if (visible.length === 0) return null;
+
+  const mark = (setter, src) => setter((prev) => {
+    if (prev.has(src)) return prev;
+    const next = new Set(prev);
+    next.add(src);
+    return next;
+  });
+
+  return (
+    <div className={`ftp-shots ${visible.length === 1 ? 'is-single' : ''}`}>
+      {visible.map((s) => (
+        <figure key={s.src} className={`ftp-shot ${s.wide ? 'ftp-shot--wide' : ''} ${loaded.has(s.src) ? 'is-loaded' : ''}`}>
+          <div className="ftp-shot__frame">
+            <img
+              src={s.src}
+              alt={s.caption}
+              loading="lazy"
+              decoding="async"
+              onLoad={() => mark(setLoaded, s.src)}
+              onError={() => mark(setMissing, s.src)}
+            />
+          </div>
+          <figcaption>{s.caption}</figcaption>
+        </figure>
+      ))}
+    </div>
+  );
+};
+
 const FeaturesPage = () => {
-  const [query, setQuery] = useState('');
-  const [newOnly, setNewOnly] = useState(false);
-  const groupRefs = useRef({});
+  const [open, setOpen] = useState(FEATURE_SECTIONS[0]?.id || null);
+  const refs = useRef({});
 
-  const q = query.trim().toLowerCase();
-
-  const groups = useMemo(() => {
-    return FEATURE_GROUPS
-      .map((g) => ({
-        ...g,
-        items: g.items.filter((it) => {
-          if (newOnly && !it.isNew) return false;
-          if (!q) return true;
-          return (
-            it.t.toLowerCase().includes(q) ||
-            it.d.toLowerCase().includes(q) ||
-            g.title.toLowerCase().includes(q)
-          );
-        }),
-      }))
-      .filter((g) => g.items.length > 0);
-  }, [q, newOnly]);
-
-  const shown = groups.reduce((n, g) => n + g.items.length, 0);
-  const filtered = Boolean(q) || newOnly;
-
-  const jumpTo = (id) => {
-    const el = groupRefs.current[id];
-    if (!el) return;
-    el.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
-  };
-
-  const clear = () => {
-    setQuery('');
-    setNewOnly(false);
+  const toggle = (id) => {
+    const opening = open !== id;
+    setOpen(opening ? id : null);
+    if (!opening) return;
+    // Bring the opened section's header into view (the one above it may have
+    // just closed, which moves everything up).
+    requestAnimationFrame(() => {
+      const el = refs.current[id];
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      if (top < 0 || top > window.innerHeight * 0.6) {
+        el.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+      }
+    });
   };
 
   return (
     <Layout>
       <div className="ftp">
         <header className="ftp-hero">
-          <div className="ftp-hero__text">
-            <p className="ftp-hero__eyebrow">Features</p>
-            <h1 className="ftp-hero__title">
-              Everything Unis <em>does</em>
-            </h1>
-            <p className="ftp-hero__sub">
-              Every feature, big and small, for listeners and for artists. The
-              ones marked <span className="ftp-new ftp-new--inline">New</span> arrived in the latest update.
-            </p>
-            <div className="ftp-hero__stats">
-              <span className="ftp-stat"><b>{FEATURE_COUNT}</b> features</span>
-              <span className="ftp-stat ftp-stat--new"><b>{NEW_COUNT}</b> new this update</span>
-              <Link className="ftp-stat ftp-stat--link" to="/help">How it all works &rarr;</Link>
-            </div>
-          </div>
           <HeroArt />
+          <p className="ftp-hero__eyebrow">Features</p>
+          <h1 className="ftp-hero__title">
+            Everything Unis <em>does</em>
+          </h1>
+          <p className="ftp-hero__sub">
+            What Unis does for listeners and artists, one section at a time. Tap a
+            section to open it.
+          </p>
+          <div className="ftp-hero__stats">
+            <span className="ftp-stat"><b>{FEATURE_COUNT}</b> features</span>
+            <span className="ftp-stat ftp-stat--new"><b>{NEW_COUNT}</b> new this update</span>
+          </div>
         </header>
 
-        <div className="ftp-bar">
-          <div className="ftp-search">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="11" cy="11" r="6.4" />
-              <path d="M16 16l4 4" />
-            </svg>
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search features"
-              aria-label="Search features"
-            />
-            {query && (
-              <button type="button" onClick={() => setQuery('')} aria-label="Clear search">
-                &times;
-              </button>
-            )}
-          </div>
-          <button
-            type="button"
-            className={`ftp-toggle ${newOnly ? 'is-on' : ''}`}
-            aria-pressed={newOnly}
-            onClick={() => setNewOnly((v) => !v)}
-          >
-            <span className="ftp-toggle__dot" aria-hidden="true" />
-            New only
-          </button>
-        </div>
+        <div className="ftp-list">
+          {FEATURE_SECTIONS.map((s, i) => {
+            const isOpen = open === s.id;
+            const newHere = s.benefits.some((b) => b.isNew);
+            return (
+              <section
+                key={s.id}
+                id={`features-${s.id}`}
+                className={`ftp-sec ${isOpen ? 'open' : ''}`}
+                ref={(el) => { refs.current[s.id] = el; }}
+              >
+                <button
+                  type="button"
+                  className="ftp-sec__head"
+                  onClick={() => toggle(s.id)}
+                  aria-expanded={isOpen}
+                  aria-controls={`features-panel-${s.id}`}
+                >
+                  <span className="ftp-sec__n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="ftp-sec__text">
+                    <span className="ftp-sec__title">
+                      <SectionTitle title={s.title} em={s.em} />
+                    </span>
+                    <span className="ftp-sec__blurb">{s.blurb}</span>
+                  </span>
+                  {newHere && <span className="ftp-new" aria-label="Has new features">New</span>}
+                  <Chevron />
+                </button>
 
-        {!filtered && (
-          <nav className="ftp-jump" aria-label="Feature groups">
-            {FEATURE_GROUPS.map((g, i) => (
-              <button key={g.id} type="button" className="ftp-jump__chip" onClick={() => jumpTo(g.id)}>
-                <span className="ftp-jump__n">{String(i + 1).padStart(2, '0')}</span>
-                {g.title}
-              </button>
-            ))}
-          </nav>
-        )}
-
-        {filtered && (
-          <p className="ftp-count" role="status">
-            {shown === 0
-              ? 'No features match.'
-              : `${shown} ${shown === 1 ? 'feature' : 'features'}`}
-            <button type="button" onClick={clear}>Show everything</button>
-          </p>
-        )}
-
-        {groups.map((g) => {
-          const n = FEATURE_GROUPS.findIndex((x) => x.id === g.id) + 1;
-          return (
-            <section
-              key={g.id}
-              className="ftp-group"
-              id={`features-${g.id}`}
-              ref={(el) => { groupRefs.current[g.id] = el; }}
-              aria-labelledby={`features-${g.id}-title`}
-            >
-              <div className="ftp-group__head">
-                <span className="ftp-group__n" aria-hidden="true">{String(n).padStart(2, '0')}</span>
-                <div>
-                  <h2 className="ftp-group__title" id={`features-${g.id}-title`}>
-                    <GroupTitle title={g.title} em={g.em} />
-                  </h2>
-                  <p className="ftp-group__intro">{g.intro}</p>
+                <div className="ftp-sec__panel" id={`features-panel-${s.id}`} hidden={!isOpen}>
+                  {isOpen && (
+                    <>
+                      <Shots shots={s.shots} />
+                      <ul className="ftp-bens">
+                        {s.benefits.map((b) => (
+                          <li key={b.t} className={`ftp-ben ${b.isNew ? 'is-new' : ''}`}>
+                            <div className="ftp-ben__top">
+                              <h3 className="ftp-ben__t">{b.t}</h3>
+                              {b.isNew && <span className="ftp-new">New</span>}
+                            </div>
+                            <p className="ftp-ben__d">{b.d}</p>
+                            <ul className="ftp-tags" aria-label="Features">
+                              {b.tags.map((tag) => <li key={tag}>{tag}</li>)}
+                            </ul>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                 </div>
-                <span className="ftp-group__count">{g.items.length}</span>
-              </div>
-              <ul className="ftp-list">
-                {g.items.map((it) => (
-                  <li key={it.t} className={`ftp-item ${it.isNew ? 'is-new' : ''}`}>
-                    <div className="ftp-item__top">
-                      <h3 className="ftp-item__t">{it.t}</h3>
-                      {it.isNew && <span className="ftp-new">New</span>}
-                    </div>
-                    <p className="ftp-item__d">{it.d}</p>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          );
-        })}
+              </section>
+            );
+          })}
+        </div>
 
         <footer className="ftp-foot">
           <p>
