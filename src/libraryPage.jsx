@@ -18,12 +18,14 @@
 // The popup (playlistManager.jsx) is kept in the repo but no longer opened.
 
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus, Search, X, ArrowUpDown, ChevronDown, LayoutGrid, List, Music,
   ImagePlus, Lock, EyeOff, Globe, MapPin,
+  Heart, History,
 } from 'lucide-react';
 import Layout from './layout';
+import './playback.scss';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';
@@ -426,6 +428,20 @@ export default function LibraryPage() {
                 </button>
               </div>
             </div>
+
+            {/* ★ Pinned: Liked Songs and Recently played */}
+            {!query.trim() && (
+              <div className="lsx-pins">
+                <Link to="/liked" className="lsx-pin">
+                  <span className="lsx-pin-art lsx-pin-art--liked" aria-hidden="true"><Heart size={20} fill="currentColor" /></span>
+                  <span><strong>Liked Songs</strong><span>Playlist · pinned</span></span>
+                </Link>
+                <Link to="/recent" className="lsx-pin">
+                  <span className="lsx-pin-art lsx-pin-art--recent" aria-hidden="true"><History size={20} /></span>
+                  <span><strong>Recently played</strong><span>Library</span></span>
+                </Link>
+              </div>
+            )}
 
             {libraryBody()}
 

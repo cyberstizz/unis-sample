@@ -3,6 +3,10 @@ import React, { createContext, useState, useRef, useEffect, useCallback } from '
 import axiosInstance from '../components/axiosInstance';
 import { useFeedback } from './FeedbackContext';
 import { saveQueueState, loadQueueState, clearAllQueueState } from '../utils/queuePersistence';
+import { usePlaybackSettings, getPlaybackSettings, setPlaybackSettings } from '../utils/playbackSettings';
+import playbackEngine from '../utils/playbackEngine';
+import { loadAnalysis } from '../utils/songAnalysis';
+import { songToTrack } from '../utils/songTrack';
 
 // ============================================================================
 // CURRENT USER ID
@@ -150,7 +154,20 @@ export const PlayerProvider = ({ children }) => {
   const [queueSource, setQueueSource] = useState(restored?.queueSource ?? null);
   const [isShuffled, setIsShuffled] = useState(restored?.isShuffled ?? false);
   const [originalQueue, setOriginalQueue] = useState(restored?.originalQueue ?? []);
-  const [autoplay, setAutoplay] = useState(restored?.autoplay ?? false);
+  // Autoplay lives in Settings → Playback (this device). On by default:
+  // when the queue runs out, similar songs keep playing, local artists first.
+  const [playbackPrefs] = usePlaybackSettings();
+  const autoplay = playbackPrefs.autoplay;
+  const setAutoplay = useCallback((v) => {
+    const on = typeof v === 'function' ? v(getPlaybackSettings().autoplay) : v;
+    setPlaybackSettings({ autoplay: Boolean(on) });
+  }, []);
+  // The similar songs Autoplay will play after the queue (shown under it).
+  const [autoplayUpcoming, setAutoplayUpcoming] = useState([]);
+  // True when playback stopped because the queue ran out (Autoplay off).
+  const [queueEnded, setQueueEnded] = useState(false);
+  // Songs heard this session: Autoplay doesn't bring them back.
+  const sessionPlayedRef = useRef(new Set());
   const [repeatMode, setRepeatMode] = useState(restored?.repeatMode ?? 'off');
   const repeatModeRef = useRef(repeatMode);
   repeatModeRef.current = repeatMode;
@@ -491,7 +508,14 @@ export const PlayerProvider = ({ children }) => {
         return;
       }
 
+      // ★ AUTOPLAY: keep going with similar songs, unless it's switched off.
+      if (autoplay && autoplayUpcoming.length > 0) {
+        appendAutoplay();
+        return;
+      }
+
       setIsPlaying(false);
+      setQueueEnded(true);
       return;
     }
 
@@ -501,7 +525,166 @@ export const PlayerProvider = ({ children }) => {
 
     setCurrentIndex(idx);
     setCurrentMedia(queue[idx]);
-  }, [queue, currentIndex, repeatMode, isTrackBlocked]);
+  }, [queue, currentIndex, repeatMode, isTrackBlocked, autoplay, autoplayUpcoming]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Moves the Autoplay songs into the queue and plays the first one.
+  const appendAutoplay = () => {
+    const items = autoplayUpcoming;
+    if (!items.length) return;
+    const start = queue.length;
+    setQueue((q) => [...q, ...items]);
+    setOriginalQueue((o) => [...o, ...items]);
+    setAutoplayUpcoming([]);
+    setQueueEnded(false);
+    setCurrentIndex(start);
+    setCurrentMedia(items[0]);
+  };
+
+  /**
+   * The song next() would play, without moving: { item, index, autoplay }
+   * or null. The sound engine uses it to plan the transition ahead.
+   */
+  const peekNext = useCallback(() => {
+    if (queue.length === 0 || repeatMode === 'one') return null;
+    let idx = currentIndex + 1;
+    while (idx < queue.length && isTrackBlocked(queue[idx])) idx++;
+    if (idx < queue.length) return { item: queue[idx], index: idx, autoplay: false };
+    if (repeatMode === 'all') {
+      let w = 0;
+      while (w <= currentIndex && isTrackBlocked(queue[w])) w++;
+      if (w >= currentIndex || w >= queue.length) return null;
+      return { item: queue[w], index: w, autoplay: false };
+    }
+    if (autoplay && autoplayUpcoming.length > 0) return { item: autoplayUpcoming[0], index: queue.length, autoplay: true };
+    return null;
+  }, [queue, currentIndex, repeatMode, isTrackBlocked, autoplay, autoplayUpcoming]);
+
+  /** Move to what peekNext() returned, without reloading (the engine already plays it). */
+  const advanceTo = (target) => {
+    if (!target?.item) return;
+    if (target.autoplay) { appendAutoplay(); return; }
+    setQueueEnded(false);
+    setCurrentIndex(target.index);
+    setCurrentMedia(queue[target.index]);
+  };
+
+  // ★ AUTOPLAY — fetch similar songs as the queue nears its end, so they're
+  // ready (and shown under the queue) before it runs out. Seeds from the last
+  // song in the queue; skips anything already queued, heard this session or
+  // on the do-not-play list. Local first: the server ranks the seed's own
+  // area ahead of others.
+  const autoplaySeedRef = useRef(null);
+  useEffect(() => {
+    const id = currentMedia?.id || currentMedia?.songId;
+    if (id) sessionPlayedRef.current.add(id);
+    if (currentMedia) setQueueEnded(false);
+  }, [currentMedia]);
+
+  useEffect(() => {
+    if (!autoplay) { if (autoplayUpcoming.length) setAutoplayUpcoming([]); autoplaySeedRef.current = null; return undefined; }
+    if (queue.length === 0 || repeatMode === 'all') return undefined;
+    if (currentIndex < queue.length - 3) return undefined;
+    const seedItem = [...queue].reverse().find((t) => t && t.type !== 'video' && (t.id || t.songId));
+    const seed = seedItem?.id || seedItem?.songId;
+    if (!seed || autoplaySeedRef.current === seed) return undefined;
+    autoplaySeedRef.current = seed;
+    let cancelled = false;
+    axiosInstance.get(`/v1/media/song/${seed}/recommended?limit=12`)
+      .then((res) => {
+        if (cancelled) return;
+        const inQueue = new Set(queue.map((t) => t.id || t.songId));
+        const batchId = newQid();
+        const items = (Array.isArray(res.data) ? res.data : [])
+          .map((song) => songToTrack(song, 'autoplay'))
+          .filter((t) => t && t.url && !inQueue.has(t.id) && !sessionPlayedRef.current.has(t.id) && !isTrackBlocked(t))
+          .slice(0, 8)
+          .map((t) => toQueueItem(t, { type: 'autoplay', name: 'Autoplay', batchId }));
+        setAutoplayUpcoming(items);
+        loadAnalysis(items);
+      })
+      .catch((err) => console.warn('[player] Autoplay could not load similar songs:', err?.message || err));
+    return () => { cancelled = true; };
+  }, [autoplay, queue, currentIndex, repeatMode, isTrackBlocked]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const removeAutoplayItem = useCallback((qid) => {
+    setAutoplayUpcoming((list) => list.filter((t) => t.qid !== qid));
+  }, []);
+
+  // ★ UNIS MIX — playlists' saved transitions (GET /v1/playlists/{id}/mix),
+  // fetched once per session for every playlist in the queue. The Mix
+  // editor fires 'unis:playlist-mix-changed' after a save to refresh one.
+  const [mixes, setMixes] = useState(() => new Map());
+  const mixRequestedRef = useRef(new Set());
+  const loadMix = useCallback((playlistId, force = false) => {
+    if (!playlistId || (!force && mixRequestedRef.current.has(playlistId))) return;
+    mixRequestedRef.current.add(playlistId);
+    axiosInstance.get(`/v1/playlists/${playlistId}/mix`)
+      .then((res) => setMixes((m) => new Map(m).set(playlistId, res.data)))
+      .catch(() => setMixes((m) => new Map(m).set(playlistId, { enabled: false, transitions: [] })));
+  }, []);
+  useEffect(() => {
+    const ids = new Set(queue.filter((t) => t?.origin?.type === 'playlist').map((t) => t.origin.playlistId));
+    ids.forEach((id) => loadMix(id));
+  }, [queue, loadMix]);
+  useEffect(() => {
+    const onChanged = (e) => { const id = e?.detail?.playlistId; if (id) loadMix(id, true); };
+    window.addEventListener('unis:playlist-mix-changed', onChanged);
+    return () => window.removeEventListener('unis:playlist-mix-changed', onChanged);
+  }, [loadMix]);
+
+  /** A playlist owner's saved transition between two queue items, or null (Auto). */
+  const overrideFor = useCallback((a, b) => {
+    const oa = a?.origin; const ob = b?.origin;
+    if (!oa || oa.type !== 'playlist' || !ob || oa.batchId !== ob.batchId) return null;
+    const mix = mixes.get(oa.playlistId);
+    if (!mix?.enabled) return null;
+    const from = a.id || a.songId; const to = b.id || b.songId;
+    const t = (mix.transitions || []).find((x) => x.fromSongId === from && x.toSongId === to);
+    return t ? { style: t.style, bars: t.bars, startShift: t.startShift } : null;
+  }, [mixes]);
+
+  // ★ SOUND ENGINE — levelling, Crossfade and Unis Mix (utils/playbackEngine.js).
+  // The host functions are read through a ref, so the engine always sees the
+  // current queue without re-attaching. player.jsx fills onOutgoingFinished.
+  const engineHostRef = useRef(null);
+  const engineCallbacksRef = useRef({ onOutgoingFinished: null });
+  engineHostRef.current = {
+    getCurrent: () => currentMedia,
+    getQueueItems: () => queue,
+    peekNext,
+    advanceTo,
+    overrideFor,
+    isRepeatOne: () => repeatMode === 'one',
+    onOutgoingFinished: (item) => engineCallbacksRef.current.onOutgoingFinished?.(item),
+  };
+  useEffect(() => { playbackEngine.attach(audioRef, engineHostRef); }, []);
+  useEffect(() => { if (queue.length) loadAnalysis(queue.slice(Math.max(0, currentIndex - 1), currentIndex + 40)); }, [queue, currentIndex]);
+
+  /** End of queue with Autoplay off: start similar music from the last song. */
+  const playSimilarNow = useCallback(async () => {
+    const last = currentMedia || queue[queue.length - 1];
+    const seed = last?.id || last?.songId;
+    if (!seed) return;
+    try {
+      const res = await axiosInstance.get(`/v1/media/song/${seed}/recommended?limit=12`);
+      const batchId = newQid();
+      const items = (Array.isArray(res.data) ? res.data : [])
+        .map((song) => songToTrack(song, 'autoplay'))
+        .filter((t) => t && t.url && !isTrackBlocked(t))
+        .slice(0, 8)
+        .map((t) => toQueueItem(t, { type: 'autoplay', name: 'Similar music', batchId }));
+      if (!items.length) { feedback.info('No similar songs yet', { id: 'player-similar' }); return; }
+      const start = queue.length;
+      setQueue((q) => [...q, ...items]);
+      setOriginalQueue((o) => [...o, ...items]);
+      setQueueEnded(false);
+      setCurrentIndex(start);
+      setCurrentMedia(items[0]);
+      feedback.success('Playing similar music', { id: 'player-similar' });
+    } catch {
+      feedback.error('Couldn’t load similar music. Try again.', { id: 'player-similar' });
+    }
+  }, [currentMedia, queue, isTrackBlocked, feedback]);
 
   // ── prev(): walk backward with the same skip, wrapping at the top ───────
   const prev = useCallback(() => {
@@ -1356,7 +1539,8 @@ export const PlayerProvider = ({ children }) => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
     };
-  }, []);
+    // Re-attached per track: a Unis Mix hands playback to the second deck.
+  }, [currentMedia?.qid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ========================================================================
   // HELPERS
@@ -1463,6 +1647,16 @@ export const PlayerProvider = ({ children }) => {
       // Autoplay
       autoplay,
       setAutoplay,
+      autoplayUpcoming,
+      removeAutoplayItem,
+      queueEnded,
+      playSimilarNow,
+
+      // Unis Mix (playlist transitions) + the sound engine's callbacks
+      playlistMixes: mixes,
+      reloadPlaylistMix: (id) => loadMix(id, true),
+      mixOverrideFor: overrideFor,
+      engineCallbacksRef,
 
       // Playlist library
       playlists,

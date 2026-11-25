@@ -5,6 +5,7 @@ import { apiCall } from './components/axiosInstance';
 import { useAuth } from './context/AuthContext';
 import { buildUrl } from './utils/buildUrl';
 import Layout from './layout';
+import { JumpBackIn } from './LibraryLists';
 import UnisLoader from './components/UnisLoader';
 import AdSlot from './components/AdSlot';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
@@ -993,6 +994,8 @@ const Feed = () => {
       <div className="feed-content-wrapper">
         {error && <div className="feed-error">{error}</div>}
         <main className="feed">
+          {/* ★ Jump back in: Liked Songs and what you played last (signed-in listeners who've played something). */}
+          <JumpBackIn />
 
           {/* ═══════ SPOTLIGHT (static across all lenses) ═══════
               Replaced the "Vote for This Week's Top Track" banner (Oct 2026).

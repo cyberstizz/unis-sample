@@ -32,6 +32,7 @@ export const OPEN_PATHS = [
   '/waitlist',  // and /waitlist/join (sub-paths are open too)
   '/sponsor',   // Sponsor Harlem: shop owners book from a QR code, before and after launch
   '/help',      // the help center, linked from the Coming Soon page
+  '/features',  // everything Unis does, linked from the help center
   '/join',      // /join/CODE: poster, QR and ad links open sign-up with the code filled in
   '/team',      // the street team: pitch page, join form, meetup replies (email links)
 ];

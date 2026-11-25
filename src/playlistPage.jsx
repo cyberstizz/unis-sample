@@ -52,7 +52,7 @@ import {
   Play, Pause, Shuffle, MoreHorizontal, Heart, Clock, Music, GripVertical,
   ListPlus, Disc3, UserRound, Link2, Pencil, ImagePlus, Trash2, ThumbsUp, ThumbsDown,
   Lock, Globe, EyeOff, X, ListMusic, Share2, ArrowLeft, ArrowDown,
-  ChevronDown, Search, ArrowUpDown,
+  ChevronDown, Search, ArrowUpDown, Check,
 } from 'lucide-react';
 import FollowBar from './components/FollowBar';
 import { useFollowBar } from './hooks/useFollowBar';
@@ -62,10 +62,41 @@ import Layout from './layout';
 import AdSlot from './components/AdSlot';
 import { PlayerContext } from './context/playercontext';
 import { useAuth } from './context/AuthContext';
-import axiosInstance from './components/axiosInstance';
+import axiosInstance, { apiCall } from './components/axiosInstance';
 import { useFeedback, errorMessage } from './context/FeedbackContext';
 import { buildUrl } from './utils/buildUrl';
+import MixEditor from './MixEditor';
+import { loadAnalysis, getAnalysis, getAnalysisRecord, subscribeAnalysis } from './utils/songAnalysis';
+import { planTransition, planLabel } from './utils/mixPlanner';
 import './playlistPage.scss';
+import './playback.scss';
+import { shareUrl } from './utils/shareLink';
+
+const MIX_ON = { transitions: 'mix', mixReleases: true };
+// The mix endpoints, never cached, behind a promise so a throw lands in .catch.
+const apiMix = (method, url, data) => Promise.resolve().then(() => apiCall({ method, url, data, useCache: false }));
+const DESKTOP = '(min-width: 1025px)';
+const mixIcon = (size) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+    <path d="M19 12a5 5 0 11-10 0 5 5 0 0110 0zM15 12a5 5 0 11-10 0 5 5 0 0110 0z" fill="none" stroke="currentColor" strokeWidth="2.2" />
+  </svg>
+);
+
+/** The chip between two songs of a mixed playlist: "Bass swap · 4 bars · Auto". */
+const MixGap = ({ label, sub, isOwn, onOpen, canEdit }) => (
+  <div className="plm-gap">
+    <span className="plm-gap-line" aria-hidden="true" />
+    <button
+      type="button"
+      className={`plm-chip ${isOwn ? 'is-own' : ''} ${label === 'None' ? 'is-none' : ''}`}
+      onClick={onOpen}
+      aria-label={`${canEdit ? 'Edit transition' : 'Transition'}: ${label}`}
+    >
+      {mixIcon(13)}{label}
+    </button>
+    <span className="plm-gap-sub">{sub}</span>
+  </div>
+);
 
 // ============================================================================
 // FORMATTERS
@@ -161,7 +192,7 @@ const roomBelow = (el) => {
 const TrackRow = ({
   track, index, num, canEdit, canDrag, isCurrentRow, isPlaying, menuOpen, menuUp, confirmingRemove,
   onPlay, onToggleMenu, onAddToQueue, onGoSong, onGoArtist,
-  onAskRemove, onConfirmRemove, onCancelRemove,
+  onAskRemove, onConfirmRemove, onCancelRemove, bpm,
 }) => {
   const {
     attributes, listeners, setNodeRef, setActivatorNodeRef,
@@ -236,6 +267,7 @@ const TrackRow = ({
               {track.artist}
             </button>
           </div>
+          {bpm != null && <span className="plm-bpm">{Math.round(bpm)} BPM</span>}
           {/* Phones have no index column: the playing song shows its bars here. */}
           {isCurrentRow && isPlaying && (
             <span className="plp-eq plp-row-eq" aria-hidden="true"><span /><span /><span /></span>
@@ -348,6 +380,10 @@ const PlaylistPage = () => {
 
   // Find in playlist + Sort (v2)
   const [query, setQuery] = useState('');
+  // ★ UNIS MIX: this playlist's Mix switch and saved transitions.
+  const [mix, setMix] = useState(null);
+  const [editPair, setEditPair] = useState(null);   // phone: the transition sheet's first song index
+  const [, bumpAnalysis] = useState(0);
   const [sort, setSort] = useState('custom');
 
   // ★ The bar that follows you (shared frame: components/FollowBar.jsx).
@@ -423,6 +459,22 @@ const PlaylistPage = () => {
   // ── Derived ──
   const pid = playlist?.playlistId || playlist?.id || playlistId;
   const isOwner = !!(playlist?.isOwner ?? playlist?.owner);          // Jackson may drop the "is" prefix
+
+  useEffect(() => {
+    if (!playlist) return undefined;
+    let off = false;
+    const id = playlist.playlistId || playlist.id || playlistId;
+    apiMix('get', `/v1/playlists/${id}/mix`)
+      .then((res) => {
+        if (off) return;
+        const d = res?.data;
+        setMix(d && typeof d === 'object' && !Array.isArray(d) ? d : { enabled: false, transitions: [], canEdit: false });
+      })
+      .catch(() => { if (!off) setMix({ enabled: false, transitions: [], canEdit: false }); });
+    return () => { off = true; };
+  }, [playlist, playlistId]);
+  useEffect(() => subscribeAnalysis(() => bumpAnalysis((n) => n + 1)), []);
+  useEffect(() => { if (mix?.enabled && tracks.length) loadAnalysis(tracks); }, [mix?.enabled, tracks]);
   const isFollowing = !!(playlist?.isFollowing ?? playlist?.following);
   const isCommunity = playlist?.type === 'community';
   const isOfficial = playlist?.type === 'official';
@@ -506,6 +558,44 @@ const PlaylistPage = () => {
   const handleShufflePlay = () => {
     if (playable.length === 0) return;
     requestPlayCollection({ tracks: playable, playlist: playlistRef, shuffle: true });
+  };
+
+  // ★ UNIS MIX
+  const mixOn = !!mix?.enabled;
+  const showGaps = mixOn && section === 'tracks' && sort === 'custom' && !query.trim() && !activeKey;
+  const toggleMix = async () => {
+    if (!isOwner) return;
+    const next = !mixOn;
+    setMix((m) => ({ ...(m || { transitions: [] }), enabled: next }));
+    try {
+      const res = await apiMix('put', `/v1/playlists/${pid}/mix`, { enabled: next });
+      setMix(res.data);
+      window.dispatchEvent(new CustomEvent('unis:playlist-mix-changed', { detail: { playlistId: pid } }));
+      showToast(next ? 'Mix on · songs blend into each other' : 'Mix off · your transitions are kept');
+    } catch (err) {
+      setMix((m) => ({ ...(m || {}), enabled: !next }));
+      showToast(errorMessage(err, 'Couldn’t change the mix. Try again.'), 'error');
+    }
+  };
+  const openTransition = (i) => {
+    if (i < 0 || i >= tracks.length - 1) return;
+    if (typeof window !== 'undefined' && window.matchMedia?.(DESKTOP)?.matches) navigate(`/playlist/${pid}/mix/${i}`);
+    else setEditPair(i);
+  };
+  const gapFor = (i) => {
+    const a = tracks[i]; const b = tracks[i + 1];
+    if (!a || !b) return null;
+    const saved = (mix?.transitions || []).find((t) => t.fromSongId === (a.songId || a.id) && t.toSongId === (b.songId || b.id));
+    const ra = getAnalysisRecord(a); const rb = getAnalysisRecord(b);
+    const plan = saved?.style === 'none' ? null : planTransition({
+      a: getAnalysis(a), b: getAnalysis(b),
+      durA: ra?.durationMs ? ra.durationMs / 1000 : (a.duration > 1000 ? a.duration / 1000 : 200),
+      durB: rb?.durationMs ? rb.durationMs / 1000 : (b.duration > 1000 ? b.duration / 1000 : 200),
+      settings: MIX_ON, override: saved && saved.style !== 'auto' ? { style: saved.style, bars: saved.bars, startShift: saved.startShift } : null,
+    });
+    const label = plan ? planLabel(plan) : 'None';
+    const sub = saved && saved.style !== 'auto' ? (isOwner ? 'You set this' : `Set by ${playlist?.creatorName || 'the owner'}`) : 'Auto';
+    return { label, sub, isOwn: !!saved && saved.style !== 'auto' };
   };
 
   const handleRowPlay = (index) => {
@@ -617,7 +707,7 @@ const PlaylistPage = () => {
   // ── Header menu actions ──
   const sharePlaylist = async () => {
     setMenu(null);
-    const url = `${window.location.origin}/playlist/${pid}`;
+    const url = await shareUrl('playlist', pid);
     if (navigator.share) {
       try {
         await navigator.share({ title: playlist?.name || 'Playlist', url });
@@ -631,7 +721,7 @@ const PlaylistPage = () => {
 
   const copyLink = async () => {
     setMenu(null);
-    const url = `${window.location.origin}/playlist/${pid}`;
+    const url = await shareUrl('playlist', pid);
     try {
       await navigator.clipboard.writeText(url);
       showToast('Link copied');
@@ -969,6 +1059,23 @@ const PlaylistPage = () => {
           <button type="button" className="plp-ring" onClick={sharePlaylist} aria-label="Share" title="Share">
             <Share2 size={17} />
           </button>
+          {isOwner && tracks.length > 1 && (
+            <button
+              type="button"
+              className={`plm-pill ${mixOn ? 'is-on' : ''}`}
+              onClick={toggleMix}
+              aria-pressed={mixOn}
+              title={mixOn ? 'Mix on: tap to turn off' : 'Mix: blend each song into the next'}
+            >
+              {mixIcon(16)} Mix {mixOn && <Check size={14} strokeWidth={2.8} aria-hidden="true" />}
+            </button>
+          )}
+          {!isOwner && mixOn && (
+            <span className="plm-pill is-on is-static">{mixIcon(16)} Mixed</span>
+          )}
+          {isOwner && mixOn && (
+            <button type="button" className="plm-edit" onClick={() => openTransition(0)}>Edit mix</button>
+          )}
 
           <div className="plp-menu-wrap">
             <button
@@ -1161,12 +1268,15 @@ const PlaylistPage = () => {
                   {visibleTracks.map(({ t: track, i: index }) => {
                     const key = rowKey(track);
                     const isCurrentRow = !!currentItemId && currentItemId === track.playlistItemId;
+                    const gap = showGaps && index < tracks.length - 1 ? gapFor(index) : null;
+                    const an = mixOn ? getAnalysis(track) : null;
                     return (
+                      <React.Fragment key={key}>
                       <TrackRow
-                        key={key}
                         track={track}
                         index={index}
                         num={index + 1}
+                        bpm={an?.bpm ?? null}
                         canEdit={isOwner}
                         canDrag={canDrag}
                         isCurrentRow={isCurrentRow}
@@ -1183,6 +1293,16 @@ const PlaylistPage = () => {
                         onConfirmRemove={confirmRemove}
                         onCancelRemove={() => setConfirmRemoveKey(null)}
                       />
+                      {gap && (
+                        <MixGap
+                          label={gap.label}
+                          sub={gap.sub}
+                          isOwn={gap.isOwn}
+                          canEdit={isOwner}
+                          onOpen={() => openTransition(index)}
+                        />
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </SortableContext>
@@ -1403,6 +1523,21 @@ const PlaylistPage = () => {
 
       </div>
       </div>
+      {editPair != null && mix && (
+        <MixEditor
+          variant="sheet"
+          playlistId={pid}
+          playlistName={playlist?.name}
+          ownerName={playlist?.creatorName}
+          tracks={tracks}
+          index={editPair}
+          mix={mix}
+          canEdit={!!mix.canEdit}
+          onClose={() => setEditPair(null)}
+          onNavigatePair={(i) => setEditPair(i)}
+          onSaved={(m) => setMix(m)}
+        />
+      )}
     </Layout>
   );
 };

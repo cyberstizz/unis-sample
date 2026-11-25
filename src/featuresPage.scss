@@ -1,0 +1,476 @@
+// featuresPage.scss — /features (everything Unis does)
+// Same footing as helpPage.scss: every accent comes from --unis-primary, so
+// the page follows all seven themes.
+
+.ftp {
+  --ft-accent: color-mix(in srgb, var(--unis-primary), white 32%);
+  --ft-t2:     color-mix(in srgb, var(--unis-primary), white 58%);
+  --ft-soft:   color-mix(in srgb, var(--unis-primary), transparent 88%);
+  --ft-edge:   color-mix(in srgb, var(--unis-primary), transparent 80%);
+  --ft-on:     #fff;
+
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 40px 20px 140px; // bottom clears the player
+  font-family: var(--unis-font-sans, 'Inter', sans-serif);
+  color: var(--unis-text, #fff);
+
+  em {
+    font-family: var(--unis-font-italic, 'Instrument Serif', Georgia, serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+
+  @media (max-width: 768px) {
+    padding: 26px 16px 160px;
+  }
+}
+
+// Yellow is light: dark text on anything filled with the theme colour.
+[data-theme='yellow'] .ftp { --ft-on: #141006; }
+
+// ── Hero ───────────────────────────────────────────────────────────
+.ftp-hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 26px;
+
+  &__text { min-width: 0; }
+
+  &__eyebrow {
+    margin: 0 0 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--ft-accent);
+  }
+
+  &__title {
+    margin: 0 0 12px;
+    font-size: clamp(34px, 7vw, 54px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1.02;
+
+    em { color: var(--ft-accent); font-size: 1.08em; }
+  }
+
+  &__sub {
+    margin: 0;
+    max-width: 54ch;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  }
+
+  &__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.ftp-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.08));
+  background: var(--unis-panel-2, rgba(255, 255, 255, 0.04));
+  font-size: 12.5px;
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+  text-decoration: none;
+
+  b { color: var(--unis-text, #fff); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  &--new {
+    border-color: var(--ft-edge);
+    background: var(--ft-soft);
+    b { color: var(--ft-accent); }
+  }
+
+  &--link {
+    color: var(--ft-accent);
+    font-weight: 600;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    &:hover { background: var(--ft-soft); border-color: var(--ft-edge); }
+    &:focus-visible { outline: 2px solid var(--ft-accent); outline-offset: 2px; }
+  }
+}
+
+// The two crossing waveforms.
+.ftp-art {
+  flex-shrink: 0;
+  width: 240px;
+  height: auto;
+  margin-bottom: 4px;
+
+  &__a { fill: var(--ft-accent); }
+  &__b { fill: var(--ft-t2); }
+
+  &__curve {
+    fill: none;
+    stroke: var(--ft-accent);
+    stroke-width: 1.2;
+    stroke-dasharray: 3 3;
+    opacity: 0.55;
+    &--b { stroke: var(--ft-t2); }
+  }
+
+  @media (max-width: 640px) {
+    width: 100%;
+    max-width: 320px;
+    order: -1;
+    margin: 0 0 6px;
+  }
+}
+
+// ── Search + New only ──────────────────────────────────────────────
+.ftp-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.ftp-search {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--unis-panel-2, rgba(255, 255, 255, 0.045));
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:focus-within {
+    border-color: color-mix(in srgb, var(--unis-primary), transparent 55%);
+    background: var(--unis-panel-hi, rgba(255, 255, 255, 0.07));
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--unis-text-3, rgba(255, 255, 255, 0.5));
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--unis-text, #fff);
+    font: inherit;
+    font-size: 15px;
+
+    &::placeholder { color: var(--unis-text-3, rgba(255, 255, 255, 0.45)); }
+    &::-webkit-search-cancel-button { display: none; }
+  }
+
+  button {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--unis-text, #fff);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    &:hover { background: rgba(255, 255, 255, 0.14); }
+  }
+}
+
+.ftp-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 46px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.08));
+  background: var(--unis-panel-2, rgba(255, 255, 255, 0.045));
+  color: var(--unis-text, #fff);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ft-accent);
+    box-shadow: 0 0 0 3px var(--ft-soft);
+  }
+
+  &:hover { border-color: var(--ft-edge); }
+  &:active { transform: scale(0.97); }
+  &:focus-visible { outline: 2px solid var(--ft-accent); outline-offset: 2px; }
+
+  &.is-on {
+    background: var(--unis-primary);
+    border-color: var(--unis-primary);
+    color: var(--ft-on);
+    .ftp-toggle__dot { background: var(--ft-on); box-shadow: none; }
+  }
+}
+
+// ── Jump chips ─────────────────────────────────────────────────────
+.ftp-jump {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+  margin: 0 -20px 8px;
+  padding: 10px 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: linear-gradient(to bottom, var(--unis-bg, #07090f) 70%, transparent);
+  &::-webkit-scrollbar { display: none; }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex-shrink: 0;
+    height: 32px;
+    padding: 0 12px 0 10px;
+    border-radius: 999px;
+    border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.08));
+    background: var(--unis-panel-2, rgba(255, 255, 255, 0.04));
+    color: var(--unis-text, #fff);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    &:hover { background: var(--ft-soft); border-color: var(--ft-edge); }
+    &:focus-visible { outline: 2px solid var(--ft-accent); outline-offset: 2px; }
+  }
+
+  &__n {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ft-accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 768px) {
+    margin: 0 -16px 8px;
+    padding: 10px 16px;
+  }
+}
+
+.ftp-count {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 10px;
+  font-size: 13px;
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.72));
+
+  button {
+    border: 0;
+    padding: 0;
+    background: none;
+    color: var(--ft-accent);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+// ── Groups ─────────────────────────────────────────────────────────
+.ftp-group {
+  scroll-margin-top: 64px;
+  padding-top: 30px;
+
+  & + & { border-top: 1px solid var(--unis-border, rgba(255, 255, 255, 0.06)); margin-top: 8px; }
+
+  &__head {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 14px;
+    align-items: start;
+    margin-bottom: 16px;
+  }
+
+  &__n {
+    padding-top: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ft-accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__title {
+    margin: 0 0 4px;
+    font-size: clamp(22px, 4vw, 28px);
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    line-height: 1.15;
+
+    em { color: var(--ft-accent); font-size: 1.1em; }
+  }
+
+  &__intro {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.68));
+  }
+
+  &__count {
+    min-width: 30px;
+    height: 24px;
+    padding: 0 8px;
+    margin-top: 5px;
+    border-radius: 999px;
+    background: var(--unis-panel-2, rgba(255, 255, 255, 0.05));
+    color: var(--unis-text-3, rgba(255, 255, 255, 0.55));
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 24px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.ftp-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  @media (max-width: 640px) { grid-template-columns: 1fr; gap: 8px; }
+}
+
+.ftp-item {
+  position: relative;
+  padding: 14px 16px 15px;
+  border-radius: 14px;
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+  background: var(--unis-panel-2, rgba(255, 255, 255, 0.035));
+  overflow: hidden;
+
+  &__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 5px;
+  }
+
+  &__t {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 650;
+    line-height: 1.35;
+    letter-spacing: -0.1px;
+  }
+
+  &__d {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--unis-text-2, rgba(255, 255, 255, 0.68));
+  }
+
+  // New features get a theme wash and a thin accent edge.
+  &.is-new {
+    border-color: var(--ft-edge);
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--unis-primary), transparent 86%), transparent 62%),
+      var(--unis-panel-2, rgba(255, 255, 255, 0.035));
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 12px;
+      bottom: 12px;
+      width: 2px;
+      border-radius: 2px;
+      background: var(--ft-accent);
+    }
+  }
+}
+
+.ftp-new {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--unis-primary);
+  color: var(--ft-on);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+
+  &--inline {
+    height: 18px;
+    padding: 0 7px;
+    vertical-align: 1px;
+    font-size: 9.5px;
+  }
+}
+
+// ── Footer ─────────────────────────────────────────────────────────
+.ftp-foot {
+  margin-top: 44px;
+  padding-top: 22px;
+  border-top: 1px solid var(--unis-border, rgba(255, 255, 255, 0.07));
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--unis-text-2, rgba(255, 255, 255, 0.68));
+
+  p { margin: 0 0 6px; }
+
+  a {
+    color: var(--ft-accent);
+    font-weight: 600;
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ftp-toggle, .ftp-jump__chip, .ftp-stat--link { transition: none; }
+}

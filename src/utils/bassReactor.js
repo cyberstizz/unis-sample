@@ -37,6 +37,8 @@
 //  • iOS/Safari suspend the AudioContext until a user gesture — we resume()
 //    on every attach, which is always triggered by a play action.
 
+import { getContext, getTap, laneFor, isRouted, isRunning, resumeContext } from './audioGraph';
+
 const KILL_SWITCH_KEY = 'unis-logo-pulse'; // localStorage 'off' disables
 
 // ─── DETECTOR TUNING ────────────────────────────────────────────────────
@@ -252,8 +254,7 @@ let analyser = null;
 let freqData = null;
 let detector = null;
 
-const sources = new Map();      // mediaElement -> MediaElementAudioSourceNode
-let connectedSource = null;     // the source currently feeding the analyser
+let connectedSource = null;     // the element the detector last followed
 
 const subscribers = new Set();  // beat subscribers (frame object)
 let rafId = null;
@@ -274,17 +275,19 @@ export function setPulseEnabled(on) {
 }
 
 function ensureContext() {
-  if (ctx) return true;
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return false;
-  ctx = new AC();
+  if (analyser) return true;
+  // The player's shared graph (audioGraph.js) owns the AudioContext; the logo
+  // listens to its master output, after levelling and any mix.
+  const c = getContext();
+  if (!c) return false;
+  ctx = c;
   analyser = ctx.createAnalyser();
   analyser.fftSize = 2048;               // bin ≈ 21–23 Hz: enough to isolate the kick
   analyser.smoothingTimeConstant = 0;    // flux needs raw frames; we smooth ourselves
   analyser.minDecibels = ANALYSER_MIN_DB;
   analyser.maxDecibels = ANALYSER_MAX_DB;
   freqData = new Uint8Array(analyser.frequencyBinCount);
-  analyser.connect(ctx.destination);
+  getTap().connect(analyser);            // a listener only: the graph already reaches the speakers
 
   detector = createBeatDetector({
     binHz: ctx.sampleRate / analyser.fftSize,
@@ -294,34 +297,25 @@ function ensureContext() {
 }
 
 /**
- * Route a media element (audio or video) through the analyser.
- * Safe to call repeatedly — on every play, on element remount, etc.
- * Returns true if the element is (now) feeding the analyser.
+ * Make sure a media element (audio or video) plays through the shared graph,
+ * so the analyser hears it. Safe to call repeatedly — on every play, on
+ * element remount, etc. Returns true if the element is (now) heard.
  */
 export function attachMediaElement(el) {
   if (!el || !isPulseEnabled()) return false;
   // Refuse tainted elements: without CORS approval the graph outputs
   // silence, which would mute playback for the user.
   if (el.crossOrigin !== 'anonymous') return false;
+  // Never route into a graph that isn't running (it would be silent).
+  if (!isRouted(el) && !isRunning()) {
+    resumeContext();
+    return false;
+  }
+  if (!laneFor(el)) return false;
   if (!ensureContext()) return false;
 
-  let src = sources.get(el);
-  if (!src) {
-    try {
-      src = ctx.createMediaElementSource(el);
-    } catch (e) {
-      console.error('[bassReactor] createMediaElementSource failed:', e);
-      return false;
-    }
-    sources.set(el, src);
-  }
-
-  if (connectedSource !== src) {
-    if (connectedSource) {
-      try { connectedSource.disconnect(); } catch (e) { /* noop */ }
-    }
-    src.connect(analyser);
-    connectedSource = src;
+  if (connectedSource !== el) {
+    connectedSource = el;
     detector.reset(); // new element = new song context
   }
 

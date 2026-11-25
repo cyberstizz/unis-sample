@@ -87,13 +87,13 @@ describe('prelaunch — open paths', () => {
   it('keeps the pages sign-up and the law depend on open', () => {
     expect(OPEN_PATHS).toEqual([
       '/verify-email', '/reset-password', '/privacy', '/terms', '/cookie', '/report',
-      '/waitlist', '/sponsor', '/help', '/join', '/team',
+      '/waitlist', '/sponsor', '/help', '/features', '/join', '/team',
     ]);
   });
 
   it.each([
     '/verify-email', '/reset-password', '/privacy', '/terms', '/cookie', '/report',
-    '/waitlist', '/waitlist/join', '/sponsor', '/sponsor/book', '/help',
+    '/waitlist', '/waitlist/join', '/sponsor', '/sponsor/book', '/help', '/features',
     '/join', '/join/HARLEM', '/team', '/team/join', '/team/me',
     '/help/', '/waitlist//',
   ])('%s is open', (path) => {
@@ -103,7 +103,7 @@ describe('prelaunch — open paths', () => {
   it.each([
     '/', '/feed', '/login', '/artist/abc', '/song/abc', '/voteawards', '/admin', '/admin/users',
     '/profile', '/earnings', '/messages', '/plus', '/charts', '/discover', '/findpage',
-    '/helpful', '/teams', '/joiner', '/terms-old', '/waitlisted',
+    '/helpful', '/teams', '/joiner', '/terms-old', '/waitlisted', '/featured',
   ])('%s is NOT open', (path) => {
     expect(isOpenPath(path)).toBe(false);
   });

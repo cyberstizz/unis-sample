@@ -99,8 +99,18 @@ function mockApi(handler = () => ({ data: { songId: 'song-new' } })) {
   return apiSpy;
 }
 
+// Every request except the taxonomy load and the sound check's analysis poll
+// (it starts right after a song upload succeeds).
 const uploadCalls = () =>
-  apiSpy.mock.calls.map(([config]) => config).filter((c) => c.url !== '/v1/taxonomy');
+  apiSpy.mock.calls
+    .map(([config]) => config)
+    .filter((c) => c.url !== '/v1/taxonomy' && !String(c.url).startsWith('/v1/media/songs/analysis'));
+
+// After a song upload the wizard shows the Sound check; Done closes it.
+async function finishSoundCheck(user) {
+  await screen.findByRole('heading', { name: /sound check/i, level: 2 });
+  await user.click(screen.getByRole('button', { name: /^done$/i }));
+}
 
 beforeEach(() => {
   global.URL.createObjectURL = vi.fn(() => 'blob:mock-preview-url');
@@ -763,7 +773,7 @@ describe('UploadWizard — song upload', () => {
     expect(meta.jurisdictionId).toBe('00000000-0000-0000-0000-000000000002');
   });
 
-  it('on success reports the song, closes, and resets to step 1', async () => {
+  it('on success reports the song, shows the sound check, then Done closes and resets to step 1', async () => {
     mockApi(() => ({ data: { songId: 'song-123', title: 'My Track' } }));
     const { onClose, onUploadSuccess } = renderWizard();
     const user = userEvent.setup();
@@ -771,6 +781,9 @@ describe('UploadWizard — song upload', () => {
     await submit(user);
 
     await waitFor(() => expect(onUploadSuccess).toHaveBeenCalledWith({ songId: 'song-123', title: 'My Track' }));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: /sound check/i, level: 2 })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^done$/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.getByText(/step 1 of 3/i)).toBeInTheDocument();
   });
@@ -786,6 +799,7 @@ describe('UploadWizard — song upload', () => {
     const busy = await screen.findByRole('button', { name: /uploading/i });
     expect(busy).toBeDisabled();
     finish({ data: { songId: 'song-1' } });
+    await finishSoundCheck(user);
     await waitFor(() => expect(screen.getByText(/step 1 of 3/i)).toBeInTheDocument());
   });
 });
@@ -954,12 +968,14 @@ describe('UploadWizard — clean version (explicit songs)', () => {
     expect(metadataOf(uploadCalls()[0]).explicit).toBe(true);
   });
 
-  it('"No, skip for now" reports the explicit song and closes', async () => {
+  it('"No, skip for now" reports the explicit song, then the sound check closes', async () => {
     const user = userEvent.setup();
     const { onClose, onUploadSuccess } = await uploadExplicit(user);
     await user.click(screen.getByRole('button', { name: /no, skip for now/i }));
 
     expect(onUploadSuccess).toHaveBeenCalledWith({ songId: 'song-explicit', title: 'Raw Cut' });
+    expect(onClose).not.toHaveBeenCalled();
+    await finishSoundCheck(user);
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(uploadCalls()).toHaveLength(1);
   });
@@ -1024,6 +1040,7 @@ describe('UploadWizard — clean version (explicit songs)', () => {
     expect(linkCall.data.get('cleanVersionId')).toBe('song-clean');
 
     await waitFor(() => expect(onUploadSuccess).toHaveBeenCalledWith({ songId: 'song-explicit', title: 'Raw Cut' }));
+    await finishSoundCheck(user);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -1058,12 +1075,13 @@ describe('UploadWizard — clean version (explicit songs)', () => {
     expect(screen.getByRole('button', { name: /^upload clean version$/i })).toBeEnabled();
   });
 
-  it('the Skip button on the picker also finishes the upload', async () => {
+  it('the Skip button on the picker also finishes the upload (through the sound check)', async () => {
     const user = userEvent.setup();
     const { onClose, onUploadSuccess } = await uploadExplicit(user);
     await user.click(screen.getByRole('button', { name: /yes, upload a clean version/i }));
     await user.click(screen.getByRole('button', { name: /^skip$/i }));
     expect(onUploadSuccess).toHaveBeenCalledTimes(1);
+    await finishSoundCheck(user);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

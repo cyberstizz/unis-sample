@@ -40,6 +40,7 @@ import { fetchStandings } from './utils/standings';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import { useTeam } from './context/TeamContext';
 import { ALERTS_CHANGED } from './utils/releaseAlerts';
+import { Heart as HeartIcon, History as HistoryIcon } from 'lucide-react';
 
 const DESKTOP_MIN = 1025;          // matches sidebar.scss and player.scss
 const PANEL_W = 268;
@@ -463,6 +464,32 @@ const Sidebar = () => {
     return out;
   }, [playlists, followedPlaylists]);
 
+  // ★ Liked Songs and Recently played, pinned above the playlists.
+  const pins = [
+    { key: 'liked', name: 'Liked Songs', meta: 'Playlist · pinned', to: '/liked', icon: <HeartIcon size={18} fill="currentColor" aria-hidden="true" />, cls: 'sb-cover--liked' },
+    { key: 'recent', name: 'Recently played', meta: 'Library', to: '/recent', icon: <HistoryIcon size={18} aria-hidden="true" />, cls: 'sb-cover--recent' },
+  ];
+  const renderPins = (rail) => pins.map((p) => (
+    <li key={p.key}>
+      <button
+        type="button"
+        className={`sb-pl ${path === p.to ? 'active' : ''}`}
+        onClick={() => handleNav(p.to)}
+        aria-current={path === p.to ? 'page' : undefined}
+        title={rail ? p.name : undefined}
+        aria-label={rail ? p.name : undefined}
+      >
+        <span className={`sb-cover ${p.cls}`} aria-hidden="true">{p.icon}</span>
+        {!rail && (
+          <span className="sb-pl__text">
+            <span className="sb-pl__name">{p.name}</span>
+            <span className="sb-pl__meta">{p.meta}</span>
+          </span>
+        )}
+      </button>
+    </li>
+  ));
+
   const playingFrom = isPlaying && currentMedia?.origin?.type === 'playlist'
     ? currentMedia.origin.playlistId
     : null;
@@ -611,6 +638,7 @@ const Sidebar = () => {
               <div className="sb-lib-head">
                 <button type="button" className="sb-lib-head__title sb-lib-head__link" onClick={handleLibrary}>Your playlists</button>
               </div>
+              <ul className="sb-lib" aria-label="Pinned">{renderPins(false)}</ul>
               {/* One playlist-sized row, not a card, so it never crowds out
                   the account row. */}
               <button type="button" className="sb-pl sb-pl--new" onClick={handleNewPlaylist} aria-label="New playlist">
@@ -637,6 +665,7 @@ const Sidebar = () => {
               </div>
             )}
             <ul className="sb-lib" aria-label="Your playlists">
+              {renderPins(rail)}
               {library.map((pl) => {
                 const playing = playingFrom && String(playingFrom) === String(pl.id);
                 const here = currentPlaylistId && String(currentPlaylistId) === String(pl.id);

@@ -19,6 +19,7 @@ import VoteHistorySection from './VoteHistorySection';
 import SupportedArtistPicker from './SupportedArtistPicker';
 import VerificationGate from './verificationGate';
 import ReleaseAlertSettings from './ReleaseAlertSettings';
+import { PlaybackSettingsLink } from './PlaybackSettings';
 import AuthGateSheet, { useAuthGate } from './AuthGateSheet';
 import { RELEASE_TYPE_LABEL } from './utils/releases';
 import { ALERTS_CHANGED, alertPath, alertWhen, fetchAlertSummary } from './utils/releaseAlerts';
@@ -491,6 +492,8 @@ const Profile = () => {
       </section>
 
       <ReleaseAlertSettings accountEmailsOff={settings?.emailNotifications === false} />
+
+      <PlaybackSettingsLink />
 
       <section className="ad-panel" aria-labelledby="lp-privacy-title">
         <div className="ad-panel__head">

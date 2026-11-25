@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Layout from './layout';
 import { HELP_SECTIONS } from './data/helpContent';
 import { useAuth } from './context/AuthContext';
@@ -123,13 +123,21 @@ const HelpPage = () => {
             plain language.
           </p>
 
-          {canTour && (
-            <button type="button" className="help-tour-btn" onClick={() => startTour(navigate)}>
-              <span className="help-tour-btn__meter" aria-hidden="true"><i /><i /><i /><i /></span>
-              Take the tour
-              <span className="help-tour-btn__hint">40 sec</span>
-            </button>
-          )}
+          <div className="help-hero__actions">
+            {canTour && (
+              <button type="button" className="help-tour-btn" onClick={() => startTour(navigate)}>
+                <span className="help-tour-btn__meter" aria-hidden="true"><i /><i /><i /><i /></span>
+                Take the tour
+                <span className="help-tour-btn__hint">40 sec</span>
+              </button>
+            )}
+            {/* The full feature list, open to everyone (even before launch). */}
+            <Link to="/features" className="help-features-link">
+              <span className="help-features-link__grid" aria-hidden="true"><i /><i /><i /><i /></span>
+              See everything Unis does
+              <span className="help-features-link__arrow" aria-hidden="true">&rarr;</span>
+            </Link>
+          </div>
 
           <div className="help-search">
             <svg viewBox="0 0 24 24" aria-hidden="true">

@@ -5,7 +5,7 @@ import { useAuth } from './context/AuthContext';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
 import {
   Heart, Vote, ChevronUp, ChevronDown, ListMusic, Lock, MessageCircle, X, Mic2,
-  MoreHorizontal, Maximize2, Disc3, UserRound,
+  MoreHorizontal, Maximize2, Disc3, UserRound, Moon, Gauge,
 } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
@@ -22,6 +22,10 @@ import LyricsView from './components/LyricsView'; // timed lyrics view (mic butt
 import useArtworkPalette from './hooks/useArtworkPalette';
 import useScrollMotion from './hooks/useScrollMotion';
 import { useThemeLogo } from './utils/themeLogo';
+import playbackEngine from './utils/playbackEngine';
+import NowPlayingMix, { MixFromLine, MixArtFade } from './NowPlayingMix';
+import SleepTimerSheet, { SleepChip } from './SleepTimerSheet';
+import { bindSleepMedia, cancelSleepFade, useSleepTimer } from './utils/sleepTimer';
 import './player.scss';
 
 // ─────────────────────────────────────────────────────────────
@@ -175,6 +179,7 @@ const Player = () => {
     closePlaylistManager,
     queue,
     consumePendingResume,
+    engineCallbacksRef,
   } = useContext(PlayerContext);
 
   const { isGuest } = useAuth();
@@ -202,6 +207,8 @@ const Player = () => {
   const [showVoteWizard, setShowVoteWizard] = useState(false);
 
   const [trayOpen, setTrayOpen] = useState(false);     // phone: song actions tray
+  const [showSleep, setShowSleep] = useState(false);   // sleep timer sheet
+  const sleepActive = !!useSleepTimer().mode;
   const [npMode, setNpMode] = useState('main');        // Now Playing: main | lyrics | queue
   const [npMore, setNpMore] = useState(false);         // Now Playing: More sheet
   const [showComments, setShowComments] = useState(false); // ★ comments: slide-up comment sheet
@@ -286,6 +293,26 @@ const Player = () => {
     }).catch((err) => console.error('Play completion failed:', err));
   };
 
+
+  // ★ UNIS MIX: when a blend hands playback to the next song, the outgoing
+  // song counts as played to the end (its completion is sent by the
+  // song-change effect below, as usual).
+  useEffect(() => {
+    if (!engineCallbacksRef) return undefined;
+    const callbacks = engineCallbacksRef.current;
+    callbacks.onOutgoingFinished = () => { lastPercentRef.current = 100; };
+    return () => { callbacks.onOutgoingFinished = null; };
+  }, [engineCallbacksRef]);
+
+  // The sleep timer fades and pauses whatever element is playing.
+  useEffect(() => { bindSleepMedia(() => audioRef.current); }, [audioRef]);
+
+  // When the timer runs out the music fades and pauses; say so once.
+  useEffect(() => {
+    const onEnded = () => feedback.info('Sleep timer ended. Music paused.', { id: 'sleep-timer' });
+    window.addEventListener('unis:sleep-ended', onEnded);
+    return () => window.removeEventListener('unis:sleep-ended', onEnded);
+  }, [feedback]);
 
   // 1. Extract User ID
   useEffect(() => {
@@ -431,6 +458,16 @@ const Player = () => {
       const mediaUrl = currentMedia.url || currentMedia.fileUrl || currentMedia.mediaUrl;
       if (!mediaUrl) return;
 
+      // ★ UNIS MIX: the sound engine already has this song playing on the
+      // other deck (a blend just handed it over). Take it as it is.
+      if (playbackEngine.consumeHandoff(currentMedia)) {
+        setCurrentTime(media.currentTime || 0);
+        setDuration(media.duration || 0);
+        setIsPlaying(!media.paused);
+        lastPercentRef.current = media.duration ? (media.currentTime / media.duration) * 100 : 0;
+        return undefined;
+      }
+
       // ★ QUEUE PERSISTENCE: on the first load after a page refresh the queue
       //   was restored from localStorage, and this effect fires as if a brand
       //   new track had been selected. Two things must NOT happen in that case:
@@ -465,11 +502,13 @@ const Player = () => {
 
         media.addEventListener('loadedmetadata', handleResumeReady);
         media.load();
+        playbackEngine.onTrackChange();
         console.log(`[Player] Restored playback position at ${resumeAt.toFixed(1)}s (paused)`);
         return () => media.removeEventListener('loadedmetadata', handleResumeReady);
       }
 
       // --- Normal track change: start from the top and play ---
+      playbackEngine.onTrackChange();
       media.currentTime = 0;
       setCurrentTime(0);
       lastPercentRef.current = 0; // ★ PLAY-FLOW: reset progress for the new track
@@ -492,12 +531,20 @@ const Player = () => {
     const media = audioRef.current;
     if (!media) return;
 
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => { setIsPlaying(false); setIsBuffering(false); };
-    const handleWaiting = () => setIsBuffering(true);
-    const handleReady = () => setIsBuffering(false);
+    // After a Unis Mix the decks swap: events from the deck that's no
+    // longer audioRef.current (the outgoing song's outro) are ignored.
+    const live = () => audioRef.current === media;
+    const handlePlay = () => { if (live()) setIsPlaying(true); };
+    const handlePause = () => {
+      if (!live()) return;
+      setIsPlaying(false); setIsBuffering(false);
+      playbackEngine.onPause();
+    };
+    const handleWaiting = () => { if (live()) setIsBuffering(true); };
+    const handleReady = () => { if (live()) setIsBuffering(false); };
 
     const handleTimeUpdate = () => {
+      if (!live()) return;
       setCurrentTime(media.currentTime);
       // ★ PLAY-FLOW: keep the last listened % up to date for completion tracking
       if (media.duration && isFinite(media.duration)) {
@@ -505,9 +552,10 @@ const Player = () => {
       }
     };
 
-    const handleLoadedMetadata = () => setDuration(media.duration || 0);
+    const handleLoadedMetadata = () => { if (live()) setDuration(media.duration || 0); };
 
     const handleEnded = () => {
+      if (!live()) return;
       setIsPlaying(false);
       lastPercentRef.current = 100;   // ★ PLAY-FLOW: finished = 100%
       completeCurrentPlay();          // ★ PLAY-FLOW: record completion
@@ -538,7 +586,7 @@ const Player = () => {
       media.removeEventListener('loadedmetadata', handleLoadedMetadata);
       media.removeEventListener('ended', handleEnded);
     };
-  }, [next, audioRef, repeatMode, currentMedia?.type, hasMedia]);
+  }, [next, audioRef, repeatMode, currentMedia?.type, hasMedia, currentMedia?.qid]); // qid: re-attach to the deck a Unis Mix handed over
 
   useEffect(() => {
     if (audioRef.current) {
@@ -676,8 +724,8 @@ const Player = () => {
     else media.pause();
   };
 
-  const handlePrev = (e) => { e?.stopPropagation?.(); prev(); };
-  const handleNext = (e) => { e?.stopPropagation?.(); next(); };
+  const handlePrev = (e) => { e?.stopPropagation?.(); playbackEngine.onUserJump(); prev(); };
+  const handleNext = (e) => { e?.stopPropagation?.(); playbackEngine.onUserJump(); next(); };
 
   const handleLike = async (e) => {
     e?.stopPropagation?.();
@@ -825,6 +873,7 @@ const Player = () => {
     const media = audioRef.current;
     if (!media || !duration) return;
     const newTime = (Number(e.target.value) / 100) * duration;
+    playbackEngine.onUserJump();
     media.currentTime = newTime;
     setCurrentTime(newTime);
   };
@@ -833,6 +882,23 @@ const Player = () => {
     const v = Math.max(0, Math.min(1, Number(e.target.value) / 100));
     setVolume(v);
     if (audioRef.current) audioRef.current.volume = v;
+  };
+
+  // Settings → Playback (levelling, transitions, autoplay)
+  const openPlaybackSettings = (e) => {
+    e?.stopPropagation?.();
+    setTrayOpen(false);
+    setNpMore(false);
+    if (isExpanded) toggleExpand();
+    navigate('/settings/playback');
+  };
+
+  const openSleep = (e) => {
+    e?.stopPropagation?.();
+    setTrayOpen(false);
+    setNpMore(false);
+    cancelSleepFade();
+    setShowSleep(true);
   };
 
   const toggleTray = (e) => {
@@ -960,6 +1026,7 @@ const Player = () => {
           formatTime={formatTime}
         />
       )}
+      <SleepTimerSheet open={showSleep} onClose={() => setShowSleep(false)} />
       <PlaylistWizard open={showPlaylistWizard} onClose={() => setShowPlaylistWizard(false)} selectedTrack={currentMedia} />
       <PlaylistManager open={showPlaylistManager} onClose={closePlaylistManager} />
       <QueuePanel
@@ -1201,7 +1268,7 @@ const Player = () => {
         <button type="button" className="unp-vote" onClick={handleVoteClick}>
           {voteIcon}<span>Vote for this song</span>
         </button>
-        <div className="unp-tray__grid">
+        <div className="unp-tray__grid unp-tray__grid--four">
           <button type="button" className={`unp-tile ${isLiked ? 'is-on' : ''}`} onClick={handleLike} aria-pressed={isLiked}>
             <span className="unp-tile__icon"><Heart size={20} fill={isLiked ? 'currentColor' : 'none'} aria-hidden="true" /></span>
             <span className="unp-tile__label">{isLiked ? 'Liked' : 'Like'}</span>
@@ -1238,6 +1305,16 @@ const Player = () => {
             <span className="unp-tile__icon"><Lock size={19} aria-hidden="true" /></span>
             <span className="unp-tile__label">Lock</span>
             <span className="unp-tile__hint">{pocketLockEnabled ? 'Protected' : 'Pocket'}</span>
+          </button>
+          <button type="button" className={`unp-tile ${sleepActive ? 'is-on' : ''}`} onClick={openSleep} aria-pressed={sleepActive}>
+            <span className="unp-tile__icon"><Moon size={19} fill={sleepActive ? 'currentColor' : 'none'} aria-hidden="true" /></span>
+            <span className="unp-tile__label">Sleep</span>
+            <span className="unp-tile__hint">{sleepActive ? 'On' : 'Timer'}</span>
+          </button>
+          <button type="button" className="unp-tile" onClick={openPlaybackSettings}>
+            <span className="unp-tile__icon"><Gauge size={19} aria-hidden="true" /></span>
+            <span className="unp-tile__label">Playback</span>
+            <span className="unp-tile__hint">Mix · level</span>
           </button>
         </div>
       </div>
@@ -1309,6 +1386,15 @@ const Player = () => {
             {queueCount > 0 && <span className="unp-badge">{queueCount}</span>}
           </button>
           <button type="button" className="unp-icon" onClick={handleDownload} aria-label="Download"><DownloadIcon size={18} /></button>
+          <button
+            type="button"
+            className={`unp-icon ${sleepActive ? 'is-on' : ''}`}
+            onClick={openSleep}
+            aria-label={sleepActive ? 'Sleep timer on' : 'Sleep timer'}
+            aria-pressed={sleepActive}
+          >
+            <Moon size={18} fill={sleepActive ? 'currentColor' : 'none'} aria-hidden="true" />
+          </button>
           <button
             type="button"
             className="unp-icon"
@@ -1407,7 +1493,10 @@ const Player = () => {
               <source src={currentMedia.url} type="video/mp4" />
             </video>
           ) : (
-            <img className="unp-np__art" src={artUrl} alt={`Artwork for ${title}`} />
+            <>
+              <img className="unp-np__art" src={artUrl} alt={`Artwork for ${title}`} />
+              <MixArtFade />
+            </>
           )}
         </div>
 
@@ -1420,6 +1509,7 @@ const Player = () => {
                   <button type="button" className="unp-link" onClick={handleNavigateToArtist}>{artist}</button>
                   {jurisdiction && <> · <em className="unp-serif">{jurisdiction}</em></>}
                 </span>
+                <MixFromLine />
               </div>
               <button
                 type="button"
@@ -1432,6 +1522,9 @@ const Player = () => {
                 <span>{likeCount}</span>
               </button>
             </div>
+
+            {!isVideo && <NowPlayingMix onOpenSettings={openPlaybackSettings} />}
+            <SleepChip className="unp-np__sleep" />
 
             <div className="unp-np__seek">
               <input
@@ -1568,6 +1661,9 @@ const Player = () => {
               </button>
               <button type="button" className="unp-more__item" onClick={handleNavigateToArtist}>
                 <UserRound size={21} aria-hidden="true" /><span>Artist page</span>
+              </button>
+              <button type="button" className={`unp-more__item ${sleepActive ? 'is-on' : ''}`} onClick={openSleep} aria-pressed={sleepActive}>
+                <Moon size={21} fill={sleepActive ? 'currentColor' : 'none'} aria-hidden="true" /><span>Sleep timer</span>
               </button>
             </div>
           </div>

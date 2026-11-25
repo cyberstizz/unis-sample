@@ -111,6 +111,71 @@
   }
 }
 
+// The row under the hero text: "Take the tour" and the feature list link.
+.help-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+
+  .help-tour-btn { margin-top: 0; }
+}
+
+// "See everything Unis does": opens /features.
+.help-features-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--unis-border, rgba(255, 255, 255, 0.1));
+  background: var(--unis-panel-2, rgba(255, 255, 255, 0.04));
+  color: var(--unis-text, #fff);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+
+  &:hover {
+    background: var(--hp-soft);
+    border-color: var(--hp-edge);
+  }
+  &:active { transform: scale(0.97); }
+  &:focus-visible {
+    outline: 2px solid var(--hp-accent);
+    outline-offset: 2px;
+  }
+
+  // A tiny 2×2 grid, the "everything" mark.
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 5px);
+    gap: 2px;
+
+    i {
+      width: 5px;
+      height: 5px;
+      border-radius: 1.5px;
+      background: var(--hp-accent);
+      &:nth-child(2), &:nth-child(3) { opacity: 0.55; }
+    }
+  }
+
+  &__arrow {
+    color: var(--hp-accent);
+    transition: transform 0.2s ease;
+  }
+  &:hover &__arrow { transform: translateX(2px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &__arrow { transition: none; }
+  }
+}
+
 @keyframes help-tour-eq {
   from { transform: scaleY(0.3); }
   to   { transform: scaleY(1); }

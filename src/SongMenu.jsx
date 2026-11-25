@@ -38,6 +38,7 @@ import { useFeedback } from './context/FeedbackContext';
 import PlaylistWizard from './playlistWizard';
 import DownloadModal from './DownloadModal';
 import './songMenu.scss';
+import { shareUrl } from './utils/shareLink';
 
 const PHONE_QUERY = '(max-width: 640px)';
 const LONG_PRESS_MS = 480;
@@ -325,7 +326,7 @@ export default function SongMenu({
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/${isSong ? 'song' : 'video'}/${song.id}`;
+    const url = await shareUrl(isSong ? 'song' : 'video', song.id);
     const artistName = song.artistData?.username || song.artist || '';
     const text = artistName ? `${song.title} by ${artistName} on Unis` : `${song.title} on Unis`;
     dismiss();

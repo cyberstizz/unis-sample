@@ -84,7 +84,27 @@ const toWeeklyRange = (dateStr) => {
   return `${startStr} – ${endStr}, ${year}`;
 };
 
-const getAwardDateLabel = (categoryKey) => (categoryKey === 'song-weekly' ? 'LAST WEEK' : 'YESTERDAY');
+// The real day of the win, relative to today in New York ("Yesterday" was
+// printed for every daily win before, even a week-old one).
+const daysAgo = (dateStr) => {
+  if (!dateStr) return null;
+  const today = new Date(`${todayInEst()}T00:00:00`);
+  const d = new Date(`${dateStr}T00:00:00`);
+  return Math.round((today - d) / 86400000);
+};
+const getAwardDateLabel = (categoryKey, awardDate) => {
+  const n = daysAgo(awardDate);
+  if (categoryKey === 'song-weekly') return n != null && n <= 7 ? 'LAST WEEK' : 'RECENT WIN';
+  if (n === 0) return 'TODAY';
+  if (n === 1) return 'YESTERDAY';
+  if (n != null && n < 7) return `${n} DAYS AGO`;
+  return 'RECENT WIN';
+};
+
+// One key per award (category + day + winner), so every new win gets its moment.
+const seenKeyOf = (n) => `unis-lwn-seen2:${n.category.key}:${n.awardDate || ''}:${n.targetId || n.title}`;
+const wasSeen = (n) => { try { return !!localStorage.getItem(seenKeyOf(n)); } catch { return false; } };
+const markSeen = (n) => { try { localStorage.setItem(seenKeyOf(n), '1'); } catch { /* storage off */ } };
 
 // The card waits while these are open.
 const isBusy = () =>
@@ -225,8 +245,10 @@ const LastWonNotification = () => {
                   title: award.song.title || 'Unknown Song',
                   artist: award.song.artist?.username || 'Unknown Artist',
                   jurisdiction: award.jurisdiction?.name || 'Unknown',
-                  dateLabel: getAwardDateLabel(cat.key),
+                  dateLabel: getAwardDateLabel(cat.key, award.awardDate),
                   date: isWeekly ? toWeeklyRange(award.awardDate) : toDisplayDate(award.awardDate),
+                  awardDate: award.awardDate,
+                  targetId: award.song.songId || award.targetId,
                   image: buildUrl(award.song.artworkUrl) || buildUrl(award.song.artist?.photoUrl),
                   songData: award.song,
                   navigateTo: `/song/${award.song.songId || award.targetId}`,
@@ -238,8 +260,10 @@ const LastWonNotification = () => {
                   title: award.user.username || 'Unknown Artist',
                   artist: null,
                   jurisdiction: award.jurisdiction?.name || 'Unknown',
-                  dateLabel: getAwardDateLabel(cat.key),
+                  dateLabel: getAwardDateLabel(cat.key, award.awardDate),
                   date: toDisplayDate(award.awardDate),
+                  awardDate: award.awardDate,
+                  targetId: award.user.userId || award.targetId,
                   image: buildUrl(award.user.photoUrl),
                   navigateTo: `/artist/${award.user.userId || award.targetId}`,
                 };
@@ -251,24 +275,18 @@ const LastWonNotification = () => {
           })
         );
 
-        const valid = results.filter(Boolean);
-        if (valid.length === 0) return;
+        // Each award is announced once. Pick among the ones this person
+        // hasn't seen yet (before, one random category was picked and, if
+        // that one was seen, nothing showed even when another was new).
+        const unseen = results.filter(Boolean).filter((n) => !wasSeen(n));
+        if (unseen.length === 0) return;
 
-        const picked = valid[Math.floor(Math.random() * valid.length)];
-
-        // Each award is announced once. The key is per award, so a new win
-        // still gets its moment.
-        const seenKey = `unis-lwn-seen:${picked.dateLabel || 'award'}:${picked.date || ''}:${picked.title || ''}`;
-        try {
-          if (localStorage.getItem(seenKey)) return;
-          localStorage.setItem(seenKey, '1');
-        } catch {
-          // Storage disabled: show it anyway.
-        }
-
+        const picked = unseen[Math.floor(Math.random() * unseen.length)];
         setNotification(picked);
 
         const reveal = () => {
+          // Counted as seen only once it's actually on screen.
+          markSeen(picked);
           returnFocusRef.current = document.activeElement;
           setVisible(true);
           timersRef.current.push(

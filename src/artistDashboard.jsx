@@ -68,6 +68,7 @@ import NewReleaseWizard from './NewReleaseWizard';
 import { RELEASE_TYPE_LABEL } from './utils/releases';
 import LiveStanding from './LiveStanding';
 import ReleaseAlertSettings from './ReleaseAlertSettings';
+import { PlaybackSettingsLink } from './PlaybackSettings';
 import './teamAndReleases.scss';
 import './dashShell.scss';
 
@@ -1701,6 +1702,8 @@ const ArtistDashboard = () => {
       </section>
 
       {!onTeam && <ReleaseAlertSettings />}
+
+      <PlaybackSettingsLink />
 
       <section className="ad-panel artist-support-section" aria-labelledby="ad-support-title">
         <div className="ad-panel__head">

@@ -1,5 +1,6 @@
 // src/components/UploadWizard.jsx
 import React, { useState, useEffect } from 'react';
+import SoundCheck from './SoundCheck';
 import { X, Upload, Music, Video, FileText, CheckCircle } from 'lucide-react';
 import { apiCall } from './components/axiosInstance';
 import buildUrl from './utils/buildUrl';
@@ -210,6 +211,11 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {}, visito
       if (explicit && mediaType === 'song') {
         setUploadedSong(response.data);
         setStep(4);
+      } else if (mediaType === 'song') {
+        // ★ Sound check: show what Unis measured before closing.
+        onUploadSuccess(response.data || { message: 'Upload successful' });
+        setUploadedSong(response.data);
+        setStep(5);
       } else {
         onUploadSuccess(response.data || { message: 'Upload successful' });
         onClose();
@@ -265,8 +271,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {}, visito
       }
 
       onUploadSuccess(uploadedSong || { message: 'Upload successful with clean version' });
-      onClose();
-      resetWizard();
+      setStep(5);
     } catch (err) {
       console.error('Clean version upload error:', err);
       setError(err.response?.data?.message || err.message || 'Clean version upload failed');
@@ -277,6 +282,10 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {}, visito
 
   const handleSkipCleanVersion = () => {
     onUploadSuccess(uploadedSong || { message: 'Upload successful' });
+    setStep(5);
+  };
+
+  const finishSoundCheck = () => {
     onClose();
     resetWizard();
   };
@@ -699,6 +708,8 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {}, visito
                 ? <>Review <em>upload</em></>
                 : step === 4
                 ? <>Clean <em>version</em></>
+                : step === 5
+                ? <>Sound <em>check</em></>
                 : <>Upload <em>{mediaType}</em></>}
             </h2>
           </div>
@@ -739,6 +750,7 @@ const UploadWizard = ({ show, onClose, onUploadSuccess, userProfile = {}, visito
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
           {step === 4 && renderStep4()}
+          {step === 5 && <SoundCheck songId={uploadedSong?.songId} title={title} onDone={finishSoundCheck} />}
         </div>
 
         {/* ── Footer nav (back/next) for steps 1-2 ── */}

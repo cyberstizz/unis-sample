@@ -44,6 +44,7 @@ import { useTaxonomy } from './utils/taxonomy';
 import { fetchStandings } from './utils/standings';
 import FollowBar from './components/FollowBar';
 import { useFollowBar } from './hooks/useFollowBar';
+import { shareUrl } from './utils/shareLink';
 
 const SongPage = () => {
   const { songId } = useParams();
@@ -434,7 +435,7 @@ const SongPage = () => {
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(await shareUrl('song', songId));
       setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2000);
       feedback.success('Link copied', { id: 'copy-link' });
     } catch (err) {

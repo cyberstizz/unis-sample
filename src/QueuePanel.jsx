@@ -18,8 +18,14 @@ import {
   ChevronDown, ChevronUp, GripVertical, Trash2, Bookmark, Shuffle,
   SkipBack, SkipForward, Play, Pause, Repeat, Repeat1, User,
   ListMusic, ChevronRight, X, Heart, CheckSquare, Check, History, ListStart,
+  Infinity as InfinityIcon, Square, RotateCcw,
 } from 'lucide-react';
+import { useEngineSnapshot } from './utils/playbackEngine';
+import { usePlaybackSettings } from './utils/playbackSettings';
+import { getAnalysis, getAnalysisRecord, subscribeAnalysis } from './utils/songAnalysis';
+import { planTransition, planLabel } from './utils/mixPlanner';
 import './queuePanel.scss';
+import './playback.scss';
 
 // ============================================================================
 // ROW HELPERS
@@ -55,7 +61,7 @@ const SWIPE_REVEAL = 96;
  * that follows the pointer while dragging, so the two always look identical.
  * In select mode the grip becomes a checkbox.
  */
-const RowBody = ({ track, isCurrent, isPlaying, handleProps, rightSlot, selecting, selected }) => (
+const RowBody = ({ track, isCurrent, isPlaying, handleProps, rightSlot, selecting, selected, mixTag }) => (
   <>
     <div className="qp-left">
       {isCurrent ? (
@@ -83,6 +89,12 @@ const RowBody = ({ track, isCurrent, isPlaying, handleProps, rightSlot, selectin
     <div className="qp-meta">
       <div className="qp-title">{track.title || track.name || 'Untitled'}</div>
       <div className="qp-artist">{track.artist || track.artistName || 'Unknown'}</div>
+      {mixTag && (
+        <div className="qp-mixtag">
+          <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M19 12a5 5 0 11-10 0 5 5 0 0110 0zM15 12a5 5 0 11-10 0 5 5 0 0110 0z" fill="none" stroke="currentColor" strokeWidth="2.3" /></svg>
+          {mixTag}
+        </div>
+      )}
     </div>
 
     <div className="qp-right">{rightSlot}</div>
@@ -106,7 +118,7 @@ const SortableQueueRow = ({
   track, index, isCurrent, isPast, isPlaying, run, showLabel, confirming,
   rowRef, onPlay, onAskRemove, onConfirmRemove, onCancelConfirm,
   onAskRemoveGroup, onConfirmRemoveGroup, onOpenPlaylist, currentQid,
-  selecting, selected, onToggleSelect, swiped, onSwipe, onRemoveNow,
+  selecting, selected, onToggleSelect, swiped, onSwipe, onRemoveNow, mixTag,
 }) => {
   const {
     attributes, listeners, setNodeRef, setActivatorNodeRef,
@@ -300,12 +312,49 @@ const SortableQueueRow = ({
             rightSlot={rightSlot}
             selecting={selecting}
             selected={selected}
+            mixTag={mixTag}
           />
         </div>
       </div>
     </div>
   );
 };
+
+const mmss = (s) => { const v = Math.max(0, Math.round(s)); return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`; };
+
+/**
+ * How each upcoming song comes in ("Bass swap in 0:12", "Fade · 8 bars"),
+ * from the same planner the sound engine runs. Empty when transitions are off.
+ */
+function useMixTags(queue, currentIndex, overrideFor) {
+  const snap = useEngineSnapshot();
+  const [settings] = usePlaybackSettings();
+  const [, bump] = useState(0);
+  useEffect(() => subscribeAnalysis(() => bump((n) => n + 1)), []);
+  return useMemo(() => {
+    const tags = {};
+    if (settings.transitions === 'off') return tags;
+    const end = Math.min(queue.length - 1, currentIndex + 12);
+    for (let i = Math.max(0, currentIndex); i < end; i++) {
+      const a = queue[i]; const b = queue[i + 1];
+      if (!a || !b || a.type === 'video' || b.type === 'video') continue;
+      if (i === currentIndex && snap.phase === 'armed' && snap.incoming?.qid === b.qid) {
+        tags[b.qid] = `${snap.styleName} in ${mmss(snap.countdown)}`;
+        continue;
+      }
+      if (i === currentIndex && (snap.phase === 'mixing' || snap.phase === 'easing')) continue;
+      const ra = getAnalysisRecord(a); const rb = getAnalysisRecord(b);
+      const sameRelease = !!(ra?.releaseId && ra.releaseId === rb?.releaseId);
+      const plan = planTransition({
+        a: getAnalysis(a), b: getAnalysis(b),
+        durA: ra?.durationMs ? ra.durationMs / 1000 : 200, durB: rb?.durationMs ? rb.durationMs / 1000 : 200,
+        settings, override: overrideFor ? overrideFor(a, b) : null, sameRelease,
+      });
+      tags[b.qid] = plan ? planLabel(plan) : (sameRelease ? 'Gapless · same release' : 'None');
+    }
+    return tags;
+  }, [queue, currentIndex, overrideFor, settings, snap]); // eslint-disable-line react-hooks/exhaustive-deps
+}
 
 // Smooth settle when a dragged row is released into place.
 const dropAnimation = {
@@ -336,7 +385,11 @@ const QueuePanel = ({ open, onClose, isLiked = false, onToggleLike, embedded = f
     isPlaying, togglePlayPause, next, prev, // ★ real transport wiring
     repeatMode, cycleRepeat,                // ★ new repeat support from context
     audioRef,                              // ★ for the live scrubber
+    autoplay, setAutoplay, autoplayUpcoming, removeAutoplayItem, queueEnded, playSimilarNow,
+    mixOverrideFor,
   } = useContext(PlayerContext);
+  const mixTags = useMixTags(queue, currentIndex, mixOverrideFor);
+  const lastOrigin = [...queue].reverse().find((t) => t?.origin?.type === 'playlist')?.origin || null;
 
   const navigate = useNavigate();
   const feedback = useFeedback();
@@ -964,6 +1017,7 @@ const QueuePanel = ({ open, onClose, isLiked = false, onToggleLike, embedded = f
                             swiped={swipedQid === track.qid}
                             onSwipe={setSwipedQid}
                             onRemoveNow={removeNow}
+                            mixTag={index > currentIndex ? mixTags[track.qid] : null}
                           />
                         </React.Fragment>
                       );
@@ -995,6 +1049,59 @@ const QueuePanel = ({ open, onClose, isLiked = false, onToggleLike, embedded = f
                   document.getElementById('root') || document.body
                 )}
               </DndContext>
+
+              {queueEnded && !isPlaying && !autoplay && (
+                <div className="qp-endcard">
+                  <span className="qp-endcard-icon" aria-hidden="true"><Square size={18} /></span>
+                  <strong>That’s the end of your queue</strong>
+                  <p>Autoplay is off, so the music stopped here. It stays off until you turn it on.</p>
+                  <button type="button" className="qp-endcard-go" onClick={playSimilarNow}>
+                    <InfinityIcon size={18} aria-hidden="true" /> Play similar music
+                  </button>
+                  <button type="button" className="qp-endcard-again" onClick={() => playQueueIndex(Math.max(0, queue.findIndex((t) => t?.origin?.batchId && t.origin.batchId === lastOrigin?.batchId)))}>
+                    <RotateCcw size={16} aria-hidden="true" /> {lastOrigin ? `Play ${lastOrigin.name} again` : 'Play your queue again'}
+                  </button>
+                </div>
+              )}
+
+              <div className="qp-autoplay">
+                <span className="qp-autoplay-icon" aria-hidden="true"><InfinityIcon size={21} /></span>
+                <div className="qp-autoplay-text">
+                  <strong>Autoplay</strong>
+                  <span>{autoplay ? 'Similar music, local artists first, after your queue' : 'Off · the music stops when your queue ends'}</span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={autoplay}
+                  aria-label="Autoplay"
+                  className={`qp-switch ${autoplay ? 'is-on' : ''}`}
+                  onClick={() => { setAutoplay(!autoplay); feedback.info(autoplay ? 'Autoplay off' : 'Autoplay on', { id: 'qp-autoplay' }); }}
+                >
+                  <span />
+                </button>
+              </div>
+              {autoplay && autoplayUpcoming.length > 0 && (
+                <ul className="qp-autolist" aria-label="Autoplay songs">
+                  {autoplayUpcoming.map((t) => (
+                    <li key={t.qid} className="qp-autorow">
+                      <img src={artOf(t)} alt="" className="qp-art" />
+                      <div className="qp-meta">
+                        <div className="qp-title">{t.title || 'Untitled'}</div>
+                        <div className="qp-artist">{[t.artist, t.jurisdiction].filter(Boolean).join(' · ')}</div>
+                      </div>
+                      <button
+                        type="button"
+                        className="qp-remove qp-autoremove"
+                        onClick={() => removeAutoplayItem(t.qid)}
+                        aria-label={`Don’t autoplay ${t.title || 'this song'}`}
+                      >
+                        <X size={14} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
               <div className="qp-end">
                 <span className="qp-end-line" aria-hidden="true" />

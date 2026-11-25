@@ -70,6 +70,11 @@ const BrowseTagPage = lazyWithRetry(() => import('./BrowseTagPage'));
 const ListenerPage = lazyWithRetry(() => import('./ListenerPage'));
 const MessagesPage = lazyWithRetry(() => import('./MessagePage'));
 const HelpPage = lazyWithRetry(() => import('./HelpPage'));
+const FeaturesPage = lazyWithRetry(() => import('./FeaturesPage'));
+const PlaybackSettingsPage = lazyWithRetry(() => import('./PlaybackSettings'));
+const MixEditorPage = lazyWithRetry(() => import('./MixEditorPage'));
+const LikedSongsPage = lazyWithRetry(() => import('./LibraryLists').then((m) => ({ default: m.LikedSongsPage })));
+const RecentlyPlayedPage = lazyWithRetry(() => import('./LibraryLists').then((m) => ({ default: m.RecentlyPlayedPage })));
 const ComingSoon = lazyWithRetry(() => import('./prelaunch/ComingSoon'));
 const JoinPage = lazyWithRetry(() => import('./JoinPage'));
 const TeamLanding = lazyWithRetry(() => import('./TeamLanding'));
@@ -189,6 +194,7 @@ const AppLayout = () => {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/cookie" element={<CookiePolicy />} />
         <Route path="/help" element={<HelpPage />} />
+        <Route path="/features" element={<FeaturesPage />} />
         <Route path="/report" element={<ReportInfringement />} />
         <Route path="/waitlist" element={<WaitlistLanding />} />
         <Route path="/waitlist/join" element={<WaitlistPage />} />
@@ -208,6 +214,8 @@ const AppLayout = () => {
           <Route path="/song/:songId" element={<SongPage />} />
           <Route path="/playlists" element={<LibraryPage />} />
           <Route path="/playlist/:playlistId" element={<PlaylistPage />} />
+          <Route path="/playlist/:playlistId/mix/:index" element={<MixEditorPage />} />
+          <Route path="/settings/playback" element={<PlaybackSettingsPage />} />
           <Route path="/release/:releaseId" element={<ReleasePage />} />
           <Route path="/video/:videoId" element={<VideoPage />} />
           <Route path="/jurisdiction/:jurisdiction" element={<JurisdictionPage />} />
@@ -231,6 +239,8 @@ const AppLayout = () => {
           <Route path="/artistDashboard" element={<ArtistDashboard />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/plus" element={<PlusPage />} />
+          <Route path="/liked" element={<LikedSongsPage />} />
+          <Route path="/recent" element={<RecentlyPlayedPage />} />
         </Route>
 
         {/* Admin routes — all tiers */}
