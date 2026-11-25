@@ -21,6 +21,7 @@ import PocketLockOverlay from './PocketLockOverlay';
 import LyricsView from './components/LyricsView'; // timed lyrics view (mic button)
 import useArtworkPalette from './hooks/useArtworkPalette';
 import useScrollMotion from './hooks/useScrollMotion';
+import useCompactOnScroll from './hooks/useCompactOnScroll';
 import { useThemeLogo } from './utils/themeLogo';
 import playbackEngine from './utils/playbackEngine';
 import NowPlayingMix, { MixFromLine, MixArtFade } from './NowPlayingMix';
@@ -143,6 +144,57 @@ const Spinner = () => <span className="unp-spinner" aria-hidden="true" />;
 // the art shows through.
 const ART_HERO_ROUTE = /^\/(song|artist|jurisdiction|playlist)\//;
 
+// ─── Compact mini player: its five spots ───
+// Must match the .at-* rules in player.scss: 180×56, 10px from the sides,
+// bottom spots where the full player sits, middle spots 46% up the screen.
+const MINI_SPOTS = ['br', 'bc', 'bl', 'mr', 'ml'];
+const MINI_W = 180;
+const MINI_H = 56;
+const MINI_EDGE = 10;
+const MINI_SPOT_KEY = 'unis-mini-spot';
+
+const readMiniSpot = () => {
+  try {
+    const v = window.localStorage.getItem(MINI_SPOT_KEY);
+    return MINI_SPOTS.includes(v) ? v : 'br';
+  } catch { return 'br'; }
+};
+const saveMiniSpot = (v) => {
+  try { window.localStorage.setItem(MINI_SPOT_KEY, v); } catch { /* private mode */ }
+};
+const barLift = () => {
+  const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--unis-bar-lift'));
+  return Number.isFinite(v) ? v : 0;
+};
+// Top-left corner of each spot, in viewport px.
+const miniSpotXY = (k) => {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const bottomY = vh - (14 + barLift()) - MINI_H;
+  const midY = vh - vh * 0.46 - MINI_H;
+  const x = { br: vw - MINI_EDGE - MINI_W, mr: vw - MINI_EDGE - MINI_W, bc: (vw - MINI_W) / 2, bl: MINI_EDGE, ml: MINI_EDGE }[k];
+  return { x, y: k === 'mr' || k === 'ml' ? midY : bottomY };
+};
+const nearestMiniSpot = (x, y) => MINI_SPOTS.reduce((best, k) => {
+  const a = miniSpotXY(k);
+  const b = miniSpotXY(best);
+  return Math.hypot(a.x - x, a.y - y) < Math.hypot(b.x - x, b.y - y) ? k : best;
+}, 'br');
+// Never off screen, under the header or under the bottom bar.
+const miniBounds = () => ({
+  minX: 4,
+  maxX: window.innerWidth - MINI_W - 4,
+  minY: 72,
+  maxY: window.innerHeight - (14 + barLift()) - MINI_H,
+});
+// While dragging, the same three properties the spots use, so letting go
+// glides from here to the spot.
+const miniDragStyle = ({ x, y }) => ({
+  left: `${x}px`,
+  right: `${window.innerWidth - x - MINI_W}px`,
+  bottom: `${window.innerHeight - y - MINI_H}px`,
+});
+
 const DESKTOP_QUERY = '(min-width: 1025px)';
 const useIsDesktop = () => {
   const [desktop, setDesktop] = useState(
@@ -246,6 +298,21 @@ const Player = () => {
   const moving = useScrollMotion({ enabled: !!currentMedia && !isExpanded });
   const pinnedGlass = ART_HERO_ROUTE.test(location.pathname);
   const glass = moving || pinnedGlass;
+
+  // --- COMPACT MINI PLAYER (phones / tablets) ---
+  // Scroll down a page and the mini player shrinks to its artwork and three
+  // buttons. Any of those buttons does its job, then the player opens back
+  // up; so does a tap on the artwork or reaching the top of the page. Only the
+  // compact player drags: drop or flick it and it glides to the nearest of
+  // five spots, which it remembers.
+  const [compact, setCompact] = useCompactOnScroll({ enabled: !!currentMedia && !isExpanded && !isDesktop });
+  const [miniSpot, setMiniSpot] = useState(readMiniSpot);
+  const [miniDrag, setMiniDrag] = useState(null);       // { x, y } while dragging
+  const [miniSnapping, setMiniSnapping] = useState(false);
+  const miniDragRef = useRef(null);
+  const miniSkipClickRef = useRef(false);
+  const snapTimerRef = useRef(null);
+  useEffect(() => () => clearTimeout(snapTimerRef.current), []);
 
   // --- DERIVE VOTING DATA ---
   const voteNominee = useMemo(() => {
@@ -911,6 +978,7 @@ const Player = () => {
     gestureRef.current = { x: e.clientX, y: e.clientY, swiped: false };
   };
   const onMiniPointerUp = (e) => {
+    if (compact) return;
     const g = gestureRef.current;
     const dx = e.clientX - g.x;
     const dy = e.clientY - g.y;
@@ -924,8 +992,63 @@ const Player = () => {
     }
   };
   const onMiniClick = () => {
+    if (miniSkipClickRef.current) return;
+    if (compact) { setCompact(false); return; }
     if (gestureRef.current.swiped) { gestureRef.current.swiped = false; return; }
     openNowPlaying('main');
+  };
+
+  // A button on the compact player does its job, then the player opens back up.
+  const miniAction = (fn) => (e) => {
+    if (miniSkipClickRef.current) return;
+    fn(e);
+    if (compact) setTimeout(() => setCompact(false), 200);
+  };
+
+  // Dragging the compact player. A press only becomes a drag after 8px, so
+  // taps still reach the buttons; once it's a drag, no button fires.
+  const onMiniDragDown = (e) => {
+    if (!compact) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    miniDragRef.current = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: r.left, oy: r.top, moved: false, el: e.currentTarget, pts: [] };
+  };
+  const onMiniDragMove = (e) => {
+    const g = miniDragRef.current;
+    if (!g || e.pointerId !== g.id) return;
+    const dx = e.clientX - g.sx;
+    const dy = e.clientY - g.sy;
+    if (!g.moved) {
+      if (Math.hypot(dx, dy) < 8) return;
+      g.moved = true;
+      try { g.el.setPointerCapture(g.id); } catch { /* not supported */ }
+    }
+    const b = miniBounds();
+    const x = Math.min(b.maxX, Math.max(b.minX, g.ox + dx));
+    const y = Math.min(b.maxY, Math.max(b.minY, g.oy + dy));
+    g.pts.push({ t: performance.now(), x, y });
+    if (g.pts.length > 6) g.pts.shift();
+    setMiniDrag({ x, y });
+  };
+  const onMiniDragEnd = (e) => {
+    const g = miniDragRef.current;
+    miniDragRef.current = null;
+    if (!g || !g.moved || e.pointerId !== g.id) return;
+    miniSkipClickRef.current = true;
+    setTimeout(() => { miniSkipClickRef.current = false; }, 60);
+    const last = g.pts[g.pts.length - 1] || { x: g.ox, y: g.oy };
+    const first = g.pts[0] || last;
+    const dt = Math.max(1, last.t - first.t);
+    // Where the flick was heading, a fifth of a second on.
+    const aimX = last.x + ((last.x - first.x) / dt) * 220;
+    const aimY = last.y + ((last.y - first.y) / dt) * 220;
+    const spot = nearestMiniSpot(aimX, aimY);
+    setMiniDrag(null);
+    setMiniSpot(spot);
+    saveMiniSpot(spot);
+    setMiniSnapping(true);
+    clearTimeout(snapTimerRef.current);
+    snapTimerRef.current = setTimeout(() => setMiniSnapping(false), 520);
+    try { navigator.vibrate?.(6); } catch { /* not supported */ }
   };
 
   // Now Playing tray: tapping the active view goes back to the main view.
@@ -1187,7 +1310,21 @@ const Player = () => {
 
   // ── Phones / tablets: the mini player ──
   const mini = (
-    <div className="unp-mini" role="region" aria-label="Player">
+    <div
+      className={[
+        'unp-mini',
+        compact ? `is-compact at-${miniSpot}` : '',
+        miniDrag ? 'is-dragging' : '',
+        miniSnapping ? 'is-snapping' : '',
+      ].filter(Boolean).join(' ')}
+      role="region"
+      aria-label="Player"
+      style={miniDrag ? miniDragStyle(miniDrag) : undefined}
+      onPointerDown={onMiniDragDown}
+      onPointerMove={onMiniDragMove}
+      onPointerUp={onMiniDragEnd}
+      onPointerCancel={onMiniDragEnd}
+    >
       <div className="unp-surface__tint" aria-hidden="true" />
       <div className="unp-mini__row">
         <button
@@ -1197,7 +1334,7 @@ const Player = () => {
           onPointerDown={onMiniPointerDown}
           onPointerUp={onMiniPointerUp}
           onClick={onMiniClick}
-          aria-label={`Open Now Playing: ${title} by ${artist}`}
+          aria-label={compact ? `Make the player full size: ${title} by ${artist}` : `Open Now Playing: ${title} by ${artist}`}
         >
           <span className="unp-mini__art">
             <img src={artUrl} alt="" />
@@ -1212,7 +1349,7 @@ const Player = () => {
           ref={trayToggleRef}
           type="button"
           className={`unp-mini__btn unp-mini__arrow ${trayOpen ? 'is-open' : ''}`}
-          onClick={toggleTray}
+          onClick={miniAction(toggleTray)}
           aria-expanded={trayOpen}
           aria-controls="unp-tray"
           aria-label={trayOpen ? 'Close song actions' : 'Song actions: vote, like, add and more'}
@@ -1222,7 +1359,7 @@ const Player = () => {
         <button
           type="button"
           className="unp-mini__btn unp-mini__queue"
-          onClick={() => openNowPlaying('queue')}
+          onClick={miniAction(() => openNowPlaying('queue'))}
           aria-label={`Queue${queueCount ? `, ${queueCount} songs` : ''}`}
         >
           <ListMusic size={21} aria-hidden="true" />
@@ -1231,7 +1368,7 @@ const Player = () => {
         <button
           type="button"
           className="unp-mini__btn unp-mini__play"
-          onClick={handlePlayPause}
+          onClick={miniAction(handlePlayPause)}
           aria-label={playLabel}
         >
           {isBuffering ? <Spinner /> : <PlayPauseGlyph playing={isPlaying} />}
@@ -1702,6 +1839,13 @@ const Player = () => {
       )}
 
       {isDesktop ? dock : mini}
+      {!isDesktop && miniDrag && (
+        <div className="unp-spots" aria-hidden="true">
+          {MINI_SPOTS.map((k) => (
+            <span key={k} className={`unp-spot at-${k} ${nearestMiniSpot(miniDrag.x, miniDrag.y) === k ? 'is-near' : ''}`} />
+          ))}
+        </div>
+      )}
       {!isDesktop && tray}
       {nowPlaying}
 
