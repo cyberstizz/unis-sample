@@ -19,9 +19,9 @@ export const FEATURE_SECTIONS = [
     em: 'neighborhood',
     blurb: 'Music from where you live, ranked by the people who live there.',
     shots: [
-      { src: '/features/local-home.png', caption: 'Home: what your area is playing' },
-      { src: '/features/local-discover.png', caption: 'Discover by genre and mood' },
-      { src: '/features/local-map.png', caption: 'Find on the map' },
+      { src: '/features/local-home.jpg', caption: 'Home: what your area is playing' },
+      { src: '/features/local-discover.jpg', caption: 'Discover by genre and mood' },
+      { src: '/features/local-map.jpg', caption: 'Find on the map' },
     ],
     benefits: [
       {
@@ -57,8 +57,8 @@ export const FEATURE_SECTIONS = [
     em: 'decides',
     blurb: 'Listeners pick the winners, not editors.',
     shots: [
-      { src: '/features/vote-race.png', caption: 'The live race' },
-      { src: '/features/vote-award.png', caption: 'An award card' },
+      { src: '/features/vote-race.jpg', caption: 'The live race' },
+      { src: '/features/vote-award.jpg', caption: 'An award card' },
     ],
     benefits: [
       {
@@ -94,9 +94,9 @@ export const FEATURE_SECTIONS = [
     em: 'feels',
     blurb: 'Smooth transitions, even volume, and controls the big apps don’t have.',
     shots: [
-      { src: '/features/listen-mix.png', caption: 'Unis Mix in Now Playing' },
-      { src: '/features/listen-sleep.png', caption: 'Sleep timer' },
-      { src: '/features/listen-mini.png', caption: 'The mini player' },
+      { src: '/features/listen-mix.jpg', caption: 'Unis Mix in Now Playing' },
+      { src: '/features/listen-sleep.jpg', caption: 'Sleep timer' },
+      { src: '/features/listen-mini.jpg', caption: 'The mini player' },
     ],
     benefits: [
       {
@@ -141,8 +141,8 @@ export const FEATURE_SECTIONS = [
     em: 'organised',
     blurb: 'A queue that respects you, and a library that remembers.',
     shots: [
-      { src: '/features/queue.png', caption: 'The queue' },
-      { src: '/features/queue-liked.png', caption: 'Liked Songs' },
+      { src: '/features/queue.jpg', caption: 'The queue' },
+      { src: '/features/queue-liked.jpg', caption: 'Liked Songs' },
     ],
     benefits: [
       {
@@ -186,8 +186,8 @@ export const FEATURE_SECTIONS = [
     em: 'sharing',
     blurb: 'Make them, mix them, build them together.',
     shots: [
-      { src: '/features/playlist-mix.png', caption: 'A mixed playlist' },
-      { src: '/features/playlist-editor.png', caption: 'The Mix editor' },
+      { src: '/features/playlist-mix.jpg', caption: 'A mixed playlist' },
+      { src: '/features/playlist-editor.jpg', caption: 'The Mix editor' },
     ],
     benefits: [
       {
@@ -220,8 +220,8 @@ export const FEATURE_SECTIONS = [
     em: 'neighbors',
     blurb: 'Follow, talk and share, on your terms.',
     shots: [
-      { src: '/features/social-messages.png', caption: 'Messages' },
-      { src: '/features/social-preview.png', caption: 'A shared link' },
+      { src: '/features/social-messages.jpg', caption: 'Messages' },
+      { src: '/features/social-preview.jpg', caption: 'A shared link' },
     ],
     benefits: [
       {
@@ -258,9 +258,9 @@ export const FEATURE_SECTIONS = [
     em: 'artist',
     blurb: 'Release, grow, get counted and get paid.',
     shots: [
-      { src: '/features/artist-dashboard.png', caption: 'The artist dashboard' },
-      { src: '/features/artist-soundcheck.png', caption: 'Sound check' },
-      { src: '/features/artist-page.png', caption: 'An artist page' },
+      { src: '/features/artist-dashboard.jpg', caption: 'The artist dashboard' },
+      { src: '/features/artist-soundcheck.jpg', caption: 'Sound check' },
+      { src: '/features/artist-page.jpg', caption: 'An artist page' },
     ],
     benefits: [
       {
@@ -302,7 +302,7 @@ export const FEATURE_SECTIONS = [
     em: 'paid',
     blurb: 'Artists and listeners both earn.',
     shots: [
-      { src: '/features/money-earnings.png', caption: 'Earnings' },
+      { src: '/features/money-earnings.jpg', caption: 'Earnings' },
     ],
     benefits: [
       {
@@ -338,8 +338,8 @@ export const FEATURE_SECTIONS = [
     em: 'yours',
     blurb: 'Your colours, your sound, your privacy.',
     shots: [
-      { src: '/features/account-themes.png', caption: 'Themes' },
-      { src: '/features/account-playback.png', caption: 'Playback settings' },
+      { src: '/features/account-themes.jpg', caption: 'Themes' },
+      { src: '/features/account-playback.jpg', caption: 'Playback settings' },
     ],
     benefits: [
       {
