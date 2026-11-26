@@ -5,7 +5,7 @@ import { useAuth } from './context/AuthContext';
 import AuthGateSheet, { useAuthGate, incrementGateSongCount } from './AuthGateSheet';
 import {
   Heart, Vote, ChevronUp, ChevronDown, ListMusic, Lock, MessageCircle, X, Mic2,
-  MoreHorizontal, Maximize2, Disc3, UserRound, Moon, Gauge,
+  MoreHorizontal, Maximize2, Disc3, UserRound, Moon, Gauge, MoreVertical,
 } from 'lucide-react';
 import PlaylistWizard from './playlistWizard';
 import PlaylistManager from './playlistManager';
@@ -972,6 +972,14 @@ const Player = () => {
     setTrayOpen((v) => !v);
   };
 
+  // Shrink the mini player on demand (the ellipsis button). Not wrapped in
+  // miniAction: that reopens the player after a compact click.
+  const handleShrink = (e) => {
+    e?.stopPropagation?.();
+    setTrayOpen(false);
+    setCompact(true);
+  };
+
   // Mini player gestures: swipe sideways to skip, swipe up to open Now
   // Playing, tap to open it. Buttons do all of this too.
   const onMiniPointerDown = (e) => {
@@ -1345,6 +1353,16 @@ const Player = () => {
             <span className="unp-mini__artist">{artist}</span>
           </span>
         </button>
+                {!compact && (
+          <button
+            type="button"
+            className="unp-mini__btn unp-mini__shrink"
+            onClick={handleShrink}
+            aria-label="Shrink player"
+          >
+            <MoreVertical size={16} aria-hidden="true" />
+          </button>
+        )}
         <button
           ref={trayToggleRef}
           type="button"
